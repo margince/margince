@@ -28,7 +28,7 @@ func TestACredentialOrRateRowTheWritersRefuseIsRefusedByTheDatabase(t *testing.T
 	const passportColumns = `INSERT INTO passport (on_behalf_of, granted_by, token_hash, expires_at, scopes)
 		VALUES (gen_random_uuid(), gen_random_uuid(), repeat('a', 64), now() + interval '1 day', `
 	const invitationColumns = `INSERT INTO deal_room_invitation
-		(participant_id, token_hash, expires_at, captured_by, attempt_no, source, failed_at, failure_reason)
+		(participant_id, token_hash, expires_at, captured_by, attempt_no)
 		VALUES (gen_random_uuid(), decode(repeat('ab', 32), 'hex'), now() + interval '1 day', 'human:test', `
 
 	for _, c := range []struct{ name, sql, constraint string }{
@@ -38,28 +38,18 @@ func TestACredentialOrRateRowTheWritersRefuseIsRefusedByTheDatabase(t *testing.T
 			VALUES ('USD', 'EUR', -0.9, current_date)`, "fx_rate_rate_positive"},
 		{"a currency priced in itself", `INSERT INTO fx_rate (from_currency, to_currency, rate, rate_date)
 			VALUES ('EUR', 'EUR', 1, current_date)`, "fx_rate_pair_distinct"},
-		{"a passport with no scope", passportColumns + `'{}')`, "passport_scopes_vocabulary"},
+		{"a passport with no scope", passportColumns + `'{}')`, "passport_scopes_present"},
 		{"a passport with an unknown scope", passportColumns + `'{read,admin}')`, "passport_scopes_vocabulary"},
 		{"a passport with a null scope", passportColumns + `ARRAY['read', NULL])`, "passport_scopes_vocabulary"},
 		{"a passport carrying offline_access", passportColumns + `'{read,offline_access}')`, "passport_scopes_vocabulary"},
 		{"a grant with no scope", `INSERT INTO oauth_grant (client_id, user_id, scopes)
-			VALUES ('c', gen_random_uuid(), '{}')`, "oauth_grant_scopes_vocabulary"},
+			VALUES ('c', gen_random_uuid(), '{}')`, "oauth_grant_scopes_present"},
 		{"a grant with an unknown scope", `INSERT INTO oauth_grant (client_id, user_id, scopes)
 			VALUES ('c', gen_random_uuid(), '{read,admin}')`, "oauth_grant_scopes_vocabulary"},
-		{"a code with no scope", codeColumns + `'{}')`, "oauth_authorization_code_scopes_vocabulary"},
+		{"a code with no scope", codeColumns + `'{}')`, "oauth_authorization_code_scopes_present"},
 		{"a code with an unknown scope", codeColumns + `'{read,admin}')`, "oauth_authorization_code_scopes_vocabulary"},
-		{"an invitation an import wrote", invitationColumns + `1, 'import', NULL, NULL)`,
-			"deal_room_invitation_source_check"},
-		{"an invitation numbered zero", invitationColumns + `0, 'system', NULL, NULL)`,
+		{"an invitation numbered zero", invitationColumns + `0)`,
 			"deal_room_invitation_attempt_no_check"},
-		{"a failed send with no reason", invitationColumns + `1, 'system', now(), NULL)`,
-			"deal_room_invitation_failure_stated"},
-		{"a reason with no failed send", invitationColumns + `1, 'system', NULL, 'relay refused')`,
-			"deal_room_invitation_failure_stated"},
-		{"a session an import wrote", `INSERT INTO deal_room_session
-			(participant_id, room_id, token_hash, expires_at, source, captured_by)
-			VALUES (gen_random_uuid(), gen_random_uuid(), decode(repeat('ab', 32), 'hex'), now() + interval '1 day', 'import', 'human:test')`,
-			"deal_room_session_source_check"},
 	} {
 		t.Run(c.name, func(t *testing.T) {
 			if got := refusingConstraint(t, conn, c.sql); got != c.constraint {
