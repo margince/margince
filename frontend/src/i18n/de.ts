@@ -18101,7 +18101,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "account.chatWaiting":
     "Ein Code wartet. Sende ihn von deinem {network}-Konto an ein {network}-Konto der Firma, oder starte neu für einen neuen Code.",
   "account.chatConfirmed": "Bestätigt: {account}",
-  "account.chatConfirm": "{network}-Konto bestätigen",
+  "account.chatConfirm": "Mit Code bestätigen",
   "account.chatRemove": "Entfernen",
   "account.chatRemoved": "Konto entfernt",
   "account.chatFailed": "Das hat nicht geklappt. Versuche es noch einmal.",

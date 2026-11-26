@@ -4,7 +4,7 @@
 package capture
 
 // A member who forwards a customer's message from their own chat app to a
-// company account files the customer's message, never a contact for the member.
+// company account files that message. The member gets no contact.
 // The check sits in FileChatMessage, so every network takes one path.
 // Telegram says who wrote the message. WhatsApp and Zalo say only that it was
 // forwarded. A forward from a non-member is that sender's own correspondence.

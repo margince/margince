@@ -6,7 +6,7 @@ You can confirm your own WhatsApp, Telegram and Zalo accounts in Margince. Then 
 
 ### How do I confirm my chat account?
 To confirm your own chat account in Margince, open **Settings**, then **Account**. The rows are on the **Profile** card.
-1. Click **Confirm WhatsApp account**, **Confirm Telegram account** or **Confirm Zalo account**.
+1. Find the row for your network: WhatsApp, Telegram or Zalo. Click **Confirm with a code** on it.
 2. Margince shows a short code. It works for 10 minutes.
 3. Send that code as a message from your own account to a company account on the same network.
 

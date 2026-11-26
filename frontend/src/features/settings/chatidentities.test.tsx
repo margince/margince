@@ -79,7 +79,7 @@ it("asks for a code for the network and shows it with the instruction", async ()
   const user = userEvent.setup();
   show();
   await user.click(
-    await screen.findByRole("button", { name: "Confirm WhatsApp account" }),
+    (await screen.findAllByRole("button", { name: "Confirm with a code" }))[0],
   );
   expect(await screen.findByText(/K7M2QX9A/)).toBeInTheDocument();
   expect(screen.getByText(/within 10 minutes/)).toBeInTheDocument();

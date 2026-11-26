@@ -17606,7 +17606,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "account.chatWaiting":
     "Đang chờ mã. Hãy gửi mã từ tài khoản {network} của bạn đến tài khoản {network} của công ty, hoặc bắt đầu lại để nhận mã mới.",
   "account.chatConfirmed": "Đã xác nhận: {account}",
-  "account.chatConfirm": "Xác nhận tài khoản {network}",
+  "account.chatConfirm": "Xác nhận bằng mã",
   "account.chatRemove": "Gỡ",
   "account.chatRemoved": "Đã gỡ tài khoản",
   "account.chatFailed": "Không thành công. Hãy thử lại.",

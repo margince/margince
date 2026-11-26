@@ -127,7 +127,7 @@ function ChatIdentityRow({
               pending={start.isPending}
               onClick={() => start.mutate()}
             >
-              {t("account.chatConfirm", { network: name })}
+              {t("account.chatConfirm")}
             </Button>
           )}
           <ErrorLine>

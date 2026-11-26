@@ -17920,7 +17920,7 @@ export const en = {
   "account.chatWaiting":
     "A code is waiting. Send it from your {network} account to a company {network} account, or start again for a new one.",
   "account.chatConfirmed": "Confirmed: {account}",
-  "account.chatConfirm": "Confirm {network} account",
+  "account.chatConfirm": "Confirm with a code",
   "account.chatRemove": "Remove",
   "account.chatRemoved": "Account removed",
   "account.chatFailed": "That did not work. Try again.",
