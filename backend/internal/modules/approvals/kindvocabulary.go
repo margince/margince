@@ -36,9 +36,8 @@ func KindHasDecisionGrants(kind string) bool {
 // to either is in this list the moment it can be staged.
 //
 // Held by: TestEveryFrontendVocabularyMirrorMatchesTheServer
-// (backend/gates/frontendvocabularymirrors_test.go), which fails in both directions
-// against the frontend's label map — a kind this list gains with no label, and
-// a label naming a kind this list does not carry.
+// (backend/gates/frontendvocabularymirrors_test.go). It fails both ways against
+// the frontend's label map: a kind with no label, or a label for no kind here.
 func StageableKinds() []string {
 	kinds := make([]string, 0, len(decisionGrants)+len(targetResolvedGrants))
 	for kind := range decisionGrants {
