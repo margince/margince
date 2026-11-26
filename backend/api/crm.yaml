@@ -51804,7 +51804,6 @@ components:
         address: { $ref: '#/components/schemas/Address' }
         emails:
           type: array
-          maxItems: 25
           items: { $ref: '#/components/schemas/ContactEmailInput' }
           description: |
             REPLACES the contact's addresses with exactly this list, which is what a
@@ -51819,7 +51818,6 @@ components:
             holds at least as many: a longer stored list may be sent back, and not grown.
         phones:
           type: array
-          maxItems: 25
           items: { $ref: '#/components/schemas/ContactPhoneInput' }
           description: |
             REPLACES the contact's numbers with exactly this list, the same way `emails`
@@ -52260,7 +52258,6 @@ components:
             archived answers 422 naming this field. Absent leaves it untouched.
         domains:
           type: array
-          maxItems: 100
           description: Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. A list past 100 domains is 422 `too_many`, unless the company already holds at least as many.
           items: { $ref: '#/components/schemas/CompanyDomainInput' }
         visibility:

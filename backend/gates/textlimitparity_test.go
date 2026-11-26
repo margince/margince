@@ -20,6 +20,7 @@ import (
 	"go/types"
 	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -129,15 +130,12 @@ func sharedCapLimits() []textLimit {
 	return limits
 }
 
-// listLimits are the replace-set caps the contacts module applies, each a
-// mirror of the contract's maxItems on the list.
-var listLimits = []textLimit{
+// Create ceilings are unconditional. Replace-set updates admit stored lists
+// past those ceilings, which maxItems cannot express.
+var createListLimits = []textLimit{
 	{"internal/modules/contacts/listcaps.go", "maxContactEmails", schemaProperty("CreateContactRequest", "emails")},
-	{"internal/modules/contacts/listcaps.go", "maxContactEmails", schemaProperty("UpdateContactRequest", "emails")},
 	{"internal/modules/contacts/listcaps.go", "maxContactPhones", schemaProperty("CreateContactRequest", "phones")},
-	{"internal/modules/contacts/listcaps.go", "maxContactPhones", schemaProperty("UpdateContactRequest", "phones")},
 	{"internal/modules/contacts/listcaps.go", "maxCompanyDomains", schemaProperty("CreateCompanyRequest", "domains")},
-	{"internal/modules/contacts/listcaps.go", "maxCompanyDomains", schemaProperty("UpdateCompanyRequest", "domains")},
 }
 
 func schemaProperty(schema, property string) []string {
@@ -150,15 +148,7 @@ func corpusBody(method, route, property string) []string {
 
 func TestEachMirroredTextCapIsTheContractsMaxLength(t *testing.T) {
 	t.Parallel()
-
-	raw, err := gatekit.ReadFile("api/crm.yaml")
-	if err != nil {
-		t.Fatalf("reading the contract: %v", err)
-	}
-	var doc map[string]any
-	if err := unmarshalYAML(raw, &doc); err != nil {
-		t.Fatalf("parsing the contract: %v", err)
-	}
+	doc := textLimitsContract(t)
 	for _, limit := range slices.Concat(textLimits, sharedCapLimits()) {
 		published := publishedBound(t, doc, limit.path, "maxLength")
 		if applied := appliedIntConst(t, limit.file, limit.constant); applied != published {
@@ -170,21 +160,39 @@ func TestEachMirroredTextCapIsTheContractsMaxLength(t *testing.T) {
 
 func TestEachMirroredListCapIsTheContractsMaxItems(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile("api/crm.yaml")
-	if err != nil {
-		t.Fatalf("reading the contract: %v", err)
-	}
-	var doc map[string]any
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
-		t.Fatalf("parsing the contract: %v", err)
-	}
-	for _, limit := range listLimits {
+	doc := textLimitsContract(t)
+	for _, limit := range createListLimits {
 		published := publishedBound(t, doc, limit.path, "maxItems")
 		if applied := appliedIntConst(t, limit.file, limit.constant); applied != published {
 			t.Errorf("%s applies %d and api/crm.yaml publishes maxItems %d at %v — one refuses what the other calls valid",
 				limit.constant, applied, published, limit.path)
 		}
 	}
+}
+
+func TestReplaceSetSchemasAdmitStoredListsPastTheCreateCap(t *testing.T) {
+	t.Parallel()
+	doc := textLimitsContract(t)
+	for _, limit := range createListLimits {
+		path := slices.Clone(limit.path)
+		path[2] = "Update" + strings.TrimPrefix(path[2], "Create")
+		if _, bounded := textLimitSchema(t, doc, path)["maxItems"]; bounded {
+			t.Errorf("%v has maxItems: remove the unconditional ceiling so oversized stored lists can shrink", path)
+		}
+	}
+}
+
+func textLimitsContract(t *testing.T) map[string]any {
+	t.Helper()
+	raw, err := gatekit.ReadFile("api/crm.yaml")
+	if err != nil {
+		t.Fatalf("reading the contract: %v", err)
+	}
+	var doc map[string]any
+	if err := unmarshalYAML(raw, &doc); err != nil {
+		t.Fatalf("parsing the contract: %v", err)
+	}
+	return doc
 }
 
 func publishedMaxLength(t *testing.T, doc map[string]any, path []string) int {
@@ -196,6 +204,16 @@ func publishedMaxLength(t *testing.T, doc map[string]any, path []string) int {
 // keyword. It fails when the node moved or carries none, because a gate
 // whose subject vanished must say so rather than pass over nothing.
 func publishedBound(t *testing.T, doc map[string]any, path []string, keyword string) int {
+	t.Helper()
+	schema := textLimitSchema(t, doc, path)
+	bound, ok := schema[keyword].(int)
+	if !ok || bound <= 0 {
+		t.Fatalf("api/crm.yaml %v publishes no positive %s — retire the cap from this gate or restore the bound", path, keyword)
+	}
+	return bound
+}
+
+func textLimitSchema(t *testing.T, doc map[string]any, path []string) map[string]any {
 	t.Helper()
 	var node any = doc
 	for _, key := range path {
@@ -211,11 +229,7 @@ func publishedBound(t *testing.T, doc map[string]any, path []string, keyword str
 	if !ok {
 		t.Fatalf("api/crm.yaml %v is not a schema node", path)
 	}
-	bound, ok := schema[keyword].(int)
-	if !ok || bound <= 0 {
-		t.Fatalf("api/crm.yaml %v publishes no positive %s — retire the cap from this gate or restore the bound", path, keyword)
-	}
-	return bound
+	return schema
 }
 
 // appliedIntConst reads a package's integer constant from source. The constants

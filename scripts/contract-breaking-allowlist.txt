@@ -162,3 +162,4 @@ c75048d1d104299f2c51019e71f1355a4af32ed0 af94ee0c871e5c91bb62977dd24a0fa63ba5f0d
 af63adc9383f7777631973df5990d6e920e65683 af94ee0c871e5c91bb62977dd24a0fa63ba5f0da ratified-main-s-and-develop-s-contract-changes-carried-into-the-merged-contract-in-the-sync
 af94ee0c871e5c91bb62977dd24a0fa63ba5f0da ae08d96426c13228be896ae86ccc57c4ec59e860 ratified-an-activity-and-task-source-is-one-of-six-channels
 8972ae1805817453aeb28d02db32bc6c75e9e05c 8a81bcf6af6ff5d68c17aa9d190cf4d5e69fdbfc ratified-12438-bound-company-email-to-the-shared-address-limit
+8972ae1805817453aeb28d02db32bc6c75e9e05c 32dd30f8a33fcf2213e09f12fad068d206006d98 ratified-12438-bound-company-email-to-the-shared-address-limit
