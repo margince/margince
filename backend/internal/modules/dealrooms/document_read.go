@@ -115,7 +115,7 @@ func sellerReadsTheCarrier(ctx context.Context, arg func(any) int) (string, erro
 
 // ListDocuments returns a room's documents in group-then-position order.
 func (s *Store) ListDocuments(ctx context.Context, roomID ids.DealRoomID) ([]crmcontracts.DealRoomDocument, storekit.Page, error) {
-	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
+	if err := requireRoomRead(ctx); err != nil {
 		return nil, storekit.Page{}, err
 	}
 	var out []crmcontracts.DealRoomDocument
