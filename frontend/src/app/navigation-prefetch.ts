@@ -9,14 +9,17 @@ import {
   type QueryClient,
   type QueryKey,
   QueryObserver,
+  type QueryObserverOptions,
   type QueryObserverResult,
 } from "@tanstack/react-query";
 import type { components } from "../api/schema";
 import { contactsArrivalOptions } from "../features/contacts/contacts.queries";
 import { dealsArrivalColumnOptions } from "../features/deals/deals.opening";
 import { grants } from "../lib/accessgrants";
+import { contact360Query, contactQuery } from "../lib/contact.queries";
 import { screenEnabled } from "../lib/corefeaturepolicy";
 import { healthScope } from "../lib/healthscopekey";
+import { latestInboundQuery } from "../lib/latestinbound.queries";
 import { pipelinesOptions } from "../lib/pipelines.queries";
 import { SESSION_STALE_MS, sessionOptions } from "../lib/session";
 
@@ -24,6 +27,13 @@ import { SESSION_STALE_MS, sessionOptions } from "../lib/session";
 // keyboard focus rests on them. Only the bare primary links: their address
 // carries no dial, so the read they open is known without the screen.
 export type PrefetchTarget = "contacts" | "deals";
+
+// A link to one contact's page warms the reads that page waits on to draw.
+export type RecordTarget = `contact:${string}`;
+
+export function contactTarget(id: string): RecordTarget {
+  return `contact:${id}`;
+}
 
 type Me = components["schemas"]["MeResponse"];
 
@@ -40,7 +50,7 @@ const SPECULATIVE = {
 } as const;
 
 type Lease = {
-  target: PrefetchTarget;
+  target: PrefetchTarget | RecordTarget;
   release: () => void;
   handedOff: boolean;
   // When a followed lease lets go, at the latest: one deadline per click.
@@ -101,11 +111,8 @@ export class NavigationPrefetch {
   intend(target: PrefetchTarget): void {
     if (this.#lease?.target === target) return;
     this.#releaseLease();
-    const me = this.#currentSession();
-    if (!me || !readsTarget(me, target)) return;
-    if (document.visibilityState !== "visible" || !onlineManager.isOnline())
-      return;
-    this.#principal = principalOf(me);
+    const me = this.#readerFor(target);
+    if (!me) return;
     // #currentSession answers only a snapshot whose scope is known.
     const readerScope = healthScope(me) ?? "";
     this.#readerScope = readerScope;
@@ -121,14 +128,38 @@ export class NavigationPrefetch {
     this.#warmDeals(readerScope);
   }
 
+  /** A settled pointer, a press or a keyboard focus rests on a link to one contact. */
+  intendContact(id: string): void {
+    const target = contactTarget(id);
+    if (this.#lease?.target === target) return;
+    this.#releaseLease();
+    if (!this.#readerFor("contacts")) return;
+    const releases = [
+      this.#holdRead(contactQuery(id)),
+      this.#holdRead(contact360Query(id)),
+      this.#holdRead(latestInboundQuery("contact", id)),
+    ].filter((release) => release !== undefined);
+    if (releases.length === 0) return;
+    this.#lease = {
+      target,
+      handedOff: false,
+      release: () => {
+        for (const release of releases) release();
+      },
+    };
+  }
+
   /** The pointer or focus left the link to `target` without following it. */
-  leave(target: PrefetchTarget): void {
+  leave(target: PrefetchTarget | RecordTarget): void {
     if (this.#lease?.target === target && !this.#lease.handedOff)
       this.#releaseLease();
   }
 
   /** The link to `target` was followed in this tab: its screen will adopt the read. */
-  follow(target: PrefetchTarget, deadline = Date.now() + HANDOFF_MS): void {
+  follow(
+    target: PrefetchTarget | RecordTarget,
+    deadline = Date.now() + HANDOFF_MS,
+  ): void {
     const lease = this.#lease;
     if (lease?.target !== target || lease.handedOff) return;
     lease.handedOff = true;
@@ -137,6 +168,17 @@ export class NavigationPrefetch {
       () => this.#releaseLease(lease),
       Math.max(0, deadline - Date.now()),
     );
+  }
+
+  // The session that may warm `screen`'s reads now, which also becomes the
+  // principal the warmed entries are read for.
+  #readerFor(screen: PrefetchTarget): Me | undefined {
+    const me = this.#currentSession();
+    if (!me || !readsTarget(me, screen)) return undefined;
+    if (document.visibilityState !== "visible" || !onlineManager.isOnline())
+      return undefined;
+    this.#principal = principalOf(me);
+    return me;
   }
 
   // A session snapshot that is answered, current and not being re-read. A
@@ -200,26 +242,60 @@ export class NavigationPrefetch {
     },
     onData?: (data: Data) => void,
   ): Lease | undefined {
-    const cache = this.#client.getQueryCache();
-    const held = cache.find({ queryKey, exact: true });
-    if (
-      held?.state.data !== undefined ||
-      held?.state.fetchStatus === "fetching"
-    )
-      return undefined;
+    if (this.#occupied(queryKey)) return undefined;
     this.#releaseLease();
     const lease: Lease = { target, handedOff: false, release: () => {} };
     this.#lease = lease;
-    lease.release = observer.subscribe((result) => {
-      if (result.fetchStatus !== "idle" || result.status === "pending") return;
-      // A lease already replaced or left settles without starting the next read.
-      const current = this.#lease === lease;
-      this.#releaseLease(lease);
-      if (current && result.status === "success") onData?.(result.data);
-    });
-    const query = cache.find({ queryKey, exact: true });
-    if (query) this.#owned.add(query);
+    lease.release =
+      this.#hold(queryKey, observer, (result) => {
+        // A lease already replaced or left settles without starting the next read.
+        const current = this.#lease === lease;
+        this.#releaseLease(lease);
+        if (current && result.status === "success") onData?.(result.data);
+      }) ?? (() => {});
     return lease;
+  }
+
+  // One speculative observer for one read, let go once the read answers.
+  #holdRead<Data, Key extends QueryKey>(
+    options: QueryObserverOptions<Data, Error, Data, Data, Key>,
+  ): (() => void) | undefined {
+    let release: (() => void) | undefined;
+    release = this.#hold(
+      options.queryKey,
+      new QueryObserver(this.#client, { ...options, ...SPECULATIVE }),
+      () => release?.(),
+    );
+    return release;
+  }
+
+  // Whether the cache already holds or is reading the entry.
+  #occupied(queryKey: QueryKey): boolean {
+    const held = this.#client.getQueryCache().find({ queryKey, exact: true });
+    return (
+      held?.state.data !== undefined || held?.state.fetchStatus === "fetching"
+    );
+  }
+
+  // Subscribes one observer to an entry the cache lacks and owns that entry,
+  // calling onSettled once its read answers. Undefined when the entry is held.
+  #hold<Data>(
+    queryKey: QueryKey,
+    observer: {
+      subscribe: (
+        listener: (result: QueryObserverResult<Data>) => void,
+      ) => () => void;
+    },
+    onSettled: (result: QueryObserverResult<Data>) => void,
+  ): (() => void) | undefined {
+    if (this.#occupied(queryKey)) return undefined;
+    const release = observer.subscribe((result) => {
+      if (result.fetchStatus !== "idle" || result.status === "pending") return;
+      onSettled(result);
+    });
+    const query = this.#client.getQueryCache().find({ queryKey, exact: true });
+    if (query) this.#owned.add(query);
+    return release;
   }
 
   #releaseLease(lease = this.#lease): void {

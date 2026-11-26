@@ -1,23 +1,16 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { type QueryClient, useQueryClient } from "@tanstack/react-query";
+import { useQueryClient } from "@tanstack/react-query";
 import { useEffect } from "react";
-import { contact360Query, contactQuery } from "../lib/contact.queries";
-import { latestInboundQuery } from "../lib/latestinbound.queries";
+import { opensElsewhere } from "../lib/linkclick";
 import { parseHash } from "../lib/router";
+import { contactTarget, navigationPrefetch } from "./navigation-prefetch";
 import { opensReservedPage } from "./reservedpages";
 
 // A pointer that rests this long on a link is heading for it; one passing over
 // a list on its way elsewhere starts nothing.
 export const HOVER_INTENT_MS = 80;
-
-/** The reads a contact's page waits on before it draws. */
-export function prefetchContactPage(client: QueryClient, id: string): void {
-  void client.prefetchQuery(contactQuery(id));
-  void client.prefetchQuery(contact360Query(id));
-  void client.prefetchQuery(latestInboundQuery("contact", id));
-}
 
 /** The contact whose page a link opens, unless that page is already open. */
 export function contactOpenedBy(
@@ -34,44 +27,74 @@ export function contactOpenedBy(
     : route.id;
 }
 
-function linkOf(event: Event): HTMLAnchorElement | undefined {
+function contactLinkOf(event: Event): string | undefined {
   const target = event.target;
   if (!(target instanceof Element)) return undefined;
   const link = target.closest("a[href]");
-  return link instanceof HTMLAnchorElement ? link : undefined;
+  return link instanceof HTMLAnchorElement
+    ? contactOpenedBy(link, globalThis.location.hash)
+    : undefined;
 }
 
 /**
- * Starts a record page's reads when the reader points at, presses or tabs to a
- * link to it, from any list, search result or mention. The page then opens on
- * reads that are already in flight or answered, instead of starting them.
+ * Warms a contact page's reads from any link to it. A resting pointer, a press
+ * or a focus starts them; leaving before the click lets them go.
  */
 export function useRecordPrefetch(): void {
   const client = useQueryClient();
   useEffect(() => {
+    const prefetch = navigationPrefetch(client);
     let pending: number | undefined;
-    const start = (link: HTMLAnchorElement) => {
-      const id = contactOpenedBy(link, globalThis.location.hash);
-      if (id) prefetchContactPage(client, id);
-    };
-    const onIntent = (event: Event) => {
+    let hovered: string | undefined;
+    const leaveHovered = () => {
       window.clearTimeout(pending);
-      const link = linkOf(event);
-      if (link) pending = window.setTimeout(() => start(link), HOVER_INTENT_MS);
+      if (hovered) prefetch.leave(contactTarget(hovered));
+      hovered = undefined;
     };
-    const onPress = (event: Event) => {
+    const onOver = (event: PointerEvent) => {
+      const id = contactLinkOf(event);
+      if (id === hovered) return;
+      leaveHovered();
+      if (!id || event.pointerType === "touch" || event.buttons !== 0) return;
+      hovered = id;
+      pending = window.setTimeout(
+        () => prefetch.intendContact(id),
+        HOVER_INTENT_MS,
+      );
+    };
+    const onPress = (event: PointerEvent) => {
+      const id = contactLinkOf(event);
+      if (!id || event.button !== 0) return;
       window.clearTimeout(pending);
-      const link = linkOf(event);
-      if (link) start(link);
+      prefetch.intendContact(id);
     };
-    document.addEventListener("pointerover", onIntent);
-    document.addEventListener("focusin", onIntent);
+    const onFocus = (event: FocusEvent) => {
+      const id = contactLinkOf(event);
+      if (id && event.target instanceof Element) {
+        if (event.target.matches(":focus-visible")) prefetch.intendContact(id);
+      }
+    };
+    const onBlur = (event: FocusEvent) => {
+      const id = contactLinkOf(event);
+      if (id && id !== hovered) prefetch.leave(contactTarget(id));
+    };
+    const onClick = (event: MouseEvent) => {
+      const id = contactLinkOf(event);
+      if (id && event.button === 0 && !opensElsewhere(event))
+        prefetch.follow(contactTarget(id));
+    };
+    document.addEventListener("pointerover", onOver);
     document.addEventListener("pointerdown", onPress);
+    document.addEventListener("focusin", onFocus);
+    document.addEventListener("focusout", onBlur);
+    document.addEventListener("click", onClick);
     return () => {
-      window.clearTimeout(pending);
-      document.removeEventListener("pointerover", onIntent);
-      document.removeEventListener("focusin", onIntent);
+      leaveHovered();
+      document.removeEventListener("pointerover", onOver);
       document.removeEventListener("pointerdown", onPress);
+      document.removeEventListener("focusin", onFocus);
+      document.removeEventListener("focusout", onBlur);
+      document.removeEventListener("click", onClick);
     };
   }, [client]);
 }
