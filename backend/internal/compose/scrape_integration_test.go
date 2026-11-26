@@ -216,6 +216,11 @@ func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
 	if source != "site_read" {
 		t.Fatalf("evidence source = %q, want site_read", source)
 	}
+	// The apply is the scrape agent's, acting for the admin who approved it.
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'company' AND entity_id = $1
+		AND actor_type = 'agent' AND actor_id = 'agent:scrape' AND on_behalf_of = $2`, companyID, e.Rep2); n != 1 {
+		t.Fatalf("%d company updates by agent:scrape for the decider, want 1", n)
+	}
 
 	// Exactly-once: the approval is consumed and a re-decide is refused.
 	var already *approvals.AlreadyDecidedError

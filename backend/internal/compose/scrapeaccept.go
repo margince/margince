@@ -30,20 +30,20 @@ func scrapeAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals
 		if err != nil {
 			return err
 		}
-		// The write executes as the scrape executor: captured_by = agent:scrape
-		// on behalf of the human whose approval released it — that human is on
-		// the decision's own audit row, this one carries the machine
-		// provenance the 360 renders as "read from the company's site".
+		// The write executes as the scrape agent acting for the human whose
+		// approval released it, under that human's grants: captured_by =
+		// agent:scrape. That human is on the decision's own audit row, and
+		// this one carries the machine provenance the 360 renders as "read
+		// from the company's site".
 		decider, ok := principal.Actor(ctx)
 		if !ok {
 			return errors.New("compose: enrich effect without a deciding principal")
 		}
-		execCtx := principal.WithActor(ctx, principal.Principal{
-			Type:       principal.PrincipalSystem,
-			ID:         "agent:scrape",
-			UserID:     decider.UserID,
-			OnBehalfOf: decider.UserID,
-		})
+		agent, err := agentPrincipalFor(decider, "agent:scrape")
+		if err != nil {
+			return err
+		}
+		execCtx := principal.WithActor(ctx, agent)
 		// The single-use redemption IS the idempotency claim: whoever consumes
 		// the approval executes; anyone else finds it consumed. Redeemed in the
 		// write's OWN transaction, so a failed apply leaves the approval
