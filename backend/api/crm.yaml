@@ -62802,6 +62802,18 @@ components:
         entity_name:
           type: [string, 'null']
           description: The name of the suggested record, for the screen. Absent on a decision's answer.
+        deal_amount_minor:
+          type: [integer, 'null']
+          format: int64
+          description: For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+        deal_currency:
+          type: [string, 'null']
+          pattern: '^[A-Z]{3}$'
+          description: The currency of `deal_amount_minor`, withheld with it.
+        deal_expected_close_date:
+          type: [string, 'null']
+          format: date
+          description: For a suggested deal, when it is expected to close. Absent on a decision's answer.
         unit:
           type: [string, 'null']
           description: The extension that proposed it. Null when Margince itself asks which deal a mail is about.

@@ -22,9 +22,14 @@ Nothing is filed on its own.
 | **File it there** | Files the message under the record the row names. |
 | **Not there** | Declines the suggestion. The message stays where it is, and the same record is not suggested for it again. |
 
-When Margince asked which deal an email is about, each open deal that fits is one row. **File it there** files the
-email and the rest of its conversation on that deal, and the other rows of the question leave the panel. **Not there**
-also tells Margince the conversation is not about that deal, so it never files it there by itself.
+When Margince asked which deal an email is about, each open deal that fits is one row. A deal row shows the deal's
+value, if your role lets you see it, and its close date. **File it there** files the email and the rest of its
+conversation on that deal, and the other rows of the question leave the panel. **Not there** also tells Margince the
+conversation is not about that deal, so it never files it there by itself.
+
+The question also ends when an email of the conversation goes on a deal some other way. That is **Relink**, or Margince
+filing it by itself. A deal that closes while it waits leaves the panel. A merged deal is shown as the deal it was
+merged into.
 
 ## What decides what I see?
 

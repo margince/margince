@@ -114,17 +114,20 @@ func ProposeLinkSuggestionTx(ctx context.Context, tx pgx.Tx, in LinkSuggestionIn
 			return SuggestionExcluded, nil
 		}
 	}
+	// Units share one key per message and target; a core question has its own
+	// per colleague, so neither producer can swallow the other's row.
 	var id ids.UUID
 	var unit, forUser any
+	conflict := `(activity_id, entity_type, entity_id) WHERE unit IS NOT NULL`
 	if in.Unit != "" {
 		unit = in.Unit
 	} else {
-		forUser = in.ForUser
+		forUser, conflict = in.ForUser, `(activity_id, entity_type, entity_id, for_user) WHERE for_user IS NOT NULL`
 	}
 	err = tx.QueryRow(ctx, `
 		INSERT INTO activity_link_suggestion (activity_id, entity_type, entity_id, unit, for_user, reason, score, captured_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
-		ON CONFLICT (activity_id, entity_type, entity_id) DO NOTHING
+		ON CONFLICT `+conflict+` DO NOTHING
 		RETURNING id`,
 		in.ActivityID, in.EntityType, in.EntityID, unit, forUser, in.Reason, in.Score, capturedBy).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
@@ -313,14 +316,18 @@ func decidable(ctx, quiet context.Context, tx pgx.Tx, suggestion crmcontracts.Li
 		return suggestion, false, err
 	}
 	suggestion.EntityName = &name
-	return suggestion, true, nil
+	if suggestion.EntityType == linkEntityDeal {
+		err = withDealFacts(ctx, tx, &suggestion)
+	}
+	return suggestion, err == nil, err
 }
 
 // mayDecide is the one bar for accepting or rejecting a suggestion, asked by
 // the decision and by the queue read. The caller updates messages, may change
 // this one, and may read the target the answer names. The write scope is the
 // relink's, so a reject cannot decide a message an accept would refuse. A
-// target they cannot read is not found.
+// target they cannot read is not found, and so is a deal Margince asked about
+// that is no longer open.
 func mayDecide(ctx context.Context, tx pgx.Tx, suggestion crmcontracts.LinkSuggestion) error {
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
 		return err
@@ -335,7 +342,14 @@ func mayDecide(ctx context.Context, tx pgx.Tx, suggestion crmcontracts.LinkSugge
 	if !seen {
 		return apperrors.ErrNotFound
 	}
-	return nil
+	if suggestion.Unit != nil || suggestion.EntityType != linkEntityDeal {
+		return nil
+	}
+	open, err := dealOpen(ctx, tx, ids.UUID(suggestion.EntityId))
+	if err != nil || open {
+		return err
+	}
+	return apperrors.ErrNotFound
 }
 
 // pendingSuggestions reads one page of the pending suggestions whose message
@@ -428,12 +442,23 @@ func (s *Store) decideLinkSuggestion(ctx context.Context, id ids.UUID, decision 
 		if err := s.applyDecision(ctx, tx, activity, out, decision); err != nil {
 			return err
 		}
-		if _, err := tx.Exec(ctx, `
-			UPDATE activity_link_suggestion SET status = $2, decided_by = $3, decided_at = now() WHERE id = $1`,
-			id, decision, capturedBy); err != nil {
+		// The filing an accept makes may already have settled this row with
+		// the rest of its question; that settlement wrote its own record.
+		var status string
+		var decided bool
+		err := tx.QueryRow(ctx, `
+			WITH decided AS (UPDATE activity_link_suggestion SET status = $2, decided_by = $3, decided_at = now()
+			                  WHERE id = $1 AND status = 'pending' RETURNING status)
+			SELECT coalesce((SELECT status FROM decided), (SELECT status FROM activity_link_suggestion WHERE id = $1)),
+			       EXISTS (SELECT 1 FROM decided)`,
+			id, decision, capturedBy).Scan(&status, &decided)
+		if err != nil {
 			return fmt.Errorf("activities: deciding a link suggestion: %w", err)
 		}
-		out.Status = crmcontracts.LinkSuggestionStatus(decision)
+		out.Status = crmcontracts.LinkSuggestionStatus(status)
+		if !decided {
+			return nil
+		}
 		return recordLinkSuggestion(ctx, tx, activity, id, decision, string(out.EntityType), ids.UUID(out.EntityId))
 	})
 	return out, err
@@ -454,20 +479,12 @@ func (s *Store) applyDecision(ctx context.Context, tx pgx.Tx, activity ids.Activ
 		}
 		return declineAcrossConversation(ctx, tx, activity, []ids.UUID{deal}, &crmcontracts.ActivityDealDecline{})
 	}
-	wrote, err := RelinkActivityInTx(ctx, tx, activity, RelinkActivityInput{
-		EntityType: string(suggestion.EntityType), EntityID: deal,
-	})
-	if err != nil {
+	onDeal := suggestion.EntityType == linkEntityDeal
+	if _, err := RelinkActivityInTx(ctx, tx, activity, RelinkActivityInput{
+		EntityType: string(suggestion.EntityType), EntityID: deal, answers: onDeal,
+	}); err != nil || !onDeal {
 		return err
 	}
-	if !wrote || suggestion.EntityType != linkEntityDeal {
-		return nil
-	}
-	// A core question being accepted is itself an open question of the
-	// conversation; a unit's suggestion answers only the ones already open.
-	answered := ids.Nil
-	if suggestion.Unit == nil {
-		answered = ids.UUID(suggestion.Id)
-	}
-	return s.answerWhichDealTx(ctx, tx, activity, deal, answered)
+	// Accepting the deal the mail is already on answers the question too.
+	return answerWhichDealTx(ctx, tx, activity, deal)
 }

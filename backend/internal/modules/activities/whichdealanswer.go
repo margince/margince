@@ -43,8 +43,17 @@ func AskWhichDealTx(ctx context.Context, tx pgx.Tx, q WhichDealQuestion) error {
 	if len(q.Deals) == 0 {
 		return nil
 	}
+	// The lock holds the read and the proposals as one step, so two mails of
+	// one conversation captured at once ask the seat once.
 	var asked bool
 	err := tx.QueryRow(ctx, `
+		SELECT pg_advisory_xact_lock(hashtextextended('margince:which-deal:' || $2::text || ':'
+		       || coalesce(nullif(mail.thread_key, ''), mail.id::text), 0)) IS NULL
+		  FROM activity mail WHERE mail.id = $1`, q.Mail, q.Seat).Scan(&asked)
+	if err != nil {
+		return fmt.Errorf("activities: holding the deal question of a conversation: %w", err)
+	}
+	err = tx.QueryRow(ctx, `
 		SELECT EXISTS (SELECT 1 FROM activity_link_suggestion s
 		  JOIN activity asked ON asked.id = s.activity_id
 		  JOIN activity mail ON mail.id = $1
@@ -89,24 +98,29 @@ func askedOfCaller(ctx context.Context, alias string, arg func(any) int) string 
 	return fmt.Sprintf("(%s.for_user IS NULL OR %s.for_user = $%d)", alias, alias, arg(reader))
 }
 
-// answerWhichDealTx is a colleague's answer to the deal question. Filing one mail
-// of a questioned conversation on an open deal files the rest of it there
-// too, and settles the question. It runs only for a human with an open
-// question in the conversation. A sibling already on a deal, or one they may
-// not change, keeps its filing; each other goes through the guarded row write.
-// answered is the suggestion the caller is deciding, which settling skips.
-func (s *Store) answerWhichDealTx(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal, answered ids.UUID) error {
+// answerWhichDealTx is a colleague's answer to the deal question: filing one
+// mail of a questioned conversation on an open deal. A human asked in the
+// conversation files the rest of it there too. A sibling already on a deal, or
+// one they may not change, keeps its filing. Then every question of the
+// conversation is settled, whoever filed.
+func answerWhichDealTx(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) error {
+	if err := fileQuestionedConversation(ctx, tx, mail, deal); err != nil {
+		return err
+	}
+	return settleWhichDealQuestions(ctx, tx, mail, deal)
+}
+
+func fileQuestionedConversation(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) error {
 	actor, ok := principal.Actor(ctx)
 	if !ok || actor.Type != principal.PrincipalHuman || !auth.ReadGranted(ctx, linkEntityDeal) {
 		return nil
 	}
-	questions, err := openWhichDealQuestions(ctx, tx, mail, answered)
-	if err != nil || (len(questions) == 0 && answered.IsZero()) {
+	questions, err := openWhichDealQuestions(ctx, tx, mail, true)
+	if err != nil || len(questions) == 0 {
 		return err
 	}
-	var open bool
-	if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal d
-		 WHERE d.id = $1 AND d.status = 'open' AND d.archived_at IS NULL)`, deal).Scan(&open); err != nil || !open {
+	open, err := dealOpen(ctx, tx, deal)
+	if err != nil || !open {
 		return err
 	}
 	siblings, err := unfiledConversationSiblings(ctx, tx, mail)
@@ -121,8 +135,35 @@ func (s *Store) answerWhichDealTx(ctx context.Context, tx pgx.Tx, mail ids.Activ
 			return err
 		}
 	}
-	_, err = settleWhichDealQuestions(ctx, tx, questions, &deal)
+	return nil
+}
+
+// settleOnFiling settles the question after a deal link a relink wrote, unless
+// the door answers the question itself.
+func settleOnFiling(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, in RelinkActivityInput) error {
+	if in.EntityType != linkEntityDeal || in.answers {
+		return nil
+	}
+	return settleWhichDealQuestions(ctx, tx, mail, in.EntityID)
+}
+
+// settleWhichDealQuestions closes every pending question of mail's
+// conversation once a mail of it is on deal.
+func settleWhichDealQuestions(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) error {
+	questions, err := openWhichDealQuestions(ctx, tx, mail, false)
+	if err != nil {
+		return err
+	}
+	_, err = closeWhichDealQuestions(ctx, tx, questions, &deal)
 	return err
+}
+
+// dealOpen reports whether the deal is open and live.
+func dealOpen(ctx context.Context, tx pgx.Tx, deal ids.UUID) (bool, error) {
+	var open bool
+	err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal d
+		 WHERE d.id = $1 AND d.status = 'open' AND d.archived_at IS NULL)`, deal).Scan(&open)
+	return open, err
 }
 
 // provenConversationSQL joins mail to the conversation of anchor. Only rows
@@ -131,21 +172,25 @@ func (s *Store) answerWhichDealTx(ctx context.Context, tx pgx.Tx, mail ids.Activ
 // References root, so anything else may be a spoof.
 var provenConversationSQL = `(` + correspondence.ConversationSQL("mail", "anchor") + ` AND ` + correspondence.ProvenSQL("mail") + `)`
 
-// whichDealQuestion is one pending deal Margince suggested to the caller.
+// whichDealQuestion is one pending deal Margince suggested.
 type whichDealQuestion struct {
 	id, mail, deal ids.UUID
 }
 
-// openWhichDealQuestions is the pending deal questions of mail's conversation
-// asked of the caller, on messages the caller may change, other than except.
-func openWhichDealQuestions(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, except ids.UUID) ([]whichDealQuestion, error) {
-	args := []any{mail, except}
-	asked := askedOfCaller(ctx, "s", func(v any) int { args = append(args, v); return len(args) })
+// openWhichDealQuestions is the pending deal questions of mail's
+// conversation. callerOnly keeps those asked of the caller, on messages they
+// may change.
+func openWhichDealQuestions(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, callerOnly bool) ([]whichDealQuestion, error) {
+	args := []any{mail}
+	asked := sqlTrue
+	if callerOnly {
+		asked = askedOfCaller(ctx, "s", func(v any) int { args = append(args, v); return len(args) })
+	}
 	rows, err := tx.Query(ctx, `SELECT s.id, s.activity_id, s.entity_id FROM activity anchor
 		  JOIN activity mail ON (mail.id = anchor.id OR `+provenConversationSQL+`)
 		  JOIN activity_link_suggestion s ON s.activity_id = mail.id AND s.unit IS NULL
 		   AND s.entity_type = 'deal' AND s.status = 'pending'
-		 WHERE anchor.id = $1 AND mail.restricted_at IS NULL AND s.id <> $2 AND `+asked+`
+		 WHERE anchor.id = $1 AND mail.restricted_at IS NULL AND `+asked+`
 		 ORDER BY s.id`, args...)
 	if err != nil {
 		return nil, fmt.Errorf("activities: reading the deal question's conversation: %w", err)
@@ -154,8 +199,8 @@ func openWhichDealQuestions(ctx context.Context, tx pgx.Tx, mail ids.ActivityID,
 		var q whichDealQuestion
 		return q, r.Scan(&q.id, &q.mail, &q.deal)
 	})
-	if err != nil || len(questions) == 0 {
-		return nil, err
+	if err != nil || len(questions) == 0 || !callerOnly {
+		return questions, err
 	}
 	messages := make([]ids.UUID, len(questions))
 	for i, q := range questions {
@@ -183,11 +228,11 @@ func unfiledConversationSiblings(ctx context.Context, tx pgx.Tx, mail ids.Activi
 		 ORDER BY mail.id`, mail)
 }
 
-// settleWhichDealQuestions closes the questions and answers on how many
+// closeWhichDealQuestions closes the questions and answers on how many
 // messages it closed one. A suggestion of the chosen deal whose message is now
 // on it is accepted; every other one is rejected. Each change has its audit
 // row and event, as a decision in the queue does.
-func settleWhichDealQuestions(ctx context.Context, tx pgx.Tx, questions []whichDealQuestion, chosen *ids.UUID) (int, error) {
+func closeWhichDealQuestions(ctx context.Context, tx pgx.Tx, questions []whichDealQuestion, chosen *ids.UUID) (int, error) {
 	decidedBy, err := storekit.CapturedBy(ctx)
 	if err != nil {
 		return 0, err

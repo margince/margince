@@ -8,6 +8,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 
+import { formatMoneyWhole } from "../../format/format";
 import { en } from "../../i18n/en";
 import { extensionTitle } from "../../lib/extensions";
 import {
@@ -87,6 +88,18 @@ describe("LinkSuggestionsPanel", () => {
         `${en["linkSuggestions.byMargince"]}: Which deal is this about?`,
       ),
     ).toBeInTheDocument();
+  });
+
+  it("shows a suggested deal's value only when the reader may see it", async () => {
+    const value = formatMoneyWhole(4_200_000, "EUR", "en");
+    mount([
+      { ...suggestion, deal_amount_minor: 4_200_000, deal_currency: "EUR" },
+    ]);
+    expect(await screen.findByText(value)).toBeInTheDocument();
+    cleanup();
+    mount([{ ...suggestion, deal_amount_minor: null, deal_currency: null }]);
+    await screen.findByText(/Which project is this\? to Renewal \(deal\)/);
+    expect(screen.queryByText(value)).toBeNull();
   });
 
   it("tells a reader without access apart from a failed read", async () => {

@@ -66,7 +66,7 @@ func (s *Store) DeclineDeal(ctx context.Context, id ids.ActivityID, deal *ids.UU
 // every one of them is rejected. A deal the caller cannot see is neither
 // declined nor rejected.
 func declineEveryOfferedDeal(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, out *crmcontracts.ActivityDealDecline) error {
-	questions, err := openWhichDealQuestions(ctx, tx, mail, ids.Nil)
+	questions, err := openWhichDealQuestions(ctx, tx, mail, true)
 	if err != nil {
 		return err
 	}
@@ -92,7 +92,7 @@ func declineEveryOfferedDeal(ctx context.Context, tx pgx.Tx, mail ids.ActivityID
 	if err := declineAcrossConversation(ctx, tx, mail, deals, out); err != nil {
 		return err
 	}
-	out.QuestionsClosed, err = settleWhichDealQuestions(ctx, tx, seen, nil)
+	out.QuestionsClosed, err = closeWhichDealQuestions(ctx, tx, seen, nil)
 	return err
 }
 

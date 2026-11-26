@@ -9,8 +9,8 @@ package gates
 // queue, through activities.AskWhichDealTx, where only the colleague asked sees
 // it. Any producer of the question spells one of its marks: the question's
 // words (the systemtext key) or the source stored on old question tasks. The
-// census finds every function that does, and the one allowed producer must ask
-// through the queue. A second producer, a task writer above all, fails here.
+// census finds every function that does or that calls AskWhichDealTx. The
+// one allowed producer must ask through the queue, and any other fails here.
 
 import (
 	"go/ast"
@@ -34,7 +34,8 @@ const dealQuestionProducer = "compose/capturewhichdeal.go:Ask"
 var dealQuestionMarks = []string{"capture.which_deal_subject", provenance.WhichDealSource}
 
 // scanDealQuestionProducers answers each function under root that spells a
-// mark, and whether it calls AskWhichDealTx. planted adds files a test writes.
+// mark or calls AskWhichDealTx, and whether it calls it. planted adds files a
+// test writes.
 func scanDealQuestionProducers(t *testing.T, root string, planted map[string]string) map[string]bool {
 	t.Helper()
 	found := map[string]bool{}
@@ -46,8 +47,12 @@ func scanDealQuestionProducers(t *testing.T, root string, planted map[string]str
 		}
 		for _, decl := range file.Decls {
 			fn, ok := decl.(*ast.FuncDecl)
-			if ok && fn.Body != nil && spellsDealQuestion(fn.Body) {
-				found[filepath.ToSlash(rel)+":"+fn.Name.Name] = firstCall(fn, callsNamed("AskWhichDealTx")) >= 0
+			if !ok || fn.Body == nil {
+				continue
+			}
+			asks := firstCall(fn, callsNamed("AskWhichDealTx")) >= 0
+			if asks || spellsDealQuestion(fn.Body) {
+				found[filepath.ToSlash(rel)+":"+fn.Name.Name] = asks
 			}
 		}
 	}
@@ -119,8 +124,8 @@ func TestTheDealQuestionHasOneProducerAndItIsTheQueue(t *testing.T) {
 	}
 }
 
-// A task writer that raises the question, and a producer that stops asking
-// through the queue, both fail.
+// A task writer that raises the question, a second caller of the queue's
+// door, and a producer that stops asking through the queue all fail.
 func TestTheDealQuestionCensusCatchesASecondProducer(t *testing.T) {
 	t.Parallel()
 	planted := map[string]string{
@@ -128,12 +133,15 @@ func TestTheDealQuestionCensusCatchesASecondProducer(t *testing.T) {
 func raise() { write(provenance.WhichDealSource) }`,
 		"modules/planted/copy.go": `package planted
 func words() string { return systemtext.Copy("capture.which_deal_subject", "en") }`,
+		"compose/refileasker.go": `package compose
+func ask(tx pgx.Tx) error { return activities.AskWhichDealTx(ctx, tx, q) }`,
 		"compose/capturewhichdeal.go": `package compose
 func (a whichDealAsker) Ask() error { return tasks.LogActivityTx("which_deal") }`,
 	}
 	faults := dealQuestionFaults(scanDealQuestionProducers(t, t.TempDir(), planted))
 	want := []string{
 		dealQuestionProducer + " raises the deal question without activities.AskWhichDealTx",
+		"compose/refileasker.go:ask raises the deal question outside the link suggestion queue",
 		"modules/planted/copy.go:words raises the deal question outside the link suggestion queue",
 		"modules/planted/question.go:raise raises the deal question outside the link suggestion queue",
 	}

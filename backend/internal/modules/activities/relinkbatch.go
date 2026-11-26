@@ -72,12 +72,16 @@ type RelinkActivityInput struct {
 	evidence map[string]any
 	// relevance is the classifier's mark on a new deal link; empty for none.
 	relevance string
+	// answers says the door answers the deal question itself after the write;
+	// otherwise a deal link the write lands settles the question (settleOnFiling).
+	answers bool
 }
 
 // RelinkActivity is the single-relink door: admits the request, then commits
 // the same guarded write RelinkActivityInTx applies inside the caller's own
 // transaction, in one of its own.
 func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in RelinkActivityInput) (crmcontracts.Activity, error) {
+	in.answers = in.EntityType == linkEntityDeal
 	column, err := admitRelink(ctx, in)
 	if err != nil {
 		return crmcontracts.Activity{}, err
@@ -90,7 +94,7 @@ func (s *Store) RelinkActivity(ctx context.Context, id ids.ActivityID, in Relink
 		}
 		// A colleague filing a questioned mail on a deal answers the question.
 		if wrote && in.EntityType == linkEntityDeal {
-			if err := s.answerWhichDealTx(ctx, tx, id, in.EntityID, ids.Nil); err != nil {
+			if err := answerWhichDealTx(ctx, tx, id, in.EntityID); err != nil {
 				return err
 			}
 		}
@@ -222,7 +226,10 @@ func relinkActivityRow(ctx context.Context, tx pgx.Tx, id ids.ActivityID, in Rel
 	if tag.RowsAffected() == 0 {
 		return false, held, confirmDealByHand(ctx, tx, id, in, held)
 	}
-	return true, held, finalizeRelinkedActivity(ctx, tx, id, in, displaced)
+	if err := finalizeRelinkedActivity(ctx, tx, id, in, displaced); err != nil {
+		return true, held, err
+	}
+	return true, held, settleOnFiling(ctx, tx, id, in)
 }
 
 // finalizeRelinkedActivity is the bookkeeping relinkActivityRow's own write
@@ -340,6 +347,7 @@ func relinkMeetsItsPin(ctx context.Context, tx pgx.Tx, id ids.ActivityID, ifVers
 // caller cannot see or cannot write is LEFT, not refused. The caller never named
 // it, so there is nothing to hide and no 403 to answer. The count says how many moved.
 func (s *Store) RelinkThread(ctx context.Context, anchor ids.ActivityID, in RelinkActivityInput) (RelinkBatchResult, error) {
+	in.answers = in.EntityType == linkEntityDeal
 	if anchor.IsZero() {
 		return RelinkBatchResult{}, httperr.Validation("activity_id", codeRequired,
 			"activity_id names a message of the conversation to move; it cannot be blank")
@@ -423,6 +431,7 @@ func liveConversationMembers(ctx context.Context, tx pgx.Tx, anchor ids.Activity
 // rolls the whole set back, because a caller who named twelve rows and had
 // seven of them move has no way to tell which seven.
 func (s *Store) RelinkActivities(ctx context.Context, activityIDs []ids.UUID, in RelinkActivityInput) (RelinkBatchResult, error) {
+	in.answers = in.EntityType == linkEntityDeal
 	if err := validateRelinkCount(len(activityIDs)); err != nil {
 		return RelinkBatchResult{}, err
 	}

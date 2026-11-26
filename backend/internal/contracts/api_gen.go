@@ -58154,9 +58154,18 @@ type LinkSuggestion struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 
 	// ActivitySubject The subject of the message. Empty when the message has none.
-	ActivitySubject *string            `json:"activity_subject,omitempty"`
-	CreatedAt       time.Time          `json:"created_at"`
-	EntityId        openapi_types.UUID `json:"entity_id"`
+	ActivitySubject *string   `json:"activity_subject,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
+
+	// DealAmountMinor For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+	DealAmountMinor *int64 `json:"deal_amount_minor,omitempty"`
+
+	// DealCurrency The currency of `deal_amount_minor`, withheld with it.
+	DealCurrency *string `json:"deal_currency,omitempty"`
+
+	// DealExpectedCloseDate For a suggested deal, when it is expected to close. Absent on a decision's answer.
+	DealExpectedCloseDate *openapi_types.Date `json:"deal_expected_close_date,omitempty"`
+	EntityId              openapi_types.UUID  `json:"entity_id"`
 
 	// EntityName The name of the suggested record, for the screen. Absent on a decision's answer.
 	EntityName *string                  `json:"entity_name,omitempty"`
