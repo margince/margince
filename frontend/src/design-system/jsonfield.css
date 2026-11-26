@@ -3,7 +3,7 @@
 .json-field {
   display: grid;
   grid-template-columns: auto 1fr;
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-sm);
   background: var(--bgInset);
   overflow: hidden;
@@ -15,10 +15,21 @@
   max-height: 300px;
 }
 .json-field:focus-within {
-  border-color: var(--accent);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
-.json-field-invalid {
+/* Keyed on the textarea's aria-invalid, as .field-shell is. Later than the
+   focus rule, so a refused field keeps its danger edge in focus. */
+.json-field:has([aria-invalid="true"]) {
   border-color: var(--danger);
+}
+.json-field:has([aria-invalid="true"]):focus-within {
+  box-shadow: var(--focus-field-danger);
+}
+/* As .field-shell dims: 1.4.11 exempts a field nobody may use. */
+.json-field:has(:disabled) {
+  background: var(--bgInset);
+  border-color: var(--borderStrong);
 }
 .json-field-gutter {
   display: flex;
@@ -39,7 +50,7 @@
   color: var(--dangerText);
   font-weight: var(--fontWeightMedium);
 }
-.json-field-text {
+.json-field .json-field-text {
   min-height: 12lh;
   font-size: inherit;
   line-height: inherit;

@@ -571,7 +571,7 @@ export const Text: Story = {
 export const Borders: Story = {
   render: () => (
     <Rows
-      intro="Choose a hairline by its job. A divider between content takes --borderStrong, where any visible line will do. A control's boundary takes --borderControl, held to 3:1 against its ground because it is often the only thing telling a reader that a rectangle accepts typing."
+      intro="Choose a hairline by its job. A divider between content takes --borderStrong, where any visible line will do. A control's boundary takes --borderControl, held to 3:1 against its ground because it is often the only thing telling a reader where a switch, a checkbox or a field begins."
       entries={BORDERS}
     />
   ),
