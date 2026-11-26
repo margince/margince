@@ -8,7 +8,7 @@ SET LOCAL lock_timeout = '3s';
 DELETE FROM knowledge_document WHERE managed_source = 'gdocs';
 DELETE FROM knowledge_corpus WHERE managed_source = 'gdocs';
 
-DROP INDEX knowledge_document_one_per_external_id;
+DROP INDEX IF EXISTS knowledge_document_one_per_external_id;
 ALTER TABLE knowledge_document DROP CONSTRAINT knowledge_document_external_id_shape;
 
 ALTER TABLE knowledge_document DROP CONSTRAINT knowledge_document_managed_source_known;

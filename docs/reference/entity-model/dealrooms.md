@@ -208,6 +208,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `deal_room_invitation_attempt_no_check`: `CHECK ((attempt_no > 0))`
 - `deal_room_invitation_expires_after_creation`: `CHECK ((expires_at > created_at))`
 - `deal_room_invitation_token_hash_check`: `CHECK ((octet_length(token_hash) = 32))`
 - `uq_deal_room_invitation_attempt`: `UNIQUE (participant_id, attempt_no)`

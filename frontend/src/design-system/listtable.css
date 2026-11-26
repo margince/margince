@@ -174,11 +174,12 @@
   padding: 0 var(--space-3);
   min-block-size: var(--controlHeight);
   background: var(--bgField);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-full);
 }
 .lt-search:focus-within {
-  border-color: var(--accent);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
   color: var(--accentText);
 }
 
@@ -186,7 +187,7 @@
  * rather than the engine's: the app reset hands a form control the body FAMILY
  * and nothing else, which left this box at the browser's default size beside a
  * `.input` sized by the house. The shell around it owns the box. */
-.lt-search-input {
+.lt-search .lt-search-input {
   border: 0;
   outline: 0;
   font: inherit;
@@ -211,7 +212,6 @@
 .lt-tools input.input {
   width: auto;
   border-radius: var(--r-full);
-  border-color: var(--borderSubtle);
 }
 
 /* The toolbar's verbs carry a pill silhouette so the row reads as one kind of
@@ -612,7 +612,7 @@
   min-block-size: var(--inputHeight);
   padding: var(--inputPaddingY) var(--inputPaddingX);
   font: inherit;
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-sm);
   background: var(--bgPage);
   color: inherit;
@@ -621,8 +621,13 @@
   color: var(--textSecondary);
 }
 .lt-fsearch-input:focus {
-  outline: 0;
-  border-color: var(--accent);
+  outline: var(--focus-ring-forced);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
+}
+.lt-fsearch-input:disabled {
+  background: var(--bgInset);
+  border-color: var(--borderStrong);
 }
 
 /* ONE ENTRY, and it stands --controlHeight tall like every other option row in
@@ -1313,7 +1318,6 @@
  * trigger in the product. */
 .lt-perpage .select-control {
   background: var(--bgField);
-  border: 1px solid var(--borderStrong);
   border-radius: var(--r-sm);
   cursor: pointer;
 }
