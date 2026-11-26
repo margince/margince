@@ -256,8 +256,8 @@ func TestDraftOfferLinesStagesGroundedLinesAndDiscloses(t *testing.T) {
 	// offer_line_item's AI authorship is recorded (T7).
 	if n := e.WsCount(t,
 		`SELECT count(*) FROM audit_log WHERE entity_type = 'offer' AND entity_id = $1
-		 AND action = 'update' AND actor_type = 'system' AND actor_id = 'agent:offer-drafting'`,
-		offerID.UUID); n != 1 {
+		 AND action = 'update' AND actor_type = 'agent' AND actor_id = 'agent:offer-drafting' AND on_behalf_of = $2`,
+		offerID.UUID, e.Rep1); n != 1 {
 		t.Fatalf("staged-lines audit row does not carry the agent:offer-drafting provenance")
 	}
 }

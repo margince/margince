@@ -349,7 +349,6 @@ var agentJobsStillSystemTyped = gatekit.Waive(map[string]string{
 	"internal/compose/extractionaccept.go":            forAColleague,
 	"internal/compose/jobs_documentextract.go":        forAColleague,
 	"internal/compose/jobs_transcript.go":             forAColleague,
-	"internal/compose/offerdraft.go":                  forAColleague,
 	"internal/compose/onboardingsitereadtransport.go": forAColleague,
 	"internal/compose/commitmenttask.go":              forNoOne,
 	"internal/compose/jobs_knowledgeingest.go":        forNoOne,
