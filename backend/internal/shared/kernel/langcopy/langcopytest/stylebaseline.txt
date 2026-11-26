@@ -139,7 +139,6 @@ vi.dash	"quá ít người liên hệ đang tương tác — thương vụ chỉ
 vi.dash	"Đã ghi nhận — lựa chọn của bạn đã nằm trong bản nháp. Trợ lý không trả lời ở lượt này, nên ở đây không còn gì để đọc thêm."
 vi.dash	"đã %d ngày không có tương tác nào được ghi nhận — thương vụ vẫn mở và không ai trao đổi"
 vi.dash	"“%s” — hãy chuẩn bị vì họ có thể nêu lại vấn đề này."
-vi.outsider-address	"Tệp này đã bị xóa hoặc bạn không còn quyền truy cập."
 vi.retired	"%d khách hàng tiềm năng đã quá hạn phản hồi"
 vi.retired	"Chọn một phễu để so sánh các giai đoạn."
 vi.retired	"Cuộc họp không được phân theo phễu; hãy chọn tất cả phễu."

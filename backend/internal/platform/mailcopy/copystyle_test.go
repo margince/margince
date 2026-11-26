@@ -93,7 +93,7 @@ func readerOf(field string) (langcopytest.Register, string) {
 }
 
 // leadingWords reports whether prefix is the whole field name or its first
-// capitalised words, so Room names RoomIntro and not a Roomy field.
+// capitalized words, so Room names RoomIntro and not a Roomy field.
 func leadingWords(prefix, field string) bool {
 	rest, found := strings.CutPrefix(field, prefix)
 	return found && (rest == "" || unicode.IsUpper(rune(rest[0])))

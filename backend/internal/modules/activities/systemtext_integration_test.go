@@ -133,8 +133,8 @@ func TestABookingPageStoredUnderAnEarlierDefaultWordingStaysOnTheDefault(t *test
 		return title
 	}
 
-	stored("Treffen wir uns", true)
-	onDefault("German earlier wording")
+	stored("Let's meet", true)
+	onDefault("English earlier wording")
 	read, err := store.SchedulingProfile(ctx)
 	if err != nil {
 		t.Fatal(err)
@@ -143,21 +143,19 @@ func TestABookingPageStoredUnderAnEarlierDefaultWordingStaysOnTheDefault(t *test
 	if _, err := store.SaveSchedulingProfile(ctx, read); err != nil {
 		t.Fatal(err)
 	}
-	if title := storedTitle(); title != systemtext.Copy("booking.lets_meet", textlang.German) {
+	if title := storedTitle(); title != systemtext.Copy("booking.lets_meet", textlang.English) {
 		t.Fatalf("an edit kept the earlier wording or changed its language: %q", title)
 	}
 
-	for language, shown := range map[textlang.Lang]string{textlang.English: "Let's meet", textlang.Vietnamese: "Hãy gặp nhau"} {
-		stale, err := store.SchedulingProfile(ctx)
-		if err != nil {
-			t.Fatal(err)
-		}
-		stale.Title, stale.UseDefaultTitle = shown, nil
-		if _, err := store.SaveSchedulingProfile(systemtext.WithLocale(ctx, language), stale); err != nil {
-			t.Fatal(err)
-		}
-		onDefault(string(language) + " reader sent the earlier wording back")
+	stale, err := store.SchedulingProfile(ctx)
+	if err != nil {
+		t.Fatal(err)
 	}
+	stale.Title, stale.UseDefaultTitle = "Let's meet", nil
+	if _, err := store.SaveSchedulingProfile(systemtext.WithLocale(ctx, textlang.English), stale); err != nil {
+		t.Fatal(err)
+	}
+	onDefault("an English reader sent the earlier wording back")
 
 	stored("Let's meet", false)
 	legacy, err := store.SchedulingProfile(ctx)

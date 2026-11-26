@@ -24,3 +24,12 @@ func TestCanonicalRecoveryPreservesArgumentsAndTranslatedMeaning(t *testing.T) {
 		t.Fatalf("human prose recovered as %+v: %v", recovered, err)
 	}
 }
+
+func TestEachBookingTitleRecoversToItsOwnCode(t *testing.T) {
+	for _, code := range []string{"booking.lets_meet", "booking.meeting"} {
+		recovered, err := RecoverCanonicalText(Copy(code, textlang.English))
+		if err != nil || recovered == nil || recovered.Code != code {
+			t.Errorf("%q recovered as %+v, not %s: %v", Copy(code, textlang.English), recovered, code, err)
+		}
+	}
+}

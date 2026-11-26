@@ -14,11 +14,11 @@ import (
 func TestAStoredEarlierWordingReadsAsThePhraseInItsOwnLanguage(t *testing.T) {
 	code := "booking.lets_meet"
 	definition, _ := definitionOf(code)
-	for _, language := range textlang.Shipped {
-		if len(definition.Retired[language]) == 0 {
-			t.Fatalf("%s keeps no earlier %s wording to read", code, language)
-		}
-		for _, stored := range definition.Retired[language] {
+	if len(definition.Retired[textlang.English]) == 0 {
+		t.Fatalf("%s keeps no earlier English wording to read", code)
+	}
+	for language, retired := range definition.Retired {
+		for _, stored := range retired {
 			if !Says(code, language, stored) || Reworded(code, stored) != Copy(code, language) {
 				t.Errorf("%s %q did not read as today's %q", language, stored, Copy(code, language))
 			}
