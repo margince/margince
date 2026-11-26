@@ -40566,7 +40566,7 @@ type CaptureConnection struct {
 	// SyncFailingSince When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage's — last_synced_at moves on every postponed tick and dates the newest attempt instead.
 	SyncFailingSince *time.Time `json:"sync_failing_since,omitempty"`
 
-	// UnreadPeriod A period no sync of this mailbox read: a sync found its provider cursor gone and listed only the newest mail, or a first sync could not reach back to where it was to start. A successful sync since, and a finished import, do not clear it. Only an import whose window reaches back over it does. Absent when there is none.
+	// UnreadPeriod A period no sync of this mailbox read: a sync found its provider cursor gone and listed only the newest mail, or a first sync could not reach back to where it was to start. A successful sync since, and a finished import, do not clear it. Only an import whose window reaches back over it, and that failed no message, does. Absent when there is none.
 	// A recent `last_success_at` and a `backfill` in state `done` say a poll and a scan completed. This period says which mail neither of them read, so the owner knows to import a window that covers it.
 	UnreadPeriod *CaptureUnreadPeriod `json:"unread_period,omitempty"`
 	UpdatedAt    *time.Time           `json:"updated_at,omitempty"`

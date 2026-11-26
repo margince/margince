@@ -17601,7 +17601,7 @@ export const en = {
   "connectors.svc.stopped": "Stopped",
   "connectors.svc.mailMissing": "Mail missing",
   "connectors.svc.unreadPeriod":
-    "Mail from {from} to {to} was never read. Import older email with a window that reaches back to {from}.",
+    "Some mail from {from} to {to} may be missing. Import older email with a window that reaches back to {from}.",
   "connectors.svc.calendar": "Calendar",
   "connectors.svc.calendarDesc":
     "Meetings show on contacts and deals, and your booking link offers only your free times.",

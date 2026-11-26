@@ -408,9 +408,10 @@ func TestAHistoryImportRecoversASentFollowUpTheLostCursorLeftOut(t *testing.T) {
 	if row.LastSuccessAt == nil || !row.LastSuccessAt.Equal(resumed) {
 		t.Fatalf("last success = %v, want the sync that just succeeded at %s", row.LastSuccessAt, resumed)
 	}
-	if row.UnreadFrom == nil || row.UnreadTo == nil || !row.UnreadTo.Equal(stalled.Add(6*time.Minute)) {
-		t.Fatalf("the owner's connection reads unread %v..%v beside a successful sync, want the gap up to where the round read back to",
-			row.UnreadFrom, row.UnreadTo)
+	if row.UnreadFrom == nil || row.UnreadTo == nil ||
+		!row.UnreadFrom.Equal(connected) || !row.UnreadTo.Equal(stalled.Add(6*time.Minute)) {
+		t.Fatalf("the owner's connection reads unread %v..%v beside a successful sync, want the gap from the last good sync at %s to where the round read back to",
+			row.UnreadFrom, row.UnreadTo, connected)
 	}
 	if audience, _ := audienceOf(t, r.e, r.activityOf(t, family)); audience != "participants" {
 		t.Fatalf("mail on a thread judged private reads to %q; the hold under test is not in place", audience)

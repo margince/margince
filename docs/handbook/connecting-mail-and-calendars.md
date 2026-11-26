@@ -165,9 +165,9 @@ Under the account, each part (**New mail**, **Past email**, **Calendar**,
 
 You also see its last good sync. A failed check does not move that time.
 
-**Past email** says **Mail missing** when some mail was never read, even after a
-good sync or a finished import. The row names the dates: "Mail from {from} to
-{to} was never read."
+**Past email** says **Mail missing** when no sync read some of your mail, even
+after a good sync or a finished import. The row names the dates: "Some mail from
+{from} to {to} may be missing."
 
 ### Does a record show all my mail?
 
@@ -182,7 +182,7 @@ Reconnecting the same account does not bring back mail. Import it again instead.
 2. Choose **Start a new import** and pick a window that reaches back to the first missing date.
 3. Press **Start import**.
 Mail already on record is not added twice. Mail you excluded and threads held as private stay as they were.
-When the import reaches back over the dates, **Mail missing** goes away. Home then stops asking for a follow-up you sent.
+When the import reaches back over the dates and no message failed, **Mail missing** goes away. Home then stops asking for a follow-up you sent.
 Also called: re-import mail, missing sent email, recover email, sync mailbox again.
 
 ### Why did my Gmail or Outlook connection stop working?

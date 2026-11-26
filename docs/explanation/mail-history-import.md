@@ -261,8 +261,8 @@ mailbox. Connecting the same account again keeps the cursor and replays nothing.
 The recovery is a new history import whose window reaches back over the span. It reads the window
 through the same Sink as a sync. A message already captured lands on its provider key and writes no
 second activity, link, import row or audit row. Sender blocks, thread holds and audiences apply as
-on a first capture. A finished import that reaches back over the span clears it
-(`settleUnreadPeriodTx`). `TestAHistoryImportRecoversASentFollowUpTheLostCursorLeftOut` holds
+on a first capture. A finished import that failed no message and reaches back over the span clears
+it (`settleUnreadPeriodTx`). `TestAHistoryImportRecoversASentFollowUpTheLostCursorLeftOut` holds
 this through the real Gmail connector.
 
 A calendar connection supplies no mail history. A reader who cannot read connections gets no claim of complete history.
