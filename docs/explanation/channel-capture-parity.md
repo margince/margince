@@ -50,8 +50,9 @@ ledger holds its question under the burst id.
 
 The confidentiality engine reads a burst once its newest message is a gap old. Its verdict reaches the
 messages it read. A later burst stays held until it has a verdict of its own. An edit that lands after the
-verdict moves the message into a burst of its own. Only a classified member seat asks the engine. A team
-seat is `shared` or `held`. A chat message with no seat is held.
+verdict moves the message into a burst of its own.
+
+Only a classified member seat asks the engine. A team seat is `shared` or `held`. A chat message with no seat is held.
 
 A company's business account (Telegram Business, WhatsApp Business, Zalo OA) is a team seat, as a
 shared mailbox is. It has no user, it has a reader team, and its posture is `held` or `shared`.
