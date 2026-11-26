@@ -13,44 +13,29 @@
   "self_judged": false,
   "stamp": {
     "scenario": "8c6aee552463f8ff",
-    "tools": "989d738a80b94052",
-    "instructions": "4eab26d5fff0793f",
+    "tools": "b98df5a4463ae52b",
+    "instructions": "d707a123fe53827f",
     "judge": "",
-    "harness": "ae24b6799c8461d2",
+    "harness": "0fe690d35efcc703",
     "parsers": {
       "gemini:cli": "fa1db64bc14e971b",
       "gpt:cli": "d48ca27c983f8b3f"
     },
-    "commit": "5dfb7ceebe8ce1b1607ab3992fb9d36b3ac8208f",
-    "ran_at": "2026-11-25T06:36:29Z",
-    "graded_commit": "e78e69d3f41bf45bbc08207d2d75a94ae33d19f4",
-    "graded_at": "2026-11-25T11:02:17Z"
+    "commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "ran_at": "2026-11-26T04:09:28Z",
+    "graded_commit": "aa66c929ba42ef19f95fafeacc2474255696c429",
+    "graded_at": "2026-11-26T04:09:28Z"
   },
   "usage": {
-    "input_tokens": 75296,
-    "output_tokens": 12531,
+    "input_tokens": 70817,
+    "output_tokens": 10302,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 281416,
+    "cache_read_input_tokens": 250116,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
   },
   "tools_by_run": [
-    {
-      "passed": true,
-      "tools": [
-        "change_settings",
-        "describe_router_actions",
-        "describe_views",
-        "get_worklist",
-        "list_notification_preferences",
-        "read_my_brief_delivery",
-        "read_view",
-        "read_workspace",
-        "update_automation",
-        "whoami"
-      ]
-    },
     {
       "passed": true,
       "tools": [
@@ -64,6 +49,28 @@
         "read_workspace",
         "update_automation",
         "whoami"
+      ],
+      "refused": [
+        "change_settings"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
+        "change_settings",
+        "describe_router_actions",
+        "describe_views",
+        "list_notices",
+        "list_notification_preferences",
+        "read_details",
+        "read_my_brief_delivery",
+        "read_view",
+        "read_workspace",
+        "update_automation",
+        "whoami"
+      ],
+      "refused": [
+        "read_workspace"
       ]
     }
   ],
@@ -76,23 +83,33 @@
     },
     "turns": {
       "median": 8,
-      "min": 7,
-      "max": 9
+      "min": 8,
+      "max": 8
     },
     "refused": {
-      "median": 1.5,
+      "median": 1,
       "min": 1,
-      "max": 2
+      "max": 1
+    },
+    "retries": {
+      "median": 1,
+      "min": 1,
+      "max": 1
+    },
+    "client_refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
     },
     "prompt_tokens": {
-      "median": 178356,
-      "min": 152156,
-      "max": 204556
+      "median": 160466.5,
+      "min": 151042,
+      "max": 169891
     },
     "output_tokens": {
-      "median": 6265.5,
-      "min": 5445,
-      "max": 7086
+      "median": 5151,
+      "min": 4908,
+      "max": 5394
     }
   }
 }
