@@ -125,10 +125,11 @@ func topLevel(source string) []string {
 	return append(parts, source[start:])
 }
 
-// A lookaround atom: a class that is not negated, an escape, or one character.
+// A lookaround atom: a class that is not negated, an escape, or one literal
+// character. A metacharacter such as . is refused, since quoted it reads as a literal.
 var (
-	leadingBehind = regexp.MustCompile(`^\(\?<!(\[[^\]^][^\]]*\]|\\.|[^\\()\[\]])\)`)
-	trailingAhead = regexp.MustCompile(`\(\?!(\[[^\]^][^\]]*\]|\\.|[^\\()\[\]])\)$`)
+	leadingBehind = regexp.MustCompile(`^\(\?<!(\[[^\]^][^\]]*\]|\\.|[^\\()\[\].^$*+?{}|])\)`)
+	trailingAhead = regexp.MustCompile(`\(\?!(\[[^\]^][^\]]*\]|\\.|[^\\()\[\].^$*+?{}|])\)$`)
 )
 
 func withoutLookarounds(alternative string) (string, error) {

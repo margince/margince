@@ -4,8 +4,6 @@
 package activities
 
 import (
-	"context"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
@@ -24,10 +22,13 @@ func (p storedSchedulingProfile) shownTitle() string {
 	return p.Title
 }
 
-func schedulingProfileToStore(ctx context.Context, profile crmcontracts.SchedulingProfile, before *storedSchedulingProfile, canonicalDefault string) storedSchedulingProfile {
+// schedulingProfileToStore keeps a page on the default when a client omits the
+// flag and sends back any wording of it. A reader may have been shown it in
+// another locale than the one the save carries.
+func schedulingProfileToStore(profile crmcontracts.SchedulingProfile, before *storedSchedulingProfile, canonicalDefault string) storedSchedulingProfile {
 	defaultTitle := profile.UseDefaultTitle != nil && *profile.UseDefaultTitle
 	if profile.UseDefaultTitle == nil && before != nil && before.DefaultTitle {
-		defaultTitle = profile.Title == before.Title || systemtext.Says("booking.meeting", systemtext.Locale(ctx), profile.Title)
+		defaultTitle = profile.Title == before.Title || systemtext.SaysInAnyLanguage("booking.meeting", profile.Title)
 	}
 	if defaultTitle && before != nil && before.DefaultTitle {
 		canonicalDefault = before.Title

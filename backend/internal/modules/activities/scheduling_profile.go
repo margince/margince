@@ -456,7 +456,7 @@ func (s *Store) persistSchedulingProfile(ctx context.Context, host ids.UserID, p
 		profile.Slug, profile.Alias, profile.PublicUrl, profile.ReplaceLink = nil, nil, nil, nil
 		profile.HostName, profile.Blocker = nil, nil
 		profile.TeamMembers = mergeTeam(before, profile.TeamMembers)
-		stored := schedulingProfileToStore(ctx, profile, before, canonicalDefault)
+		stored := schedulingProfileToStore(profile, before, canonicalDefault)
 		args := []any{stored, id}
 		if _, err := tx.Exec(ctx, fmt.Sprintf(`UPDATE booking_page SET scheduling_policy=$%d WHERE id=$%d`, len(args)-1, len(args)), args...); err != nil {
 			return err

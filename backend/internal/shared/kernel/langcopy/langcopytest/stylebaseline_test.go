@@ -12,6 +12,8 @@ import (
 	"io/fs"
 	"os"
 	"path/filepath"
+	"regexp"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -19,6 +21,24 @@ import (
 )
 
 var recut = flag.Bool("recut", false, "drop the stylebaseline.txt lines whose sentence passes its rule or is gone")
+
+// wantStyleWaivers pins how many lines stylebaseline.txt holds, so a line
+// added by hand moves a number review sees.
+const wantStyleWaivers = 157
+
+var styleWaiverPin = regexp.MustCompile(`(?m)^const wantStyleWaivers = \d+$`)
+
+func TestTheStyleBaselineHoldsItsPinnedCount(t *testing.T) {
+	t.Parallel()
+	waivers, err := StyleBaseline()
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(waivers) != wantStyleWaivers {
+		t.Errorf("%s holds %d waivers, and wantStyleWaivers pins %d. The recut lowers the pin with the lines it drops; "+
+			"a line added by hand raises it in the same change, for review to accept", baselinePath, len(waivers), wantStyleWaivers)
+	}
+}
 
 func TestEveryStyleWaiverStillBreaksItsRule(t *testing.T) {
 	t.Parallel()
@@ -166,7 +186,36 @@ func TestRecutStyleBaseline(t *testing.T) {
 		}
 	}
 	writeBaseline(t, "stylebaseline.txt", kept)
+	writePin(t, "stylebaseline_test.go", len(kept))
 	t.Logf("kept %d of %d waivers", len(kept), len(waivers))
+}
+
+func TestTheRecutLowersThePinToTheLinesItKept(t *testing.T) {
+	t.Parallel()
+	path := filepath.Join(t.TempDir(), "pin_test.go")
+	if err := os.WriteFile(path, []byte("package x\n\nconst wantStyleWaivers = 160\n"), 0o600); err != nil {
+		t.Fatal(err)
+	}
+	writePin(t, path, 157)
+	if got, err := os.ReadFile(path); err != nil || string(got) != "package x\n\nconst wantStyleWaivers = 157\n" {
+		t.Errorf("the recut left the pin as %q: %v", got, err)
+	}
+}
+
+// writePin sets wantStyleWaivers in path to the count the recut kept.
+func writePin(t *testing.T, path string, kept int) {
+	t.Helper()
+	source, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(styleWaiverPin.FindAll(source, -1)) != 1 {
+		t.Fatalf("%s no longer declares wantStyleWaivers once on a line of its own", path)
+	}
+	pinned := styleWaiverPin.ReplaceAll(source, []byte("const wantStyleWaivers = "+strconv.Itoa(kept)))
+	if err := os.WriteFile(path, pinned, 0o600); err != nil {
+		t.Fatal(err)
+	}
 }
 
 func writeBaseline(t *testing.T, path string, waivers []Waiver) {

@@ -10,11 +10,11 @@ import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
 // the call for a table that is not made of phrases.
 func EnglishText(t reporter, name, english string) {
 	t.Helper()
-	member.EnglishText(t, name, english)
+	judge(t, member, textlang.English, name, english, english)
 }
 
-// EnglishText is the English check in this register.
+// EnglishText is the English check in this register, which must name its reason.
 func (r Register) EnglishText(t reporter, name, english string) {
 	t.Helper()
-	judge(t, r, textlang.English, name, english, english)
+	judge(t, named(t, []Register{r}), textlang.English, name, english, english)
 }

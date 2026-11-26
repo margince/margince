@@ -24,7 +24,7 @@ var member = Register{name: "member copy", drops: []string{ruleViOutsiderAddress
 
 var mechanics = []string{
 	ruleEnDash, ruleEnSpelling, ruleEnAmpersand,
-	ruleViToneOpen, ruleViToneClosed, ruleViDash, ruleViExclamation,
+	ruleViToneOpen, ruleViToneClosed, ruleViDash, ruleViExclamation, ruleViNFC, ruleViQuotes,
 }
 
 // Agent is an agent speaking in a chat bubble, which may say I.
@@ -76,6 +76,8 @@ func named(t reporter, registers []Register) Register {
 		return member
 	case len(registers) > 1:
 		t.Fatalf("a table has one register, and this call names %d", len(registers))
+	case registers[0].name == "":
+		t.Fatalf("a zero Register names no voice; build it with Agent, Outsider, Controller, OwnVoice or Verbatim")
 	case strings.TrimSpace(registers[0].reason) == "":
 		t.Fatalf("the %s register names no reason; say who speaks this table and who reads it", registers[0].name)
 	}

@@ -89,6 +89,9 @@ func TestAJavaScriptPatternReadsAsItDoesInJavaScript(t *testing.T) {
 		`a(?<!b)c`:                  "iu",
 		`(?=x)y`:                    "iu",
 		`(?:quý vị|anh chị(?! em))`: "iu",
+		`foo(?!.)`:                  "u",
+		`(?<!.)foo`:                 "u",
+		`foo(?!$)`:                  "u",
 	} {
 		if _, err := jsPattern(source, flags); err == nil {
 			t.Errorf("/%s/%s has no Go reading and was compiled", source, flags)
@@ -102,9 +105,17 @@ func TestAHandPortFailsWhenItsCensusCodeChanges(t *testing.T) {
 	if err := pinned(census, `"never addresses anyone",`, `word("quý vị|anh chị(?! em)"),`); err != nil {
 		t.Errorf("the pinned code, spaced as the census spaces it, was refused: %v", err)
 	}
-	changed := strings.Replace(census, "(?! em)", "(?! em|$)", 1)
-	if err := pinned(changed, `"never addresses anyone",`, `word("quý vị|anh chị(?! em)"),`); err == nil {
-		t.Error("a changed census pattern still matched its pin, so the hand port would drift unseen")
+	for _, changed := range []string{
+		strings.Replace(census, "(?! em)", "(?! em|$)", 1),
+		strings.Replace(census, "(?! em)", "(?!em)", 1),
+		strings.Replace(census, "quý vị|", "quý  vị|", 1),
+	} {
+		if err := pinned(changed, `"never addresses anyone",`, `word("quý vị|anh chị(?! em)"),`); err == nil {
+			t.Errorf("the census code %q still matched its pin, so the hand port would drift unseen", changed)
+		}
+	}
+	if compact("a = /x [ ]/u, `$ {b}`") != "a=/x [ ]/u,`$ {b}`" {
+		t.Error("a space inside a regex or template literal was dropped")
 	}
 }
 

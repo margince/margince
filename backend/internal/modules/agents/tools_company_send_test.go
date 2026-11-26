@@ -13,6 +13,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"regexp"
 	"strings"
 	"testing"
 
@@ -23,6 +24,17 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
+
+var filedCount = regexp.MustCompile(`records it is filed under: (\d+)`)
+
+// filedUnder answers the whole count a summary files the send under, or ""
+// when it names none.
+func filedUnder(summary string) string {
+	if m := filedCount.FindStringSubmatch(summary); m != nil {
+		return m[1]
+	}
+	return ""
+}
 
 // accountSendArgs is one well-formed call, so a test that varies ONE thing
 // varies only that thing.
@@ -100,10 +112,13 @@ func TestTheAccountStartedSendSummaryNamesEveryArgumentItReleases(t *testing.T) 
 		To: []string{"buyer@example.test"}, Cc: []string{"rival@example.test"}, Subject: "Q3 pricing",
 	}, []RecordLink{{EntityType: "company", EntityID: ids.NewV7()}})
 
-	for _, want := range []string{"buyer@example.test", "rival@example.test", `“Q3 pricing”`, "records it is filed under: 1"} {
+	for _, want := range []string{"buyer@example.test", "rival@example.test", `“Q3 pricing”`} {
 		if !strings.Contains(got, want) {
 			t.Errorf("summary %q does not name %q", got, want)
 		}
+	}
+	if filedUnder(got) != "1" {
+		t.Errorf("summary %q does not file the send under its one record", got)
 	}
 }
 
@@ -284,7 +299,7 @@ func TestAnAccountStartedSendIsBoundedAndDeduplicatedBeforeItReadsAnything(t *te
 		if len(p.read) != 1 {
 			t.Errorf("read %d records for one repeated link, want 1", len(p.read))
 		}
-		if !strings.Contains(info.Summary, "records it is filed under: 1") {
+		if filedUnder(info.Summary) != "1" {
 			t.Errorf("summary %q counts the repeats; a human would read a reach the send does not have", info.Summary)
 		}
 	})

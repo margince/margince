@@ -29,6 +29,21 @@ func TestAStoredEarlierWordingReadsAsThePhraseInItsOwnLanguage(t *testing.T) {
 	}
 }
 
+func TestAPhraseInAnyShippedLanguageOrWordingIsRecognised(t *testing.T) {
+	code := "booking.meeting"
+	definition, _ := definitionOf(code)
+	for _, language := range textlang.Shipped {
+		for _, wording := range append([]string{Copy(code, language)}, definition.Retired[language]...) {
+			if !SaysInAnyLanguage(code, wording) {
+				t.Errorf("the %s wording %q of %s was not recognised", language, wording, code)
+			}
+		}
+	}
+	if SaysInAnyLanguage(code, "My own title") || SaysInAnyLanguage("no.such.code", "Meeting") {
+		t.Error("a member's title, or a code with no phrase, was recognised")
+	}
+}
+
 // A kept wording that some language shows today lets Reworded move a title into the wrong language.
 func TestEveryRetiredWordingIsNoLongerShown(t *testing.T) {
 	for code, definition := range catalog {

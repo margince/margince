@@ -61,7 +61,21 @@ const (
 	memberDraft  = "a draft the member sends as themselves, which no style page governs"
 )
 
-var languageMapType = regexp.MustCompile(`type\s+(\w+)\s+map\[textlang\.Lang\]`)
+// containerPrefix spells the map, slice, array and pointer types a language
+// map may sit in, whose literals elide its type.
+const containerPrefix = `(?:map\[[^\[\]]*\]|\[[^\[\]]*\]|\*)*`
+
+var languageMapType = regexp.MustCompile(`type\s+(\w+)\s+` + containerPrefix + `map\[textlang\.Lang\]`)
+
+// languageLiteral matches a literal of a language map, of a named type that
+// holds one, or of a container whose elements are either.
+func languageLiteral(mapTypes []string) *regexp.Regexp {
+	spelled := []string{`map\[textlang\.Lang\]`}
+	for _, name := range mapTypes {
+		spelled = append(spelled, name+`\{`)
+	}
+	return regexp.MustCompile(`(?:[=:]|return)\s*` + containerPrefix + `(?:` + strings.Join(spelled, "|") + `)`)
+}
 
 func TestEveryLanguageKeyedCopyTableIsHeldToTheStylePages(t *testing.T) {
 	t.Parallel()
@@ -137,11 +151,7 @@ func languageLiteralFiles(t *testing.T, root string) []string {
 	for path, text := range texts {
 		dir := filepath.Dir(path)
 		if literals[dir] == nil {
-			spelled := []string{`map\[textlang\.Lang\]`}
-			for _, name := range mapTypes[dir] {
-				spelled = append(spelled, name+`\{`)
-			}
-			literals[dir] = regexp.MustCompile(`(?:[=:]|return)\s*(?:` + strings.Join(spelled, "|") + `)`)
+			literals[dir] = languageLiteral(mapTypes[dir])
 		}
 		if literals[dir].Match(text) {
 			flagged = append(flagged, path)
@@ -151,25 +161,31 @@ func languageLiteralFiles(t *testing.T, root string) []string {
 	return flagged
 }
 
-// TestTheLanguageTableArmSeesATableAndItsWalk is the vacuity check: shown three
-// tables, one of a named map type, the arm finds all three and the two walked.
-// A style test's local named like a table does not hold it.
+// TestTheLanguageTableArmSeesATableAndItsWalk is the vacuity check. Shown five
+// tables, two of which elide a language map's type, the arm finds all five and
+// the three walked. A style test's local named like a table does not hold one,
+// nor does a helper no Test runs.
 func TestTheLanguageTableArmSeesATableAndItsWalk(t *testing.T) {
 	t.Parallel()
 	source := `package copy
 import tl "github.com/margince/margince/backend/internal/shared/kernel/textlang"
 type spellings map[tl.Lang][]string
+type byKey map[string]map[tl.Lang]string
 var walked = map[tl.Lang]struct{ Saved string }{tl.English: {Saved: "Saved"}}
 var shown = buildShown()
 func buildShown() map[string]spellings { return map[string]spellings{"x": spellings{}} }
 var unwalked = struct{ text map[tl.Lang]string }{text: map[tl.Lang]string{}}
+var nested = map[string]map[tl.Lang]string{"saved": {tl.English: "We saved it"}}
+var orphaned = []*byKey{{"saved": {tl.English: "We saved it"}}}
 `
 	walk := `package copy
 import "github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 func check(t langcopytest.T) { langcopytest.EnglishText(t, "x", "y") }
-func TestWalked(t *testing.T) { check(t); _ = walked; _ = shown }
+func TestWalked(t *testing.T) { check(t); _ = walked; _ = shown; t.Run("x", checkNested) }
+func checkNested(t *testing.T) { langcopytest.EnglishText(t, "x", nested["saved"]["en"]) }
 func TestUnwalked(t *testing.T) { _ = unwalked }
 func TestShadowed(t *testing.T) { check(t); unwalked := struct{ unwalked int }{unwalked: 1}; _ = unwalked.unwalked }
+func unusedCheck(t langcopytest.T) { langcopytest.EnglishText(t, "x", orphaned[0]) }
 `
 	pkg := &languagePackage{tables: map[string]string{}, literalIn: map[string]bool{}}
 	for name, text := range map[string]string{"copy.go": source, "copy_test.go": walk} {
@@ -180,11 +196,18 @@ func TestShadowed(t *testing.T) { check(t); unwalked := struct{ unwalked int }{u
 		pkg.add(name, file)
 	}
 	pkg.resolve()
-	if got := slices.Sorted(maps.Keys(pkg.tables)); !slices.Equal(got, []string{"buildShown", "unwalked", "walked"}) {
-		t.Errorf("the arm read the tables %v", got)
+	want := []string{"buildShown", "nested", "orphaned", "unwalked", "walked"}
+	if got := slices.Sorted(maps.Keys(pkg.tables)); !slices.Equal(got, want) {
+		t.Errorf("the arm read the tables %v, want %v", got, want)
 	}
-	if held := pkg.held(); !held["walked"] || !held["buildShown"] || held["unwalked"] {
+	if held := pkg.held(); !held["walked"] || !held["buildShown"] || !held["nested"] || held["unwalked"] || held["orphaned"] {
 		t.Errorf("the arm read the walked tables as %v", held)
+	}
+	literal := languageLiteral([]string{"byKey"})
+	for _, line := range []string{"var nested = map[string]map[textlang.Lang]string{", "return []*byKey{"} {
+		if !literal.MatchString(line) {
+			t.Errorf("the text census does not read %q as a language-keyed literal", line)
+		}
 	}
 }
 
@@ -197,6 +220,7 @@ type languagePackage struct {
 	tables    map[string]string
 	literalIn map[string]bool
 	mapTypes  map[string]bool
+	typeSpecs map[string]ast.Expr
 }
 
 func languagePackages(t *testing.T, root string) map[string]*languagePackage {
@@ -250,12 +274,13 @@ func (p *languagePackage) add(path string, file *ast.File) {
 // resolve finds the tables once every file of the directory is in, since a
 // named map type and its literals may sit in different files.
 func (p *languagePackage) resolve() {
-	p.mapTypes = map[string]bool{}
+	p.mapTypes, p.typeSpecs = map[string]bool{}, map[string]ast.Expr{}
 	for _, file := range p.files {
 		lang := textlangQualifier(file)
 		ast.Inspect(file, func(node ast.Node) bool {
-			if spec, ok := node.(*ast.TypeSpec); ok && languageKeyed(spec.Type, lang, nil) {
-				p.mapTypes[spec.Name.Name] = true
+			if spec, ok := node.(*ast.TypeSpec); ok {
+				p.typeSpecs[spec.Name.Name] = spec.Type
+				p.mapTypes[spec.Name.Name] = languageKeyed(spec.Type, lang, nil)
 			}
 			return true
 		})
@@ -264,9 +289,18 @@ func (p *languagePackage) resolve() {
 		lang := textlangQualifier(file)
 		for _, decl := range file.Decls {
 			for name, part := range declParts(decl) {
+				implied := map[*ast.CompositeLit]ast.Expr{}
 				ast.Inspect(part, func(node ast.Node) bool {
 					literal, ok := node.(*ast.CompositeLit)
-					if !ok || !languageKeyed(literal.Type, lang, p.mapTypes) {
+					if !ok {
+						return true
+					}
+					literalType := literal.Type
+					if literalType == nil {
+						literalType = implied[literal]
+					}
+					if !languageKeyed(literalType, lang, p.mapTypes) {
+						p.imply(literal, literalType, implied)
 						return true
 					}
 					if _, seen := p.tables[name]; !seen {
@@ -278,6 +312,47 @@ func (p *languagePackage) resolve() {
 			}
 		}
 	}
+}
+
+// imply gives each element literal that elides its type the element type of
+// the literal around it. So {lang: …} inside a map of language maps is read.
+func (p *languagePackage) imply(literal *ast.CompositeLit, literalType ast.Expr, implied map[*ast.CompositeLit]ast.Expr) {
+	keyType, elementType := p.elementTypes(literalType)
+	elide := func(element, elementType ast.Expr) {
+		if pointer, ok := elementType.(*ast.StarExpr); ok {
+			elementType = pointer.X
+		}
+		if inner, ok := element.(*ast.CompositeLit); ok && inner.Type == nil && elementType != nil {
+			implied[inner] = elementType
+		}
+	}
+	for _, element := range literal.Elts {
+		if pair, ok := element.(*ast.KeyValueExpr); ok {
+			elide(pair.Key, keyType)
+			element = pair.Value
+		}
+		elide(element, elementType)
+	}
+}
+
+// elementTypes answers the key and element types of a map, slice or array
+// type, through the package's named types. A struct elides nothing.
+func (p *languagePackage) elementTypes(container ast.Expr) (keyType, elementType ast.Expr) {
+	for range len(p.typeSpecs) + 1 {
+		switch t := container.(type) {
+		case *ast.MapType:
+			return t.Key, t.Value
+		case *ast.ArrayType:
+			return nil, t.Elt
+		case *ast.ParenExpr:
+			container = t.X
+		case *ast.Ident:
+			container = p.typeSpecs[t.Name]
+		default:
+			return nil, nil
+		}
+	}
+	return nil, nil
 }
 
 // held answers the tables a test that reaches langcopytest names, directly or
@@ -424,10 +499,12 @@ func textlangQualifier(file *ast.File) string {
 	return qualifier
 }
 
-// namedByStyleTests answers every name the test functions that reach
-// langcopytest spell, following calls to the directory's own test helpers.
+// namedByStyleTests answers every name spelled by a test function that a Test
+// runs and that reaches langcopytest, following calls to the directory's own
+// test helpers. A helper no Test runs checks nothing.
 func namedByStyleTests(tests []*ast.File) []string {
 	reaches, calls, names := map[string]bool{}, map[string][]string{}, map[string][]string{}
+	spelled := map[string][]string{}
 	for _, file := range tests {
 		qualifier, _ := gatekit.ImportedAs(file, langcopytestImport)
 		for _, decl := range file.Decls {
@@ -438,6 +515,8 @@ func namedByStyleTests(tests []*ast.File) []string {
 			names[fn.Name.Name] = append(names[fn.Name.Name], packageNames(fn)...)
 			ast.Inspect(fn.Body, func(node ast.Node) bool {
 				switch n := node.(type) {
+				case *ast.Ident:
+					spelled[fn.Name.Name] = append(spelled[fn.Name.Name], n.Name)
 				case *ast.SelectorExpr:
 					if x, isIdent := n.X.(*ast.Ident); isIdent && qualifier != "" && x.Name == qualifier {
 						reaches[fn.Name.Name] = true
@@ -460,8 +539,32 @@ func namedByStyleTests(tests []*ast.File) []string {
 		}
 	}
 	var named []string
-	for caller := range reaches {
-		named = append(named, names[caller]...)
+	for caller := range runByTests(spelled) {
+		if reaches[caller] {
+			named = append(named, names[caller]...)
+		}
 	}
 	return named
+}
+
+// runByTests answers the test functions a Test runs: each Test and every test
+// function it spells. It may call one, pass one on or call it as a method.
+func runByTests(spelled map[string][]string) map[string]bool {
+	run := map[string]bool{}
+	var visit func(name string)
+	visit = func(name string) {
+		if _, isFunc := spelled[name]; !isFunc || run[name] {
+			return
+		}
+		run[name] = true
+		for _, next := range spelled[name] {
+			visit(next)
+		}
+	}
+	for name := range spelled {
+		if strings.HasPrefix(name, "Test") {
+			visit(name)
+		}
+	}
+	return run
 }

@@ -119,6 +119,29 @@ func TestCensusNamesOneRegisterAndWhy(t *testing.T) {
 	}
 }
 
+func TestARegisterTextCheckNamesWhy(t *testing.T) {
+	t.Parallel()
+	checks := map[string]func(Register, reporter){
+		"English":    func(register Register, r reporter) { register.EnglishText(r, "Field", "We hold your details") },
+		"Vietnamese": func(register Register, r reporter) { register.VietnameseText(r, "Field", "Chúng tôi lưu") },
+	}
+	for lang, check := range checks {
+		for name, register := range map[string]Register{"no reason": Controller(" "), "zero": {}} {
+			if s := run(func(r reporter) { check(register, r) }); s.fatal == "" {
+				t.Errorf("%s %s: a register with no reason was not refused", lang, name)
+			}
+		}
+	}
+	for lang, check := range map[string]func(reporter){
+		"English":    func(r reporter) { EnglishText(r, "Field", "Saved") },
+		"Vietnamese": func(r reporter) { VietnameseText(r, "Field", "Đã lưu") },
+	} {
+		if s := run(check); s.fatal != "" || len(s.errors) != 0 {
+			t.Errorf("%s member copy, which names no reason, was refused: %v %s", lang, s.errors, s.fatal)
+		}
+	}
+}
+
 func TestEveryRegisterNamesRulesThatExist(t *testing.T) {
 	t.Parallel()
 	seen := map[string]bool{}
@@ -141,10 +164,10 @@ func TestCensusByLanguageHoldsTheStylePages(t *testing.T) {
 	t.Parallel()
 	type summary struct{ sentence string }
 	table := map[textlang.Lang]summary{
-		textlang.English: {"We wrote last"}, textlang.German: {"Zuletzt geschrieben"}, textlang.Vietnamese: {"Đã viết lần cuối"},
+		textlang.English: {"We wrote last"}, textlang.German: {"Zuletzt geschrieben"}, textlang.Vietnamese: {"Chúng tôi đã viết"},
 	}
 	got := rulesReported(func(r reporter) { CensusByLanguage(r, table, map[string][]string{"sentence": nil}) })
-	if strings.Join(got, " ") != ruleEnWe {
-		t.Errorf("a legacy table speaking as we was reported for %v", got)
+	if strings.Join(got, " ") != ruleEnWe+" "+ruleViChungToi {
+		t.Errorf("a legacy table speaking as we in English and Vietnamese was reported for %v", got)
 	}
 }

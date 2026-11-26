@@ -5,6 +5,8 @@ package langcopytest
 
 import (
 	"regexp"
+	"strings"
+	"unicode"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -23,6 +25,8 @@ const (
 	ruleViToneClosed      = "vi.tone-closed"
 	ruleViDash            = "vi.dash"
 	ruleViExclamation     = "vi.exclamation"
+	ruleViNFC             = "vi.nfc"
+	ruleViQuotes          = "vi.quotes"
 	ruleViToi             = "vi.toi"
 	ruleViChungToi        = "vi.chung-toi"
 	ruleViChungTa         = "vi.chung-ta"
@@ -135,6 +139,14 @@ var styleRules = []styleRule{
 		matches(ruleViExclamation, asWritten),
 	},
 	{
+		ruleViNFC, textlang.Vietnamese, "holds a combining mark, so it is not NFC; write each letter precomposed", alone,
+		func(_ sources, text, _ string) bool { return strings.ContainsFunc(text, isCombiningMark) },
+	},
+	{
+		ruleViQuotes, textlang.Vietnamese, `quotes with a straight " or ', or with „, » or «; write “…” and ’`, alone,
+		matches(ruleViQuotes, asWritten),
+	},
+	{
 		ruleViToi, textlang.Vietnamese, "speaks as tôi; the product never speaks as itself", besideEnglish,
 		func(src sources, text, english string) bool {
 			return matches(ruleViToi, without(patternToiWe, viProse))(src, text, english) &&
@@ -169,6 +181,10 @@ var styleRules = []styleRule{
 		},
 	},
 }
+
+// isCombiningMark is a nonspacing mark, which NFC Vietnamese never holds:
+// every Vietnamese letter has a precomposed form.
+func isCombiningMark(r rune) bool { return unicode.Is(unicode.Mn, r) }
 
 // withoutPaths keeps a quoted vendor label, a file name and a URL out of the
 // vocabulary rule. Each keeps the spelling the reader must match or type.

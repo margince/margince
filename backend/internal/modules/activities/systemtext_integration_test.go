@@ -174,6 +174,24 @@ func TestABookingPageStoredUnderAnEarlierDefaultWordingStaysOnTheDefault(t *test
 	}
 	onDefault("an English reader sent the earlier wording back")
 
+	for _, shown := range textlang.Shipped {
+		for _, saving := range textlang.Shipped {
+			stored("Let's meet", true)
+			sent, err := store.SchedulingProfile(systemtext.WithLocale(ctx, shown))
+			if err != nil {
+				t.Fatal(err)
+			}
+			sent.UseDefaultTitle = nil
+			if _, err := store.SaveSchedulingProfile(systemtext.WithLocale(ctx, saving), sent); err != nil {
+				t.Fatal(err)
+			}
+			onDefault(string(shown) + " wording sent back under a " + string(saving) + " locale")
+			if title := storedTitle(); title != "Let's meet" {
+				t.Fatalf("the %s wording sent under a %s locale stored %q over the default", shown, saving, title)
+			}
+		}
+	}
+
 	stored("Let's meet", true)
 	custom, err := store.SchedulingProfile(ctx)
 	if err != nil {

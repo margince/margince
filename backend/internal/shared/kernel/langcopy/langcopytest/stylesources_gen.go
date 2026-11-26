@@ -18,6 +18,7 @@ var ownerSnapshot = styleSnapshot{
 		"vi.member-address":   {`(?<![\p{L}])(?:quý khách|vui lòng)(?![\p{L}])`, "iu"},
 		"vi.outsider-address": {`(?<![\p{L}])(?:bạn)(?![\p{L}])`, "iu"},
 		"vi.quoted":           {`“[^“”]*”`, "g"},
+		"vi.quotes":           {`["„»«]|\p{L}'\p{L}`, "u"},
 		"vi.reflexive":        {`(?<![\p{L}])(?:(?:chính|tự|một) mình)(?![\p{L}])`, "giu"},
 		"vi.says-me":          {`\b(?:me|my|mine)\b`, "i"},
 		"vi.toi":              {`(?<![\p{L}])(?:tôi)(?![\p{L}])`, "iu"},

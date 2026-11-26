@@ -17,6 +17,7 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+	"unicode"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -50,6 +51,7 @@ var vietnamesePatternLeads = map[string]string{
 	ruleViToneClosed:      `"marks the tone on the second vowel before a final consonant",`,
 	patternDash:           `"uses no en dash, em dash, double hyphen or spaced hyphen",`,
 	ruleViExclamation:     `matching("uses no exclamation mark",`,
+	ruleViQuotes:          `matching("quotes with “…” and ’ only",`,
 	ruleViToi:             `"says tôi only for the onboarding agent, a consent statement or an English me",`,
 	patternToiWe:          `word("tôi"), { text: (value) => prose(value).replace(`,
 	patternSaysMe:         `key.startsWith(voices.agentSpeaks) || spokenByTheReader(key) ||`,
@@ -215,7 +217,6 @@ var (
 	// class may hold a slash, so it is read as a unit.
 	regexLiteral = regexp.MustCompile(`^/((?:\\.|\[(?:\\.|[^\]\\])*\]|[^/\\\[\n])+)/([a-z]*)`)
 	wordCall     = regexp.MustCompile(`^word\(\s*("(?:\\.|[^"\\])*")\s*(?:,\s*"([a-z]*)"\s*)?\)`)
-	spacing      = regexp.MustCompile(`\s+`)
 )
 
 // leadIn finds the one place a lead stands in a source and answers the code
@@ -259,16 +260,52 @@ func patternAfter(source, lead string) (jsRegex, error) {
 	return pattern, nil
 }
 
-// pinned fails unless code follows lead, spacing aside.
+// pinned fails unless code follows lead, spacing between tokens aside.
 func pinned(source, lead, code string) error {
 	after, err := leadIn(source, lead)
 	if err != nil {
 		return err
 	}
-	if want := spacing.ReplaceAllString(code, ""); !strings.HasPrefix(spacing.ReplaceAllString(after, ""), want) {
+	if !strings.HasPrefix(compact(after), compact(code)) {
 		return fmt.Errorf("the code after %q is no longer %s", lead, code)
 	}
 	return nil
+}
+
+// compact drops the spacing between JavaScript tokens and keeps every
+// character of a string, template or regex literal, where a space is pattern.
+func compact(code string) string {
+	var out strings.Builder
+	var literal, last rune
+	escaped, class := false, false
+	for _, r := range code {
+		switch {
+		case literal != 0:
+			switch {
+			case escaped:
+				escaped = false
+			case r == '\\':
+				escaped = true
+			case literal == '/' && (r == '[' || r == ']'):
+				class = r == '['
+			case r == literal && !class:
+				literal = 0
+			}
+		case unicode.IsSpace(r):
+			continue
+		case opensLiteral(r, last):
+			literal = r
+		}
+		out.WriteRune(r)
+		last = r
+	}
+	return out.String()
+}
+
+// opensLiteral reports whether r starts a literal. A slash does only where an
+// operand may start, after which it is a regex and not a division.
+func opensLiteral(r, last rune) bool {
+	return r == '"' || r == '\'' || r == '`' || (r == '/' && (last == 0 || strings.ContainsRune("(,=:[!&|?{};", last)))
 }
 
 var (

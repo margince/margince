@@ -10,11 +10,11 @@ import "github.com/margince/margince/backend/internal/shared/kernel/textlang"
 // every phrase; this is the call for a table that is not made of phrases.
 func VietnameseText(t reporter, name, vietnamese string) {
 	t.Helper()
-	member.VietnameseText(t, name, vietnamese)
+	judge(t, member, textlang.Vietnamese, name, vietnamese, "")
 }
 
-// VietnameseText is the Vietnamese check in this register.
+// VietnameseText is the Vietnamese check in this register, which must name its reason.
 func (r Register) VietnameseText(t reporter, name, vietnamese string) {
 	t.Helper()
-	judge(t, r, textlang.Vietnamese, name, vietnamese, "")
+	judge(t, named(t, []Register{r}), textlang.Vietnamese, name, vietnamese, "")
 }
