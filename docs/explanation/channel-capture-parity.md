@@ -39,16 +39,19 @@ meets depends on the credential model, not the kind:
 
 Rung 5 for a chat reads the account's seat, a `capture_connection` row
 (`backend/internal/modules/capture/chatseat.go`). A member's own chat account is a member seat that
-starts `classified`. A classified chat is born held. Rung 4 does not apply to a chat, because a chat is
-one long thread and one verdict on it would open everything said later. The verdict ledger judges a
-**burst** instead: consecutive messages of one chat thread whose gaps stay under
-`capture.ChatBurstGap`, 15 minutes (`backend/internal/modules/capture/chatburst.go`). A message joins the burst before it when
-that burst is not yet judged, else it starts a burst. Messages with a day or unknown time filed in one
-operation form one burst. `capture_import.burst_id` names the burst, and the ledger holds its question
-under the burst id. The confidentiality engine reads a burst once its newest message is a gap old, and
-its verdict reaches the messages it read. A later burst is born held until it has a verdict of
-its own. Only a classified member seat asks the engine; a team seat is `shared` or `held`. A chat
-message with no seat is held.
+starts `classified`. A classified chat is held from the start. Rung 4 does not apply to a chat, because a chat is
+one long thread and one verdict on it would open everything said later.
+
+The verdict ledger judges a **burst** instead: messages of one chat thread that follow one another with
+gaps under `capture.ChatBurstGap`, 15 minutes (`backend/internal/modules/capture/chatburst.go`). A message
+joins the burst before it when that burst is not yet judged, else it starts a burst. Messages with a day or
+unknown time filed in one operation form one burst. `capture_import.burst_id` names the burst, and the
+ledger holds its question under the burst id.
+
+The confidentiality engine reads a burst once its newest message is a gap old. Its verdict reaches the
+messages it read. A later burst stays held until it has a verdict of its own. An edit that lands after the
+verdict moves the message into a burst of its own. Only a classified member seat asks the engine. A team
+seat is `shared` or `held`. A chat message with no seat is held.
 
 A company's business account (Telegram Business, WhatsApp Business, Zalo OA) is a team seat, as a
 shared mailbox is. It has no user, it has a reader team, and its posture is `held` or `shared`.
