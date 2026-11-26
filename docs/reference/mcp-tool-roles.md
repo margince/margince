@@ -39,7 +39,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Group | Calls | admin | management | manager | ops | read_only | rep |
 |---|---:|---|---|---|---|---|---|
-| [Business operations](#business-operations) | 394 | 392✓ 2✗ | 366✓ 28✗ | 368✓ 26✗ | 365✓ 29✗ | 184✓ 210✗ | 337✓ 57✗ |
+| [Business operations](#business-operations) | 397 | 395✓ 2✗ | 369✓ 28✗ | 371✓ 26✗ | 368✓ 29✗ | 185✓ 212✗ | 340✓ 57✗ |
 | [Compliance and privacy](#compliance-and-privacy) | 47 | 47✓ 0✗ | 27✓ 20✗ | 27✓ 20✗ | 32✓ 15✗ | 11✓ 36✗ | 26✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 44 | 44✓ 0✗ | 38✓ 6✗ | 38✓ 6✗ | 44✓ 0✗ | 28✓ 16✗ | 37✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 40 | 40✓ 0✗ | 40✓ 0✗ | 40✓ 0✗ | 40✓ 0✗ | 35✓ 5✗ | 40✓ 0✗ |
@@ -210,6 +210,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Call | admin | management | manager | ops | read_only | rep |
 |---|---|---|---|---|---|---|
+| `change_activities.accept_link_suggestion` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_activities.assign_inquiry` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_activities.bring_back` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `change_activities.cancel_send` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
@@ -222,6 +223,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `change_activities.preview_inquiry_assignment` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_activities.preview_sign_off` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `change_activities.read_transcript` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
+| `change_activities.reject_link_suggestion` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_activities.relink` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_activities.relink_many` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_activities.reschedule_send` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
@@ -238,6 +240,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_details.project_filing` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_details.scheduled_send` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_details.scheduled_sends` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `read_workspace.link_suggestions` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `send_outbound.answer_invitation` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `send_outbound.chat_reply` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `send_outbound.email_new` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
@@ -1218,6 +1221,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Leads | `read_details.lead_promotion_preview` | `preview_lead_promotion` | `deal.read` `lead.read` |
 | Leads | `read_details.lead_score` | `explain_lead_score` | `lead.read` |
 | Leads | `read_details.lead_signals` | `list_lead_manual_signals` | `lead.read` |
+| Activities, mail and tasks | `change_activities.accept_link_suggestion` | `accept_link_suggestion` | `activity.update` `deal.read` |
 | Activities, mail and tasks | `change_activities.assign_inquiry` | `assign_website_inquiry` | `activity.read` `activity.update` `lead.read` `relationship.read` |
 | Activities, mail and tasks | `change_activities.bring_back` | `clear_activity_disposition` | `activity.read` |
 | Activities, mail and tasks | `change_activities.cancel_send` | `cancel_scheduled_send` | `activity.read` `activity.update` |
@@ -1230,6 +1234,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Activities, mail and tasks | `change_activities.preview_inquiry_assignment` | `preview_website_inquiry_assignment` | `activity.read` `activity.update` `lead.read` `relationship.read` |
 | Activities, mail and tasks | `change_activities.preview_sign_off` | `preview_email_sign_off` |  |
 | Activities, mail and tasks | `change_activities.read_transcript` | `read_transcript_for_next_steps` | `activity.create` `activity.read` `company.read` `contact.read` `relationship.read` |
+| Activities, mail and tasks | `change_activities.reject_link_suggestion` | `reject_link_suggestion` | `activity.update` `deal.read` |
 | Activities, mail and tasks | `change_activities.relink` | `relink_activity` | `activity.read` `activity.update` `relationship.read` |
 | Activities, mail and tasks | `change_activities.relink_many` | `relink_activities` | `activity.update` |
 | Activities, mail and tasks | `change_activities.reschedule_send` | `reschedule_scheduled_send` | `activity.read` `activity.update` |
@@ -1246,6 +1251,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Activities, mail and tasks | `read_details.project_filing` | `get_activity_project_filing` | `activity.read` |
 | Activities, mail and tasks | `read_details.scheduled_send` | `get_scheduled_send` | `activity.read` |
 | Activities, mail and tasks | `read_details.scheduled_sends` | `list_scheduled_sends` | `activity.read` |
+| Activities, mail and tasks | `read_workspace.link_suggestions` | `list_link_suggestions` | `activity.read` `deal.read` |
 | Activities, mail and tasks | `send_outbound.answer_invitation` | `answer_calendar_invitation` | `activity.read` |
 | Activities, mail and tasks | `send_outbound.chat_reply` | `send_message` | `activity.create` `activity.read` |
 | Activities, mail and tasks | `send_outbound.email_new` | `send_company_email` | `activity.create` `activity.read` `company.read` `contact.create` `contact.read` `deal.read` `lead.read` `project.read` |

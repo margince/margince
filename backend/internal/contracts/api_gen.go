@@ -104337,10 +104337,10 @@ type ServerInterface interface {
 	// Take back an open request.
 	// (POST /legal-reviews/{id}/withdraw)
 	WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id)
-	// The records a message may belong to, waiting for a reader to decide.
+	// The link suggestions waiting for the caller to decide.
 	// (GET /link-suggestions)
 	ListLinkSuggestions(w http.ResponseWriter, r *http.Request)
-	// Accept a suggestion, which files the message under the record it names.
+	// Accept a suggestion, filing the message under its record.
 	// (POST /link-suggestions/{id}/accept)
 	AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id)
 	// Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
@@ -110064,13 +110064,13 @@ func (_ Unimplemented) WithdrawLegalReview(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The records a message may belong to, waiting for a reader to decide.
+// The link suggestions waiting for the caller to decide.
 // (GET /link-suggestions)
 func (_ Unimplemented) ListLinkSuggestions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Accept a suggestion, which files the message under the record it names.
+// Accept a suggestion, filing the message under its record.
 // (POST /link-suggestions/{id}/accept)
 func (_ Unimplemented) AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -145597,6 +145597,8 @@ func (siw *ServerInterfaceWrapper) ListLinkSuggestions(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -145629,6 +145631,8 @@ func (siw *ServerInterfaceWrapper) AcceptLinkSuggestion(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -145660,6 +145664,8 @@ func (siw *ServerInterfaceWrapper) RejectLinkSuggestion(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 

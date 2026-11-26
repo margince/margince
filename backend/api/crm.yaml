@@ -10482,16 +10482,16 @@ paths:
     get:
       tags: [Activities]
       operationId: listLinkSuggestions
-      x-agent-access: human-only
-      x-human-only-reason: security   # a reader decides what a message attaches to
-      security: [{ cookieAuth: [] }]
-      summary: The records a message may belong to, waiting for a reader to decide.
+      x-mcp-tool: { verb: list_link_suggestions, router: read_workspace, action: link_suggestions, tier: auto_execute, scope: read, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: The link suggestions waiting for the caller to decide.
       description: |
         An extension may suggest which deal, company, contact or project a message belongs to. A
         suggestion attaches nothing. It waits here until a reader accepts or rejects it. Margince
         itself asks one question here: when several open deals fit a captured mail, it suggests each
         of them to the one colleague the mailbox confirms is responsible. Such a suggestion has no
-        `unit`, and only that colleague sees and decides it.
+        `unit`, and only that colleague sees and decides it. An agent acting for a colleague sees
+        and decides what that colleague would, and never another colleague's question.
 
         Oldest first, at most 50. A decided suggestion leaves the queue, so asking again shows the
         next ones. A suggestion is left out when the caller may not read its message or its target,
@@ -10511,10 +10511,9 @@ paths:
     post:
       tags: [Activities]
       operationId: acceptLinkSuggestion
-      x-agent-access: human-only
-      x-human-only-reason: security   # a reader decides what a message attaches to
-      security: [{ cookieAuth: [] }]
-      summary: Accept a suggestion, which files the message under the record it names.
+      x-mcp-tool: { verb: accept_link_suggestion, router: change_activities, action: accept_link_suggestion, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Accept a suggestion, filing the message under its record.
       description: |
         Files the message under the suggested record through the same relink as any other filing,
         and closes the suggestion in the same transaction. The caller needs the right to update the
@@ -10538,9 +10537,8 @@ paths:
     post:
       tags: [Activities]
       operationId: rejectLinkSuggestion
-      x-agent-access: human-only
-      x-human-only-reason: security   # a reader decides what a message attaches to
-      security: [{ cookieAuth: [] }]
+      x-mcp-tool: { verb: reject_link_suggestion, router: change_activities, action: reject_link_suggestion, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
       description: |
         Closes the suggestion and attaches nothing. The same target is not proposed for the same

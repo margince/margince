@@ -300,7 +300,7 @@
 1795648399_the_ai_team_rules_have_their_own_grant.down.sql | role | removes that one grant from the same fixed set of system roles
 1795650957_a_member_merge_confirmation_names_its_pair.down.sql | auth_token | holds only live single-use mail tokens, a few per account, and the rollback deletes the confirmation tokens, which are all of one purpose and expire in three days
 1795665583_a_zalo_message_can_name_its_channel.down.sql | * | the down migration is a single SELECT 1; the provider remains available to historical foreign keys and no row changes
-1795668965_a_link_suggestion_may_ask_one_colleague.down.sql | activity_link_suggestion | deletes only the suggestions Margince itself made, a small set of deal questions
-1795668967_open_which_deal_tasks_move_into_the_link_suggestion_queue.up.sql | *, activity, activity_link_suggestion | the WITH statement is the insert of the moved questions; only open "which deal" question tasks of live full-seat colleagues are read and closed, at most one per conversation and colleague, with one suggestion row per deal each offered
-1795668967_open_which_deal_tasks_move_into_the_link_suggestion_queue.down.sql | activity_link_suggestion | deletes only the suggestions Margince itself made, the same small set of deal questions
-1795668968_the_link_suggestion_producer_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795675270_a_link_suggestion_may_ask_one_colleague.down.sql | activity_link_suggestion | deletes only the suggestions Margince itself made, a small set of deal questions
+1795675272_open_which_deal_tasks_move_into_the_link_suggestion_queue.up.sql | *, activity, activity_link_suggestion | the WITH statement is the insert of the moved questions; only open "which deal" question tasks of live full-seat colleagues are read and closed, at most one per conversation and colleague, with one suggestion row per deal each offered
+1795675272_open_which_deal_tasks_move_into_the_link_suggestion_queue.down.sql | activity_link_suggestion | deletes only the suggestions Margince itself made, the same small set of deal questions
+1795675273_the_link_suggestion_producer_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing

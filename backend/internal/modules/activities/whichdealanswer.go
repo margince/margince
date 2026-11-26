@@ -99,10 +99,10 @@ func askedOfCaller(ctx context.Context, alias string, arg func(any) int) string 
 }
 
 // answerWhichDealTx is a colleague's answer to the deal question: filing one
-// mail of a questioned conversation on an open deal. A human asked in the
-// conversation files the rest of it there too. A sibling already on a deal, or
-// one they may not change, keeps its filing. Then every question of the
-// conversation is settled, whoever filed.
+// mail of a questioned conversation on an open deal. A colleague asked in the
+// conversation, or their agent, files the rest of it there too. A sibling
+// already on a deal, or one they may not change, keeps its filing. Then every
+// question of the conversation is settled, whoever filed.
 func answerWhichDealTx(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) error {
 	if err := fileQuestionedConversation(ctx, tx, mail, deal); err != nil {
 		return err
@@ -112,7 +112,7 @@ func answerWhichDealTx(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal
 
 func fileQuestionedConversation(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids.UUID) error {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalHuman || !auth.ReadGranted(ctx, linkEntityDeal) {
+	if !ok || !actor.HumanOrItsAgent() || !auth.ReadGranted(ctx, linkEntityDeal) {
 		return nil
 	}
 	questions, err := openWhichDealQuestions(ctx, tx, mail, true)

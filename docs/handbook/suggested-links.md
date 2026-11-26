@@ -38,4 +38,6 @@ merged into.
 - If you may not read messages at all, the panel says that you do not have access to suggested links.
 - The contact who wrote a message is never suggested for it.
 - A question Margince asked shows only to the one colleague it asked. Nobody else sees it, admins included.
+- Your AI assistant can read and decide your suggestions for you, by the same rules. It never sees a question
+  Margince asked someone else.
 - The panel shows the oldest 50. Decide some and the next ones appear.

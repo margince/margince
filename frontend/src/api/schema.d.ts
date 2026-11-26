@@ -7020,12 +7020,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The records a message may belong to, waiting for a reader to decide.
+         * The link suggestions waiting for the caller to decide.
          * @description An extension may suggest which deal, company, contact or project a message belongs to. A
          *     suggestion attaches nothing. It waits here until a reader accepts or rejects it. Margince
          *     itself asks one question here: when several open deals fit a captured mail, it suggests each
          *     of them to the one colleague the mailbox confirms is responsible. Such a suggestion has no
-         *     `unit`, and only that colleague sees and decides it.
+         *     `unit`, and only that colleague sees and decides it. An agent acting for a colleague sees
+         *     and decides what that colleague would, and never another colleague's question.
          *
          *     Oldest first, at most 50. A decided suggestion leaves the queue, so asking again shows the
          *     next ones. A suggestion is left out when the caller may not read its message or its target,
@@ -7053,7 +7054,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Accept a suggestion, which files the message under the record it names.
+         * Accept a suggestion, filing the message under its record.
          * @description Files the message under the suggested record through the same relink as any other filing,
          *     and closes the suggestion in the same transaction. The caller needs the right to update the
          *     message and to attach to the target. Accepting a suggestion that is already accepted is the
