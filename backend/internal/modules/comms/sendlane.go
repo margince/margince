@@ -143,7 +143,7 @@ func (l sendLane) statement(ctx context.Context, userID ids.UUID, since time.Tim
 SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.%s, ''), o.%s, l.contact_id,
        %s, COALESCE(NULLIF(cp.label, ''), o.provider, ''), COALESCE(p.display_name, '')
   FROM comms_outbound o
-  `+contactLateral(visible)+`
+  `+contactLateral(visible, "")+`
   LEFT JOIN channel_provider cp ON cp.provider = o.provider
   LEFT JOIN LATERAL (
     SELECT COALESCE(NULLIF(ap.display_name, ''), NULLIF(cci.username, '')) AS display_name
@@ -171,10 +171,12 @@ SELECT o.id, left(COALESCE(o.subject, ''), %d), COALESCE(o.%s, ''), o.%s, l.cont
 // contactLateral joins a send to the one contact its activity is filed under
 // that the reader may see. It is shared by every read that names a send's
 // contact, so two of them cannot pick different contacts for one send.
-func contactLateral(visible string) string {
+//
+// `also` narrows the choice by a further predicate on `al`, or is empty.
+func contactLateral(visible, also string) string {
 	return `LEFT JOIN LATERAL (
     SELECT al.contact_id FROM activity_link al
-     WHERE al.activity_id = o.activity_id AND al.entity_type = 'contact' AND ` + visible + `
+     WHERE al.activity_id = o.activity_id AND al.entity_type = 'contact' AND ` + visible + also + `
      ORDER BY al.contact_id LIMIT 1
   ) l ON true`
 }

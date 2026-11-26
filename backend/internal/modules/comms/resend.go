@@ -74,21 +74,18 @@ func (s *Store) ResendSource(ctx context.Context, id ids.UUID) (ResendSource, er
 		return ResendSource{}, err
 	}
 	args := []any{actor.UserID}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
+	lateral, err := resendContactLateral(ctx, &args)
 	if err != nil {
 		return ResendSource{}, err
 	}
-	if visible == "" {
-		visible = alwaysVisible
-	}
+	arg := func(v any) int { args = append(args, v); return len(args) }
 	statement := fmt.Sprintf(`
 SELECT o.id, o.activity_id, l.contact_id, COALESCE(o.subject, ''),
        left(o.body, o.authored_body_len), left(COALESCE(o.html_body, ''), COALESCE(o.authored_html_len, 0)),
        o.recipients, o.cc, COALESCE(o.bcc, '[]'::jsonb), o.attachments,
        COALESCE(o.consent_purpose, ''), o.bounce_recipient
   FROM comms_outbound o
-  `+contactLateral(visible)+`
+  `+lateral+`
  WHERE o.id = $%d AND l.contact_id IS NOT NULL AND `+resendable, arg(id))
 	var (
 		source             ResendSource
@@ -130,6 +127,27 @@ func decodeResendSource(source *ResendSource, to, cc, bcc, files []byte) error {
 	return nil
 }
 
+// resendContactLateral joins a bounced send to the contact whose address
+// refused it: a contact the activity is filed under, that the caller may read,
+// and that holds the bounced address. The address picks the contact. An
+// activity filed under several contacts would otherwise hand the corrected
+// address, and the consent question, to whichever contact sorted first.
+// Archived addresses count, so a second press after a refused send still finds
+// the contact whose address was already replaced.
+func resendContactLateral(ctx context.Context, args *[]any) (string, error) {
+	arg := func(v any) int { *args = append(*args, v); return len(*args) }
+	visible, err := auth.LinkTargetReadableClause(ctx, "al", arg)
+	if err != nil {
+		return "", err
+	}
+	if visible == "" {
+		visible = alwaysVisible
+	}
+	return contactLateral(visible, ` AND EXISTS (
+       SELECT 1 FROM contact_email ce
+        WHERE ce.contact_id = al.contact_id AND ce.email = lower(btrim(o.bounce_recipient)))`), nil
+}
+
 // sendAgainFrom answers which of the given bounced sends may be sent again,
 // by the same predicate ResendSource reads with.
 func (s *Store) sendAgainFrom(ctx context.Context, userID ids.UUID, bounced []ids.UUID) (map[ids.UUID]bool, error) {
@@ -137,8 +155,14 @@ func (s *Store) sendAgainFrom(ctx context.Context, userID ids.UUID, bounced []id
 	if len(bounced) == 0 {
 		return again, nil
 	}
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `SELECT o.id FROM comms_outbound o WHERE o.id = ANY($2) AND `+resendable, userID, bounced)
+	args := []any{userID, bounced}
+	lateral, err := resendContactLateral(ctx, &args)
+	if err != nil {
+		return nil, err
+	}
+	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		rows, err := tx.Query(ctx, `SELECT o.id FROM comms_outbound o `+lateral+`
+ WHERE o.id = ANY($2) AND l.contact_id IS NOT NULL AND `+resendable, args...)
 		if err != nil {
 			return err
 		}

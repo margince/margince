@@ -298,3 +298,96 @@ func TestSendAgainRefusesAnAddressThatCannotReplaceTheBouncedOne(t *testing.T) {
 	}
 	assertDelivered(t, f.e, 1, "refused addresses")
 }
+
+// linkSecondContact files the bounced send under another contact the rep can
+// see, whose id sorts before the bounced contact's, so a read that took "the
+// first linked contact" would pick it.
+func (f bounceFixture) linkSecondContact(t *testing.T, address string) ids.UUID {
+	t.Helper()
+	other := ids.MustParse("00000000-0000-7000-8000-000000000001")
+	activity := f.e.WsScalar(t, `SELECT activity_id::text FROM comms_outbound WHERE id = $1`, f.bounceID)
+	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+		for _, statement := range []string{
+			`INSERT INTO contact (id, full_name, source, captured_by, owner_id) VALUES ($1, 'Other Contact', 'test', 'human:x', '` + f.e.Rep1.String() + `')`,
+			`INSERT INTO contact_email (contact_id, email, email_type, is_primary, source, captured_by) VALUES ($1, '` + address + `', 'work', true, 'manual', 'human:x')`,
+		} {
+			if _, err := tx.Exec(context.Background(), statement, other); err != nil {
+				return err
+			}
+		}
+		_, err := tx.Exec(context.Background(),
+			`INSERT INTO activity_link (id, activity_id, entity_type, contact_id) VALUES ($1, $2::uuid, 'contact', $3)`, ids.NewV7(), activity, other)
+		return err
+	}); err != nil {
+		t.Fatalf("link the second contact: %v", err)
+	}
+	return other
+}
+
+func (f bounceFixture) addressesOf(t *testing.T, contact ids.UUID) []string {
+	t.Helper()
+	rows, err := f.e.Pool.Query(f.e.Admin(), `SELECT email FROM contact_email WHERE contact_id = $1 AND archived_at IS NULL ORDER BY email`, contact)
+	if err != nil {
+		t.Fatal(err)
+	}
+	defer rows.Close()
+	var out []string
+	for rows.Next() {
+		var a string
+		if err := rows.Scan(&a); err != nil {
+			t.Fatal(err)
+		}
+		out = append(out, a)
+	}
+	return out
+}
+
+func TestSendAgainChangesOnlyTheContactWhoseAddressBounced(t *testing.T) {
+	f := newBounceFixture(t)
+	other := f.linkSecondContact(t, "other@buyer.test")
+
+	if _, err := f.svc.SendAgain(f.rep, f.bounceID, correctedAddress); err != nil {
+		t.Fatalf("SendAgain: %v", err)
+	}
+	if got := f.addressesOf(t, other); len(got) != 1 || got[0] != "other@buyer.test" {
+		t.Errorf("the other linked contact now holds %v, want its own address untouched", got)
+	}
+	if got := f.addressesOf(t, f.contact); len(got) != 1 || got[0] != correctedAddress {
+		t.Errorf("the bounced contact holds %v, want only %s", got, correctedAddress)
+	}
+}
+
+func TestSendAgainChecksConsentForTheContactWhoseAddressBounced(t *testing.T) {
+	f := newBounceFixture(t)
+	other := f.linkSecondContact(t, "other@buyer.test")
+	// The linked contact that did not bounce has consent. A send that put the
+	// corrected address on it would pass the gate.
+	if _, err := f.consents.Record(f.e.Admin(), consent.RecordInput{
+		ContactID: ids.From[ids.ContactKind](other), PurposeID: f.purpose.ID, NewState: "granted", PolicyText: &grantedWording,
+	}); err != nil {
+		t.Fatalf("grant the other contact: %v", err)
+	}
+	f.setConsent(t, "withdrawn")
+
+	if _, err := f.svc.SendAgain(f.rep, f.bounceID, correctedAddress); !errors.Is(err, apperrors.ErrConsentNotGranted) {
+		t.Fatalf("SendAgain = %v, want the bounced contact's withdrawn consent to refuse it", err)
+	}
+	assertDelivered(t, f.e, 1, "a refused repeat")
+}
+
+func TestSendAgainIsRefusedWhenNoVisibleLinkedContactHoldsTheBouncedAddress(t *testing.T) {
+	f := newBounceFixture(t)
+	elsewhere := f.e.SeedContact(t, "Unlinked Contact", &f.e.Rep1)
+	f.e.WsExec(t, `UPDATE contact_email SET contact_id = $1 WHERE email = $2`, elsewhere, bouncedAddress)
+
+	if f.canSendAgain(t, f.bounceID) {
+		t.Error("Send again is offered although no linked contact holds the bounced address")
+	}
+	if _, err := f.svc.SendAgain(f.rep, f.bounceID, correctedAddress); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Fatalf("SendAgain = %v, want not found", err)
+	}
+	if got := f.addressesOf(t, f.contact); len(got) != 0 {
+		t.Errorf("the linked contact gained %v, want nothing appended", got)
+	}
+	assertDelivered(t, f.e, 1, "a refused repeat")
+}
