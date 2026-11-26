@@ -21,9 +21,9 @@ import (
 // message counted as theirs, and no row changes to fire a trigger.
 func DirectionlessSendersTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795661340_directionless_sender_strength_dates", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795661340_directionless_sender_strength_dates"),
-		Requires: []string{"core/1795661340"},
+		ID: "core/1795675601_directionless_sender_strength_dates", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795675601_directionless_sender_strength_dates"),
+		Requires: []string{"core/1795675601"},
 		Steps:    []datatask.Step{directionlessSendersStep()},
 	}
 }
