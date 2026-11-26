@@ -97,6 +97,7 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/deals:requireReadableBuyerTx":           "Asks whether the caller may read the offer's buyer company before a send freezes its name or a render prints it. It decides whether the offer's own operation may proceed, and no company changes.",
 	"internal/modules/contacts:memberMayReadTx":               "Asks whether some member of a shared mailbox's reader team may see the contact or lead before the mail is filed under it. Filing shared mail where its readers can find it is a read decision about the mail, and the record itself does not change.",
 	"internal/modules/contacts:visibleCompanyDomainsTx":       "Asks whether the caller may see an employer before the import test run reads its domains for the duplicate check. It decides what the batch is told, and no company changes.",
 	"internal/modules/contacts:ownerSeesCompanies":            "Asks whether the contact's OWNER may open the two companies an employer question names, so the card never shows them a name they could not read. It narrows what is staged; the accept writes through EnsureLinkTarget and the relationship writers, and no company changes.",

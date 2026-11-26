@@ -228,6 +228,47 @@ func withholdUnreadableBuyerOn(ctx context.Context, tx pgx.Tx, offer *crmcontrac
 	return nil
 }
 
+// BuyerNotReadableError refuses a render or a send of an offer whose buyer
+// company the caller cannot read. A copy without the buyer block would be a
+// contract that names nobody. A missing buyer, a row-scope miss and a missing
+// object grant all answer this one error, so the refusal tells them apart
+// to no one.
+type BuyerNotReadableError struct{}
+
+func (e *BuyerNotReadableError) Error() string {
+	code, message := e.MessageFault()
+	return code + ": " + message
+}
+
+// Unwrap keeps the refusal on the 403 row of the sentinel table.
+func (e *BuyerNotReadableError) Unwrap() error { return apperrors.ErrPermissionDenied }
+
+// MessageFault says what to do without naming the company.
+func (e *BuyerNotReadableError) MessageFault() (code, message string) {
+	return "permission_denied", "The buyer company of this offer is not readable for you, so it cannot be " +
+		"rendered or sent by you. Ask the company's owner to share it with you, or ask an administrator " +
+		"to grant you company read."
+}
+
+// requireReadableBuyerTx refuses the offers whose buyer the caller may not
+// read. Render and send both print or freeze the buyer's names, which the
+// company read grant and the row scope govern. Both ask it here, so the
+// document and the snapshot agree for one caller. An offer with no buyer
+// company passes.
+func requireReadableBuyerTx(ctx context.Context, tx pgx.Tx, offer crmcontracts.Offer) error {
+	if offer.BuyerCompanyId == nil {
+		return nil
+	}
+	err := auth.Require(ctx, "company", principal.ActionRead)
+	if err == nil {
+		err = auth.EnsureVisible(ctx, tx, "company", ids.UUID(*offer.BuyerCompanyId))
+	}
+	if errors.Is(err, apperrors.ErrPermissionDenied) || errors.Is(err, apperrors.ErrNotFound) {
+		return &BuyerNotReadableError{}
+	}
+	return err
+}
+
 func readOffer(ctx context.Context, tx pgx.Tx, id ids.OfferID, archived storekit.ArchivedFilter) (crmcontracts.Offer, error) {
 	q := `SELECT ` + offerColumns + ` FROM offer WHERE id = $1`
 	if archived == storekit.LiveOnly {
