@@ -28,7 +28,7 @@ show how to verify those identities and signatures.
    Keep the database, Redis and object storage off the public network. Use HTTPS at the reverse proxy.
 2. Use the deployment guide's separate database roles, fresh bootstrap password, protected root key
    and proxy settings. Keep development mode off. Encrypt data volumes and backups through your infrastructure.
-3. Give each person only the access they need. Review service accounts, agent passports and connectors.
+3. Give each team member only the access they need. Review service accounts, agent passports and connectors.
    A compromised administrator, database owner or host can expose the whole installation.
 4. Read the [AI data-egress reference](../reference/ai-egress.md) before enabling model providers.
    Untrusted messages, files and websites can contain hostile instructions. Keep approvals and access limits in place.

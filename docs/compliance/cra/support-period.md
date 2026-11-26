@@ -59,8 +59,9 @@ longer period when the expected use time is longer.
 
 A release that is not a substantial modification keeps the end date of its version.
 After a substantial modification, reassess the factors that determined expected use.
-Where those factors are unchanged, retain the existing end date; where they change, recalculate the period.
-Record the reasoning for the assessed version. Sections 4 and 5.1 of the Commission guidance describe these tests.
+The guidance allows the existing end date where those factors are unchanged; where they change, recalculate the period.
+Record the reasoning and any longer period declared for the assessed version.
+Sections 4 and 5.1 of the Commission guidance describe these tests.
 
 Products placed on the market before 11 December 2027 come under the Article 13 duties only if they are
 substantially modified after that date (Article 69(2)). The Article 14 reporting duty applies to them in
