@@ -158,18 +158,15 @@ Margince puts a captured email on a deal by itself only when one deal, and no ot
 
 An email stays on no deal when nothing picks one of several open deals, or the AI check is not sure. It also stays off when its contacts work at two companies, or when a colleague said it is not about the deal that fits. An email already on a deal keeps it, and a deal you chose by hand is never changed.
 
-When several deals fit, the AI check reads the email first. A sure pick files it, and a sure "none" files nothing. Only when it is not sure is one colleague asked once per thread: "Which deal is this about?". The question waits in
-their **Suggested links** panel on **Home**, one row for each deal that fits, see [Suggested links](suggested-links.md).
+When several deals fit, the AI check reads the email first. A sure pick files it, and a sure "none" files nothing. Only when it is not sure is one colleague asked once per thread: "Which deal is this about?". The question waits in their **Suggested links** panel on **Home**, one row for each deal that fits, see [Suggested links](suggested-links.md).
 
 That is the colleague who sent the email, or the one colleague it was addressed to. Nobody else is asked. If no colleague is named that way, nobody is asked. An email older than the waiting horizon asks nobody, even when it is captured today.
 
 To answer, choose **File it there** on the row of the right deal. **Relink** on any email of that conversation works too. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The other rows of the question then leave the panel.
 
-Choose **Not there** on each deal the conversation is not about. Margince then never files that conversation on those deals.
+Choose **Not there** on each deal the conversation is not about. Margince then never files that conversation on those deals. When an extension filed an email on a deal, its row says **Filed here by**, the extension's name and its reason. **Undo** beside it marks the email **Not about this deal**, so the extension cannot file it there again.
 
 To say an email or a meeting is not about a deal, choose **Not about this deal** under **More actions** on its row. It stays on the deal with that mark, and no longer counts as activity on the deal. Margince never files it on that deal again, or moves it to another deal, by itself; **Relink** still files it on any record. A project link that came with that deal comes off too, unless its retention rules keep it. **About this deal** takes the mark back. This holds when an agent marks the deal for you as well.
-
-When an extension filed an email on a deal, its row says **Filed here by**, the extension's name and its reason. **Undo** beside it marks the email **Not about this deal**, so the extension cannot file it there again.
 
 Meetings use the same contact and company rules. They never follow an email thread or ask you to choose a deal. If several deals fit, the meeting stays off them.
 
@@ -350,8 +347,7 @@ To correct what Margince decided about a sender, open **Settings → Connections
 3. Open its **…** (**Actions**) menu and choose **Mark as business**, or choose **Exclude** and confirm **Exclude and destroy**.
 **Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. Margince still receives their later mail, but hides and destroys it, so it never shows. **Capture exclusions** work earlier: they stop new mail before it is stored. What Margince sorts by itself never writes over a decision you make.
 
-A sender Margince judged personal shows as **Private**. No contact is made for that address again, whoever writes. To undo it, choose **Lift: allow contacts again** in its **…** menu.
-Their mail stays in your mailbox. A colleague who works with the same address keeps their own contact.
+A sender Margince judged personal shows as **Private**. No contact is made for that address again, whoever writes. To undo it, choose **Lift: allow contacts again** in its **…** menu. Their mail stays in your mailbox. A colleague who works with the same address keeps their own contact.
 Also called: mark as not spam, whitelist a sender.
 
 ## Things you control yourself

@@ -10537,7 +10537,7 @@ paths:
     post:
       tags: [Activities]
       operationId: rejectLinkSuggestion
-      x-mcp-tool: { verb: reject_link_suggestion, router: change_activities, action: reject_link_suggestion, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: reject_link_suggestion, router: change_activities, action: reject_link_suggestion, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
       description: |

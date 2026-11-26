@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 244.8 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 64075 |
+| Approx. wire tokens | 64081 |
 | Largest tool | `read_details` (15.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -819,7 +819,8 @@ decline_deal, discard_draft, file_channel_message, hide_document, log, preview_i
 preview_sign_off, read_document_fields, read_transcript, ready, reject_link_suggestion,
 request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details,
 set_thread_audience, show_document, task, unready; decided per call from its arguments for relink,
-relink_many; ask the user first for the actions archive_document, assign_inquiry.)
+relink_many; ask the user first for the actions archive_document, assign_inquiry,
+reject_link_suggestion.)
 ```
 
 <details><summary>Input schema</summary>
