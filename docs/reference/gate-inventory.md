@@ -423,7 +423,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `machineryapplied_test.go` | H2 | Every setting read through an ungated machinery reader (settings.ApplyTx or settings.ApplyManyTx) is declared MachineryApplied. |
 | `magicfieldcensus_test.go` | H2 | Every column of a record a reader edits is shown on a receipt or declared internal. |
 | `mailboxproofwriters_test.go` | H2 | A MailboxProof is set in one place, and that place spends the token that earns it. |
-| `maillanguagereader_test.go` | H2 | One reader of the installation's base language. |
 | `makefilepaths_test.go` | H1 | Every config file the Makefiles name is a config file that exists. |
 | `maskablefieldobjects_test.go` | H2 | Every object the maskable-field catalog offers is an object some module actually withholds on. |
 | `maskedamountreaders_test.go` | H2 | maskableCatalog is what this build can withhold, one "\<object> \<field>" per line; it owns this census's subject and is the only place it is named. |
