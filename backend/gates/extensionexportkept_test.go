@@ -17,9 +17,16 @@ const publishedInV1 = "released in v1.0.0, so code outside this tree may call it
 // files a member's own chats calls it. No unit in this tree does yet.
 const memberChatIngest = "the member-owned chat ingest; no unit in this tree files a member's own chats yet"
 
+// testKit is the reason for the unit test kit. Its callers are units' tests,
+// which this census does not read; extensions/finance-demo's test calls each.
+const testKit = "the unit test kit; its callers are units' test files, which the census does not read"
+
 // exportWaivers are the exported pkg/extension names with no caller in this
 // tree, each with why it stays.
 var exportWaivers = gatekit.Waive(map[string]string{
+	"extension/extensiontest.Check":                  testKit,
+	"extension/extensiontest.CheckLink":              testKit,
+	"extension/extensiontest.CheckSignal":            testKit,
 	"extension.OccurredPrecision":                    memberChatIngest,
 	"extension.PostureClassified":                    memberChatIngest,
 	"extension.PostureHeld":                          memberChatIngest,

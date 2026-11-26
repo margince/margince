@@ -6244,7 +6244,7 @@ export interface paths {
          *     screen shows for each. Which extensions are installed is a fact of the binary, so the
          *     contract cannot list the values; this operation does.
          *
-         *     Readable by any signed-in seat, because the company list shows these types and filters
+         *     Readable by any signed-in seat and its agent, because the company list shows these types and filters
          *     on them. Each value and label is declared in extension code, never typed by an
          *     administrator. Empty when no installed extension declares a type.
          */
@@ -15854,6 +15854,63 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/installation/authentication-policy/google-directory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether the Google directory connection is set up, and how its last check went.
+         * @description The group→role map reads a Google member's groups from the Workspace Directory API,
+         *     because Google's ID tokens carry none. This says whether the credential that does it
+         *     is stored and how the last lookup went. The key and the admin address have no read
+         *     path: nothing here returns either.
+         *
+         *     `last_result` and `last_reason` describe the newest check: a sign-in lookup that
+         *     failed, a lookup that ended a run of failures, or the check made when the credential
+         *     was stored. Both are absent before any check. A failed lookup never fails the
+         *     sign-in, so this is where an operator sees that members are signing in without the
+         *     roles their groups map to.
+         *
+         *     Governed by `authentication_policy` read. Human-only.
+         */
+        get: operations["getGoogleDirectory"];
+        /**
+         * Store or replace the Google directory credential.
+         * @description Seals a Google service-account key and the admin address it acts for in the key
+         *     vault, replacing any earlier credential. The old sealed copy is destroyed after the
+         *     new one is in place.
+         *
+         *     The credential is checked before it is sealed: Google must exchange the key for a
+         *     token under domain-wide delegation with the one read-only scope
+         *     `https://www.googleapis.com/auth/admin.directory.group.readonly`, and answer a group
+         *     read for the admin address. A credential that fails is a 422 naming what to fix,
+         *     never echoing the key, and nothing is stored.
+         *
+         *     `service_account_json` and `admin_subject` are write-only. Takes effect on the next
+         *     Google sign-in, without a restart.
+         *
+         *     Requires a key vault; without one the answer is 503. 409 when a boot source sets the
+         *     credential. Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        put: operations["setGoogleDirectory"];
+        post?: never;
+        /**
+         * Remove the Google directory credential.
+         * @description Drops the reference and destroys the sealed credential. Removing one that was never
+         *     stored succeeds, so a retry is safe. Google members then sign in as before the
+         *     connection existed: the map grants them nothing.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        delete: operations["deleteGoogleDirectory"];
         options?: never;
         head?: never;
         patch?: never;
@@ -29797,6 +29854,35 @@ export interface components {
             oidc_group_role_map: {
                 [key: string]: string;
             };
+        };
+        /** @description Whether the Google directory credential is stored and how the newest check went. Carries neither the key nor the admin address. */
+        GoogleDirectoryStatus: {
+            /** @description A credential is stored, or a boot source sets one. */
+            configured: boolean;
+            /**
+             * Format: date-time
+             * @description When the newest check ran. Absent before any check.
+             */
+            last_checked_at?: string;
+            /**
+             * @description How the newest check ended. Absent before any check.
+             * @enum {string}
+             */
+            last_result?: "ok" | "failed";
+            /**
+             * @description Why the newest check failed, present only when `last_result` is `failed`. A closed vocabulary, never Google's own words. `delegation_refused` is the common setup mistake: the service account's client ID has no domain-wide delegation for the read-only group scope, or the admin address is wrong.
+             * @enum {string}
+             */
+            last_reason?: "key_invalid" | "delegation_refused" | "permission_denied" | "member_not_found" | "timeout" | "unavailable" | "bad_answer";
+        };
+        GoogleDirectoryInput: {
+            /** @description The service account's JSON key file, as Google issues it. */
+            service_account_json: string;
+            /**
+             * Format: email
+             * @description The Workspace admin the service account acts for. The Directory API refuses a delegated read that names no admin.
+             */
+            admin_subject: string;
         };
         /** @description Why the base currency is locked, as facts a client words in its reader's language. Present exactly when `base_currency_locked_reason` is (ADR-0085 §7). */
         BaseCurrencyLock: {
@@ -69769,7 +69855,7 @@ export interface operations {
                 status?: "unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified";
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
-                /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. */
+                /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. `listCompanyTypes` lists the values, and an agent reads them with the `read_workspace` action `company_types`. */
                 extension_relationship_type?: string;
                 /**
                  * @description Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
@@ -72973,7 +73059,7 @@ export interface operations {
                 priority?: "low" | "medium" | "high" | "unset";
                 /** @description An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker. */
                 acquisition_source?: string;
-                /** @description A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. */
+                /** @description A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. `listLinkTypes` lists the values, and an agent reads them with the `read_workspace` action `link_types`. */
                 link_type?: string;
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.
@@ -84013,7 +84099,7 @@ export interface operations {
     getFilterVocabulary: {
         parameters: {
             query: {
-                /** @description The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. */
+                /** @description The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. `listRecordKinds` lists the kinds the caller may read, and an agent reads them with the `read_workspace` action `record_kinds`. */
                 resource: components["schemas"]["FilterResource"];
             };
             header?: never;
@@ -91887,6 +91973,95 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getGoogleDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The connection status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleDirectoryStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    setGoogleDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleDirectoryInput"];
+            };
+        };
+        responses: {
+            /** @description Sealed. The status, with the check just made. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleDirectoryStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["SettingLocked"];
+            422: components["responses"]["ValidationError"];
+            /** @description This installation has no key vault, so the credential cannot be stored. The remedy is the operator's, the vault root key, and not anything the caller sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteGoogleDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed, or there was nothing to remove. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["SettingLocked"];
+            /** @description This installation has no key vault, so there is no sealed credential to remove. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getInstallationSettings: {

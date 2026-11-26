@@ -42,8 +42,8 @@ type Query struct {
 	// of the direct ownership clause (the timeline's visibility rule).
 	ActivityWalk bool
 	// Object, when set, is the extension record kind whose rows Table holds.
-	// Such rows carry no owner, so the read right on the kind is the whole row
-	// scope. The gate then names the kind, not the schema-qualified Table.
+	// The gate then names the kind, not the schema-qualified Table, and the row
+	// scope is the kind's (auth.ExtensionScopeClause).
 	Object string
 	// WinChance renders the win chance of every deal over a deal alias. A
 	// predicate on the stored win probability reads it instead, so a list reads
@@ -77,11 +77,11 @@ func (q Query) object() string {
 }
 
 // rowScope is the caller's row-scope clause over alias t, empty when the caller
-// sees every row, and always empty for an extension kind.
+// sees every row.
 func (q Query) rowScope(ctx context.Context, arg func(any) int) (string, error) {
 	switch {
 	case q.Object != "":
-		return "", nil
+		return auth.ExtensionScopeClause(ctx, q.Object, "t", arg)
 	case q.ActivityWalk:
 		return auth.ActivityContentClause(ctx, "t", arg)
 	default:

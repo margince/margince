@@ -419,6 +419,7 @@ admin can also change under Settings. One that also says kept by a reset keeps i
 | Key | Env | Flag | Type | Default | Programs | Doc |
 |---|---|---|---|---|---|---|
 | `identity.enabled_oidc_providers` | `MARGINCE_IDENTITY_ENABLED_OIDC_PROVIDERS` | — | `list<string>`, stored, kept by a reset | — | api, worker | The sign-in providers offered, as a list of provider keys; unset offers every provider the deployment set up. |
+| `identity.google_directory_credential` | `MARGINCE_IDENTITY_GOOGLE_DIRECTORY_CREDENTIAL` | — | `string`, secret, stored, kept by a reset | — | api, worker | The service-account key and admin address that read a Google member's groups at sign-in, as JSON with `service_account_key` and `admin_subject`. |
 | `identity.mcp_client_check` | `MARGINCE_IDENTITY_MCP_CLIENT_CHECK` | — | `bool`, stored, kept by a reset | `false` | api, worker | Admins may run the `check_client` tool from an AI tool to test whether it can answer a form. |
 | `identity.oauth_dynamic_registration` | `MARGINCE_IDENTITY_OAUTH_DYNAMIC_REGISTRATION` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may register their own OAuth client (DCR) for new sign-ins. |
 | `identity.oauth_metadata_documents` | `MARGINCE_IDENTITY_OAUTH_METADATA_DOCUMENTS` | — | `bool`, stored, kept by a reset | `true` | api, worker | AI tools may sign in with a client ID that is the URL of their metadata document (CIMD). |

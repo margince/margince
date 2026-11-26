@@ -142,6 +142,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /companies/{id}/facts` | listCompanyFacts | The company's confirmed facts, grouped by category on the client. Site-read facts carry evidence (snippet, source URL, confidence); human/migration values may omit it. | Read records | at once |
 | `POST /companies/{id}/facts` | createCompanyFact | State a fact about this company by hand. | Change records | at once |
 | `GET /companies/{id}/profile-fields` | listCompanyProfileFields | The company's confirmed profile fields. A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it. | Read records | at once |
+| `GET /company-types` | listCompanyTypes | Which company types installed extensions add beside core's own. | Read records | at once |
 | `GET /onboarding/company/proposal` | getOnboardingCompanyProposal | The deterministic evidence-backed company proposal derived from the onboarding website read. | Read records | at once |
 | `GET /company` | getAnchorCompany | The installation's own company (the anchor company). | Read records | at once |
 | `PUT /company` | putAnchorCompany | Save the installation's own company. | Change records | at once |
@@ -268,6 +269,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
+| `GET /link-types` | listLinkTypes | The types a link between two records may have. | Read records | at once |
 | `GET /records/references` | readRecordReferences | Read names and archive state for a bounded set of records. | Read records | at once |
 
 ## Pipelines
@@ -966,6 +968,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
+| `GET /record-kinds` | listRecordKinds | Which kinds of record installed extensions add beside core's own. | Read records | at once |
 | `GET /extensions` | listExtensions | List the composed extension units and what each contributes. Read-only; needs the extension_access read grant. | Read records | at once |
 | `GET /extensions/{name}/settings` | getExtensionSettings | Read what the core does with a unit's feed. Needs the extension_access read grant. | Read records | at once |
 

@@ -521,6 +521,7 @@
     "listCompanyLinkCandidates": "business",
     "listCompanyOfferedValues": "business",
     "listCompanyProfileFields": "business",
+    "listCompanyTypes": "business",
     "listConfirmSubmissions": "compliance",
     "listConnectorContainers": "capture",
     "listConnectors": "capture",
@@ -579,6 +580,7 @@
     "listLegalEntityMembers": "workspace_settings",
     "listLegalHolds": "compliance",
     "listLegalReviews": "business",
+    "listLinkTypes": "business",
     "listListHistory": "business",
     "listListMembers": "business",
     "listLists": "business",
@@ -603,6 +605,7 @@
     "listProviderConnections": "capture",
     "listProviderLocations": "admin_settings",
     "listRecordAssignments": "business",
+    "listRecordKinds": "workspace_settings",
     "listRecordRoles": "workspace_settings",
     "listRelationships": "business",
     "listReportRuns": "business",
@@ -1148,6 +1151,7 @@
     "deleteCaptureSenderDecision": "capture_triage",
     "deleteCompanyFact": "companies",
     "deleteCorpusDocument": "knowledge",
+    "deleteGoogleDirectory": "installation",
     "deleteLeadDisqualifyReason": "sales_lists",
     "deleteLeadOrigin": "sales_lists",
     "deleteLeadSource": "sales_lists",
@@ -1352,6 +1356,7 @@
     "getForecastFocus": "forecast",
     "getForecastMovement": "forecast",
     "getForecastStageChances": "forecast",
+    "getGoogleDirectory": "installation",
     "getHandledForYou": "worklist",
     "getHandoffAssignee": "leads",
     "getHiddenBacklog": "worklist",
@@ -1955,6 +1960,7 @@
     "setDealRoomExpiry": "deal_rooms",
     "setForecastAssuranceEnforcement": "forecast",
     "setFxRate": "rates",
+    "setGoogleDirectory": "installation",
     "setLeadManualSignal": "leads",
     "setMyAgentGrant": "agent_limits",
     "setOauthApp": "installation",
@@ -3546,6 +3552,9 @@
     "read_card_photo": [
       "contacts"
     ],
+    "read_company_types": [
+      "companies"
+    ],
     "read_corpus": [
       "knowledge"
     ],
@@ -3569,6 +3578,9 @@
     ],
     "read_job_health_history": [
       "system_health"
+    ],
+    "read_link_types": [
+      "search"
     ],
     "read_lists": [
       "lists"
@@ -3599,6 +3611,9 @@
       "leads",
       "offers",
       "projects"
+    ],
+    "read_record_kinds": [
+      "extensions"
     ],
     "read_recovery_health": [
       "system_health"
@@ -5681,6 +5696,9 @@
     "read_card_photo": [
       "business"
     ],
+    "read_company_types": [
+      "business"
+    ],
     "read_corpus": [
       "business"
     ],
@@ -5705,6 +5723,9 @@
     "read_job_health_history": [
       "operator"
     ],
+    "read_link_types": [
+      "business"
+    ],
     "read_lists": [
       "business"
     ],
@@ -5725,6 +5746,9 @@
     ],
     "read_record": [
       "business",
+      "workspace_settings"
+    ],
+    "read_record_kinds": [
       "workspace_settings"
     ],
     "read_recovery_health": [

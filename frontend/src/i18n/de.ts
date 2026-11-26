@@ -7,6 +7,7 @@ import type { MessageKey } from "./en";
 export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.proposal_stage":
     "Fragen, ob ein gesendetes Angebot den Deal verschiebt",
+  "systemJob.google_directory": "Google-Gruppen eines Mitglieds lesen",
   "systemJob.legal_review_desk": "Rechtsprüfung",
   "systemJob.import_identity_links": "Importierte E-Mail verknüpfen",
   "systemJob.history_narrowing": "Einschränkung früherer E-Mails",
@@ -17549,7 +17550,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Auch für dieses Konto muss bei der Anmeldung mit Passwort die zweistufige Anmeldung eingerichtet werden.",
   "groupRoles.title": "Rollen aus IdP-Gruppen",
   "groupRoles.sub":
-    "Vergibt bei der Anmeldung über SSO eine Rolle an jedes eingeladene Mitglied einer IdP-Gruppe. Die Gruppe muss genau so geschrieben sein wie im groups-Anspruch des ID-Tokens. Ein Nutzerkonto entsteht dabei nicht: Eine nicht eingeladene E-Mail-Adresse wird abgewiesen, mit oder ohne Gruppen.",
+    "Vergibt bei der Anmeldung über Microsoft eine Rolle an jedes eingeladene Mitglied einer IdP-Gruppe. Die Gruppe muss genau so geschrieben sein wie im groups-Anspruch des ID-Tokens. Google sendet keine Gruppen: Für Google wirkt die Zuordnung erst, wenn die Google-Gruppenabfrage unten verbunden ist. Ein Nutzerkonto entsteht dabei nicht: Eine nicht eingeladene E-Mail-Adresse wird abgewiesen, mit oder ohne Gruppen.",
   "groupRoles.grantOnlyTitle": "Nur Vergabe: Das Verzeichnis entzieht nie",
   "groupRoles.grantOnly":
     "Jede Anmeldung vergibt die zugeordneten Rollen und entfernt keine. Wer aus einer IdP-Gruppe entfernt wird, verliert die Rolle hier nicht: Der Entzug bleibt eine bewusste Admin-Entscheidung am Nutzerkonto des Mitglieds.",
@@ -17570,6 +17571,40 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Ein Gruppenname darf nicht mit einem Leerzeichen beginnen oder enden. Der Gruppenname muss dem ID-Token genau entsprechen.",
   "groupRoles.duplicateGroup": "Jede Gruppe kann nur einmal zugeordnet werden.",
   "groupRoles.tooMany": "Höchstens 64 Gruppen können zugeordnet werden.",
+  "googleDirectory.title": "Google-Gruppenabfrage",
+  "googleDirectory.sub":
+    "Google sendet bei der Anmeldung keine Gruppen des Mitglieds mit. Diese Verbindung liest sie aus dem Verzeichnis deiner Google-Domäne, wenn sich ein Mitglied mit Google anmeldet. Lege ein Dienstkonto an, gib ihm domainweite Delegierung für den schreibgeschützten Verzeichnisbereich für Gruppen und speichere hier seinen Schlüssel zusammen mit der Adresse eines Admins deiner Google-Domäne, für den es handelt. Google benennt eine Gruppe mit ihrer E-Mail-Adresse. Ordne Gruppen oben deshalb genau so zu, wie Google sie auflistet, zum Beispiel sales@example.com. Es zählen nur Gruppen, in denen das Mitglied direkt ist, nicht verschachtelte Gruppen.",
+  "googleDirectory.state.none":
+    "Nicht verbunden. Mitglieder, die sich mit Google anmelden, erhalten keine Rollen aus der Zuordnung.",
+  "googleDirectory.state.unchecked":
+    "Verbunden. Es ist noch keine Abfrage gelaufen.",
+  "googleDirectory.state.ok":
+    "Verbunden. Die letzte Abfrage hat am {time} funktioniert.",
+  "googleDirectory.state.failedTitle":
+    "Die letzte Google-Abfrage ist am {time} fehlgeschlagen",
+  "googleDirectory.state.failedEffect":
+    "Bis das behoben ist, erhalten Mitglieder, die sich mit Google anmelden, keine Rollen aus der Zuordnung. Niemand verliert eine Rolle, die er schon hat.",
+  "googleDirectory.reason.key_invalid":
+    "Mit der gespeicherten Schlüsseldatei lassen sich keine Anfragen signieren. Speichere den Schlüssel neu.",
+  "googleDirectory.reason.delegation_refused":
+    "Google hat die Delegierung abgelehnt. Prüfe, ob die Client-ID des Dienstkontos domainweite Delegierung für den schreibgeschützten Verzeichnisbereich für Gruppen hat und ob die Admin-Adresse stimmt.",
+  "googleDirectory.reason.permission_denied":
+    "Google hat die Gruppenliste verweigert. Die Admin-Adresse muss zu einem Admin der Google-Domäne gehören, der Gruppen lesen darf.",
+  "googleDirectory.reason.member_not_found":
+    "Google kennt die Adresse des Mitglieds nicht, das sich angemeldet hat.",
+  "googleDirectory.reason.timeout": "Google hat nicht rechtzeitig geantwortet.",
+  "googleDirectory.reason.unavailable":
+    "Google war nicht erreichbar oder begrenzt die Anfragen.",
+  "googleDirectory.reason.bad_answer":
+    "Google hat in einer Form geantwortet, die dieser Server nicht lesen kann.",
+  "googleDirectory.admin":
+    "Admin der Google-Domäne, für den der Schlüssel handelt",
+  "googleDirectory.adminHint":
+    "Das Dienstkonto liest das Verzeichnis als dieser Admin. Nimm die Adresse eines echten Admins der Google-Domäne.",
+  "googleDirectory.needBoth":
+    "Füge die Schlüsseldatei und die Admin-Adresse hinzu.",
+  "googleDirectory.save": "Prüfen und speichern",
+  "googleDirectory.remove": "Verbindung entfernen",
   "oauthApp.google.title": "Google-App",
   "oauthApp.google.clientIdPlaceholder":
     "000000000000-xxxx.apps.googleusercontent.com",
