@@ -293,6 +293,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// rules a mailbox deletion does.
 		WithChatEditor(activities.ApplyProviderEditTx).
 		WithChatPurger(purgeRemovedChat).
+		WithMemberIdentities(capture.ApprovedAccountMembers{}).
 		// The files a captured message carried, written by the module that owns
 		// the attachment table. Built here, from the store, so every role that
 		// composes a sink gets the same one — the worker runs mail capture and

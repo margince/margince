@@ -49,14 +49,19 @@ func ChatMessage(msg Message) (connector.ChatMessage, error) {
 	if all := CustomerIdentities(msg); len(all) > 1 {
 		party.Alias = &connector.ChatAlias{AccountScope: all[1].Scope, UserID: all[1].UserID}
 	}
-	return connector.ChatMessage{
+	chat := connector.ChatMessage{
 		ConversationID: userID,
 		IdempotencyKey: msg.ID,
 		Direction:      direction,
 		Counterparty:   party,
 		Body:           body,
 		OccurredAt:     msg.At,
-	}, nil
+	}
+	// WhatsApp says only that a message was forwarded, never who wrote it.
+	if msg.Forwarded && direction == connector.DirectionInbound {
+		chat.Forward = &connector.ChatForward{}
+	}
+	return chat, nil
 }
 
 // ChatChange maps an edit or a revoke to a change of the message it names. The

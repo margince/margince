@@ -36,9 +36,16 @@ const ChatMessageKind = "message"
 func FileChatMessage(
 	ctx context.Context, sink connector.Sink, binding connector.ChatBinding, msg connector.ChatMessage,
 ) (datasource.EntityRef, error) {
-	rec, err := chatRecord(binding, msg)
+	ctx, route, err := routeForward(ctx, sink, binding, msg)
 	if err != nil {
 		return datasource.EntityRef{}, err
+	}
+	rec, err := chatRecord(binding, route.msg)
+	if err != nil {
+		return datasource.EntityRef{}, err
+	}
+	if route.held {
+		rec = heldForwardRecord(rec)
 	}
 	if binding.SeatID.IsZero() && connector.IsCaptureOnlyThread(binding.Provider, rec.ThreadKey) {
 		return datasource.EntityRef{}, fmt.Errorf("%w: a business account's message names no seat, so no posture could decide who reads it", apperrors.ErrInvalidArgument)
