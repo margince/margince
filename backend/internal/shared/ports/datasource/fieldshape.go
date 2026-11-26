@@ -195,12 +195,14 @@ func LocalizeFieldFault(raw json.RawMessage, into any, err error, decode ProbeDe
 		// correctly-shaped array reports the array's own shape, and "must be an
 		// array of objects, not an array of objects" is a sentence that tells
 		// the caller their value is wrong for being right.
-		if sent := sentShape(keys[key]); errors.As(probeErr, &typeErr) && sent != want {
-			refusal.Got = sent
-		} else if errors.As(probeErr, &typeErr) && (want == numberShape || want == integerShape) {
-			// A number of the right shape that the decoder still refused is one
-			// past what the field can hold, such as 1e400.
-			refusal.Got, refusal.code = "a number outside the range it can hold", codeOutOfRange
+		if errors.As(probeErr, &typeErr) {
+			sent := sentShape(keys[key])
+			switch {
+			case sent == numberShape && (want == numberShape || want == integerShape && !bytes.ContainsAny(keys[key], ".eE")):
+				refusal.Got, refusal.code = "a number outside the range it can hold", codeOutOfRange
+			case sent != want:
+				refusal.Got = sent
+			}
 		}
 		return refusal
 	}

@@ -11,6 +11,7 @@ package identity
 // file's suite.
 
 import (
+	"errors"
 	"fmt"
 	"maps"
 	"net/http"
@@ -19,19 +20,16 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 )
 
-// redirectURIFault says which rule a redirect URI breaks, or "" for none, so a
-// refusal names the rule the client broke and not one it kept. It admits https
-// anywhere and plain http only on loopback (native-app dev flows).
-//
-// A query is allowed — a client may legitimately register one — but only one
-// this server can reproduce verbatim when it delivers a response there. An
-// undecodable query is refused HERE, where a client developer sees it at
-// registration, rather than at the redirect that follows a human's consent.
+// A redirect URI's query must survive delivery verbatim, so malformed escapes
+// are refused at registration while the client can still fix them.
 func redirectURIFault(raw string) string {
 	const schemeRule = "a redirect URI must be https, or http on localhost"
 	u, err := url.Parse(raw)
 	switch {
 	case err != nil:
+		if _, malformedEscape := errors.AsType[url.EscapeError](err); malformedEscape {
+			return "a redirect URI must use valid percent-escapes"
+		}
 		return "a redirect URI must be an absolute URL"
 	case u.Fragment != "":
 		return "a redirect URI must not carry a fragment"

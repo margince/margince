@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -111,8 +112,10 @@ func (s *Store) CreateTag(ctx context.Context, name string, color, description *
 		return err
 	})
 	if taken, ok := errors.AsType[*TagNameTakenError](err); ok {
-		// Without the holder's id the refusal still stands; the id only helps.
-		if holder, live, findErr := s.FindTag(ctx, name); findErr == nil && live {
+		holder, live, findErr := s.FindTag(ctx, name)
+		if findErr != nil {
+			slog.WarnContext(ctx, "reading the tag that holds a name failed", "err", findErr)
+		} else if live {
 			taken.ExistingID = holder
 		}
 	}

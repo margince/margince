@@ -263,9 +263,30 @@ func TestLocalizeFieldFault_namesANumberPastItsRange(t *testing.T) {
 	}
 }
 
-// Two bad fields must produce the SAME refusal on every identical request. Map
-// iteration is not ordered, so without sorting a caller fixing one mistake
-// cannot tell progress from churn.
+func TestIntegerOverflowIsDistinctFromFractionalInput(t *testing.T) {
+	type body struct {
+		Quantity int8 `json:"quantity"`
+	}
+	for _, tc := range []struct {
+		raw, code string
+	}{
+		{`{"quantity":128}`, "out_of_range"},
+		{`{"quantity":-129}`, "out_of_range"},
+		{`{"quantity":9223372036854775808}`, "out_of_range"},
+		{`{"quantity":1.5}`, "not_integer"},
+		{`{"quantity":1.0}`, "not_integer"},
+		{`{"quantity":1e2}`, "not_integer"},
+	} {
+		var into body
+		err := StrictDecode(json.RawMessage(tc.raw), &into)
+		refusal, ok := errors.AsType[*FieldShapeError](err)
+		if !ok || refusal.Field != "quantity" || refusal.ShapeCode() != tc.code {
+			t.Errorf("%s: %v, want %s on quantity", tc.raw, err, tc.code)
+		}
+	}
+}
+
+// Sorted probes keep a request with several bad fields from changing its refusal.
 func TestLocalizeFieldFault_namesTheSameFieldEveryTime(t *testing.T) {
 	raw := json.RawMessage(`{"industry":123,"count":"12"}`)
 	first := ""

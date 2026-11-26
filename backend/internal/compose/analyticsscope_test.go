@@ -17,10 +17,12 @@ package compose
 
 import (
 	"errors"
+	"net/http"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/forecasting"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -87,54 +89,54 @@ func TestATeamLensWithNoTeamsDoesNotWiden(t *testing.T) {
 func TestAScopeOutsideTheCallersLensIsRefused(t *testing.T) {
 	other := ids.NewV7()
 	cases := []struct {
-		name      string
-		actor     principal.Principal
-		requested RequestedScope
-		wantErr   error
+		name       string
+		actor      principal.Principal
+		requested  RequestedScope
+		wantStatus int
 	}{
 		{
 			"a rep may not name a colleague",
 			actorWithScope(principal.RowScopeOwn),
 			RequestedScope{Kind: ScopeKindOwner, ID: &other},
-			apperrors.ErrNotFound,
+			http.StatusNotFound,
 		},
 		{
 			"a population nobody defined is refused rather than ignored",
 			actorWithScope(principal.RowScopeAll),
 			RequestedScope{Kind: "everyone"},
-			apperrors.ErrInvalidArgument,
+			http.StatusUnprocessableEntity,
 		},
 		{
 			"the managed-teams kind cannot be asked for from the wire",
 			actorWithScope(principal.RowScopeTeam, ids.NewV7()),
 			RequestedScope{Kind: ScopeKindManagedTeams},
-			apperrors.ErrInvalidArgument,
+			http.StatusUnprocessableEntity,
 		},
 		{
 			"a workspace scope naming a subject is malformed",
 			actorWithScope(principal.RowScopeAll),
 			RequestedScope{Kind: ScopeKindWorkspace, ID: &other},
-			apperrors.ErrInvalidArgument,
+			http.StatusUnprocessableEntity,
 		},
 		{
 			"a team scope naming no team is malformed",
 			actorWithScope(principal.RowScopeAll),
 			RequestedScope{Kind: ScopeKindTeam},
-			apperrors.ErrInvalidArgument,
+			http.StatusUnprocessableEntity,
 		},
 		{
 			"an owner scope naming no owner is malformed",
 			actorWithScope(principal.RowScopeAll),
 			RequestedScope{Kind: ScopeKindOwner},
-			apperrors.ErrInvalidArgument,
+			http.StatusUnprocessableEntity,
 		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := principal.WithActor(individualPerformanceShown(), tc.actor)
 			_, err := resolveAnalyticsScope(ctx, nil, tc.actor, tc.requested)
-			if !errors.Is(err, tc.wantErr) {
-				t.Fatalf("refusal was %v, want %v", err, tc.wantErr)
+			if fault, ok := httperr.Classify(err); !ok || fault.Status != tc.wantStatus {
+				t.Fatalf("refusal was %v (%+v), want status %d", err, fault, tc.wantStatus)
 			}
 		})
 	}

@@ -152,10 +152,7 @@ func admitLeadHolders(ctx context.Context, tx pgx.Tx, keys storekit.IdentityKeys
 	}
 	if len(holders.Leads) == 0 {
 		if len(convert) > 0 {
-			return nil, &values.ParseError{
-				Field: fieldConvertLeadIDs, Code: "reference_not_found",
-				Message: "convert_lead_ids names no live lead that holds an address or profile this write gives the contact; leave it out",
-			}
+			return nil, unmatchedLeadConversion()
 		}
 		return nil, nil
 	}
@@ -173,6 +170,13 @@ func admitLeadHolders(ctx context.Context, tx pgx.Tx, keys storekit.IdentityKeys
 		return nil, apperrors.ErrPermissionDenied
 	}
 	return holders.Leads, nil
+}
+
+func unmatchedLeadConversion() *values.ParseError {
+	return &values.ParseError{
+		Field: fieldConvertLeadIDs, Code: "reference_not_found",
+		Message: "convert_lead_ids names no live lead that holds an address or profile this write gives the contact; leave it out",
+	}
 }
 
 func sameLeads(holders, convert []ids.LeadID) bool {
@@ -257,7 +261,7 @@ func admitEditLeadHolders(ctx context.Context, tx pgx.Tx, id ids.ContactID, curr
 	keys := freshEditKeys(current, *in)
 	if len(keys.Emails) == 0 && len(keys.LinkedInURLs) == 0 {
 		if len(in.ConvertLeadIDs) > 0 {
-			return &LeadHoldsIdentityError{LeadIDs: []ids.LeadID{}}
+			return unmatchedLeadConversion()
 		}
 		return nil
 	}

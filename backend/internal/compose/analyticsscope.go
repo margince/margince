@@ -38,6 +38,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The population kinds, spelled as the wire spells them.
@@ -252,7 +253,7 @@ func resolveAnalyticsScope(
 	}
 
 	if fault := scopesubjects.ShapeFault(requested.Kind, requested.ID != nil); fault != nil {
-		return ResolvedScope{}, fault
+		return ResolvedScope{}, &values.ParseError{Field: "scope_" + fault.Part, Code: codeInvalid, Message: fault.Sentence}
 	}
 	switch requested.Kind {
 	case ScopeKindTeam:

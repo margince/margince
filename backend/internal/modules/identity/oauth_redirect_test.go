@@ -13,6 +13,19 @@ import (
 	"testing"
 )
 
+func TestRedirectURIFaultNamesMalformedEscapes(t *testing.T) {
+	for raw, want := range map[string]string{
+		"https://client.example/%zz":      "a redirect URI must use valid percent-escapes",
+		"https://%zz.example/cb":          "a redirect URI must use valid percent-escapes",
+		"https://client.example/\n":       "a redirect URI must be an absolute URL",
+		"https://client.example/cb?q=%zz": "a redirect URI's query must be well formed",
+	} {
+		if got := redirectURIFault(raw); got != want {
+			t.Errorf("redirectURIFault(%q) = %q, want %q", raw, got, want)
+		}
+	}
+}
+
 func TestRedirectURIMatchingIsPortAgnosticForLoopbackOnly(t *testing.T) {
 	for name, tc := range map[string]struct {
 		registered, presented string
