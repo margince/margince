@@ -363,13 +363,18 @@ func reopenAdmittedDomainTx(ctx context.Context, tx pgx.Tx, domain string, owner
 func readDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain string) (BlockedDomain, error) {
 	var d BlockedDomain
 	var company standingCompany
+	// A domain seen but never decided has no admission_at; it reads as no decision.
+	var decidedAt *time.Time
 	err := tx.QueryRow(ctx, `
 		SELECT d.id, d.domain, COALESCE(d.admission, ''), COALESCE(d.admission_reason, ''),
 		       COALESCE(d.admission_source, ''), d.admission_at, d.company_id, c.display_name, `+domainReasonCodeColumns+`
 		  FROM `+domainStandingFrom+` WHERE d.domain = $1`, domain).
-		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &company.id, &company.name, &d.ReasonCode, &d.SenderKind)
+		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &decidedAt, &company.id, &company.name, &d.ReasonCode, &d.SenderKind)
 	if err != nil {
 		return BlockedDomain{}, fmt.Errorf("contacts: reading back the admission of %s: %w", domain, err)
+	}
+	if decidedAt != nil {
+		d.DecidedAt = *decidedAt
 	}
 	if err := withVisibleCompanyTx(ctx, tx, &d, company); err != nil {
 		return BlockedDomain{}, err

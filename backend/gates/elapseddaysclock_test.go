@@ -40,12 +40,10 @@ var notAnActivityTime = gatekit.Waive(map[string]string{
 
 // storedClockStillCounted: callers that count from a stored activity clock
 // without its precision yet, each with the reader it serves.
-var storedClockStillCounted = gatekit.Waive(map[string]string{
-	"internal/shared/kernel/convstate/convstate.go:Classify": storedClock,
-	"internal/shared/kernel/dormancy/dormancy.go:Read":       storedClock,
-	"internal/modules/deals/viability.go:AssessViability":    storedClock,
-	"internal/compose/dealcloselost.go:daysSince":            "the newest customer progress, read without the precision of the activity it names",
-})
+var storedClockStillCounted = gatekit.Waive(map[string]string{})
+
+// elapsedDaysCallerCount is how many functions call elapsed.Days today.
+const elapsedDaysCallerCount = 13
 
 func TestEveryDayCountFromATimeSaysWhetherItIsAnActivitysTime(t *testing.T) {
 	t.Parallel()
@@ -70,10 +68,11 @@ func TestEveryDayCountFromATimeSaysWhetherItIsAnActivitysTime(t *testing.T) {
 				"date; otherwise say in notAnActivityTime what its start is.", key)
 		}
 	}
-	// A floor below the real number, so a walk that stopped finding the call
-	// fails instead of reading green over an empty census.
-	if found < 15 {
-		t.Errorf("found %d function(s) calling elapsed.Days, want at least 15: the walk has stopped finding them", found)
+	// The exact count. A walk that stopped finding the call fails instead of
+	// reading green. A new caller is met here too.
+	if found != elapsedDaysCallerCount {
+		t.Errorf("found %d function(s) calling elapsed.Days, want exactly %d: the walk lost one, or a caller "+
+			"was added or removed; update elapsedDaysCallerCount once the lists above place it", found, elapsedDaysCallerCount)
 	}
 }
 

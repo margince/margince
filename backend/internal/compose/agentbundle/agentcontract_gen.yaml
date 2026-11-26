@@ -33647,6 +33647,10 @@ components:
           readOnly: true
           description: >-
             When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable.
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
@@ -34686,6 +34690,10 @@ components:
           type: [string, 'null']
           format: date-time
           description: The account's stored last activity the rung is counted from. Null when it has none.
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         silent_days:
           type: integer
           minimum: 0
@@ -34975,6 +34983,10 @@ components:
         key: {type: [string, 'null'], description: 'The subject-line handle, when the project has one.'}
         phase: {$ref: '#/components/schemas/Company360ProjectPhase'}
         last_activity_at: {type: [string, 'null'], format: date-time}
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         target_end_date: {type: [string, 'null'], format: date}
         owner_id: {type: [string, 'null'], format: uuid}
         owner_name:
