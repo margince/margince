@@ -68,6 +68,8 @@ func productSources(t *testing.T) map[string]string {
 }
 
 func TestEventTimeSourcesBelongToTheBackendModule(t *testing.T) {
+	t.Parallel()
+
 	sources := productSources(t)
 	if _, found := sources[arrivalStampOwner]; !found {
 		t.Fatalf("the backend source census misses %s", arrivalStampOwner)
