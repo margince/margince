@@ -168,13 +168,20 @@ func (p *preflightEnv) dispatchAsMailboxWith(t *testing.T, provider *sharedMailb
 
 func (p *preflightEnv) sendAs(t *testing.T, box ids.UUID) (int, string) {
 	t.Helper()
+	return p.sendAsWith(t, box, nil)
+}
+
+// sendAsWith sends as box with the given credential headers, nil being the
+// signed-in session.
+func (p *preflightEnv) sendAsWith(t *testing.T, box ids.UUID, headers map[string]string) (int, string) {
+	t.Helper()
 	var problem struct {
 		Code string `json:"code"`
 	}
 	status := p.Call(t, "POST", "/v1/activities/"+p.activityID+"/send-email", AnyMap{
 		"subject": "Re: Inbound question", "body": "Your order shipped.", "from_connection_id": box.String(),
 		"to": []string{"buyer@preflight.test"}, "consent_purpose": "transactional",
-	}, nil, &problem)
+	}, headers, &problem)
 	return status, problem.Code
 }
 
@@ -372,5 +379,27 @@ func TestAChangeCommittedBetweenTheLookupAndTheProviderCallParksTheReply(t *test
 				t.Fatalf("the tenant received %v after %s, want nothing", paths, name)
 			}
 		})
+	}
+}
+
+// An agent acts for a member of the team, yet a team address is a member's own
+// choice: a passport naming the mailbox on the REST door gets the answer of an
+// unknown id, and nothing is staged or audited.
+func TestAPassportNamingTheSharedMailboxOnTheRESTDoorIsRefused(t *testing.T) {
+	p := setupPreflight(t)
+	p.stakeADeal(t)
+	box := p.sharedMailbox(t, p.user)
+	bearer := apptest.PassportBearer(t, p.AppEnv, "outreach agent", "read", "write", "send")
+
+	unknownStatus, unknownCode := p.sendAsWith(t, ids.NewV7(), bearer)
+	status, code := p.sendAsWith(t, box, bearer)
+	if status != http.StatusUnprocessableEntity || status != unknownStatus || code != unknownCode {
+		t.Fatalf("a passport sending as the shared mailbox → %d %q, want the 422 an unknown id gets (%d %q)", status, code, unknownStatus, unknownCode)
+	}
+	if n := p.stagedDeliveries(t); n != 0 {
+		t.Fatalf("%d deliveries staged behind a refused agent send, want 0", n)
+	}
+	if got := p.sendAudits(t, box); len(got) != 0 {
+		t.Fatalf("a refused agent send left audit rows %+v", got)
 	}
 }

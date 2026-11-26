@@ -129,9 +129,10 @@ func sharedReplyTx(ctx context.Context, tx pgx.Tx, seat ids.UserID, id ids.UUID)
 
 // ReplyableSharedMailbox finds the shared mailbox from names when the seat may
 // reply as it. An unnamed choice never reaches a shared mailbox, so a member's
-// own default is never replaced by a team address.
+// own default is never replaced by a team address. Only a signed-in member
+// replies as a team: an agent naming the id gets the answer of an unknown one.
 func (r *Registry) ReplyableSharedMailbox(ctx context.Context, seat ids.UserID, from ids.UUID) (SendingMailbox, bool, error) {
-	if from.IsZero() {
+	if actor, ok := principal.Actor(ctx); from.IsZero() || !ok || actor.Type != principal.PrincipalHuman {
 		return SendingMailbox{}, false, nil
 	}
 	var found SendingMailbox
