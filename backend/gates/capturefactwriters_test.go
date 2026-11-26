@@ -55,9 +55,7 @@ var (
 // changes reports whether body sends a statement that changes the fact. A SET
 // list the literal leaves open for a concatenated column counts as changing it.
 func (f captureFact) changes(body string) bool {
-	// Under (?i) only the long s and the Kelvin sign fold onto an ASCII letter, and
-	// ToLower maps the Kelvin sign. Text that folds to no copy of the table never writes it.
-	if !strings.Contains(strings.ReplaceAll(strings.ToLower(body), "\u017f", "s"), f.table) {
+	if !mayHoldFolded(body, f.table) {
 		return false
 	}
 	write := compiledPattern(`(?i)\b(INSERT INTO|UPDATE|DELETE FROM)\s+` + f.table + `\b`)
