@@ -3,8 +3,9 @@
 # its line. A line whose sentence passes or is gone fails a test.
 # One line: rule id, a tab, the sentence as a Go string; vi.toi adds a tab and
 # the English the sentence was checked beside.
-# The recut drops every line nothing reports and never adds one. From backend/:
-#   go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut -timeout 30m
+# The recut drops every line whose sentence passes or is gone, and never adds
+# one. From backend/:
+#   go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut
 en.contraction	"Asking a colleague for context isn't available yet"
 en.contraction	"The model's answer didn't match the records, so only the rule-based advice is shown."
 en.dash	"%d deals moved backwards — review the recovery plan"

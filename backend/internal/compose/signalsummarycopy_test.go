@@ -16,6 +16,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -74,5 +75,21 @@ func TestAnUnknownLanguageFallsBackToEnglish(t *testing.T) {
 	said := signalSummaryCopyFor(textlang.Lang("kl"))
 	if said.ghostedThread != signalSummaryByLang[textlang.English].ghostedThread {
 		t.Errorf("an unshipped language answered %q, want the English sentence", said.ghostedThread)
+	}
+}
+
+func TestTheLanguageKeyedSummariesFollowTheStylePages(t *testing.T) {
+	holdSentences(t, "signalSummary", signalSummaryByLang[textlang.English], signalSummaryByLang[textlang.Vietnamese])
+	holdSentences(t, "technicalSummary", technicalSummaryByLang[textlang.English], technicalSummaryByLang[textlang.Vietnamese])
+	holdSentences(t, "projectHealth", projectHealthByLang[textlang.English], projectHealthByLang[textlang.Vietnamese])
+}
+
+func holdSentences[T any](t *testing.T, table string, english, vietnamese T) {
+	t.Helper()
+	for name, text := range langcopytest.Sentences(t, english) {
+		langcopytest.EnglishText(t, table+"."+name, text)
+	}
+	for name, text := range langcopytest.Sentences(t, vietnamese) {
+		langcopytest.VietnameseText(t, table+"."+name, text)
 	}
 }

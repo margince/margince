@@ -4,12 +4,10 @@
 package langcopytest
 
 import (
-	"os"
-	"path/filepath"
+	"regexp"
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -22,14 +20,8 @@ it("never speaks as we", () => {
 
 func TestAPatternIsTheLiteralRightAfterItsLead(t *testing.T) {
 	t.Parallel()
-	contraction, err := patternAfter(plantedGate, "const contraction =")
-	if err != nil {
-		t.Fatal(err)
-	}
-	we, err := patternAfter(plantedGate, `it("never speaks as we", () => { expect( offenders(`)
-	if err != nil {
-		t.Fatal(err)
-	}
+	contraction := compiledAfter(t, plantedGate, "const contraction =")
+	we := compiledAfter(t, plantedGate, `it("never speaks as we", () => { expect( offenders(`)
 	if !contraction.MatchString("CAN'T") || we.MatchString("US") {
 		t.Error("a pattern lost its flags on the way from the gate")
 	}
@@ -42,10 +34,26 @@ func TestAPatternIsTheLiteralRightAfterItsLead(t *testing.T) {
 			t.Errorf("%s was read as the contraction pattern", name)
 		}
 	}
-	reflexive, err := patternAfter(`const REFLEXIVE = word("(?:chính|tự) mình", "giu");`, "const REFLEXIVE =")
-	if err != nil || !reflexive.MatchString("Tự mình") || reflexive.MatchString("tự mìnhx") {
-		t.Errorf("a word() call was not read as the census reads it: %v", err)
+	reflexive := compiledAfter(t, `const REFLEXIVE = word("(?:chính|tự) mình", "giu");`, "const REFLEXIVE =")
+	if !reflexive.MatchString("Tự mình") || reflexive.MatchString("tự mìnhx") {
+		t.Error("a word() call was not read as the census reads it")
 	}
+	if _, err := patternAfter("const contraction = /a(?<!b)c/;", "const contraction ="); err == nil {
+		t.Error("a pattern Go cannot compile was read into the snapshot")
+	}
+}
+
+func compiledAfter(t *testing.T, source, lead string) *regexp.Regexp {
+	t.Helper()
+	pattern, err := patternAfter(source, lead)
+	if err != nil {
+		t.Fatal(err)
+	}
+	compiled, err := pattern.compile()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return compiled
 }
 
 func TestAJavaScriptPatternReadsAsItDoesInJavaScript(t *testing.T) {
@@ -109,7 +117,11 @@ const plantedPage = "# Page\n\n## Vocabulary\n\n" +
 
 func TestTheRetiredWordsAreReadFromTheVocabularyTable(t *testing.T) {
 	t.Parallel()
-	retired, ordinary, err := vietnameseVocabulary(plantedPage)
+	words, kept, err := vietnameseVocabulary(plantedPage)
+	if err != nil {
+		t.Fatal(err)
+	}
+	retired, ordinary, err := vocabulary(words, kept)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -142,20 +154,6 @@ func TestAnAdjacentExemptPhraseIsErasedToo(t *testing.T) {
 	}, func(r reporter, text string) { VietnameseText(r, "Field", text) })
 }
 
-func TestTheDigestVariablesAreTheOnesCISets(t *testing.T) {
-	t.Parallel()
-	for top, name := range map[string]string{"frontend": frontendDigestVar, "docs": docsDigestVar} {
-		if want := gatekit.TreeDigestVar(top); name != want {
-			t.Errorf("the style sources under %s/ declare %s, and CI sets %s", top, name, want)
-		}
-	}
-	for _, path := range []string{englishGatePath, vietnameseCensusPath, vietnamesePagePath} {
-		if top, _, _ := strings.Cut(path, "/"); top != "frontend" && top != "docs" {
-			t.Errorf("%s lies under %s/, whose digest the style sources do not read", path, top)
-		}
-	}
-}
-
 func TestTheStyleSourcesAreTheRepositorysOwn(t *testing.T) {
 	t.Parallel()
 	src, err := loadSources()
@@ -163,10 +161,10 @@ func TestTheStyleSourcesAreTheRepositorysOwn(t *testing.T) {
 		t.Fatal(err)
 	}
 	if want := len(englishPatternLeads) + len(vietnamesePatternLeads); len(src.patterns) != want {
-		t.Errorf("read %d patterns, want %d", len(src.patterns), want)
+		t.Errorf("compiled %d patterns, want %d", len(src.patterns), want)
 	}
 	if !src.retired.MatchString("thương vụ") {
-		t.Errorf("%s no longer retires thương vụ, or the table is not being read", vietnamesePagePath)
+		t.Errorf("%s no longer retires thương vụ, or the snapshot lost the table", vietnamesePagePath)
 	}
 	for _, rule := range styleRules {
 		for _, text := range []string{"", "Thương vụ “x” report.pdf https://x.y {n} %d tôi", "We can't"} {
@@ -217,52 +215,5 @@ func TestABaselineEntryWaivesItsFindingAlone(t *testing.T) {
 	}
 	if got := rulesReported(func(r reporter) { check(r, "Field", w.Text+" ") }); !strings.Contains(strings.Join(got, " "), w.Rule) {
 		t.Errorf("a waiver for %q also waived the same words with a trailing space: %v", w.Text, got)
-	}
-}
-
-func TestARecutRecordsEveryFindingInsteadOfFailing(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "findings")
-	if err := os.WriteFile(path, []byte(recordHeader+"tok\n"), 0o600); err != nil {
-		t.Fatal(err)
-	}
-	t.Setenv(recordVariable, path)
-	t.Setenv(tokenVariable, "tok")
-	if got := rulesReported(func(r reporter) { EnglishText(r, "Field", "We saved it") }); len(got) != 0 {
-		t.Errorf("a recording run failed on %v", got)
-	}
-	recorded, err := os.ReadFile(filepath.Clean(path))
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, line, _ := strings.Cut(string(recorded), "\t"); line != ruleEnWe+"\t\"We saved it\"\n" {
-		t.Errorf("recorded %q", recorded)
-	}
-}
-
-func TestAStrayRecordVariableFailsInsteadOfWaiving(t *testing.T) {
-	path := filepath.Join(t.TempDir(), "findings")
-	t.Setenv(recordVariable, path)
-	for _, c := range []struct {
-		name    string
-		prepare func() error
-	}{
-		{"no file", func() error { return nil }},
-		{"no token", func() error { return os.WriteFile(path, []byte(recordHeader+"tok\n"), 0o600) }},
-		{"a file of another run", func() error {
-			t.Setenv(tokenVariable, "tok")
-			return os.WriteFile(path, []byte(recordHeader+"other\n"), 0o600)
-		}},
-	} {
-		name := c.name
-		if err := c.prepare(); err != nil {
-			t.Fatal(err)
-		}
-		if got := rulesReported(func(r reporter) { EnglishText(r, "Field", "Saved") }); len(got) != 0 {
-			t.Errorf("%s: a passing sentence was reported for %v", name, got)
-		}
-		got := rulesReported(func(r reporter) { EnglishText(r, "Field", "We saved it") })
-		if len(got) != 1 || !strings.HasPrefix(got[0], "fatal: "+recordVariable+" is set") {
-			t.Errorf("%s: a finding under a stray %s was answered %v", name, recordVariable, got)
-		}
 	}
 }

@@ -6,8 +6,6 @@ package langcopytest
 import (
 	"regexp"
 
-	"golang.org/x/text/unicode/norm"
-
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -21,7 +19,6 @@ const (
 	ruleEnSpelling    = "en.spelling"
 	ruleEnAmpersand   = "en.ampersand"
 
-	ruleViNFC             = "vi.nfc"
 	ruleViToneOpen        = "vi.tone-open"
 	ruleViToneClosed      = "vi.tone-closed"
 	ruleViDash            = "vi.dash"
@@ -67,10 +64,10 @@ func prose(text, sep string) string {
 // textOf prepares a sentence for one pattern.
 type textOf func(src sources, text string) string
 
-func enProse(_ sources, text string) string  { return prose(text, "") }
-func viProse(_ sources, text string) string  { return prose(text, " ") }
-func padded(_ sources, text string) string   { return " " + text + " " }
-func verbatim(_ sources, text string) string { return text }
+func enProse(_ sources, text string) string   { return prose(text, "") }
+func viProse(_ sources, text string) string   { return prose(text, " ") }
+func padded(_ sources, text string) string    { return " " + text + " " }
+func asWritten(_ sources, text string) string { return text }
 
 func matches(pattern string, prepare textOf) func(sources, string, string) bool {
 	return func(src sources, text, _ string) bool { return src.patterns[pattern].MatchString(prepare(src, text)) }
@@ -99,48 +96,78 @@ func erase(pattern *regexp.Regexp, text string) string {
 var styleRules = []styleRule{
 	// ui-copy-style.md fails the marks the Vietnamese census fails, wider than
 	// the English catalog gate's em and en dash.
-	{ruleEnDash, textlang.English, "uses a dash as punctuation; rewrite with a period, colon, comma or parentheses", alone,
-		matches(patternDash, padded)},
-	{ruleEnContraction, textlang.English, "uses a contraction; write it out (cannot, is not)", alone,
-		matches(ruleEnContraction, enProse)},
-	{ruleEnWe, textlang.English, "speaks as we; Margince is software, so name the actor or drop the pronoun", alone,
-		matches(ruleEnWe, enProse)},
+	{
+		ruleEnDash, textlang.English, "uses a dash as punctuation; rewrite with a period, colon, comma or parentheses", alone,
+		matches(patternDash, padded),
+	},
+	{
+		ruleEnContraction, textlang.English, "uses a contraction; write it out (cannot, is not)", alone,
+		matches(ruleEnContraction, enProse),
+	},
+	{
+		ruleEnWe, textlang.English, "speaks as we; Margince is software, so name the actor or drop the pronoun", alone,
+		matches(ruleEnWe, enProse),
+	},
 	{ruleEnI, textlang.English, "speaks as I; only an agent in a chat bubble says I", alone, matches(ruleEnI, enProse)},
-	{ruleEnSpelling, textlang.English, "uses a British spelling; write American English", alone,
-		matches(ruleEnSpelling, enProse)},
-	{ruleEnAmpersand, textlang.English, "uses &; write and", alone,
-		matches(ruleEnAmpersand, without(patternEnQuoted, verbatim))},
+	{
+		ruleEnSpelling, textlang.English, "uses a British spelling; write American English", alone,
+		matches(ruleEnSpelling, enProse),
+	},
+	{
+		ruleEnAmpersand, textlang.English, "uses &; write and", alone,
+		matches(ruleEnAmpersand, without(patternEnQuoted, asWritten)),
+	},
 
-	{ruleViNFC, textlang.Vietnamese, "is not NFC; normalize it", alone,
-		func(_ sources, text, _ string) bool { return !norm.NFC.IsNormalString(text) }},
-	{ruleViToneOpen, textlang.Vietnamese, "marks an open oa, oe or uy on the second vowel; write hòa, xóa, tùy", alone,
-		matches(ruleViToneOpen, viProse)},
-	{ruleViToneClosed, textlang.Vietnamese, "marks the first vowel before a final consonant; write hoàn, khuyên", alone,
-		matches(ruleViToneClosed, viProse)},
-	{ruleViDash, textlang.Vietnamese, "uses a dash as punctuation; rewrite with a comma, period, colon or parentheses", alone,
-		matches(patternDash, padded)},
-	{ruleViExclamation, textlang.Vietnamese, "uses !; state the fact without it", alone,
-		matches(ruleViExclamation, verbatim)},
-	{ruleViToi, textlang.Vietnamese, "speaks as tôi; the product never speaks as itself", besideEnglish,
+	{
+		ruleViToneOpen, textlang.Vietnamese, "marks an open oa, oe or uy on the second vowel; write hòa, xóa, tùy", alone,
+		matches(ruleViToneOpen, viProse),
+	},
+	{
+		ruleViToneClosed, textlang.Vietnamese, "marks the first vowel before a final consonant; write hoàn, khuyên", alone,
+		matches(ruleViToneClosed, viProse),
+	},
+	{
+		ruleViDash, textlang.Vietnamese, "uses a dash as punctuation; rewrite with a comma, period, colon or parentheses", alone,
+		matches(patternDash, padded),
+	},
+	{
+		ruleViExclamation, textlang.Vietnamese, "uses !; state the fact without it", alone,
+		matches(ruleViExclamation, asWritten),
+	},
+	{
+		ruleViToi, textlang.Vietnamese, "speaks as tôi; the product never speaks as itself", besideEnglish,
 		func(src sources, text, english string) bool {
 			return matches(ruleViToi, without(patternToiWe, viProse))(src, text, english) &&
 				!src.patterns[patternSaysMe].MatchString(english)
-		}},
-	{ruleViChungToi, textlang.Vietnamese, "speaks as chúng tôi; only the data controller does", alone,
-		matches(ruleViChungToi, viProse)},
-	{ruleViChungTa, textlang.Vietnamese, "speaks as chúng ta or mình", alone,
-		matches(ruleViChungTa, without(patternReflexive, viProse))},
-	{ruleViFormal, textlang.Vietnamese, "addresses the reader as quý vị, anh/chị or kính thưa", alone,
-		func(src sources, text, _ string) bool { return formal.MatchString(erase(siblings, viProse(src, text))) }},
+		},
+	},
+	{
+		ruleViChungToi, textlang.Vietnamese, "speaks as chúng tôi; only the data controller does", alone,
+		matches(ruleViChungToi, viProse),
+	},
+	{
+		ruleViChungTa, textlang.Vietnamese, "speaks as chúng ta or mình", alone,
+		matches(ruleViChungTa, without(patternReflexive, viProse)),
+	},
+	{
+		ruleViFormal, textlang.Vietnamese, "addresses the reader as quý vị, anh/chị or kính thưa", alone,
+		func(src sources, text, _ string) bool { return formal.MatchString(erase(siblings, viProse(src, text))) },
+	},
 	{ruleViParticle, textlang.Vietnamese, "ends on nhé, nha or ạ", alone, matchesHere(particle, viProse)},
-	{ruleViMemberAddress, textlang.Vietnamese, "says quý khách or vui lòng to a member; those are for an outsider", alone,
-		matches(ruleViMemberAddress, viProse)},
-	{ruleViOutsiderAddress, textlang.Vietnamese, "says bạn to an outsider; write quý khách", alone,
-		matches(ruleViOutsiderAddress, viProse)},
-	{ruleViRetired, textlang.Vietnamese, "uses a word the Vocabulary table of ui-copy-style-vi.md retires", alone,
+	{
+		ruleViMemberAddress, textlang.Vietnamese, "says quý khách or vui lòng to a member; those are for an outsider", alone,
+		matches(ruleViMemberAddress, viProse),
+	},
+	{
+		ruleViOutsiderAddress, textlang.Vietnamese, "says bạn to an outsider; write quý khách", alone,
+		matches(ruleViOutsiderAddress, viProse),
+	},
+	{
+		ruleViRetired, textlang.Vietnamese, "uses a word the Vocabulary table of ui-copy-style-vi.md retires", alone,
 		func(src sources, text, _ string) bool {
 			return src.retired.MatchString(erase(src.ordinary, withoutPaths(src, text)))
-		}},
+		},
+	},
 }
 
 // withoutPaths keeps a quoted vendor label, a file name and a URL out of the

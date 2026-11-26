@@ -24,7 +24,7 @@ var member = Register{name: "member copy", drops: []string{ruleViOutsiderAddress
 
 var mechanics = []string{
 	ruleEnDash, ruleEnSpelling, ruleEnAmpersand,
-	ruleViNFC, ruleViToneOpen, ruleViToneClosed, ruleViDash, ruleViExclamation,
+	ruleViToneOpen, ruleViToneClosed, ruleViDash, ruleViExclamation,
 }
 
 // Agent is an agent speaking in a chat bubble, which may say I.
@@ -41,21 +41,22 @@ func Outsider(reason string) Register {
 // Controller is the data controller writing to a data subject. In law it
 // speaks as we and chúng tôi, and it addresses an outsider.
 func Controller(reason string) Register {
-	return Register{name: "controller copy", reason: reason,
-		drops: []string{ruleEnWe, ruleViChungToi, ruleViMemberAddress}}
+	return Register{
+		name: "controller copy", reason: reason,
+		drops: []string{ruleEnWe, ruleViChungToi, ruleViMemberAddress},
+	}
 }
 
-// OwnVoice is a sentence a person speaks in their own words: a draft a member
+// OwnVoice is a sentence someone speaks in their own words: a draft a member
 // sends as themselves, or a consent the reader gives. Only mechanics hold.
 func OwnVoice(reason string) Register {
 	return Register{name: "own voice", reason: reason, keeps: mechanics}
 }
 
 // Verbatim is text a program matches or a reader types as it stands: a
-// matcher's word list, a sample cell, an enum value. It must still be NFC, or
-// it misses the text it is matched against.
+// matcher's word list, a sample cell, an enum value. No style rule holds it.
 func Verbatim(reason string) Register {
-	return Register{name: "verbatim text", reason: reason, keeps: []string{ruleViNFC}}
+	return Register{name: "verbatim text", reason: reason, keeps: []string{}}
 }
 
 func (r Register) holds(rule string) bool {

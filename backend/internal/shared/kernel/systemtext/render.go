@@ -91,6 +91,31 @@ func (c Component) renderings(r reading, depth int) ([]string, error) {
 	if !ok || c.Origin != Template || len(c.Args) != len(definition.Arguments) {
 		return nil, errors.New("system text: invalid definition")
 	}
+	values, err := c.argumentValues(r, definition, depth)
+	if err != nil {
+		return nil, err
+	}
+	lines := [][]string{r.sentences(c.Code, definition, values)}
+	for _, part := range c.Following {
+		rendered, err := part.renderings(r, depth+1)
+		if err != nil {
+			return nil, err
+		}
+		lines = append(lines, rendered)
+	}
+	separator, err := layoutSeparator(c.Layout)
+	if err != nil {
+		return nil, err
+	}
+	var out []string
+	for chosen := range combinations(lines) {
+		out = r.keep(out, strings.Join(chosen, separator))
+	}
+	return out, nil
+}
+
+// argumentValues answers every rendering of each argument, a count as itself.
+func (c Component) argumentValues(r reading, definition Definition, depth int) ([][]any, error) {
 	values := make([][]any, len(c.Args))
 	for i, arg := range c.Args {
 		if !argumentKindMatches(arg.Kind, definition.Arguments[i]) {
@@ -108,9 +133,13 @@ func (c Component) renderings(r reading, depth int) ([]string, error) {
 			values[i] = append(values[i], text)
 		}
 	}
+	return values, nil
+}
 
+// sentences fills each wording of code with every combination of the values.
+func (r reading) sentences(code string, definition Definition, values [][]any) []string {
 	var sentences []string
-	for _, words := range r.wordings(c.Code, definition) {
+	for _, words := range r.wordings(code, definition) {
 		for chosen := range combinations(values) {
 			sentence := words
 			if len(chosen) > 0 {
@@ -119,23 +148,7 @@ func (c Component) renderings(r reading, depth int) ([]string, error) {
 			sentences = r.keep(sentences, sentence)
 		}
 	}
-	lines := [][]string{sentences}
-	for _, part := range c.Following {
-		rendered, err := part.renderings(r, depth+1)
-		if err != nil {
-			return nil, err
-		}
-		lines = append(lines, rendered)
-	}
-	separator, err := layoutSeparator(c.Layout)
-	if err != nil {
-		return nil, err
-	}
-	var out []string
-	for chosen := range combinations(lines) {
-		out = r.keep(out, strings.Join(chosen, separator))
-	}
-	return out, nil
+	return sentences
 }
 
 // combinations yields each way of taking one option from every list, reusing

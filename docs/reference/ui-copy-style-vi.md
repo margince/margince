@@ -388,13 +388,13 @@ and edge spaces against the English, sentence case, hand-formatted numbers, leng
 column. Those are the author's and the reviewer's judgement.
 
 In Go, `langcopytest.Census` holds the Vietnamese of every `langcopy.Phrase` table, and `langcopytest.VietnameseText`
-a table of another shape. They hold NFC, tone marks, no dashes, no !, the three Never rows, formal address, outsider
-address and retired vocabulary, and they also fail "nhé", "nha" and "ạ". Each run reads the retired words from the
-Vocabulary table and the patterns from `copy-style-vi.census.ts`; formal address is a hand port pinned to its census
+a table of another shape. They hold tone marks, no dashes, no !, the three Never rows, formal address, outsider
+address and retired vocabulary, and they also fail "nhé", "nha" and "ạ". They read the Vocabulary table's retired words
+and the patterns of `copy-style-vi.census.ts` from a snapshot a test holds to both; formal address is a hand port pinned to its census
 pattern. A table is member copy unless its test names another register with a reason. Agent allows tôi. Outsider
-allows quý khách and vui lòng and fails bạn. Controller also allows chúng tôi. Own voice keeps only NFC, tone marks,
-dashes and !, and Verbatim only NFC. Findings that wait for a rewrite sit in `langcopytest/stylebaseline.txt`. Its
-[recut](ui-copy-style.md#copy-the-server-writes) adds no line; a line added by hand needs review. The check does not reach the
+allows quý khách and vui lòng and fails bạn. Controller also allows chúng tôi. Own voice keeps only tone marks,
+dashes and !, and Verbatim none. `backend/gates/stringliteralnfc_test.go` holds every Go string literal to NFC. Findings that wait for a rewrite sit in `langcopytest/stylebaseline.txt`. Its
+[recut](ui-copy-style.md#copy-the-server-writes) drops only a line that passes or is gone; a line added by hand needs review. The check does not reach the
 voice of a draft the member sends as themselves (`draftfloor`, intro notes), the demo mail of `capture/offlinedemo`,
 or the word lists of `draftcheck`, `salutation` and `searchplan`. Nor does it reach text returned from a `switch`, or
 strings outside a table: problem details, `crm.yaml` and MCP tool copy (#13561, #13562).

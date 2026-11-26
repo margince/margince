@@ -225,10 +225,13 @@ outside its list. And `you` used where no one needed it.
 The Go copy tables answer to part of this page. `langcopytest.Census` checks the
 English of every `langcopy.Phrase` table, and `langcopytest.EnglishText` checks a
 table of another shape from its own test. Both live in
-`backend/internal/shared/kernel/langcopy/langcopytest/`. They fail a dash as
-punctuation: an em dash, an en dash, `--` or a spaced hyphen. They also fail a
-contraction, `we`, `I`, a British spelling and `&`. Each test run reads those
-patterns from `copy-style.test.ts`, so both gates hold one list.
+`backend/internal/shared/kernel/langcopy/langcopytest/`.
+
+They fail a dash as punctuation: an em dash, an en dash, `--` or a spaced
+hyphen. They also fail a contraction, `we`, `I`, a British spelling and `&`.
+They read those patterns from `stylesources_gen.go`, a snapshot of
+`copy-style.test.ts`. A test of that folder fails when the two differ, and its
+`-update` flag rewrites the snapshot.
 
 A table keyed by language is walked from its own test.
 `backend/gates/langcopylanguagetables_test.go` fails one that no test walks. The
@@ -242,12 +245,12 @@ stands, keeps none of them.
 
 Findings that wait for a rewrite are listed in `stylebaseline.txt` in that
 folder, one rule and sentence a line. A test fails a line whose sentence now
-passes, or that no Go string spells. The command below drops every line nothing
-reports and never adds one, so it fails on a finding the list does not hold. A
-line added by hand is an exception that review must accept. Run it from `backend/`:
+passes, or that no Go string spells. The command below drops those lines and
+never adds one. A line added by hand is an exception that review must accept.
+Run it from `backend/`:
 
 ```sh
-go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut -timeout 30m
+go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut
 ```
 
 The check does not reach:

@@ -4,32 +4,20 @@
 package langcopytest
 
 import (
-	"bufio"
 	_ "embed"
-	"errors"
 	"fmt"
-	"os"
-	"path/filepath"
 	"strconv"
 	"strings"
 	"sync"
 )
 
 // stylebaseline.txt holds the findings the tree still has. A test fails an
-// entry whose sentence passes or is gone, and the recut never adds one.
+// entry whose sentence passes or is gone, and the recut drops those alone.
 //
 //go:embed stylebaseline.txt
 var baselineText string
 
 const baselinePath = "backend/internal/shared/kernel/langcopy/langcopytest/stylebaseline.txt"
-
-// A recut sets both variables. The file must open with the token, so a stray
-// export of the first cannot turn the style check into a pass.
-const (
-	recordVariable = "LANGCOPY_STYLE_RECORD"
-	tokenVariable  = "LANGCOPY_STYLE_RECORD_TOKEN"
-	recordHeader   = "# langcopytest recut "
-)
 
 // Waiver is one finding the baseline holds: a rule id and the sentence. A rule
 // that reads the English also keeps the English it was checked beside.
@@ -95,51 +83,16 @@ var baselineSet = sync.OnceValues(func() (map[Waiver]bool, error) {
 	return set, nil
 })
 
-// waived reports whether the baseline holds a finding, or records it when a
-// recut is running.
+// waived reports whether the baseline holds a finding.
 func waived(t reporter, rule styleRule, text, english string) bool {
 	t.Helper()
 	w := Waiver{Rule: rule.id, Text: text}
 	if rule.readsEnglish {
 		w.English = english
 	}
-	if path := os.Getenv(recordVariable); path != "" {
-		if err := record(path, os.Getenv(tokenVariable), w); err != nil {
-			t.Fatalf("%s is set, and recording a style finding failed: %v. Only TestRecutStyleBaseline -recut "+
-				"records findings; unset the variable", recordVariable, err)
-		}
-		return true
-	}
 	set, err := baselineSet()
 	if err != nil {
 		t.Fatalf("the style baseline cannot be read: %v", err)
 	}
 	return set[w]
-}
-
-var recording sync.Mutex
-
-// record appends a finding and its package to the file a recut opened with
-// token. One append write keeps test binaries running side by side apart.
-func record(path, token string, w Waiver) error {
-	recording.Lock()
-	defer recording.Unlock()
-	dir, err := os.Getwd()
-	if err != nil {
-		return err
-	}
-	file, err := os.OpenFile(filepath.Clean(path), os.O_APPEND|os.O_RDWR, 0o600)
-	if err != nil {
-		return err
-	}
-	first, readErr := bufio.NewReader(file).ReadString('\n')
-	switch {
-	case readErr != nil:
-		err = fmt.Errorf("%s opens with no line: %w", path, readErr)
-	case token == "" || first != recordHeader+token+"\n":
-		err = fmt.Errorf("%s does not open with the token %s holds", path, tokenVariable)
-	default:
-		_, err = file.WriteString(strconv.Quote(dir) + "\t" + w.line() + "\n")
-	}
-	return errors.Join(err, file.Close())
 }

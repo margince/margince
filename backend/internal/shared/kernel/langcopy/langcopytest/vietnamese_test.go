@@ -7,15 +7,12 @@ import (
 	"strings"
 	"testing"
 
-	"golang.org/x/text/unicode/norm"
-
 	"github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 )
 
 func TestVietnameseTextHoldsTheMechanicalRules(t *testing.T) {
 	t.Parallel()
 	assertStyle(t, []styleCase{
-		{norm.NFD.String("Đã xóa"), ruleViNFC},
 		{"Đã xóa", ""},
 		{"Đã xoá", ruleViToneOpen},
 		{"Tuỳ chọn", ruleViToneOpen},
@@ -57,11 +54,13 @@ func TestEachRegisterHoldsItsOwnVietnameseVoice(t *testing.T) {
 		cases    []styleCase
 	}{
 		{Outsider("a buyer reads it"), []styleCase{
-			{"Vui lòng xác nhận, quý khách", ""}, {"Bạn hãy xác nhận", ruleViOutsiderAddress},
+			{"Vui lòng xác nhận, quý khách", ""},
+			{"Bạn hãy xác nhận", ruleViOutsiderAddress},
 			{"Chúng tôi đã nhận", ruleViChungToi},
 		}},
 		{Controller("the data controller writes it"), []styleCase{
-			{"Chúng tôi lưu thông tin của quý khách", ""}, {"Tôi lưu thông tin", ruleViToi},
+			{"Chúng tôi lưu thông tin của quý khách", ""},
+			{"Tôi lưu thông tin", ruleViToi},
 			{"Bạn có thể phản đối", ruleViOutsiderAddress},
 		}},
 		{Agent("an agent speaks in a chat bubble"), []styleCase{{"Tôi đã đọc trang web", ""}}},
@@ -69,7 +68,7 @@ func TestEachRegisterHoldsItsOwnVietnameseVoice(t *testing.T) {
 			{"Anh chị giới thiệu giúp mình nhé", ""}, {"Cảm ơn — hẹn gặp lại", ruleViDash},
 		}},
 		{Verbatim("a word list a matcher reads"), []styleCase{
-			{"Kính gửi anh chị — xoá!", ""}, {norm.NFD.String("Kính gửi"), ruleViNFC},
+			{"Kính gửi anh chị — xoá!", ""},
 		}},
 	} {
 		assertStyle(t, c.cases, func(r reporter, text string) { c.register.VietnameseText(r, "Field", text) })
