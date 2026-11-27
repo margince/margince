@@ -36,14 +36,14 @@ func waitingReplyEntityClause(entityType string, entityID ids.UUID, arg func(any
 		// see CompanyLinkedActivityExists.
 		return CompanyLinkedActivityExists(arg(entityID)), nil
 	}
-	column := linkColumn(entityType)
-	if column == "" {
+	target, ok := linkTargetOf(entityType)
+	if !ok {
 		return "", &InvalidLinkTypeError{EntityType: entityType}
 	}
-	typePos := arg(entityType)
-	idPos := arg(entityID)
-	return sprintf("EXISTS (SELECT 1 FROM activity_link el WHERE el.activity_id = a.id AND el.entity_type = $%d AND el.%s = $%d)",
-		typePos, column, idPos), nil
+	// The type is a literal from the link vocabulary, so a generic plan keeps
+	// the partial index on it.
+	return sprintf("EXISTS (SELECT 1 FROM activity_link el WHERE el.activity_id = a.id AND el.entity_type = '%s' AND el.%s = $%d)",
+		target.kind, target.column, arg(entityID)), nil
 }
 
 // waitingReplyExistsClause builds the timeline list's `waiting_reply=true`

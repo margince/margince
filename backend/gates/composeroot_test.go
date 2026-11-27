@@ -106,12 +106,14 @@ const (
 	// inventory handler, schedule book and catch-up schedule.
 	// Raised by 2 production and 27 test lines for the unread mail period on the
 	// owner's connection row, mapped and checked in the unexported connection wire.
-	// Raised by 232 production and 189 test lines. They hold
+	// Raised by 44 test lines for the contact page reads the plan reuse census
+	// drives through its unexported statement recorder and partial index check.
+	// Raised by 231 production and 190 test lines. They hold
 	// the How it stands job and its page case, and the task explanation's
 	// certification case and its test. The job needs the unexported job
 	// context; the cases drive the contact page.
-	composeRootProductionLines = 231_463
-	composeRootTestLines       = 362_085
+	composeRootProductionLines = 231_462
+	composeRootTestLines       = 362_130
 )
 
 // A read under these floors stopped early or read the wrong place, and would

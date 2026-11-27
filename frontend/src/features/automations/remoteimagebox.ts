@@ -3,5 +3,5 @@
 
 // The attribute on the box the server draws for an https image it did not
 // fetch. A mirror of activities.RemoteImageBoxAttribute, held by
-// backend/gates/frontendremoteimagebox_test.go.
+// backend/gates/frontendlimits_test.go.
 export const REMOTE_IMAGE_BOX = "data-remote-image";
