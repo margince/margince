@@ -71,7 +71,7 @@ export type ReportsStubOpts = {
   quietRows?: Record<string, unknown>[];
   closeMonthRows?: Record<string, unknown>[];
   // The coverage read: a payload, a status (403 for a seat without the ops
-  // grant, 404 for a fresh installation), or omitted for the default 403.
+  // grant, 204 for a fresh installation), or omitted for the default 403.
   coverage?: { status: number; body?: unknown };
   derivation?: Record<string, unknown>;
   onDerivation?: (url: string) => void;
@@ -133,9 +133,10 @@ function meAnswer(opts: ReportsStubOpts) {
 }
 
 // The nightly check's answer: a payload, or the status a seat without the ops
-// grant (403) or a fresh installation (404) meets.
+// grant (403) or a fresh installation (204) meets.
 function coverageAnswer(opts: ReportsStubOpts) {
   const asked = opts.coverage ?? { status: 403 };
+  if (asked.status === 204) return new Response(null, { status: 204 });
   return jsonResponse(
     asked.body ?? { title: "Forbidden", status: asked.status },
     asked.status,

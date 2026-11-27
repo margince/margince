@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/settings/roles-settings.tsx frontend/src/features/settings/roles-detail.tsx frontend/src/features/settings/roles-drawer.tsx frontend/src/features/settings/grantmatrix.tsx frontend/src/lib/roles.queries.ts backend/internal/modules/identity/rolelifecycle.go backend/internal/modules/identity/roles.go -->
+<!-- describes: frontend/src/features/settings/roles-settings.tsx frontend/src/features/settings/roles-detail.tsx frontend/src/features/settings/roles-drawer.tsx frontend/src/features/settings/grantmatrix.tsx frontend/src/lib/roles.queries.ts backend/internal/modules/identity/rolelifecycle.go backend/internal/modules/identity/roles.go frontend/src/features/sign-in/group-role-grants.tsx frontend/src/features/sign-in/google-directory.tsx backend/internal/modules/identity/googledirectory.go -->
 # Roles and permissions
 
 The **Roles and permissions** page in Settings, under **People**, lists every role your company has. Open a role to see what its members may do, and whose records they may change.
@@ -56,3 +56,14 @@ The Admin role keeps its rights to manage users, roles and teams. Margince refus
 Open a built-in role and choose **Restore shipped grants**, then confirm. Every switch goes back to what Margince ships, and your changes to that role's rights are lost. A custom role has no shipped rights, so it has no such button.
 
 Also called: permissions, access rights, create a role, custom role, who can edit what.
+
+### How do I give a role to everyone in a group?
+To give a role to everyone in a group, open Settings → **Sign-in and security** → **Group role grants**. Choose **Add group**, type the group and pick its role. Then choose **Save group roles**.
+A member gets the role at their next sign-in. The map only adds roles, so leaving a group takes none away. Nobody gets in without an invitation.
+
+Microsoft sends a member's groups at sign-in, so type a group as your company names it. Google does not. A member who signs in with Google gets roles only after you connect the **Google group lookup** on the same tab.
+Google names a group by its email address, such as `sales@example.com`. Only groups the member belongs to count, not groups inside other groups.
+
+If the lookup fails, the member still signs in with no roles from the map, and the tab says what to fix.
+
+Also called: group roles, company groups.

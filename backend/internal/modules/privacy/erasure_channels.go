@@ -31,6 +31,7 @@ import (
 type channelIdentity struct {
 	Provider      string
 	ChannelUserID string
+	AccountScope  string
 }
 
 // contactChannelIdentities reads every channel account bound to the subject,
@@ -46,7 +47,7 @@ type channelIdentity struct {
 // of "which accounts belong to this subject" in the erasure path.
 func contactChannelIdentities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID) ([]channelIdentity, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT provider, channel_user_id FROM contact_channel_identity WHERE contact_id = $1`, contactID)
+		`SELECT provider, channel_user_id, account_scope FROM contact_channel_identity WHERE contact_id = $1`, contactID)
 	if err != nil {
 		return nil, err
 	}
@@ -98,7 +99,7 @@ func channelIdentityLockKeys(identities []channelIdentity) []storekit.ChannelIde
 	keys := make([]storekit.ChannelIdentityKey, 0, len(identities))
 	for _, identity := range identities {
 		keys = append(keys, storekit.ChannelIdentityKey{
-			Provider: identity.Provider, ChannelUserID: identity.ChannelUserID,
+			Provider: identity.Provider, ChannelUserID: storekit.ChannelSuppressionAccount(identity.AccountScope, identity.ChannelUserID),
 		})
 	}
 	return keys
@@ -126,11 +127,11 @@ func channelIdentityLockKeys(identities []channelIdentity) []storekit.ChannelIde
 func eraseChannelIdentities(ctx context.Context, tx pgx.Tx, identities []channelIdentity) (int, error) {
 	for _, identity := range identities {
 		if _, err := tx.Exec(ctx,
-			`DELETE FROM contact_channel_identity WHERE provider = $1 AND channel_user_id = $2`,
-			identity.Provider, identity.ChannelUserID); err != nil {
+			`DELETE FROM contact_channel_identity WHERE provider = $1 AND channel_user_id = $2 AND account_scope = $3`,
+			identity.Provider, identity.ChannelUserID, identity.AccountScope); err != nil {
 			return 0, err
 		}
-		hash := storekit.ChannelIdentityHash(identity.Provider, identity.ChannelUserID)
+		hash := storekit.ChannelIdentityHash(identity.Provider, storekit.ChannelSuppressionAccount(identity.AccountScope, identity.ChannelUserID))
 		if err := armSuppression(ctx, tx, "channel_identity", []string{hash}, storekit.SuppressionKeyID()); err != nil {
 			return 0, err
 		}
@@ -252,8 +253,13 @@ func purgeChannelRawCapture(ctx context.Context, tx pgx.Tx, identities []channel
 	var purged int64
 	for _, identity := range identities {
 		erased, err := deleteRawOriginalsTx(ctx, tx,
-			rawChannelMatchSQL("r.payload", "r.source_system", "@provider::text", "@account::text"),
-			pgx.NamedArgs{"provider": identity.Provider, "account": identity.ChannelUserID})
+			rawChannelMatchSQL("r.payload", "r.source_system", "@provider::text", "@account::text")+
+				` OR r.channel_subjects @> ARRAY[@subject_key::text]`,
+			pgx.NamedArgs{
+				"provider":    identity.Provider,
+				"account":     identity.ChannelUserID,
+				"subject_key": subjectKeysOf([]channelIdentity{identity})[0],
+			})
 		if err != nil {
 			return 0, err
 		}

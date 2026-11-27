@@ -20,7 +20,7 @@ import {
   type Reference,
   useReferenceOptions,
 } from "../../components/filterreference";
-import type { VocabularyField } from "../../lib/filterdata";
+import { optionWords, type VocabularyField } from "../../lib/filterdata";
 import { valueFor } from "../../lib/labelfor";
 import {
   type FilterOp,
@@ -134,8 +134,8 @@ export function ValueControl({
     // surface exists to prevent: a value outside the set compiles, matches
     // nothing, and reads as a settled answer rather than as a mistake.
     //
-    // The label is the value, except for the industry codes, which the record
-    // page words through format/industry.ts and so does this picker.
+    // The label is the value as the record page words it: industry codes
+    // through format/industry.ts, other closed values through optionWords.
     return (
       <Select
         options={options.map((option) => ({
@@ -143,7 +143,8 @@ export function ValueControl({
           label:
             field === INDUSTRY_FIELD
               ? industryWords(t, option)
-              : (optionLabels?.[option] ?? option),
+              : (optionLabels?.[option] ??
+                (field ? optionWords(field, option, t) : option)),
         }))}
         value={typeof value === "string" ? value : ""}
         onChange={onChange}

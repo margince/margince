@@ -83,7 +83,6 @@ func TestAnUntypedTaskReadsTheTypeOfWhatMadeIt(t *testing.T) {
 		{"a task a rep wrote", "human", "", crmcontracts.TaskTypeReachOut},
 		{"an answer owed to a request", "system_remediation", "email_request", crmcontracts.TaskTypeReply},
 		{"a lead to qualify", "system_remediation", "lead_replied", crmcontracts.TaskTypeReview},
-		{"a mail to file under a deal", "system_remediation", "which_deal", crmcontracts.TaskTypeDecide},
 		{"a notice the product filed", "system_notice", "", crmcontracts.TaskTypeDo},
 	} {
 		t.Run(tc.name, func(t *testing.T) {

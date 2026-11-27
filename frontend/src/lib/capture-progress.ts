@@ -49,6 +49,8 @@ export type CaptureProgress = Readonly<{
 
 /** How often the connectors read re-asks while an import is live. */
 const POLL_LIVE_MS = 2_500;
+// The server narrows earlier mail one batch every ten seconds.
+const POLL_NARROWING_MS = 10_000;
 
 /**
  * The sentence that explains why a live import's count fell, or null when it
@@ -189,7 +191,9 @@ export function liveCapture(
 export function connectorsPollInterval(
   answer: Readonly<{ data: readonly CaptureConnection[] }> | undefined,
 ): number | false {
-  return answer !== undefined && liveCapture(answer.data) !== null
-    ? POLL_LIVE_MS
+  if (answer === undefined) return false;
+  if (liveCapture(answer.data) !== null) return POLL_LIVE_MS;
+  return answer.data.some((c) => c.history_narrowing)
+    ? POLL_NARROWING_MS
     : false;
 }

@@ -34,6 +34,10 @@ name: scheduled
 #                        catch that, because the change that breaks it is the
 #                        CALENDAR rather than a diff — and it sat red on main for
 #                        a month behind the classifier skipping the frontend jobs.
+#   secondary browsers — pull requests run the end-to-end lane in Chromium only.
+#                        Five smoke flows run daily in Playwright's WebKit and
+#                        Firefox builds, so a break in the secondary tier is
+#                        found the day after the merge and not by a reader.
 #   every story        — fe-uat renders only the stories a diff reaches, so a story
 #                        red on main stays hidden until a change fans out to it.
 #   perf budgets       — PERF-3/PERF-7 rode the integration lane at the SMB tier
@@ -778,6 +782,44 @@ jobs:
           cache-dependency-path: pnpm-lock.yaml
       - run: make fe-clock-drift
 
+  fe-secondary-browsers:
+    if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
+    name: smoke flows in WebKit and Firefox (main)
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    permissions:
+      contents: read
+    defaults:
+      run:
+        working-directory: .
+    steps:
+      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
+        with:
+          persist-credentials: false
+      - uses: pnpm/action-setup@73e46992e05b19abd31f2f3c20e0e7370d762115 # v6.1.1
+      - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
+        with:
+          node-version: 24
+          cache: pnpm
+          cache-dependency-path: pnpm-lock.yaml
+      - name: Install deps
+        working-directory: frontend
+        timeout-minutes: 5
+        run: pnpm install --frozen-lockfile --ignore-scripts
+      - name: Install the Playwright WebKit and Firefox browsers
+        uses: ./.github/actions/install-playwright-chromium
+        with:
+          browsers: webkit firefox
+      - name: Run the smoke flows (make e2e-secondary)
+        run: make e2e-secondary
+      - uses: ./.github/actions/upload-artifact-retried
+        if: failure()
+        with:
+          name: secondary-browsers-failures
+          path: frontend/test-results
+          if-no-files-found: ignore
+          retention-days: 14
+
   fe-all-stories:
     if: github.event_name == 'workflow_dispatch' || github.event.schedule == '0 1 * * *'
     name: every story renders (main)
@@ -1075,7 +1117,7 @@ jobs:
   # fails, so it is guarded on !cancelled() rather than needs alone.
   report:
     name: report
-    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift-slices, backend-clock-drift-slice, backend-clock-drift, fe-clock-drift, fe-all-stories, perf-budgets, perf-mid-market, perf-mobile, records, reap-caches, slop-trend, vendor-live, role-sweep, home-growth]
+    needs: [vuln, quality-gate, renovate-liveness, backend-clock-drift-slices, backend-clock-drift-slice, backend-clock-drift, fe-clock-drift, fe-all-stories, fe-secondary-browsers, perf-budgets, perf-mid-market, perf-mobile, records, reap-caches, slop-trend, vendor-live, role-sweep, home-growth]
     # Every result, not only the failures — see the same condition in
     # main-health.yml for why. In short: the reporter now retracts a finding
     # whose check came back green, and a job gated on a failure is never reached
@@ -1126,6 +1168,7 @@ jobs:
           BACKEND_CLOCK_RESULT: ${{ needs['backend-clock-drift'].result }}
           BACKEND_CLOCK_OUTCOME: ${{ needs['backend-clock-drift'].outputs.outcome }}
           STORIES_RESULT: ${{ needs['fe-all-stories'].result }}
+          SECONDARY_RESULT: ${{ needs['fe-secondary-browsers'].result }}
           PERF_RESULT: ${{ needs.perf-budgets.result }}
           PERF_OUTCOME: ${{ needs.perf-budgets.outputs.outcome }}
           PERF_MEASURE_ONLY: ${{ inputs.perf_measure }}

@@ -198,7 +198,7 @@ func deriveAudienceTx(
   NULLIF(`+threadverdict.ReasonSQL("v.kind")+`,'')
   ELSE i.verdict_reason END
  FROM capture_import i JOIN activity a ON a.id=i.activity_id
- LEFT JOIN capture_thread_verdict v ON v.user_id=i.user_id AND v.thread_key=a.thread_key
+ LEFT JOIN capture_thread_verdict v ON v.user_id=i.user_id AND v.thread_key=`+threadverdict.LedgerKeySQL("i", "a")+`
  WHERE i.activity_id = $1 AND a.restricted_at IS NULL ORDER BY i.user_id`, activityID)
 	if err != nil {
 		return "", "", false, fmt.Errorf("activities: reading the import rows of %s: %w", activityID, err)

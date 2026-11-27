@@ -118,7 +118,7 @@ func SeedScoutedNamed(t *testing.T, e *AppEnv, companyName, contactName string) 
 	}
 
 	ws := InstallationWorkspaceUUID(context.Background(), t, e.Pool)
-	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), ws), "agent:deal-scout")
+	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), ws), "system:deal-scout")
 	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		for _, kind := range []string{"new_opportunity", "commitment_made"} {
 			if _, err := signals.RecordDerived(ctx, tx, signals.DerivedSignal{

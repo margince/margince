@@ -85,9 +85,7 @@ describe("DealsScreen", () => {
     vi.stubGlobal("fetch", stubBackend([deal({})]));
     render(<DealsScreen />);
     await showLayout(userEvent.setup(), "Table");
-    expect(
-      await screen.findByText(/^1 to 1 of 1 deals in Sales/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/^1-1 of 1 in Sales/)).toBeInTheDocument();
   });
 
   // A view saved on the deals list is a server row, and the tab rail has to
@@ -663,7 +661,6 @@ describe("DealsScreen", () => {
     dropOnStage("s3");
     await askedToClose("Won");
 
-    // Asked on opening, and Confirm waits for the answer. Nothing is posted yet.
     await screen.findByText("How was it won?");
     expect(
       screen.getByRole("button", { name: "Confirm" }).hasAttribute("disabled"),
@@ -683,6 +680,7 @@ describe("DealsScreen", () => {
       status: "won",
       won_without_contract_reason: "purchase_order",
     });
+    expect(await screen.findByText("Closed as won")).toBeTruthy();
   });
 
   it("a deal with a contract is never asked how it was won", async () => {

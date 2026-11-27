@@ -187,6 +187,7 @@ func (e *WorkflowEngine) HandleEvent(ctx context.Context, env kevents.Envelope) 
 		for _, inst := range instances[h.Spec().Name] {
 			iev := ev
 			iev.AutomationID = inst.id.UUID
+			iev.AutomationName = inst.name
 			iev.OwnerID = inst.owner
 			iev.Params = inst.params
 			iev.EnabledFrom = inst.enabledFrom
@@ -237,6 +238,7 @@ func (e *WorkflowEngine) clockHandlers() []workflow.Handler {
 // authority to re-check at all.
 type automationInstance struct {
 	id          ids.AutomationID
+	name        string
 	owner       ids.UUID
 	params      json.RawMessage
 	version     int64
@@ -250,7 +252,7 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 	out := map[string][]automationInstance{}
 	err := e.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT id, key, params, owner_id, version, enabled_from
+			`SELECT id, key, params, owner_id, version, enabled_from, name
 			 FROM automation WHERE enabled AND archived_at IS NULL ORDER BY created_at, id`)
 		if err != nil {
 			return err
@@ -261,7 +263,7 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 			var key string
 			var owner *ids.UUID
 			var enabledFrom *time.Time
-			if err := rows.Scan(&inst.id, &key, &inst.params, &owner, &inst.version, &enabledFrom); err != nil {
+			if err := rows.Scan(&inst.id, &key, &inst.params, &owner, &inst.version, &enabledFrom, &inst.name); err != nil {
 				return err
 			}
 			if owner != nil {
@@ -280,11 +282,10 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 	return out, nil
 }
 
-// systemSource is the provenance every deterministic workflow write
-// stamps: an automation acts as the system, never on behalf of the
-// human who authored or enabled it. Named once so ApplyActions'
-// Create/Update calls and applyAssignOwner's (handlers_actions.go)
-// cannot drift into three independent spellings of the same fact.
+// systemSource is the provenance every deterministic workflow update
+// stamps. An automation acts as the system, never on behalf of the human who
+// authored or enabled it. A create names the automation channel instead
+// (effectclaims.go).
 const systemSource = "system"
 
 // systemActor is the principal id every workflow write is attributed to, and
@@ -317,6 +318,7 @@ const systemActor = "system"
 func ApplyActions(ctx context.Context, ex Executors, effect workflow.Effect) ([]workflow.Action, error) {
 	var applied []workflow.Action
 	for _, action := range effect.Actions {
+		action.Why = effect.Why
 		recorded, staged, err := applyOne(ctx, ex, effect, action)
 		if err != nil {
 			return applied, err
@@ -393,7 +395,7 @@ func applyOne(ctx context.Context, ex Executors, eff workflow.Effect, action wor
 		if err != nil {
 			return recorded, nil, err
 		}
-		id, err := stageHeldDraft(ctx, ex.Approvals, ex.Language, action.Target, proposal)
+		id, err := stageHeldDraft(ctx, ex.Approvals, ex.Language, action.Target, proposal, action.Why)
 		if err != nil {
 			return recorded, nil, err
 		}

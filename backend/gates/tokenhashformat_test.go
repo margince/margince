@@ -20,7 +20,6 @@ import (
 	"strings"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/erasedmark"
 )
 
@@ -95,11 +94,8 @@ func hashColumnsWithoutFormat(catalog string) (off map[string]string, seen []str
 
 func TestEveryTokenHashColumnStatesItsFormat(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
-	off, seen := hashColumnsWithoutFormat(string(raw))
+	raw := headCatalog(t)
+	off, seen := hashColumnsWithoutFormat(raw)
 	// A short census would pass on a catalog whose line shape had moved.
 	if len(seen) < 17 {
 		t.Fatalf("read %d hash columns from the catalog, and the schema has at least 17: %v", len(seen), seen)

@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
@@ -72,6 +73,12 @@ func TestTheFrontendsCopiesOfServerLimitsMatchTheirOwners(t *testing.T) {
 			read:  regexp.MustCompile(`const WIRE_ROW_TAG_CAP\s*=\s*(\d+)\s*;`),
 			owner: fixed(strconv.Itoa(storekit.RowTagCap)),
 			drift: "a row page carries storekit.RowTagCap tags, so the strip counts the rest off an array that stopped early",
+		},
+		{
+			file: "../frontend/src/components/listqueryparams.ts", name: "LIST_OFFSET_CAP",
+			read:  regexp.MustCompile(`(?m)^export const LIST_OFFSET_CAP = ([0-9_]+);`),
+			owner: fixed(strconv.Itoa(storekit.MaxListOffset)),
+			drift: "the pager opens a page at an offset storekit.MaxListOffset refuses, so move both together",
 		},
 		{
 			file: "../frontend/src/lib/voice-refusal.ts", name: "VOICE_SOURCE_MAX_BYTES",
@@ -139,7 +146,7 @@ func TestTheFrontendsCopiesOfServerLimitsMatchTheirOwners(t *testing.T) {
 		t.Run(limit.name, func(t *testing.T) {
 			source, read := sources[limit.file]
 			if !read {
-				source = tsComment.ReplaceAllString(readFile(t, limit.file), " ")
+				source = gatekit.TSWithoutComments(readFile(t, limit.file))
 				sources[limit.file] = source
 			}
 			found := limit.read.FindAllStringSubmatch(source, -1)

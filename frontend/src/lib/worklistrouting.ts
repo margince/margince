@@ -3,12 +3,16 @@
 
 import type { components } from "../api/schema";
 import { routeHash } from "./router";
-import { hashWithParams } from "./urlstate";
+import { hashWithParams, type UrlParams } from "./urlstate";
 import { viewOfFilter } from "./worklistviews";
 
 type Worklist = components["schemas"]["Worklist"];
 export const WORKLIST_FILTER_PARAM = "filter";
 export const WORKLIST_VIEW_PARAM = "queue_view";
+
+/** Whether these dials open Home's Worklist panel. */
+export const drawerOpen = (params: UrlParams): boolean =>
+  params.get("queue") === "1";
 
 export function worklistLaneTarget(
   filter: NonNullable<Worklist["filter"]>,

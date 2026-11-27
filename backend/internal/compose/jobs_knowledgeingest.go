@@ -208,7 +208,7 @@ func (w *knowledgeIngestWorker) ingest(ctx context.Context, documentID ids.UUID)
 	// reads, and a document reported finished while its passages carry no
 	// vector is a corpus that answers "not covered" for prose it holds.
 	if w.embedder != nil {
-		if _, err := w.store.EmbedDocument(ctx, documentID, w.embedder); err != nil {
+		if _, err := w.store.EmbedIngest(ctx, documentID, src, w.embedder); err != nil {
 			return err
 		}
 	}

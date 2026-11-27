@@ -68,6 +68,10 @@ type sendSeam struct {
 	// and Telegram cannot, so their seam marks a transmission in flight before
 	// the call, and refuses to retry an outcome it never learned.
 	detectsPriorSend bool
+
+	// recheck asks once more, immediately before the provider call, whether the
+	// sender may still use this mailbox. Nil when the seam has nothing to ask.
+	recheck func(ctx context.Context) error
 }
 
 // resolveSeam resolves the delivery's transmitting credential and binds the
@@ -117,7 +121,12 @@ func (d *Dispatcher) resolveSeam(ctx context.Context, del Delivery) (sendSeam, e
 	if err != nil {
 		return sendSeam{}, err
 	}
+	var recheck func(context.Context) error
+	if checker, ok := d.resolver.(ReplyRechecker); ok && del.ConnectionID != nil {
+		recheck = func(ctx context.Context) error { return checker.RecheckReply(ctx, del.UserID, *del.ConnectionID) }
+	}
 	return sendSeam{
+		recheck:          recheck,
 		granted:          granted,
 		detectsPriorSend: connector.DetectsPriorSend(sender),
 		carriage:         connector.CarriageOf(sender),

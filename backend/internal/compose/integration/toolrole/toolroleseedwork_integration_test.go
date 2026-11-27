@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -112,7 +113,8 @@ func workSeeders(s sweepSeed) map[string]func() string {
 			_, suggestion := apptest.SeedScoutedNamed(s.t, s.e, "Sweep "+stem, "Buyer "+stem)
 			return suggestion
 		},
-		"tag_suggestion": func() string { return tagSuggestion(s) },
+		"tag_suggestion":  func() string { return tagSuggestion(s) },
+		"link_suggestion": func() string { return linkSuggestion(s) },
 		"notice": func() string {
 			id, err := notices.NewStore(compose.InstallationDB(s.e.Pool)).Create(s.systemContext("system:role-sweep"), notices.NewNotice{
 				Recipient: ids.From[ids.UserKind](ids.MustParse(apptest.SessionUserID(s.t, s.e))), Kind: "automation",
@@ -318,6 +320,26 @@ func stagedApproval(s sweepSeed) string {
 	return s.ownerScalar(`SELECT id::text FROM approval WHERE bundle_id = $1`, bundle)
 }
 
+// linkSuggestion is an extension's suggestion that an email belongs on a
+// deal, proposed through the same door a unit uses.
+func linkSuggestion(s sweepSeed) string {
+	email := s.post("/v1/activities", integration.AnyMap{
+		"kind": "email", "direction": "inbound", "subject": "Role sweep", "source": "manual",
+	})
+	deal := s.create["deal"]()
+	ctx := s.systemContext("system:role-sweep")
+	if err := database.WithWorkspaceTx(ctx, s.e.Pool, func(tx pgx.Tx) error {
+		_, err := activities.ProposeLinkSuggestionTx(ctx, tx, activities.LinkSuggestionInput{
+			ActivityID: ids.From[ids.ActivityKind](ids.MustParse(email)), EntityType: "deal", EntityID: ids.MustParse(deal),
+			Unit: "role-sweep", Reason: "Role sweep", Score: 0.5,
+		})
+		return err
+	}); err != nil {
+		s.t.Fatalf("proposing a link suggestion: %v", err)
+	}
+	return s.ownerScalar(`SELECT id::text FROM activity_link_suggestion WHERE activity_id = $1`, email)
+}
+
 // tagSuggestion is what the tag scout raises for a suggestible tag a note on
 // a contact names.
 func tagSuggestion(s sweepSeed) string {
@@ -330,7 +352,7 @@ func tagSuggestion(s sweepSeed) string {
 		"occurred_at": clocktest.Now(s.t).Add(-time.Hour).UTC().Format(time.RFC3339),
 		"links":       []integration.AnyMap{{"entity_type": "contact", "entity_id": contact}},
 	})
-	ctx := s.systemContext("agent:tag-scout")
+	ctx := s.systemContext("system:tag-scout")
 	if err := database.WithWorkspaceTx(ctx, s.e.Pool, func(tx pgx.Tx) error {
 		_, err := compose.RunTagScout(ctx, tx, clocktest.Now(s.t))
 		return err

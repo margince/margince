@@ -19,8 +19,10 @@ import {
   LeadScreen,
   LeadsScreen,
   LegalReviewsRoute,
+  MergeConfirmScreen,
   OAuthConsent,
   OfferScreen,
+  OffersRedirect,
   OnboardingScreen,
   PartnersScreen,
   PreferenceCenterScreen,
@@ -56,7 +58,7 @@ import {
 import { paintsFromEssentialCopy } from "./lib/essentialscreens";
 import { EXTENSION_APP_SCREEN } from "./lib/extensionapps";
 import { EXTENSION_SCREEN } from "./lib/extensions";
-import { traversalInFlight, traverseTo } from "./lib/historydepth";
+import { traversalInFlight, traverseOr } from "./lib/historydepth";
 import { routeIdentity } from "./lib/routeidentity";
 import {
   navigateReplacing,
@@ -132,12 +134,7 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // into the startup graph. The key is still typed against `Screen`.
     scheduled: () => <ScheduledSendsScreen />,
     "legal-reviews": ({ id }) => <LegalReviewsRoute id={id} />,
-    offers: ({ id }) =>
-      id ? (
-        <OfferScreen id={id} />
-      ) : (
-        <ScreenNotice messageKey="screen.pending" />
-      ),
+    offers: ({ id }) => (id ? <OfferScreen id={id} /> : <OffersRedirect />),
     search: ({ id, id2 }) => (
       <SearchRoute q={id ? safeDecode(id) : ""} openActivityId={id2} />
     ),
@@ -161,6 +158,9 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
     // token is single-use and shows the subject their own record, which is why
     // it is a different credential from the reusable preference link.
     confirm: ({ id }) => <ConfirmDetailsScreen token={id} />,
+    // #/confirm-merge?token=<token>: anonymous. The router has taken the token
+    // out of the address by the time this table is reached.
+    "confirm-merge": () => <MergeConfirmScreen />,
     // #/room?c=<credential>: the Deal Room's buyer, anonymous. The credential
     // is already out of the address by the time this table is reached. The
     // router takes it as it reads the hash (lib/router.tsx). A gate above this
@@ -186,10 +186,13 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
 // Through history, so the entries around the held one are kept. Never a replace
 // while a traversal is under way: that would rename the entry it lands on.
 function returnTo(address: string, depth: number | undefined): void {
-  if (traversalInFlight() || (depth !== undefined && traverseTo(depth))) {
+  const replace = () =>
+    navigateReplacing(parseHash(address), parseParams(address));
+  if (depth === undefined) {
+    if (!traversalInFlight()) replace();
     return;
   }
-  navigateReplacing(parseHash(address), parseParams(address));
+  traverseOr(depth, replace);
 }
 
 // The view for a held address, parsed rather than threaded alongside the

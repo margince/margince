@@ -206,7 +206,7 @@ func TestASignatureFillRecordsTheEmptyColumn(t *testing.T) {
 
 	before, after := auditImagesHolding(ctx, t, e.store, entityContact, contactID.UUID, "title")
 	wantImage(t, before, "before", "title", nil)
-	wantImage(t, after, "after", "title", signatureFieldFilled)
+	wantImage(t, after, "after", "title", auditFilledMarker)
 	if _, folded := after[auditKeyFields]; folded {
 		t.Errorf("the after image carries a bookkeeping key instead of the column: %v", after)
 	}
@@ -246,7 +246,7 @@ func TestASiteContactFillNeverRecordsAFieldAlreadyAnswered(t *testing.T) {
 		t.Fatalf("%d audit rows claim role, want only the signature's — the site fill declined", n)
 	}
 	_, after := auditImagesHolding(ctx, t, e.store, entityContact, contactID.UUID, "role")
-	wantImage(t, after, "after", "role", signatureFieldFilled)
+	wantImage(t, after, "after", "role", auditFilledMarker)
 }
 
 // The breach mark is the lead's own column and carries an image; the deadline
@@ -323,6 +323,6 @@ func TestASignatureFillRecordsTheEmptySidecarFields(t *testing.T) {
 	wantImage(t, before, "before", "linkedin", nil)
 	// Named, not quoted: this pass parses a message, and audit_log outlives the
 	// erasure that clears what it parsed.
-	wantImage(t, after, "after", "role", signatureFieldFilled)
-	wantImage(t, after, "after", "linkedin", signatureFieldFilled)
+	wantImage(t, after, "after", "role", auditFilledMarker)
+	wantImage(t, after, "after", "linkedin", auditFilledMarker)
 }

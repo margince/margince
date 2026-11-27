@@ -180,29 +180,6 @@ func (a attentionAIWork) Troubled(ctx context.Context, since time.Time, limit in
 	return out, nil
 }
 
-// attentionBounces binds the bounce lane to the comms store's own per-user
-// read of the stamp RecordBounce leaves; the contact-only refusal lives there.
-type attentionBounces struct{ store *comms.Store }
-
-func (b attentionBounces) HardBounces(ctx context.Context, since time.Time, limit int) ([]attention.BouncedSend, error) {
-	bounced, err := b.store.HardBouncesFor(ctx, since, limit)
-	if err != nil {
-		return nil, err
-	}
-	out := make([]attention.BouncedSend, 0, len(bounced))
-	for _, send := range bounced {
-		out = append(out, attention.BouncedSend{
-			ID:        send.ID,
-			Subject:   send.Subject,
-			Reason:    send.Reason,
-			BouncedAt: send.BouncedAt,
-			ContactID: send.ContactID,
-			Recipient: send.Recipient,
-		})
-	}
-	return out, nil
-}
-
 // attentionUndelivered binds the undelivered lane to the comms store's own
 // per-user read of the stamp the dispatcher's park leaves; the contact-only
 // refusal lives there.

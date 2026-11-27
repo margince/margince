@@ -16,7 +16,6 @@ import (
 	"fmt"
 	"go/ast"
 	"go/token"
-	"io/fs"
 	"maps"
 	"path/filepath"
 	"regexp"
@@ -85,7 +84,9 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"mail_draft.communication_context": {"internal/contracts", "CommunicationContext"},
 	// How to read an activity's time. A precision the contract admits and the
 	// CHECK refuses would be a 500 on a valid create.
-	"activity.occurred_precision": {"internal/contracts", "OccurredPrecision"},
+	"activity.occurred_precision":           {"internal/contracts", "OccurredPrecision"},
+	"graph_contact_edge.last_precision":     {"internal/contracts", "OccurredPrecision"},
+	"graph_interaction_edge.last_precision": {"internal/contracts", "OccurredPrecision"},
 
 	// What an approval names as its target, and what acquisition evidence cites.
 	// An approval's CHECK also admits a unit's own table, which extensionArm sets
@@ -174,6 +175,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	// generated_by whether or not it holds this vocabulary.
 	"company_scan.generated_by":      {"internal/contracts", "WrittenBy"},
 	"generated_summary.generated_by": {"internal/contracts", "WrittenBy"},
+	"task_explanation.generated_by":  {"internal/contracts", "WrittenBy"},
 	"generated_summary.kind":         {"internal/platform/generatedsummary", "Kind"},
 
 	// Found by the vocabulary census in vocabularycensus_test.go. Each type is the one
@@ -193,7 +195,6 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"ai_feedback.verdict":                          {"internal/contracts", "AIFeedbackInputVerdict"},
 	"analytics_share.kind":                         {"internal/contracts", "ForecastShareKind"},
 	"analytics_share.scope_kind":                   {"internal/contracts", "ForecastCallScopeKind"},
-	"app_user.locale":                              {"internal/contracts", "SaveMyLocaleRequestLocale"},
 	"app_user.morning_brief_delivery":              {"internal/contracts", "BriefDeliveryMorningBriefDelivery"},
 	"app_user.routine_mail_scope":                  {"internal/contracts", "BriefDeliveryRoutineMailScope"},
 	"app_user.seat_type":                           {"internal/shared/kernel/principal", "SeatType"},
@@ -244,6 +245,7 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"company.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
 	"contact.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
 	"deal.source":                                  {"internal/shared/kernel/provenance", "RecordSource"},
+	"activity.source":                              {"internal/shared/kernel/provenance", "RecordSource"},
 	"lead.source":                                  {"internal/shared/kernel/provenance", "RecordSource"},
 	"offer.source":                                 {"internal/shared/kernel/provenance", "RecordSource"},
 	"project.source":                               {"internal/shared/kernel/provenance", "RecordSource"},
@@ -326,113 +328,6 @@ var requestEnumBindings = []struct{ typeName, col string }{
 	{"SalesGoalDraftInputOrigin", "sales_goal_plan_revision.origin"},
 }
 
-// checkInList captures CHECK (col IN ('a','b',…)) allowing an optional
-// "col IS NULL OR" prefix; applied to a table block's accumulated text.
-var checkInList = regexp.MustCompile(`(?is)CHECK\s*\(\s*(?:([a-z_]+)\s+IS\s+NULL\s+OR\s+)?([a-z_]+)\s+IN\s*\(([^)]*)\)`)
-
-// alterTableStmt keys an ALTER statement's CHECK lists to their table.
-var alterTableStmt = regexp.MustCompile(`(?is)ALTER\s+TABLE\s+([a-z_]+)`)
-
-// singleQuoted pulls the 'value' literals out of a captured IN-list.
-var singleQuoted = regexp.MustCompile(`'([^']*)'`)
-
-// migrationPrefix is the numeric-prefix name shape last-wins ordering needs.
-// Widths differ — custom/ stamps 14 digits, core/ ten since it started naming
-// a migration for the unix second it was written, and four before that — and
-// last-wins does not need them to agree, only to sort
-// lexically-equals-chronologically within one namespace, which is all
-// tableCheckSets' per-root walk relies on. core/'s closed four-digit sequence
-// is zero-padded and so still sorts below its later stamps.
-var migrationPrefix = regexp.MustCompile(`^\d{4,}_`)
-
-// recordChecks derives every CHECK (col IN (…)) set in text and records
-// it under table.col — the one spelling shared by the CREATE-block and
-// ALTER-statement passes.
-func recordChecks(sets map[string][]string, table, text string) {
-	for _, m := range checkInList.FindAllStringSubmatch(text, -1) {
-		var vals []string
-		for _, q := range singleQuoted.FindAllStringSubmatch(m[3], -1) {
-			vals = append(vals, q[1])
-		}
-		sort.Strings(vals)
-		sets[table+"."+m[2]] = vals
-	}
-}
-
-// tableCheckSets derives table.column → allowed set from the migration
-// sources, using the same line-based CREATE TABLE scan as updateguard
-// (column definitions nest parens beyond what a block regex can pair),
-// plus a per-statement ALTER TABLE pass: vocabularies grow additively
-// (drop CHECK + re-add wider), so the LAST migration to state a column's
-// IN-list wins — walk order is lexical, which is migration order.
-func tableCheckSets(t *testing.T) map[string][]string {
-	t.Helper()
-	sets := map[string][]string{}
-	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
-				return err
-			}
-			// Last-wins depends on lexical order being migration order:
-			// every name must carry the numeric version prefix.
-			if !migrationPrefix.MatchString(d.Name()) {
-				return fmt.Errorf("%s: migration name lacks the numeric version prefix the lexical-order derivation relies on", path)
-			}
-			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
-			if err != nil {
-				return err
-			}
-			// Read through the renames the migrations themselves declare: a CHECK
-			// against a table since renamed would otherwise be filed under a
-			// name no caller uses, and the vocabulary derived for the current
-			// one comes back empty.
-			sql := withCurrentNames(string(raw))
-			current, block := "", strings.Builder{}
-			flush := func() {
-				if current == "" {
-					return
-				}
-				recordChecks(sets, current, block.String())
-				current = ""
-				block.Reset()
-			}
-			for line := range strings.SplitSeq(sql, "\n") {
-				if m := createTableLine.FindStringSubmatch(line); m != nil {
-					flush()
-					current = m[1]
-					continue
-				}
-				if strings.HasPrefix(line, ");") {
-					flush()
-					continue
-				}
-				if current != "" {
-					block.WriteString(line)
-					block.WriteString("\n")
-				}
-			}
-			flush()
-			for stmt := range strings.SplitSeq(sql, ";") {
-				if alter := alterTableStmt.FindStringSubmatch(stmt); alter != nil {
-					recordChecks(sets, alter[1], stmt)
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	// The evidence views store nothing, so their vocabularies are the lists on
-	// field_provenance, read from the catalog the migrations build.
-	evidence, err := readEvidenceVocabularies()
-	if err != nil {
-		t.Fatal(err)
-	}
-	maps.Copy(sets, evidence)
-	return sets
-}
-
 // goConstSet derives the string values of every constant declared with
 // the given type in the package directory.
 func goConstSet(t *testing.T, pkgDir, typeName string) []string {
@@ -488,9 +383,9 @@ func goConstSet(t *testing.T, pkgDir, typeName string) []string {
 // extension kind.
 func TestSavedViewTargetIsTheResourceCheck(t *testing.T) {
 	t.Parallel()
-	want, ok := tableCheckSets(t)["saved_view.resource"]
+	want, ok := checkVocabularies(t)["saved_view.resource"]
 	if !ok {
-		t.Fatal("no CHECK (resource IN (…)) found for saved_view in the migrations — broken derivation")
+		t.Fatal("no CHECK vocabulary found for saved_view.resource in the head catalog — broken derivation")
 	}
 	spelling := spellingOf(contractSchema(t, "SavedViewTarget"))
 	sort.Strings(spelling.Enum)
@@ -523,7 +418,7 @@ func TestEveryDomainEnumMatchesItsSchemaCheck(t *testing.T) {
 		col := binding.col
 		want, ok := checks[col]
 		if !ok {
-			t.Errorf("enumBindings[%s]: no CHECK vocabulary found in %s — stale binding or broken derivation", col, vocabularyCatalog)
+			t.Errorf("enumBindings[%s]: no CHECK vocabulary found in %s — stale binding or broken derivation", col, headCatalogPath)
 			continue
 		}
 		want = readVocabulary(col, want)
@@ -588,7 +483,7 @@ func TestEveryListedVocabularyIsItsColumnsCheck(t *testing.T) {
 		switch {
 		case !ok:
 			t.Errorf("%s: no CHECK vocabulary found in %s, so %s is held to nothing; "+
-				"restore the constraint or repoint the row", row.col, vocabularyCatalog, row.lister)
+				"restore the constraint or repoint the row", row.col, headCatalogPath, row.lister)
 		case len(got) == 0:
 			t.Errorf("%s: %s lists no value", row.col, row.lister)
 		case len(got) != len(listed):

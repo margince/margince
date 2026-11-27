@@ -40,6 +40,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -404,6 +405,7 @@ func wireEdge(e search.InteractionEdge, from, to string, now time.Time) crmcontr
 		Outbound90d:     &outCount,
 		Sent90d:         e.SentCount90d,
 		LastAt:          &last,
+		LastPrecision:   occurredday.ClockPrecision[crmcontracts.OccurredPrecision](&last, e.LastAtDateOnly),
 	}
 }
 

@@ -128,7 +128,8 @@ type SiteReadContact struct {
 }
 
 // siteReadColumns is the ONE column list every dossier read scans —
-// scanSiteRead pairs with it positionally.
+// scanSiteRead pairs with it positionally. It reads proposal_ids, complete for
+// every read, until core/1795796173_read_proposals_keyed fills site_read_proposal.
 const siteReadColumns = `id, company_id, target_kind, seed_url, status, status_code, status_detail, next_attempt_at, pages, skipped,
 	stopped_reason, fact_count, proposal_ids, requested_by, profile_fields, facts, contacts, legal_entities, warnings,
 	draft_version, proposal_hash, phase, pages_read, logo_object_key, logo_icon_object_key, attempt, attempt_at,

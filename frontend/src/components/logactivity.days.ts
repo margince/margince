@@ -14,6 +14,15 @@ export function dueBoundsOf(
   return kind === "task" ? dueDayBounds(recordZone) : {};
 }
 
+// A logged day reaches back as far as a due date may. An older day is a year
+// typo, and the entry would sink below everything on the timeline.
+export function earliestDayOf(
+  kind: ActivityDraft["kind"],
+  recordZone: string,
+): ISODate | undefined {
+  return kind === "task" ? undefined : dueDayBounds(recordZone).min;
+}
+
 export function latestDayOf(
   kind: ActivityDraft["kind"],
   recordZone: string,

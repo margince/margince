@@ -23,12 +23,9 @@ package gates
 
 import (
 	"fmt"
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // A column line of the committed catalog: table, column and its type.
@@ -49,12 +46,9 @@ var outlookParentKeys = map[string]string{
 
 func TestTheTeamOutlookMirrorsTheRepOutlook(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(filepath.Join("migrations", "testdata", "head_catalog.txt"))
-	if err != nil {
-		t.Fatalf("reading the committed catalog: %v", err)
-	}
-	rep := outlookColumns(string(raw), "weekly_review_outlook")
-	team := outlookColumns(string(raw), "team_weekly_review_outlook")
+	raw := headCatalog(t)
+	rep := outlookColumns(raw, "weekly_review_outlook")
+	team := outlookColumns(raw, "team_weekly_review_outlook")
 
 	// Under-recognition is the failure that reports PASS: a scan that found no
 	// columns would agree with itself perfectly.

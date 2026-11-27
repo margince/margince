@@ -18,7 +18,6 @@ package gates
 
 import (
 	"bufio"
-	"bytes"
 	"regexp"
 	"slices"
 	"strings"
@@ -49,6 +48,8 @@ const addressesAreOpen = "mail addresses a message or a request named; any addre
 
 // openTextArrays are the text arrays whose set the database does not close.
 var openTextArrays = gatekit.Waive(map[string]string{
+	"raw_capture.ask_message_ids":                         "thread-qualified provider message keys of clarification questions, with legacy unqualified ids; they identify echoes, not a closed vocabulary",
+	"raw_capture.channel_subjects":                        "channel identities as `provider:account`, written by every network that stores a raw original; the providers own the set",
 	"activity.redacted_fields":                            "names of activity columns, written by the privacy erasure paths; the set moves with the schema",
 	"comms_outbound.redacted_fields":                      "names of comms_outbound columns, written by the privacy erasure paths; the set moves with the schema",
 	"capture_connection.provider_scopes":                  "the OAuth scopes the provider granted, stored as it returned them; the provider owns the set",
@@ -137,12 +138,9 @@ type arrayCatalog struct {
 
 func readArrayCatalog(t *testing.T) arrayCatalog {
 	t.Helper()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
-	if err != nil {
-		t.Fatal(err)
-	}
+	raw := headCatalog(t)
 	out := arrayCatalog{contained: map[string][]string{}, shaped: map[string]bool{}}
-	scanner := bufio.NewScanner(bytes.NewReader(raw))
+	scanner := bufio.NewScanner(strings.NewReader(raw))
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -170,7 +168,7 @@ func readArrayCatalog(t *testing.T) arrayCatalog {
 	}
 	if len(out.columns) < textArrayColumnFloor {
 		t.Fatalf("read %d text array columns from %s, fewer than the %d the schema carries: the catalog format moved",
-			len(out.columns), vocabularyCatalog, textArrayColumnFloor)
+			len(out.columns), headCatalogPath, textArrayColumnFloor)
 	}
 	return out
 }

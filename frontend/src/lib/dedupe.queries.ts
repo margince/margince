@@ -11,7 +11,7 @@ import {
 import { api } from "../api/client";
 import { fileListKeys } from "./attachmentkeys";
 import { problemCodeOf, problemStatus, unwrap } from "./problem";
-import { invalidateRecord } from "./recordwritekeys";
+import { invalidateRecord, invalidateRetiredRecord } from "./recordwritekeys";
 import {
   companyPairsKey,
   contactCasesKey,
@@ -40,13 +40,18 @@ function invalidatePairReads(client: QueryClient): Promise<unknown> {
 export function invalidateAfterContactMerge(
   client: QueryClient,
   contactIds: Iterable<string>,
+  survivorId: string | undefined,
 ): Promise<unknown> {
   const ids = [...new Set(contactIds)];
   return Promise.all([
     invalidatePairReads(client),
     client.invalidateQueries({ queryKey: ["contacts"] }),
     client.invalidateQueries({ queryKey: dsrsKey }),
-    ...ids.map((id) => invalidateRecord(client, "contact", id)),
+    ...ids.map((id) =>
+      id === survivorId
+        ? invalidateRecord(client, "contact", id)
+        : invalidateRetiredRecord(client, "contact", id),
+    ),
     // The merged-away contact's files and message links move to the survivor.
     ...movedFileKeys("contact", ids).map((queryKey) =>
       client.invalidateQueries({ queryKey }),
@@ -99,7 +104,11 @@ export function useDedupeDisposition() {
       if (input.disposition !== "merge")
         return invalidatePairReads(queryClient);
       if (input.contactIds) {
-        return invalidateAfterContactMerge(queryClient, input.contactIds);
+        return invalidateAfterContactMerge(
+          queryClient,
+          input.contactIds,
+          input.winnerId,
+        );
       }
       return Promise.all([
         invalidatePairReads(queryClient),

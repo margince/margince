@@ -36,7 +36,7 @@ func TestDocumentReadingStoresItsOriginalExplanationLanguage(t *testing.T) {
 			}
 			brain := scriptedBrain{FakeClient: ai.NewFakeClient().Script(allFour())}
 			reader := NewDocumentExtractor(env.Pool, brain, discardLogger())
-			if err := reader.Read(ctx, store, reading.ID, attachmentID); err != nil {
+			if err := reader.Read(ctx, ctx, store, reading.ID, attachmentID); err != nil {
 				t.Fatal(err)
 			}
 			integration.SetBaseLanguage(ctx, t, env.Pool, "en")

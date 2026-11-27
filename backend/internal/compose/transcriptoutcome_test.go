@@ -49,6 +49,7 @@ func TestEveryTranscriptFailureCodeRenders(t *testing.T) {
 	for _, code := range []string{
 		activities.TranscriptFailureNotTranscript, activities.TranscriptFailureTooLong, activities.TranscriptFailureBlank,
 		activities.TranscriptFailureMissing, activities.TranscriptFailureRefused, activities.TranscriptFailureNoModel,
+		activities.TranscriptFailureDenied,
 	} {
 		got := en.outcomeSentence(activities.TranscriptReadFacts{Failure: &activities.TranscriptFailure{Code: code, Lines: 9, Chars: 99}}, transcriptAudience{})
 		if got == "" {

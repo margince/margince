@@ -91,6 +91,7 @@ describe("FieldTable", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(screen.getByText("Renewal date")).toBeInTheDocument();
@@ -116,6 +117,7 @@ describe("FieldTable", () => {
         onRename={() => {}}
         onArchive={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
         onSetting={() => {}}
       />,
     );
@@ -134,6 +136,7 @@ describe("FieldTable", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     const menu = await openFieldMenu("Renewal date");
@@ -156,6 +159,7 @@ describe("FieldTable", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(
@@ -175,6 +179,7 @@ describe("FieldTable", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(screen.getByText(en["cf.retired"])).toBeInTheDocument();
@@ -792,6 +797,7 @@ describe("the create-form setting on the field table", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(screen.queryByRole("switch")).toBeNull();
@@ -878,6 +884,7 @@ describe("the reporting setting on the field table", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(
@@ -896,6 +903,7 @@ describe("the reporting setting on the field table", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(screen.queryByText(en["cf.col.inReports"])).toBeNull();
@@ -912,6 +920,7 @@ describe("the reporting setting on the field table", () => {
         onArchive={() => {}}
         onSetting={() => {}}
         onKinds={() => {}}
+        onPipelines={() => {}}
       />,
     );
     expect(

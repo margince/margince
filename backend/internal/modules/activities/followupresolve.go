@@ -20,19 +20,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// systemSource is activity.source as the automation engine's create
-// executor stamps it (automation's own systemSource — spelled again here
-// because a module cannot import a sibling's constant). Never trusted
-// alone, and deliberately NOT reserved at the create wire: the engine's
-// own creates flow through the same mapper as a client's
-// (LogActivityInputFrom), so a value-level refusal there would refuse the
-// engine itself. A caller can spell it — so every selector over it in
-// this package (the follow-up resolver below, the last-touch scan's
-// genuine-engagement exclusion) pairs it with systemCapturedBy, which no
-// client can write, and that PAIRING is the security boundary. The one
-// pair of constants for the package, so the next selector cannot copy
-// half the predicate.
+// systemSource is the word older rows the system wrote kept in source. The
+// channel trigger moves them to automation and leaves source_system as it was,
+// because storekit.HumanOrImportedTaskSQL reads a task with none as current work.
 const systemSource = "system"
+
+// systemTaskSources binds the identities systemWorkSQL reads.
+var systemTaskSources = provenance.SystemTaskSources()
+
+// systemWorkSQL tests that the activity at alias is work the system opened
+// under its own name. Every word the trigger maps to automation is read the
+// same way, so a row answers alike before and after the correction task.
+// pos binds systemTaskSources. Each caller pairs it with captured_by, which no
+// client writes.
+func systemWorkSQL(alias, pos string) string {
+	return fmt.Sprintf("(%[1]s.source IN ('', '%[2]s', '%[3]s') AND (%[1]s.source_system IS NULL OR %[1]s.source_system = ANY(%[4]s)))",
+		alias, systemSource, provenance.RecordSourceAutomation, pos)
+}
 
 // systemCapturedBy is captured_by as the workflow engine's runs stamp it:
 // storekit.CapturedBy writes the authenticated principal's ID, and the

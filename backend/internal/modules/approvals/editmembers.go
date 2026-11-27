@@ -24,6 +24,10 @@ import (
 // typed. The two boxes are the only choice the card offers.
 var editableMembers = map[string][]string{
 	kindLinkedInMatch: {"use_as_title", "use_as_employer"},
+	// A card's review is answered by one choice: merge into the contact it
+	// resembled, or keep it separate. The card's own fields are what the
+	// decider was shown.
+	KindVCardCreate: {"merge_into_candidate"},
 	// A handover is answered yes or no, and its effect trusts every member.
 	approvalsubject.KindOwnershipTransfer: {},
 	// A share request is answered yes or no; every member names a record.

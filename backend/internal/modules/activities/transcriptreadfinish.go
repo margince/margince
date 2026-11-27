@@ -74,10 +74,6 @@ func (s *Store) checkTranscriptOutcome(ctx context.Context, outcome TranscriptRe
 }
 
 func finishTranscriptReadTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, outcome TranscriptReadOutcome) error {
-	proposals := outcome.ProposalIDs
-	if proposals == nil {
-		proposals = []ids.UUID{}
-	}
 	var detail *string
 	if outcome.Detail != "" {
 		detail = &outcome.Detail
@@ -91,23 +87,28 @@ func finishTranscriptReadTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, out
 	// line count, and the row is what every other reader sees.
 	settled, err := scanTranscriptRead(tx.QueryRow(ctx, `
 			UPDATE transcript_read
-			   SET status = $2, status_detail = $3, proposal_ids = $4, finished_at = now(),
-			       line_count = COALESCE($5, line_count), outcome = $6
+			   SET status = $2, status_detail = $3, finished_at = now(),
+			       line_count = COALESCE($4, line_count), outcome = $5
 			 WHERE id = $1 AND status = 'running'
 			RETURNING `+transcriptReadColumns,
-		readID, outcome.Status, detail, proposals, readLineCount(outcome.LineCount), facts))
+		readID, outcome.Status, detail, readLineCount(outcome.LineCount), facts))
 	if errors.Is(err, pgx.ErrNoRows) {
 		return fmt.Errorf("%w: transcript read %s is not running", apperrors.ErrConflict, readID)
 	}
 	if err != nil {
 		return fmt.Errorf("finish transcript read: %w", err)
 	}
+	stored, err := storeTranscriptReadProposals(ctx, tx, readID, outcome.ProposalIDs)
+	if err != nil {
+		return err
+	}
+	settled.ProposalIDs = stored
 	// AuditEvent, not Audit: the compare-and-set above proves the row was
 	// running, so a prior state exists — it is simply a run record's own
 	// progress rather than a field a contact edited, and nothing would ever
 	// be restored to it.
 	if _, err := storekit.AuditEvent(ctx, tx, "update", "transcript_read", readID, map[string]any{
-		fieldStatus: outcome.Status, "proposals": len(proposals),
+		fieldStatus: outcome.Status, "proposals": len(stored),
 	}); err != nil {
 		return fmt.Errorf("audit transcript read finish: %w", err)
 	}
@@ -121,4 +122,23 @@ func readLineCount(count int) *int {
 		return nil
 	}
 	return &count
+}
+
+// storeTranscriptReadProposals records the approvals a reading staged, keeping
+// their order; a repeated id keeps its first place, and the list kept is
+// returned. A reading finishes once, under the row lock its UPDATE took.
+//
+// The list is stored twice, as proposal_ids and as keyed rows. This is the one
+// runtime writer of both, so the two agree for every reading it finishes.
+func storeTranscriptReadProposals(ctx context.Context, tx pgx.Tx, readID ids.UUID, proposals []ids.UUID) ([]ids.UUID, error) {
+	kept := storekit.FirstOccurrences(proposals)
+	if _, err := tx.Exec(ctx, `UPDATE transcript_read SET proposal_ids = $2 WHERE id = $1`, readID, kept); err != nil {
+		return nil, fmt.Errorf("store the transcript read's proposal list: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `INSERT INTO transcript_read_proposal (transcript_read_id, approval_id, position)
+		SELECT $1, staged.approval_id, staged.n FROM unnest($2::uuid[]) WITH ORDINALITY AS staged(approval_id, n)`,
+		readID, kept); err != nil {
+		return nil, fmt.Errorf("store the transcript read's proposals: %w", err)
+	}
+	return kept, nil
 }

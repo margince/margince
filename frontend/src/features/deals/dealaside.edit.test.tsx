@@ -45,6 +45,8 @@ const deal: Deal = {
 
 type Sent = Readonly<{ ifMatch: string | null; body: unknown }>;
 
+let view: ReturnType<typeof render>;
+
 afterEach(cleanup);
 
 function mount(
@@ -52,11 +54,22 @@ function mount(
   current: Deal = deal,
   locale: "en" | "de" = "en",
   tags: () => Response = () => jsonResponse({ data: [] }),
+  seats: readonly {
+    id: string;
+    display_name: string;
+    departed: boolean;
+  }[] = [],
 ) {
   const sent: Sent[] = [];
   installFetchStub({
     "GET /me": meRoute({ deal: grant }, { seat: "full" }),
     "GET /records/deal/d1/tags": tags,
+    "GET /users/names": () => jsonResponse({ data: seats }),
+    "GET /users": () =>
+      jsonResponse({
+        data: seats.filter((seat) => !seat.departed),
+        page: { has_more: false, next_cursor: null },
+      }),
   });
   const stub = globalThis.fetch;
   globalThis.fetch = async (input, init) => {
@@ -67,7 +80,7 @@ function mount(
     sent.push({ ifMatch: headers.get("If-Match"), body: JSON.parse(text) });
     return jsonResponse({ ...current, version: 5 });
   };
-  render(
+  view = render(
     <StoryProviders locale={locale}>
       <DealAside deal={current} stages={[]} />
     </StoryProviders>,
@@ -339,4 +352,97 @@ it("refuses a close date the server cannot store before sending it", async () =>
   expect(day).toHaveAttribute("aria-invalid", "true");
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
   expect(sent).toEqual([]);
+});
+
+const gone = [{ id: "u-gone", display_name: "Shay Left", departed: true }];
+const here = [{ id: "u-here", display_name: "Ada Here", departed: false }];
+const leftNote = "Shay Left left. This needs a new owner.";
+
+it("says the owner left and opens Ownership from the note's action", async () => {
+  const user = userEvent.setup();
+  mount(
+    ["read", "update"],
+    { ...deal, owner_id: "u-gone" },
+    "en",
+    undefined,
+    gone,
+  );
+  expect(await screen.findByText(leftNote)).toBeTruthy();
+  await user.click(screen.getByRole("button", { name: "Choose a new owner" }));
+  expect(await screen.findByRole("dialog", { name: "Ownership" })).toBeTruthy();
+});
+
+it("gives a reader who may not edit the sentence and no action", async () => {
+  mount(
+    ["read"],
+    { ...deal, owner_id: "u-gone", writable: false },
+    "en",
+    undefined,
+    gone,
+  );
+  expect(await screen.findByText(leftNote)).toBeTruthy();
+  expect(
+    screen.queryByRole("button", { name: "Choose a new owner" }),
+  ).toBeNull();
+});
+
+it("says nothing for an owner who is still here or a deal with no owner", async () => {
+  mount(
+    ["read", "update"],
+    { ...deal, owner_id: "u-here" },
+    "en",
+    undefined,
+    here,
+  );
+  await screen.findByRole("region", { name: "Ownership" });
+  await screen.findByText("Ada Here");
+  expect(screen.queryByText(/This needs a new owner/)).toBeNull();
+  cleanup();
+  mount(["read", "update"], deal, "en", undefined, gone);
+  await screen.findByRole("region", { name: "Ownership" });
+  expect(screen.queryByText(/This needs a new owner/)).toBeNull();
+});
+
+it("shows no note on an archived deal, which cannot be handed over", async () => {
+  mount(
+    ["read", "update"],
+    { ...deal, owner_id: "u-gone", archived_at: "2026-10-01T00:00:00Z" },
+    "en",
+    undefined,
+    gone,
+  );
+  await screen.findByRole("region", { name: "Ownership" });
+  await screen.findByText(/Shay Left/);
+  expect(screen.queryByText(/This needs a new owner/)).toBeNull();
+});
+
+it("drops the note once the deal is saved with a new owner", async () => {
+  const user = userEvent.setup();
+  const sent = mount(
+    ["read", "update"],
+    { ...deal, owner_id: "u-gone" },
+    "en",
+    undefined,
+    [...gone, ...here],
+  );
+  await user.click(
+    await screen.findByRole("button", { name: "Choose a new owner" }),
+  );
+  const dialog = await screen.findByRole("dialog", { name: "Ownership" });
+  await user.click(within(dialog).getByRole("combobox"));
+  await user.click(await screen.findByRole("option", { name: /Ada Here/ }));
+  await user.click(within(dialog).getByRole("button", { name: "Save" }));
+  await waitFor(() => expect(sent).toHaveLength(1));
+  expect(sent[0]?.body).toEqual({ owner_id: "u-here" });
+  view.rerender(
+    <StoryProviders locale="en">
+      <DealAside
+        deal={{ ...deal, owner_id: "u-here", version: 5 }}
+        stages={[]}
+      />
+    </StoryProviders>,
+  );
+  await waitFor(() =>
+    expect(screen.queryByText(/This needs a new owner/)).toBeNull(),
+  );
 });

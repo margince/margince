@@ -183,8 +183,8 @@ the English opens lowercase ("Über Partner" for "via partner").
 - **A no-break space** also holds together a short phrase a narrow chip would
   otherwise split, as in "in Arbeit" in the Worklist summary.
 - **Numbers** written as text use a period for thousands and a comma for
-  decimals: 1.234,50. Ranges use "bis": "1 bis 4", "von 1 bis
-  1.000.000.000.000".
+  decimals: 1.234,50. A range of figures is joined by a hyphen with no spaces,
+  as in English: "1-4". A sentence keeps "bis": "von 1 bis 1.000.000.000.000".
 - **Dates and times** come from the formatting layer through a placeholder and
   are never spelled in a string. Relative time: "gerade eben", "vor {n}
   Minuten", "gestern", "in {n} Tagen".
@@ -261,11 +261,11 @@ distorted value.
 
 ## Vocabulary
 
-One German word per concept, the same word on every screen. In the Never
-column a word in code format is retired by `frontend/census/rules/copy-style-de.census.ts`: it fails
-as a whole word, case-sensitive, anywhere outside the keys the test names with
-a reason. A plain word is held by the reviewer, and only in the sense its row
-gives, because it is ordinary German in another sense.
+One German word per concept, the same word on every screen. A Never word in
+code format fails as a whole word, case-sensitive, on the screens (the census
+below) and in the server's German (`backend/gates/germanvocabulary_test.go`).
+The Never column retires 134 words in code format. Raise the count when you
+add one. A plain word is held by the reviewer, in the sense its row gives.
 
 | Concept | German | Never |
 |---|---|---|
@@ -375,8 +375,8 @@ source file, key and value. Placeholders are removed before the word rules run.
 | Never wir | wir, uns, unser in lower or leading capital, outside `privacynotice.` and the consent statements |
 | Retired vocabulary | A word in code format in the Vocabulary table's Never column, as a whole word, case-sensitive, outside the keys it names with a reason |
 
-A last test compares the code-format words of the Never column with the words
-the test retires, and fails a difference in either direction.
+The census reads its word list from the Never column and fails on a count the
+Vocabulary section does not state.
 
 `frontend/census/rules/address-register.census.ts` holds the address: no Sie, Ihr or
 Ihnen outside the five outsider families, no du-pronoun inside them, and no

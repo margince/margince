@@ -37,6 +37,7 @@ import {
 import { navigate } from "../../lib/router";
 import { BookingZone } from "./booking-common";
 import type { GuestSlot, monthDays } from "./booking-guest-month";
+import { BookingPrivacyInformation } from "./booking-privacy";
 
 /**
  * The app a booking's video link will come from, as the guest page names it.
@@ -170,6 +171,7 @@ export type GuestDetails = Readonly<{
  * names its recipient, so it asks only for consent.
  */
 export function GuestDetailsForm({
+  privacyInformation,
   selected,
   zone,
   personal,
@@ -181,6 +183,7 @@ export function GuestDetailsForm({
   pending,
   error,
 }: Readonly<{
+  privacyInformation?: string;
   selected: GuestSlot;
   zone: string;
   personal: boolean;
@@ -248,6 +251,7 @@ export function GuestDetailsForm({
         onChange={(event) => set({ consent: event.target.checked })}
         label={t("book.consentWording")}
       />
+      <BookingPrivacyInformation address={privacyInformation} />
       <div className="bookguest-actions">
         <Button onClick={onChangeTime}>{t("scheduling.changeTime")}</Button>
         <Button

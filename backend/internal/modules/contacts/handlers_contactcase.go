@@ -41,7 +41,7 @@ func (h Handlers) ListContactCases(w http.ResponseWriter, r *http.Request, param
 }
 
 // GetContactCase serves GET /dedupe/contact-cases/{contact_id}.
-func (h Handlers) GetContactCase(w http.ResponseWriter, r *http.Request, contactID openapi_types.UUID) {
+func (h Handlers) GetContactCase(w http.ResponseWriter, r *http.Request, contactID openapi_types.UUID, _ crmcontracts.GetContactCaseParams) {
 	out, err := h.store.GetContactCase(r.Context(), ids.UUID(contactID))
 	if err != nil {
 		writeStoreErr(w, r, err)

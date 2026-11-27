@@ -196,6 +196,18 @@ describe("what a tool is called on screen", () => {
     );
   });
 
+  // A job that now runs under a system: id left rows under its old agent:
+  // id. History still names them, and the new rows by the same job.
+  it("names a retired agent id and the system id that replaced it", () => {
+    expect(tagText("agent:tag-scout", "en")).toBe(
+      "Automated by Tag suggestions",
+    );
+    cleanup();
+    expect(tagText("system:tag-scout", "en")).toBe(
+      "System task: Tag suggestions",
+    );
+  });
+
   it("says only the kind for an agent the catalogue cannot name", () => {
     expect(tagText("agent:ext:notes:summarise", "de")).toBe(
       "Automatisiert durch einen Agenten",

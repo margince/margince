@@ -32,22 +32,14 @@ type scheduledPayload struct {
 	ConsentPurpose string   `json:"consent_purpose"`
 	DraftRef       string   `json:"draft_ref,omitempty"`
 	PendingDraftID string   `json:"pending_draft_id,omitempty"`
-	// The four context fields the send door decoded. Frozen with the message
-	// for the reason everything else here is: what the rep claimed at 17:00
-	// today is what the decision row must say when the message goes out at
-	// 09:00 tomorrow. A payload that dropped them recorded a scheduled
-	// marketing send as claiming nothing, and made its proof row strictly
-	// worse than the same message sent immediately.
-	Context          string         `json:"context,omitempty"`
-	MarketingPurpose string         `json:"marketing_purpose,omitempty"`
-	OperatorReason   string         `json:"operator_reason,omitempty"`
-	Evidence         frozenEvidence `json:"evidence,omitzero"`
-	// SendingEntity is the legal entity the scheduling resolved. A payload
-	// written before it was frozen has none, and the fire resolves one.
-	SendingEntity string `json:"sending_entity,omitempty"`
+	sendClaims
 	// FromConnection is the mailbox the sender chose. A payload with none
 	// leaves the choice to the fire, as an unchosen send does.
 	FromConnection string `json:"from_connection,omitempty"`
+	// ResentFrom is the bounced delivery this message repeats. A repeat that a
+	// gate holds and a user later releases is still that bounce's one repeat.
+	// The release stamps it, so the bounce cannot be sent again beside it.
+	ResentFrom string `json:"resent_from,omitempty"`
 }
 
 // frozenEvidence is the evidence block as it sits on a scheduled row. Ids as
@@ -181,12 +173,9 @@ func freezePayload(in SendEmailInput) scheduledPayload {
 		ConsentPurpose: in.ConsentPurpose,
 		DraftRef:       in.DraftRef,
 
-		Context:          string(in.Context),
-		MarketingPurpose: in.MarketingPurpose,
-		OperatorReason:   in.OperatorReason,
-		Evidence:         freezeEvidence(in.Evidence),
-		SendingEntity:    idText(in.SendingEntity),
-		FromConnection:   idText(in.FromConnection),
+		sendClaims:     freezeClaims(in),
+		FromConnection: idText(in.FromConnection),
+		ResentFrom:     idText(in.ResentFrom),
 	}
 }
 
@@ -199,11 +188,7 @@ func (p scheduledPayload) thaw() (SendEmailInput, error) {
 		}
 		files = append(files, id)
 	}
-	evidence, err := p.Evidence.thaw()
-	if err != nil {
-		return SendEmailInput{}, err
-	}
-	entity, err := frozenID("sending entity", p.SendingEntity)
+	claims, err := p.sendClaims.thaw()
 	if err != nil {
 		return SendEmailInput{}, err
 	}
@@ -211,15 +196,9 @@ func (p scheduledPayload) thaw() (SendEmailInput, error) {
 	if err != nil {
 		return SendEmailInput{}, err
 	}
-	// A category reserved for the installation's own notices can never
-	// legitimately be in a scheduled payload: the door that wrote it refuses
-	// one, and freezePayload has a single caller behind that door. Refusing it
-	// again here costs a live send nothing and removes the assumption — a
-	// second payload writer added later cannot smuggle one past the fire.
-	if commsauthz.Category(p.Context).ServesTheSubject() {
-		return SendEmailInput{}, &CommunicationContextError{
-			Reason: "that category is reserved for the installation's own notices and cannot be claimed by a send",
-		}
+	resent, err := frozenID("bounced delivery", p.ResentFrom)
+	if err != nil {
+		return SendEmailInput{}, err
 	}
 	return SendEmailInput{
 		Recipients:     p.Recipients,
@@ -232,12 +211,13 @@ func (p scheduledPayload) thaw() (SendEmailInput, error) {
 		ConsentPurpose: p.ConsentPurpose,
 		DraftRef:       p.DraftRef,
 
-		Context:          commsauthz.Category(p.Context),
-		MarketingPurpose: p.MarketingPurpose,
-		OperatorReason:   p.OperatorReason,
-		Evidence:         evidence,
-		SendingEntity:    entity,
+		Context:          claims.Context,
+		MarketingPurpose: claims.MarketingPurpose,
+		OperatorReason:   claims.OperatorReason,
+		Evidence:         claims.Evidence,
+		SendingEntity:    claims.SendingEntity,
 		FromConnection:   from,
+		ResentFrom:       resent,
 	}, nil
 }
 

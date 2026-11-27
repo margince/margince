@@ -131,7 +131,7 @@ if (scope === "diff") {
     base = git(`merge-base ${baseRef} HEAD`);
   } catch {
     console.error(
-      `fe-uat: cannot compute merge-base with ${baseRef} (shallow/detached?) — fall back to full-stack UAT`,
+      `fe-uat: cannot compute merge-base with ${baseRef} (shallow/detached?) — fall back to the full stack`,
     );
     process.exit(2);
   }

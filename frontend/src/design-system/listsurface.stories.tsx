@@ -61,7 +61,6 @@ function GermanSurface() {
       onViewChange={setActive}
       count={
         <CountLine
-          unit="Unternehmen"
           first={1}
           last={25}
           total={1312}
@@ -93,7 +92,7 @@ function RefusedSurface() {
     <ListSurface
       title="Unternehmen"
       views={VIEWS}
-      count={<CountLine unit="Unternehmen" first={1} last={25} total={1312} />}
+      count={<CountLine first={1} last={25} total={1312} />}
       refusal={{
         id: refusalId,
         text: "Du hast einen Leseplatz. Frage einen Admin nach einem vollen Platz.",
@@ -140,6 +139,57 @@ export const ViewTabsFadePhone: Story = {
     await waitFor(() => expect(rail).toHaveClass("is-clipped-end"));
     await expect(rail).not.toHaveClass("is-clipped-start");
   },
+};
+
+// A tab that opens another page instead of narrowing the list trails an arrow,
+// never lights, and says where it goes in its name.
+const LINKED_VIEWS: readonly ListView[] = [
+  { label: "Alle" },
+  { label: "Meine" },
+  {
+    id: "v-vip",
+    label: "VIP in Berlin",
+    link: {
+      href: "#/filters/contacts/v-vip",
+      name: "VIP in Berlin, öffnet in Filter und Ansichten",
+    },
+  },
+];
+
+function LinkTabSurface() {
+  const [active, setActive] = useState(0);
+  return (
+    <ListSurface
+      title="Kontakte"
+      views={LINKED_VIEWS}
+      activeView={active}
+      onViewChange={setActive}
+      count={<CountLine first={1} last={25} total={86} />}
+    >
+      <p>Zeilen</p>
+    </ListSurface>
+  );
+}
+
+const linkTabNamed = async (canvasElement: HTMLElement) => {
+  const link = await within(canvasElement).findByRole("link", {
+    name: "VIP in Berlin, öffnet in Filter und Ansichten",
+  });
+  await expect(link).toHaveClass("lt-vtab");
+  await expect(link).not.toHaveAttribute("aria-pressed");
+};
+
+export const LinkTab: Story = {
+  name: "View tab that opens another page",
+  render: () => <LinkTabSurface />,
+  play: async ({ canvasElement }) => linkTabNamed(canvasElement),
+};
+
+export const LinkTabDark: Story = {
+  name: "View tab that opens another page, dark",
+  globals: { theme: "dark" },
+  render: () => <LinkTabSurface />,
+  play: async ({ canvasElement }) => linkTabNamed(canvasElement),
 };
 
 // The verbs and the tab rail lie inside the card: neither is clipped or pushed
@@ -211,7 +261,7 @@ function SearchedSurface() {
         views={VIEWS}
         count={
           pending || !countSays(rows) ? undefined : (
-            <CountLine unit="Leads" first={1} last={rows} total={rows} />
+            <CountLine first={1} last={rows} total={rows} />
           )
         }
         holdCount={pending || (query !== "" && rows === 0)}
@@ -255,7 +305,7 @@ export const CountHoldsItsLinePhone: Story = {
     const search = canvas.getByRole("searchbox");
     const loading = toolbarTop(canvasElement);
     await userEvent.click(some);
-    await canvas.findByText("Leads 1 bis 25 von 25");
+    await canvas.findByText("1-25 von 25");
     await expect(toolbarTop(canvasElement)).toBe(loading);
 
     await userEvent.type(search, "a");
@@ -264,7 +314,7 @@ export const CountHoldsItsLinePhone: Story = {
     );
     await expect(toolbarTop(canvasElement)).toBe(loading);
     await userEvent.click(some);
-    await canvas.findByText("Leads 1 bis 25 von 25");
+    await canvas.findByText("1-25 von 25");
     await expect(toolbarTop(canvasElement)).toBe(loading);
 
     await userEvent.type(search, "zzqx");

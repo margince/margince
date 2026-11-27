@@ -29,6 +29,7 @@ import (
 	"go/parser"
 	"go/token"
 	"io/fs"
+	"path/filepath"
 	"sort"
 	"strings"
 	"testing"
@@ -55,11 +56,9 @@ var languageRuleHeading = promptlang.Heading
 const waiverPrefix = "//promptlang:exempt"
 
 // promptTrees are the trees whose prompts this gate governs: everything that
-// composes a request to a model on this installation's behalf.
-var promptTrees = []string{
-	"internal/compose",
-	"internal/modules",
-}
+// composes a request to a model on this installation's behalf. The site census
+// reads the same walk.
+var promptTrees = []string{"internal"}
 
 func TestEveryPromptSaysWhatLanguageToAnswerIn(t *testing.T) {
 	t.Parallel()
@@ -113,6 +112,10 @@ type requestSite struct {
 	// voiceGoverned is true when the shared voice block reaches this literal's
 	// System field.
 	voiceGoverned bool
+	// site is the Site the literal names, when namesSite; empty when the value
+	// is not a string the reader can resolve.
+	site      string
+	namesSite bool
 }
 
 // everyModelRequest walks the prompt trees and returns one entry per
@@ -148,11 +151,24 @@ func everyModelRequest(t *testing.T) []requestSite {
 // requestSitesIn parses one file and reports every model.Request literal in it.
 func requestSitesIn(t *testing.T, path string) []requestSite {
 	t.Helper()
-	fset := gatekit.SourceFileSet()
 	file, err := gatekit.ParseFile(path, parser.ParseComments)
 	if err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
+	var consts map[string]string
+	constsOf := func() map[string]string {
+		if consts == nil {
+			consts = gatekit.PackageStringConstants(t, filepath.Dir(path))
+		}
+		return consts
+	}
+	return requestSitesOf(path, file, func() string { return readSource(t, path) }, constsOf)
+}
+
+// requestSitesOf reports every model.Request literal in a parsed file. The
+// source and the package constants are read only for a file that builds one.
+func requestSitesOf(path string, file *ast.File, sourceOf func() string, constsOf func() map[string]string) []requestSite {
+	fset := gatekit.SourceFileSet()
 	// The import path decides what the local name means. Assuming the package
 	// is called `model` would miss a file that aliases it and, worse, would
 	// wrongly claim a literal in a file with its own unrelated `model` package.
@@ -160,7 +176,7 @@ func requestSitesIn(t *testing.T, path string) []requestSite {
 	if !ok {
 		return nil
 	}
-	source := readSource(t, path)
+	source := sourceOf()
 	var out []requestSite
 	ast.Inspect(file, func(node ast.Node) bool {
 		lit, isLit := node.(*ast.CompositeLit)
@@ -170,6 +186,7 @@ func requestSitesIn(t *testing.T, path string) []requestSite {
 		pos := fset.Position(lit.Pos())
 		reason, waived := waiverAround(file, fset, lit, waiverPrefix)
 		voiceReason, voiceWaived := waiverAround(file, fset, lit, voiceWaiverPrefix)
+		site, namesSite := requestSiteOf(lit, constsOf)
 		out = append(out, requestSite{
 			where:             fmt.Sprintf("%s:%d", path, pos.Line),
 			governed:          systemCarriesALanguageRule(lit, source),
@@ -178,10 +195,25 @@ func requestSitesIn(t *testing.T, path string) []requestSite {
 			voiceWaived:       voiceWaived,
 			voiceWaiverReason: voiceReason,
 			voiceGoverned:     systemCarriesTheVoice(lit, source),
+			site:              site,
+			namesSite:         namesSite,
 		})
 		return true
 	})
 	return out
+}
+
+// requestSiteOf reads the literal's Site field. FoldStrict: a value it cannot
+// fully resolve is "", which the site census reports rather than skips.
+func requestSiteOf(lit *ast.CompositeLit, constsOf func() map[string]string) (string, bool) {
+	for _, element := range lit.Elts {
+		field, isField := element.(*ast.KeyValueExpr)
+		if key, isKey := field.Key.(*ast.Ident); isField && isKey && key.Name == "Site" {
+			site, _ := gatekit.StringExpr(field.Value, constsOf(), gatekit.FoldStrict)
+			return site, true
+		}
+	}
+	return "", false
 }
 
 // isRequestLiteral reports whether this composite literal builds a

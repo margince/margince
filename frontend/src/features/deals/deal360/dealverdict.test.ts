@@ -132,6 +132,29 @@ describe("an open deal's verdict", () => {
     });
   });
 
+  it("dates a quiet deal's day entry by its own date far east of UTC", () => {
+    const east = { t, locale: "en", zone: "Pacific/Kiritimati" } as const;
+    const inputs = (precision: "day" | "instant"): DealStandingInputs => ({
+      deal: deal({
+        stalled: true,
+        last_activity_at: "2026-05-28T12:00:00Z",
+        last_activity_precision: precision,
+      }),
+      stages,
+      asOf: AS_OF,
+      activities: [],
+      offers: [],
+      coverage: { withheld: false, pending: false },
+      ladder: { advancing: false, advanceRefused: false, onAdvance: () => {} },
+    });
+    expect(openDealVerdict(written, "live", inputs("day"), east).sentence).toBe(
+      t("deal.verdict.goneQuietSince", { date: "28 May" }),
+    );
+    expect(
+      openDealVerdict(written, "live", inputs("instant"), east).sentence,
+    ).toBe(t("deal.verdict.goneQuietSince", { date: "29 May" }));
+  });
+
   it("calls a paused deal on hold until the agreed day", () => {
     expect(verdictFor({ wait_until: "2026-06-12T00:00:00Z" })).toMatchObject({
       word: t("deal.verdict.onHold"),

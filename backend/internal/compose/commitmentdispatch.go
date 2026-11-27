@@ -428,7 +428,8 @@ func (d *CommitmentDispatcher) fileClaim(
 	in := contacts.ClaimInput{
 		ContactID: contact, Kind: kind, Body: c.Summary, ActivityID: c.SourceActivityID,
 		Quote: c.Quote, Source: c.Extractor, Locator: c.Locator,
-		Renewal: c.AdmissionSourceID != nil && reason == activities.CommitmentCurrent,
+		Renewal:    c.AdmissionSourceID != nil && reason == activities.CommitmentCurrent,
+		SameFilers: sameJobFilers(c.Extractor),
 	}
 	if c.DueDate != "" {
 		due, err := dueday.EndOf(ctx, tx, c.DueDate, c.DueZone)

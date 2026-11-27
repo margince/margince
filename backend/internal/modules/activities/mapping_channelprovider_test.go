@@ -30,7 +30,7 @@ func TestLogActivityInputCarriesTheTransportTheCallerNamed(t *testing.T) {
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind:            crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMessage,
 		ChannelProvider: &provider,
-		Source:          "human",
+		Source:          "manual",
 	})
 	if err != nil {
 		t.Fatalf("mapping a message: %v", err)
@@ -49,7 +49,7 @@ func TestLogActivityInputCarriesTheTransportTheCallerNamed(t *testing.T) {
 func TestLogActivityInputRefusesAMessageWithNoTransport(t *testing.T) {
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind:   crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMessage,
-		Source: "human",
+		Source: "manual",
 	})
 
 	var fault *MessageProviderError
@@ -78,7 +78,7 @@ func TestLogActivityInputRefusesATransportOnAKindThatTravelledOnNothing(t *testi
 		_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 			Kind:            kind,
 			ChannelProvider: &provider,
-			Source:          "human",
+			Source:          "manual",
 		})
 		if _, ok := errors.AsType[*MessageProviderError](err); !ok {
 			t.Errorf("kind %s accepted a transport (err = %v), want a MessageProviderError — only a message travels on one", kind, err)
@@ -95,7 +95,7 @@ func TestLogActivityInputAcceptsANonMessageWithNoTransport(t *testing.T) {
 		crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
 	} {
 		subject := "Quarterly sync"
-		in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: kind, Subject: &subject, Source: "human"})
+		in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{Kind: kind, Subject: &subject, Source: "manual"})
 		if err != nil {
 			t.Fatalf("mapping a %s activity: %v", kind, err)
 		}

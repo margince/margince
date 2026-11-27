@@ -156,18 +156,10 @@ func magicKeysIn(t *testing.T, path string) map[string]bool {
 		t.Fatalf("reading %s: %v", path, err)
 	}
 	keys := map[string]bool{}
-	for _, match := range magicKeyLiteral.FindAllStringSubmatch(withoutProse(string(source)), -1) {
+	for _, match := range magicKeyLiteral.FindAllStringSubmatch(gatekit.TSWithoutComments(string(source)), -1) {
 		keys[match[1]] = true
 	}
 	return keys
-}
-
-// magicKeyProse matches a line comment and a block comment in TypeScript.
-var magicKeyProse = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
-
-// withoutProse blanks the comments in a TypeScript source.
-func withoutProse(source string) string {
-	return magicKeyProse.ReplaceAllString(source, "")
 }
 
 // absentFrom names what the first side has and the second does not, in a

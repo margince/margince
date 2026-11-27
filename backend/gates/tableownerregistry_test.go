@@ -131,6 +131,7 @@ var tableOwners = map[string]string{
 	// authorizes rather than with the capture path that asks the question.
 	"company_domain_disposition": "internal/modules/contacts",
 	"site_read":                  "internal/modules/contacts",
+	"site_read_proposal":         "internal/modules/contacts",
 	// DH-DDL-1: the pair verdicts live with the ONE dedupe implementation.
 	"dedupe_candidate":  "internal/modules/contacts",
 	"dedupe_scan_state": "internal/modules/contacts",
@@ -204,10 +205,11 @@ var tableOwners = map[string]string{
 	"sales_initiative_enrolment": "internal/modules/initiatives",
 	"offer_template":             "internal/modules/deals",
 	// activities
-	"activity":              "internal/modules/activities",
-	"transcript_read":       "internal/modules/activities",
-	"attachment_extraction": "internal/modules/activities",
-	"activity_link":         "internal/modules/activities",
+	"activity":                 "internal/modules/activities",
+	"transcript_read":          "internal/modules/activities",
+	"transcript_read_proposal": "internal/modules/activities",
+	"attachment_extraction":    "internal/modules/activities",
+	"activity_link":            "internal/modules/activities",
 	// The evidence that qualified an activity for the statutory retention
 	// floor (A165/ADR-0114). It hangs off `activity` and is written by the
 	// stamp, so it belongs to the module that owns the row it substantiates.
@@ -491,7 +493,10 @@ var tableOwners = map[string]string{
 	"extension_ingest_refusal": "internal/compose",
 	// Where a unit's bulk load stopped, written by the extension port.
 	"extension_ingest_position": "internal/compose/extingress",
-	"idempotency_key":           "internal/compose",
+	// The running count and size of each unit's stored objects, kept by the
+	// object capability beside the store call it counts.
+	"extension_object_usage": "internal/compose/extcapability",
+	"idempotency_key":        "internal/compose",
 	// A bulk change and the user's confirmation of one. compose owns both
 	// because the change spans three record types in two modules, and the
 	// engine that writes them is the composition layer's (bulkchange.go).
@@ -507,6 +512,7 @@ var tableOwners = map[string]string{
 	// way it owns idempotency_key and agent_task.
 	"activity_kind":    "internal/compose",
 	"channel_provider": "internal/compose",
+	"language":         "internal/compose/languages",
 	"analytics_share":  "internal/compose",
 	"report_run":       "internal/compose",
 	"brief_run":        "internal/compose/briefs",
@@ -611,6 +617,11 @@ var tableOwners = map[string]string{
 	// One reader's generated summaries of a company, a contact or a deal:
 	// derived content, rebuilt from the record, read by no other reader.
 	"generated_summary": generatedSummaryStoreDir,
+	// Each record's status line, shared by its readers and served only to one
+	// who may open every activity it was written from.
+	"standing_line": generatedSummaryStoreDir,
+	// Why a task is on one reader's list, rebuilt from the task's records.
+	"task_explanation": generatedSummaryStoreDir,
 }
 
 // sqlTarget is one write a literal performs: which table, by which verb, and

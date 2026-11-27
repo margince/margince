@@ -25,12 +25,14 @@ import (
 	"github.com/margince/margince/backend/internal/compose/importscopes"
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
 	"github.com/margince/margince/backend/internal/compose/invitationsenders"
+	"github.com/margince/margince/backend/internal/compose/languages"
 	"github.com/margince/margince/backend/internal/compose/meetingrosters"
 	"github.com/margince/margince/backend/internal/compose/negativecounts"
 	"github.com/margince/margince/backend/internal/compose/offernetdeals"
 	"github.com/margince/margince/backend/internal/compose/participantaddresses"
 	"github.com/margince/margince/backend/internal/compose/provensenders"
 	"github.com/margince/margince/backend/internal/compose/qualifytasks"
+	"github.com/margince/margince/backend/internal/compose/readproposals"
 	"github.com/margince/margince/backend/internal/compose/recordsources"
 	"github.com/margince/margince/backend/internal/compose/retiredstagecards"
 	"github.com/margince/margince/backend/internal/compose/retiredthreadsplit"
@@ -119,7 +121,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		meetingDuplicatesDataTask(pool),
 		meetingPairsDataTask(pool),
 		meetingSeriesSlotsDataTask(pool),
-		splitSeriesDataTask(pool), activities.ImportedMeetingCopiesDataTask(activities.NewStore(InstallationDB(pool))),
+		splitSeriesDataTask(pool), activities.ImportedMeetingCopiesDataTask(activities.NewStore(InstallationDB(pool)), identity.MemberPrincipalTx),
 		meetingOrganizerHostDataTask(pool),
 		linkedInIdentityDataTask(),
 		leadContactPairsDataTask(pool),
@@ -134,6 +136,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		initiativeenrolment.Task(NewInitiativeStore(pool)),
 		heldContactsDataTask(pool),
 		technicalAddressDataTask(pool),
+		capture.PersonalStandingDataTask(),
 		gmailDedupeScanDataTask(),
 		retiredReviewsDataTask(pool),
 		viabilitytasks.DataTask(activities.NewStore(InstallationDB(pool))),
@@ -159,8 +162,9 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
-		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(), recordsources.SignalDataTask(), recordsources.PartyDataTask(), recordsources.LeadDataTask(), rolemailboxseats.DataTask(), participantaddresses.DataTask(),
+		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(), recordsources.SignalDataTask(), recordsources.PartyDataTask(), recordsources.LeadDataTask(), recordsources.ActivityDataTask(), rolemailboxseats.DataTask(), participantaddresses.DataTask(),
 		activities.TeamLinksDataTask(activities.NewStore(InstallationDB(pool)).WithTeamRequestNotice(teamRequestNotice{}), now), contacts.LegacyEvidenceDataTask(),
-		negativecounts.DataTask(),
+		leadArrivalOriginDataTask(), languages.DataTask(), negativecounts.DataTask(),
+		readproposals.DataTask(),
 	}
 }

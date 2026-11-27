@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"log/slog"
 	"strings"
 	"time"
 	"unicode/utf8"
@@ -34,14 +35,21 @@ type tagRow struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	ArchivedAt  *time.Time
+	// MergedIntoID is the tag a merge folded this one into. It is nil on a tag
+	// retired by hand, which is what tells the two apart.
+	MergedIntoID   *ids.TagID
+	MergedIntoName *string
 }
 
-const tagColumns = `id, name, color, description, suggestible, version, created_at, updated_at, archived_at`
+// The survivor's name is read where the row is, so a rename of the kept tag
+// shows on the merged one without a second write.
+const tagColumns = `id, name, color, description, suggestible, version, created_at, updated_at, archived_at,
+	merged_into_id, (SELECT kept.name FROM tag kept WHERE kept.id = tag.merged_into_id)`
 
 func scanTag(r pgx.Row) (tagRow, error) {
 	var t tagRow
 	err := r.Scan(&t.ID, &t.Name, &t.Color, &t.Description, &t.Suggestible, &t.Version,
-		&t.CreatedAt, &t.UpdatedAt, &t.ArchivedAt)
+		&t.CreatedAt, &t.UpdatedAt, &t.ArchivedAt, &t.MergedIntoID, &t.MergedIntoName)
 	return t, err
 }
 
@@ -101,12 +109,23 @@ func (s *Store) CreateTag(ctx context.Context, name string, color, description *
 	if err != nil {
 		return tagRow{}, err
 	}
+	if err := refuseUnknownColor(color); err != nil {
+		return tagRow{}, err
+	}
 	var out tagRow
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		var err error
 		out, err = insertTagTx(ctx, tx, name, color, description)
 		return err
 	})
+	if taken, ok := errors.AsType[*TagNameTakenError](err); ok {
+		holder, live, findErr := s.FindTag(ctx, name)
+		if findErr != nil {
+			slog.WarnContext(ctx, "reading the tag that holds a name failed", "err", findErr)
+		} else if live {
+			taken.ExistingID = holder
+		}
+	}
 	return out, err
 }
 
@@ -119,7 +138,7 @@ func insertTagTx(ctx context.Context, tx pgx.Tx, name string, color, description
 	out, err := scanTag(row)
 	if err != nil {
 		if constraint, ok := storekit.UniqueViolation(err); ok && constraint == uqTagName {
-			return tagRow{}, fmt.Errorf("tag %q: %w", name, apperrors.ErrConflict)
+			return tagRow{}, &TagNameTakenError{}
 		}
 		return tagRow{}, err
 	}
@@ -389,7 +408,7 @@ func NormalizeTagName(name string) string {
 func ValidateTagName(name string) (string, error) {
 	normalized := NormalizeTagName(name)
 	if !values.HasVisibleText(normalized) {
-		return "", &BadInputError{Field: "name", Reason: "must not be empty"}
+		return "", &BadInputError{Field: nameField, Code: codeRequired, Reason: "a tag needs a name"}
 	}
 	if utf8.RuneCountInString(normalized) > maxTagNameRunes {
 		return "", &BadInputError{

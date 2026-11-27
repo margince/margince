@@ -21,12 +21,14 @@ import (
 
 // SourceProjection is shared by confirmation and its read-only preview.
 type SourceProjection struct {
+	SubjectReachedOut    bool       `json:"subject_reached_out,omitempty"`
 	PreviewToken         string     `json:"preview_token"`
 	Rule                 NoticeRule `json:"rule"`
 	NoticeRequired       bool       `json:"notice_required"`
 	DeadlineIsUpperBound bool       `json:"deadline_is_upper_bound"`
 	DueAt                *time.Time `json:"due_at"`
 	Timezone             string     `json:"timezone"`
+	reachedActivity      *ids.UUID
 	duty                 NoticeDuty
 }
 
@@ -62,6 +64,17 @@ func prepareSourceProjectionTx(ctx context.Context, tx pgx.Tx, current NoticeCas
 	if err != nil {
 		return SourceProjection{}, err
 	}
+	var reached ids.UUID
+	err = tx.QueryRow(ctx, `SELECT a.id FROM `+SubjectReachedOutFromSQL("$1::uuid")+` ORDER BY `+SubjectReachedOutAtSQL("a")+`, a.id LIMIT 1`, current.ContactID).Scan(&reached)
+	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
+		return SourceProjection{}, err
+	}
+	if err == nil {
+		projection.reachedActivity = &reached
+		projection.SubjectReachedOut = true
+		projection.NoticeRequired, projection.DeadlineIsUpperBound = false, false
+		projection.Rule, projection.DueAt = RuleNone, nil
+	}
 	stamp := ""
 	if in.SelectedEvidence != nil {
 		evidence, err := resolveSourceEvidenceTx(ctx, tx, current, *in.SelectedEvidence)
@@ -80,25 +93,26 @@ func prepareSourceProjectionTx(ctx context.Context, tx pgx.Tx, current NoticeCas
 		}
 	}
 	raw, err := json.Marshal(struct {
-		Case          ids.UUID
-		Contact       ids.ContactID
-		AcquisitionID ids.UUID
-		State         NoticeState
-		UpdatedAt     time.Time
-		Owner         *ids.UUID
-		Acquisition   *NoticeAcquisition
-		Kind          string
-		Note          string
-		MetInPerson   bool
-		ObtainedAt    *time.Time
-		Evidence      *SourceEvidenceReference
-		EvidenceStamp string
-		Projection    SourceProjection
-		Duty          NoticeDuty
+		Case            ids.UUID
+		Contact         ids.ContactID
+		AcquisitionID   ids.UUID
+		State           NoticeState
+		UpdatedAt       time.Time
+		Owner           *ids.UUID
+		Acquisition     *NoticeAcquisition
+		Kind            string
+		Note            string
+		MetInPerson     bool
+		ObtainedAt      *time.Time
+		Evidence        *SourceEvidenceReference
+		EvidenceStamp   string
+		Projection      SourceProjection
+		Duty            NoticeDuty
+		ReachedActivity *ids.UUID
 	}{
 		Case: current.ID, Contact: current.ContactID, AcquisitionID: current.AcquisitionID, State: current.State,
 		UpdatedAt: current.UpdatedAt, Owner: current.OwnerUserID, Acquisition: current.Acquisition, Kind: in.Kind, Note: in.Note, MetInPerson: in.MetInPerson,
-		ObtainedAt: in.ObtainedAt, Evidence: in.SelectedEvidence, EvidenceStamp: stamp, Projection: projection, Duty: projection.duty,
+		ObtainedAt: in.ObtainedAt, Evidence: in.SelectedEvidence, EvidenceStamp: stamp, Projection: projection, Duty: projection.duty, ReachedActivity: projection.reachedActivity,
 	})
 	if err != nil {
 		return SourceProjection{}, fmt.Errorf("encode the source preview: %w", err)

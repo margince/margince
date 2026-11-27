@@ -127,6 +127,7 @@ func plantProviderEmploymentEdge(ctx context.Context, tx pgx.Tx, contactID ids.U
 		WHERE NOT EXISTS (
 			SELECT 1 FROM relationship
 			WHERE contact_id = $1 AND `+employment.CurrentPrimarySlotSQL("")+`)
+		  AND NOT `+employment.EndedAtCompanySQL("$1::uuid", "$2::uuid")+`
 		ON CONFLICT DO NOTHING
 		RETURNING id`,
 		contactID, companyID, providerName, connectorCapturedBy(providerName), title).Scan(&edgeID)

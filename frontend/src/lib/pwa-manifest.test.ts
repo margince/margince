@@ -31,6 +31,9 @@ interface ManifestShortcut {
 }
 
 interface Manifest {
+  name: string;
+  start_url: string;
+  display: string;
   scope: string;
   shortcuts: ManifestShortcut[];
   theme_color: string;
@@ -83,6 +86,12 @@ describe("the install manifest is where the page says it is", () => {
 });
 
 describe("the install manifest", () => {
+  it("names the app and opens it standalone at the root", () => {
+    expect(manifest.name).toBe("Margince");
+    expect(manifest.start_url).toBe("/");
+    expect(manifest.display).toBe("standalone");
+  });
+
   it("offers an unmasked icon and the PNGs Android masks", () => {
     const offered = manifest.icons.map(
       (icon) => `${icon.type} ${icon.sizes} ${purposeOf(icon)}`,

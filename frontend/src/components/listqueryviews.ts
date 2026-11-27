@@ -97,7 +97,10 @@ export function useActiveView(
   const [pickedId, setPickedId] = useState<string | null>(null);
   const [opened, setOpened] = useState<OpenedView | null>(null);
   const [litId, setLitId] = useState<string | null>(null);
-  const matched = views.findIndex((spec) => matchesView(spec, query));
+  // A link tab opens another page, so it never stands for this list.
+  const matched = views.findIndex(
+    (spec) => !spec.link && matchesView(spec, query),
+  );
   const pinned = views.findIndex((spec) => spec.id === pickedId);
   const pinnedView = views[pinned];
   const view =

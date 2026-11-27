@@ -37,7 +37,7 @@ var listedActions = map[string][]string{
 		"company_brief", "company_contracts", "company_linkedin_reach", "contact_brief",
 		"contact_consent", "contact_consent_guard", "contact_optout_records", "contact_overrides", "contact_stops",
 		"deal_lines", "dossier", "field_history", "job_health_history",
-		"lead_promotion_preview", "meeting_proposals", "notice_case_review", "notice_source_evidence",
+		"lead_promotion_preview", "mail_draft", "meeting_proposals", "notice_case_review", "notice_source_evidence",
 		"notice_source_preview", "notices", "scheduled_sends",
 	},
 	"run_research": {"draft_intro_request"},

@@ -30,7 +30,7 @@ const meta: Meta<typeof SourceReviewDialog> = {
   title: "Components/Overlays and layering/Source review",
   component: SourceReviewDialog,
   decorators: [
-    (Story) => {
+    (Story, context) => {
       stubWithSession(
         {
           "GET /privacy/notice-case-reviews/source-case": () =>
@@ -52,6 +52,8 @@ const meta: Meta<typeof SourceReviewDialog> = {
               preview_token: "a".repeat(64),
               rule: "none",
               notice_required: false,
+              subject_reached_out:
+                context.parameters.subjectReachedOut === true,
               due_at: null,
               timezone: browserZone(),
               deadline_is_upper_bound: false,
@@ -94,6 +96,27 @@ export const SelectedSourcePreview: Story = {
     await panel.findByText(/No separate notice duty follows from this source/);
   },
 };
+export const SubjectAlreadyReachedOut: Story = {
+  parameters: { subjectReachedOut: true },
+  play: async ({ canvasElement }) => {
+    const panel = within(canvasElement.ownerDocument.body);
+    await userEvent.click(
+      await panel.findByRole("radio", { name: /Original booking/ }),
+    );
+    await userEvent.click(
+      panel.getByRole("radio", { name: "Met face to face" }),
+    );
+    await userEvent.type(
+      panel.getByRole("textbox", { name: "Obtained on" }),
+      "01/01/2026",
+    );
+    await userEvent.tab();
+    await panel.findByText(
+      /The contact already reached out by email or a meeting/,
+    );
+  },
+};
+
 export const SelectedSourcePreviewDark: Story = {
   ...SelectedSourcePreview,
   globals: { theme: "dark" },

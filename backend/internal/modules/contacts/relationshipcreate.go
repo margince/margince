@@ -129,6 +129,9 @@ func writeRelationshipInTx(
 	if err := validEmploymentAssertion(in.Kind, in.EmploymentStatus, in.StartedPrecision, in.EndedPrecision); err != nil {
 		return out, err
 	}
+	if err := refuseFormerEndingAhead(ctx, tx, in.EmploymentStatus, in.EndedAt); err != nil {
+		return out, err
+	}
 	// BEFORE anything is locked or probed. The endpoint probe below asks
 	// whether each named record exists; this asks whether the SET of them
 	// belongs to the kind, which is the question neither it nor the shape

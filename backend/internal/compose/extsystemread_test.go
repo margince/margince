@@ -41,10 +41,10 @@ func TestAReleasedRuntimeRefusesEverySystemRead(t *testing.T) {
 	ctx := context.Background()
 	deal := extension.EntityRef{Type: "deal", ID: "01a15cc1-9f33-7665-9e65-403f04f85f6b"}
 	refusals := map[string]error{}
-	_, refusals["Deals().Get"] = rt.Deals().Get(ctx, deal.ID)
-	_, refusals["Deals().Responsible"] = rt.Deals().Responsible(ctx, deal.ID)
-	_, refusals["Authority().CanRead"] = rt.Authority().CanRead(ctx, "", deal, nil)
-	_, refusals["Directory().Emails"] = rt.Directory().Emails(ctx, nil)
+	_, refusals["Deals().Get"] = rt.Deals().Get(ctx, deal.ID)                       //nolint:staticcheck // this suite holds the deprecated system-actor form
+	_, refusals["Deals().Responsible"] = rt.Deals().Responsible(ctx, deal.ID)       //nolint:staticcheck // this suite holds the deprecated system-actor form
+	_, refusals["Authority().CanRead"] = rt.Authority().CanRead(ctx, "", deal, nil) //nolint:staticcheck // this suite holds the deprecated system-actor form
+	_, refusals["Directory().Emails"] = rt.Directory().Emails(ctx, nil)             //nolint:staticcheck // this suite holds the deprecated system-actor form
 	for read, err := range refusals {
 		if !errors.Is(err, extension.ErrRuntimeExpired) {
 			t.Errorf("%s on a released runtime: err = %v, want ErrRuntimeExpired", read, err)
@@ -66,7 +66,7 @@ func TestOnlyATickAndADeliveryAnswerASystemRead(t *testing.T) {
 		"an inbound request": inboundRuntimeFor,
 	} {
 		rt := mint(ctx, "dealmirror", "1.0.0", "probe", extensionRuntimeBinding{pool: &pgxpool.Pool{}})
-		_, err := rt.Directory().Emails(context.Background(), nil)
+		_, err := rt.Directory().Emails(context.Background(), nil) //nolint:staticcheck // this suite holds the deprecated system-actor form
 		rt.release()
 		answers := name == "a job tick" || name == "a bus delivery"
 		if answers && err != nil {
@@ -105,7 +105,7 @@ func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T)
 		if name == "the same id in upper case" {
 			about = strings.ToUpper(about)
 		}
-		_, err := rt.Authority().CanRead(ctx, extension.UserID(about), company, nil)
+		_, err := rt.Authority().CanRead(ctx, extension.UserID(about), company, nil) //nolint:staticcheck // this suite holds the deprecated system-actor form
 		rt.release()
 		if !errors.Is(err, c.want) {
 			t.Errorf("%s: err = %v, want %v", name, err, c.want)
@@ -116,7 +116,7 @@ func TestAnAttendedCanReadAnswersOnlyItsHumanCallerAboutThemselves(t *testing.T)
 	defer rt.release()
 	// A deal, so the refusal is the user id's and not the record type's.
 	deal := extension.EntityRef{Type: "deal", ID: ids.NewV7().String()}
-	if _, err := rt.Authority().CanRead(ctx, "not-a-user", deal, nil); !errors.Is(err, extension.ErrInvalid) ||
+	if _, err := rt.Authority().CanRead(ctx, "not-a-user", deal, nil); !errors.Is(err, extension.ErrInvalid) || //nolint:staticcheck // this suite holds the deprecated system-actor form
 		!strings.Contains(err.Error(), "user") {
 		t.Errorf("a malformed user id: err = %v, want ErrInvalid naming the user", err)
 	}
@@ -141,15 +141,15 @@ func TestASystemReadTheUnitDidNotDeclareIsRefused(t *testing.T) {
 	defer rt.release()
 	deal := extension.EntityRef{Type: "deal", ID: "01a15cc1-9f33-7665-9e65-403f04f85f6b"}
 	refusals := map[string]error{}
-	_, refusals["Deals().Get"] = rt.Deals().Get(ctx, deal.ID)
-	_, refusals["Deals().Responsible"] = rt.Deals().Responsible(ctx, deal.ID)
-	_, refusals["Authority().CanRead"] = rt.Authority().CanRead(ctx, "", deal, nil)
+	_, refusals["Deals().Get"] = rt.Deals().Get(ctx, deal.ID)                       //nolint:staticcheck // this suite holds the deprecated system-actor form
+	_, refusals["Deals().Responsible"] = rt.Deals().Responsible(ctx, deal.ID)       //nolint:staticcheck // this suite holds the deprecated system-actor form
+	_, refusals["Authority().CanRead"] = rt.Authority().CanRead(ctx, "", deal, nil) //nolint:staticcheck // this suite holds the deprecated system-actor form
 	for read, err := range refusals {
 		if !errors.Is(err, extension.ErrUndeclaredRead) {
 			t.Errorf("%s, undeclared: err = %v, want ErrUndeclaredRead", read, err)
 		}
 	}
-	if _, err := rt.Directory().Emails(ctx, nil); err != nil {
+	if _, err := rt.Directory().Emails(ctx, nil); err != nil { //nolint:staticcheck // this suite holds the deprecated system-actor form
 		t.Errorf("Directory().Emails, declared: err = %v, want an answer", err)
 	}
 }

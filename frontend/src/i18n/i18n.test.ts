@@ -90,6 +90,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // the tab that opens it.
   "room.card.title",
   "tab.dealRoom",
+  "search.kind.dealRoom",
   "buyer.eyebrow",
   // Sales nouns Vietnamese borrows: vi writes "Tên deal" and "Pipeline" elsewhere,
   // so translating only these drill-through headers would split the vocabulary.
@@ -129,6 +130,10 @@ const KEPT_IN_ENGLISH = new Set<string>([
   // Two signed counts and a slash, with no word to translate. Its spoken
   // form, lists.pulse.label, is translated normally.
   "lists.pulse.chip",
+  // "Deal" and "Email" are the words Vietnamese sales teams use, borrowed
+  // rather than translated, as the Deals screen itself is named.
+  "co.deals.col.deal",
+  "record.verb.email",
   // The area's name, which is the same word in all three catalogs by decision:
   // "Analytics" is what the product calls this surface, and both German and
   // Vietnamese borrow it as a term of art rather than translating it. The
@@ -259,7 +264,6 @@ const KEPT_IN_ENGLISH = new Set<string>([
   "filters.sentence.ref.pipeline_one",
   "cf.obj.deal",
   "cf.obj.lead",
-  "unit.lead",
   "co.brief.cite.deal",
   "co.brief.cite.lead",
   // The borrowed noun in the singular, which English and Vietnamese spell alike;
@@ -558,14 +562,14 @@ describe("the product's word for the tenant", () => {
  * Where the Responsibilities card says the owner's word, a reader is told
  * "X is responsible" and "nobody is responsible" on one page.
  *
- * The word, not the whole label: Vietnamese says "Người chịu trách nhiệm" as a
- * label and "ai chịu trách nhiệm" in a sentence. The label check below keeps
+ * The word, not the whole label: Vietnamese says "Người phụ trách" as a label
+ * and "ai phụ trách" in a sentence. The label check below keeps
  * this table in step with the catalogs.
  */
 const OWNER_WORD: Record<string, string> = {
   en: "owner",
   de: "verantwortlich",
-  vi: "chịu trách nhiệm",
+  vi: "phụ trách",
 };
 
 describe("the owner and the responsibility roles", () => {

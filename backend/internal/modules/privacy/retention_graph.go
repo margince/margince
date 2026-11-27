@@ -72,7 +72,7 @@ func subjectGraphIdentifiers(ctx context.Context, tx pgx.Tx, id ids.UUID) ([]str
 		return nil, nil, err
 	}
 	rows, err := tx.Query(ctx,
-		`SELECT provider, channel_user_id FROM contact_channel_identity
+		`SELECT provider, channel_user_id, account_scope FROM contact_channel_identity
 		  WHERE contact_id = $1 AND archived_at IS NULL`, id)
 	if err != nil {
 		return nil, nil, err

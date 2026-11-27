@@ -4,13 +4,14 @@
 import type { components } from "../../api/schema";
 import { Badge, Button } from "../../design-system/atoms";
 import { undoAction, useToast } from "../../design-system/toast";
-import { useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
 import { useCanWriteRecord } from "../../lib/capability";
+import { unitWords } from "../../lib/extensions";
+import { problemMessageOf } from "../../lib/problem";
 import {
   type DealRelevanceInput,
   useDealRelevance,
-} from "../../lib/dealdecline";
-import { problemMessageOf } from "../../lib/problem";
+} from "./dealdecline.queries";
 
 type Activity = components["schemas"]["Activity"];
 type Relevance = DealRelevanceInput["relevance"];
@@ -23,22 +24,16 @@ export function dealRelevanceOf(activity: Activity, dealId: string) {
 }
 
 /**
- * "Not about this deal" and "About this deal" on a row of a deal's timeline.
- * The row stays on the timeline with its mark, the deal's activity date stops
- * counting it, and the toast's Undo sets the other mark.
+ * Sets a mark on the row's deal link, with an Undo toast that sets the other
+ * mark through the same send. A refusal lands in a toast, because the press
+ * came from a menu, a row or a toast.
  */
-export function DealRelevanceAction({
-  activity,
-  dealId,
-}: Readonly<{ activity: Activity; dealId: string }>) {
+function useDealMark() {
   const t = useT();
   const toast = useToast();
-  const writable = useCanWriteRecord("activity", activity);
-  // Pressed from the menu or from an Undo toast, so a refusal lands in a toast.
   const refuse = (error: Error) =>
     toast.show(problemMessageOf(error, t), { tone: "danger", sticky: true });
   const mark = useDealRelevance();
-  // Each mark offers an Undo that sets the other mark, through the same send.
   function send(input: DealRelevanceInput) {
     mark.mutate(input, {
       onError: refuse,
@@ -54,21 +49,83 @@ export function DealRelevanceAction({
       },
     });
   }
+  return { send, pending: mark.isPending };
+}
+
+/**
+ * "Not about this deal" and "About this deal" on a row of a deal's timeline.
+ * The row stays on the timeline with its mark, the deal's activity date stops
+ * counting it, and the toast's Undo sets the other mark.
+ */
+export function DealRelevanceAction({
+  activity,
+  dealId,
+}: Readonly<{ activity: Activity; dealId: string }>) {
+  const t = useT();
+  const writable = useCanWriteRecord("activity", activity);
+  const mark = useDealMark();
   const unrelated = dealRelevanceOf(activity, dealId) === "unrelated";
   return (
     <Button
       onClick={() =>
-        send({
+        mark.send({
           activityId: activity.id,
           dealId,
           relevance: unrelated ? "relevant" : "unrelated",
         })
       }
-      pending={mark.isPending}
+      pending={mark.pending}
       reason={writable ? undefined : t("activity.notYoursToChange")}
     >
       {t(unrelated ? "dealRelevance.about" : "dealDecline.action")}
     </Button>
+  );
+}
+
+/**
+ * Which extension filed the row on this deal and why, while the filing holds.
+ * Its Undo marks the row "Not about this deal", so no automatic pass files it
+ * there again.
+ */
+export function DealFiledBy({
+  activity,
+  dealId,
+}: Readonly<{ activity: Activity; dealId: string }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const writable = useCanWriteRecord("activity", activity);
+  const mark = useDealMark();
+  const link = activity.links?.find(
+    (candidate) =>
+      candidate.entity_type === "deal" && candidate.entity_id === dealId,
+  );
+  const filer = link?.filed_by;
+  if (!filer || filer.actor === "core" || link.deal_relevance === "unrelated") {
+    return null;
+  }
+  const unit = unitWords(locale, filer.actor, "title") || filer.actor;
+  const reason = filer.reason
+    ? unitWords(locale, filer.actor, `captureReason.${filer.reason}`) ||
+      filer.reason
+    : "";
+  return (
+    <>
+      <Badge>
+        {reason
+          ? t("dealFiling.byUnit", { unit, reason })
+          : t("dealFiling.byUnitNoReason", { unit })}
+      </Badge>
+      <Button
+        variant="link"
+        onClick={() =>
+          mark.send({ activityId: activity.id, dealId, relevance: "unrelated" })
+        }
+        pending={mark.pending}
+        reason={writable ? undefined : t("activity.notYoursToChange")}
+      >
+        {t("common.undo")}
+      </Button>
+    </>
   );
 }
 

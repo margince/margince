@@ -13,17 +13,14 @@ package automation
 // same cutoff from ev.Params and confirming the anchor the scan carried
 // still crosses it as of this event's own OccurredAt.
 //
-// Three handlers share this file because they share machinery, not
-// because they are one concept: no_activity_reminder and
-// check_in_cadence are both "quiet spell" triggers over the IDENTICAL
-// ActivityScan read (activities/lasttouch.go's source='system'
-// exclusion applies to both alike) and differ only in which params key
-// names their own cadence and what their own reminder says — the shared
-// anchor helpers (touchAnchor, activityStaleMatch and anchorIdempotencyKey
-// below, anchorReminderTaskEffect in taskeffect.go) exist so that
-// difference is the ONLY thing their Match/Plan/IdempotencyKey bodies
-// spell out. renewal_reminder rides a different anchor (a custom
-// renewal-date field's value, not a last-touch timestamp), scanned by
+// Three handlers share this file because they share machinery, not because
+// they are one concept. no_activity_reminder and check_in_cadence are both
+// "quiet spell" triggers over the same ActivityScan read, and the system's own
+// work is left out of it for both. They differ only in the params key naming
+// their cadence and in what their reminder says. The shared anchor helpers
+// (touchAnchor, activityStaleMatch, anchorIdempotencyKey, and
+// anchorReminderTaskEffect in taskeffect.go) keep that the only difference.
+// renewal_reminder rides a custom renewal-date field instead, scanned by
 // dateFieldScanHandlers in timescan.go.
 
 import (
@@ -280,16 +277,12 @@ func checkInCadenceDays(params json.RawMessage) (int, error) {
 	return *decoded.CheckInDays, nil
 }
 
-// checkInCadence reminds an entity's owner to re-engage once it has gone
-// quiet for the automation's OWN (typically longer) cadence — the
-// IDENTICAL LastTouchBefore read no_activity_reminder shares
-// (activities/lasttouch.go's source='system' exclusion means this
-// reminder's own task never resets the very clock it fires off), so it
-// fires once per quiet spell rather than nagging every pass. It is a
-// second catalog entry over the SAME read, not no_activity_reminder
-// wearing a second name: a workspace may enable either independently,
-// each with its own N and its own wording ("time for a check-in", not
-// "no activity").
+// checkInCadence reminds an entity's owner to re-engage once it has gone quiet
+// for the automation's own, typically longer, cadence. It reads the
+// LastTouchBefore scan no_activity_reminder reads, which leaves the system's
+// own work out. So its own task never resets the clock it fires off, and it
+// fires once per quiet spell. A workspace may enable either reminder on its
+// own, each with its own N and its own wording.
 type checkInCadence struct {
 	ex Executors
 }

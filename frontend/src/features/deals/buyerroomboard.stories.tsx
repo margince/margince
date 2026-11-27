@@ -53,6 +53,7 @@ const THREADS: readonly DealRoomThread[] = [
     id: "thread-1",
     room_id: "room-1",
     document_id: "doc-1",
+    visible_to_buyer: true,
     required_change: true,
     state: "open",
     author: { side: "buyer", name: "Dana Buyer" },

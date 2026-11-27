@@ -354,10 +354,8 @@ func validCIMD(body []byte, clientID string) (cimdDocument, error) {
 		// The SAME predicate a DCR registration is held to. One rule for what a
 		// redirect may be, whichever door the client came through — otherwise
 		// CIMD becomes the way to register the redirect DCR refuses.
-		if !validRedirectURI(raw) {
-			return cimdDocument{}, fmt.Errorf(
-				"identity: the client's metadata document lists redirect uri %q, which must be https or http on localhost", raw,
-			)
+		if fault := redirectURIFault(raw); fault != "" {
+			return cimdDocument{}, fmt.Errorf("identity: the client's metadata document lists redirect uri %q: %s", raw, fault)
 		}
 	}
 	return doc, nil

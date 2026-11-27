@@ -7,7 +7,9 @@
 
 import { useId, useState } from "react";
 import { Button } from "../../design-system/button";
+import { Callout } from "../../design-system/callout";
 import { describedByIds } from "../../design-system/describedby";
+import { OffsiteLink } from "../../design-system/offsitelink";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { PanelNotices } from "../../design-system/panelnotices";
 import { QueryGate } from "../../design-system/querystates";
@@ -16,6 +18,7 @@ import { Select } from "../../design-system/select";
 import { SettingList, SettingRow } from "../../design-system/settingrow";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useHoldsAdminRole } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
 import {
   type BrowserNotificationPermission,
@@ -33,6 +36,12 @@ import {
 /** The four deliveries, in the order the dropdown offers them. */
 const CHOICES = ["off", "in_app", "email", "digest"] as const;
 
+/** The two deliveries that leave the product, through the installation's own mail. */
+const MAILED: readonly NotificationDelivery[] = ["email", "digest"];
+
+const MAIL_GUIDE =
+  "https://github.com/margince/margince/blob/main/docs/how-to/set-up-outbound-mail.md";
+
 /**
  * What this class may be set to.
  *
@@ -49,14 +58,21 @@ const CHOICES = ["off", "in_app", "email", "digest"] as const;
  * promise mail that was never going to arrive, which is worse than not offering
  * it — the reader stops watching the screen. `digest` reaches every class, so
  * mail is still on the table for every class.
+ *
+ * With no mail on this installation, neither mailed choice is offered. The
+ * stored and the drafted one stay listed. So the control still shows what the
+ * row holds and what Save would write, even when mail goes away mid-draft.
  */
 function choicesFor(
   notificationClass: NotificationClass,
+  mailSends: boolean,
+  kept: readonly NotificationDelivery[],
 ): readonly NotificationDelivery[] {
   return CHOICES.filter(
     (choice) =>
       !(choice === "off" && notificationClass === "coach") &&
-      !(choice === "email" && notificationClass !== "approval_pending"),
+      !(choice === "email" && notificationClass !== "approval_pending") &&
+      (mailSends || !MAILED.includes(choice) || kept.includes(choice)),
   );
 }
 
@@ -119,11 +135,14 @@ const DELIVERY_COPY: Readonly<Record<NotificationDelivery, MessageKey>> = {
 export function NotificationSettingsCard() {
   const t = useT();
   const preferences = useNotificationPreferences();
+  // An older server sends no answer, and no answer is not "mail is off".
+  const mailSends = preferences.data?.email_delivery_available !== false;
 
   return (
     <Panel title={t("notifications.title")}>
       <PanelBody>
         <PanelIntro>{t("notifications.sub")}</PanelIntro>
+        {!mailSends && <NoMailCallout />}
       </PanelBody>
       <SettingList bleed="settings">
         <BrowserNotificationsRow
@@ -132,9 +151,31 @@ export function NotificationSettingsCard() {
         />
       </SettingList>
       <QueryGate pendingLabel={t("notifications.title")} query={preferences}>
-        {(list) => <DeliveryChoices rows={list.items} />}
+        {(list) => <DeliveryChoices rows={list.items} mailSends={mailSends} />}
       </QueryGate>
     </Panel>
+  );
+}
+
+/** The callout covers the email summaries below too: one relay sends all of it. */
+function NoMailCallout() {
+  const t = useT();
+  const isAdmin = useHoldsAdminRole();
+  return (
+    <Callout
+      tone="warning"
+      kind="standing"
+      title={t("notifications.noMailTitle")}
+      actions={
+        isAdmin ? (
+          <OffsiteLink href={MAIL_GUIDE}>
+            {t("notifications.noMailGuide")}
+          </OffsiteLink>
+        ) : undefined
+      }
+    >
+      {t("notifications.noMail")}
+    </Callout>
   );
 }
 
@@ -185,7 +226,8 @@ type Picks = Partial<Record<NotificationClass, NotificationDelivery>>;
 
 function DeliveryChoices({
   rows,
-}: Readonly<{ rows: readonly NotificationPreference[] }>) {
+  mailSends,
+}: Readonly<{ rows: readonly NotificationPreference[]; mailSends: boolean }>) {
   const t = useT();
   const save = useSaveNotificationPreference();
   const [picks, setPicks] = useState<Picks>({});
@@ -236,6 +278,7 @@ function DeliveryChoices({
             key={row.class}
             row={row}
             delivery={picks[row.class] ?? row.delivery}
+            mailSends={mailSends}
             onPick={(delivery) => {
               setRefused(null);
               setPicks((held) => ({ ...held, [row.class]: delivery }));
@@ -266,17 +309,19 @@ function DeliveryChoices({
 function DeliveryRow({
   row,
   delivery,
+  mailSends,
   onPick,
   refusedBy,
 }: Readonly<{
   row: NotificationPreference;
   /** The drafted choice, or the stored one while the row is untouched. */
   delivery: NotificationDelivery;
+  mailSends: boolean;
   onPick: (delivery: NotificationDelivery) => void;
   refusedBy?: string;
 }>) {
   const t = useT();
-  const offered = choicesFor(row.class);
+  const offered = choicesFor(row.class, mailSends, [row.delivery, delivery]);
   return (
     <SettingRow
       label={t(CLASS_COPY[row.class].label)}

@@ -43,12 +43,6 @@ const frontendMinorUnits = "../frontend/src/format/minorunits.ts"
 // and it is the same shape as the star projection the sibling census missed.
 var tsMinorUnitEntry = regexp.MustCompile(`["']?\b([A-Z]{3})\b["']?:\s*(\d+)\b`)
 
-// tsComment strips a comment from the table's own text before the entries are
-// read. Without it, a line inside the literal MENTIONING a code — "VND: 0, for
-// example" — keeps this gate green after the real entry is deleted, and
-// minorUnitDigits then answers 2 for the dong while the server answers 0.
-var tsComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
-
 func TestTheFrontendMinorUnitTableMatchesTheGoOne(t *testing.T) {
 	t.Parallel()
 	source, err := gatekit.ReadFile(frontendMinorUnits)
@@ -65,7 +59,7 @@ func TestTheFrontendMinorUnitTableMatchesTheGoOne(t *testing.T) {
 		t.Fatalf("%s's %s literal is unterminated", frontendMinorUnits, marker)
 	}
 
-	table := tsComment.ReplaceAllString(string(source)[start:start+end], " ")
+	table := gatekit.TSWithoutComments(string(source)[start : start+end])
 	inTS := map[string]int{}
 	for _, m := range tsMinorUnitEntry.FindAllStringSubmatch(table, -1) {
 		digits, convErr := strconv.Atoi(m[2])

@@ -119,7 +119,7 @@ func tasksAnsweredByTx(ctx context.Context, tx pgx.Tx, email ids.ActivityID, hum
 func answerableTaskSQL(args *schedulingArgs, evidence, holder, onRecord string) string {
 	return `task.kind='task' AND NOT task.is_done AND task.archived_at IS NULL AND task.created_at < ` + evidence + `.created_at
  AND task.assignee_id=` + holder + `
- AND NOT (task.source=` + args.add(systemSource) + ` AND ` + systemCapturedSQL("task", args.add(systemCapturedBy), args.add(systemCapturedByPattern)) + `)
+ AND NOT (` + systemWorkSQL("task", args.add(systemTaskSources)) + ` AND ` + systemCapturedSQL("task", args.add(systemCapturedBy), args.add(systemCapturedByPattern)) + `)
  AND EXISTS (SELECT 1 FROM activity_link t WHERE t.activity_id=task.id AND (` + onRecord + `))
  AND NOT ` + reopenedAfterAnswerSQL("task")
 }

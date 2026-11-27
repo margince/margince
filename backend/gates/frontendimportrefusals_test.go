@@ -88,5 +88,5 @@ func frontendRefusalsTable(t *testing.T) string {
 	if end < 0 {
 		t.Fatalf("%s's REFUSALS literal is unterminated", frontendImportRefusals)
 	}
-	return tsComment.ReplaceAllString(string(source)[start:start+end], " ")
+	return gatekit.TSWithoutComments(string(source)[start : start+end])
 }

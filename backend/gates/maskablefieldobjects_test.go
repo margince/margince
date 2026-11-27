@@ -78,7 +78,7 @@ func TestEveryOfferedMaskObjectIsOneSomeModuleWithholdsOn(t *testing.T) {
 // the same package than the call that passes it.
 func maskedObjects(t *testing.T) map[string]string {
 	t.Helper()
-	consts := stringConstsByPackage(t, token.NewFileSet(), maskedObjectScope.Roots)
+	consts := stringConstsByPackage(t, maskedObjectScope.Roots)
 	found := make(map[string]string)
 	for _, source := range maskedObjectScope.Files(t) {
 		dir := filepath.ToSlash(filepath.Dir(source.Path))

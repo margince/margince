@@ -154,7 +154,7 @@ describe("the data coverage section", () => {
   });
 
   it("points to the input check when source coverage has no result", async () => {
-    vi.stubGlobal("fetch", reportsStub({ coverage: { status: 404 } }));
+    vi.stubGlobal("fetch", reportsStub({ coverage: { status: 204 } }));
     render(<AnalyticsScreen />);
     await userEvent
       .setup()

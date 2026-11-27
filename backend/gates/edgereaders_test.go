@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind census H2
-
 package gates
 
 // `relationship` is a first-class RBAC object, and it is the only join table in
@@ -43,8 +41,6 @@ package gates
 // and is judged at file scope, as it is there.
 
 import (
-	"go/ast"
-	"path"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -101,6 +97,7 @@ var predicateEdgeReads = gatekit.Waive(map[string]string{
 	"internal/modules/capture/dealrefile.go:RefileCandidatesTx":                            "System-only candidate selection returns activity identities, never relationship endpoints; RefileTx recomputes employment evidence under the capturing seat through mailCompanies and its EdgeReadScope before any filing.",
 	"internal/modules/approvals/decidable.go:archivableWithoutDelete":                      "which staged archive targets are deal seats, asked of ids the decider already reaches as visible targets. Only the decision whether the staged row is decidable leaves it, never an edge column or endpoint",
 	"internal/modules/deals/stagemoveverdict.go:buyerWrote":                                "an existence predicate under the deal row lock: whether a cited mail's sender is a current employee of the deal's company or a stakeholder of the deal. Only a yes or no leaves the query, never an edge column or endpoint",
+	"internal/shared/kernel/employment/employment.go:EndedAtCompanySQL":                    "an existence predicate inside an automatic writer's insert or selector: whether a contact already has a no-longer-live employment at the company. Only the yes or no decides whether the writer skips the pair; no edge column or endpoint leaves the statement",
 	"internal/modules/contacts/employerrepair.go:hasEmploymentHistory":                     "prevents inferred or repaired employment from overwriting employment history; only an internal existence predicate is returned, with no edge columns or endpoints",
 	"internal/modules/contacts/mergerelationshippreview.go:authorizeMergePrimaryWitnesses": "the edges a merge's primary flags rest on: ids only, read after its one caller asks auth.Require(ctx, \"relationship\", read). Each id is re-read through visibleRelationship under RelationshipEndpointScope, and one the caller may not see refuses the preview. No edge column leaves it",
 	"internal/modules/contacts/linkedinmatchfields.go:liveEmploymentAt":                    "an accepted LinkedIn match's employer write: finds the contact's own employment at the company the card offered, to promote it rather than create a second. Only a decider who can see that company reaches it. The id, role and author it reads go to the write, never to a reader, and a promote takes relationship:update before it writes",
@@ -152,6 +149,8 @@ var predicateEdgeReads = gatekit.Waive(map[string]string{
 // than the disclosure this change fixes: the sweep's correctness depends on
 // seeing every edge, and it runs as the system principal precisely so it does.
 var lifecycleEdgeReads = gatekit.Waive(map[string]string{
+	"internal/modules/contacts/employment_import_link.go:lockPairEmployments":           "the employment link reads and locks the edges of one contact at one company inside the write that links the evidence, after the contact was held writable and live. Only the matched edge leaves it, to the writer.",
+	"internal/modules/privacy/erasurebriefcache.go:summarisedRecords":                   "the contact-delete-authorized eraser and the retention anonymize read the company and deal ids of the subject's own edges, to delete the cached summaries of those records inside the same transaction. Every edge is read so no reader's summary survives; the ids go to the store that deletes them and to no caller",
 	"internal/modules/contacts/employerchange.go:employerChangeSQL":                     "capture's employer-change check, run inside the capture, triage or signature transaction under that machine principal. It reads the contact's owner, name and current employment and the two company names to stage a question only the contact's owner may open (a payload-owned approval kind). Nothing is returned to a caller, and accepting the question re-asks every grant as the owner",
 	"internal/compose/dealscout/buyer.go:UnlinkedCommercialMatter":                      "the Deal Scout's system pass: whether a cited activity already sits on a live project of the signal's resolved company. It runs as the system principal and must see every edge; nothing of the edge is selected",
 	"internal/modules/projects/continuity.go:CompanyDeliveryTx":                         "whether an account still has delivery decides if ending the account is blocked, a fact about the account rather than about the caller. The edges are read whole so a narrower seat can never unblock it; only booleans leave, and the projects counted stay under the caller's project scope",
@@ -213,8 +212,8 @@ var lifecycleEdgeReads = gatekit.Waive(map[string]string{
 // It is a real verdict and not a quiet exclusion, which is the distinction
 // #1831 drew when it refused a bare exemption list: a bare list reads as
 // "handled", this reads as "decided, and not yet done". The hole stays
-// countable — `go test -run TestEveryReaderOfTheRelationshipTable -v` prints
-// the count.
+// countable: `go test -run TestEveryReaderOfAnObjectTable/relationship -v`
+// prints the count.
 //
 // Every reason here names its issue. That is a convention rather than a checked
 // rule, deliberately: a parallel map of reasons to police it is exactly what
@@ -277,74 +276,6 @@ var ruledEdgeReads = gatekit.Waive(map[string]string{
 // only a collapse is a finding.
 const wantMinimumGatedSites = 16
 
-// edgeReaderScope is every non-test, non-generated file under internal/ that
-// reads the relationship table by name.
-var edgeReaderScope = gatekit.Scope{
-	Roots:   []string{"internal"},
-	Subject: readsRelationshipTable,
-	Exempt:  gatekit.Waive(map[string]string{}),
-}
-
-func readsRelationshipTable(filePath string, file *ast.File) bool {
-	return gatekit.FileReadsTable(filePath, file, relationshipGate.literal)
-}
-
-func TestEveryReaderOfTheRelationshipTableCarriesTheEdgeGateOrAVerdict(t *testing.T) {
-	t.Parallel()
-	files := edgeReaderScope.Files(t)
-	walk := relationshipGate.walkPackages(t, files)
-	consts := constantTable{}
-
-	var satisfied int
-	for _, parsed := range files {
-		pkg := path.Dir(parsed.Path)
-		for _, site := range relationshipGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := site.subject(parsed.Path)
-			// Its own body first, then the helpers IT CALLS — never its own
-			// name. A by-name lookup would let a gated Store.X vouch for an
-			// ungated Handlers.X, which is the vouching this gate is
-			// per-function precisely to prevent.
-			carriesGate := walk.carries(t, relationshipGate, parsed, site, consts.of(t, pkg))
-			verdict := verdictIn(t, subject, edgeVerdicts)
-
-			switch {
-			case carriesGate && verdict != "":
-				// A satisfied site that is ALSO waived is the way this census
-				// silently stops counting down: a deferred read that later gets
-				// its gate keeps matching its waiver for ever, and the hole
-				// reads as open when it is closed.
-				t.Errorf("%s carries the edge gate AND a %s verdict — remove the verdict, it now "+
-					"describes code that is gated", subject, verdict)
-			case carriesGate:
-				satisfied++
-			case verdict == "":
-				t.Errorf("%s reads the relationship table without the edge gate and without a verdict.\n"+
-					"  Reading an edge discloses its endpoints AS A PAIR, which is what relationship.read "+
-					"governs — the endpoints' own grants do not cover it.\n"+
-					"  Either call auth.EdgeReadScope, or declare the read in predicateEdgeReads / lifecycleEdgeReads / "+
-					"calleeGatedEdgeReads / ruledEdgeReads / deferredEdgeReads with the reason it needs no gate.\n"+
-					"  Left alone it is indistinguishable from a read nobody considered.\n"+
-					"  The read: %s", subject, site.sql)
-			}
-		}
-	}
-
-	if satisfied < wantMinimumGatedSites {
-		t.Errorf("only %d relationship reads satisfy the edge gate, want at least %d — a literal "+
-			"extractor that stopped recognising this tree's SQL would report exactly this, and it "+
-			"reads the same as a clean tree", satisfied, wantMinimumGatedSites)
-	}
-	t.Logf("edge reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled, %d DEFERRED (still disclosing)",
-		satisfied, len(predicateEdgeReads.Subjects()), len(lifecycleEdgeReads.Subjects()),
-		len(calleeGatedEdgeReads.Subjects()), len(ruledEdgeReads.Subjects()), len(deferredEdgeReads.Subjects()))
-
-	predicateEdgeReads.AssertAllMatched(t)
-	lifecycleEdgeReads.AssertAllMatched(t)
-	calleeGatedEdgeReads.AssertAllMatched(t)
-	ruledEdgeReads.AssertAllMatched(t)
-	deferredEdgeReads.AssertAllMatched(t)
-}
-
 // edgeVerdicts are the five declarations, in the order a reader meets them
 // above. Named as one list because "which declaration a read sits in IS its
 // verdict" is only true if every declaration is asked — a set left off this
@@ -356,4 +287,15 @@ var edgeVerdicts = []namedVerdict{
 	{"callee-gated", calleeGatedEdgeReads},
 	{"ruled", ruledEdgeReads},
 	{"deferred", deferredEdgeReads},
+}
+
+// sweepEdgeVerdicts fails a verdict no read matched any more. The
+// gate census asks for each sweep by name, so the list is written out.
+func sweepEdgeVerdicts(t *testing.T) {
+	t.Helper()
+	predicateEdgeReads.AssertAllMatched(t)
+	lifecycleEdgeReads.AssertAllMatched(t)
+	calleeGatedEdgeReads.AssertAllMatched(t)
+	ruledEdgeReads.AssertAllMatched(t)
+	deferredEdgeReads.AssertAllMatched(t)
 }

@@ -23,30 +23,74 @@ func compileCollecting(t *testing.T, p Predicate, fields map[string]Field) (stri
 	return sql, args, err
 }
 
-func TestAFoldedFieldBindsItsOperandLowercasedAndAnUnfoldedOneAsTyped(t *testing.T) {
+// A text condition ignores capitals, surrounding spaces and accents whichever
+// operator asks, so "cto" finds "CTO" and " Muller " finds "Müller". Both sides
+// fold in SQL, where list search's f_unaccent lives.
+func TestEveryTextOperatorComparesUnderOneRule(t *testing.T) {
 	fields := map[string]Field{
 		"email": {Expr: "t.email", Type: FieldText, FoldCase: true},
-		"name":  {Expr: "t.name", Type: FieldText},
+		"title": {Expr: "t.title", Type: FieldText},
 	}
+	const column, operand = "f_fold_apostrophes(lower(t.title))", "f_fold_apostrophes(lower($1::text))"
 	for _, c := range []struct {
-		p    Predicate
-		want []any
+		p       Predicate
+		wantSQL string
+		want    []any
 	}{
-		{Predicate{Field: "email", Op: OpEq, Value: "Ann@X.Example"}, []any{"ann@x.example"}},
-		{Predicate{Field: "email", Op: OpIn, Value: []any{"A@B.C", "d@e.f"}}, []any{[]string{"a@b.c", "d@e.f"}}},
-		{Predicate{Field: "name", Op: OpEq, Value: "Ann"}, []any{"Ann"}},
+		{Predicate{Field: "title", Op: OpEq, Value: " cto "}, column + " = " + operand, []any{"cto"}},
+		{Predicate{Field: "title", Op: OpNeq, Value: "CTO"}, column + " IS DISTINCT FROM " + operand, []any{"CTO"}},
+		{Predicate{Field: "title", Op: OpContains, Value: " Muller "}, column + " LIKE " + operand, []any{"%Muller%"}},
+		{
+			Predicate{Field: "title", Op: OpIn, Value: []any{" cto", "Cfo "}},
+			column + " = ANY(ARRAY(SELECT f_fold_apostrophes(lower(v)) FROM unnest($1::text[]) AS v))",
+			[]any{[]string{"cto", "Cfo"}},
+		},
+		{
+			Predicate{Field: "email", Op: OpEq, Value: "Ann@X.Example"},
+			"f_fold_apostrophes(lower(t.email)) = " + operand,
+			[]any{"ann@x.example"},
+		},
 	} {
 		sql, args, err := compileCollecting(t, c.p, fields)
 		if err != nil {
 			t.Fatalf("%s %s: %v", c.p.Field, c.p.Op, err)
 		}
-		if !reflect.DeepEqual(args, c.want) {
-			t.Errorf("%s %s bound %#v, want %#v", c.p.Field, c.p.Op, args, c.want)
+		if sql != c.wantSQL || !reflect.DeepEqual(args, c.want) {
+			t.Errorf("%s %s %v compiled to %q %#v, want %q %#v", c.p.Field, c.p.Op, c.p.Value, sql, args, c.wantSQL, c.want)
 		}
-		folded := strings.HasPrefix(sql, "lower(t.email)")
-		if folded != fields[c.p.Field].FoldCase {
-			t.Errorf("%s %s compiled to %q: a folded field lowers the column, an unfolded one does not", c.p.Field, c.p.Op, sql)
-		}
+	}
+	if _, _, err := compileCollecting(t, Predicate{Field: "title", Op: OpContains, Value: "   "}, fields); err == nil {
+		t.Error("contains took a value of spaces alone, which matches every row")
+	}
+}
+
+// A picklist holds option keys, compared as stored, and a field folded for
+// case alone still lowers only.
+func TestOnlyFreeTextFoldsAccents(t *testing.T) {
+	fields := map[string]Field{
+		"status": {Expr: "t.status", Type: FieldPicklist},
+		"key":    {Expr: "t.key", Type: FieldCompanyKey, FoldCase: true},
+	}
+	sql, args, err := compileCollecting(t, Predicate{Field: "status", Op: OpEq, Value: "Open"}, fields)
+	if err != nil || sql != "t.status = $1" || !reflect.DeepEqual(args, []any{"Open"}) {
+		t.Errorf("picklist eq compiled to %q %#v (%v), want the key compared as stored", sql, args, err)
+	}
+	sql, _, err = compileCollecting(t, Predicate{Field: "key", Op: OpContains, Value: "acme"}, fields)
+	if err != nil || strings.Contains(sql, "f_fold_apostrophes") {
+		t.Errorf("company key contains compiled to %q (%v), want it unchanged", sql, err)
+	}
+}
+
+// A text field reached through a link compares under the same rule inside its
+// subquery.
+func TestALinkedTextFieldComparesUnderTheTextRule(t *testing.T) {
+	fields := map[string]Field{
+		"technology": {Expr: "f.value", Type: FieldText, Link: "EXISTS (SELECT 1 FROM fact f WHERE f.id = t.id AND %s)"},
+	}
+	sql, args, err := compileCollecting(t, Predicate{Field: "technology", Op: OpEq, Value: " WordPress "}, fields)
+	want := "EXISTS (SELECT 1 FROM fact f WHERE f.id = t.id AND f_fold_apostrophes(lower(f.value)) = f_fold_apostrophes(lower($1::text)))"
+	if err != nil || sql != want || !reflect.DeepEqual(args, []any{"WordPress"}) {
+		t.Errorf("linked eq compiled to %q %#v (%v), want %q", sql, args, err, want)
 	}
 }
 

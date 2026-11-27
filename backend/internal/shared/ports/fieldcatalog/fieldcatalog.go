@@ -14,6 +14,8 @@ package fieldcatalog
 import (
 	"context"
 	"slices"
+
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The closed field types (custom-fields.md), spelled the way the
@@ -77,12 +79,22 @@ type Column struct {
 	// ActivityKinds are the activity kinds an activity column applies to, and
 	// empty means every kind. It is schema, like Name and Type.
 	ActivityKinds []string
+	// PipelineIDs are the pipelines a deal column applies to, and empty means
+	// every pipeline. An archived pipeline stays in the list and matches nothing
+	// a deal can be in, because the column cannot carry a foreign key.
+	PipelineIDs []ids.UUID
 }
 
 // AppliesToKind reports whether a value of this column may be written on an
 // activity of kind.
 func (c Column) AppliesToKind(kind string) bool {
 	return len(c.ActivityKinds) == 0 || slices.Contains(c.ActivityKinds, kind)
+}
+
+// AppliesToPipeline reports whether a value of this column may be written on a
+// deal of pipeline.
+func (c Column) AppliesToPipeline(pipeline ids.UUID) bool {
+	return len(c.PipelineIDs) == 0 || slices.Contains(c.PipelineIDs, pipeline)
 }
 
 // Reader answers the active custom-field columns for one core object,

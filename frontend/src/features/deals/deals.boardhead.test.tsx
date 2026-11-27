@@ -139,7 +139,7 @@ describe("the deals board's counts", () => {
     render(<DealsScreen />);
 
     expect(
-      await screen.findByText("1 to 2 of 2 deals loaded in Sales"),
+      await screen.findByText("1-2 of 2 loaded in Sales"),
     ).toBeInTheDocument();
   });
 
@@ -216,7 +216,7 @@ describe("the deals board's counts", () => {
     render(<DealsScreen />);
 
     expect(
-      await screen.findByText("1 to 2 of 2 deals loaded in Sales"),
+      await screen.findByText("1-2 of 2 loaded in Sales"),
     ).toBeInTheDocument();
   });
 
@@ -245,7 +245,7 @@ describe("the deals board's counts", () => {
     expect(await within(column("s1")).findByRole("alert")).toBeTruthy();
     expect(within(column("s1")).getByText("Fleet one")).toBeTruthy();
     expect(
-      await screen.findByText("1 to 2 of 2 deals loaded in Sales"),
+      await screen.findByText("1-2 of 2 loaded in Sales"),
     ).toBeInTheDocument();
   });
 });

@@ -85,10 +85,26 @@ func connectFeed(t *testing.T, env captureEnv, feed *calendarFeed) func() {
 // connectFeedAs is connectFeed for a calendar on the account owner.
 func connectFeedAs(t *testing.T, env captureEnv, feed *calendarFeed, owner string) func() {
 	t.Helper()
+	return connectFeedWith(t, env, feed, owner, func(c *gcal.Connector) *gcal.Connector { return c })
+}
+
+// connectFeedAt is connectFeed with the connector's clock fixed at now, for a
+// test about the capture horizon the connector dates from it.
+func connectFeedAt(t *testing.T, env captureEnv, feed *calendarFeed, now time.Time) func() {
+	t.Helper()
+	return connectFeedWith(t, env, feed, captureOwner, func(c *gcal.Connector) *gcal.Connector {
+		return c.WithClock(func() time.Time { return now })
+	})
+}
+
+func connectFeedWith(
+	t *testing.T, env captureEnv, feed *calendarFeed, owner string, configure func(*gcal.Connector) *gcal.Connector,
+) func() {
+	t.Helper()
 	stub := feed.serve(t, owner)
 	oauth := gmail.NewOAuth(gmail.OAuthConfig{ClientID: "cid", ClientSecret: "sec", TokenURL: stub.URL + "/token"})
 	api := gcal.NewAPI(stub.Client(), stub.URL)
-	env.registry.Register(gcal.New(oauth, api))
+	env.registry.Register(configure(gcal.New(oauth, api)))
 	authReq, err := gcal.AuthRequestFrom("the-code", "https://app.test/v1/connectors/gcal/callback")
 	if err != nil {
 		t.Fatal(err)
@@ -439,15 +455,24 @@ func TestACalendarEventMatchedOntoAnImportBringsItsGuests(t *testing.T) {
 // export states it: one contact, and the calendar's identity for the meeting.
 func importMeetingFor(t *testing.T, e *integration.SearchEnv, contact ids.ContactID, uid string, start time.Time) ids.UUID {
 	t.Helper()
+	return importMeetingUnder(t, e, e.Rep1, "meeting-1", contact, uid, start)
+}
+
+// importMeetingUnder is importMeetingFor by the importer seat, under the
+// export's own record id.
+func importMeetingUnder(
+	t *testing.T, e *integration.SearchEnv, importer ids.UUID, sourceID string, contact ids.ContactID, uid string, start time.Time,
+) ids.UUID {
+	t.Helper()
 	instance := start.UTC().Format(time.RFC3339)
-	system, sourceID, subject := "hubspot", "meeting-1", "Quarterly review"
+	system, subject := "hubspot", "Quarterly review"
 	req := crmcontracts.CreateActivityRequest{
 		Kind:         crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
 		Subject:      &subject,
 		OccurredAt:   &start,
 		SourceSystem: &system,
 		SourceId:     &sourceID,
-		Source:       "hubspot_import:1",
+		Source:       "import",
 		IcalUid:      &uid,
 		IcalInstance: &instance,
 	}
@@ -459,7 +484,7 @@ func importMeetingFor(t *testing.T, e *integration.SearchEnv, contact ids.Contac
 	if err != nil {
 		t.Fatalf("mapping the import: %v", err)
 	}
-	created, _, err := activities.NewStore(e.DB()).LogActivity(importerCtx(e), in)
+	created, _, err := activities.NewStore(e.DB()).LogActivity(importerCtxFor(e, importer), in)
 	if err != nil {
 		t.Fatalf("importing the meeting: %v", err)
 	}
@@ -467,10 +492,14 @@ func importMeetingFor(t *testing.T, e *integration.SearchEnv, contact ids.Contac
 }
 
 func importerCtx(e *integration.SearchEnv) context.Context {
+	return importerCtxFor(e, e.Rep1)
+}
+
+func importerCtxFor(e *integration.SearchEnv, seat ids.UUID) context.Context {
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	return principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalHuman, ID: "human:" + e.Rep1.String(), UserID: e.Rep1, OnBehalfOf: e.Rep1,
+		Type: principal.PrincipalHuman, ID: "human:" + seat.String(), UserID: seat, OnBehalfOf: seat, SeatType: principal.SeatFull,
 		Permissions: principal.Permissions{
 			Objects: map[string]principal.ObjectGrant{
 				"activity": {Create: true, Read: true, Update: true},

@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/shared/kernel/dormancy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
@@ -50,6 +51,7 @@ type ListCompaniesInput struct {
 	// IncludeAnchor admits the installation's own company (ADR-0082/A127).
 	IncludeAnchor bool
 	Cursor        *string
+	Offset        *int
 	Limit         *int
 	Query         *string
 	OwnerID       *ids.UserID
@@ -192,7 +194,6 @@ func companyCommonFilters(in ListCompaniesInput) listFilters {
 		OwnerTeamID:     in.OwnerTeamID,
 		Unassigned:      in.Unassigned,
 		Query:           in.Query,
-		Cursor:          in.Cursor,
 		CustomFilters:   in.CustomFilters,
 		nameColumn:      companyNameColumn,
 		identifier:      storekit.CompanyDomains,
@@ -231,8 +232,9 @@ func companyListSpec(in ListCompaniesInput, now time.Time) listPageSpec[crmcontr
 	// transaction before the filters render.
 	var ladder dormancy.Ladder
 	return listPageSpec[crmcontracts.Company]{
-		entity:    companyEntity,
-		firstPage: in.Cursor == nil || *in.Cursor == "",
+		entity: companyEntity,
+		cursor: in.Cursor,
+		offset: in.Offset,
 		prepare: func(ctx context.Context, tx pgx.Tx) (context.Context, error) {
 			if in.Dormancy == nil {
 				return ctx, nil
@@ -243,8 +245,8 @@ func companyListSpec(in ListCompaniesInput, now time.Time) listPageSpec[crmcontr
 		},
 		columns: func(context.Context, func(any) int) (string, error) { return companyColumns, nil },
 		fields:  companyListFields,
-		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
-			where, err := shared.clauses(ctx, active, sorted, arg)
+		filters: func(ctx context.Context, active []fieldcatalog.Column, arg func(any) int) ([]string, error) {
+			where, err := shared.clauses(active, arg)
 			if err != nil {
 				return nil, err
 			}
@@ -435,5 +437,11 @@ func dormancyClause(rung string, ladder dormancy.Ladder, now time.Time, arg func
 			"filter by active, cooling, dormant or stale, or leave the parameter off")
 	}
 	asOf := fmt.Sprintf("$%d::timestamptz", arg(now))
-	return ladder.WindowOf(dormancy.Rung(rung)).SQL("company.last_activity_at", asOf), nil
+	// A date-only last activity sits in the window from the start of its own date,
+	// as the company page's reading counts it. The loosened window on the stored
+	// column is the indexed range; the precision is read only for the rows in it.
+	window := ladder.WindowOf(dormancy.Rung(rung))
+	lastActivity := occurredday.StartAtSQL("company.last_activity_at",
+		"(CASE WHEN "+LastActivityDaySQL("company")+" THEN 'day' ELSE 'instant' END)")
+	return window.Loosened().SQL("company.last_activity_at", asOf) + " AND " + window.SQL(lastActivity, asOf), nil
 }

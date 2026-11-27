@@ -6,6 +6,8 @@
 package activitywhen
 
 import (
+	"time"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -19,6 +21,15 @@ func Text(a crmcontracts.Activity) string {
 // MomentOf is an activity's time as occurredday reads it.
 func MomentOf(a crmcontracts.Activity) occurredday.Moment {
 	return occurredday.Moment{At: a.OccurredAt, DateOnly: occurredday.IsDay(a.OccurredPrecision)}
+}
+
+// StampOf is a wire time and its precision as occurredday reads them: a zero
+// time when the wire sent none.
+func StampOf(at *time.Time, precision *crmcontracts.OccurredPrecision) occurredday.Moment {
+	if at == nil {
+		return occurredday.Moment{}
+	}
+	return occurredday.Moment{At: *at, DateOnly: occurredday.IsStatedDay(precision)}
 }
 
 // PrecisionOf is the wire precision of a time occurredday reads.

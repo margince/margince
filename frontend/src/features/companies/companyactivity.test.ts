@@ -68,6 +68,22 @@ describe("an unrated account's verdict", () => {
     });
   });
 
+  it("dates a date-only last activity by its own date far east of UTC", () => {
+    const east = { ...words, zone: "Pacific/Kiritimati" } as const;
+    const at = "2026-10-20T12:00:00Z";
+    const sentence = (precision: "day" | "instant") =>
+      companyActivityVerdict(
+        reading({ last_activity_at: at, last_activity_precision: precision }),
+        east,
+      )?.sentence;
+    expect(sentence("day")).toBe(
+      t("co.verdict.lastExchange", { date: "20 Oct" }),
+    );
+    expect(sentence("instant")).toBe(
+      t("co.verdict.lastExchange", { date: "21 Oct" }),
+    );
+  });
+
   it("names each colder rung with the silent days and the ladder behind it", () => {
     for (const [rung, word, tone] of [
       ["cooling", "co.verdict.cooling", "warning"],

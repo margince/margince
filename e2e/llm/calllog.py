@@ -23,6 +23,11 @@ SUFFIX = ".calls"
 EVIDENCE_PER_CALL = 2000
 EVIDENCE_TOTAL = 12000
 
+# What every answer repeats and no claim rests on. It is about a third of a
+# call's share, spent before the call's own data begins.
+ENVELOPE = ("schema_version", "trace_id", "freshness")
+STOCK_WARNING = "untrusted_content"
+
 
 def path_for(transcript_path):
     return transcript_path + SUFFIX
@@ -56,18 +61,48 @@ def worked(record):
     return record.get("outcome") == "ok"
 
 
+def compact(answer):
+    """An answer without its envelope: the ids, the freshness and the stock
+    warning every answer carries. Any other warning stays, and text that is not
+    a JSON object is kept as the server sent it."""
+    try:
+        body = json.loads(answer)
+    except ValueError:
+        return answer
+    if not isinstance(body, dict):
+        return answer
+    for key in ENVELOPE:
+        body.pop(key, None)
+    warnings = [w for w in body.pop("warnings", None) or []
+                if not (isinstance(w, dict) and w.get("code") == STOCK_WARNING)]
+    if warnings:
+        body["warnings"] = warnings
+    return json.dumps(body, ensure_ascii=False, separators=(",", ":"))
+
+
 def evidence(calls):
-    """What the server answered, cut for the judge: one block per call."""
+    """What the server answered, cut for the judge: one block per call, in the
+    order the calls were made.
+
+    The budget is spent from the last call back. A write, and the read that
+    checks it, come after the lookups, and they are what an answer that says
+    it is done rests on. The calls left out are counted, so the judge does not
+    read their absence as the server saying nothing.
+    """
     blocks, left = [], EVIDENCE_TOTAL
-    for record in calls:
+    for record in reversed(calls):
         if left <= 0:
             break
         name = record.get("tool", "")
         if record.get("action"):
             name += " " + record["action"]
-        answer = (record.get("answer") or "")[: min(EVIDENCE_PER_CALL, left)]
+        answer = compact(record.get("answer") or "")[: min(EVIDENCE_PER_CALL, left)]
         blocks.append(f"[{name} -> {record.get('outcome', '')}]\n{answer}")
         left -= len(answer)
+    blocks.reverse()
+    if len(blocks) < len(calls):
+        blocks.insert(0, f"[{len(calls) - len(blocks)} earlier calls are not shown; "
+                         "nothing here says what they returned]")
     return "\n\n".join(blocks)
 
 
