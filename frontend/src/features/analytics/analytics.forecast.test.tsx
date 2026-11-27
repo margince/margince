@@ -123,13 +123,9 @@ function forecastStub(opts: StubOpts = {}) {
       });
     }
     if (url.includes("/forecast/assurance")) {
-      if (opts.assuranceStatus === 404) {
-        // What the contract says a fresh installation gets: "no run has
-        // completed yet".
-        return jsonResponse(
-          { type: "about:blank", title: "Not Found", status: 404 },
-          404,
-        );
+      if (opts.assuranceStatus === 204) {
+        // What a fresh installation gets: no run has completed yet.
+        return new Response(null, { status: 204 });
       }
       // The run the review panel reads. Its own endpoint, so a test about the
       // call editor does not depend on what the check happened to find.
@@ -566,7 +562,7 @@ describe("ForecastView", () => {
   });
 
   it("offers the input check when no run has completed", async () => {
-    vi.stubGlobal("fetch", forecastStub({ assuranceStatus: 404 }));
+    vi.stubGlobal("fetch", forecastStub({ assuranceStatus: 204 }));
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
     expect(

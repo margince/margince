@@ -182,7 +182,7 @@ function answerReasons(
   reader: string,
 ): string[] {
   // No brief run yet is a page that offers to make one, unless one is expected.
-  if (read === "brief" && status === 404 && !expected.brief) return [];
+  if (read === "brief" && status === 204 && !expected.brief) return [];
   if (status !== 200) return [`${read}: answered ${status}`];
   if (body === undefined) return [`${read}: answered 200 with no JSON body`];
   switch (read) {

@@ -93,9 +93,9 @@ export function voiceCorpusOwner(client: QueryClient): VoiceCorpusOwner {
 }
 
 export type RestoreInputs = Readonly<{
-  /** GET /onboarding/state; null when nothing was persisted (404). */
+  /** GET /onboarding/state; null when nothing was persisted (204). */
   state: OnboardingState | null;
-  /** GET /company; null while no human confirmed one (404), and always null
+  /** GET /company; null while no human confirmed one (204), and always null
    * for a seat that is not an admin, which may not read it. */
   profile: CompanyProfile | null;
   /** Whether the installation has described itself (useInstallationDescribed):

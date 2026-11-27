@@ -299,6 +299,9 @@ func indexPackageFuncs(fset *token.FileSet, files []*ast.File) map[string]*packa
 // a stand-in costs is a call on a value of an IMPORTED type, which the walk
 // would not follow in any case. The checker reports each reference into a
 // stand-in and moves past it, so one pass resolves everything else.
+//
+// It is not typedModule: it checks each compose package alone, with the
+// integration-tagged files the default build leaves out.
 func typeCheckLoosely(fset *token.FileSet, dir string, files []*ast.File) (*types.Info, int) {
 	info := &types.Info{
 		Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{},

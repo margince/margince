@@ -164,6 +164,20 @@ func (e *VersionSkewError) MessageFault() (code, message string) {
 	return "version_skew", e.Message
 }
 
+// ErrNothingYet is a read of something the caller may see that has no row
+// yet: no brief run, no saved draft, no check recorded. It is ErrNotFound
+// for every caller, so it answers 404. Only a request that asks for
+// `Prefer: absent=204` on an operation that declares it hears 204 instead.
+// A row-scope miss is never this error, so the 204 tells no one that a hidden
+// row exists.
+var ErrNothingYet error = nothingYet{}
+
+type nothingYet struct{}
+
+func (nothingYet) Error() string { return ErrNotFound.Error() }
+
+func (nothingYet) Unwrap() error { return ErrNotFound }
+
 // ErrUnsupportedBySoR is the declared capability gap a system-of-record
 // adapter answers with: a verb the frozen datasource seam names and this
 // adapter cannot serve (interfaces.md §0). A refusal, never a silent empty

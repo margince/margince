@@ -28,7 +28,7 @@ type onboardingStateHandlers struct {
 	proposal *onboardingProposalEngine
 }
 
-func (h onboardingStateHandlers) GetOnboardingState(w http.ResponseWriter, r *http.Request) {
+func (h onboardingStateHandlers) GetOnboardingState(w http.ResponseWriter, r *http.Request, _ crmcontracts.GetOnboardingStateParams) {
 	state, err := h.state.Get(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)

@@ -29,6 +29,7 @@ export function useEmployerSummary(companyId: string) {
         params: { path: { id: companyId } },
       });
       if (error) {
+        // absent-404: a company out of reach or gone draws a plain row.
         if (response.status === 403 || response.status === 404) {
           return null;
         }

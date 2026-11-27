@@ -234,7 +234,7 @@ func (h transcriptReadHandlers) GetTranscriptRead(w http.ResponseWriter, r *http
 	h.report(w, r, id, readID)
 }
 
-func (h transcriptReadHandlers) GetLatestTranscriptRead(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (h transcriptReadHandlers) GetLatestTranscriptRead(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, _ crmcontracts.GetLatestTranscriptReadParams) {
 	if h.latest == nil {
 		httperr.NotImplemented(w, r, "getLatestTranscriptRead (no job runner configured)")
 		return

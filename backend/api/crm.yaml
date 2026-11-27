@@ -5272,12 +5272,15 @@ paths:
       operationId: getPartner
       summary: Read the partner extension on a company (404 if the company is not a partner).
       x-mcp-tool: { verb: read_record, record_type: partner, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The partner record.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Partner' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -5486,12 +5489,15 @@ paths:
         404 when the account has never been looked up, which is the honest difference between
         "never tried" and "tried and found nothing".
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: What each source last did for this account.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TechnicalEnrichStatus' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -5518,12 +5524,15 @@ paths:
         404 when the number has never been consulted, which is the honest difference between
         "never asked" and "asked and told no".
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The current standing, and the proof it was checked.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CompanyVatCheck' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -5578,12 +5587,15 @@ paths:
         stand on. 404 when the account has never been read, which is the honest
         difference between "never tried" and "tried and got nothing".
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The newest read's report.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SiteReadReport' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -10915,12 +10927,15 @@ paths:
         exactly like one whose reading had failed. 404 when this transcript has never been read, which
         is the honest difference between "never tried" and "tried and got nothing".
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The newest reading's report.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TranscriptReadReport' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -11467,6 +11482,7 @@ paths:
         surface, not this route.
       x-mcp-tool: { verb: get_mail_draft, router: read_details, action: mail_draft, tier: auto_execute, scope: read, served_by: route }
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: anchor_type
           in: query
           required: true
@@ -11481,6 +11497,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MailDraft' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '404':
           description: |
             No draft of the caller's for this anchor, or an anchor the caller can no longer
@@ -20049,12 +20066,15 @@ paths:
         persisted state receives 404; the client starts from the server-derived creator/member path.
       x-mcp-tool: { verb: read_onboarding_state, router: read_workspace, action: onboarding_state, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The acting user's current onboarding state.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OnboardingState' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
     put:
@@ -20135,6 +20155,7 @@ paths:
       x-mcp-tool: { verb: read_onboarding_company_proposal, router: read_workspace, action: onboarding_company_proposal, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: locale
           in: query
           required: false
@@ -20150,6 +20171,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OnboardingCompanyProposal' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -20182,12 +20204,15 @@ paths:
         edit the installation's own name. Whether this installation has described itself YET is a
         different question and is not administered: the growth fit and the onboarding conversation
         both resolve it, for any seat.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The anchor company's profile.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CompanyProfile' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -25874,12 +25899,15 @@ paths:
         `404` when the contact is in no open case and was not merged away. A contact that was merged
         away answers `status: resolved` with the contact it went into, so a reviewer holding an old
         tab sees who settled it.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The case.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ContactCase' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -29654,12 +29682,15 @@ paths:
       x-mcp-tool: { verb: get_ownership_request, router: read_details, action: ownership_request, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: The caller's open request to be handed this record.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The caller's open request.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OwnershipRequest' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -29726,12 +29757,15 @@ paths:
       x-mcp-tool: { verb: get_edit_access_request, router: read_details, action: edit_access_request, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: The caller's open request for edit access to this record.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The caller's open request.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EditAccessRequest' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -29806,12 +29840,15 @@ paths:
       x-mcp-tool: { verb: get_ownership_offer, router: read_details, action: ownership_offer, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: The caller's open offer of this record.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The caller's open offer.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OwnershipOffer' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -34016,12 +34053,15 @@ paths:
       #
       # The tool spends one call, like every read.
       x-mcp-tool: { verb: read_brief, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The latest brief run with its ranked queue.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MorningBrief' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -34116,6 +34156,7 @@ paths:
         the team's week closed on.
       x-mcp-tool: { verb: get_team_weekly_review, router: read_details, action: team_weekly_review, tier: auto_execute, scope: read, served_by: route }
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: team
           in: query
           required: true
@@ -34133,6 +34174,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TeamWeeklyReview' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -34154,6 +34196,7 @@ paths:
         erase it. That is also why the weekly is its own aggregate rather than living on
         `brief_item`, whose rows cascade away with their deal.
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: week
           in: query
           required: false
@@ -34166,6 +34209,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WeeklyReview' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -34363,12 +34407,15 @@ paths:
         evaluated. Compared against the previous run it shows a pass that covered less of
         the pipeline.
       x-mcp-tool: { verb: forecast_input_checks, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The most recent completed run.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ForecastAssurance' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -34466,12 +34513,15 @@ paths:
         one would read as "checked up to then" when nothing was read at all — which is the
         difference between a quiet week and a broken connector.
       x-mcp-tool: { verb: data_coverage, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The most recent run's source health.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataCoverage' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -35647,12 +35697,15 @@ paths:
         would put an empty week in every rep's history the first time they opened the page,
         and "did this contact plan their week" would stop being answerable.
       x-mcp-tool: { verb: get_current_weekly_plan, router: read_details, action: weekly_plan, tier: auto_execute, scope: read, served_by: route }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The week as planned.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WeeklyPlan' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -35688,6 +35741,7 @@ paths:
         is itself something a stranger may not learn.
       x-mcp-tool: { verb: get_teammate_weekly_plan, router: read_details, action: teammate_weekly_plan, tier: auto_execute, scope: read, served_by: route }
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: owner_id
           in: path
           required: true
@@ -35699,6 +35753,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WeeklyPlan' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -38122,6 +38177,7 @@ paths:
         `chat_capture` reading (403): it is the model's transcript of an image that no quote
         could be checked against, a suggestion until someone files it, and not evidence.
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: question
           in: query
           required: false
@@ -38132,6 +38188,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AttachmentExtraction' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -40470,9 +40527,29 @@ components:
         rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
         re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
         Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+    PreferAbsent:
+      name: Prefer
+      in: header
+      schema: { type: string, maxLength: 1024 }
+      description: |
+        An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+        read finds nothing yet. The token is matched without case, and every other preference is
+        ignored. A row the caller may not see still answers `404`. Every answer of an operation
+        that takes this header carries `Vary: Prefer`.
 
   # --------------------------- shared responses -----------------------------
   responses:
+    NothingYet:
+      description: |
+        Nothing exists yet. Only when the request carries `Prefer: absent=204`; without it the same
+        case answers `404`.
+      headers:
+        Preference-Applied:
+          description: '`absent=204`, the preference this answer honours.'
+          schema: { type: string }
+        Vary:
+          description: '`Prefer`: the answer depends on that request header.'
+          schema: { type: string }
     Unauthorized:
       description: No valid credential — a missing/invalid/expired `crm_session` cookie (human path) or a missing/invalid/expired bearer token (agent path).
       content:

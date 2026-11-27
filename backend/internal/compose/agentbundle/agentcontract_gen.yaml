@@ -3070,12 +3070,15 @@ paths:
       tags: [Companies, Partners]
       operationId: getPartner
       summary: Read the partner extension on a company (404 if the company is not a partner).
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The partner record.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Partner'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: Read the partner extension on a company (404 if the company is not a partner).
@@ -3265,12 +3268,15 @@ paths:
         single verdict would hide which of them is stale: an account can hold a mail provider
         read this morning beside services last read a week ago because the certificate log has
         been down since.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: What each source last did for this account.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/TechnicalEnrichStatus'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -3288,12 +3294,15 @@ paths:
         the register issues — the receipt, tied to the number consulted and the day it was
         asked. A `valid` flag with no receipt proves nothing, which is why the receipt and the
         date the register itself reported both travel here.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The current standing, and the proof it was checked.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/CompanyVatCheck'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -3337,12 +3346,15 @@ paths:
         industry, no description, no facts — and a draft written from it had nothing to
         stand on. 404 when the account has never been read, which is the honest
         difference between "never tried" and "tried and got nothing".
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The newest read's report.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/SiteReadReport'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -7506,12 +7518,15 @@ paths:
         after the rep left the page could not be found again — and a transcript nobody had read looked
         exactly like one whose reading had failed. 404 when this transcript has never been read, which
         is the honest difference between "never tried" and "tried and got nothing".
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The newest reading's report.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/TranscriptReadReport'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -8026,6 +8041,7 @@ paths:
         left, a handover of their work (`handOverUserWork`) moves their drafts to the colleague
         who takes over, who from then on is the only one who reads them.
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: anchor_type
           in: query
           required: true
@@ -8040,6 +8056,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/MailDraft'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '404':
           description: |-
             No draft of the caller's for this anchor, or an anchor the caller can no longer
@@ -14014,12 +14031,15 @@ paths:
         voice artifacts, and connector grants remain in their owning resources. A user with no
         persisted state receives 404; the client starts from the server-derived creator/member path.
       security: [{bearerAuth: []}]
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The acting user's current onboarding state.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/OnboardingState'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '404': {$ref: '#/components/responses/NotFound'}
     put:
@@ -14067,6 +14087,7 @@ paths:
         read is still queued, deferred, or running.
       security: [{bearerAuth: []}]
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: locale
           in: query
           required: false
@@ -14081,6 +14102,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/OnboardingCompanyProposal'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404':
@@ -14101,12 +14123,15 @@ paths:
         saves the company form: that 404 IS the "this installation has not described itself yet" signal,
         and it is what onboarding gates on. Distinct from GET /companies/{id}, which reads the
         customer records.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The anchor company's profile.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/CompanyProfile'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404':
@@ -17214,12 +17239,15 @@ paths:
         `404` when the contact is in no open case and was not merged away. A contact that was merged
         away answers `status: resolved` with the contact it went into, so a reviewer holding an old
         tab sees who settled it.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The case.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ContactCase'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -19627,12 +19655,15 @@ paths:
       operationId: getOwnershipRequest
       security: [{bearerAuth: []}]
       summary: The caller's open request to be handed this record.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The caller's open request.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/OwnershipRequest'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -19705,12 +19736,15 @@ paths:
       operationId: getEditAccessRequest
       security: [{bearerAuth: []}]
       summary: The caller's open request for edit access to this record.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The caller's open request.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/EditAccessRequest'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -19790,12 +19824,15 @@ paths:
       operationId: getOwnershipOffer
       security: [{bearerAuth: []}]
       summary: The caller's open offer of this record.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The caller's open offer.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/OwnershipOffer'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -22953,12 +22990,15 @@ paths:
       tags: [Brief]
       operationId: getMorningBrief
       summary: Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The latest brief run with its ranked queue.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/MorningBrief'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404':
@@ -23021,6 +23061,7 @@ paths:
       summary: A team's week, frozen — what each member's week came to, and the one thing to raise.
       description: Home, Weekly reads it when a lead or an overseer picks a team.
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: team
           in: query
           required: true
@@ -23038,6 +23079,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/TeamWeeklyReview'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -23054,6 +23096,7 @@ paths:
         the deal you closed on Friday reclassified in March because somebody edited its stage —
         and a record of a past week that does that is not a record.
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: week
           in: query
           required: false
@@ -23065,6 +23108,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/WeeklyReview'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404':
@@ -23207,12 +23251,15 @@ paths:
         date that went by, an amount that disagrees with the offer that was sent, a deal
         nobody has heard from in ninety days. None is a bug in the arithmetic; every one
         makes the total wrong.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The most recent completed run.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ForecastAssurance'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404':
@@ -23272,12 +23319,15 @@ paths:
       description: |-
         Source health: which connectors the nightly check could read, how far back each
         reaches, and what it could not open.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The most recent run's source health.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/DataCoverage'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404':
@@ -24138,12 +24188,15 @@ paths:
       description: |-
         The forward half of the Brief's weekly. `/weekly-reviews/latest` is the week that
         closed, frozen and edited by nobody; this is the week running, authored by the rep.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The week as planned.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/WeeklyPlan'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -24178,6 +24231,7 @@ paths:
         shared-live-team question that decides whether a lead may open a rep's queue or put
         a notice in it — one seam, never a fourth spelling of "is this my colleague".
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: owner_id
           in: path
           required: true
@@ -24189,6 +24243,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/WeeklyPlan'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -25828,6 +25883,7 @@ paths:
         or is listed in `omitted` with reason "not_stated_in_file" — never a guessed value. Valid for any entity_type; the same parent-visibility gate as
         `downloadAttachment`/`listAttachments` applies.
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: question
           in: query
           required: false
@@ -25838,6 +25894,7 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/AttachmentExtraction'}
+        '204': {$ref: '#/components/responses/NothingYet'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
@@ -27258,7 +27315,27 @@ components:
         rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
         re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
         Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+    PreferAbsent:
+      name: Prefer
+      in: header
+      schema: {type: string, maxLength: 1024}
+      description: |-
+        An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+        read finds nothing yet. The token is matched without case, and every other preference is
+        ignored. A row the caller may not see still answers `404`. Every answer of an operation
+        that takes this header carries `Vary: Prefer`.
   responses:
+    NothingYet:
+      description: |-
+        Nothing exists yet. Only when the request carries `Prefer: absent=204`; without it the same
+        case answers `404`.
+      headers:
+        Preference-Applied:
+          description: '`absent=204`, the preference this answer honours.'
+          schema: {type: string}
+        Vary:
+          description: '`Prefer`: the answer depends on that request header.'
+          schema: {type: string}
     Unauthorized:
       description: No valid credential — a missing/invalid/expired `crm_session` cookie (human path) or a missing/invalid/expired bearer token (agent path).
       content:

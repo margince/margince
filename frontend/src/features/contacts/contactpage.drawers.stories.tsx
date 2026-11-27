@@ -289,7 +289,7 @@ export const ReplySourceOutsideTimeline: Story = {
         }),
       "GET /contacts/p-1": () => jsonResponse(contactView.contact),
       "GET /contacts/p-1/360": () => jsonResponse(contactView),
-      "GET /mail-drafts": () => jsonResponse({ code: "not_found" }, 404),
+      "GET /mail-drafts": () => new Response(null, { status: 204 }),
     });
     return (
       <StoryProviders>

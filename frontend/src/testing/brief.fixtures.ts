@@ -201,8 +201,6 @@ export function report(rows: unknown[], excluded = 0): Response {
   });
 }
 
-export const NOT_FOUND = { title: "Not Found", code: "no_digest_yet" };
-
 /**
  * `GET /deal-corrections/pending` on a night Margince changed no deal. Home
  * reads `bundles` off it beside the receipts. The contract marks `bundles`
