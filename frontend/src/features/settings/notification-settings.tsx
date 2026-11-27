@@ -60,7 +60,7 @@ const MAIL_GUIDE =
  * mail is still on the table for every class.
  *
  * With no mail on this installation, neither mailed choice is offered. The
- * stored and the drafted one stay listed, so the control still shows what the
+ * stored and the drafted one stay listed. So the control still shows what the
  * row holds and what Save would write, even when mail goes away mid-draft.
  */
 function choicesFor(

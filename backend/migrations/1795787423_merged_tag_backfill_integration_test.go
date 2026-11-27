@@ -41,7 +41,7 @@ func seedTagAudit(t *testing.T, conn *pgx.Conn, tag, after string, at time.Time)
 }
 
 // A tag merged before the column existed takes its survivor from the merge's
-// audit row, while no later row restored or retired it; a rename is not one.
+// audit row. A later restore or retirement undoes that, and a rename does not.
 func TestTheMergedTagBackfillNamesOnlyTagsStillMerged(t *testing.T) {
 	ownerDSN, _ := dsns(t)
 	conn := connect(t, ownerDSN)
@@ -52,7 +52,7 @@ func TestTheMergedTagBackfillNamesOnlyTagsStillMerged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	through := namespaceThroughVersion(t, core, "1795772058")
+	through := namespaceThroughVersion(t, core, "1795787423")
 	if _, err := dbmigrate.Up(ctx, conn, through); err != nil {
 		t.Fatalf("up: %v", err)
 	}
