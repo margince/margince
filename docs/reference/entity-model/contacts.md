@@ -2343,7 +2343,7 @@ The 51 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## site_read
 
-34 columns · primary key `(id)` · referenced by 5 foreign keys
+35 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -2369,6 +2369,7 @@ The 51 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `phase` | `text` |  | One of `crawling`, `extracting`. |
 | `profile_fields` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `proposal_hash` | `text`, default `''::text` | yes |  |
+| `proposal_ids` | `uuid[]`, default `'{}'::uuid[]` | yes |  |
 | `requested_by` | `text` | yes |  |
 | `seed_url` | `text` | yes |  |
 | `skipped` | `jsonb`, default `'[]'::jsonb` | yes |  |

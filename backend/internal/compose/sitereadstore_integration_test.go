@@ -143,8 +143,9 @@ func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T)
 	if done.StoppedReason == nil || *done.StoppedReason != "page_cap" {
 		t.Fatalf("stopped_reason = %v, want page_cap", done.StoppedReason)
 	}
-	if len(done.ProposalIDs) != 2 || done.ProposalIDs[0] != proposal || done.ProposalIDs[1] != other {
-		t.Fatalf("proposal_ids = %v, want [%s %s]: staging order, a repeat kept once", done.ProposalIDs, proposal, other)
+	if len(done.ProposalIDs) != 2 || done.ProposalIDs[0] != proposal || done.ProposalIDs[1] != other ||
+		e.WsCount(t, `SELECT count(*) FROM site_read WHERE id = $1 AND proposal_ids = ARRAY(SELECT approval_id FROM site_read_proposal WHERE site_read_id = $1 ORDER BY position)`, read.ID) != 1 {
+		t.Fatalf("proposal_ids = %v, want [%s %s] with keyed rows in that order: staging order, a repeat kept once", done.ProposalIDs, proposal, other)
 	}
 
 	// The terminal write is a CAS too: a finished read cannot finish again.

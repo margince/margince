@@ -124,16 +124,17 @@ func readLineCount(count int) *int {
 	return &count
 }
 
-// transcriptReadProposalsSQL reads the approvals a reading staged, in the order
-// it staged them, as one column of transcriptReadColumns.
-const transcriptReadProposalsSQL = `ARRAY(SELECT p.approval_id FROM transcript_read_proposal p
-	WHERE p.transcript_read_id = transcript_read.id ORDER BY p.position) AS proposal_ids`
-
 // storeTranscriptReadProposals records the approvals a reading staged, keeping
 // their order; a repeated id keeps its first place, and the list kept is
 // returned. A reading finishes once, under the row lock its UPDATE took.
+//
+// The list is stored twice, as proposal_ids and as keyed rows. This is the one
+// runtime writer of both, so the two agree for every reading it finishes.
 func storeTranscriptReadProposals(ctx context.Context, tx pgx.Tx, readID ids.UUID, proposals []ids.UUID) ([]ids.UUID, error) {
 	kept := storekit.FirstOccurrences(proposals)
+	if _, err := tx.Exec(ctx, `UPDATE transcript_read SET proposal_ids = $2 WHERE id = $1`, readID, kept); err != nil {
+		return nil, fmt.Errorf("store the transcript read's proposal list: %w", err)
+	}
 	if _, err := tx.Exec(ctx, `INSERT INTO transcript_read_proposal (transcript_read_id, approval_id, position)
 		SELECT $1, staged.approval_id, staged.n FROM unnest($2::uuid[]) WITH ORDINALITY AS staged(approval_id, n)`,
 		readID, kept); err != nil {

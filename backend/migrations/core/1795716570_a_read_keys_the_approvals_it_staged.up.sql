@@ -2,11 +2,9 @@
 -- SPDX-FileCopyrightText: 2026 Gradion
 
 -- A site read and a transcript read each list the approvals they staged. A
--- uuid[] cannot carry a foreign key, so each list becomes a table whose rows
--- key the approval, and position keeps the order the read staged them in.
---
--- The copy keeps an id only once and only while its approval exists: the key
--- cannot hold an id that names no approval.
+-- uuid[] cannot carry a foreign key, so each list gains a table whose rows key
+-- the approval, and position keeps the order the read staged them in. The data
+-- task core/1795716570_read_proposals_keyed fills it from the older reads.
 SET LOCAL lock_timeout = '3s';
 
 CREATE TABLE site_read_proposal (
@@ -34,20 +32,3 @@ CREATE TABLE transcript_read_proposal (
 );
 CREATE INDEX transcript_read_proposal_approval_ix ON transcript_read_proposal (approval_id);
 GRANT SELECT, INSERT, UPDATE, DELETE ON TABLE transcript_read_proposal TO margince_app;
-
-INSERT INTO site_read_proposal (site_read_id, approval_id, position)
-SELECT r.id, staged.approval_id, min(staged.n)
-  FROM site_read r
- CROSS JOIN LATERAL unnest(r.proposal_ids) WITH ORDINALITY AS staged(approval_id, n)
-  JOIN approval a ON a.id = staged.approval_id
- GROUP BY r.id, staged.approval_id;
-
-INSERT INTO transcript_read_proposal (transcript_read_id, approval_id, position)
-SELECT r.id, staged.approval_id, min(staged.n)
-  FROM transcript_read r
- CROSS JOIN LATERAL unnest(r.proposal_ids) WITH ORDINALITY AS staged(approval_id, n)
-  JOIN approval a ON a.id = staged.approval_id
- GROUP BY r.id, staged.approval_id;
-
-ALTER TABLE site_read DROP COLUMN proposal_ids;
-ALTER TABLE transcript_read DROP COLUMN proposal_ids;

@@ -172,6 +172,9 @@ func TestATranscriptReadingStagesACitedProposalAndWritesNothingYet(t *testing.T)
 	if len(read.ProposalIDs) != 1 {
 		t.Fatalf("want one staged proposal, got %d", len(read.ProposalIDs))
 	}
+	if e.WsCount(t, `SELECT count(*) FROM transcript_read_proposal WHERE transcript_read_id = $1 AND approval_id = $2 AND position = 1`, read.ID, read.ProposalIDs[0]) != 1 {
+		t.Error("the staged proposal has no keyed row beside proposal_ids")
+	}
 	if read.LineCount != 4 {
 		t.Errorf("the report must say how many lines were addressed; want 4, got %d", read.LineCount)
 	}

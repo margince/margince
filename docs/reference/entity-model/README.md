@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 356 |
-| Columns | 4351 |
+| Columns | 4353 |
 | Foreign keys | 623 |
 | Owning areas | 40 |
 
@@ -446,7 +446,7 @@ erDiagram
 | [`signal`](signals.md#signal) | signals | 31 | 3 |
 | [`signal_resolution`](signals.md#signal_resolution) | signals | 12 | 0 |
 | [`signal_thread_scan`](compose.md#signal_thread_scan) | compose | 10 | 0 |
-| [`site_read`](contacts.md#site_read) | contacts | 34 | 5 |
+| [`site_read`](contacts.md#site_read) | contacts | 35 | 5 |
 | [`site_read_proposal`](contacts.md#site_read_proposal) | contacts | 3 | 0 |
 | [`stage`](deals.md#stage) | deals | 11 | 5 |
 | [`stage_exit_criterion`](deals.md#stage_exit_criterion) | deals | 12 | 1 |
@@ -469,7 +469,7 @@ erDiagram
 | [`team_weekly_review_rep_funnel`](compose.md#team_weekly_review_rep_funnel) | compose | 13 | 0 |
 | [`team_weekly_review_rep_pattern`](compose.md#team_weekly_review_rep_pattern) | compose | 5 | 0 |
 | [`technical_lookup_cache`](contacts.md#technical_lookup_cache) | contacts | 6 | 0 |
-| [`transcript_read`](activities.md#transcript_read) | activities | 12 | 1 |
+| [`transcript_read`](activities.md#transcript_read) | activities | 13 | 1 |
 | [`transcript_read_proposal`](activities.md#transcript_read_proposal) | activities | 3 | 0 |
 | [`user_mfa`](identity.md#user_mfa) | identity | 5 | 1 |
 | [`user_record_view`](compose.md#user_record_view) | compose | 8 | 0 |

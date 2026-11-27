@@ -252,17 +252,18 @@ func (s *Store) FinishSiteRead(ctx context.Context, readID ids.UUID, in FinishSi
 	})
 }
 
-// siteReadProposalsSQL reads the approvals a dossier staged, in the order it
-// staged them, as one column of siteReadColumns.
-const siteReadProposalsSQL = `ARRAY(SELECT p.approval_id FROM site_read_proposal p
-	WHERE p.site_read_id = site_read.id ORDER BY p.position) AS proposal_ids`
-
 // storeSiteReadProposals replaces the approvals a dossier lists with proposals,
 // keeping their order; a repeated id keeps its first place, and the list kept
 // is returned. The caller holds the site_read row lock, so two writers never
 // interleave their lists.
+//
+// The list is stored twice, as proposal_ids and as keyed rows. This is the one
+// runtime writer of both, so the two agree for every read it writes.
 func storeSiteReadProposals(ctx context.Context, tx pgx.Tx, readID ids.UUID, proposals []ids.UUID) ([]ids.UUID, error) {
 	kept := storekit.FirstOccurrences(proposals)
+	if _, err := tx.Exec(ctx, `UPDATE site_read SET proposal_ids = $2 WHERE id = $1`, readID, kept); err != nil {
+		return nil, fmt.Errorf("store the site read's proposal list: %w", err)
+	}
 	if _, err := tx.Exec(ctx, `DELETE FROM site_read_proposal WHERE site_read_id = $1`, readID); err != nil {
 		return nil, fmt.Errorf("clear the site read's proposals: %w", err)
 	}
