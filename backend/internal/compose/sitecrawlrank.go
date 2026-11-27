@@ -69,16 +69,19 @@ func candidatePriority(cand crawlCandidate) int {
 	if boilerplatePath(cand.url) {
 		return priBoilerplate
 	}
-	pri, ok := kindPriority[classifyKind(cand.url)]
-	if !ok {
+	pri, classified := kindPriority[classifyKind(cand.url)]
+	if !classified {
 		pri = priOther
 	}
-	if demoted := pri - (pathDepth(cand.url)-1)*depthDemotion; demoted > priBoilerplate {
-		return demoted
+	pri -= (pathDepth(cand.url) - 1) * depthDemotion
+	if !classified {
+		// After the depth demotion, because /p/10428 is already two segments
+		// deep and the demotion alone floors every such URL at the same rank.
+		pri += cand.sitemapNudge
 	}
 	// A deep page still outranks a blog archive: boilerplate is the only
 	// band below everything, and depth alone never demotes into it.
-	return priBoilerplate + 1
+	return max(pri, priBoilerplate+1)
 }
 
 // legalIdentityPath recognizes pages that can plausibly state the

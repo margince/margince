@@ -98,7 +98,7 @@ type siteCrawl struct {
 // an in-memory site through it.
 type siteFetcher interface {
 	FetchPage(ctx context.Context, rawURL string) (webread.Page, error)
-	FetchSitemap(ctx context.Context, origin string) ([]string, error)
+	FetchSitemap(ctx context.Context, origin string) ([]webread.SitemapEntry, error)
 	// CrawlDelay reports what the host's robots.txt asks between requests,
 	// from the policy a fetch already resolved. False means it asked for none.
 	CrawlDelay(rawURL string) (time.Duration, bool)
@@ -203,6 +203,9 @@ type crawlCandidate struct {
 	// one-page-per-kind preference, and it exists only because we invented
 	// the path.
 	probe bool
+	// sitemapNudge is the rank shift the site's own sitemap metadata earns an
+	// otherwise unclassifiable URL (webread.SitemapEntry.RankNudge).
+	sitemapNudge int
 }
 
 // Crawl walks the seed's site breadth-first under the caps. The seed page
@@ -366,29 +369,30 @@ func newCrawlRun(c *siteCrawler, pacer crawlPacer, seedURL string, seedPage webr
 	}
 }
 
-// discover seeds the candidate queue in the documented deterministic order:
-// well-known probes on the seed's origin, then sitemap <loc>s, then the seed
+// discover seeds the candidate queue in a fixed order: well-known probes on
+// the seed's origin, then sitemap entries, then the seed
 // page's own nav links. Later fetches append THEIR links breadth-first.
 func (r *crawlRun) discover(ctx context.Context, origin string, seedPage webread.Page) {
 	for _, probe := range wellKnownProbes {
 		r.queue = append(r.queue, crawlCandidate{url: origin + probe.path, kind: probe.kind, probe: true})
 	}
-	sitemapLocs, err := r.crawler.fetch.FetchSitemap(ctx, origin)
+	sitemapEntries, err := r.crawler.fetch.FetchSitemap(ctx, origin)
 	if transientCrawlError(ctx, err) {
 		// A single slow sitemap response must not collapse an SPA site to its
 		// landing page. Retry once without delaying; the crawl's wall deadline
 		// remains the governing bound.
-		sitemapLocs, err = r.crawler.fetch.FetchSitemap(ctx, origin)
+		sitemapEntries, err = r.crawler.fetch.FetchSitemap(ctx, origin)
 	}
 	if err != nil {
 		// The sitemap is one of three discovery channels, and the flakiest:
 		// SPA catch-alls serve HTML at /sitemap.xml, robots may fence it off.
 		// Losing it narrows discovery; it must not fail a read that the
 		// probes and nav links can still carry.
-		sitemapLocs = nil
+		sitemapEntries = nil
 	}
-	for _, loc := range sitemapLocs {
-		r.queue = append(r.queue, crawlCandidate{url: loc})
+	newest := webread.NewestLastMod(sitemapEntries)
+	for _, entry := range sitemapEntries {
+		r.queue = append(r.queue, crawlCandidate{url: entry.Loc, sitemapNudge: entry.RankNudge(newest)})
 	}
 	r.queue = append(r.queue, linkCandidates(seedPage.Links)...)
 }

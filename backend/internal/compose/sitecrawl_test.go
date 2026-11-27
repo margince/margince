@@ -27,12 +27,13 @@ import (
 // fakeSite is an in-memory site behind the siteFetcher seam. It records every
 // URL the crawler asked for, so tests can assert what was NEVER fetched.
 type fakeSite struct {
-	pages         map[string]fakeSitePage
-	sitemap       []string
-	sitemapErrors []error
-	sitemapCalls  int
-	pageErrors    map[string][]error
-	pageCalls     map[string]int
+	pages          map[string]fakeSitePage
+	sitemap        []string
+	sitemapEntries []webread.SitemapEntry
+	sitemapErrors  []error
+	sitemapCalls   int
+	pageErrors     map[string][]error
+	pageCalls      map[string]int
 	// assets are the site's binary assets by URL (logo candidates).
 	assets map[string][]byte
 	// mu guards fetched/onFetch: the production crawler fetches waves
@@ -128,7 +129,7 @@ func (s *fakeSite) FetchAsset(_ context.Context, rawURL string) ([]byte, string,
 	return asset, "image/png", nil
 }
 
-func (s *fakeSite) FetchSitemap(context.Context, string) ([]string, error) {
+func (s *fakeSite) FetchSitemap(context.Context, string) ([]webread.SitemapEntry, error) {
 	s.mu.Lock()
 	defer s.mu.Unlock()
 	call := s.sitemapCalls
@@ -136,7 +137,11 @@ func (s *fakeSite) FetchSitemap(context.Context, string) ([]string, error) {
 	if call < len(s.sitemapErrors) && s.sitemapErrors[call] != nil {
 		return nil, s.sitemapErrors[call]
 	}
-	return s.sitemap, nil
+	entries := s.sitemapEntries
+	for _, loc := range s.sitemap {
+		entries = append(entries, webread.SitemapEntry{Loc: loc, Priority: 0.5})
+	}
+	return entries, nil
 }
 
 // instantPacer removes real-clock politeness from crawler tests; pacing has its

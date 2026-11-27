@@ -146,19 +146,35 @@ func TestFetchPageReportsWhereARedirectedBodyCameFrom(t *testing.T) {
 	}
 }
 
-func TestSitemapLocParsing(t *testing.T) {
+func TestSitemapEntryParsing(t *testing.T) {
+	jan := time.Date(2026, 1, 1, 0, 0, 0, 0, time.UTC)
 	cases := []struct {
 		name string
 		body string
-		want []string
+		want []SitemapEntry
 	}{
 		{
-			"urlset yields page URLs",
+			"urlset keeps lastmod, changefreq and priority beside each loc",
 			`<?xml version="1.0"?><urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
-				<url><loc>https://acme.example/</loc><lastmod>2026-01-01</lastmod></url>
+				<url><loc>https://acme.example/</loc><lastmod>2026-01-01</lastmod>
+					<changefreq>Weekly</changefreq><priority>1.0</priority></url>
 				<url><loc> https://acme.example/team </loc></url>
 			</urlset>`,
-			[]string{"https://acme.example/", "https://acme.example/team"},
+			[]SitemapEntry{
+				{Loc: "https://acme.example/", LastMod: jan, ChangeFreq: "weekly", Priority: 1},
+				{Loc: "https://acme.example/team", Priority: 0.5},
+			},
+		},
+		{
+			"a timestamp lastmod parses, unreadable metadata is dropped but the loc stays",
+			`<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">
+				<url><loc>https://acme.example/a</loc><lastmod>2026-01-01T00:00:00Z</lastmod></url>
+				<url><loc>https://acme.example/b</loc><lastmod>yesterday</lastmod><priority>7</priority></url>
+			</urlset>`,
+			[]SitemapEntry{
+				{Loc: "https://acme.example/a", LastMod: jan, Priority: 0.5},
+				{Loc: "https://acme.example/b", Priority: 0.5},
+			},
 		},
 		{
 			// Non-recursion: an index's <loc>s are child sitemap URLs and come
@@ -169,7 +185,10 @@ func TestSitemapLocParsing(t *testing.T) {
 				<sitemap><loc>https://acme.example/sitemap-pages.xml</loc></sitemap>
 				<sitemap><loc>https://acme.example/sitemap-blog.xml</loc></sitemap>
 			</sitemapindex>`,
-			[]string{"https://acme.example/sitemap-pages.xml", "https://acme.example/sitemap-blog.xml"},
+			[]SitemapEntry{
+				{Loc: "https://acme.example/sitemap-pages.xml", Priority: 0.5},
+				{Loc: "https://acme.example/sitemap-blog.xml", Priority: 0.5},
+			},
 		},
 		{
 			"an empty urlset yields nothing",
@@ -179,12 +198,12 @@ func TestSitemapLocParsing(t *testing.T) {
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
-			got, err := parseSitemapLocs(tc.body)
+			got, err := parseSitemapEntries(tc.body)
 			if err != nil {
 				t.Fatal(err)
 			}
 			if !reflect.DeepEqual(got, tc.want) {
-				t.Fatalf("locs = %v, want %v", got, tc.want)
+				t.Fatalf("entries = %+v, want %+v", got, tc.want)
 			}
 		})
 	}
@@ -196,9 +215,9 @@ func TestSitemapAbsenceIsNormal(t *testing.T) {
 	}))
 	defer srv.Close()
 
-	locs, err := testFetcher().FetchSitemap(context.Background(), srv.URL)
-	if err != nil || locs != nil {
-		t.Fatalf("missing sitemap = %v, %v — absence must be an empty list, not an error", locs, err)
+	entries, err := testFetcher().FetchSitemap(context.Background(), srv.URL)
+	if err != nil || entries != nil {
+		t.Fatalf("missing sitemap = %v, %v — absence must be an empty list, not an error", entries, err)
 	}
 }
 

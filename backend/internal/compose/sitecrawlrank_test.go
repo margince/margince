@@ -4,10 +4,12 @@
 package compose
 
 import (
+	"context"
 	"strings"
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/webread"
 )
 
 func TestClassifyKindSeparatesLegalIdentityFromLegalProductsAndPolicies(t *testing.T) {
@@ -205,5 +207,26 @@ func TestLegalIdentityPathKnowsOtherLanguagesNotMarketingPages(t *testing.T) {
 		if legalIdentityPath(url) {
 			t.Errorf("%s is not a legal notice, and treating it as one lets an address come off a marketing page", url)
 		}
+	}
+}
+
+func TestSitemapNudgeReordersOnlyURLsThePathCannotPlace(t *testing.T) {
+	opaque, team := seedURL+"/10428", seedURL+"/team"
+	if candidatePriority(crawlCandidate{url: opaque, sitemapNudge: 5}) <= candidatePriority(crawlCandidate{url: opaque}) ||
+		candidatePriority(crawlCandidate{url: team, sitemapNudge: -5}) != candidatePriority(crawlCandidate{url: team}) {
+		t.Error("a nudge must reorder opaque URLs and leave path-classified ones alone")
+	}
+}
+
+func TestCrawlSpendsItsLastPageOnTheSitemapsPrioritizedURL(t *testing.T) {
+	listed, prioritized := seedURL+"/p/1", seedURL+"/p/2"
+	site := &fakeSite{pages: seedOnly(), sitemapEntries: []webread.SitemapEntry{{Loc: listed, Priority: 0.5}, {Loc: prioritized, Priority: 1}}}
+	site.pages[listed] = fakeSitePage{text: readable("Listed first")}
+	site.pages[prioritized] = fakeSitePage{text: readable("Prioritized")}
+	crawler := testSiteCrawler(site)
+	crawler.maxPages = 2
+	crawl, err := crawler.Crawl(context.Background(), seedURL)
+	if err != nil || len(crawl.Pages) != 2 || crawl.Pages[1].URL != prioritized {
+		t.Fatalf("pages = %v, err = %v, want the seed then %s", crawl.Pages, err, prioritized)
 	}
 }
