@@ -110,7 +110,7 @@ func readAs[V any](t *testing.T, e *seamEnv, ref datasource.EntityRef) V {
 
 func (e *seamEnv) search(t *testing.T, typ datasource.EntityType, filters map[string]string) []datasource.Record {
 	t.Helper()
-	rows, _, _, err := e.provider.SearchEntity(e.passport(), typ, nil, 50, nil, filters)
+	rows, _, _, err := e.provider.SearchEntity(e.passport(), typ, nil, 50, nil, nil, filters)
 	if err != nil {
 		t.Fatalf("listing %s through the seam: %v", typ, err)
 	}
@@ -264,7 +264,7 @@ func TestTheSeamCarriesAnOfferAndItsLines(t *testing.T) {
 // not found rather than an empty page.
 func TestAnOfferListOnAnUnknownDealAnswersNotFound(t *testing.T) {
 	e := setupSeamEnv(t)
-	_, _, _, err := e.provider.SearchEntity(e.passport(), datasource.EntityOffer, nil, 10, nil,
+	_, _, _, err := e.provider.SearchEntity(e.passport(), datasource.EntityOffer, nil, 10, nil, nil,
 		map[string]string{"deal_id": ids.NewV7().String()})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Errorf("listing the offers of an unknown deal answered %v, want not found", err)

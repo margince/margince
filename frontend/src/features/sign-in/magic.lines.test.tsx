@@ -371,7 +371,7 @@ describe("a line names its record once", () => {
     expect(occurrences(item.textContent ?? "", "Ines Kraft")).toBe(1);
     // A decision is a task card: its sentence is the title, its record a chip.
     expect(item.querySelector(".brief-task-title")?.textContent).toBe(
-      "Someone new wrote to you. Keep as a contact?",
+      en["magic.action.approval_capture_counterparty"],
     );
     expect(within(item).getByText("Ines Kraft")).toBeTruthy();
   });

@@ -190,7 +190,9 @@ describe("the two-step sign-in row", () => {
 
     await user.type(passwordField(), PASSWORD);
     await user.click(within(dialog).getByRole("button", { name: "Turn on" }));
-    await within(dialog).findByRole("textbox", { name: "Recovery codes" });
+    await within(dialog).findByRole("textbox", {
+      name: englishCopy["mfa.codesLabel"],
+    });
     expect(server.sent).toContainEqual({
       route: "POST /v1/me/mfa/totp/confirm",
       body: { current_password: PASSWORD, code: "123456" },
@@ -373,7 +375,9 @@ describe("the two-step sign-in row", () => {
       "123456",
     );
     await user.click(within(dialog).getByRole("button", { name: "Turn on" }));
-    await within(dialog).findByRole("textbox", { name: "Recovery codes" });
+    await within(dialog).findByRole("textbox", {
+      name: englishCopy["mfa.codesLabel"],
+    });
 
     await user.keyboard("{Escape}");
     await user.click(within(dialog).getByRole("button", { name: /close/i }));

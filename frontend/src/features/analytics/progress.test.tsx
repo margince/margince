@@ -99,7 +99,11 @@ describe("ProgressResult", () => {
         /A colleague who manages sales goals can publish one\.$/,
       ),
     ).toBeTruthy();
-    expect(screen.queryByRole("link", { name: "Set sales goals" })).toBeNull();
+    expect(
+      screen.queryByRole("link", {
+        name: englishCopy["progress.setGoals"],
+      }),
+    ).toBeNull();
   });
 
   it("links a reader who may set the missing goal to the sales goals", () => {
@@ -116,7 +120,7 @@ describe("ProgressResult", () => {
     );
     expect(
       screen
-        .getByRole("link", { name: "Set sales goals" })
+        .getByRole("link", { name: englishCopy["progress.setGoals"] })
         .getAttribute("href"),
     ).toBe("/#/goals?year=2026");
   });
@@ -436,7 +440,9 @@ describe("ProgressScreen", () => {
     );
     // Analytics does not offer this reader the one team member, so no door.
     expect(
-      screen.queryByRole("link", { name: "Open in Analytics" }),
+      screen.queryByRole("link", {
+        name: englishCopy["palette.openAnalytics"],
+      }),
     ).toBeNull();
   });
 
@@ -472,9 +478,11 @@ describe("ProgressScreen", () => {
         /^Figures up to .+ · Central European Summer Time · UTC\+2$/,
       ),
     ).toBeTruthy();
-    expect(screen.queryByLabelText("Team member or team")).toBeNull();
+    expect(screen.queryByLabelText(englishCopy["progress.scope"])).toBeNull();
     // A link, so the reader can open Analytics in a new tab.
-    const analytics = screen.getByRole("link", { name: "Open in Analytics" });
+    const analytics = screen.getByRole("link", {
+      name: englishCopy["palette.openAnalytics"],
+    });
     expect(analytics.getAttribute("href")).toMatch(
       /#\/analytics\/performance\?/,
     );
@@ -501,7 +509,7 @@ describe("ProgressScreen", () => {
     const user = userEvent.setup();
     render(<ProgressScreen />);
     const links = await screen.findAllByRole("link", {
-      name: "View sales goals",
+      name: englishCopy["progress.viewGoals"],
     });
     await user.click(links[links.length - 1] as HTMLElement);
     expect(window.location.hash).toMatch(/^#\/goals\?/);

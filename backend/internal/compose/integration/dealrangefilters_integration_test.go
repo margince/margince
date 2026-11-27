@@ -222,7 +222,7 @@ func TestTheAgentsDealFilterTakesACodeInEitherCaseAndRefusesAMalformedOne(t *tes
 	dollars := f.rangeDeal(t, "USD 500", deals.CreateDealInput{Source: "manual", AmountMinor: new(int64(50000)), Currency: new("USD")})
 	f.rangeDeal(t, "EUR 300", deals.CreateDealInput{Source: "manual", AmountMinor: new(int64(30000)), Currency: new("EUR")})
 	search := func(filters map[string]string) ([]datasource.Record, error) {
-		records, _, _, err := dealProvider(f.e).SearchEntity(f.e.Admin(), datasource.EntityDeal, nil, 25, nil, filters)
+		records, _, _, err := dealProvider(f.e).SearchEntity(f.e.Admin(), datasource.EntityDeal, nil, 25, nil, nil, filters)
 		return records, err
 	}
 

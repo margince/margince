@@ -45,6 +45,7 @@ func (h Handlers) MergeCompany(w http.ResponseWriter, r *http.Request, id crmcon
 func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params crmcontracts.ListCompaniesParams) {
 	in := ListCompaniesInput{
 		Cursor:           params.Cursor,
+		Offset:           params.Offset,
 		Limit:            params.Limit,
 		Query:            params.Q,
 		IncludeArchived:  params.IncludeArchived != nil && *params.IncludeArchived,

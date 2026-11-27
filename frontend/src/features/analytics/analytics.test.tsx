@@ -179,10 +179,14 @@ describe("the data coverage section", () => {
     const user = userEvent.setup();
     await user.click(await screen.findByRole("button", { name: "Setup" }));
     expect(
-      await screen.findByRole("button", { name: "Data coverage" }),
+      await screen.findByRole("button", {
+        name: en["analytics.sectionCoverage"],
+      }),
     ).toBeTruthy();
     expect(askedCoverage()).toBe(false);
-    await user.click(screen.getByRole("button", { name: "Data coverage" }));
+    await user.click(
+      screen.getByRole("button", { name: en["analytics.sectionCoverage"] }),
+    );
     await waitFor(() => expect(askedCoverage()).toBe(true));
   });
 

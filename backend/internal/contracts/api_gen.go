@@ -62418,7 +62418,7 @@ type PageInfo struct {
 	// NextCursor Opaque cursor for the next page, or null if none.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
-	// Total How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company and lead lists count on the first page only and send no total with a cursor, so a client keeps the first page's total while it loads further pages.
+	// Total How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company, lead, deal and project lists count on a page read without a cursor, which is the first page or a page opened by `offset`, and send no total with a cursor, so a client keeps that total while it loads further pages.
 	Total *int `json:"total,omitempty" minimum:"0"`
 }
 
@@ -78057,6 +78057,9 @@ type Limit = int
 // ListMembershipFilter defines model for ListMembershipFilter.
 type ListMembershipFilter = openapi_types.UUID
 
+// Offset defines model for Offset.
+type Offset = int
+
 // PreferAbsent defines model for PreferAbsent.
 type PreferAbsent = string
 
@@ -78218,7 +78221,8 @@ type ListActivitiesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -78780,7 +78784,8 @@ type ListAiCallsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79115,7 +79120,8 @@ type ListSalesProgressDealsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79239,7 +79245,8 @@ type ListReportRunsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79450,7 +79457,8 @@ type ListApprovalsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79573,7 +79581,8 @@ type ListAttachmentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79628,7 +79637,8 @@ type ListAuditLogParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79703,7 +79713,8 @@ type ListAutomationsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79729,7 +79740,8 @@ type ListAutomationRunsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79889,7 +79901,8 @@ type ListMyCaptureActivityParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79905,7 +79918,8 @@ type ListWorkspaceCaptureActivityParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79927,7 +79941,8 @@ type ListDomainQuestionsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79969,7 +79984,8 @@ type ListHeldThreadsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80046,7 +80062,8 @@ type ListCommissionEntriesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80120,12 +80137,16 @@ type ListCompaniesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -80400,7 +80421,8 @@ type GetCompanyAccessParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80467,7 +80489,8 @@ type ListCompanyContactsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80486,7 +80509,8 @@ type ListCompanyContractsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80509,7 +80533,8 @@ type ListCompanyDocumentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -81337,12 +81362,16 @@ type ListContactsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -81629,7 +81658,8 @@ type GetContactAccessParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -81677,7 +81707,8 @@ type ListContactOverridesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82089,7 +82120,8 @@ type ListCustomFieldsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82256,7 +82288,8 @@ type ListDataSubjectRequestsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82315,7 +82348,8 @@ type ListDealRoomsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82524,12 +82558,16 @@ type ListDealsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -82856,7 +82894,8 @@ type ListDealDocumentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82973,7 +83012,8 @@ type ListDealOffersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83164,7 +83204,8 @@ type GetFieldHistoryParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83209,7 +83250,8 @@ type ListFinanceSourceCustomersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83376,7 +83418,8 @@ type ListImportRunsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83461,7 +83504,8 @@ type ListAgentClientsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83635,12 +83679,16 @@ type ListLeadsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -84045,7 +84093,8 @@ type ExplainLeadScoreParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84148,7 +84197,8 @@ type ListListHistoryParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84164,7 +84214,8 @@ type ListListMembersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84441,7 +84492,8 @@ type ListOfferTemplatesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84807,7 +84859,8 @@ type ListPartnersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85024,7 +85077,8 @@ type ListProductsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85116,12 +85170,16 @@ type ListProjectsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -85376,7 +85434,8 @@ type ListProjectHealthAssessmentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85773,7 +85832,8 @@ type ListRecordGrantsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85916,7 +85976,8 @@ type GetRecordHistoryParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86102,7 +86163,8 @@ type ListRelationshipsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86181,7 +86243,8 @@ type ListArchivedActivitiesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86226,7 +86289,8 @@ type ListLegalHoldsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86300,7 +86364,8 @@ type ListRestrictedActivitiesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86537,7 +86602,8 @@ type SearchParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86558,7 +86624,8 @@ type ListSignalsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86883,7 +86950,8 @@ type ListTeamsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86905,7 +86973,8 @@ type ListUsersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -87217,7 +87286,8 @@ type ListVoiceProfileDeltasParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -87340,7 +87410,8 @@ type ListVoiceProfileVersionsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -87502,7 +87573,8 @@ type ListWebhookDeliveriesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -127711,6 +127783,19 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "limit" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
@@ -132755,6 +132840,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
 		}
 		return
 	}
@@ -137907,6 +138005,19 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
 		}
 		return
 	}
@@ -145169,6 +145280,19 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
 		}
 		return
 	}
@@ -152594,6 +152718,19 @@ func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
 		}
 		return
 	}

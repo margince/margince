@@ -26,6 +26,12 @@ const readsAList = (file: CensusFile) =>
   /\buseListQuery</.test(file.text) &&
   !/export function useListQuery/.test(file.text);
 
+/** The limits a fetcher may send: the page size's, or the reach's for a jump. */
+const DERIVED_LIMITS: ReadonlySet<string> = new Set([
+  "listFetchLimit(query.perPage)",
+  "listFetchLimit(query.perPage, reach)",
+]);
+
 /**
  * Whether the list fetcher's own `limit` derives from the query. A typeahead on
  * the same screen caps itself, so the fetcher is found by the `cursor` beside
@@ -35,14 +41,14 @@ export function pageSizeFindings(file: CensusFile, tree: CensusTree): string[] {
   const body =
     listFetcherBody(fromSrc(file), file.text, treeModules(tree)) ?? file.text;
   const fetcher = body.match(
-    /cursor: cursor \|\| undefined,\s*\n\s*limit: ([^,\n]+),/,
+    /cursor: cursor \|\| undefined,\s*\n\s*limit: ([^\n]+),\n/,
   );
   if (!fetcher) {
     return [
       `${file.rel} has no list fetcher shaped like the shared one; if the shape changed, change this check with it`,
     ];
   }
-  return fetcher[1] === "listFetchLimit(query.perPage)"
+  return DERIVED_LIMITS.has(fetcher[1])
     ? []
     : [`${file.rel} sends the page limit ${fetcher[1]}`];
 }

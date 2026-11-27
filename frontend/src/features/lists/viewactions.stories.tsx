@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en } from "../../i18n/en";
 import type { SavedView } from "../../lib/savedviews.queries";
 import {
   installFetchStub,
@@ -82,9 +83,7 @@ export const RenameTakenName: Story = {
         name: "Rename",
       }),
     );
-    await page.findByText(
-      "A view with this name already exists. Choose another name.",
-    );
+    await page.findByText(en["views.nameTaken"]);
   },
 };
 

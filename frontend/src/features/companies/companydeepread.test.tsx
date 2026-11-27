@@ -279,9 +279,7 @@ describe("company-360 deep read", () => {
 
     await waitFor(() => expect(screen.getByText("Failed")).toBeTruthy());
     expect(
-      screen.getByText(
-        "Margince could not finish the read. The cause is on this installation, not on the site, and an admin finds it in the server log.",
-      ),
+      screen.getByText(englishCopy["deepread.failure.internal"]),
     ).toBeTruthy();
   });
 

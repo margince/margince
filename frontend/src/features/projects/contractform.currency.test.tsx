@@ -154,7 +154,9 @@ describe("recording an agreement's value", () => {
       /^USD/,
     );
     await user.type(screen.getByLabelText(/^Title/), "MSA 2026");
-    await user.click(screen.getByRole("button", { name: "Record contract" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["contracts.form.title"] }),
+    );
 
     await waitFor(async () =>
       expect(await writtenBody(seen, "POST")).toMatchObject({

@@ -20,6 +20,7 @@ import (
 func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmcontracts.ListLeadsParams) {
 	in := ListLeadsInput{
 		Cursor:          params.Cursor,
+		Offset:          params.Offset,
 		Limit:           params.Limit,
 		Query:           params.Q,
 		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,

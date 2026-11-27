@@ -71,12 +71,12 @@ func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource
 // clause — see listfilters.go: a caller who narrowed a search and got every row
 // back has been told something false about what they are looking at.
 func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, text *string, limit int, cursor *string,
-	filters map[string]string,
+	offset *int, filters map[string]string,
 ) ([]datasource.Record, string, bool, error) {
 	if t != datasource.EntityProject {
 		return nil, "", false, &datasource.UnsupportedEntityError{Type: string(t)}
 	}
-	in := ListProjectsInput{Query: text, Limit: &limit, Cursor: cursor}
+	in := ListProjectsInput{Query: text, Limit: &limit, Cursor: cursor, Offset: offset}
 	if err := projectListFilters.ApplyCustom(&in, filters, func(in *ListProjectsInput, custom map[string]string) { in.CustomFilters = custom }); err != nil {
 		return nil, "", false, err
 	}

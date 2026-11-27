@@ -805,7 +805,7 @@ describe("the forced two-step setup, held at the boundary", () => {
       "123 456",
     );
     await user.click(screen.getByRole("button", { name: "Turn on" }));
-    await screen.findByRole("textbox", { name: "Recovery codes" });
+    await screen.findByRole("textbox", { name: englishCopy["mfa.codesLabel"] });
 
     const readsBefore = server.meReads();
     focusManager.setFocused(false);

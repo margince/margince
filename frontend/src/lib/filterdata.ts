@@ -232,6 +232,7 @@ const FILTER_ONLY_FIELD_LABELS = new Map<string, MessageKey>([
   ["phase", "filters.field.phase"],
   ["pipeline_id", "filters.field.pipeline_id"],
   ["relationship_type", "filters.field.relationship_type"],
+  ["stage_id", "filters.field.stage_id"],
   ["tag", "filters.field.tag"],
   ["technology", "filters.field.technology"],
 ]);

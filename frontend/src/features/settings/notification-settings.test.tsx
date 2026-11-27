@@ -259,7 +259,9 @@ describe("NotificationSettingsCard", () => {
     );
     const automations = screen.getByRole("listbox");
     expect(
-      within(automations).queryByRole("option", { name: "Daily digest" }),
+      within(automations).queryByRole("option", {
+        name: en["notifications.delivery.digest"],
+      }),
     ).toBeNull();
     expect(
       within(automations).getByRole("option", { name: "In the app" }),
@@ -273,7 +275,7 @@ describe("NotificationSettingsCard", () => {
     await user.click(approvals);
     expect(
       within(screen.getByRole("listbox")).queryByRole("option", {
-        name: "Daily digest",
+        name: en["notifications.delivery.digest"],
       }),
     ).toBeNull();
   });
@@ -300,7 +302,7 @@ describe("NotificationSettingsCard", () => {
     expect(
       screen.getByRole("combobox", { name: /Automations that ran/i })
         .textContent,
-    ).toContain("Daily digest");
+    ).toContain(en["notifications.delivery.digest"]);
   });
 
   it("points an administrator at the mail setup, and a rep at nothing", async () => {

@@ -149,24 +149,24 @@ it("keeps the quarter's cards and Shared links on a week, and says why Share vie
     </StoryProviders>,
   );
   expect(
-    await screen.findByRole("button", { name: "Shared links" }),
+    await screen.findByRole("button", {
+      name: englishCopy["analytics.share.listOpen"],
+    }),
   ).toBeVisible();
   expect(screen.getByRole("button", { name: "Share view" })).toHaveAttribute(
     "disabled",
   );
   expect(
-    screen.getAllByText(
-      "Sharing covers the quarter. Choose Quarter to share this view.",
-    ).length,
+    screen.getAllByText(englishCopy["analytics.share.quarterOnly"]).length,
   ).toBeGreaterThan(0);
-  expect(
-    screen.getByText("The two pipeline cards below cover the quarter."),
-  ).toBeVisible();
+  expect(screen.getByText(englishCopy["forecast.quarterCards"])).toBeVisible();
   expect(
     await screen.findByRole("button", { name: /Opening.*760/ }),
   ).toBeVisible();
   expect(
-    screen.queryByRole("combobox", { name: "Snapshot to share" }),
+    screen.queryByRole("combobox", {
+      name: englishCopy["reporting.shareSnapshot"],
+    }),
   ).not.toBeInTheDocument();
 });
 

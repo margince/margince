@@ -84,7 +84,9 @@ describe("SalesGoalsScreen", () => {
     });
     render(<SalesGoalsScreen />);
     const plan = await screen.findByText("Sales goals of Alex Brandt for 2026");
-    const roster = screen.getByRole("complementary", { name: "Team members" });
+    const roster = screen.getByRole("complementary", {
+      name: englishCopy["users.teamMembersLabel"],
+    });
     expect(
       plan.compareDocumentPosition(roster) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
@@ -241,7 +243,9 @@ describe("GoalEditor", () => {
     const yearly = screen.getByLabelText("Yearly goal in EUR");
     await user.clear(yearly);
     await user.type(yearly, "100000");
-    await user.click(screen.getByRole("button", { name: "Spread equally" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["goals.spread"] }),
+    );
     await waitFor(() =>
       expect(screen.getByLabelText<HTMLInputElement>("January").value).toBe(
         "€8,333.34",
@@ -261,13 +265,12 @@ describe("GoalEditor", () => {
     await user.clear(yearly);
     await user.type(yearly, "-1200");
     expect(
-      (await screen.findAllByText("The yearly goal must be more than zero."))
-        .length,
+      (await screen.findAllByText(englishCopy["goals.positiveFirst"])).length,
     ).toBeGreaterThan(0);
     expect(yearly.getAttribute("aria-invalid")).toBe("true");
     expect(
       screen
-        .getByRole("button", { name: "Spread equally" })
+        .getByRole("button", { name: englishCopy["goals.spread"] })
         .hasAttribute("disabled"),
     ).toBe(true);
     expect(screen.queryByText(/not the yearly goal of/)).toBeNull();

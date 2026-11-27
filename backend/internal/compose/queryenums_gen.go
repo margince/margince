@@ -426,6 +426,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/companies": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 	},
 	"GET /v1/companies/{id}/access": {
 		{Name: "limit", Minimum: 1},
@@ -447,6 +448,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/contacts": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 	},
 	"GET /v1/contacts/{id}/access": {
 		{Name: "limit", Minimum: 1},
@@ -471,6 +473,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/deals": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 		{Name: "value_max", Minimum: 0},
 		{Name: "value_min", Minimum: 0},
 		{Name: "win_probability_max", Minimum: 0},
@@ -509,6 +512,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/leads": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 	},
 	"GET /v1/leads/{id}/score": {
 		{Name: "limit", Minimum: 1},
@@ -557,6 +561,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/projects": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 	},
 	"GET /v1/projects/{id}/health-assessments": {
 		{Name: "limit", Minimum: 1},

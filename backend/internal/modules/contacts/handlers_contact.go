@@ -56,6 +56,7 @@ func uuidArgs(in *[]openapi_types.UUID) []ids.UUID {
 func (h Handlers) ListContacts(w http.ResponseWriter, r *http.Request, params crmcontracts.ListContactsParams) {
 	in := ListContactsInput{
 		Cursor:          params.Cursor,
+		Offset:          params.Offset,
 		Limit:           params.Limit,
 		Query:           params.Q,
 		IncludeArchived: params.IncludeArchived != nil && *params.IncludeArchived,

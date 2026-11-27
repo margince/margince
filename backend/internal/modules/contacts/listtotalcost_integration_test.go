@@ -33,7 +33,7 @@ func TestExactListTotalUsesExhaustedFirstPage(t *testing.T) {
 					}
 					later := cursor != nil && *cursor != ""
 					if later && page.Total != nil {
-						t.Fatalf("a page after the first sent total %d; only the first page counts", *page.Total)
+						t.Fatalf("a page read through a cursor sent total %d; it sends none", *page.Total)
 					}
 					if !later && (page.Total == nil || *page.Total != count) {
 						t.Fatalf("total = %v, want %d", page.Total, count)

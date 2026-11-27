@@ -551,6 +551,7 @@ paths:
           schema: {type: string, enum: [mr, ms, none, unset]}
           description: Filter by an explicit salutation; unset finds records whose choice is null.
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -1892,6 +1893,7 @@ paths:
       summary: List companies (live by default; cursor-paginated).
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -4299,6 +4301,7 @@ paths:
       summary: List deals (live by default; cursor-paginated). Supports Kanban-by-stage reads.
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -5419,6 +5422,7 @@ paths:
       summary: List projects (live by default; cursor-paginated).
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Sort'
         - $ref: '#/components/parameters/IncludeArchived'
@@ -8947,6 +8951,7 @@ paths:
           schema: {type: string, enum: [mr, ms, none, unset]}
           description: Filter by an explicit salutation; unset finds records whose choice is null.
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -27379,11 +27384,18 @@ components:
         Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
         effective `sort` of the originating request (field + direction) plus the last row's keyset
         (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-        under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+        under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+        to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
         together with a `sort` that differs from the one the cursor was minted under returns
         `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
         **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
         remaining pages see, so re-issue the query without the cursor when changing filters.
+    Offset:
+      name: offset
+      in: query
+      schema: {type: integer, minimum: 0, maximum: 10000}
+      description: >-
+        Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
     Limit:
       name: limit
       in: query
@@ -32519,7 +32531,7 @@ components:
           type: integer
           minimum: 0
           description: >-
-            How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company and lead lists count on the first page only and send no total with a cursor, so a client keeps the first page's total while it loads further pages.
+            How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company, lead, deal and project lists count on a page read without a cursor, which is the first page or a page opened by `offset`, and send no total with a cursor, so a client keeps that total while it loads further pages.
     Address:
       type: [object, 'null']
       description: Structured postal address.

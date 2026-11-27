@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 250623,
+    "tool_catalog_bytes": 250819,
     "resource_catalog_bytes": 5618,
-    "approx_wire_tokens_total": 64060,
+    "approx_wire_tokens_total": 64109,
     "largest_tool_bytes": 15878,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 52323,
-      "input_schema_bytes": 151973,
+      "input_schema_bytes": 152169,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 204296
+      "description_plus_input_schema_bytes": 204492
     }
   },
   "tools": {
@@ -2961,6 +2961,12 @@
               "description": "list, meaning, search only; at most 25 for meaning, search.",
               "maximum": 50,
               "minimum": 1,
+              "type": "integer"
+            },
+            "offset": {
+              "description": "list only: Skips rows in the list's order; cannot be sent with cursor. Contact, company, deal, lead and project lists only.",
+              "maximum": 10000,
+              "minimum": 0,
               "type": "integer"
             },
             "per_type": {

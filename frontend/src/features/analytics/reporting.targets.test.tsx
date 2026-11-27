@@ -128,7 +128,9 @@ describe("ReportingTargets", () => {
     ).toBeTruthy();
     expect(within(row).getByText("€1,140,000")).toBeTruthy();
     expect(within(row).getByText("Sales goals 2026 · 12 months")).toBeTruthy();
-    const goals = within(row).getByRole("link", { name: "Open sales goals" });
+    const goals = within(row).getByRole("link", {
+      name: englishCopy["reporting.openGoals"],
+    });
     expect(goals.getAttribute("href")).toContain(
       `seller=${goalRoster.data[1]?.owner_id}`,
     );

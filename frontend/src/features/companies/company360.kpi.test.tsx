@@ -653,7 +653,7 @@ describe("the money slot says WHY it has no figure", () => {
     renderCompany();
     const region = await strip();
     expect(
-      (await screen.findAllByText("First sync pending")).length,
+      (await screen.findAllByText(englishCopy["co.strip.fin.syncing"])).length,
     ).toBeGreaterThan(0);
     expect(region.textContent).not.toMatch(/Accounting not connected/);
   });
