@@ -109,7 +109,7 @@ func TestExplainClassifiesEveryCallerFacingRefusal(t *testing.T) {
 		{"seat tier", fmt.Errorf("seat: %w", apperrors.ErrSeatTierInsufficient), "seat_tier_insufficient", false},
 		{"consent", fmt.Errorf("send: %w", apperrors.ErrConsentNotGranted), "consent_not_granted", false},
 		{"budget", fmt.Errorf("quota: %w", apperrors.ErrBudgetExceeded), "rate_limited", true},
-		{"bad fields", &datasource.FieldDecodeError{Cause: &datasource.UnknownFieldError{Fields: []string{"subjekt"}}}, "invalid_field", false},
+		{"bad fields", &datasource.FieldDecodeError{Cause: &datasource.UnknownFieldError{Fields: []string{"subjekt"}}}, "unknown_field", false},
 		{"unserved entity", &datasource.UnsupportedEntityError{Type: "invoice"}, "unsupported_entity_type", false},
 		{"malformed cursor", &storekit.MalformedCursorError{}, "malformed_cursor", false},
 		{"cursor sort mismatch", &storekit.CursorSortMismatchError{}, "cursor_param_mismatch", false},

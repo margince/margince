@@ -137,7 +137,7 @@ func TestAnActivityCreateStillNamesAMisspeltField(t *testing.T) {
 		"a misspelt core field": {AnyMap{"subjekt": "x"}, `unknown field "subjekt"`},
 		"a nested shape fault": {
 			AnyMap{"links": []AnyMap{{"entity_type": "contact", "entity_id": 5}}},
-			"`links.0.entity_id` must be",
+			"`links[0].entity_id` must be",
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
