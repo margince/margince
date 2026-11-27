@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
@@ -357,7 +358,9 @@ describe("paging the rows", () => {
     );
     expect(bodies.at(-1)).toMatchObject({ limit: 100, cursor: "100" });
     // The count is the whole match count on every page.
-    expect(screen.getByText(/101 to 200 of 214 contacts/)).toBeTruthy();
+    expect(document.querySelector(".lt-count")).toHaveTextContent(
+      /^101-200 of 214/,
+    );
   });
 });
 

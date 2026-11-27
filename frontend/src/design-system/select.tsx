@@ -64,6 +64,11 @@ export type SelectOption = Readonly<{
   lang?: string;
   /** More words the list's filter matches, such as a colleague's email. */
   keywords?: readonly string[];
+  /**
+   * The closed face's words while this option is picked, for a face with no
+   * room for the label ("25" for "25 per page"). The list keeps the label.
+   */
+  faceLabel?: string;
 }>;
 
 export type SelectProps = Readonly<{
@@ -298,7 +303,8 @@ function SelectTrigger({
   // floor: it needs no copy (every user-facing string here comes from the
   // catalog) and the suite can assert it, which it cannot do for a stylesheet
   // jsdom never applies.
-  const face = selected?.label ?? field.placeholder ?? "\u00a0";
+  const face =
+    selected?.faceLabel ?? selected?.label ?? field.placeholder ?? "\u00a0";
   return (
     <TriggerButton
       field={field}

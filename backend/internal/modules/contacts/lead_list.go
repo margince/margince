@@ -150,13 +150,14 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	// page and once for the total, and they must judge the same leads overdue.
 	ctx = pinSLANow(ctx)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Lead]{
-		entity:    leadEntity,
-		firstPage: in.Cursor == nil || *in.Cursor == "",
-		prepare:   withLeadTaskIdentities,
-		columns:   leadColumns,
-		fields:    leadListFields,
-		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
-			return leadListWhere(ctx, in, active, sorted, policy, arg)
+		entity:  leadEntity,
+		cursor:  in.Cursor,
+		offset:  in.Offset,
+		prepare: withLeadTaskIdentities,
+		columns: leadColumns,
+		fields:  leadListFields,
+		filters: func(ctx context.Context, active []fieldcatalog.Column, arg func(any) int) ([]string, error) {
+			return leadListWhere(ctx, in, active, policy, arg)
 		},
 		scan: func(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort) ([]crmcontracts.Lead, []*string, error) {
 			return scanLeadPage(rows, active, sorted, policy, slaNow(ctx), systemtext.Locale(ctx))
@@ -171,6 +172,7 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 // ListLeadsInput is one read of the lead list: its page, its sort and what it narrows by.
 type ListLeadsInput struct {
 	Cursor *string
+	Offset *int
 	Limit  *int
 	Status *string
 	// OwnerID, OwnerTeamID and Unassigned are the owner dials every
@@ -220,7 +222,7 @@ type ListLeadsInput struct {
 
 // leadListWhere builds a lead list read's `WHERE`: the shared chain, then the lead's own
 // filters. The sorted page, the work queue and the filter-reach probe all call it.
-func leadListWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog.Column, sorted *storekit.ListSort,
+func leadListWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog.Column,
 	policy leadSLAPolicy, arg func(any) int,
 ) ([]string, error) {
 	where, err := listFilters{
@@ -232,8 +234,7 @@ func leadListWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog
 		OwnerTeamID:     in.OwnerTeamID,
 		Unassigned:      in.Unassigned,
 		Query:           nil,
-		Cursor:          in.Cursor,
-	}.clauses(ctx, active, sorted, arg)
+	}.clauses(active, arg)
 	if err != nil {
 		return nil, err
 	}

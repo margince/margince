@@ -146,3 +146,67 @@ describe("pressing the last page of a counted list", () => {
     expect(probe.reads).toBe(1);
   });
 });
+
+// A list whose endpoint reads at an offset hands the table the rows of the
+// page past its own, so nothing walks.
+function Jumped({
+  page,
+  probe,
+  settled = true,
+}: Readonly<{ page: number; probe: Probe; settled?: boolean }>) {
+  const from = Math.floor(((page - 1) * 25) / READ) * READ;
+  return (
+    <LocaleProvider initial="en">
+      <ListTable
+        rows={rowsUpTo(READ)}
+        columns={COLUMNS}
+        rowKey={(row) => row.id}
+        unit="rows"
+        page={page}
+        onPage={(next) => probe.pages.push(next)}
+        hasMore
+        total={ALL}
+        jumped={{
+          from,
+          rows: settled ? rowsUpTo(ALL).slice(from, from + READ) : [],
+          settled,
+        }}
+        onLoadMore={() => {
+          probe.reads += 1;
+        }}
+      />
+    </LocaleProvider>
+  );
+}
+
+describe("a page read at its offset", () => {
+  const LAST = Math.ceil(ALL / 25);
+  const lastPage = () => screen.getByRole("button", { name: `Page ${LAST}` });
+
+  it("draws the rows the jump read, with no cursor walk", () => {
+    const probe = probeOf();
+    render(<Jumped page={LAST} probe={probe} />);
+
+    expect(screen.getByText("r-400")).toBeTruthy();
+    expect(probe.reads).toBe(0);
+    expect(lastPage().getAttribute("aria-current")).toBe("page");
+    expect(
+      screen.getByRole("button", { name: "Next" }).hasAttribute("disabled"),
+    ).toBe(true);
+  });
+
+  it("marks the page busy while its read is under way", () => {
+    render(<Jumped page={LAST} probe={probeOf()} settled={false} />);
+
+    expect(lastPage().getAttribute("aria-busy")).toBe("true");
+    expect(screen.queryByText("r-400")).toBeNull();
+  });
+
+  it("brings a page past the count back to the last page it names", async () => {
+    const probe = probeOf();
+    render(<Jumped page={99} probe={probe} />);
+
+    await waitFor(() => expect(probe.pages).toEqual([LAST]));
+    expect(probe.reads).toBe(0);
+  });
+});

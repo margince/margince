@@ -344,9 +344,11 @@ never shows as a title.
 ### The badge policy
 
 `BADGE_SCREENS` is empty: no place on the rail shows a count. A badge would
-count only what needs a human to look, never a plain total. The
-list endpoints page by key and return no total, so a count only for looks has
-no real number to show. Approvals and tasks are lanes inside Home, which
+count only what needs a human to look, never a plain total. The record lists
+send `page.total`, a plain total a badge must not show. The lists of what needs
+a look page by key with no total.
+
+Approvals and tasks are lanes inside Home, which
 reports its numbers on the page. The set stays because `badgeIds` is how a
 rail level declares rows that may carry a badge. The levels below it use it
 too.
