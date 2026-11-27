@@ -6,6 +6,7 @@ import { type ReactNode, useState } from "react";
 import { expect, screen, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
+import { latestInboundKey } from "../lib/latestinbound.queries";
 import { OpenSourceProvider } from "../lib/opensource";
 import {
   installFetchStub,
@@ -17,7 +18,6 @@ import {
   type JustIn,
   JustInScope,
   LatestInboundLine,
-  latestInboundKey,
   RecordNextBar,
 } from "./latestinbound";
 

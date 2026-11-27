@@ -39,14 +39,9 @@ describe("the terminal columns' counts", () => {
     expect(leadStatusReportFilters(query)).toEqual({ origin: null });
   });
 
-  it("are withheld for a whole connector, and counted for one account", () => {
+  it("are counted for every channel the source dial names", () => {
     expect(
-      terminalCountsWithheldBecause(narrowed({ source: "connector:apollo" })),
-    ).toBe("lead.boardCountsNoConnectorSource");
-    expect(
-      terminalCountsWithheldBecause(
-        narrowed({ source: "connector:apollo:a-1" }),
-      ),
+      terminalCountsWithheldBecause(narrowed({ source: "capture" })),
     ).toBeUndefined();
   });
 

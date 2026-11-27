@@ -64,6 +64,7 @@ var questions = []question{
 		{"lists", "A list of 50 records", screen},
 		{"record_open", "Opening a record", screen},
 		{"contact_360", "A contact's whole story", screen},
+		{"contact_page", "The rest of a contact's page", recorded},
 		{"company_360", "A company's whole page", screen},
 	}},
 	{"How fast does a record with a long history open?", []moment{

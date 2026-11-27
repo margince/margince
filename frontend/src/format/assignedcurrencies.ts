@@ -3,7 +3,7 @@
 
 // The currency codes the server accepts when a record is priced in a new
 // currency. A mirror of shared/kernel/values/currencycodes.go;
-// backend/gates/frontendcurrencies_test.go fails when the two differ.
+// backend/gates/frontendvocabularymirrors_test.go fails when the two differ.
 export const ASSIGNED_CURRENCIES: readonly string[] = [
   "AED",
   "AFN",

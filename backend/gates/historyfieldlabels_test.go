@@ -470,8 +470,8 @@ func readProjectionKeys(t *testing.T, expr ast.Expr, consts map[string]string, w
 
 // tsLabelEntry reads one `["key", "message.key"]` pair out of a TypeScript Map,
 // in either quote style, so an entry written the other way cannot vanish from a
-// census. Comments are stripped first (tsComment): a line MENTIONING a key would
-// otherwise keep a gate green after the real entry was deleted.
+// census. Comments are stripped first (tsWithoutComments): a line MENTIONING a
+// key would otherwise keep a gate green after the real entry was deleted.
 var tsLabelEntry = regexp.MustCompile(`\[\s*["']([a-z0-9_]+)["']\s*,`)
 
 // historyLabelMaps reads both label maps out of the screen module.
@@ -497,7 +497,7 @@ func tsMapKeys(t *testing.T, path, source, marker string) map[string]bool {
 		t.Fatalf("%s's %s literal is unterminated", path, marker)
 	}
 	keys := map[string]bool{}
-	for _, match := range tsLabelEntry.FindAllStringSubmatch(tsComment.ReplaceAllString(source[start:start+end], " "), -1) {
+	for _, match := range tsLabelEntry.FindAllStringSubmatch(tsWithoutComments(source[start:start+end]), -1) {
 		keys[match[1]] = true
 	}
 	if len(keys) == 0 {

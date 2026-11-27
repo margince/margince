@@ -22,9 +22,10 @@ import { ErrorLine } from "../design-system/errorline";
 import { NextBar } from "../design-system/nextbar";
 import { type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
-import { taskWriteKeys, timelineBaseKey } from "../lib/activitykeys";
+import { taskWriteKeys } from "../lib/activitykeys";
 import type { EntityKind } from "../lib/entity";
 import { UNKNOWN_VALUE_LABEL } from "../lib/labelfor";
+import { latestInboundQuery } from "../lib/latestinbound.queries";
 import { useSourceOpener } from "../lib/opensource";
 import { unwrap } from "../lib/problem";
 import { readStored, STORAGE_KEYS, writeStored } from "../lib/storage";
@@ -41,14 +42,6 @@ export type JustIn = LatestInbound & Readonly<{ notice?: () => void }>;
 
 function noticedKey(activityId: string) {
   return { family: STORAGE_KEYS.latestInboundNoticed, member: activityId };
-}
-
-/** The read every surface that shows the record's newest unanswered item shares. */
-export function latestInboundKey(
-  entityType: EntityKind,
-  entityId: string,
-): QueryKey {
-  return [...timelineBaseKey(entityType, entityId), "latest-inbound"];
 }
 
 /**
@@ -82,15 +75,7 @@ export function useLatestInbound(
 
 /** The record's latest-inbound read; one request serves the item and the last exchange. */
 export function useLatestInboundRead(entityType: EntityKind, entityId: string) {
-  return useQuery({
-    queryKey: latestInboundKey(entityType, entityId),
-    queryFn: async () =>
-      unwrap(
-        await api.GET("/activities/latest-inbound", {
-          params: { query: { entity_type: entityType, entity_id: entityId } },
-        }),
-      ),
-  });
+  return useQuery(latestInboundQuery(entityType, entityId));
 }
 
 /** What a record page hands its Next bar about the item. */

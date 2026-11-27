@@ -67,14 +67,12 @@ var (
 	emptySizes atomic.Pointer[map[string]int64]
 )
 
-// resetTables is the ONE spelling of which relations a reset acts on: ordinary
-// tables in the schemas below, minus every MIGRATION LEDGER and the
-// boot-seeded reference-data tables. All are preserved for the same reason:
-// EnsureSchema's once-per-process contract assumes what its own package doc
-// once stated as an invariant — "no migration seeds reference data a test
-// depends on" — and migration 0240 was the first to break that assumption
-// (activity_kind, channel_provider: DESIGN-SP4 §4; the lead_source and
-// lead_disqualify_reason vocabularies and the field_mask seed since).
+// resetTables names the relations a reset acts on: the ordinary tables in the
+// schemas below. Every migration ledger and the boot-seeded reference-data
+// tables are left out. EnsureSchema runs once per process, so a reset must
+// keep reference data a migration seeds and a test depends on.
+// activity_kind and channel_provider were the first such tables. The lead
+// origins, the disqualification reasons and the field_mask seed followed.
 //
 // currency_minor_digits is the same shape and the newest member: a migration
 // seeds the codes whose minor unit is not two, and SQL money conversions read
@@ -133,7 +131,7 @@ const resetTables = `
 //
 // A gate derives its corpus from the owner it protects rather than restating
 // it, so the corpus lives here beside the reset that owns it.
-const PreservedReferenceTables = `('activity_kind', 'channel_provider', 'lead_source', ` +
+const PreservedReferenceTables = `('activity_kind', 'channel_provider', ` +
 	`'lead_origin', 'lead_disqualify_reason', 'sdr_handoff_reason', 'field_mask', ` +
 	`'currency_minor_digits', 'deal_acquisition_source', 'deal_loss_reason', 'record_role', 'partner_stage', ` +
 	`'maskable_field', 'report_projection_fence', 'home_read_fence', ` +

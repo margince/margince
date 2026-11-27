@@ -1072,7 +1072,7 @@ fi
 # reach disqualification rather than guess it.
 bruno="$(lead_id_by_email "Bruno Kellner" "bruno.kellner@ostsee-kaelte.test")"
 if [[ -z "$bruno" ]]; then
-  body="$(printf '{"full_name":"Bruno Kellner","email":"bruno.kellner@ostsee-kaelte.test","title":"Betriebsleiter","company_name":"Ostsee Kälte GmbH","status":"contacted","source":"referral","owner_id":"%s"}' "$me")"
+  body="$(printf '{"full_name":"Bruno Kellner","email":"bruno.kellner@ostsee-kaelte.test","title":"Betriebsleiter","company_name":"Ostsee Kälte GmbH","status":"contacted","source":"manual","owner_id":"%s"}' "$me")"
   bruno="$(create_or_die "/leads" "$body" "the dead-end lead")"
   # Half a year back and two days apart, RELATIVE like every other date here.
   # Fixed instants age: "nothing since" is the whole of what a model has to read
@@ -1282,7 +1282,7 @@ if [[ -z "$messe" ]]; then
   messe="$(create_or_die "/lists" '{"name":"Messe Hannover 2026","entity_type":"contact","list_type":"static","sharing":"workspace","purpose":"Everyone we spoke to at the Hannover fair"}' "the Messe Hannover shortlist")"
   mara_lead="$(lead_id_by_email "Mara Voigt" "mara.voigt@voigt-antriebe.test")"
   if [[ -z "$mara_lead" ]]; then
-    body="$(printf '{"full_name":"Mara Voigt","email":"mara.voigt@voigt-antriebe.test","company_name":"Voigt Antriebstechnik","status":"new","source":"fair","owner_id":"%s"}' "$me")"
+    body="$(printf '{"full_name":"Mara Voigt","email":"mara.voigt@voigt-antriebe.test","company_name":"Voigt Antriebstechnik","status":"new","source":"manual","owner_id":"%s"}' "$me")"
     mara_lead="$(create_or_die "/leads" "$body" "Mara Voigt's lead")"
   fi
   code="$(status_of POST "/leads/$mara_lead/promote" '{"trigger":"human_qualify","evidence":{"note":"Promoted at the fair stand"}}')"

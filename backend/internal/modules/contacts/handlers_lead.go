@@ -14,6 +14,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmcontracts.ListLeadsParams) {
@@ -37,6 +38,12 @@ func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmco
 		Partner: LeadPartnerFilter{
 			CompanyID: idArg[ids.CompanyKind](params.PartnerCompanyId), Accepted: params.PartnerAccepted,
 		},
+	}
+	if params.Source != nil {
+		if err := provenance.AdmitRecordChannel(*params.Source); err != nil {
+			httperr.Write(w, r, httperr.Validation(fieldSource, "invalid_source", err.Error()))
+			return
+		}
 	}
 	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
 	if err != nil {

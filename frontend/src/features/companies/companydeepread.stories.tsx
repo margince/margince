@@ -146,8 +146,25 @@ export const StoppedEarly: Story = {
   }),
 };
 
-/** The crawl failed. Danger tone on the status, and still no page telling the
- *  reader what our internals said. */
+/** The crawl failed. Danger tone on the status, and the reason in the reader's
+ *  words for the recorded cause, never what our internals said. */
 export const Failed: Story = {
-  render: reporting({ status: "failed", phase: null }),
+  render: reporting({
+    status: "failed",
+    phase: null,
+    status_code: "internal",
+    status_detail:
+      "The read failed inside this system rather than at the site.",
+  }),
+};
+
+/** A failure that clears on its own names its next attempt. */
+export const FailedWillRetry: Story = {
+  render: reporting({
+    status: "failed",
+    phase: null,
+    status_code: "bot_blocked",
+    status_detail: "The site answered 403. Another attempt is scheduled.",
+    next_attempt_at: "2026-07-18T08:00:00Z",
+  }),
 };

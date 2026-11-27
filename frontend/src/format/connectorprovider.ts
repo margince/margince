@@ -20,7 +20,7 @@ const PROVIDER_NAME: Readonly<Record<Provider, MessageKey>> = {
 };
 
 // Mirrors the server's `compose.MailProviders`, which refuses mail operations
-// on a calendar; backend/gates/frontendmailproviders_test.go holds them equal.
+// on a calendar; backend/gates/frontendvocabularymirrors_test.go holds them equal.
 export const MAIL_PROVIDERS: ReadonlySet<Provider> = new Set<Provider>([
   "gmail",
   "graph",
