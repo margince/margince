@@ -4,3 +4,8 @@
   color: var(--textSecondary);
   overflow-wrap: anywhere;
 }
+
+/* A language the team reads that this label has no name in yet. */
+.label-translations-missing {
+  color: var(--warningText);
+}

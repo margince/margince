@@ -27,7 +27,7 @@ function translateFields(
   t: ReturnType<typeof useT>,
 ): CreateField[] {
   const options = (field.options ?? []).flatMap((option, index) =>
-    translationFields(optionPrefix(index)).map(
+    translationFields(optionPrefix(index), () => option).map(
       (one): CreateField => ({
         ...one,
         label: undefined,
@@ -38,7 +38,7 @@ function translateFields(
       }),
     ),
   );
-  return [...translationFields(LABEL), ...options];
+  return [...translationFields(LABEL, () => field.label), ...options];
 }
 
 function translateRecord(field: CustomField) {

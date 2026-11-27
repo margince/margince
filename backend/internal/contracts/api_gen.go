@@ -16900,6 +16900,48 @@ func (e KnowledgeEmbedState) Valid() bool {
 	}
 }
 
+// Defines values for LabelTranslationLanguage.
+const (
+	LabelTranslationLanguageDe LabelTranslationLanguage = "de"
+	LabelTranslationLanguageEn LabelTranslationLanguage = "en"
+	LabelTranslationLanguageVi LabelTranslationLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the LabelTranslationLanguage enum.
+func (e LabelTranslationLanguage) Valid() bool {
+	switch e {
+	case LabelTranslationLanguageDe:
+		return true
+	case LabelTranslationLanguageEn:
+		return true
+	case LabelTranslationLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LabelTranslationRequestLanguage.
+const (
+	LabelTranslationRequestLanguageDe LabelTranslationRequestLanguage = "de"
+	LabelTranslationRequestLanguageEn LabelTranslationRequestLanguage = "en"
+	LabelTranslationRequestLanguageVi LabelTranslationRequestLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the LabelTranslationRequestLanguage enum.
+func (e LabelTranslationRequestLanguage) Valid() bool {
+	switch e {
+	case LabelTranslationRequestLanguageDe:
+		return true
+	case LabelTranslationRequestLanguageEn:
+		return true
+	case LabelTranslationRequestLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for LastExchangeWhoseMove.
 const (
 	LastExchangeWhoseMoveNeither LastExchangeWhoseMove = "neither"
@@ -57465,6 +57507,35 @@ type KnowledgeDocumentList struct {
 //   - `complete`: every live passage carries a vector under the model bound now.
 type KnowledgeEmbedState string
 
+// LabelTranslation One label in one UI language, a suggestion stored nowhere.
+type LabelTranslation struct {
+	Language LabelTranslationLanguage `json:"language"`
+
+	// ModelUsed The model that wrote the suggestion. Absent when no model was asked.
+	ModelUsed *string `json:"model_used,omitempty"`
+
+	// Text The label in the target language.
+	Text string `json:"text"`
+
+	// Unchanged True when the label is already in the target language; `text` is then the label itself.
+	Unchanged bool `json:"unchanged"`
+}
+
+// LabelTranslationLanguage defines model for LabelTranslation.Language.
+type LabelTranslationLanguage string
+
+// LabelTranslationRequest defines model for LabelTranslationRequest.
+type LabelTranslationRequest struct {
+	// Language The UI language to write the label in.
+	Language LabelTranslationRequestLanguage `json:"language"`
+
+	// Text The label as stored.
+	Text string `json:"text"`
+}
+
+// LabelTranslationRequestLanguage The UI language to write the label in.
+type LabelTranslationRequestLanguage string
+
 // LabelTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
 // language has an entry sees it; any other reader sees the stored label. On a write the
 // map replaces the stored one, an empty text drops its language, and a language outside
@@ -88368,6 +88439,9 @@ type AskCorpusJSONRequestBody AskCorpusJSONBody
 // UploadCorpusDocumentMultipartRequestBody defines body for UploadCorpusDocument for multipart/form-data ContentType.
 type UploadCorpusDocumentMultipartRequestBody UploadCorpusDocumentMultipartBody
 
+// SuggestLabelTranslationJSONRequestBody defines body for SuggestLabelTranslation for application/json ContentType.
+type SuggestLabelTranslationJSONRequestBody = LabelTranslationRequest
+
 // ConfirmSendWithoutLawfulBasisJSONRequestBody defines body for ConfirmSendWithoutLawfulBasis for application/json ContentType.
 type ConfirmSendWithoutLawfulBasisJSONRequestBody = LawfulBasisConfirmationRequest
 
@@ -104981,6 +105055,9 @@ type ServerInterface interface {
 	// Download a document's own bytes.
 	// (GET /knowledge/documents/{id})
 	DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
+	// Suggest a stage or custom field name in another UI language.
+	// (POST /label-translations)
+	SuggestLabelTranslation(w http.ResponseWriter, r *http.Request)
 	// Record that a user read the no-lawful-basis warning and chose to send anyway.
 	// (POST /lawful-basis-confirmations)
 	ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request)
@@ -110588,6 +110665,12 @@ func (_ Unimplemented) DeleteCorpusDocument(w http.ResponseWriter, r *http.Reque
 // Download a document's own bytes.
 // (GET /knowledge/documents/{id})
 func (_ Unimplemented) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Suggest a stage or custom field name in another UI language.
+// (POST /label-translations)
+func (_ Unimplemented) SuggestLabelTranslation(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -144144,6 +144227,26 @@ func (siw *ServerInterfaceWrapper) DownloadCorpusDocument(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// SuggestLabelTranslation operation middleware
+func (siw *ServerInterfaceWrapper) SuggestLabelTranslation(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SuggestLabelTranslation(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ConfirmSendWithoutLawfulBasis operation middleware
 func (siw *ServerInterfaceWrapper) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
 
@@ -166943,6 +167046,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/knowledge/documents/{id}", wrapper.DownloadCorpusDocument)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/label-translations", wrapper.SuggestLabelTranslation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/lawful-basis-confirmations", wrapper.ConfirmSendWithoutLawfulBasis)

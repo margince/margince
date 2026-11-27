@@ -99,6 +99,13 @@ export type CreateField = {
   readOnly?: Readonly<{ reading: ReactNode; reason: string }>;
   // Changed by a flow of its own, which the form leaves before it opens.
   flow?: Readonly<{ open: () => void; reading?: ReactNode }>;
+  // A button under the field that fills it with a suggestion, ready once the
+  // values it reads from are there.
+  fill?: Readonly<{
+    label: MessageKey;
+    ready: (values: Record<string, string>) => boolean;
+    from: (values: Record<string, string>) => Promise<string>;
+  }>;
 };
 
 /** A field the form shows but never answers: read-only, or changed by its own flow. */

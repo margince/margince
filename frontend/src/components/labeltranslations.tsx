@@ -5,6 +5,7 @@ import "./labeltranslations.css";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { LOCALES, type Locale } from "../i18n/locale";
+import { suggestLabelTranslation } from "../lib/labelsuggestion";
 import type { LabelTranslations } from "../lib/labeltranslation";
 import type { CreateField } from "./create";
 
@@ -22,12 +23,27 @@ function translationKey(prefix: string, locale: Locale): string {
   return `${prefix}_${locale}`;
 }
 
-/** One optional text field per UI language. */
-export function translationFields(prefix: string): CreateField[] {
+/**
+ * One optional text field per UI language. With `source`, which reads the
+ * stored name from the form, each field offers Suggest translation from it.
+ */
+export function translationFields(
+  prefix: string,
+  source?: (values: Record<string, string>) => string | undefined,
+): CreateField[] {
+  const named = (values: Record<string, string>) =>
+    source?.(values)?.trim() ?? "";
   return LOCALES.map((locale) => ({
     key: translationKey(prefix, locale),
     label: NAME_IN[locale],
     maxLength: 200,
+    fill: source
+      ? {
+          label: "translation.suggest",
+          ready: (values) => named(values) !== "",
+          from: (values) => suggestLabelTranslation(named(values), locale),
+        }
+      : undefined,
   }));
 }
 
@@ -80,6 +96,39 @@ export function TranslationsLine({
           }),
         )
         .join(" · ")}
+    </span>
+  );
+}
+
+const MISSING_IN: Record<Locale, MessageKey> = {
+  en: "translation.missing.en",
+  de: "translation.missing.de",
+  vi: "translation.missing.vi",
+};
+
+/**
+ * The team's languages a label has no name in, as one line under the name.
+ * `languages` are those some active member reads the app in, less the
+ * installation's base language, which the stored name is written in.
+ */
+export function MissingTranslationsLine({
+  translations,
+  languages,
+}: Readonly<{
+  translations: LabelTranslations | undefined;
+  languages: readonly Locale[];
+}>) {
+  const t = useT();
+  const missing = languages.filter((locale) => !translations?.[locale]?.trim());
+  if (missing.length === 0) {
+    return null;
+  }
+  return (
+    <span
+      className="label-translations label-translations-missing"
+      data-testid="label-translations-missing"
+    >
+      {missing.map((locale) => t(MISSING_IN[locale])).join(" · ")}
     </span>
   );
 }

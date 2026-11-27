@@ -905,6 +905,7 @@ var Declared = map[string][]string{
 	"POST /v1/knowledge/corpora/{id}/ask":                                      {},
 	"POST /v1/knowledge/corpora/{id}/documents":                                {},
 	"POST /v1/knowledge/corpora/{id}/restore":                                  {},
+	"POST /v1/label-translations":                                              {},
 	"POST /v1/lawful-basis-confirmations":                                      {},
 	"POST /v1/lead-disqualify-reasons":                                         {},
 	"POST /v1/lead-origins":                                                    {},
