@@ -33374,12 +33374,19 @@ components:
           items: {$ref: '#/components/schemas/Relationship'}
     VCardImportReport:
       type: object
-      required: [results]
+      required: [results, staged_for_review]
       description: One entry per card in the file, in the order the file listed them.
       properties:
         results:
           type: array
           items: {$ref: '#/components/schemas/VCardImportResult'}
+        staged_for_review:
+          type: integer
+          minimum: 0
+          description: |-
+            How many cards were staged as a review in the approvals inbox, so
+            the reader knows how many answers are waiting. An undecided one
+            expires after 30 days, and the expiry deletes the card's data.
     VCardImportResult:
       type: object
       required: [index, full_name, outcome]
@@ -33393,7 +33400,8 @@ components:
             `created` — nobody matched, so the card became a contact, their company and the edge
             between them. `updated` — an exact match: what the card states replaces an older value, which
             stays in `superseded_value`, and a field a human corrected stands.
-            `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+            `needs_review` — a resemblance, so nothing was written; the card waits in the approvals
+            inbox, where whoever uploaded it merges it into the candidate or keeps it separate.
             `proposed` — a card read from a photo that nobody matched, waiting on an approval.
             `skipped` — the card states no name or one over 120 characters, carries a sending
             system's address, holds a value that is not readable text or cannot be stored, or
@@ -48704,7 +48712,7 @@ components:
           type: [string, 'null']
           maxLength: 120
           description: >-
-            The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
+            The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the given name of `display_name` (the last word after a Vietnamese family name, else the first). Present on the caller's own seat; absent on the roster.
         timezone:
           type: string
           description: >-
@@ -48867,7 +48875,7 @@ components:
           type: [string, 'null']
           maxLength: 120
           description: >-
-            The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset.
+            The name the member's greetings use, when the given name read off `display_name` is not it. Optional; absent, empty or null leaves it unset.
         role:
           type: string
           maxLength: 64

@@ -265,7 +265,7 @@ var decisionGrants = map[string][]DecisionGrant{
 	// grant the release can spend, exactly as if the approver had typed the
 	// card in — a shorter list would show the card to an approver whose
 	// approval then fails partway.
-	"vcard_create": {
+	KindVCardCreate: {
 		{tableContact, principal.ActionCreate},
 		{tableContact, principal.ActionUpdate},
 		{tableCompany, principal.ActionCreate},

@@ -96,7 +96,7 @@ func FillOf(before, after, evidence json.RawMessage, occurredAt time.Time) (Fill
 		Legacy: said.Source == enrichSource && said.Confirmed == nil,
 	}
 	var title string
-	if json.Unmarshal(now[fieldTitle], &title) == nil && title != signatureFieldFilled {
+	if json.Unmarshal(now[fieldTitle], &title) == nil && title != auditFilledMarker {
 		fill.MirroredTitle = title
 	}
 	return fill, true

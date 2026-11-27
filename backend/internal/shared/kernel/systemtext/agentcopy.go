@@ -8,7 +8,7 @@ import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 var agentDefinitions = map[string]Definition{
 	"stage.open": {Words: langcopy.Phrase{En: "open", De: "offen", Vi: "mở"}},
 	"stage.won":  {Words: langcopy.Phrase{En: "won", De: "gewonnen", Vi: "thắng"}},
-	"stage.lost": {Words: langcopy.Phrase{En: "lost", De: "verloren", Vi: "thua"}},
+	"stage.lost": {Words: langcopy.Phrase{En: "lost", De: "verloren", Vi: "thất bại"}},
 
 	"agent.fieldListMore": {Words: langcopy.Phrase{En: commaSeparatedPair, De: commaSeparatedPair, Vi: commaSeparatedPair}, Arguments: []string{argumentText, argumentText}},
 
@@ -50,7 +50,7 @@ var agentDefinitions = map[string]Definition{
 	"agent.projectPhase":        {Words: langcopy.Phrase{En: "Move project %s to %s", De: "Projekt %s in die Phase %s bringen", Vi: "Chuyển dự án %s sang %s"}, Arguments: []string{argumentText, argumentText}},
 	"agent.dealMove":            {Words: langcopy.Phrase{En: "Move deal %s to %s", De: "Deal %s nach %s verschieben", Vi: "Chuyển deal %s sang %s"}, Arguments: []string{argumentText, argumentText}},
 	"agent.dealMoveOpen":        {Words: langcopy.Phrase{En: "Move deal %s to another open stage", De: "Deal %s in eine andere offene Phase verschieben", Vi: "Chuyển deal %s sang một giai đoạn mở khác"}, Arguments: []string{argumentText}},
-	"agent.dealReopen":          {Words: langcopy.Phrase{En: "REOPEN deal %s, which is currently %s — this clears its close date, its lost reason and the exchange rate frozen when it closed", De: "Deal %s WIEDER ÖFFNEN, aktuell %s. Dabei werden Abschlussdatum, Verlustgrund und der beim Abschluss eingefrorene Wechselkurs gelöscht.", Vi: "MỞ LẠI deal %s, hiện đang là %s; thao tác này xóa ngày chốt, lý do thua và tỷ giá đã cố định khi deal được chốt"}, Arguments: []string{argumentText, argumentText}},
+	"agent.dealReopen":          {Words: langcopy.Phrase{En: "REOPEN deal %s, which is currently %s — this clears its close date, its lost reason and the exchange rate frozen when it closed", De: "Deal %s WIEDER ÖFFNEN, aktuell %s. Dabei werden Abschlussdatum, Verlustgrund und der beim Abschluss eingefrorene Wechselkurs gelöscht.", Vi: "MỞ LẠI deal %s, hiện đang là %s; thao tác này xóa ngày chốt, lý do thất bại và tỷ giá đã cố định khi deal được chốt"}, Arguments: []string{argumentText, argumentText}},
 	"agent.dealChange":          {Words: langcopy.Phrase{En: "Change deal %s from %s to %s", De: "Deal %s von %s auf %s ändern", Vi: "Đổi deal %s từ %s sang %s"}, Arguments: []string{argumentText, argumentText, argumentText}},
 	"agent.dealClose":           {Words: langcopy.Phrase{En: "Close deal %s as %s", De: "Deal %s als %s abschließen", Vi: "Chốt deal %s là %s"}, Arguments: []string{argumentText, argumentText}},
 	"agent.sendEmail":           {Words: langcopy.Phrase{En: "Send an email to %s", De: "E-Mail senden an %s", Vi: "Gửi email tới %s"}, Arguments: []string{argumentText}},

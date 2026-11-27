@@ -128,11 +128,40 @@ func describe(e entry) (description, bool) {
 			reason:  reason,
 		}, true
 	}
+	if key, plain := plainChangeKey(fields, after); plain {
+		return description{
+			summary: crmcontracts.MagicSentence{Key: key},
+			reason:  reasonFromEvidence(evidence, after),
+		}, true
+	}
 	values := map[string]string{"fields": strings.Join(fields, ", ")}
 	return description{
 		summary: crmcontracts.MagicSentence{Key: "magic.action.fields_changed", Values: &values},
 		reason:  reasonFromEvidence(evidence, after),
 	}, true
+}
+
+// calendarGuestFields are the image keys a calendar sync writes about guests.
+// Named one by one they read as a list of field names, so they share a line.
+var calendarGuestFields = setOf(
+	"guest answers changed", "guest links added", "guests added", "guests left out", "guests retired",
+)
+
+// plainChangeKey names a change that reads as one action, not a list of fields.
+// Those are a calendar sync of guests, and a task marked done or reopened.
+func plainChangeKey(fields []string, after map[string]any) (string, bool) {
+	if len(fields) == 1 && fields[0] == "is done" {
+		if done, _ := after["is_done"].(bool); done {
+			return "magic.action.task_done", true
+		}
+		return "magic.action.task_reopened", true
+	}
+	for _, field := range fields {
+		if !calendarGuestFields[field] {
+			return "", false
+		}
+	}
+	return "magic.action.guests_synced_from_calendar", true
 }
 
 // changedFields lists, readably and sorted, the fields an update moved: every

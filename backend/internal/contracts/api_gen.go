@@ -56802,7 +56802,7 @@ type InviteUserRequest struct {
 	DisplayName string              `json:"display_name"`
 	Email       openapi_types.Email `json:"email"`
 
-	// GreetingName The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset.
+	// GreetingName The name the member's greetings use, when the given name read off `display_name` is not it. Optional; absent, empty or null leaves it unset.
 	GreetingName *string `json:"greeting_name,omitempty"`
 
 	// LegalEntityId The legal entity the member works for, from `listLegalEntities`, written in the same transaction as the seat. Omitted, the member works for the default entity. Naming one needs the grants `assignLegalEntityMember` needs: `legal_entity` update and `user_admin` update. An unknown or archived entity is refused as 422.
@@ -73724,7 +73724,7 @@ type User struct {
 	// EmailEditable Whether this unused member's sign-in email can still be corrected. Present only on the administration view.
 	EmailEditable *bool `json:"email_editable,omitempty"`
 
-	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
+	// GreetingName The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the given name of `display_name` (the last word after a Vietnamese family name, else the first). Present on the caller's own seat; absent on the roster.
 	GreetingName *string            `json:"greeting_name,omitempty"`
 	Id           openapi_types.UUID `json:"id"`
 
@@ -73873,6 +73873,11 @@ type VCardImportFieldField string
 // VCardImportReport One entry per card in the file, in the order the file listed them.
 type VCardImportReport struct {
 	Results []VCardImportResult `json:"results"`
+
+	// StagedForReview How many cards were staged as a review in the approvals inbox, so
+	// the reader knows how many answers are waiting. An undecided one
+	// expires after 30 days, and the expiry deletes the card's data.
+	StagedForReview int `json:"staged_for_review" minimum:"0"`
 }
 
 // VCardImportResult defines model for VCardImportResult.
@@ -73900,7 +73905,8 @@ type VCardImportResult struct {
 	// Outcome `created` — nobody matched, so the card became a contact, their company and the edge
 	// between them. `updated` — an exact match: what the card states replaces an older value, which
 	// stays in `superseded_value`, and a field a human corrected stands.
-	// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+	// `needs_review` — a resemblance, so nothing was written; the card waits in the approvals
+	// inbox, where whoever uploaded it merges it into the candidate or keeps it separate.
 	// `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 	// `skipped` — the card states no name or one over 120 characters, carries a sending
 	// system's address, holds a value that is not readable text or cannot be stored, or
@@ -73915,7 +73921,8 @@ type VCardImportResult struct {
 // VCardImportResultOutcome `created` — nobody matched, so the card became a contact, their company and the edge
 // between them. `updated` — an exact match: what the card states replaces an older value, which
 // stays in `superseded_value`, and a field a human corrected stands.
-// `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+// `needs_review` — a resemblance, so nothing was written; the card waits in the approvals
+// inbox, where whoever uploaded it merges it into the candidate or keeps it separate.
 // `proposed` — a card read from a photo that nobody matched, waiting on an approval.
 // `skipped` — the card states no name or one over 120 characters, carries a sending
 // system's address, holds a value that is not readable text or cannot be stored, or

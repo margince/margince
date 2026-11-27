@@ -60,6 +60,9 @@ function valueText(
   if (value === null || value === undefined || value === "") {
     return t("magic.records.empty_value");
   }
+  if (value === FILLED_MARKER) {
+    return t("magic.records.filled_value");
+  }
   switch (change.type) {
     case "money":
       return moneyText(change, value, format);
@@ -126,6 +129,10 @@ function untypedText(
   }
   return String(value);
 }
+
+// The server writes this in place of a value a provider or signature filled,
+// which the audit never keeps (contacts' auditFilledMarker).
+const FILLED_MARKER = "filled";
 
 const UUID = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/i;
 

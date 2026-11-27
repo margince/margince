@@ -41603,7 +41603,7 @@
     "disqualify_reason":
      "Lý do",
     "disqualify_reason_id":
-     "Lý do loại",
+     "Lý do loại lead",
     "domain":
      "Tên miền",
     "domains":
@@ -41679,7 +41679,7 @@
     "granted":
      "granted",
     "greeting_register":
-     "Cách chào",
+     "Cách xưng hô",
     "gross_minor":
      "Sau thuế",
     "guest_answers_changed":
@@ -41779,7 +41779,7 @@
     "legitimate_interests":
      "legitimate interests",
     "lifecycle":
-     "Vòng đời",
+     "Giai đoạn",
     "lifted_by":
      "Người gỡ",
     "lifted_by_level":
@@ -41805,7 +41805,7 @@
     "lost":
      "lost",
     "lost_reason":
-     "Lý do thua",
+     "Lý do thất bại",
     "low_balance":
      "low balance",
     "machine":
@@ -49185,7 +49185,7 @@
     "merge_company_profile_field/text/buying_intents":
      "Yếu tố thúc đẩy mua",
     "merge_company_profile_field/text/common_objections":
-     "Ý kiến phản đối thường gặp",
+     "Băn khoăn thường gặp của khách",
     "merge_company_profile_field/text/customer_pains":
      "Vấn đề của khách hàng",
     "merge_company_profile_field/text/desired_outcomes":
@@ -49223,7 +49223,7 @@
     "merge_company_profile_field/lifecycle/buying_intents":
      "Yếu tố thúc đẩy mua",
     "merge_company_profile_field/lifecycle/common_objections":
-     "Ý kiến phản đối thường gặp",
+     "Băn khoăn thường gặp của khách",
     "merge_company_profile_field/lifecycle/customer_pains":
      "Vấn đề của khách hàng",
     "merge_company_profile_field/lifecycle/desired_outcomes":
@@ -49889,21 +49889,21 @@
     "merge_grant_after/text/read":
      "Đọc",
     "merge_grant_after/text/write":
-     "Ghi",
+     "Sửa",
     "merge_grant_after/lifecycle/read":
      "Đọc",
     "merge_grant_after/lifecycle/write":
-     "Ghi",
+     "Sửa",
     "merge_grant_after/boolean/true":
      "Có",
     "merge_grant_before/text/read":
      "Đọc",
     "merge_grant_before/text/write":
-     "Ghi",
+     "Sửa",
     "merge_grant_before/lifecycle/read":
      "Đọc",
     "merge_grant_before/lifecycle/write":
-     "Ghi",
+     "Sửa",
     "merge_grant_before/boolean/true":
      "Có",
     "merge_grant_expiry_after/lifecycle/customer":
@@ -49969,11 +49969,11 @@
     "merge_grant_source/text/read":
      "Đọc",
     "merge_grant_source/text/write":
-     "Ghi",
+     "Sửa",
     "merge_grant_source/lifecycle/read":
      "Đọc",
     "merge_grant_source/lifecycle/write":
-     "Ghi",
+     "Sửa",
     "merge_grant_source/boolean/true":
      "Có",
     "merge_grant_subject/lifecycle/customer":
@@ -50727,7 +50727,7 @@
     "merge_profile_field/text/commitment_evidence_unavailable":
      "Bằng chứng cam kết không còn khả dụng",
     "merge_profile_field/text/common_objections":
-     "Ý kiến phản đối thường gặp",
+     "Băn khoăn thường gặp của khách",
     "merge_profile_field/text/communication_basis":
      "Căn cứ pháp lý",
     "merge_profile_field/text/company_id":
@@ -50755,7 +50755,7 @@
     "merge_profile_field/text/disposition":
      "Kết quả xử lý",
     "merge_profile_field/text/disqualify_reason_id":
-     "Lý do loại",
+     "Lý do loại lead",
     "merge_profile_field/text/domain":
      "Tên miền",
     "merge_profile_field/text/domains":
@@ -50793,7 +50793,7 @@
     "merge_profile_field/text/fx_rate_to_base":
      "Tỷ giá",
     "merge_profile_field/text/greeting_register":
-     "Cách chào",
+     "Cách xưng hô",
     "merge_profile_field/text/guest_answers_changed":
      "Phản hồi của khách được cập nhật từ lịch",
     "merge_profile_field/text/guest_links_added":
@@ -50831,7 +50831,7 @@
     "merge_profile_field/text/legal_name":
      "Tên pháp lý",
     "merge_profile_field/text/lifecycle":
-     "Vòng đời",
+     "Giai đoạn",
     "merge_profile_field/text/lifted_by":
      "Người gỡ",
     "merge_profile_field/text/lifted_by_level":
@@ -50843,7 +50843,7 @@
     "merge_profile_field/text/linkedin_url":
      "Liên kết LinkedIn",
     "merge_profile_field/text/lost_reason":
-     "Lý do thua",
+     "Lý do thất bại",
     "merge_profile_field/text/meeting_documents_added":
      "Ghi chú cuộc họp được liên kết từ lịch",
     "merge_profile_field/text/meeting_guests_removed":
@@ -51095,7 +51095,7 @@
     "merge_profile_field/lifecycle/commitment_evidence_unavailable":
      "Bằng chứng cam kết không còn khả dụng",
     "merge_profile_field/lifecycle/common_objections":
-     "Ý kiến phản đối thường gặp",
+     "Băn khoăn thường gặp của khách",
     "merge_profile_field/lifecycle/communication_basis":
      "Căn cứ pháp lý",
     "merge_profile_field/lifecycle/company_id":
@@ -51123,7 +51123,7 @@
     "merge_profile_field/lifecycle/disposition":
      "Kết quả xử lý",
     "merge_profile_field/lifecycle/disqualify_reason_id":
-     "Lý do loại",
+     "Lý do loại lead",
     "merge_profile_field/lifecycle/domain":
      "Tên miền",
     "merge_profile_field/lifecycle/domains":
@@ -51161,7 +51161,7 @@
     "merge_profile_field/lifecycle/fx_rate_to_base":
      "Tỷ giá",
     "merge_profile_field/lifecycle/greeting_register":
-     "Cách chào",
+     "Cách xưng hô",
     "merge_profile_field/lifecycle/guest_answers_changed":
      "Phản hồi của khách được cập nhật từ lịch",
     "merge_profile_field/lifecycle/guest_links_added":
@@ -51199,7 +51199,7 @@
     "merge_profile_field/lifecycle/legal_name":
      "Tên pháp lý",
     "merge_profile_field/lifecycle/lifecycle":
-     "Vòng đời",
+     "Giai đoạn",
     "merge_profile_field/lifecycle/lifted_by":
      "Người gỡ",
     "merge_profile_field/lifecycle/lifted_by_level":
@@ -51211,7 +51211,7 @@
     "merge_profile_field/lifecycle/linkedin_url":
      "Liên kết LinkedIn",
     "merge_profile_field/lifecycle/lost_reason":
-     "Lý do thua",
+     "Lý do thất bại",
     "merge_profile_field/lifecycle/meeting_documents_added":
      "Ghi chú cuộc họp được liên kết từ lịch",
     "merge_profile_field/lifecycle/meeting_guests_removed":
@@ -51495,7 +51495,7 @@
     "merge_relationship_kind/text/deal_stakeholder":
      "Bên liên quan deal",
     "merge_relationship_kind/text/employment":
-     "Quan hệ công tác",
+     "Làm việc tại",
     "merge_relationship_kind/text/partner_of":
      "Đối tác của",
     "merge_relationship_kind/text/project_company":
@@ -54425,7 +54425,7 @@
     "read_profile_field/text/buying_intents":
      "Yếu tố thúc đẩy mua",
     "read_profile_field/text/common_objections":
-     "Ý kiến phản đối thường gặp",
+     "Băn khoăn thường gặp của khách",
     "read_profile_field/text/customer_pains":
      "Vấn đề của khách hàng",
     "read_profile_field/text/desired_outcomes":
@@ -54463,7 +54463,7 @@
     "read_profile_field/lifecycle/buying_intents":
      "Yếu tố thúc đẩy mua",
     "read_profile_field/lifecycle/common_objections":
-     "Ý kiến phản đối thường gặp",
+     "Băn khoăn thường gặp của khách",
     "read_profile_field/lifecycle/customer_pains":
      "Vấn đề của khách hàng",
     "read_profile_field/lifecycle/desired_outcomes":
@@ -54929,7 +54929,7 @@
     "relationship_kind/text/deal_stakeholder":
      "Bên liên quan deal",
     "relationship_kind/text/employment":
-     "Quan hệ công tác",
+     "Làm việc tại",
     "relationship_kind/text/partner_of":
      "Đối tác của",
     "relationship_kind/text/project_company":
@@ -56437,7 +56437,7 @@
     "state/boolean/true":
      "Có",
     "status/text/lost":
-     "Thua",
+     "Thất bại",
     "status/text/open":
      "Đang mở",
     "status/text/won":
@@ -57085,13 +57085,13 @@
     "unit/text/HR":
      "Giờ",
     "unit/text/cái":
-     "Cái",
+     "Gói",
     "unit/text/day":
      "Ngày",
     "unit/text/days":
      "Ngày",
     "unit/text/each":
-     "Cái",
+     "Gói",
     "unit/text/festpreis":
      "Trọn gói",
     "unit/text/flat fee":
@@ -57113,9 +57113,9 @@
     "unit/text/hrs":
      "Giờ",
     "unit/text/item":
-     "Cái",
+     "Gói",
     "unit/text/items":
-     "Cái",
+     "Gói",
     "unit/text/lump sum":
      "Trọn gói",
     "unit/text/monat":
@@ -57133,29 +57133,29 @@
     "unit/text/pauschale":
      "Trọn gói",
     "unit/text/pc":
-     "Cái",
+     "Gói",
     "unit/text/pcs":
-     "Cái",
+     "Gói",
     "unit/text/personentag":
      "Ngày",
     "unit/text/personentage":
      "Ngày",
     "unit/text/piece":
-     "Cái",
+     "Gói",
     "unit/text/pieces":
-     "Cái",
+     "Gói",
     "unit/text/std":
      "Giờ",
     "unit/text/stk":
-     "Cái",
+     "Gói",
     "unit/text/stueck":
-     "Cái",
+     "Gói",
     "unit/text/stunde":
      "Giờ",
     "unit/text/stunden":
      "Giờ",
     "unit/text/stück":
-     "Cái",
+     "Gói",
     "unit/text/tag":
      "Ngày",
     "unit/text/tage":
@@ -57165,19 +57165,19 @@
     "unit/text/trọn gói":
      "Trọn gói",
     "unit/text/unit":
-     "Cái",
+     "Gói",
     "unit/text/units":
-     "Cái",
+     "Gói",
     "unit/lifecycle/HR":
      "Giờ",
     "unit/lifecycle/cái":
-     "Cái",
+     "Gói",
     "unit/lifecycle/day":
      "Ngày",
     "unit/lifecycle/days":
      "Ngày",
     "unit/lifecycle/each":
-     "Cái",
+     "Gói",
     "unit/lifecycle/festpreis":
      "Trọn gói",
     "unit/lifecycle/flat fee":
@@ -57199,9 +57199,9 @@
     "unit/lifecycle/hrs":
      "Giờ",
     "unit/lifecycle/item":
-     "Cái",
+     "Gói",
     "unit/lifecycle/items":
-     "Cái",
+     "Gói",
     "unit/lifecycle/lump sum":
      "Trọn gói",
     "unit/lifecycle/monat":
@@ -57219,29 +57219,29 @@
     "unit/lifecycle/pauschale":
      "Trọn gói",
     "unit/lifecycle/pc":
-     "Cái",
+     "Gói",
     "unit/lifecycle/pcs":
-     "Cái",
+     "Gói",
     "unit/lifecycle/personentag":
      "Ngày",
     "unit/lifecycle/personentage":
      "Ngày",
     "unit/lifecycle/piece":
-     "Cái",
+     "Gói",
     "unit/lifecycle/pieces":
-     "Cái",
+     "Gói",
     "unit/lifecycle/std":
      "Giờ",
     "unit/lifecycle/stk":
-     "Cái",
+     "Gói",
     "unit/lifecycle/stueck":
-     "Cái",
+     "Gói",
     "unit/lifecycle/stunde":
      "Giờ",
     "unit/lifecycle/stunden":
      "Giờ",
     "unit/lifecycle/stück":
-     "Cái",
+     "Gói",
     "unit/lifecycle/tag":
      "Ngày",
     "unit/lifecycle/tage":
@@ -57251,9 +57251,9 @@
     "unit/lifecycle/trọn gói":
      "Trọn gói",
     "unit/lifecycle/unit":
-     "Cái",
+     "Gói",
     "unit/lifecycle/units":
-     "Cái",
+     "Gói",
     "unit/boolean/true":
      "Có",
     "unit_price_minor/lifecycle/customer":
