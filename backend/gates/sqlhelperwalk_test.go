@@ -198,6 +198,8 @@ func markSeen(n ast.Node, seen map[ast.Node]bool) {
 }
 
 // handWrittenGoSources walks the module for source a contact maintains.
+// Generated files are left out: nobody edits them, and a shape a generator
+// emitted is the generator's defect, not a call site's.
 func handWrittenGoSources(t *testing.T) []string {
 	t.Helper()
 	var paths []string

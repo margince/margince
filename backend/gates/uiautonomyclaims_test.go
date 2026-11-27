@@ -9,6 +9,8 @@ package gates
 
 // No shipped UI string promises that nothing sends without a human's approval
 // while the generated policy table says the send verbs auto-execute.
+// Nor does one say that granting the send permission approves a message: that
+// is false at any tier, and the same locale reader refuses it.
 //
 // This is the defect it exists for, and it shipped. The product moved attended
 // sending from confirm-first to auto-execute, because a user who asks their own
@@ -205,24 +207,56 @@ func TestNoLocaleClaimsSendingAlwaysWaitsForAHuman(t *testing.T) {
 		return
 	}
 	t.Logf("send verbs running at auto_execute: %s", strings.Join(autoExecuting, ", "))
+	refuseLocaleClaims(t, absoluteApprovalClaims, "nothing sends without your approval",
+		"the contract runs the send verbs at auto_execute, so the app is telling a user their approval gates "+
+			"something it does not gate")
+}
 
+// permissionIsApprovalClaims are the shapes of "granting the send permission
+// approves the message". An unattended run holds that permission and still
+// stages every send, so the claim is false whatever tier the verbs run at.
+var permissionIsApprovalClaims = map[string][]*regexp.Regexp{
+	"en": {
+		regexp.MustCompile(`(granting the permission|giving that passport) is the approval`),
+		regexp.MustCompile(`send anything or change a record without your approval`),
+	},
+	"de": {
+		regexp.MustCompile(`mit (der berechtigung|diesem passport) ist die freigabe bereits erteilt`),
+		regexp.MustCompile(`ohne deine freigabe etwas senden oder einen datensatz ändern`),
+	},
+	"vi": {
+		regexp.MustCompile(`cấp (quyền|passport đó) chính là phê duyệt`),
+		regexp.MustCompile(`gửi bất cứ thứ gì hay sửa hồ sơ khi bạn chưa duyệt`),
+	},
+}
+
+func TestNoLocaleClaimsTheSendPermissionIsTheApproval(t *testing.T) {
+	t.Parallel()
+	refuseLocaleClaims(t, permissionIsApprovalClaims, "the permission is the approval",
+		"an unattended run stages its sends whatever permission it holds")
+}
+
+// refuseLocaleClaims fails a shipped locale that spells one of its language's
+// claims, and a shipped locale the claims have no phrasing for.
+func refuseLocaleClaims(t *testing.T, claims map[string][]*regexp.Regexp, claim, why string) {
+	t.Helper()
 	dir := filepath.Join(repoRoot, "frontend", "src", "i18n")
 	for _, locale := range shippedLocales(t, dir) {
-		claims, covered := absoluteApprovalClaims[locale]
+		phrasings, covered := claims[locale]
 		if !covered {
-			t.Errorf("frontend/src/i18n/%s.ts ships to users but this gate knows no %s phrasing of \"nothing sends without your approval\", so it reads none of that language. Add the shapes to absoluteApprovalClaims — an uncovered locale is where this census goes short", locale, locale)
+			t.Errorf("frontend/src/i18n/%s.ts ships to users but this gate knows no %s phrasing of %q, so it "+
+				"reads none of that language. Add the shapes: an uncovered locale is where this census goes short",
+				locale, locale, claim)
 			continue
 		}
-
 		raw, err := gatekit.ReadFile(filepath.Join(dir, locale+".ts"))
 		if err != nil {
 			t.Fatalf("reading the %s locale: %v", locale, err)
 		}
 		body := strings.ToLower(shippedCopy(string(raw)))
-
-		for _, claim := range claims {
-			if loc := claim.FindStringIndex(body); loc != nil {
-				t.Errorf("frontend/src/i18n/%s.ts promises %q, but the contract runs the send verbs at auto_execute — the app is telling a user their approval gates something it does not gate", locale, strings.TrimSpace(body[loc[0]:loc[1]]))
+		for _, phrasing := range phrasings {
+			if loc := phrasing.FindStringIndex(body); loc != nil {
+				t.Errorf("frontend/src/i18n/%s.ts promises %q, but %s", locale, strings.TrimSpace(body[loc[0]:loc[1]]), why)
 			}
 		}
 	}

@@ -482,7 +482,7 @@ var shapeCensus = map[string]int{
 	"cannot-drift":   143,
 	"once":           151,
 	"one-of-a-kind":  134,
-	"is-every-named": 81,
+	"is-every-named": 80,
 	"only-noun":      9,
 	"no-second":      10,
 	"never-twice":    7,

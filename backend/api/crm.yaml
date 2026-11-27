@@ -74264,6 +74264,12 @@ components:
         before: { type: [object, 'null'], additionalProperties: true }
         after: { type: [object, 'null'], additionalProperties: true }
         summary: { type: string }
+        reason:
+          type: [string, 'null']
+          description: >-
+            Why a project's phase was moved, in the words given with the move, so a walk
+            through the history says why each move was made. Null on every other row, on a
+            move made without a reason, and for a reader whose role does not read the phase.
         undid_audit_log_id:
           type: [string, 'null']
           format: uuid

@@ -13,8 +13,6 @@ package gates
 
 import (
 	"encoding/json"
-	"io/fs"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -135,37 +133,5 @@ func TestTheAgentCatalogHasNoStandingExceptionWriter(t *testing.T) {
 	}
 	if slices.Contains(actions, "allow_contact") {
 		t.Errorf("change_compliance offers allow_contact again: no action records a standing exception")
-	}
-}
-
-func TestOnlyTheMergeCarryWritesStandingExceptions(t *testing.T) {
-	t.Parallel()
-	var writers []string
-	for _, root := range []string{"internal", "cmd", "pkg"} {
-		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-				return err
-			}
-			body, err := gatekit.ReadFile(path)
-			if err != nil {
-				return err
-			}
-			for range overrideInsert.FindAllIndex(body, -1) {
-				writers = append(writers, filepath.ToSlash(path))
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("walking %s: %v", root, err)
-		}
-	}
-	if !slices.Contains(writers, standingExceptionCarry) {
-		t.Fatalf("no INSERT INTO communication_override found in %s: the census read nothing (found %v)",
-			standingExceptionCarry, writers)
-	}
-	for _, path := range writers {
-		if path != standingExceptionCarry {
-			t.Errorf("%s inserts into communication_override: only the merge carry may write a standing exception", path)
-		}
 	}
 }

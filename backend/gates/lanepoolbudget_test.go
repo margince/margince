@@ -173,6 +173,9 @@ func integrationSuitesUnder(t *testing.T, roots ...string) []gatekit.ParsedFile 
 // Judging MORE files is the safe direction for a prohibition: the cost of an
 // extra file is a finding somebody reads, and the cost of a missing one is the
 // gate reading green over the thing it exists to refuse.
+//
+// activeGateSources keeps its own context: it asks what the running build
+// compiled, not what the CI lane would.
 func laneContexts() []build.Context {
 	lane := build.Default
 	lane.GOOS, lane.GOARCH, lane.CgoEnabled = "linux", "amd64", true
