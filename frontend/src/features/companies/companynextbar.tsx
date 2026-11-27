@@ -7,6 +7,7 @@ import { formatDueCompact } from "../../format/format.dates";
 import { useLocale, usePlural, useT, type Words } from "../../i18n";
 import { useCompanyZone } from "../../lib/companyzone";
 import { type LatePromise, latePromise } from "../../lib/latepromise";
+import { useReadsOnly, useSetAsideWords } from "../../lib/setasidewords";
 import { tasksPeek } from "../../lib/standingpeeks";
 import { taskDetail } from "../../lib/taskdetail";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -112,6 +113,7 @@ export function CompanyNextBar({
   const zone = useViewerZone();
   const companyZone = useCompanyZone();
   const { deferOf } = useCompanySetAside(view.company.id);
+  const words = useSetAsideWords(useReadsOnly("company", view.company));
   const fallback = momentFallbackVerb({
     view,
     t,
@@ -174,7 +176,13 @@ export function CompanyNextBar({
             momentVerb({ moment, onOpenRecord, fallback })
           )
         }
-        snooze={defer && { onSnooze: defer.onDefer, pending: defer.pending }}
+        snooze={
+          defer && {
+            onSnooze: defer.onDefer,
+            pending: defer.pending,
+            ...words,
+          }
+        }
         more={more}
       />
     );

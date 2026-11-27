@@ -4889,6 +4889,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.suggest.dismiss": "Để sau",
   "record.setAside.done": "Đã để sau. Mục này sẽ quay lại khi có thay đổi.",
   "record.setAside.restored": "Đã trở lại thẻ.",
+  "record.setAside.verb": "Để sau",
+  "record.setAside.forMe": "Chỉ ẩn với bạn",
+  "record.setAside.forMeHint":
+    "Chỉ ẩn thẻ này với bạn. Người chịu trách nhiệm và nhóm của bạn vẫn thấy thẻ.",
   "co.suggest.byline": "Margince đề xuất",
   "co.suggest.dismissFailed": "Không thể bỏ qua gợi ý. Thử lại.",
   "co.suggest.addTaskFailed": "Không thể lưu bước tiếp theo. Thử lại.",

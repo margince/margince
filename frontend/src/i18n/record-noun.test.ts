@@ -284,6 +284,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "ob.manual.icpHint",
     "contact.intro.answerSuggestHelp",
     "contact.notYoursToChange",
+    // The owner who still sees a card a reader set aside.
+    "record.setAside.forMeHint",
     "provider.profile.lookupNotYours",
     "project.notYoursToChange",
     "record.notYoursToChange",
@@ -531,6 +533,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "brief.weekly.sharedDefinitions",
     "company.rejectReasonHint",
     "contact.notYoursToChange",
+    // The owner who still sees a card a reader set aside.
+    "record.setAside.forMeHint",
     "provider.profile.lookupNotYours",
     "deal.notYoursToChange",
     "history.field.lifted_by",

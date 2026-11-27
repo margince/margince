@@ -8,6 +8,7 @@ import { Badge, Button } from "./atoms";
 import { Panel } from "./panel";
 import { type PeekContent, usePeek } from "./peek";
 import { badgeTone, type ReadingTone } from "./readingtone";
+import { useTooltip } from "./tooltip";
 import "./nextbar.css";
 
 /** The other open tasks behind the bar: how many, where the list is, and which
@@ -16,6 +17,14 @@ export type NextBarMore = Readonly<{
   count: number;
   onOpen: () => void;
   peek?: PeekContent;
+}>;
+
+/** Putting the bar's move off, by date or by setting it aside. */
+export type NextBarSnooze = Readonly<{
+  onSnooze: () => void;
+  pending?: boolean;
+  label?: string;
+  hint?: string;
 }>;
 
 /**
@@ -47,12 +56,9 @@ export function NextBar({
   insight?: ReactNode;
   // The verb that settles the move, as the caller's own `Button`.
   action?: ReactNode;
-  // `label` names what the deferral does where it is no snooze to a date.
-  snooze?: Readonly<{
-    onSnooze: () => void;
-    pending?: boolean;
-    label?: string;
-  }>;
+  // `label` names what the deferral does where it is no snooze to a date;
+  // `hint` says on hover and focus who it hides the move from.
+  snooze?: NextBarSnooze;
   // The other open tasks, behind a link to the record's task list. `peek`
   // names them on hover and focus, so "+2 tasks" is never a lone number.
   more?: NextBarMore;
@@ -97,20 +103,43 @@ export function NextBar({
         {(action || snooze || more) && (
           <div className="next-bar-verbs">
             {action}
-            {snooze && (
-              <Button
-                variant="ghost"
-                onClick={snooze.onSnooze}
-                pending={snooze.pending}
-              >
-                {snooze.label ?? t("standing.next.snooze")}
-              </Button>
-            )}
+            {snooze &&
+              (snooze.hint ? (
+                <HintedSnooze snooze={snooze} hint={snooze.hint} />
+              ) : (
+                <Button
+                  variant="ghost"
+                  onClick={snooze.onSnooze}
+                  pending={snooze.pending}
+                >
+                  {snooze.label ?? t("standing.next.snooze")}
+                </Button>
+              ))}
             {more && more.count > 0 && <MoreTasks more={more} />}
           </div>
         )}
       </div>
     </Panel>
+  );
+}
+
+function HintedSnooze({
+  snooze,
+  hint,
+}: Readonly<{ snooze: NextBarSnooze; hint: string }>) {
+  const t = useT();
+  const { ref, trigger, tip } = useTooltip<HTMLButtonElement>(hint);
+  return (
+    <Button
+      ref={ref}
+      variant="ghost"
+      onClick={snooze.onSnooze}
+      pending={snooze.pending}
+      {...trigger}
+    >
+      {snooze.label ?? t("standing.next.snooze")}
+      {tip}
+    </Button>
   );
 }
 

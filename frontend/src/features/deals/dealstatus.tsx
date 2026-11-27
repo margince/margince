@@ -13,6 +13,7 @@ import { formatDayMonth } from "../../format/format";
 import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { unwrap } from "../../lib/problem";
+import { useSetAsideWords } from "../../lib/setasidewords";
 import { useViewerZone } from "../../lib/viewerzone";
 import { hasMoveControl, MoveButton } from "../records/movebutton";
 import {
@@ -87,6 +88,7 @@ export function DealStatusCardPanel({
   renderStanding,
   onOpenEmail,
   more,
+  viewOnly = false,
 }: Readonly<{
   deal: DealRef;
   // How it stands, drawn by the page that holds the ladder's write path.
@@ -96,6 +98,9 @@ export function DealStatusCardPanel({
   onOpenEmail?: (activityId: string) => void;
   // The other open tasks, for the Next bar's tail.
   more?: NextBarMore;
+  // Whether this reader may not change the deal, so its move's verbs are
+  // locked and its set-aside hides the move for them alone.
+  viewOnly?: boolean;
 }>) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -124,6 +129,7 @@ export function DealStatusCardPanel({
           card={card}
           onOpenEmail={onOpenEmail}
           more={more}
+          viewOnly={viewOnly}
         />
         {standing(cardHead(card, deal, t, onOpenEmail))}
         {/* The record page says what the brief says through How it stands and
@@ -376,14 +382,17 @@ function DealNextBar({
   card,
   onOpenEmail,
   more,
+  viewOnly,
 }: Readonly<{
   dealId: string;
   card: DealStatusCard;
   onOpenEmail?: (activityId: string) => void;
   more?: NextBarMore;
+  viewOnly: boolean;
 }>) {
   const t = useT();
   const notNow = useDealMoveSetAside(dealId);
+  const words = useSetAsideWords(viewOnly);
   const move = card.next;
   if (!move) {
     return <RecordNextBar more={more} />;
@@ -421,7 +430,7 @@ function DealNextBar({
         action={dealMoveVerb(dealId, card, move)}
         snooze={
           snooze
-            ? { onSnooze: snooze.onDefer, pending: snooze.pending }
+            ? { onSnooze: snooze.onDefer, pending: snooze.pending, ...words }
             : undefined
         }
         more={more}

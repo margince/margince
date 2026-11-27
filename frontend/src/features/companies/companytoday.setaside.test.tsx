@@ -10,7 +10,11 @@ import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
-import { installFetchStub, jsonResponse } from "../../testing/story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  meRoute,
+} from "../../testing/story-utils";
 import { useCompany360 } from "./company360";
 import { CompanyNextBar } from "./companynextbar";
 
@@ -63,6 +67,7 @@ function view(moment: Moment): Company360 {
     company: {
       id: "o-1",
       display_name: "Acme",
+      writable: true,
       source: "manual",
       captured_by: "human:test",
       created_at: "2026-08-01T09:00:00Z",
@@ -84,6 +89,7 @@ it("sets the account's moment aside, and the Undo puts it back", async () => {
   let setAside = false;
   const sent: unknown[] = [];
   installFetchStub({
+    "GET /me": meRoute({ company: ["read", "update"] }),
     "GET /companies/o-1/360": () =>
       jsonResponse(view(setAside ? QUIET : PROMISE)),
     "POST /companies/o-1/suggestions/dismiss": (body) => {
@@ -114,7 +120,7 @@ it("sets the account's moment aside, and the Undo puts it back", async () => {
 
   await screen.findByText(PROMISE.headline);
   await user.click(
-    screen.getByRole("button", { name: en["standing.next.snooze"] }),
+    screen.getByRole("button", { name: en["record.setAside.verb"] }),
   );
 
   await waitFor(() => expect(screen.queryByText(PROMISE.headline)).toBeNull());
