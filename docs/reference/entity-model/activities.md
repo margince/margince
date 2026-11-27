@@ -824,7 +824,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_review_response
 
-16 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -843,7 +843,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 
 **Points at**
 
@@ -872,7 +871,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "outcome": 20000, "captured_by": 20000, "template_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"outcome":20000,"source":20000,"template_key":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "outcome": 20000, "captured_by": 20000, "template_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"outcome":20000,"source":20000,"template_key":20000}')`
-- `trg_activity_review_response_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at()`
 
 ## activity_review_template
 

@@ -61358,7 +61358,9 @@ type OutcomeReview struct {
 	Revision        int              `json:"revision"`
 	TemplateKey     string           `json:"template_key"`
 	TemplateVersion int              `json:"template_version"`
-	UpdatedAt       time.Time        `json:"updated_at"`
+
+	// UpdatedAt Always equal to `created_at`: a review is not edited after it is submitted.
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // OutcomeReviewOutcome What the deal did, as the closing recorded it — not as the stage reads today. A stage can be renamed or reconfigured; what happened cannot.
