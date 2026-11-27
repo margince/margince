@@ -2402,6 +2402,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.stage_evidence": "Phasenbelege",
   "systemJob.stage_evidence_read": "Auswertung der Phasenbelege",
   "systemJob.stage_evidence_reread": "Erneute Auswertung der Phasenbelege",
+  "systemJob.standing_line": "Prüfung von „Wie es steht“",
   "systemJob.suppression_journal_worker": "Export des Löschjournals",
   "systemJob.stored_object_reap_worker": "Bereinigung des Dateispeichers",
   "systemJob.technical_backfill": "Nachholen der technischen Abfrage",
@@ -4020,7 +4021,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.strip.fin.neverInvoiced": "Nicht fakturiert",
   "co.strip.fin.noConnection": "Buchhaltung nicht verbunden",
   "co.strip.fin.unmapped": "Kunde nicht zugeordnet",
-  "co.strip.fin.syncing": "Wird synchronisiert",
+  "co.strip.fin.syncing": "Erste Synchronisierung ausstehend",
   "co.strip.fin.staleFigure": "Synchronisierung veraltet",
   "co.strip.fin.notCurrent": "Nicht aktuell",
   "co.strip.fin.errorFigure": "Letzte Synchronisierung fehlgeschlagen",
@@ -4240,6 +4241,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.title": "Wie es steht · {date}",
   "standing.noteMore": "Mehr anzeigen",
   "standing.noteLess": "Weniger anzeigen",
+  "standing.citations.source": "Die Aktivität",
+  "standing.citations.from": "Gelesen aus",
   "standing.latest.title": "Zuletzt",
   "standing.latest.open": "Im Verlauf öffnen",
   "standing.sources.records": "Aus den CRM-Daten",
@@ -4485,7 +4488,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "finance.none": "Nichts erfasst.",
   "finance.loading": "Rechnungen werden geladen…",
   "finance.syncing":
-    "Synchronisierung mit dem Buchhaltungssystem läuft. Die Zahlen erscheinen nach der ersten Synchronisierung.",
+    "Die erste Synchronisierung mit dem Buchhaltungssystem steht noch aus. Margince synchronisiert alle sechs Stunden, und ein Admin kann die Synchronisierung unter Einstellungen → Anbindungen früher starten.",
   "finance.noConnection":
     "Kein Buchhaltungssystem verbunden. Rechnungen und Zahlungsverhalten dieses Kunden erscheinen, sobald eines verbunden ist.",
   "finance.unmapped":
@@ -4542,13 +4545,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contracts.status.expired": "Ausgelaufen",
   "contracts.status.cancelled": "Gek\u00fcndigt",
   "contracts.status.superseded": "Ersetzt",
-  "contracts.endsOn": "Endet am {when}",
+  "contracts.cancelledTo": "Gekündigt zum {when}",
+  "contracts.cancelledToNotice": "Gekündigt zum {when}, Kündigung am {notice}",
+  "contracts.replacedBy": "Ersetzt durch {title}",
+  "contracts.replacedByUnnamed": "Durch einen späteren Vertrag ersetzt",
   "contracts.renewsOn": "Verl\u00e4ngert sich am {when}",
   "contracts.endedPendingStatus": "Laufzeit beendet, Status ausstehend",
   "contracts.form.title": "Vertrag erfassen",
   "contracts.form.name": "Titel",
   "contracts.form.number": "Vertragsnummer",
   "contracts.form.value": "Wert",
+  "contracts.form.currency": "Währung",
   "contracts.form.basis": "Dieser Wert ist",
   "contracts.form.arr": "Jährlich wiederkehrender Umsatz",
   "contracts.form.arrMonthly": "Monatlicher Gegenwert:",
@@ -4594,6 +4601,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contracts.statusChange.label": "Neuer Status",
   "contracts.statusChange.submit": "Status ändern",
   "contracts.statusChange.errSame": "Der Vertrag hat bereits diesen Status.",
+  "contracts.statusChange.finalTitle": "{status} ist endgültig",
+  "contracts.statusChange.finalBody":
+    "Nach dem Speichern lässt sich der Status nicht mehr ändern. Um die Vereinbarung fortzusetzen, verlängere sie.",
   "contracts.cancel.title": "Kündigung erfassen",
   "contracts.cancel.hint":
     "Der Kunde bleibt unter Vertrag, bis die Kündigung wirksam wird. Damit wird die Kündigung erfasst. Der Status ändert sich nicht.",
@@ -7121,7 +7131,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.termsText": "Bedingungstext",
   "offer.lines": "Positionen",
   "offer.addLine": "Position hinzufügen",
-  "offer.positionTaken": "Eine andere Zeile hat schon diese Position.",
+  "offer.lineOrderHint":
+    "Ziehe eine Position am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
+  "offer.lineHandle": "{name} verschieben, Position {position} von {total}",
+  "offer.lineMoved": "{name} ist jetzt Position {position} von {total}",
+  "offer.lineHandleUnnamed": "Position {position} von {total} verschieben",
+  "offer.lineMovedUnnamed":
+    "Die Position ist jetzt Position {position} von {total}",
   "offer.lapsed":
     "Das Datum „Gültig bis“ dieses Angebots ist überschritten. Ändere es bei einem Entwurf unter „Kopfdaten bearbeiten“ oder erzeuge für ein gesendetes Angebot eine neue Revision.",
   "offer.position": "Position",
@@ -11562,6 +11578,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.risk_verdict_sweep": "Prüfung des Deal-Risikos",
   "jobs.kind.signal_scan": "Suche nach Signalen",
   "jobs.kind.site_deep_read": "Analyse der Unternehmenswebsite",
+  "jobs.kind.standing_line_check": "Prüfung von „Wie es steht“",
   "jobs.kind.stored_object_reap": "Bereinigung des Dateispeichers",
   "jobs.kind.suppression_journal_export": "Export des Löschjournals",
   "jobs.kind.tag_scout": "Tag-Vorschläge",
@@ -21874,6 +21891,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.why.now": "Warum jetzt",
   "worklist.why.consequence": "Wenn nichts passiert",
   "worklist.why.todo": "Was zu tun ist",
+  "worklist.why.writing": "Aufgabe und Nachrichten werden gelesen…",
   "worklist.title.deal_at_risk": "Bei {name} tut sich nichts mehr",
   "worklist.title.deal_at_risk.close_overdue":
     "{name} ist über das Abschlussdatum",
@@ -21888,8 +21906,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.title.bounce": "Unzustellbar: {name}",
   "worklist.title.lead_response": "Neuen Lead {name} kontaktieren",
   "worklist.title.customer_waiting": "{name} wartet auf deine Antwort",
-  "worklist.todo.task.named":
-    "Erledige die Aufgabe mit {name} und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
   "worklist.todo.deal_at_risk.named":
     "Öffne {name} und plane den nächsten Schritt.",
   "worklist.todo.customer_waiting.named": "Antworte {name}.",
@@ -21919,8 +21935,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Prüfe die Verbindung des Kalenders, damit seine Termine wieder erfasst werden.",
   "worklist.todo.capture_health.calendar.named":
     "Prüfe die Verbindung von {name}, damit seine Termine wieder erfasst werden.",
-  "worklist.consequence.task_slips.named":
-    "Die Aufgabe mit {name} bleibt unerledigt.",
   "worklist.happened.customer_waiting":
     "{name} hat am {when} geschrieben, und noch niemand hat geantwortet.",
   "worklist.happened.customer_waiting.bare":
@@ -22006,7 +22020,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.task": "Die Aufgabe ist am {due} fällig.",
   "worklist.happened.task.overdue":
     "Die Aufgabe war am {due} fällig und ist noch offen.",
-  "worklist.happened.task.undated": "Die Aufgabe hat kein Fälligkeitsdatum.",
   "worklist.happened.deal": "{deal}: {figures}.",
   "worklist.happened.lastFrom": "Letzter Kontakt von {name}: {when}",
   "worklist.happened.lastTo": "Letzter Kontakt an {name}: {when}",
@@ -22031,7 +22044,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{name} rutscht über das erwartete Abschlussdatum.",
   "worklist.consequence.meeting_unprepared":
     "Du gehst unvorbereitet in den Termin.",
-  "worklist.consequence.task_slips": "Die Aufgabe bleibt unerledigt.",
   "worklist.consequence.work_blocked":
     "Arbeit, die an dieser Entscheidung hängt, bleibt blockiert.",
   "worklist.consequence.customer_never_received": "Die Nachricht kommt nie an.",
@@ -22047,8 +22059,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Datensätze laufen weiter auseinander.",
   "worklist.todo.deal_at_risk":
     "Öffne den Deal und plane den nächsten Schritt.",
-  "worklist.todo.task":
-    "Erledige sie und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
   "worklist.todo.customer_waiting": "Beantworte die Nachricht.",
   "worklist.todo.awaiting_reply": "Sende eine Nachfrage.",
   "worklist.todo.lead_response":

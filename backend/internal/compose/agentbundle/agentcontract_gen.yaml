@@ -24684,7 +24684,17 @@ paths:
                 entity_type: {type: string, enum: [contact, company, deal, activity, lead, project]}
                 entity_id: {type: string, format: uuid}
                 file: {type: string, format: binary}
+                reuse_identical:
+                  type: boolean
+                  description: 'When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy.'
       responses:
+        '200':
+          description: The identical file the record already held, answered for `reuse_identical`. Nothing was stored.
+          headers:
+            Location: {schema: {type: string}}
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/Attachment'}
         '201':
           description: The stored attachment metadata.
           headers:
@@ -34998,6 +35008,9 @@ components:
           format: date-time
           description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
         company: {$ref: '#/components/schemas/Company'}
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         moment:
           description: >-
             The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's contacts — a promise past its date, or the next one coming due — read from both places a promise is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
@@ -35361,6 +35374,9 @@ components:
           format: date-time
           description: The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not promise one snapshot across sections.
         contact: {$ref: '#/components/schemas/Contact'}
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         created_by:
           allOf: [{$ref: '#/components/schemas/PrincipalAttribution'}]
           description: |-
@@ -36153,6 +36169,22 @@ components:
           description: >-
             Two to five sentences: who this contact is in the current commercial context, what they have explicitly cared about, what recently changed, and the unresolved decision or risk. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited.
           items: {$ref: '#/components/schemas/CompanyBriefSentence'}
+    StandingLine:
+      type: object
+      description: |-
+        Where a record stands after its latest activity, in one sentence the model wrote in
+        the background when that activity landed. Shared by the record's readers, and served
+        only to a reader who may open every activity it cites.
+      required: [text, activity_ids, written_at]
+      properties:
+        text: {type: string}
+        activity_ids:
+          type: array
+          description: |-
+            The activities the sentence rests on, as the model cited them. The page opens
+            each one, so a reader can check the line against what was said.
+          items: {type: string, format: uuid}
+        written_at: {type: string, format: date-time}
     ContactConsentGuard:
       type: object
       description: |-
@@ -40070,6 +40102,9 @@ components:
           format: date-time
           description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
         project: {$ref: '#/components/schemas/Project'}
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         sections_omitted:
           type: array
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
@@ -55908,7 +55943,7 @@ components:
       type: object
       description: Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422).
       properties:
-        position: {type: integer, minimum: 1}
+        position: {type: integer, minimum: 1, description: 'Moves the line to this place in the offer. The lines between shift to make room, and the offer''s lines are numbered from 1 again. A place past the last line puts it last.'}
         description: {type: string}
         unit: {type: string}
         quantity: {type: number, format: double}

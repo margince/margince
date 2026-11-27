@@ -19,7 +19,7 @@ dates and the paper.
 To create a contract in Margince, or upload a customer's signed contract document, open the company's **Documents** tab. Click **Add contract** in the **Contracts** panel, and drop the signed file on **Signed document**.
 1. Open the company, choose **Documents**, then **Add contract**.
 2. In **Record contract**, fill **Title** and **This value is** (both required).
-   You may also fill **Value**, **Starts**, **Ends**, **Renews**, **Notice period (days)**, **Payment terms (days)** and **Signed**.
+   You may also fill **Currency**, **Value**, **Starts**, **Ends**, **Renews**, **Notice period (days)**, **Payment terms (days)** and **Signed**. **Currency** starts on your base currency; pick another and the value you typed stays the same.
 3. Click **Record contract**.
 A new contract starts as **Draft**; without the Create permission there is no button.
 Also called: add an agreement, upload a signed contract.
@@ -27,7 +27,7 @@ Also called: add an agreement, upload a signed contract.
 ### How do I make a contract active or change its status?
 To change a contract's status in Margince, open the company's **Documents** tab and use the contract row's actions menu → **Change status**.
 1. Open the actions menu on the contract's row. A screen reader names it **Actions for** and the contract's title, then its number or, without one, its start day. Two menus that would still read the same end in (1) and (2).
-2. Choose **Change status**, pick the **New status** (Draft, Active, Expired or Canceled), and click **Change status**.
+2. Choose **Change status**, pick the **New status** (Draft, Active, Expired or Canceled), and click **Change status**. When you pick Expired or Canceled, the form warns that the status is final.
 A contract that is already Expired, Canceled or Superseded offers no status change, because those are final. Superseded cannot be chosen at all; renewing sets it.
 Also called: activate a contract, mark a contract expired.
 
@@ -107,13 +107,15 @@ replaces.
 ### What renewing changes
 Renewing a contract creates the new contract and supersedes the old one in one
 step. **The old contract keeps its terms.** Only its status changes to
-Superseded, and it shows which contract replaced it. You may not be able to open the
+Superseded, and its row reads "Replaced by" and the new contract's name. You may not be able to open the
 company. Then the renewal still works and says what it did instead: "The renewal
 keeps the same counterparty and records no deal."
 
 ### What a cancellation records
 Recording a cancellation stores the date notice was given and the date it takes
 effect. Nothing else changes; the status changes later, when somebody sets it.
+The contract row shows it at once, as "Canceled, ends" and the date, with the notice
+date, even when the term has not started yet. It no longer shows when the contract renews.
 
 The form refuses three cases: "Enter both dates.";
 "Cancellation cannot take effect before notice was given."; "Cancellation
@@ -169,7 +171,7 @@ The sources on offer are the add-ons your installation was built with. Margince 
 
 After the first sync, the card lists the source's customers. Press **Link** on each one and pick its company. A company can have more than one customer in the source. Margince never links them by itself, so a guess never puts money on the wrong company.
 
-The sync runs every six hours. **Sync now** runs it sooner. Margince only reads from the source and never writes to it.
+The sync runs every six hours. **Sync now** runs it sooner, and so does each **Link**, so a linked company's invoices do not wait for the next one. Margince only reads from the source and never writes to it.
 Until one is connected, the **Finance** card reads "No accounting system connected."
 Also called: connect finance, link accounting, sync invoices, connect a ledger, bookkeeping integration.
 
@@ -238,7 +240,7 @@ day it was issued. If that day has no rate yet, an admin can add older history i
 |---|---|
 | **No connection** | "No accounting system connected." |
 | **Unmapped** | "Connected, but this company is not yet matched to a customer in the accounting system." |
-| **Syncing** | "Figures appear after the first sync." |
+| **Syncing** | "Waiting for the first sync with the accounting system." It runs every six hours, and an admin can start it sooner. |
 | **Connected** | Working |
 | **Stale** | Connected, but the last sync is old |
 | **Error** | The sync failed |

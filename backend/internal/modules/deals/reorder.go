@@ -201,19 +201,29 @@ func placeStages(ctx context.Context, tx pgx.Tx, ladder []ranked, moves []placem
 			Message: "a stage sits too low to reorder around; give it a small position first",
 		}
 	}
-	movers := make([]ids.UUID, len(moves))
 	parks := make([]int, len(moves))
-	ranks := make([]int, len(moves))
-	for i, m := range moves {
-		movers[i], parks[i], ranks[i] = m.id, floor-1-i, m.to
+	for i := range moves {
+		parks[i] = floor - 1 - i
 	}
 	const place = `UPDATE stage SET position = v.position
 		FROM unnest($1::uuid[], $2::int[]) AS v(id, position) WHERE stage.id = v.id`
+	return parkThenPlace(ctx, tx, place, moves, parks, "stages")
+}
+
+// parkThenPlace runs `place` (ids $1, positions $2) twice: first to the parks,
+// which no row holds, then to each mover's rank. A unique position index is
+// checked row by row, so one statement straight to the ranks can collide.
+func parkThenPlace(ctx context.Context, tx pgx.Tx, place string, moves []placement, parks []int, noun string) error {
+	movers := make([]ids.UUID, len(moves))
+	ranks := make([]int, len(moves))
+	for i, m := range moves {
+		movers[i], ranks[i] = m.id, m.to
+	}
 	if _, err := tx.Exec(ctx, place, movers, parks); err != nil {
-		return fmt.Errorf("park the moving stages: %w", err)
+		return fmt.Errorf("park the moving %s: %w", noun, err)
 	}
 	if _, err := tx.Exec(ctx, place, movers, ranks); err != nil {
-		return fmt.Errorf("place the moving stages: %w", err)
+		return fmt.Errorf("place the moving %s: %w", noun, err)
 	}
 	return nil
 }

@@ -2,9 +2,15 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { StoryProviders } from "../../testing/story-utils";
+import { screen, userEvent } from "storybook/test";
+import {
+  emptyPage,
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import type { CarriageViolation } from "./carriage";
-import { CarriageNotice } from "./composeattachments";
+import { AttachAction, CarriageNotice } from "./composeattachments";
 
 // The attachment shelf's standing refusal, rendered off the same violation
 // shapes carriage.test.ts asserts rather than a sentence typed here — so the
@@ -43,4 +49,32 @@ export const CarriesNoFiles: Story = {
       <CarriageNotice channel="SMS" blocks={[{ kind: "carries", count: 1 }]} />
     </StoryProviders>
   ),
+};
+
+// Ten files on the message: the picker takes no upload, since the record would
+// keep a file the message cannot carry.
+export const FullMessageTakesNoUpload: Story = {
+  render: () => {
+    installFetchStub({ "GET /attachments": () => jsonResponse(emptyPage) });
+    const ten = Array.from({ length: 10 }, (_, at) => ({
+      id: `f-${at}`,
+      filename: `drawing-${at + 1}.pdf`,
+    }));
+    return (
+      <StoryProviders>
+        <AttachAction
+          entityType="deal"
+          entityId="deal-1"
+          chosen={ten}
+          onChange={() => {}}
+        />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Attach" }),
+    );
+    await screen.findByLabelText(/Upload file/);
+  },
 };

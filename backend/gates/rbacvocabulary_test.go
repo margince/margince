@@ -28,10 +28,13 @@ package gates
 // vocabulary a third time would drift exactly like the two it is watching.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
+	"maps"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"gopkg.in/yaml.v3"
@@ -164,11 +167,31 @@ type contractSchemaFields struct {
 	Properties map[string]yaml.Node `yaml:"properties"`
 }
 
+// contractSchema answers one schema as the caller's own copy. Its property
+// nodes are shared with every caller: decode them, never change them.
 func contractSchema(t *testing.T, name string) contractSchemaFields {
 	t.Helper()
+	schemas, err := contractSchemas()
+	if err != nil {
+		t.Fatal(err)
+	}
+	schema, ok := schemas[name]
+	if !ok {
+		t.Fatalf("%s declares no components.schemas.%s", contractFile, name)
+	}
+	schema.Enum = slices.Clone(schema.Enum)
+	schema.Extensible = slices.Clone(schema.Extensible)
+	schema.Required = slices.Clone(schema.Required)
+	schema.Properties = maps.Clone(schema.Properties)
+	return schema
+}
+
+// contractSchemas decodes the contract's schemas once per test binary. The
+// decode keeps yaml.Node values, so the shared parse cannot serve it.
+var contractSchemas = sync.OnceValues(func() (map[string]contractSchemaFields, error) {
 	raw, err := gatekit.ReadFile(contractFile)
 	if err != nil {
-		t.Fatalf("reading %s: %v", contractFile, err)
+		return nil, fmt.Errorf("reading %s: %w", contractFile, err)
 	}
 	var doc struct {
 		Components struct {
@@ -176,14 +199,10 @@ func contractSchema(t *testing.T, name string) contractSchemaFields {
 		} `yaml:"components"`
 	}
 	if err := unmarshalYAML(raw, &doc); err != nil {
-		t.Fatalf("parsing %s: %v", contractFile, err)
+		return nil, fmt.Errorf("parsing %s: %w", contractFile, err)
 	}
-	schema, ok := doc.Components.Schemas[name]
-	if !ok {
-		t.Fatalf("%s declares no components.schemas.%s", contractFile, name)
-	}
-	return schema
-}
+	return doc.Components.Schemas, nil
+})
 
 // objectGrantActions returns principal.ObjectGrant's field names lowercased —
 // the wire spelling of each action. The struct declares them on one line
@@ -225,4 +244,20 @@ func objectGrantActions(t *testing.T) []string {
 		}
 	}
 	return actions
+}
+
+// A caller's change to its schema leaves the next caller's schema as it was.
+func TestACallersChangeToAContractSchemaStaysItsOwn(t *testing.T) {
+	t.Parallel()
+	first := contractSchema(t, "RbacObjectGrant")
+	if len(first.Required) == 0 || len(first.Properties) == 0 {
+		t.Fatalf("%s's RbacObjectGrant has no required list or properties to change", contractFile)
+	}
+	want, properties := slices.Clone(first.Required), len(first.Properties)
+	first.Required[0] = "changed"
+	clear(first.Properties)
+	again := contractSchema(t, "RbacObjectGrant")
+	if !slices.Equal(again.Required, want) || len(again.Properties) != properties {
+		t.Errorf("a caller's change reached the next caller: required %v, %d properties", again.Required, len(again.Properties))
+	}
 }

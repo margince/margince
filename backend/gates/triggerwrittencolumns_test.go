@@ -307,12 +307,9 @@ const judgedWriteFloor = 120
 // trigger already writes.
 func touchTriggerTables(t *testing.T) map[string]map[string]bool {
 	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	raw := headCatalog(t)
 	tables := map[string]map[string]bool{}
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		m := touchTriggerLine.FindStringSubmatch(strings.TrimSpace(line))
 		if m == nil {
 			continue
@@ -429,11 +426,8 @@ func declarationName(decl ast.Decl) string {
 // wrong in the direction of deleting a live assignment.
 func TestTheTouchTriggerFunctionsStillWriteWhatThisGateSays(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
-	catalog := string(raw)
+	raw := headCatalog(t)
+	catalog := raw
 	for function, columns := range triggerWrites {
 		body := functionBody(catalog, function)
 		if body == "" {
@@ -490,11 +484,8 @@ func TestNothingInGoTurnsOffTheTouchTrigger(t *testing.T) {
 	}
 	// And the setting still exists where it is supposed to, or this test is
 	// reading for a string nothing uses and passing for the wrong reason.
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
-	if !strings.Contains(string(raw), guc) {
+	raw := headCatalog(t)
+	if !strings.Contains(raw, guc) {
 		t.Fatalf("the head catalog no longer names %s at all — the early return this test is about has moved or gone, and the reasoning above has to be redone rather than assumed", guc)
 	}
 	if found > 0 {

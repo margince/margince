@@ -230,7 +230,7 @@ func TestExplainSendsAnUnimplementedCapabilityToTheApp(t *testing.T) {
 
 	got := srv.explain("attach_document", &httperr.DetailedError{
 		Status: 501, Code: "not_implemented",
-		Detail: "this server has no object store configured, so files cannot be stored or read here",
+		Detail: "This server has no object store configured, so files cannot be stored or read here.",
 	})
 
 	for _, want := range []string{"not_implemented", "files cannot be stored", "not available here", "Do not retry"} {

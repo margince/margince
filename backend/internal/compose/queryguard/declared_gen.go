@@ -108,6 +108,7 @@ var Declared = map[string][]string{
 	"GET /v1/activities/{id}/pipeline":                                         {},
 	"GET /v1/activities/{id}/project-filing":                                   {},
 	"GET /v1/activities/{id}/reply-recipient":                                  {},
+	"GET /v1/activities/{id}/task-explanation":                                 {},
 	"GET /v1/activities/{id}/transcript-proposals/latest":                      {},
 	"GET /v1/activities/{id}/transcript-proposals/{readId}":                    {},
 	"GET /v1/activity-review-templates":                                        {},

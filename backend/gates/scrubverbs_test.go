@@ -172,9 +172,9 @@ func scrubVerbSet(t *testing.T, consts map[string]string) map[string]bool {
 // from its CHECK — the only authority on a verb no source walk can resolve.
 func retentionPolicyVerbs(t *testing.T) []string {
 	t.Helper()
-	verbs, ok := tableCheckSets(t)["retention_policy.action"]
+	verbs, ok := checkVocabularies(t)["retention_policy.action"]
 	if !ok {
-		t.Fatal("retention_policy.action: no CHECK (col IN (...)) found — the runtime verb would go unjudged")
+		t.Fatal("retention_policy.action: no CHECK vocabulary found in the head catalog — the runtime verb would go unjudged")
 	}
 	return verbs
 }
