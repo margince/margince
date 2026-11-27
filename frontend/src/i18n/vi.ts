@@ -22883,6 +22883,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.action.mail_filed": "Đã xếp email thu thập được vào liên hệ này",
   "magic.action.company_profile_read": "Đã đọc hồ sơ kỹ thuật của công ty",
   "magic.action.fields_changed": "Đã thay đổi {fields}",
+  "magic.action.guests_synced_from_calendar": "Đã cập nhật khách mời từ lịch",
+  "magic.action.task_done": "Đã đánh dấu hoàn thành",
+  "magic.action.task_reopened": "Đã mở lại việc cần làm",
   "magic.action.retention_lead_anonymize":
     "Đã ẩn danh các lead chưa chuyển đổi đã quá thời hạn lưu trữ",
   "magic.action.retention_lead_archive":
@@ -22988,6 +22991,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "magic.records.fromTo": "từ {from} thành {to}",
   "magic.records.hidden_value": "đã ẩn",
   "magic.records.empty_value": "trống",
+  "magic.records.filled_value": "đã điền",
   "magic.records.count_one": "{count} hồ sơ",
   "magic.records.count_other": "{count} hồ sơ",
   "magic.undoReason.noCompletedChange":

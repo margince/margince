@@ -23522,6 +23522,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.company_profile_read":
     "Technisches Profil des Unternehmens analysiert",
   "magic.action.fields_changed": "{fields} geändert",
+  "magic.action.guests_synced_from_calendar": "Gäste aus dem Kalender aktualisiert",
+  "magic.action.task_done": "Aufgabe als erledigt markiert",
+  "magic.action.task_reopened": "Aufgabe wieder geöffnet",
   "magic.action.retention_lead_anonymize":
     "Nicht konvertierte Leads nach Ablauf der Aufbewahrungsfrist anonymisiert",
   "magic.action.retention_lead_archive":
@@ -23627,6 +23630,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.records.fromTo": "{from} → {to}",
   "magic.records.hidden_value": "verborgen",
   "magic.records.empty_value": "leer",
+  "magic.records.filled_value": "ausgefüllt",
   "magic.records.count_one": "{count} Datensatz",
   "magic.records.count_other": "{count} Datensätze",
   "magic.undoReason.noCompletedChange":

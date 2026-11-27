@@ -23168,6 +23168,9 @@ export const en = {
   "magic.action.mail_filed": "Filed captured email under this contact",
   "magic.action.company_profile_read": "Read the company’s technical profile",
   "magic.action.fields_changed": "Changed {fields}",
+  "magic.action.guests_synced_from_calendar": "Updated guests from the calendar",
+  "magic.action.task_done": "Marked the task done",
+  "magic.action.task_reopened": "Reopened the task",
   "magic.action.retention_lead_anonymize":
     "Anonymized unconverted leads past their retention period",
   "magic.action.retention_lead_archive":
@@ -23272,6 +23275,7 @@ export const en = {
   "magic.records.fromTo": "{from} → {to}",
   "magic.records.hidden_value": "hidden",
   "magic.records.empty_value": "empty",
+  "magic.records.filled_value": "filled in",
   "magic.records.count_one": "{count} record",
   "magic.records.count_other": "{count} records",
   "magic.undoReason.noCompletedChange":
