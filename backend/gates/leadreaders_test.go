@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind census H2
-
 package gates
 
 // `lead` is an RBAC object, and until this gate nothing held the object half of
@@ -26,8 +24,6 @@ package gates
 // objectGate, and the walk is shared rather than copied.
 
 import (
-	"go/ast"
-	"path"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -210,68 +206,18 @@ var leadVerdicts = []namedVerdict{
 	{"ruled", ruledLeadReads},
 }
 
-// wantMinimumGatedLeadSites is the floor below the count of sites that satisfy
-// the gate today. It exists for the reason every floor in this directory does:
-// an extractor that stops recognising SQL finds no sites and reports nothing,
-// which is indistinguishable from a clean tree.
-const wantMinimumGatedLeadSites = 1
-
-var leadReaderScope = gatekit.Scope{
-	Roots:   []string{"internal"},
-	Subject: readsLeadTable,
-	Exempt:  gatekit.Waive(map[string]string{}),
-}
-
-func readsLeadTable(filePath string, file *ast.File) bool {
-	return gatekit.FileReadsTable(filePath, file, leadGate.literal)
-}
-
-func TestEveryReaderOfTheLeadTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
-	t.Parallel()
-	files := leadReaderScope.Files(t)
-	walk := leadGate.walkPackages(t, files)
-	consts := constantTable{}
-
-	var satisfied int
-	for _, parsed := range files {
-		pkg := path.Dir(parsed.Path)
-		for _, site := range leadGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := site.subject(parsed.Path)
-			carriesGate := walk.carries(t, leadGate, parsed, site, consts.of(t, pkg))
-			verdict := verdictIn(t, subject, leadVerdicts)
-
-			switch {
-			case carriesGate && verdict != "":
-				t.Errorf("%s carries the lead object gate AND a %s verdict — remove the verdict, it "+
-					"now describes code that is gated", subject, verdict)
-			case carriesGate:
-				satisfied++
-			case verdict == "":
-				t.Errorf("%s reads the lead table without the object gate and without a verdict.\n"+
-					"  Reading a lead discloses somebody who has not agreed to be a customer, "+
-					"which is what the lead grant governs.\n"+
-					"  Either ask auth.Require(ctx, \"lead\", …), or declare the read in "+
-					"predicateLeadReads / lifecycleLeadReads / calleeGatedLeadReads / ruledLeadReads "+
-					"with the reason it "+
-					"needs no gate.\n"+
-					"  Left alone it is indistinguishable from a read nobody considered.\n"+
-					"  The read: %s", subject, site.sql)
-			}
-		}
-	}
-
-	if satisfied < wantMinimumGatedLeadSites {
-		t.Errorf("only %d lead reads satisfy the object gate, want at least %d — a literal extractor "+
-			"that stopped recognising this tree's SQL would report exactly this, and it reads the "+
-			"same as a clean tree", satisfied, wantMinimumGatedLeadSites)
-	}
-	t.Logf("lead reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled",
-		satisfied, len(predicateLeadReads.Subjects()), len(lifecycleLeadReads.Subjects()),
-		len(calleeGatedLeadReads.Subjects()), len(ruledLeadReads.Subjects()))
-
+// sweepLeadVerdicts fails a verdict no read matched any more. The
+// gate census asks for each sweep by name, so the list is written out.
+func sweepLeadVerdicts(t *testing.T) {
+	t.Helper()
 	predicateLeadReads.AssertAllMatched(t)
 	lifecycleLeadReads.AssertAllMatched(t)
 	calleeGatedLeadReads.AssertAllMatched(t)
 	notTheLeadTable.AssertAllMatched(t)
 	ruledLeadReads.AssertAllMatched(t)
 }
+
+// wantMinimumGatedLeadSites is the floor below the count of sites that satisfy
+// the gate today. An extractor that stops recognising SQL finds no sites and
+// reports nothing, which reads the same as a clean tree.
+const wantMinimumGatedLeadSites = 1

@@ -18,9 +18,9 @@ package gates
 // back an unread marker they had already consumed, on a surface where "3 new"
 // and "0 new" are both plausible and neither looks like a bug.
 //
-// So the statement lives once, and this is the test that holds it. Two writers
-// of one write shape signal nothing while they agree, which is the whole
-// window: they agree right up until the moment one of them is edited.
+// So the statement lives once. TestEachFactHasOneWriter (onewriters_test.go)
+// holds it with the matcher below. Two writers of one write shape signal
+// nothing while they agree. They agree right up until one of them is edited.
 //
 // What the callers keep is the part that legitimately differs: their own
 // visibility gate. company360 asks `EnsureVisible`; contact360 asks
@@ -29,13 +29,8 @@ package gates
 // ruling per record type. The upsert is not.
 
 import (
-	"io/fs"
-	"path/filepath"
 	"regexp"
-	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // viewBaselineOwner is the file that may write the table. Keyed to the FILE and
@@ -78,76 +73,6 @@ var writesViewBaseline = regexp.MustCompile(
 	`(?is)(INSERT\s+INTO|UPDATE(?:\s+ONLY)?)\s+` +
 		`(?:"?[\w$]+"?\s*\.\s*)*(?:(?-i:"user_record_view")|user_record_view)(?:[^\w$".]|$)`)
 
-// viewBaselineWords lets the census skip a file no write can be in, because
-// every write matches writesViewBaseline.
-var viewBaselineWords = requiredWords(writesViewBaseline)
-
-// TestUserRecordViewHasOneWriter is the census `company360.RecordVisit`'s doc
-// comment names.
-func TestUserRecordViewHasOneWriter(t *testing.T) {
-	t.Parallel()
-	var findings []string
-	judged := 0
-	for _, root := range []string{".", "../extensions", "../fixtures"} {
-		err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
-			if walkErr != nil {
-				return walkErr
-			}
-			if entry.IsDir() {
-				if name := entry.Name(); name == "node_modules" || name == "testdata" {
-					return fs.SkipDir
-				}
-				return nil
-			}
-			if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_gen.go") {
-				return nil
-			}
-			rel := filepath.ToSlash(path)
-			if rel == viewBaselineOwner {
-				return nil
-			}
-			// This file spells the statement out in its own probes below;
-			// judging them would report the gate's own evidence as a finding.
-			if filepath.Base(path) == "userrecordviewwriter_test.go" {
-				return nil
-			}
-			src, readErr := gatekit.ReadFile(path)
-			if readErr != nil {
-				return readErr
-			}
-			judged++
-			if !mayHoldFolded(string(src), viewBaselineWords...) {
-				return nil
-			}
-			file, parseErr := gatekit.ParseFile(path, 0)
-			if parseErr != nil {
-				return parseErr
-			}
-			for _, line := range gatekit.SQLStatementsOf(file) {
-				if writesViewBaseline.MatchString(line) {
-					findings = append(findings, rel+": "+gatekit.FirstLineOf(line))
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("walking %s: %v", root, err)
-		}
-	}
-	// A walk that reads nothing passes exactly like a clean tree.
-	if judged < 500 {
-		t.Fatalf("the census read only %d Go files, so it covered almost nothing", judged)
-	}
-	if len(findings) > 0 {
-		t.Errorf("%d statement(s) write user_record_view outside %s.\n\n"+
-			"The mark's correctness is one word — GREATEST(stored, EXCLUDED) — and a second "+
-			"statement that loses it rewinds a baseline on a late-arriving ack, handing a reader "+
-			"back an unread marker they had already consumed. Call company360.RecordVisit inside your "+
-			"own transaction, after your own visibility gate:\n\n\t%s",
-			len(findings), viewBaselineOwner, strings.Join(findings, "\n\t"))
-	}
-}
-
 // TestTheViewBaselineCensusSeesWhatItClaimsTo plants what the census must
 // catch, and what it must not.
 //
@@ -181,9 +106,6 @@ func TestTheViewBaselineCensusSeesWhatItClaimsTo(t *testing.T) {
 	for _, statement := range caught {
 		if !writesViewBaseline.MatchString(statement) {
 			t.Errorf("the census does not see a write it must:\n\t%s", statement)
-		}
-		if !mayHoldFolded(statement, viewBaselineWords...) {
-			t.Errorf("the census skips a file whose only write is:\n\t%s", statement)
 		}
 	}
 	missed := []string{

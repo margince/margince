@@ -37,27 +37,58 @@ var systemPrincipalText = regexp.MustCompile(`^system:[a-z0-9_.-]+$`)
 
 func TestEverySystemPrincipalHasAFrontendLabel(t *testing.T) {
 	t.Parallel()
+	assertPrincipalLabels(t, principalLabels{
+		kind: "system", key: tsJobLabelKey, keyPrefix: "systemJob", bound: boundSystemPrincipals(t),
+		unlabelled: "binds system principal %q, and %s has no \"systemJob.%s\" message (add it to de.ts and " +
+			"vi.ts too), so its changes read as a bare \"System task\" in History",
+	})
+}
+
+// principalLabels is one kind of named principal and its catalogue messages:
+// each principal needs one, and a message no principal earns is dead.
+type principalLabels struct {
+	kind, keyPrefix string
+	key             *regexp.Regexp
+	// bound is each principal's label key, valued by a file that names it.
+	bound map[string]string
+	// unlabelled formats the finding for a principal with no message, from the
+	// principal, the catalogue and the key.
+	unlabelled string
+	// refuse rejects a message before the parity is asked, with the reason.
+	refuse func(name string) (string, bool)
+}
+
+// assertPrincipalLabels holds one kind's principals and its catalogue messages
+// to each other, in both directions.
+func assertPrincipalLabels(t *testing.T, row principalLabels) {
+	t.Helper()
 	source, err := gatekit.ReadFile(frontendCatalogue)
 	if err != nil {
 		t.Fatalf("reading the frontend catalogue: %v", err)
 	}
 	labelled := map[string]bool{}
-	for _, m := range tsJobLabelKey.FindAllStringSubmatch(tsComment.ReplaceAllString(string(source), " "), -1) {
+	for _, m := range row.key.FindAllStringSubmatch(tsComment.ReplaceAllString(string(source), " "), -1) {
 		labelled[m[1]] = true
 	}
-
-	bound := boundSystemPrincipals(t)
-	if len(bound) == 0 || len(labelled) == 0 {
-		t.Fatalf("read %d system principals and %d labels — a census that reads nothing agrees with everything", len(bound), len(labelled))
+	if len(row.bound) == 0 || len(labelled) == 0 {
+		t.Fatalf("read %d %s principals and %d labels — a census that reads nothing agrees with everything",
+			len(row.bound), row.kind, len(labelled))
 	}
-	for _, name := range sortedKeys(bound) {
+	for _, name := range sortedKeys(row.bound) {
 		if !labelled[name] {
-			t.Errorf("%s binds system principal %q, and %s has no \"systemJob.%s\" message (add it to de.ts and vi.ts too), so its changes read as a bare \"System task\" in History", bound[name], name, frontendCatalogue, name)
+			t.Errorf("%s "+row.unlabelled, row.bound[name], name, frontendCatalogue, name)
 		}
 	}
 	for _, name := range sortedKeys(labelled) {
-		if _, ok := bound[name]; !ok {
-			t.Errorf("%s labels systemJob.%s, which no system principal in the backend binds — delete the message or bind the principal", frontendCatalogue, name)
+		if row.refuse != nil {
+			if why, refused := row.refuse(name); refused {
+				t.Errorf("%s labels %s.%s, %s", frontendCatalogue, row.keyPrefix, name, why)
+				continue
+			}
+		}
+		if _, ok := row.bound[name]; !ok {
+			t.Errorf("%s labels %s.%s, which no %s principal in the backend names — delete the message or "+
+				"name the principal", frontendCatalogue, row.keyPrefix, name, row.kind)
 		}
 	}
 }
