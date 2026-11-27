@@ -23,16 +23,17 @@ export function answerText(dsr: DataSubjectRequest, t: Translator): string {
   return fixed ? t(fixed) : written;
 }
 
-// The answer box rests on the answer the server holds. When that answer changes
-// underneath, by a retirement or another officer, the draft resting on the old one goes.
+// The answer box rests on the answer the server holds and on whether the subject
+// is erased. When either changes underneath, the draft resting on the old one goes.
 export function useClosingDraft(
   dsr: DataSubjectRequest,
 ): readonly [DsrClosing, (change: Partial<DsrClosing>) => void] {
   const held = writtenAnswer(dsr) ?? "";
+  const erased = Boolean(dsr.subject_erased);
   const [draft, setDraft] = useState<DsrClosing>(() => requestClosing(dsr));
-  const [basis, setBasis] = useState(held);
-  if (basis !== held) {
-    setBasis(held);
+  const [basis, setBasis] = useState({ held, erased });
+  if (basis.held !== held || basis.erased !== erased) {
+    setBasis({ held, erased });
     setDraft((current) => ({ ...current, resolution: held }));
   }
   function edit(change: Partial<DsrClosing>) {

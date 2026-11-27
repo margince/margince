@@ -418,7 +418,7 @@ describe("a request retired while its drawer is open", () => {
     resolution_removed: true,
   };
 
-  function renderRetiring() {
+  function renderRetiring(first: DataSubjectRequest = DRAFTED) {
     const client = new QueryClient({
       defaultOptions: { queries: { retry: false } },
     });
@@ -431,7 +431,7 @@ describe("a request retired while its drawer is open", () => {
         onFulfilErasure={() => {}}
       />
     );
-    const view = rtlRender(drawer(DRAFTED), {
+    const view = rtlRender(drawer(first), {
       wrapper: ({ children }) => (
         <QueryClientProvider client={client}>
           <LocaleProvider initial="en">{children}</LocaleProvider>
@@ -481,6 +481,27 @@ describe("a request retired while its drawer is open", () => {
       resolution: "Nothing left to send.",
     });
   });
+  // A case with no answer yet keeps none through the retirement, so the flag on
+  // the subject is what tells the drawer that a typed draft went stale.
+  //
+  // Mutation: reset only on a changed answer and the typed draft is sent.
+  it("sends no draft typed on an unanswered case before the retirement", async () => {
+    const patched: Patched[] = [];
+    stub(undefined, patched);
+    const refresh = renderRetiring({ ...DRAFTED, resolution: null });
+    const user = userEvent.setup();
+    await user.type(await answerBox(), "Sent the package to Lena Hoffmann.");
+
+    refresh({ ...RETIRED, resolution: null, resolution_removed: false });
+    expect(await answerBox()).toHaveValue("");
+    await user.click(
+      await screen.findByRole("button", { name: en["privacy.inProgress"] }),
+    );
+
+    await waitFor(() => expect(patched).toHaveLength(1));
+    expect(patched[0]?.body).toEqual({ status: "in_progress" });
+  });
+
   // Another officer answers the retired case. Their answer, never the one drafted
   // before the retirement, fills the box, whether or not this drawer saw the
   // retirement first.
