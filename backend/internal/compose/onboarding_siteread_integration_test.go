@@ -648,10 +648,7 @@ func TestOnboardingSiteReadStartRollsBackWhenQueueInsertFails(t *testing.T) {
 // contacts, hands back an empty proposal list, and confirming it must still
 // work — it is the ordinary case, not an edge one.
 //
-// It did not. A nil proposal slice encodes as SQL NULL, `site_read.proposal_ids`
-// is NOT NULL, and the confirmation failed with a bare 500 at the last step of
-// onboarding. Every existing confirm test staged somebody, so the whole suite
-// stayed green while the common path was broken.
+// Every other confirm test stages somebody, so this one holds the empty list.
 func TestConfirmingAReadThatNamedNobodySucceeds(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
@@ -704,12 +701,12 @@ func TestConfirmingAReadThatNamedNobodySucceeds(t *testing.T) {
 		t.Fatal("the confirmation returned no company")
 	}
 
-	// The row records an empty list, not a null one.
-	var proposals []ids.UUID
+	var proposals int
 	var confirmedAt *time.Time
 	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
-			`SELECT proposal_ids, confirmed_at FROM site_read WHERE id = $1`, read.ID).
+			`SELECT (SELECT count(*) FROM site_read_proposal WHERE site_read_id = $1), confirmed_at
+			   FROM site_read WHERE id = $1`, read.ID).
 			Scan(&proposals, &confirmedAt)
 	}); err != nil {
 		t.Fatalf("reading the confirmed row: %v", err)
@@ -717,7 +714,7 @@ func TestConfirmingAReadThatNamedNobodySucceeds(t *testing.T) {
 	if confirmedAt == nil {
 		t.Error("the read was not stamped confirmed")
 	}
-	if len(proposals) != 0 {
-		t.Errorf("proposal_ids = %v, want empty — nobody was staged", proposals)
+	if proposals != 0 {
+		t.Errorf("the read lists %d proposals, want none — nobody was staged", proposals)
 	}
 }

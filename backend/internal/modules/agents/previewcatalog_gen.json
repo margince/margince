@@ -51031,7 +51031,7 @@
     "lead_holds_email":
      "lead holds email",
     "lead_id":
-     "Khách hàng tiềm năng",
+     "Lead",
     "lead_status":
      "Trạng thái",
     "legal_entity_id":
@@ -62033,7 +62033,7 @@
     "merge_profile_field/text/last_name":
      "Họ",
     "merge_profile_field/text/lead_id":
-     "Khách hàng tiềm năng",
+     "Lead",
     "merge_profile_field/text/legal_entity_id":
      "Công ty gửi",
     "merge_profile_field/text/legal_form":
@@ -62711,7 +62711,7 @@
     "merge_profile_field/lifecycle/last_name":
      "Họ",
     "merge_profile_field/lifecycle/lead_id":
-     "Khách hàng tiềm năng",
+     "Lead",
     "merge_profile_field/lifecycle/legal_entity_id":
      "Công ty gửi",
     "merge_profile_field/lifecycle/legal_form":

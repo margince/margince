@@ -194,6 +194,8 @@ const (
 	// the unexported knowledge ingest worker and its embedder fixture.
 	// Raised by 3 test lines for the generated Prefer parameter the unwired
 	// transcript read now takes.
+	// Raised by 1 test line for the second staged approval in the site-read
+	// finish case, which checks a repeated id keeps its first place.
 	composeRootTestLines = 363_802
 )
 
