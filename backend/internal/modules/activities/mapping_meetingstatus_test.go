@@ -23,7 +23,7 @@ func TestLogActivityInputCarriesAMeetingsStatus(t *testing.T) {
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind:          crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
 		MeetingStatus: &status,
-		Source:        "human",
+		Source:        "manual",
 	})
 	if err != nil {
 		t.Fatalf("mapping a held meeting: %v", err)
@@ -39,7 +39,7 @@ func TestLogActivityInputRefusesAMeetingStatusOnANote(t *testing.T) {
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind:          crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote,
 		MeetingStatus: &status,
-		Source:        "human",
+		Source:        "manual",
 	})
 
 	var fault *MeetingStatusKindError

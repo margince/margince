@@ -292,7 +292,6 @@ internal/modules/approvals/stageagentcall.go#method Service.StageAgentCall
 internal/modules/approvals/staging.go#func withCanonicalIdentity
 internal/modules/automation/automations_catalog_renewal.go#func RenewalReminderObjects
 internal/modules/automation/automations_preview.go#const previewBaseWhereNotArchived
-internal/modules/automation/engine.go#const systemSource
 internal/modules/automation/handlers_clock.go#func renewalAnchor
 internal/modules/automation/handlers_clock.go#func touchAnchor
 internal/modules/automation/handlers_event.go#const block at const dealStageStatusField

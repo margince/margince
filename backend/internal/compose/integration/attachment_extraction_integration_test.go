@@ -194,7 +194,7 @@ func TestRequestAttachmentAccessAuditsANoteAndReturnsRequested(t *testing.T) {
 	notes := e.WsCount(t, `
 		SELECT count(*) FROM activity a
 		JOIN activity_link al ON al.activity_id = a.id
-		WHERE a.kind = 'note' AND a.source = 'attachment_access_request'
+		WHERE a.kind = 'note' AND a.source_system = 'attachment_access_request'
 		  AND a.body LIKE '%contract.pdf%' AND al.entity_type = 'deal' AND al.deal_id = $1
 		  AND a.captured_by IS NOT NULL AND a.captured_by <> ''`,
 		deal)
@@ -224,7 +224,7 @@ func TestRequestAttachmentAccessHidesAnInvisibleParent(t *testing.T) {
 		t.Errorf("request-access through an invisible parent: status %d, want 404", rec.Code)
 	}
 
-	notes := e.WsCount(t, `SELECT count(*) FROM activity WHERE source = 'attachment_access_request'`)
+	notes := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'attachment_access_request'`)
 	if notes != 0 {
 		t.Errorf("a hidden-parent request-access still wrote %d audit note(s), want 0", notes)
 	}
