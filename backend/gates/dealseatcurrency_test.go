@@ -110,6 +110,9 @@ func TestEveryDealSeatCurrencyTestUsesTheOneDefinition(t *testing.T) {
 
 // typeCheckModule checks every package in import order, so a constant is read
 // with its value wherever it is declared in the module.
+//
+// It is not typedModule: it also reads integration-tagged files and tools/,
+// and an outside import stands in empty, so a contract constant stays unvalued.
 func typeCheckModule(fset *token.FileSet, files []*ast.File) map[*ast.File]*types.Info {
 	byDir := map[string][]*ast.File{}
 	for _, file := range files {

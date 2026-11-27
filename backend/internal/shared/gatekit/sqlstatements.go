@@ -19,6 +19,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"slices"
 	"strings"
 	"testing"
 )
@@ -52,7 +53,14 @@ func SQLStatementsIn(t testing.TB, path, source string) []string {
 
 // SQLStatementsOf is SQLStatementsIn over a subtree already parsed — the shape
 // a census wants when it is walking declarations rather than whole files.
+//
+// A whole tree ParseFile shares is read once; each caller gets its own slice.
 func SQLStatementsOf(node ast.Node) []string {
+	if file, isFile := node.(*ast.File); isFile {
+		if facts, shared := factsOf(file); shared {
+			return slices.Clone(facts.sqlStatementsOf(file))
+		}
+	}
 	return sqlStatements(node, nil)
 }
 

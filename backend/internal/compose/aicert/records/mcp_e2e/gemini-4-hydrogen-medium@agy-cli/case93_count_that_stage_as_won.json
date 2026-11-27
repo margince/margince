@@ -13,24 +13,24 @@
   "self_judged": false,
   "stamp": {
     "scenario": "8211845bade70d7f",
-    "tools": "f133d0250dfe9bea",
-    "instructions": "4eab26d5fff0793f",
+    "tools": "d4e78ef7759b595f",
+    "instructions": "d707a123fe53827f",
     "judge": "",
-    "harness": "ae24b6799c8461d2",
+    "harness": "0fe690d35efcc703",
     "parsers": {
       "gemini:cli": "fa1db64bc14e971b",
       "gpt:cli": "d48ca27c983f8b3f"
     },
-    "commit": "5dfb7ceebe8ce1b1607ab3992fb9d36b3ac8208f",
-    "ran_at": "2026-11-25T07:06:51Z",
-    "graded_commit": "8d1a2e3f3d0e19ca67b1a23f47f3c2d8686628c3",
-    "graded_at": "2026-11-25T10:49:09Z"
+    "commit": "ad96834804cdd040c8f582fe5c8d31b0fa53f1ab",
+    "ran_at": "2026-11-26T08:23:10Z",
+    "graded_commit": "ad96834804cdd040c8f582fe5c8d31b0fa53f1ab",
+    "graded_at": "2026-11-26T08:23:10Z"
   },
   "usage": {
-    "input_tokens": 31202,
-    "output_tokens": 6290,
+    "input_tokens": 32660,
+    "output_tokens": 6744,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 29095,
+    "cache_read_input_tokens": 30569,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -42,7 +42,8 @@
         "describe_router_actions",
         "list_pipelines",
         "read_workspace"
-      ]
+      ],
+      "refused": []
     },
     {
       "passed": true,
@@ -50,7 +51,8 @@
         "describe_router_actions",
         "list_pipelines",
         "read_workspace"
-      ]
+      ],
+      "refused": []
     }
   ],
   "efficiency": {
@@ -70,15 +72,25 @@
       "min": 0,
       "max": 0
     },
+    "retries": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
+    "client_refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
     "prompt_tokens": {
-      "median": 30148.5,
-      "min": 29744,
-      "max": 30553
+      "median": 31614.5,
+      "min": 30967,
+      "max": 32262
     },
     "output_tokens": {
-      "median": 3145,
-      "min": 2830,
-      "max": 3460
+      "median": 3372,
+      "min": 3303,
+      "max": 3441
     }
   }
 }

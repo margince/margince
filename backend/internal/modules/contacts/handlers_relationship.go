@@ -185,7 +185,8 @@ func (h Handlers) UpsertPartner(w http.ResponseWriter, r *http.Request, id crmco
 	httperr.WriteJSON(w, http.StatusOK, partner)
 }
 
-func (h Handlers) GetPartner(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+// GetPartner answers the partner row a company plays, if it plays one.
+func (h Handlers) GetPartner(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.GetPartnerParams) {
 	partner, err := h.store.GetPartner(r.Context(), pathID[ids.CompanyKind](id))
 	if err != nil {
 		writeStoreErr(w, r, err)
@@ -249,4 +250,17 @@ func gateMetricInt16(f float64, field string, low, high int16) (int16, error) {
 			fmt.Sprintf("%s must be between %d and %d", field, low, high))
 	}
 	return int16(f), nil
+}
+
+// EndPartnerProgram retires a company's partner extension and keeps the company.
+func (h Handlers) EndPartnerProgram(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.EndPartnerProgramParams) {
+	version, ok := httperr.IfMatchVersion(w, r)
+	if !ok {
+		return
+	}
+	if err := h.store.EndPartnerProgram(r.Context(), pathID[ids.CompanyKind](id), version); err != nil {
+		writeStoreErr(w, r, err)
+		return
+	}
+	w.WriteHeader(http.StatusNoContent)
 }

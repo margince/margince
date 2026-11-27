@@ -120,7 +120,7 @@ func resolvePartnerStage(ctx context.Context, tx pgx.Tx, in UpsertPartnerInput) 
 	var standing string
 	var activated bool
 	err := tx.QueryRow(ctx,
-		`SELECT relationship_stage, activation_basis IS NOT NULL FROM partner WHERE company_id = $1`,
+		`SELECT relationship_stage, activation_basis IS NOT NULL FROM partner WHERE company_id = $1 AND archived_at IS NULL`,
 		in.CompanyID).Scan(&standing, &activated)
 	if err != nil && !errors.Is(err, pgx.ErrNoRows) {
 		return partnerStageWrite{}, fmt.Errorf("read the partner's stage: %w", err)

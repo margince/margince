@@ -10,9 +10,25 @@ import (
 	"net/http/httptest"
 	"testing"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
+
+func TestAContactEditWithNoFreshIdentityRefusesOnlyAnUnmatchedConversion(t *testing.T) {
+	name := "Taylor Example"
+	in := UpdateContactInput{FullName: &name}
+	if err := admitEditLeadHolders(t.Context(), nil, ids.ContactID{}, crmcontracts.Contact{}, &in); err != nil {
+		t.Fatalf("a name-only edit with no conversion: %v", err)
+	}
+	in.ConvertLeadIDs = []ids.LeadID{ids.New[ids.LeadKind]()}
+	err := admitEditLeadHolders(t.Context(), nil, ids.ContactID{}, crmcontracts.Contact{}, &in)
+	fault, ok := httperr.Classify(err)
+	if !ok || fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 ||
+		fault.Fields[0].Field != fieldConvertLeadIDs || fault.Fields[0].Code != "reference_not_found" {
+		t.Fatalf("fault %+v (%v), want 422 reference_not_found on convert_lead_ids", fault, err)
+	}
+}
 
 func TestALeadHeldRefusalReachesTheWireAsTheDuplicateProblem(t *testing.T) {
 	t.Parallel()

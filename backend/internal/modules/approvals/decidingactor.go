@@ -141,14 +141,20 @@ func agentMayDecide(ctx context.Context, p principal.Principal, a row, approve b
 // (AgentIdentity.Principal) — the same "is this your own business" test
 // decidable() applies to a self-only kind.
 //
-// A row with NO recorded human is a SERVER proposal (attributableStager
-// guarantees a NULL passport_id means that): the unattended policy apply,
-// bounded by the owner's own authority rather than by a staging.
+// A row with no passport was made by no credential. attributableStager admits
+// only the server and the product's own job acting for a named colleague, and
+// that job does not approve what it staged. A row with no recorded human is a
+// server proposal: the unattended policy apply, bounded by the owner's own
+// authority.
 func agentReleasesOnlyItsHumansProposal(p principal.Principal, a row, own ownRelease) error {
 	if a.OnBehalfOf != nil && (p.UserID == ids.Nil || a.OnBehalfOf.UUID != p.UserID) {
 		return fmt.Errorf("this credential acts for somebody other than the human this action was "+
 			"staged for, so it does not release it — that contact answers it themselves: %w",
 			apperrors.ErrPermissionDenied)
+	}
+	if a.PassportID == nil && p.PassportID == ids.Nil && a.ProposedBy != "" && a.ProposedBy == p.ID {
+		return fmt.Errorf("this job proposed the action, so it does not approve it; the colleague it acts for "+
+			"answers it: %w", apperrors.ErrPermissionDenied)
 	}
 	if a.PassportID != nil && (own == ownReleaseRefused || a.OnBehalfOf == nil) {
 		return agentReleasesNoIrreversibleProposal(p, a)

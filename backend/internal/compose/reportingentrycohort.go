@@ -90,8 +90,13 @@ func readReportingAccountProgression(ctx context.Context, tx pgx.Tx, frame crmco
 	return facts, coverage, nil
 }
 
-// readReportingSourceQuality reads each lead of the entry cohort under its
-// origin, valued 1 once it is linked to a deal by the evaluation instant.
+// leadArrivalOriginSQL is the origin a lead arrived with. A lead whose arrival
+// origin was not recorded counts under the origin it has now.
+const leadArrivalOriginSQL = "COALESCE(l.arrival_origin,l.origin)"
+
+// readReportingSourceQuality reads each lead of the entry cohort under the
+// origin it arrived with. A lead is valued 1 once it is linked to a deal by the
+// evaluation instant.
 func readReportingSourceQuality(ctx context.Context, tx pgx.Tx, frame crmcontracts.ReportingContext, _ crmcontracts.ReportingFramework, _ metricEvaluator) ([]reporting.Fact, crmcontracts.ReportingCoverage, error) {
 	if frame.PipelineId != nil {
 		return nil, noPipelineGap(frame), nil
@@ -110,9 +115,9 @@ func readReportingSourceQuality(ctx context.Context, tx pgx.Tx, frame crmcontrac
 	query := ctes + `
  SELECT l.id::text,l.id,` + label + `,l.arrival_owner_id,COALESCE(u.display_name,''),` + leadArrivalSQL + `,
  CASE WHEN ` + linked + ` THEN 1 ELSE 0 END::float8,` + leadCohortProvenanceSQL + `,
- '` + sourceGroupPrefix + `'||replace(replace(COALESCE(l.origin,''),'%','%25'),':','%3A')||CASE WHEN ` + linked + ` THEN ':` + sourceLinked + `' ELSE ':` + sourceNotLinked + `' END,
+ '` + sourceGroupPrefix + `'||replace(replace(COALESCE(` + leadArrivalOriginSQL + `,''),'%','%25'),':','%3A')||CASE WHEN ` + linked + ` THEN ':` + sourceLinked + `' ELSE ':` + sourceNotLinked + `' END,
  COALESCE(lo.label,` + b.add(said.Say(reportingBreakdownLabels.NoOrigin)) + `)
- FROM lead l JOIN arrived ON arrived.id=l.id LEFT JOIN lead_origin lo ON lo.key=l.origin LEFT JOIN app_user u ON u.id=l.arrival_owner_id
+ FROM lead l JOIN arrived ON arrived.id=l.id LEFT JOIN lead_origin lo ON lo.key=` + leadArrivalOriginSQL + ` LEFT JOIN app_user u ON u.id=l.arrival_owner_id
  ORDER BY l.id LIMIT ` + b.add(reportingFactLimit+1)
 	facts, coverage, err := readGroupedFacts(ctx, tx, frame, reportingSourceQuality, string(recordTypeLead), query, b, withheld)
 	if err != nil {

@@ -108,7 +108,7 @@ func (r TranscriptRead) Live() bool {
 }
 
 // transcriptReadColumns reads proposal_ids, complete for every reading, until
-// core/1795756890_read_proposals_keyed fills transcript_read_proposal.
+// core/1795796173_read_proposals_keyed fills transcript_read_proposal.
 const transcriptReadColumns = `id, activity_id, status, status_detail, line_count,
 	proposal_ids, outcome, requested_by, started_at, finished_at, created_at, attempt, attempt_at`
 
@@ -431,7 +431,7 @@ func (s *Store) LatestTranscriptRead(ctx context.Context, activityID ids.Activit
 			 ORDER BY created_at DESC
 			 LIMIT 1`, activityID))
 		if errors.Is(err, pgx.ErrNoRows) {
-			return fmt.Errorf("%w: no transcript read for activity %s", apperrors.ErrNotFound, activityID)
+			return fmt.Errorf("%w: no transcript read for activity %s", apperrors.ErrNothingYet, activityID)
 		}
 		if err != nil {
 			return fmt.Errorf("read latest transcript read: %w", err)

@@ -162,7 +162,7 @@ func TestALinkWaitingOnTheLockSeesTheRoleWidenedMeanwhile(t *testing.T) {
 	}
 	var issued int
 	if err := e.owner.QueryRow(context.Background(),
-		`SELECT count(*) FROM auth_token WHERE user_id = $1 AND used_at IS NULL`,
+		`SELECT count(*) FROM auth_token WHERE user_id = $1 AND purpose = 'password_reset' AND used_at IS NULL`,
 		target.UserID).Scan(&issued); err != nil || issued != 1 {
 		t.Errorf("the target holds %d live set-password tokens (%v), want only the invitation's", issued, err)
 	}

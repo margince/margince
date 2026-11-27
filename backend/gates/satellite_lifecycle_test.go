@@ -16,7 +16,7 @@ package gates
 //
 // The obligations are derived, never listed:
 //
-//   - The satellite set comes from the migration DDL: every contact_ table
+//   - The satellite set comes from the head catalog: every contact_ table
 //     with a contact_id column. A new satellite is enrolled by the migration
 //     that creates it, not by an edit here.
 //   - The archive cascade binds a satellite IFF it has an archived_at column.
@@ -50,14 +50,11 @@ package gates
 // is a constraint nobody chose and a failure that fires when nothing is wrong.
 
 import (
-	"io/fs"
 	"regexp"
 	"slices"
 	"sort"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // satellitePath is one lifecycle obligation: the entry point that discharges
@@ -139,97 +136,29 @@ var carriedThroughAPort = map[string]portCarry{
 	"sales_initiative_enrolment": {initiativesPkg, "CarryLeadMergeTx", "refuseUnwiredInitiativeCarry"},
 }
 
-var (
-	// contactSatelliteName matches the CREATE TABLE lines this gate governs:
-	// child tables named for the contact they hang off.
-	contactSatelliteName = regexp.MustCompile(`^contact_[a-z_]+$`)
-	// columnLine matches a bare column definition inside a CREATE TABLE block.
-	// Constraint clauses (CONSTRAINT/PRIMARY/UNIQUE/CHECK/FOREIGN) never reach
-	// the two names this gate reads, so no exclusion is needed.
-	columnLine = regexp.MustCompile(`^\s+([a-z_]+)\s+[a-z]`)
-	// alterColumn matches a later migration adding or dropping a column on an
-	// existing table — contact_consent gains lead_id that way (0056), so a
-	// derivation that read only CREATE TABLE would be reading a stale schema.
-	alterColumn = regexp.MustCompile(`(?i)^\s*ALTER TABLE ([a-z_]+)\s+(ADD|DROP) COLUMN (?:IF (?:NOT )?EXISTS )?([a-z_]+)`)
-	// dropTable matches a later migration removing a table outright, so a
-	// dropped table stops being a satellite that owes a lifecycle path.
-	dropTable = regexp.MustCompile(`(?i)^\s*DROP TABLE (?:IF EXISTS )?([a-z_]+)`)
-)
+// contactSatelliteName matches the tables this gate governs: child tables
+// named for the contact they hang off.
+var contactSatelliteName = regexp.MustCompile(`^contact_[a-z_]+$`)
 
-// contactSatellites derives the governed satellites from the migration sources:
-// table name → its column set. A contact_*-named CREATE TABLE with a contact_id
-// column qualifies; ADD/DROP COLUMN and DROP TABLE in a later migration are
-// folded in, in file order, so the column set is the one the migrated schema
-// actually has.
+// contactSatellites derives the governed satellites from the head catalog:
+// table name → its column set, for every table with a contact_id column.
 func contactSatellites(t *testing.T) map[string]map[string]bool {
 	t.Helper()
-	columns := map[string]map[string]bool{}
-	var paths []string
-	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
-				return err
-			}
-			paths = append(paths, path)
-			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
-	// core is sequentially numbered and custom timestamp-ordered, so a
-	// lexical sort per namespace IS apply order (ADR-0017).
-	sort.Strings(paths)
-	for _, path := range paths {
-		raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
-		if err != nil {
-			t.Fatal(err)
-		}
-		current := ""
-		for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
-			if m := createTableLine.FindStringSubmatch(line); m != nil {
-				current = m[1]
-				columns[current] = map[string]bool{}
-				continue
-			}
-			if strings.HasPrefix(line, ");") {
-				current = ""
-				continue
-			}
-			if current != "" {
-				if m := columnLine.FindStringSubmatch(line); m != nil {
-					columns[current][m[1]] = true
-				}
-				continue
-			}
-			if m := dropTable.FindStringSubmatch(line); m != nil {
-				delete(columns, m[1])
-				continue
-			}
-			m := alterColumn.FindStringSubmatch(line)
-			if m == nil || columns[m[1]] == nil {
-				continue
-			}
-			if strings.EqualFold(m[2], "ADD") {
-				columns[m[1]][m[3]] = true
-			} else {
-				delete(columns[m[1]], m[3])
-			}
-		}
-	}
+	schema := parseHeadCatalog(t)
 	satellites := map[string]map[string]bool{}
-	for table, cols := range columns {
-		if cols["contact_id"] {
-			satellites[table] = cols
+	for name := range schema.tablesWithColumn("contact_id", "") {
+		columns := map[string]bool{}
+		for _, column := range schema.tables[name].columns {
+			columns[column.name] = true
 		}
+		satellites[name] = columns
 	}
-	// The derivation reads DDL text, so a change in how migrations spell a
-	// CREATE TABLE would empty it silently and the gate would pass by finding
-	// nothing to check. contact_email and contact_phone have been satellites
-	// since 0004 and cannot legitimately disappear.
+	// A catalog reader that stopped seeing columns would empty the set, and the
+	// gate would pass by finding nothing to check. contact_email and
+	// contact_phone are satellites and cannot legitimately disappear.
 	for _, expected := range []string{"contact_email", "contact_phone"} {
 		if satellites[expected] == nil {
-			t.Fatalf("derived no %s satellite from the migrations — the derivation is broken, not the schema", expected)
+			t.Fatalf("derived no %s satellite from %s — the derivation is broken, not the schema", expected, headCatalogPath)
 		}
 	}
 	return satellites

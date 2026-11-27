@@ -166,6 +166,24 @@ func TestLinkingMovesACustomerAndUnlinkingTakesItOff(t *testing.T) {
 	}
 }
 
+// A company reads as syncing until a pass mirrors its new link, so the link
+// queues one; a refused link queues nothing.
+func TestALinkQueuesThePassThatMirrorsIt(t *testing.T) {
+	a := setupSourceAdmin(t)
+	a.syncDirectory(t)
+	ctx := a.admin()
+	beta := a.seedCompany(t, "Beta GmbH", nil)
+
+	expect(t, a.link(ctx, "NOPE-99", beta), http.StatusNotFound, "")
+	if a.queue.queued != 0 {
+		t.Fatalf("%d syncs queued for a refused link, want none", a.queue.queued)
+	}
+	expect(t, a.link(ctx, "BETA-02", beta), http.StatusOK, "")
+	if a.queue.queued != 1 {
+		t.Errorf("%d syncs queued after the link, want 1", a.queue.queued)
+	}
+}
+
 func TestALinkRequestNamesAKnownCustomerAndCompany(t *testing.T) {
 	a := setupSourceAdmin(t)
 	a.syncDirectory(t)

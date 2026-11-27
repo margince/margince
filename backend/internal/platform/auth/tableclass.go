@@ -72,6 +72,7 @@ func RowScoped(table string) bool { return ownerScopedTables[table] }
 // the kind is answered before the table is, or a buyer would read every contact,
 // company, lead, deal and project in the installation.
 func readsEveryRow(p principal.Principal, table string) bool {
+	// A buyer has no search, by design: it reads through its one room.
 	if p.Type == principal.PrincipalBuyer {
 		return false
 	}

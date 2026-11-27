@@ -76,21 +76,33 @@ func (s *Store) updateMatchedByCard(
 	}
 	result.Outcome = VCardUpdated
 	result.ContactID = &contactID
-	st, err := s.fillFromVCard(ctx, tx, contactID, entry)
+	fields, err := s.fillMatchedFromCard(ctx, tx, contactID, entry)
 	if err != nil {
 		return err
+	}
+	result.Fields = fields
+	result.Reason = withTitleNote(result.Reason, entry, fields)
+	return nil
+}
+
+// fillMatchedFromCard writes a card onto a contact that is already held
+// writable, and reports each field's outcome. The exact-match import and the
+// reviewed merge both end here, so a card moves a contact the same way
+// whichever of them a human chose.
+func (s *Store) fillMatchedFromCard(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, entry VCardEntry) ([]VCardField, error) {
+	st, err := s.fillFromVCard(ctx, tx, contactID, entry)
+	if err != nil {
+		return nil, err
 	}
 	address, err := fillAddressFromCard(ctx, tx, contactID, entry, st.corrected[fieldAddress])
 	if err != nil {
-		return err
+		return nil, err
 	}
 	held, err := liveEmails(ctx, tx, contactID)
 	if err != nil {
-		return err
+		return nil, err
 	}
-	result.Fields = updatedReport(entry, st, held, address)
-	result.Reason = withTitleNote(result.Reason, entry, result.Fields)
-	return nil
+	return updatedReport(entry, st, held, address), nil
 }
 
 // createFromCard turns a card nobody matched into a contact.

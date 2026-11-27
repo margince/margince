@@ -56,7 +56,7 @@ func TestBookingConsentPassthrough(t *testing.T) {
 	consent := AnyMap{
 		"purpose_id":     purposeID,
 		"policy_version": "pp-2026-01",
-		"wording":        "You agree we may contact you about this meeting.",
+		"wording":        "You agree we may contact you about this meeting.\nPrivacy information: https://example.test/privacy",
 	}
 
 	assertConsentRefusalsLeaveNothingBehind(t, e, contact.ID, tuesday, purposeID)
@@ -75,7 +75,7 @@ func assertConsentRefusalsLeaveNothingBehind(t *testing.T, e *apptest.AppEnv, co
 	unknownPurpose := bookingAt(slot, contactID, AnyMap{
 		"consent": AnyMap{
 			"purpose_id": ids.NewV7().String(), "policy_version": "pp-2026-01",
-			"wording": "You agree we may contact you about this meeting.",
+			"wording": "You agree we may contact you about this meeting.\nPrivacy information: https://example.test/privacy",
 		},
 	})
 	if status := e.Call(t, "POST", "/v1/bookings", unknownPurpose, nil, nil); status != 422 {
@@ -106,7 +106,7 @@ func assertConsentRefusalsLeaveNothingBehind(t *testing.T, e *apptest.AppEnv, co
 		"links": []AnyMap{},
 		"consent": AnyMap{
 			"purpose_id": purposeID, "policy_version": "pp-2026-01",
-			"wording": "You agree we may contact you about this meeting.",
+			"wording": "You agree we may contact you about this meeting.\nPrivacy information: https://example.test/privacy",
 		},
 	})
 	if status := e.Call(t, "POST", "/v1/bookings", subjectless, nil, nil); status != 422 {
@@ -174,7 +174,7 @@ func assertConsentedBookingLandsGrantWithProof(t *testing.T, e *apptest.AppEnv, 
 		contactID, purposeID).Scan(&policyVersion, &policyText); err != nil {
 		t.Fatalf("reading the proof event: %v", err)
 	}
-	if policyVersion != "pp-2026-01" || policyText != "You agree we may contact you about this meeting." {
+	if policyVersion != "pp-2026-01" || policyText != "You agree we may contact you about this meeting.\nPrivacy information: https://example.test/privacy" {
 		t.Fatalf("proof event lost the passthrough: version=%q text=%q", policyVersion, policyText)
 	}
 }
@@ -213,7 +213,7 @@ func TestARepsBookingSurvivesANewsletterTickForAWithdrawnContact(t *testing.T) {
 	if status := e.Call(t, "POST", "/v1/bookings", bookingAt(tuesday.Add(3*time.Hour), contact.ID, AnyMap{
 		"consent": AnyMap{
 			"purpose_id": transactional, "policy_version": "pp-2026-01",
-			"wording": "You agree we may contact you about this meeting.",
+			"wording": "You agree we may contact you about this meeting.\nPrivacy information: https://example.test/privacy",
 			"marketing": AnyMap{
 				"purpose_id": marketing, "policy_version": "mk-2026-01",
 				"wording": "Send me your newsletter.",
@@ -280,7 +280,7 @@ func TestARepsBookingCannotAskForConsentNobodyRequested(t *testing.T) {
 	if status := e.Call(t, "POST", "/v1/bookings", bookingAt(tuesday.Add(3*time.Hour), contact.ID, AnyMap{
 		"consent": AnyMap{
 			"purpose_id": transactional, "policy_version": "pp-2026-01",
-			"wording": "You agree we may contact you about this meeting.",
+			"wording": "You agree we may contact you about this meeting.\nPrivacy information: https://example.test/privacy",
 			"marketing": AnyMap{
 				"purpose_id": marketing, "policy_version": "mk-2026-01",
 				"wording": "Send me your newsletter.",

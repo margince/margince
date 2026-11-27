@@ -172,14 +172,33 @@ func FirstLineOf(sql string) string {
 // subtree that the pattern matches.
 func matchingLiterals(node ast.Node, pattern *regexp.Regexp) []string {
 	var out []string
-	ast.Inspect(node, func(n ast.Node) bool {
-		lit, isLit := n.(*ast.BasicLit)
-		if !isLit {
-			return true
-		}
-		text, isString := LiteralText(lit)
-		if isString && pattern.MatchString(text) {
+	for _, text := range literalsOf(node) {
+		if pattern.MatchString(text) {
 			out = append(out, text)
+		}
+	}
+	return out
+}
+
+// literalsOf reads a whole tree ParseFile shares once, for every caller.
+func literalsOf(node ast.Node) []string {
+	if file, isFile := node.(*ast.File); isFile {
+		if facts, shared := factsOf(file); shared {
+			return facts.stringLiterals(file)
+		}
+	}
+	return stringLiterals(node)
+}
+
+// stringLiterals returns the unquoted text of every string literal in the
+// subtree, in source order.
+func stringLiterals(node ast.Node) []string {
+	var out []string
+	ast.Inspect(node, func(n ast.Node) bool {
+		if lit, isLit := n.(*ast.BasicLit); isLit {
+			if text, isString := LiteralText(lit); isString {
+				out = append(out, text)
+			}
 		}
 		return true
 	})

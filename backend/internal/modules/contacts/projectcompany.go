@@ -270,9 +270,15 @@ func setCompanyRoleTx(
 		 ON CONFLICT (project_id, company_id)
 		   WHERE kind = '`+ProjectCompanyKind+`' AND archived_at IS NULL
 		   DO UPDATE SET role = EXCLUDED.role
+		   WHERE relationship.role IS DISTINCT FROM EXCLUDED.role
 		 RETURNING `+relationshipColumns+`, (SELECT was.role FROM was), xmax = 0`,
 		projectID, companyID, role, projectCompanySource, by)
 	row, err := scanRelationshipWithPrior(scan, &priorRole, &inserted)
+	// No row back is an edge that already held this role. The conflict matched
+	// and the update's condition left it alone, so there is nothing to record.
+	if errors.Is(err, pgx.ErrNoRows) {
+		return nil
+	}
 	if err != nil {
 		return fmt.Errorf("put the company on the project: %w", err)
 	}

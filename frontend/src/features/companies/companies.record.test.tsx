@@ -791,6 +791,21 @@ describe("CompanyScreen — the Partner tab is scoped to the account being read"
     return { ...rtlRender(page("o-1")), page };
   }
 
+  it("keeps the Partner tab for an ended program after returning to Overview", async () => {
+    stubFetch(async (url) => {
+      if (new URL(url).pathname.endsWith("/companies/o-1")) {
+        return jsonResponse({ ...company, partner_program_ended: true });
+      }
+      return emptyPage();
+    });
+    render(<CompanyScreen id="o-1" />);
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Partner" }),
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Overview" }));
+    expect(screen.getByRole("button", { name: "Partner" })).toBeTruthy();
+  });
+
   it("does not carry the Partner tab to an account with no programme", async () => {
     stubTwoCompanies();
     const { rerender, page } = renderTwoCompanies();

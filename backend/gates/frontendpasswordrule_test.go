@@ -64,7 +64,7 @@ func TestThePasswordRuleMirrorsTheServer(t *testing.T) {
 	}
 
 	goBounds := passwordBounds(t, string(goSource), goPasswordBound)
-	tsBounds := passwordBounds(t, tsComment.ReplaceAllString(string(tsSource), " "), tsPasswordBound)
+	tsBounds := passwordBounds(t, gatekit.TSWithoutComments(string(tsSource)), tsPasswordBound)
 	for _, edge := range []string{"min", "max"} {
 		if goBounds[edge] != tsBounds[edge] {
 			t.Errorf("the server's %s password length is %s and the browser's is %s", edge, goBounds[edge], tsBounds[edge])

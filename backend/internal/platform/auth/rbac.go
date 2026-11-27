@@ -197,6 +197,20 @@ func RequireHumanOrItsAgent(ctx context.Context) error {
 	return RequireHuman(ctx)
 }
 
+// RequireHumanOrAgentFor is RequireHumanOrItsAgent that also admits the
+// product's own job acting for one named colleague. Its live grants are that
+// colleague's, so it may file what that colleague could.
+func RequireHumanOrAgentFor(ctx context.Context) error {
+	p, err := rbacActor(ctx)
+	if err != nil {
+		return err
+	}
+	if p.ProductAgentForItsUser() {
+		return nil
+	}
+	return RequireHumanOrItsAgent(ctx)
+}
+
 // RequireMember admits any SEATED principal and refuses everyone else. It is
 // the gate for a read whose whole boundary is membership: the roster and the
 // colleague list answer "who works here", which every seat may ask and nobody

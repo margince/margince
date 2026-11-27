@@ -73,7 +73,7 @@ function serve(seat: Seat = "full", asked = false) {
       if (key === `GET ${path}`) {
         return requested
           ? json(openRequest)
-          : json({ status: 404, title: "Not found" }, 404);
+          : new Response(null, { status: 204 });
       }
       return json({});
     }),

@@ -7,9 +7,9 @@ package search
 // at boot, so it cannot be a row of searchBranches. Each request builds one
 // branch per kind from the registry.
 //
-// A row has no search_tsv, no owner and no row scope. The kind's read right is
-// the whole of who may see it, as it is for a link. A title match makes it a
-// text-only type like a tag: no vector lane, no graph, no near matches.
+// A row has no search_tsv. Who may see it is the kind's read right and its row
+// scope, as for a link. A title match makes it a text-only type like a tag: no
+// vector lane, no graph, no near matches.
 
 import (
 	"context"
@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
@@ -63,7 +64,7 @@ func requestedTypes(ctx context.Context, in Input) []string {
 // The core branches bind the query as headPos and tailPos (0 without a
 // fragment). A statement with an unreferenced parameter fails whole.
 // Every core branch may be denied, so each branch names them in an always-true test.
-func admittedExtensionSQL(ctx context.Context, types []string, query string, headPos, tailPos int, arg func(any) int) []string {
+func admittedExtensionSQL(ctx context.Context, types []string, query string, headPos, tailPos int, arg func(any) int) ([]string, error) {
 	bound := fmt.Sprintf("$%d::text IS NOT NULL", headPos)
 	if tailPos != 0 {
 		bound += fmt.Sprintf(" AND $%d::text IS NOT NULL", tailPos)
@@ -72,6 +73,13 @@ func admittedExtensionSQL(ctx context.Context, types []string, query string, hea
 	for _, kind := range recordkinds.All() {
 		if !slices.Contains(types, kind.Name) || !mayRead(ctx, kind.Name) {
 			continue
+		}
+		scope, err := auth.ExtensionScopeClause(ctx, kind.Name, "t", arg)
+		if err != nil {
+			return nil, err
+		}
+		if scope != "" {
+			scope = " AND " + scope
 		}
 		column := "t." + pgx.Identifier{kind.TitleColumn()}.Sanitize()
 		title := "lower(" + column + ")"
@@ -84,12 +92,12 @@ func admittedExtensionSQL(ctx context.Context, types []string, query string, hea
 			`SELECT $%d::text AS rtype, t.id, %s AS title, NULL::text AS snippet,
 			        (CASE WHEN strpos(%s, $%d::text) = 1 THEN 1.0 ELSE 0.5 END)::float8 AS score, %s,
 			        NULL::text AS identifier_match
-			 FROM %s t WHERE t.archived_at IS NULL AND %s AND %s`,
+			 FROM %s t WHERE t.archived_at IS NULL AND %s AND %s%s`,
 			arg(kind.Name), column,
 			title, arg(words[0]), noEmployer,
-			pgx.Identifier{"ext", kind.Table}.Sanitize(), strings.Join(holds, " AND "), bound))
+			pgx.Identifier{"ext", kind.Table}.Sanitize(), strings.Join(holds, " AND "), bound, scope))
 	}
-	return branches
+	return branches, nil
 }
 
 // excludeClause renders the ids a search leaves out over the union's output id,

@@ -136,11 +136,16 @@ func (c *Connector) SendMessage(ctx context.Context, auth connector.Auth, msg co
 	if len(msg.Files) > 0 {
 		transmit = c.api.SendFiles
 	}
-	id, err := transmit(ctx, string(auth), OutboundChannelMessage{
-		ChatID:           chatID,
-		Text:             msg.Body,
-		ReplyToMessageID: replyTo,
-		Files:            msg.Files,
+	token, business := string(auth), ""
+	if creds, ok := connector.ParseChatSendAuth(auth); ok {
+		token, business = creds.Token, creds.Account
+	}
+	id, err := transmit(ctx, token, OutboundChannelMessage{
+		ChatID:               chatID,
+		Text:                 msg.Body,
+		ReplyToMessageID:     replyTo,
+		BusinessConnectionID: business,
+		Files:                msg.Files,
 	})
 	if err != nil {
 		return connector.SendReceipt{}, sendOutcome(err)

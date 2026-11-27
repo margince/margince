@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -140,11 +141,19 @@ func (e *transcriptEnv) readAt(t *testing.T, brain completer, now func() time.Ti
 	}
 	quiet := slog.New(slog.NewTextHandler(os.Stderr, nil))
 	proposer := NewTranscriptProposer(e.Pool, brain, e.svc, now, quiet)
-	// The worker's own principal, as production binds it: the reader acting
-	// for the rep who asked. A test reading as the rep would pass gates the
-	// worker never faces and fail ones it always passes.
-	worker := withTranscriptReader(principal.WithWorkspaceID(context.Background(), e.WS),
+	// The worker's own principals, as production binds them. The reader acts
+	// for the rep who asked, under the rep's live grants, and the system keeps
+	// the run row. A test reading as the rep would pass gates the worker never
+	// faces and fail ones it always passes.
+	// The shipped rep role, the same team scope transcriptPerms gives e.ctx,
+	// so what the reader may see is what the rep who asked may see.
+	e.GrantRole(t, e.Rep1, "rep")
+	reader := &transcriptProposeWorker{users: identity.NewService(e.Pool)}
+	worker, live, err := reader.readerFor(principal.WithWorkspaceID(context.Background(), e.WS),
 		"human:"+e.Rep1.String(), started.ID)
+	if err != nil || !live {
+		t.Fatalf("binding the reader for Rep1: live=%t err=%v", live, err)
+	}
 	if err := proposer.Read(worker, e.Activities, started.ID, e.activity); err != nil {
 		t.Fatalf("reading the transcript: %v", err)
 	}
@@ -754,8 +763,8 @@ func TestAConfidentPromiseByANamedColleagueIsTheirTaskWithoutAsking(t *testing.T
 	}
 	task := e.wsString(t, `SELECT coalesce(assignee_id::text, '') || ' ' || captured_by || ' ' || source_system
 		FROM activity WHERE kind = 'task' ORDER BY created_at DESC LIMIT 1`)
-	if want := e.Rep2.String() + " " + transcriptProposalActor + " " + activities.CommitmentTaskSource; task != want {
-		t.Errorf("the task reads %q, want it held by the colleague, written by the reader, keyed as a commitment (%q)",
+	if want := e.Rep2.String() + " " + transcriptReadSystemID + " " + activities.CommitmentTaskSource; task != want {
+		t.Errorf("the task reads %q, want it held by the colleague, filed by the system for the rep's meeting, keyed as a commitment (%q)",
 			task, want)
 	}
 }

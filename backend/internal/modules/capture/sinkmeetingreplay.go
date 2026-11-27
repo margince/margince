@@ -75,7 +75,7 @@ func (s *Sink) meetingForSeat(ctx context.Context, tx pgx.Tx, rec connector.Norm
 		return ids.ActivityID{}, false, fmt.Errorf("capture: finding the meeting to replay: %w", err)
 	}
 	if !found {
-		return ids.ActivityID{}, false, nil
+		return s.meetingOfOwnDelivery(ctx, tx, rec.NaturalKey)
 	}
 	return lockedMeetingForSeat(ctx, tx, matched)
 }

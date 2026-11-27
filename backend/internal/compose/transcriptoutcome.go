@@ -231,6 +231,8 @@ func (said transcriptCopy) failureSentence(failure activities.TranscriptFailure)
 		return said.Say(transcriptWords.Unanswered)
 	case activities.TranscriptFailureUnfinished:
 		return said.Say(transcriptWords.Unfinished)
+	case activities.TranscriptFailureDenied:
+		return said.Say(transcriptWords.Denied)
 	default:
 		return said.Say(transcriptWords.Refused)
 	}
@@ -251,6 +253,8 @@ func unreadableTranscript(err error) (*activities.TranscriptFailure, bool) {
 		return &activities.TranscriptFailure{Code: activities.TranscriptFailureBlank}, true
 	case errors.Is(err, apperrors.ErrNotFound):
 		return &activities.TranscriptFailure{Code: activities.TranscriptFailureMissing}, true
+	case errors.Is(err, apperrors.ErrPermissionDenied):
+		return &activities.TranscriptFailure{Code: activities.TranscriptFailureDenied}, true
 	}
 	return nil, false
 }

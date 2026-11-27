@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
@@ -35,14 +34,22 @@ const (
 	translationTextLimit    = values.TextDocumentCharacters
 )
 
-var languageShape = regexp.MustCompile(`^[a-z]{2}$`)
+// checkLanguage refuses a code the language table does not hold.
+func checkLanguage(ctx context.Context, tx pgx.Tx, language string) error {
+	return storekit.CheckLanguage(ctx, tx, languageField, language)
+}
 
-// checkLanguage refuses anything but a lower-case ISO 639-1 code.
-func checkLanguage(language string) error {
+// checkLanguageShape takes any code of the stored shape, so a translation
+// stored before the registry check can still be named and deleted.
+func checkLanguageShape(language string) error {
 	if !languageShape.MatchString(language) {
-		return &values.ParseError{Field: languageField, Code: "invalid_language", Message: "language is an ISO 639-1 code, for example de"}
+		return languageRefusal()
 	}
 	return nil
+}
+
+func languageRefusal() error {
+	return &values.ParseError{Field: languageField, Code: "invalid_language", Message: "language is an ISO 639-1 code, for example de"}
 }
 
 // ListProductTranslations answers a product's text in every further language.
@@ -82,9 +89,6 @@ func (s *Store) PutProductTranslation(ctx context.Context, id ids.ProductID, lan
 	if err := auth.Require(ctx, "product", principal.ActionUpdate); err != nil {
 		return crmcontracts.ProductTranslation{}, err
 	}
-	if err := checkLanguage(language); err != nil {
-		return crmcontracts.ProductTranslation{}, err
-	}
 	name = strings.TrimSpace(name)
 	if description != nil && strings.TrimSpace(*description) == "" {
 		description = nil
@@ -104,6 +108,9 @@ func (s *Store) PutProductTranslation(ctx context.Context, id ids.ProductID, lan
 	var out crmcontracts.ProductTranslation
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		if err := lockProductForTranslation(ctx, tx, id); err != nil {
+			return err
+		}
+		if err := checkLanguage(ctx, tx, language); err != nil {
 			return err
 		}
 		before, err := readProductTranslation(ctx, tx, id, language)
@@ -137,7 +144,7 @@ func (s *Store) DeleteProductTranslation(ctx context.Context, id ids.ProductID, 
 	if err := auth.Require(ctx, "product", principal.ActionUpdate); err != nil {
 		return err
 	}
-	if err := checkLanguage(language); err != nil {
+	if err := checkLanguageShape(language); err != nil {
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {

@@ -12,8 +12,9 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en } from "../../i18n/en";
 import { vi as VIETNAMESE } from "../../i18n/vi";
-import { ConfirmDetailsScreen } from "./confirm";
+import { ConfirmDetailsScreen, MergeConfirmScreen } from "./confirm";
 
 // The public confirm page answers TWO bodies from one endpoint, and until the
 // contract carried a discriminator it published only one of them.
@@ -601,6 +602,56 @@ describe("a confirm page asks the question its link pinned", () => {
     );
     expect(
       await screen.findByText(/^Die Frage auf dieser Seite hat sich geändert/),
+    ).toBeInTheDocument();
+  });
+});
+
+describe("the merge confirmation page", () => {
+  it("asks before it spends the link, and spends it once on the press", async () => {
+    const calls: string[] = [];
+    vi.spyOn(globalThis, "fetch").mockImplementation(async (input, init) => {
+      const request =
+        input instanceof Request ? input : new Request(String(input), init);
+      calls.push(`${request.method} ${new URL(request.url).pathname}`);
+      return new Response(null, { status: 204 });
+    });
+    globalThis.location.hash = "#/confirm-merge?token=merge-token";
+    render(<MergeConfirmScreen />);
+
+    expect(calls).toEqual([]);
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: en["users.mergeConfirm.action"],
+      }),
+    );
+    expect(
+      await screen.findByText(en["users.mergeConfirm.done"]),
+    ).toBeInTheDocument();
+    expect(calls).toEqual(["POST /v1/auth/confirm-member-merge"]);
+  });
+
+  it("names a refused link as dead, whichever way it was refused", async () => {
+    vi.spyOn(globalThis, "fetch").mockResolvedValue(
+      jsonResponse({ title: "unauthorized" }, 401),
+    );
+    globalThis.location.hash = "#/confirm-merge?token=spent-token";
+    render(<MergeConfirmScreen />);
+
+    await userEvent.click(
+      await screen.findByRole("button", {
+        name: en["users.mergeConfirm.action"],
+      }),
+    );
+    expect(
+      await screen.findByText(en["users.mergeConfirm.dead"]),
+    ).toBeInTheDocument();
+  });
+
+  it("has no link to spend without a token", async () => {
+    globalThis.location.hash = "#/confirm-merge";
+    render(<MergeConfirmScreen />);
+    expect(
+      await screen.findByText(en["users.mergeConfirm.dead"]),
     ).toBeInTheDocument();
   });
 });

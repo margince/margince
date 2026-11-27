@@ -25,8 +25,8 @@ func TestOfferDraftNamesRecordsByRefAndReadsThemBack(t *testing.T) {
 	source := "activity:" + ids.NewV7().String()
 	dealContext := []dealContextItem{{SourceID: source, Snippet: "Client wants the support plan."}}
 	brain := &replyBrainStub{response: model.Response{Text: `{"lines":[
-		{"description":"Support","quantity":"1","tax_rate":"19.00","evidence_snippet":"wants the support plan","source_id":"s1","product_id":"p1"},
-		{"description":"Other","quantity":"1","tax_rate":"19.00","evidence_snippet":"wants the support plan","source_id":"s2","product_id":"p2"}]}`}}
+		{"description":"Support","quantity":"1","evidence_snippet":"wants the support plan","source_id":"s1","product_id":"p1"},
+		{"description":"Other","quantity":"1","evidence_snippet":"wants the support plan","source_id":"s2","product_id":"p2"}]}`}}
 
 	candidates, err := offerDrafter{brain: brain}.draftCandidates(
 		context.Background(), dealContext, []crmcontracts.Product{product}, string(textlang.English))

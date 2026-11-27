@@ -8,6 +8,7 @@ package compose
 import (
 	"encoding/json"
 	"errors"
+	"maps"
 	"strings"
 	"testing"
 
@@ -15,6 +16,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
@@ -29,14 +32,23 @@ func TestAutomationConfirmationShowsTheQuestionAndOnlyItsActualEffect(t *testing
 	if err != nil {
 		t.Fatal(err)
 	}
-	_, err = automation.ApplyActions(e.Admin(), automation.Executors{Approvals: automationApprovalsAdapter{svc: svc}}, workflow.Effect{Actions: []workflow.Action{{Kind: workflow.ActionEmitFlowEvent, Target: datasource.EntityRef{Type: datasource.EntityContact, ID: contact}, Args: raw}}})
+	_, err = automation.ApplyActions(e.Admin(), automation.Executors{Approvals: automationApprovalsAdapter{svc: svc}}, workflow.Effect{Why: systemtext.Sentence("automation.rule_trigger", systemtext.Label("Quarterly review"), systemtext.Text("activity.captured"), systemtext.Text("2026-07-01T09:00:00Z")), Actions: []workflow.Action{{Kind: workflow.ActionEmitFlowEvent, Target: datasource.EntityRef{Type: datasource.EntityContact, ID: contact}, Args: raw}}})
 	var staged *workflow.StagedApprovalError
 	if !errors.As(err, &staged) {
 		t.Fatalf("staging: %v", err)
 	}
-	proposal, err := svc.GetWire(e.Admin(), staged.ApprovalID)
+	reader, ok := principal.Actor(e.Admin())
+	if !ok {
+		t.Fatal("missing admin actor")
+	}
+	reader.Permissions.Objects = maps.Clone(reader.Permissions.Objects)
+	reader.Permissions.Objects["automation"] = principal.ObjectGrant{Read: true}
+	proposal, err := svc.GetWire(principal.WithActor(e.Admin(), reader), staged.ApprovalID)
 	if err != nil {
 		t.Fatal(err)
+	}
+	if proposal.Why == nil || !strings.Contains(proposal.Why.Text, "Quarterly review") || !strings.Contains(proposal.Why.Text, "activity.captured") {
+		t.Fatalf("approval lost its rule reason: %+v", proposal.Why)
 	}
 	if proposal.Preview == nil || proposal.Preview.State != "ready" || proposal.Preview.Details == nil || proposal.Preview.Effects == nil {
 		t.Fatalf("missing confirmation: %+v", proposal.Preview)

@@ -9,6 +9,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // The reason exists to tell a reader which way the silence runs, because the
@@ -197,7 +198,7 @@ func TestQuietForSpeaksInTheUnitAContactWouldUse(t *testing.T) {
 		{15, "2 weeks ago"},
 		{45, "6 weeks ago"},
 	} {
-		if got := quietCopyFor("en").quietFor(quietAt(-tc.daysAgo), quietToday, time.UTC); got != tc.want {
+		if got := quietCopyFor("en").quietFor(occurredday.Moment{At: quietAt(-tc.daysAgo)}, quietToday, time.UTC); got != tc.want {
 			t.Errorf("quietFor(%d days ago) = %q, want %q", tc.daysAgo, got, tc.want)
 		}
 	}
@@ -215,17 +216,17 @@ func TestQuietDayIsTheWorkspacesOwnCalendarDay(t *testing.T) {
 	// 00:30 on 2026-08-06 in Berlin is 22:30 on 5 August in UTC.
 	justAfterMidnight := time.Date(2026, 8, 6, 0, 30, 0, 0, berlin)
 
-	if got := quietDay(justAfterMidnight, berlin); got != "2026-08-06" {
+	if got := quietDay(occurredday.Moment{At: justAfterMidnight}, berlin); got != "2026-08-06" {
 		t.Errorf("quietDay in Berlin = %q, want %q", got, "2026-08-06")
 	}
-	if got := quietDay(justAfterMidnight, time.UTC); got != "2026-08-05" {
+	if got := quietDay(occurredday.Moment{At: justAfterMidnight}, time.UTC); got != "2026-08-05" {
 		t.Errorf("quietDay in UTC = %q, want %q — the zones must genuinely differ here", got, "2026-08-05")
 	}
 }
 
 // A clock that has not caught up must not print a negative span.
 func TestQuietForNeverReportsTheFuture(t *testing.T) {
-	if got := quietCopyFor("en").quietFor(quietAt(3), quietToday, time.UTC); got != "that was today" {
+	if got := quietCopyFor("en").quietFor(occurredday.Moment{At: quietAt(3)}, quietToday, time.UTC); got != "that was today" {
 		t.Errorf("quietFor(future) = %q, want it clamped to today", got)
 	}
 }
@@ -252,5 +253,22 @@ func TestPacedBasisNamesActualObservationsAndUncertainty(t *testing.T) {
 		if !strings.Contains(got, want) {
 			t.Fatalf("basis %q lacks %q", got, want)
 		}
+	}
+}
+
+// A date-only exchange names its own date and counts from it. Its noon-UTC
+// anchor is already the next day at UTC+14.
+func TestADateOnlyExchangeIsDatedAndCountedByItsOwnDate(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	visit := occurredday.Moment{At: time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC), DateOnly: true}
+	if got := quietDay(visit, kiritimati); got != "2026-11-20" {
+		t.Errorf("quietDay of a date-only visit = %q, want 2026-11-20", got)
+	}
+	today := time.Date(2026, 11, 21, 10, 30, 0, 0, time.UTC)
+	if got := quietCopyFor("en").quietFor(visit, today, kiritimati); got != "2 days ago" {
+		t.Errorf("quietFor a date-only visit = %q, want 2 days ago", got)
 	}
 }

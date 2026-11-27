@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
@@ -30,10 +31,14 @@ func (e *transcriptEnv) tryTranscript(t *testing.T, first int, brains ...complet
 		t.Fatalf("starting the reading: %v", err)
 	}
 	quiet, now := slog.New(slog.DiscardHandler), func() time.Time { return clocktest.Now(t) }
+	// The reading works as Rep1's agent, under Rep1's live grants.
+	e.GrantRole(t, e.Rep1, "admin")
 	args := TranscriptProposeArgs{Workspace: e.WS, ActivityID: e.activity.UUID, TranscriptReadID: started.ID, RequestedBy: "human:" + e.Rep1.String()}
 	var errs []error
 	for i, brain := range brains {
-		worker := &transcriptProposeWorker{language: installationLanguage(e.Pool), activities: e.Activities, log: quiet}
+		worker := &transcriptProposeWorker{
+			language: installationLanguage(e.Pool), activities: e.Activities, users: identity.NewService(e.Pool), log: quiet,
+		}
 		worker.proposer = NewTranscriptProposer(e.Pool, brain, e.svc, now, quiet)
 		ctx, cancel := context.WithCancel(context.Background())
 		if hook, ok := brain.(*interruptedBrain); ok && hook.before == nil {

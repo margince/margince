@@ -44,7 +44,7 @@ func tsArray(t *testing.T, source, marker string) ([]string, bool) {
 	if end < 0 {
 		t.Fatalf("%s: the array after %q is unterminated", frontendQuestionWords, marker)
 	}
-	body := tsWithoutComments(source[start : start+end])
+	body := gatekit.TSWithoutComments(source[start : start+end])
 	var phrases []string
 	for _, m := range tsPhrase.FindAllStringSubmatch(body, -1) {
 		phrases = append(phrases, m[1])

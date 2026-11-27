@@ -31,6 +31,9 @@ Do not refuse or limit normal product change because an older document disagrees
 conflict, say what it costs, and keep going. If someone other than you must decide, say who, and
 open an issue labelled `status: needs-decision`.
 
+An issue's decision is a document: check each step against current code before building it, even when the
+stated problem still holds. Check every other table, screen and caller that touches what the decision changes.
+
 The product is **Margince**; older documents call it "Gradion CRM".
 
 ## This repository is public

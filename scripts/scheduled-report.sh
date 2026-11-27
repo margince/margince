@@ -533,6 +533,26 @@ elif [[ "${STORIES_RESULT:-}" = "success" ]]; then
   resolve "a story does not render clean on main"
 fi
 
+if [[ "${SECONDARY_RESULT:-}" = "failure" ]]; then
+  report "a smoke flow fails in WebKit or Firefox on main" "priority: normal,area: ci-tests,bug" \
+"\`make e2e-secondary\` failed on the scheduled run of \`main\`: $RUN_URL
+
+Pull requests run the end-to-end lane in Chromium only, so a flow that breaks in
+WebKit or Firefox shows up here the day after the merge. The run's
+\`secondary-browsers-failures\` artifact holds the screenshot of each failing
+test. The failing test's name says which flow broke, and the project in front of
+it (\`webkit\` or \`firefox\`) says which engine.
+
+No artifact means the lane failed before a test ran: the install of the browsers
+or their system libraries, or the app build. The step log names which.
+
+Reproduce locally with \`cd frontend && pnpm exec playwright install webkit firefox\`,
+then \`make e2e-secondary\`."\
+    || unreported=1
+elif [[ "${SECONDARY_RESULT:-}" = "success" ]]; then
+  resolve "a smoke flow fails in WebKit or Firefox on main"
+fi
+
 if [[ "${TREND_RESULT:-}" = "failure" ]]; then
   report "the weekly slop trend could not run" "priority: low,area: ci-tests,bug" \
 "\`make slop-trend\` failed on the scheduled run: $RUN_URL

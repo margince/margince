@@ -47,13 +47,10 @@ var notACurrencyCode = gatekit.Waive(map[string]string{
 // currencyColumns derives the corpus, mapping "table.column" to its type.
 func currencyColumns(t *testing.T) map[string]string {
 	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	raw := headCatalog(t)
 	trailing := regexp.MustCompile(`\s+(?:NOT NULL|gen=|def=).*$`)
 	columns := map[string]string{}
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		trimmed := strings.TrimSpace(line)
 		if strings.Contains(trimmed, " CHECK (") || strings.Contains(trimmed, " KEY (") {
 			continue

@@ -299,7 +299,7 @@ func (h siteReadHandlers) GetSiteRead(w http.ResponseWriter, r *http.Request, id
 	h.report(w, r, id, readID)
 }
 
-func (h siteReadHandlers) GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (h siteReadHandlers) GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, _ crmcontracts.GetLatestSiteReadParams) {
 	if h.latest == nil {
 		httperr.NotImplemented(w, r, "getLatestSiteRead (no crawl runner configured)")
 		return

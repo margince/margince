@@ -136,7 +136,7 @@ func basePathBetween(route, declared string) (string, bool) {
 // route so the caller can bind the two rather than trust either alone.
 func humanOnlyOperationsInContract(t *testing.T) map[string]string {
 	t.Helper()
-	doc := loadContract(t)
+	doc := loadContractDocument(t)
 	paths, ok := doc["paths"].(map[string]any)
 	if !ok {
 		t.Fatal("api/crm.yaml carries no paths, so this census would clear every operation by reading none")

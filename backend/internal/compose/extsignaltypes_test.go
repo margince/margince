@@ -20,7 +20,7 @@ func TestAJobTickCannotFileASignal(t *testing.T) {
 	}
 }
 
-func TestPreflightSignalTypesRefusesWhatCoreCannotCarry(t *testing.T) {
+func TestPreflightRefusesASignalTypeCoreCannotCarry(t *testing.T) {
 	loss := extension.SignalTypeDeclaration{Kind: "loss", Label: "Loss"}
 	cases := map[string]struct {
 		types []extension.SignalTypeDeclaration
@@ -33,7 +33,7 @@ func TestPreflightSignalTypesRefusesWhatCoreCannotCarry(t *testing.T) {
 		"two fields once": {[]extension.SignalTypeDeclaration{{Kind: "loss", Label: "L", Evidence: []extension.SignalEvidenceField{{Name: "a", Label: "A", Type: extension.SignalFieldText}, {Name: "a", Label: "B", Type: extension.SignalFieldText}}}}, "twice"},
 	}
 	for name, c := range cases {
-		err := preflightSignalTypes([]extension.Extension{{Name: "demo", SignalTypes: c.types}})
+		err := preflightKindsLinksSignals([]extension.Extension{{Name: "demo", SignalTypes: c.types}})
 		switch {
 		case c.want == "" && err != nil:
 			t.Errorf("%s: %v", name, err)

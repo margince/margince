@@ -219,10 +219,10 @@ describe("what waiting costs", () => {
     ).toBe("Depot rollout keeps drifting.");
   });
 
-  it("names the contact a task is with", () => {
+  it("leaves a task's cost to the task's own explanation", () => {
     expect(
       consequenceLine(row({ consequence: "task_slips", contact: SONYA }), t),
-    ).toBe("The task with Sonya Beck stays undone.");
+    ).toBeNull();
   });
 
   it("says nothing when nothing follows, or when this build has no words", () => {

@@ -229,6 +229,12 @@ type Extension struct {
 	// unit name one would undo the axis split from outside the core.
 	Channels []Channel
 
+	// Languages are the languages this unit lets stored data carry, beside the
+	// three core ships. The boot writes each into the language table, so a unit
+	// adds one with no core migration. A language with no UI catalogue falls
+	// back to English on screen, and a unit cannot remove a core language.
+	Languages []Language
+
 	// CompanyTypes are the company types this unit adds beside core's own. A
 	// unit sets them only on a company, under its own name, through
 	// Core.Companies().SetExtensionTypes; a type no unit declared is refused.

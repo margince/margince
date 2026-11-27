@@ -92,6 +92,18 @@ export const StatusChangeOpen: Story = {
   },
 };
 
+/** Canceled picked: the dialog says it is final before anything is saved. */
+export const StatusChangeFinal: Story = {
+  ...StatusChangeOpen,
+  play: async () => {
+    await userEvent.click(await screen.findByRole("combobox"));
+    await userEvent.click(
+      await screen.findByRole("option", { name: "Canceled" }),
+    );
+    await screen.findByText("Canceled is final");
+  },
+};
+
 /** Recording a cancellation: notice given and when it takes effect. The
  * status does not move — the customer stays under contract until the
  * effective date. */

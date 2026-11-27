@@ -11,7 +11,7 @@ import (
 // jobContractHash is the sha256 of api/jobs.yaml this file was generated
 // from — the same fingerprint jobs.JobContractHash carries, so a stale
 // half of the pair is visible without diffing the two tables.
-const jobContractHash = "4a9336dc7431ca4c053c2089e3570d37980f3967d45a1ad9ee20d0fbc042b360"
+const jobContractHash = "3168e4b5bdbcb7eadf1c09904bdcbc779157b6fa9e8302852b4ef4bd308740c1"
 
 // declaredJobArgs requires the generated registration marker for the exact args type.
 // Handwritten markers are refused by the registration census.
@@ -43,11 +43,13 @@ func (CaptureClassifyArgs) declaredJobType(CaptureClassifyArgs)                 
 func (ConfidentialityVerdictArgs) declaredJobType(ConfidentialityVerdictArgs)         {}
 func (CounterpartyVerdictArgs) declaredJobType(CounterpartyVerdictArgs)               {}
 func (CaptureEnrichArgs) declaredJobType(CaptureEnrichArgs)                           {}
+func (CaptureHistoryNarrowingArgs) declaredJobType(CaptureHistoryNarrowingArgs)       {}
 func (CapturePartSlimArgs) declaredJobType(CapturePartSlimArgs)                       {}
 func (CaptureSyncArgs) declaredJobType(CaptureSyncArgs)                               {}
 func (CaptureTraceSweepArgs) declaredJobType(CaptureTraceSweepArgs)                   {}
 func (CapturedDealRefileArgs) declaredJobType(CapturedDealRefileArgs)                 {}
 func (CapturedDealRefileSweepArgs) declaredJobType(CapturedDealRefileSweepArgs)       {}
+func (ChatClarificationSweepArgs) declaredJobType(ChatClarificationSweepArgs)         {}
 func (ChatLinkFlushArgs) declaredJobType(ChatLinkFlushArgs)                           {}
 func (ChatPullArgs) declaredJobType(ChatPullArgs)                                     {}
 func (ChatPullSweepArgs) declaredJobType(ChatPullSweepArgs)                           {}
@@ -115,6 +117,7 @@ func (SignalScanArgs) declaredJobType(SignalScanArgs)                           
 func (SiteDeepReadArgs) declaredJobType(SiteDeepReadArgs)                             {}
 func (StageEvidenceReadArgs) declaredJobType(StageEvidenceReadArgs)                   {}
 func (StageEvidenceRereadArgs) declaredJobType(StageEvidenceRereadArgs)               {}
+func (StandingLineCheckArgs) declaredJobType(StandingLineCheckArgs)                   {}
 func (StoredObjectReapArgs) declaredJobType(StoredObjectReapArgs)                     {}
 func (SuppressionJournalArgs) declaredJobType(SuppressionJournalArgs)                 {}
 func (TagScoutArgs) declaredJobType(TagScoutArgs)                                     {}
@@ -132,6 +135,9 @@ func (VoiceBuildRetryArgs) declaredJobType(VoiceBuildRetryArgs)                 
 func (WaitingHorizonRefreshArgs) declaredJobType(WaitingHorizonRefreshArgs)           {}
 func (WebhookRetryArgs) declaredJobType(WebhookRetryArgs)                             {}
 func (WeeklyReviewGenerateArgs) declaredJobType(WeeklyReviewGenerateArgs)             {}
+func (WhatsAppIngestArgs) declaredJobType(WhatsAppIngestArgs)                         {}
+func (ZaloOAIngestArgs) declaredJobType(ZaloOAIngestArgs)                             {}
+func (ZaloTokenRenewArgs) declaredJobType(ZaloTokenRenewArgs)                         {}
 
 // addDeclaredWorker is the sanctioned registration path. Its type parameter
 // is constrained to the declared set, so a kind absent from api/jobs.yaml
@@ -159,8 +165,10 @@ var (
 	_ jobs.FleetWide = ConfidentialityVerdictArgs{}
 	_ jobs.FleetWide = CounterpartyVerdictArgs{}
 	_ jobs.FleetWide = CaptureEnrichArgs{}
+	_ jobs.FleetWide = CaptureHistoryNarrowingArgs{}
 	_ jobs.FleetWide = CaptureTraceSweepArgs{}
 	_ jobs.FleetWide = CapturedDealRefileSweepArgs{}
+	_ jobs.FleetWide = ChatClarificationSweepArgs{}
 	_ jobs.FleetWide = ChatPullSweepArgs{}
 	_ jobs.FleetWide = CloseDateSweepArgs{}
 	_ jobs.FleetWide = CompanyNamePromotionArgs{}
@@ -203,6 +211,7 @@ var (
 	_ jobs.FleetWide = TranscriptAudienceSweepArgs{}
 	_ jobs.FleetWide = VoiceBuildRetryArgs{}
 	_ jobs.FleetWide = WeeklyReviewGenerateArgs{}
+	_ jobs.FleetWide = ZaloTokenRenewArgs{}
 )
 
 // The declared tenant-scoped kinds: each says which workspace it is for
@@ -235,10 +244,13 @@ var (
 	_ jobs.WorkspaceScoped = SiteDeepReadArgs{}
 	_ jobs.WorkspaceScoped = StageEvidenceReadArgs{}
 	_ jobs.WorkspaceScoped = StageEvidenceRereadArgs{}
+	_ jobs.WorkspaceScoped = StandingLineCheckArgs{}
 	_ jobs.WorkspaceScoped = TechnicalEnrichCompanyArgs{}
 	_ jobs.WorkspaceScoped = TelegramIngestArgs{}
 	_ jobs.WorkspaceScoped = TelegramPollArgs{}
 	_ jobs.WorkspaceScoped = TranscriptProposeArgs{}
 	_ jobs.WorkspaceScoped = VCardIngestArgs{}
 	_ jobs.WorkspaceScoped = VoiceBuildArgs{}
+	_ jobs.WorkspaceScoped = WhatsAppIngestArgs{}
+	_ jobs.WorkspaceScoped = ZaloOAIngestArgs{}
 )

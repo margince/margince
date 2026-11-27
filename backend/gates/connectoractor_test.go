@@ -111,6 +111,9 @@ type writtenActorID struct {
 	// a prefix constant and a vendor name that strict folding cannot settle.
 	// Nothing that waits for a whole string can see it.
 	kind string
+	// binder names the function that bound the principal from a call
+	// argument, such as principal.SystemActing; empty for a literal.
+	binder string
 }
 
 // packageSource parses one directory's non-test Go and indexes every string
@@ -326,48 +329,79 @@ func principalFieldType(lit *ast.CompositeLit) string {
 	return ""
 }
 
-// connectorKinds pairs an actor-id prefix with the type that may carry it.
-// Only the connector kind is here. The test below says why.
+// actorKinds pairs an actor-id prefix with the one principal type that may
+// carry it.
 //
 // gatekit:fixture the actor kinds whose prefix and principal type must agree
-var connectorKinds = map[string]string{connectorActorPrefix: "PrincipalConnector"}
+var actorKinds = map[string]string{
+	connectorActorPrefix: "PrincipalConnector",
+	"agent:":             "PrincipalAgent",
+	"system:":            "PrincipalSystem",
+}
 
-// TestAConnectorIDIsCarriedOnlyByAConnectorPrincipal holds both directions of
-// one pairing.
+// agentJobsStillSystemTyped are the AI jobs that act for no one and still bind
+// PrincipalSystem under their `agent:` id, keyed by file. Every job that acts
+// for a named colleague runs as an agent under that colleague's grants. A
+// converted file that keeps its entry fails AssertAllMatched.
+var agentJobsStillSystemTyped = gatekit.Waive(map[string]string{
+	"internal/compose/approvalpreviewcommitment.go": forNoOne,
+	"internal/compose/captureenrich.go":             forNoOne,
+	"internal/compose/captureenrichpending.go":      forNoOne,
+	"internal/compose/captureenrichrequests.go":     forNoOne,
+	"internal/compose/captureverdict.go":            forNoOne,
+	"internal/compose/commitmentparties.go":         forNoOne,
+	"internal/compose/commitmentrestatement.go":     forNoOne,
+	"internal/compose/commitmenttask.go":            forNoOne,
+	"internal/compose/confidentialityverdict.go":    forNoOne,
+	"internal/compose/heldcontactrelease.go":        forNoOne,
+	"internal/compose/jobs_knowledgeingest.go":      forNoOne,
+	"internal/compose/jobs_signals.go":              forNoOne,
+	"internal/compose/signalextractcommitment.go":   forNoOne,
+})
+
+const (
+	forNoOne = "an AI job that acts for no one; an AI job keeps its agent: id, and it needs a fixed grant set " +
+		"of its own before it can run as an agent, so until then audit_log records it as a system act"
+)
+
+// TestAnActorIDIsCarriedOnlyByItsKindsPrincipal holds both directions of one
+// pairing for every actor kind.
 //
-// storekit writes actor_type from the type and actor_id from the id. A
-// `connector:` id under any other type writes an audit row that contradicts
+// storekit writes actor_type from the type and actor_id from the id. An
+// `agent:` id under PrincipalSystem writes an audit row that contradicts
 // itself, and audit_log admits no correction. The reverse is the same
 // disagreement seen from the other side.
-//
-// The connector kind alone, because the agent spelling is still being decided.
-// Twenty jobs bind PrincipalSystem with an `agent:` id, and the direction
-// changes whether they answer to RBAC at all. Widening this map is the whole
-// change once that is settled.
-func TestAConnectorIDIsCarriedOnlyByAConnectorPrincipal(t *testing.T) {
+func TestAnActorIDIsCarriedOnlyByItsKindsPrincipal(t *testing.T) {
 	t.Parallel()
-	read := 0
+	binders := actorBinders(t)
+	if _, ok := binders[systemActing]; !ok {
+		t.Fatalf("the binder census did not find %s, which binds every scheduled pass: the reader has stopped matching", systemActing)
+	}
+	read, viaSystemActing := 0, 0
 	err := gatekit.WalkDir("internal", func(dir string, d fs.DirEntry, err error) error {
 		if err != nil || !d.IsDir() {
 			return err
 		}
 		files, constants := packageSource(t, dir)
-		for _, named := range principalActorIDs(t, files, constants) {
+		all := append(principalActorIDs(t, files, constants), binderCalls(dir, files, constants, boundKinds(files, constants), binders)...)
+		for _, named := range all {
+			if named.binder == systemActing && modulePath+"/"+dir != principalImportPath {
+				viaSystemActing++
+			}
 			if named.typ == "" || named.kind == "" {
 				continue
 			}
 			read++
-			for prefix, wantType := range connectorKinds {
-				idSays := named.kind == prefix
-				typeSays := named.typ == wantType
-				if idSays == typeSays {
-					continue
-				}
-				t.Errorf("%s: binds %s with an id of kind %q. storekit stamps actor_type from the type and actor_id "+
-					"from the id, so this writes an audit row naming two kinds of actor for one act, and "+
-					"audit_log admits no correction. Make the two name one kind",
-					named.file, named.typ, named.kind)
+			if kindAgreesWithType(named.kind, named.typ) {
+				continue
 			}
+			if agentJobsStillSystemTyped.Waived(t, named.file) {
+				continue
+			}
+			t.Errorf("%s: binds %s with an id of kind %q. storekit stamps actor_type from the type and actor_id "+
+				"from the id, so this writes an audit row naming two kinds of actor for one act, and "+
+				"audit_log admits no correction. Make the two name one kind",
+				named.file, named.typ, named.kind)
 		}
 		return nil
 	})
@@ -378,6 +412,23 @@ func TestAConnectorIDIsCarriedOnlyByAConnectorPrincipal(t *testing.T) {
 		t.Fatal("this census read no principal that names both a type and a written id, and this tree has many: " +
 			"the reader has stopped matching rather than the tree having changed")
 	}
+	if want := systemActingCallsInText(t); viaSystemActing != want {
+		t.Fatalf("read %d calls to principal.SystemActing, and a text search finds %d: the binder reader is "+
+			"missing calls, so the census reads a smaller tree than there is", viaSystemActing, want)
+	}
+	agentJobsStillSystemTyped.AssertAllMatched(t)
+}
+
+// kindAgreesWithType is false when the id's kind names another type, or the
+// type belongs to another kind. A kind outside actorKinds (`user:`) is not this
+// gate's to judge from the id side.
+func kindAgreesWithType(kind, typ string) bool {
+	for prefix, wantType := range actorKinds {
+		if (kind == prefix) != (typ == wantType) {
+			return false
+		}
+	}
+	return true
 }
 
 // actorKindPrefix is the actor kind an ID expression starts with.
@@ -397,7 +448,7 @@ func actorKindPrefix(expr ast.Expr, constants map[string]string) string {
 	if !ok {
 		return ""
 	}
-	for prefix := range connectorKinds {
+	for prefix := range actorKinds {
 		if strings.HasPrefix(text, prefix) {
 			return prefix
 		}

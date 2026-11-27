@@ -41,17 +41,21 @@ var keylessUUIDArrays = gatekit.Waive(map[string]string{
 	"assurance_run.eligible_signal_owners":              "the owners a finished check run counted, frozen with the counts so its verdict reads as it was reached",
 	"brief_item.evidence_ids":                           "the deal and then the activities a ranking cited, two tables in citation order; servedFindingSQL compares its length with what a reader still sees, so a cascade would hide a lost citation",
 	"bulk_confirmation.affected":                        "contacts, companies, deals, leads or worklist items a bulk preview listed, five tables in one list, on a row that lapses after 15 minutes",
+	"custom_field.pipeline_ids":                         "the pipelines one field definition is scoped to, written whole with the definition; a pipeline is archived and never deleted, so the list cannot name a gone row",
 	"consent_qualifying_event.recorded_for_entities":    "the legal entities a consent ground was recorded for; consent evidence must outlive what it names",
 	"mail_draft.attachment_ids":                         "a draft must never hold back the archive or erasure of a document, so each read resolves the ids and leaves out a gone one",
 	"meeting_invitation.team_user_ids":                  "the colleagues whose time a team booking holds, written with the booking and found by a GIN index; " + seatsAreRetired,
-	"site_read.proposal_ids":                            "site_read_proposal now holds the keyed copy; the array goes once core/1795756890_read_proposals_keyed has finished",
+	"site_read.proposal_ids":                            "site_read_proposal now holds the keyed copy; the array goes once core/1795796173_read_proposals_keyed has finished",
+	"standing_line.evidence":                            "the activities a generated status line cites, written whole with its text each time the line is rewritten and found by standing_line_evidence_ix",
 	"tag_interest_read.tag_ids":                         "a cached model answer read only under the vocabulary digest it was made with; tagsuggest.VocabularyDigest covers every tag id, so a removed tag retires the answer",
-	"transcript_read.proposal_ids":                      "transcript_read_proposal now holds the keyed copy; the array goes once core/1795756890_read_proposals_keyed has finished",
+	"transcript_read.proposal_ids":                      "transcript_read_proposal now holds the keyed copy; the array goes once core/1795796173_read_proposals_keyed has finished",
 })
+
+const uuidArrayCatalog = "migrations/testdata/head_catalog.txt"
 
 func TestAUUIDArraySaysWhyItKeepsNoForeignKey(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
+	raw, err := gatekit.ReadFile(uuidArrayCatalog)
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -68,7 +72,7 @@ func TestAUUIDArraySaysWhyItKeepsNoForeignKey(t *testing.T) {
 	}
 	if len(columns) < uuidArrayColumnFloor {
 		t.Fatalf("read %d uuid array columns from %s, fewer than the %d the schema carries: the catalog format moved",
-			len(columns), vocabularyCatalog, uuidArrayColumnFloor)
+			len(columns), uuidArrayCatalog, uuidArrayColumnFloor)
 	}
 	for _, column := range columns {
 		if keylessUUIDArrays.Waived(t, column) {

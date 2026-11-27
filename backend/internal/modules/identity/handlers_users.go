@@ -45,6 +45,10 @@ func seatIdentity(
 	w http.ResponseWriter, r *http.Request, rawEmail, rawName string,
 ) (values.Email, string, bool) {
 	email, perr := values.ParseEmail(rawEmail)
+	if limited, ok := errors.AsType[*values.ParseError](perr); ok && limited.Max > 0 {
+		httperr.Write(w, r, perr)
+		return values.Email{}, "", false
+	}
 	if perr != nil {
 		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
 		return values.Email{}, "", false
@@ -260,7 +264,7 @@ func (h Handlers) IssueUserPasswordLink(w http.ResponseWriter, r *http.Request, 
 		return
 	}
 	httperr.WriteJSON(w, http.StatusCreated, crmcontracts.IssuePasswordLinkResponse{
-		SetPasswordUrl: passwordLink(h.passwordLinkBaseURL, rawToken),
+		SetPasswordUrl: passwordLink(h.passwordLinkBaseURL, resetPasswordRoute, rawToken),
 		ExpiresAt:      expiresAt,
 	})
 }
@@ -398,7 +402,7 @@ func (h Handlers) sendInvite(r *http.Request, rawToken string, inviter Identity)
 				slog.Info("invitation not mailed: its link or its member changed before the send")
 				return false, nil
 			}
-			link := passwordLink(h.passwordLinkBaseURL, rawToken)
+			link := passwordLink(h.passwordLinkBaseURL, resetPasswordRoute, rawToken)
 			words := h.mailCopy(ctx, current)
 			body := words.AccountMessage(true, inviter.DisplayName, inviter.WorkspaceName, link)
 			sendErr := mailer.SendProduct(ctx, h.resetMailer, current, words.InviteSubject, body)

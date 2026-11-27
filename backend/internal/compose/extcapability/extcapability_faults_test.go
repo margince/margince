@@ -57,11 +57,15 @@ func TestAModelCallReportsEachWayTheLaneOrTheTraceCanFail(t *testing.T) {
 
 func TestAnObjectCallReportsEachWayTheStoreOrTheNameCanFail(t *testing.T) {
 	t.Parallel()
-	ctx, _ := inWorkspace()
+	ctx, ws := inWorkspace()
 	memory := blobstore.NewMemory()
 	broken := objectsFor("u", failingStore{memory})
 	if err := broken.Put(ctx, "report", []byte("x")); !errors.Is(err, extcapability.ErrObjectsFailed) {
 		t.Errorf("Put on a failing store: err = %v, want ErrObjectsFailed", err)
+	}
+	// A Delete reaches the store only for an object that is there.
+	if err := memory.Put(ctx, extcapability.Prefix(ws, "u")+"report", bytes.NewReader([]byte("x")), 1, "text/plain"); err != nil {
+		t.Fatal(err)
 	}
 	if err := broken.Delete(ctx, "report"); !errors.Is(err, extcapability.ErrObjectsFailed) {
 		t.Errorf("Delete on a failing store: err = %v, want ErrObjectsFailed", err)

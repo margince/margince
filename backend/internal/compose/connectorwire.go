@@ -36,6 +36,7 @@ func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnecti
 		MailPosture:            postureOnWire(v.MailPosture),
 		ContextTag:             contextTagOnWire(v.ContextTag),
 		HistoryBaseline:        historyBaselineOnWire(v.HistoryBaseline),
+		HistoryNarrowing:       capturehealth.HistoryNarrowingOf(v.HistoryNarrowing),
 		CanBackfill:            v.CanBackfill,
 	}
 	if v.Concern != "" {

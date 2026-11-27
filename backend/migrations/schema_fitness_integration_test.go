@@ -218,6 +218,7 @@ var rowScopedFKDecisions = gatekit.Waive(map[string]string{
 	"lead.partner_company_id":             "gated: auth.EnsureReferenceTarget in setLeadPartner, the one writer that names a partner; a company merge repoints it to the survivor",
 	"suggestion_dismissal.company_id":     "gated: auth.EnsureVisible in company360.Service.DismissSuggestion, inside the same transaction as the insert — dismissing advice about an account the caller cannot read would confirm it exists",
 	"generated_summary.company_id":        "gated: a company summary is written only after its service ran the caller's OWN gated read of the company. companybrief.Service.Get runs company360 Assemble, whose GetCompanyTx does auth.Require + auth.EnsureVisible; companydossier's two services run the caller's sidecar reads, and contacts.ListCompanyProfileFields opens with auth.Require + ensureCompanyReadable. The row is keyed on that same caller",
+	"task_explanation.activity_id":        "gated: taskexplain.Service.Get reads the task through activities.Store.GetActivity, whose auth gates refuse a task the caller cannot read, before it consults or writes the cache. The row is keyed on that same caller",
 	"generated_summary.deal_id":           "gated: the card is written only after dealstatus.Service.gather calls deals.Store.GetDeal, whose auth.Require + auth.EnsureVisible refuse a deal the caller cannot read, and that gather runs BEFORE the cache is consulted so the served-from-cache path carries the same gate. The row is keyed on that same caller",
 	"generated_summary.contact_id":        "gated: the brief is written only after contactbrief.Service.Get runs the caller's own contact360 Assemble, whose GetContactTx does auth.Require + auth.EnsureVisible, and the row is keyed on that same caller",
 	"deal_move_dismissal.deal_id":         "gated: auth.RequireHuman + auth.Require + auth.EnsureVisible in dealstatus.Service.setAside, inside the same transaction as the write — setting aside a move on a deal the caller cannot read would confirm it exists",
@@ -645,37 +646,21 @@ func TestFK_rowScopedTargetsHaveVisibilityDecision(t *testing.T) {
 	}
 }
 
-// Every language the product ships is a language a captured message may
-// record.
-//
-// Derived from textlang.Shipped rather than listed, because the failure this
-// prevents is silent in the direction that matters: the CHECK admitted de and
-// en for as long as the product shipped Vietnamese too, so a detected
-// Vietnamese message could not be stored at all — and nothing said so, because
-// nothing wrote the column. A fourth language added to the Go list fails here
-// until the constraint admits it.
-func TestSchema_theLanguageCheckAdmitsEveryShippedLanguage(t *testing.T) {
+// Every shipped language is a row of the language table, so a captured message
+// may record it. A fourth language added to textlang.Shipped fails here until the
+// table is seeded with it.
+func TestSchema_theLanguageTableHoldsEveryShippedLanguage(t *testing.T) {
 	owner, _ := dsns(t)
 	conn := connect(t, owner)
 	resetSchema(t, conn)
 	migrateAll(t, conn)
 
-	var definition string
-	if err := conn.QueryRow(context.Background(), `
-		SELECT pg_get_constraintdef(oid)
-		  FROM pg_constraint
-		 WHERE conname = 'activity_language_check'`).Scan(&definition); err != nil {
-		t.Fatalf("reading the language constraint: %v", err)
-	}
 	for _, lang := range textlang.Shipped {
-		if !strings.Contains(definition, "'"+string(lang)+"'") {
-			t.Errorf("the product ships %q but activity_language_check does not admit it, so a message in "+
-				"that language cannot record what it is written in: %s", lang, definition)
+		var source string
+		if err := conn.QueryRow(context.Background(),
+			`SELECT source FROM language WHERE code = $1`, string(lang)).Scan(&source); err != nil || source != "core" {
+			t.Errorf("the product ships %q and the language table holds it as %q (%v): a message in that "+
+				"language cannot record what it is written in", lang, source, err)
 		}
-	}
-	// NULL stays admitted: it is what every row captured before this carried,
-	// and what a message too short to tell still carries.
-	if !strings.Contains(definition, "IS NULL") {
-		t.Errorf("activity_language_check no longer admits NULL, which is what an unknown language records: %s", definition)
 	}
 }

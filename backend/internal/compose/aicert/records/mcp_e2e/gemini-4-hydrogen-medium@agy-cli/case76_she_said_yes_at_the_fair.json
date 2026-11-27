@@ -13,24 +13,24 @@
   "self_judged": false,
   "stamp": {
     "scenario": "22fad93ffe20de9f",
-    "tools": "2468435d59d3d7dc",
-    "instructions": "4eab26d5fff0793f",
+    "tools": "8ca0ae01b8014eba",
+    "instructions": "d707a123fe53827f",
     "judge": "",
-    "harness": "ae24b6799c8461d2",
+    "harness": "0fe690d35efcc703",
     "parsers": {
       "gemini:cli": "fa1db64bc14e971b",
       "gpt:cli": "d48ca27c983f8b3f"
     },
-    "commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
-    "ran_at": "2026-11-25T10:29:55Z",
-    "graded_commit": "6d3a5be8c69b862c6c7db3c3534ac5fd705dd41e",
-    "graded_at": "2026-11-25T10:29:55Z"
+    "commit": "ad96834804cdd040c8f582fe5c8d31b0fa53f1ab",
+    "ran_at": "2026-11-26T08:05:09Z",
+    "graded_commit": "ad96834804cdd040c8f582fe5c8d31b0fa53f1ab",
+    "graded_at": "2026-11-26T08:05:09Z"
   },
   "usage": {
-    "input_tokens": 67138,
-    "output_tokens": 13580,
+    "input_tokens": 67188,
+    "output_tokens": 15324,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 199014,
+    "cache_read_input_tokens": 198159,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
@@ -39,11 +39,34 @@
     {
       "passed": true,
       "tools": [
+        "describe_router_actions",
+        "find_records",
+        "get_contact_consent",
+        "get_contact_consent_guard",
+        "list_contact_stops",
+        "list_tags",
+        "read_details",
+        "read_installation_jurisdiction",
+        "read_lists",
+        "read_tags",
+        "read_workspace",
+        "search_records",
+        "whoami"
+      ],
+      "refused": [
+        "read_context",
+        "read_tags"
+      ]
+    },
+    {
+      "passed": true,
+      "tools": [
         "catch_me_up_on",
         "describe_router_actions",
         "find_records",
         "get_contact_consent",
         "get_contact_consent_guard",
+        "get_record_tags",
         "list_contact_stops",
         "list_tags",
         "read_context",
@@ -54,32 +77,16 @@
         "read_workspace",
         "search_records",
         "whoami"
-      ]
-    },
-    {
-      "passed": true,
-      "tools": [
-        "describe_router_actions",
-        "find_records",
-        "get_contact_consent",
-        "get_contact_consent_guard",
-        "list_contact_stops",
-        "list_tags",
-        "read_details",
-        "read_lists",
-        "read_tags",
-        "read_workspace",
-        "search_records",
-        "whoami"
-      ]
+      ],
+      "refused": []
     }
   ],
   "efficiency": {
     "runs": 2,
     "calls": {
       "median": 14,
-      "min": 13,
-      "max": 15
+      "min": 14,
+      "max": 14
     },
     "turns": {
       "median": 6.5,
@@ -87,19 +94,29 @@
       "max": 7
     },
     "refused": {
-      "median": 2,
-      "min": 2,
+      "median": 1.5,
+      "min": 0,
+      "max": 3
+    },
+    "retries": {
+      "median": 1,
+      "min": 0,
       "max": 2
     },
+    "client_refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
     "prompt_tokens": {
-      "median": 133076,
-      "min": 113900,
-      "max": 152252
+      "median": 132673.5,
+      "min": 121303,
+      "max": 144044
     },
     "output_tokens": {
-      "median": 6790,
-      "min": 5959,
-      "max": 7621
+      "median": 7662,
+      "min": 7102,
+      "max": 8222
     }
   }
 }

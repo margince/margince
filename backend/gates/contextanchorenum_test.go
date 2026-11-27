@@ -161,7 +161,7 @@ func branchEntities(t *testing.T, values []ast.Expr, selection branchSelection) 
 			// no neighbours to return. Skipped here rather than listed in the
 			// contract enum, because a client naming one would be asking for
 			// the context of something that has none.
-			if selection == anchorsOnly && branchIsTextOnly(branch) {
+			if selection == anchorsOnly && (branchSetsTrue(branch, "textOnly") || branchSetsTrue(branch, "dealChild")) {
 				continue
 			}
 			if selection == nearNamed && !branchSetsField(branch, "nearName") {
@@ -191,15 +191,15 @@ func branchEntities(t *testing.T, values []ast.Expr, selection branchSelection) 
 	return out
 }
 
-// branchIsTextOnly reports whether a searchBranches element sets textOnly.
-func branchIsTextOnly(branch *ast.CompositeLit) bool {
+// branchSetsTrue reports whether a searchBranches element sets the flag to true.
+func branchSetsTrue(branch *ast.CompositeLit, flag string) bool {
 	for _, field := range branch.Elts {
 		kv, ok := field.(*ast.KeyValueExpr)
 		if !ok {
 			continue
 		}
 		key, ok := kv.Key.(*ast.Ident)
-		if !ok || key.Name != "textOnly" {
+		if !ok || key.Name != flag {
 			continue
 		}
 		value, ok := kv.Value.(*ast.Ident)

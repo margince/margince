@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { formatAnalyticsMoney, monthName } from "../../format/format";
+import { formatMoneyWhole, monthName } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 
 type Months = readonly (number | null)[];
@@ -47,7 +47,7 @@ export function GoalMonths({
   const money = (minor: number | null) =>
     minor === null
       ? t("goals.notSet")
-      : formatAnalyticsMoney(minor, currency, locale);
+      : formatMoneyWhole(minor, currency, locale);
   const total = months.every((month) => month !== null)
     ? months.reduce<number>((sum, month) => sum + (month ?? 0), 0)
     : null;

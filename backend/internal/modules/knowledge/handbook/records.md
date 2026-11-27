@@ -81,7 +81,7 @@ New contacts use the same company check from every source. A company name can fi
 To link a contact to a company in Margince, open the contact's **Companies** tab and choose **Add company** under **Work history**. The same list shows the companies they worked at before, with role and dates. When the first page holds the whole list, the number on the tab counts them.
 1. Under **Employer**, search for the company and pick it. It must already be in Margince; create it first under **Companies** if it is not.
 2. If you like, enter the **Role** and a **Start date** (`YYYY-MM` or `YYYY-MM-DD`).
-3. For a past job, set **Employment status** to **Former** and enter the **End date**.
+3. For a past job, set **Employment status** to **Former** and enter the **End date**, today or earlier.
 4. Tick **This is their primary employer** if it is their main job now, and choose **Create**.
 To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**. To move a contact, press **Edit** in **About**, then **Change Employer**, and pick the company or tick **No current employer**. Then say if they left the old one or it was never their employer. In **Edit employment**, choose **Current** or **Former**. An imported link marked **Status unknown** needs a choice before you save.
 
@@ -142,7 +142,7 @@ To add a company (a new customer, client or account) in Margince, open **Compani
 3. Choose **Add domain** for each domain; a domain row you add must be filled.
 4. Fill any custom fields, then choose **Create**. If another company holds the same domain, **View existing record** opens it instead and nothing is created. If a company with the same name exists, Margince still creates yours and shows a notice with **View existing record**. Your company's page then shows **Possible duplicates** and a count. The website address comes from the main domain, so there is no website box.
 
-A new company with a domain lists the unlinked contacts with an email address on it, none ticked. Margince links those with no current job to it each day, ticked or not, so ticks matter most for contacts with another employer. Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later. Also called: new account, new business, add a client or customer.
+A new company with a domain lists the unlinked contacts with an email address on it, none ticked. Margince links those with no current job to it each day, ticked or not, so ticks matter most for contacts with another employer. A contact whose job at the company was ended or removed is not linked again by that run. Later mail and enrichment do not link them either; link them here. Tick those who work there and choose **Link contacts**, or choose **Review contacts** on its **Contacts** tab later. Also called: new account, new business, add a client or customer.
 
 ### How do I edit a company?
 To edit a company in Margince, open it and press **Edit** in a section of the panel beside the tabs. The sections are **About**, **Address**, **Ownership** and **Registration**. Each **Edit** opens a dialog with only the fields of its section. **Description** is on **Profile** and shows on its own when its text differs from the offer.
@@ -350,7 +350,7 @@ To add a custom field in Margince, open Settings → **Records and fields**, pic
 The new field then shows on the record page, and in the create form unless you unticked it. Without the right to change fields you see **Read-only settings** at the top of the page. More on fields is in [Settings](settings.md).
 Also called: custom property, extra column, new attribute, hide a field on new records.
 
-**A custom field on activities** is offered on every call, meeting, note and task you log, unless you pick types under **Shows on**. You can pick them when you add the field, or in its row later. You fill the field in **Log activity**, and it shows only for the types it is on. On a meeting you change it in **Add notes**. A value saved before you changed **Shows on** stays, and **Add notes** still shows it so you can clear it. A colleague who may not read the activity does not see the field.
+**A custom field on activities** is offered on every call, meeting, note and task you log, unless you pick types under **Shows on**. **A custom field on deals** is offered on every deal, unless you pick pipelines under **Shows in**. You can pick them when you add the field, or in its row later. You fill an activity field in **Log activity**, and on a meeting you change it in **Add notes**. A value saved before you changed the setting stays, and the form still shows it so you can clear it. A colleague who may not read the activity does not see the field.
 
 Renaming a field changes its label and keeps your reports working. To name a field and its choices per language, choose **Names in other languages** in its row menu. A colleague whose Margince is in that language sees those names in forms and on records. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there.
 

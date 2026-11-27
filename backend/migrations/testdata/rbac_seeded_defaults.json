@@ -37,6 +37,12 @@
         "read": true,
         "update": true
       },
+      "ai_team_rules": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
       "audit_log": {
         "create": false,
         "delete": false,
@@ -472,6 +478,12 @@
         "create": false,
         "delete": false,
         "read": false,
+        "update": false
+      },
+      "ai_team_rules": {
+        "create": false,
+        "delete": false,
+        "read": true,
         "update": false
       },
       "audit_log": {
@@ -911,6 +923,12 @@
         "read": false,
         "update": false
       },
+      "ai_team_rules": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "audit_log": {
         "create": false,
         "delete": false,
@@ -1343,6 +1361,12 @@
         "update": true
       },
       "ai_routing": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": true
+      },
+      "ai_team_rules": {
         "create": false,
         "delete": false,
         "read": true,
@@ -1785,6 +1809,12 @@
         "read": false,
         "update": false
       },
+      "ai_team_rules": {
+        "create": false,
+        "delete": false,
+        "read": true,
+        "update": false
+      },
       "audit_log": {
         "create": false,
         "delete": false,
@@ -2220,6 +2250,12 @@
         "create": false,
         "delete": false,
         "read": false,
+        "update": false
+      },
+      "ai_team_rules": {
+        "create": false,
+        "delete": false,
+        "read": true,
         "update": false
       },
       "audit_log": {

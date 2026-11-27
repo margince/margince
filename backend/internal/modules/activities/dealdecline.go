@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -32,8 +33,8 @@ const dealDeclineUndoReason = "Not about this deal: the project came from the de
 
 // DeclineDeal says the activity is not about deal. A nil deal answers "none
 // of them" to the open deal question of the activity's conversation. Every
-// deal the question offered is then declined on the activity and on each
-// unfiled message of the conversation. The question is done.
+// deal Margince suggested to the caller is then declined on the activity and
+// on each unfiled message of the conversation, and its suggestion rejected.
 func (s *Store) DeclineDeal(ctx context.Context, id ids.ActivityID, deal *ids.UUID) (crmcontracts.ActivityDealDecline, error) {
 	out := crmcontracts.ActivityDealDecline{DeclinedDealIds: []openapi_types.UUID{}}
 	if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
@@ -47,12 +48,12 @@ func (s *Store) DeclineDeal(ctx context.Context, id ids.ActivityID, deal *ids.UU
 			if err := lockMarkedLink(ctx, tx, id, *deal); err != nil {
 				return err
 			}
-			return s.declineOnMessage(ctx, tx, id, []ids.UUID{*deal}, &out)
+			return declineOnMessage(ctx, tx, id, []ids.UUID{*deal}, &out)
 		}
 		if err := lockForFilingChange(ctx, tx, id); err != nil {
 			return err
 		}
-		return s.declineEveryOfferedDeal(ctx, tx, id, &out)
+		return declineEveryOfferedDeal(ctx, tx, id, &out)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
 		return out, apperrors.ErrNotFound
@@ -60,23 +61,46 @@ func (s *Store) DeclineDeal(ctx context.Context, id ids.ActivityID, deal *ids.UU
 	return out, err
 }
 
-// declineEveryOfferedDeal is "none of them" to the questions the caller may
-// read and mark done. A deal the caller cannot see is not declined, and the
-// question is done all the same.
-func (s *Store) declineEveryOfferedDeal(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, out *crmcontracts.ActivityDealDecline) error {
-	questions, err := answerableWhichDealQuestions(ctx, tx, mail)
+// declineEveryOfferedDeal is "none of them" to the deal questions of the
+// conversation asked of the caller. Each deal they suggested is declined, and
+// every one of them is rejected. A deal the caller cannot see is neither
+// declined nor rejected.
+func declineEveryOfferedDeal(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, out *crmcontracts.ActivityDealDecline) error {
+	questions, err := openWhichDealQuestions(ctx, tx, mail, true)
 	if err != nil {
 		return err
 	}
-	if len(questions) == 0 {
+	seen := questions[:0]
+	var deals []ids.UUID
+	for _, q := range questions {
+		visible, err := auth.VisibleTo(ctx, tx, linkEntityDeal, q.deal)
+		if err != nil {
+			return err
+		}
+		if !visible {
+			continue
+		}
+		seen = append(seen, q)
+		if !slices.Contains(deals, q.deal) {
+			deals = append(deals, q.deal)
+		}
+	}
+	if len(seen) == 0 {
 		return httperr.Validation("deal_id", codeRequired,
-			"this message has no open deal question, so name the deal it is not about")
+			"this message has no open deal question for you, so name the deal it is not about")
 	}
-	deals, err := offeredDeals(ctx, tx, questions)
-	if err != nil {
+	if err := declineAcrossConversation(ctx, tx, mail, deals, out); err != nil {
 		return err
 	}
-	if err := s.declineOnMessage(ctx, tx, mail, deals, out); err != nil {
+	out.QuestionsClosed, err = closeWhichDealQuestions(ctx, tx, seen, nil)
+	return err
+}
+
+// declineAcrossConversation declines the deals on the locked message and on
+// each unfiled message of its conversation, as an answer to the deal question
+// does.
+func declineAcrossConversation(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deals []ids.UUID, out *crmcontracts.ActivityDealDecline) error {
+	if err := declineOnMessage(ctx, tx, mail, deals, out); err != nil {
 		return err
 	}
 	siblings, err := unfiledConversationSiblings(ctx, tx, mail)
@@ -88,14 +112,13 @@ func (s *Store) declineEveryOfferedDeal(ctx context.Context, tx pgx.Tx, mail ids
 			return err
 		}
 	}
-	out.QuestionsClosed, err = s.completeWhichDealQuestions(ctx, tx, questions)
-	return err
+	return nil
 }
 
 // declineOnMessage declines each deal on the message the caller named, which
 // lockForFilingChange holds. A project link that came from a deal marked so
 // goes too, under the project-filing undo's rules.
-func (s *Store) declineOnMessage(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deals []ids.UUID, out *crmcontracts.ActivityDealDecline) error {
+func declineOnMessage(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deals []ids.UUID, out *crmcontracts.ActivityDealDecline) error {
 	for _, deal := range deals {
 		decline, err := declineDealTx(ctx, tx, mail, deal)
 		if err != nil {
@@ -176,55 +199,4 @@ func declineDealTx(ctx context.Context, tx pgx.Tx, mail ids.ActivityID, deal ids
 	}
 	project, err := unfileDealProject(ctx, tx, mail, deal)
 	return dealDecline{declined: !already, linked: true, marked: true, project: project}, err
-}
-
-// answerableWhichDealQuestions is the open deal questions of mail's
-// conversation whose content the caller may read and which they may mark done.
-func answerableWhichDealQuestions(ctx context.Context, tx pgx.Tx, mail ids.ActivityID) ([]ids.UUID, error) {
-	questions, err := openWhichDealQuestions(ctx, tx, mail)
-	if err != nil || len(questions) == 0 {
-		return nil, err
-	}
-	visible, err := VisibleTasks(ctx, tx, questions)
-	if err != nil {
-		return nil, err
-	}
-	writable, err := auth.ActivityWritableSubset(ctx, tx, questions)
-	if err != nil {
-		return nil, err
-	}
-	answerable := questions[:0]
-	for _, question := range questions {
-		if visible[question] && writable[question] {
-			answerable = append(answerable, question)
-		}
-	}
-	return answerable, nil
-}
-
-// offeredDeals is the deals the questions recorded as offered, as the caller
-// may read them. A question raised before questions recorded their deals
-// offers the open deals of its project, else of its company, read now.
-func offeredDeals(ctx context.Context, tx pgx.Tx, questions []ids.UUID) ([]ids.UUID, error) {
-	var args []any
-	arg := func(v any) int { args = append(args, v); return len(args) }
-	questionsArg, keyArg := arg(questions), arg(provenance.WhichDealOfferedKey)
-	scope, err := auth.ScopeClauseFor(ctx, linkEntityDeal, "d", arg)
-	if err != nil {
-		return nil, err
-	}
-	if scope == "" {
-		scope = sqlTrue
-	}
-	recorded := fmt.Sprintf(`q.raw->$%d`, keyArg)
-	return threadIDs(ctx, tx, `SELECT DISTINCT d.id FROM activity q JOIN deal d ON CASE
-		   WHEN jsonb_typeof(`+recorded+`) = 'array'
-		     THEN d.id::text IN (SELECT jsonb_array_elements_text(`+recorded+`))
-		   ELSE d.status = 'open' AND d.archived_at IS NULL AND EXISTS (SELECT 1 FROM activity_link ql
-		     WHERE ql.activity_id = q.id AND ((ql.entity_type = 'project' AND d.project_id = ql.project_id)
-		       OR (ql.entity_type = 'company' AND d.company_id = ql.company_id
-		           AND NOT EXISTS (SELECT 1 FROM activity_link qp WHERE qp.activity_id = q.id AND qp.entity_type = 'project'))))
-		   END
-		 WHERE q.id = ANY($`+fmt.Sprint(questionsArg)+`) AND (`+scope+`)
-		 ORDER BY d.id`, args...)
 }

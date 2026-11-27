@@ -53,6 +53,7 @@ import { useAddressWriters, useUrlParams } from "../../lib/urlstate";
 import { useSaveMyTimezone, useViewerZone } from "../../lib/viewerzone";
 import { MfaSettingRow } from "../sign-in/mfacard";
 import { PasswordSettingRow } from "../sign-in/passwordcard";
+import { ChatIdentityRows } from "./chatidentities";
 import { reloadReaderLanguageReads } from "./languagereads";
 import { ProfilePictureRow } from "./profilepicture";
 import { NameSettingRows, useAccountNames } from "./settings-names";
@@ -125,6 +126,7 @@ function ProfilePanel({ toast }: Readonly<{ toast: Toast }>) {
         )}
         <NameSettingRows names={names} />
         <SignatureSettingRow toast={toast} />
+        <ChatIdentityRows toast={toast} />
       </SettingList>
     </Panel>
   );

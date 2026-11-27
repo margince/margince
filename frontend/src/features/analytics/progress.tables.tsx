@@ -13,6 +13,7 @@ import {
   identifierNumber,
   monthName,
 } from "../../format/format";
+import { sumMinor } from "../../format/minorsum";
 import { useLocale, useT } from "../../i18n";
 import { routeHash } from "../../lib/router";
 import { hashWithParams, replaceDial, useUrlParams } from "../../lib/urlstate";
@@ -259,12 +260,16 @@ function YearLine({ progress }: Readonly<{ progress: SalesProgress }>) {
         (row.closed.status === "ok" || row.closed.status === "not_started"),
     );
   if (!whole) return null;
-  const goals = progress.months.map((row) => row.goal.amount_minor);
-  const goal = goals.reduce<number>((sum, each) => sum + (each ?? 0), 0);
-  const closed = progress.months.reduce(
-    (sum, row) => sum + (row.closed.amount_minor ?? 0),
-    0,
+  const goal = sumMinor(
+    progress.months.map((row) => row.goal.amount_minor ?? 0),
   );
+  const closed = sumMinor(
+    progress.months.map((row) => row.closed.amount_minor ?? 0),
+  );
+  // A year past the exact range has no line: its figures would be wrong.
+  if (goal === undefined || closed === undefined) {
+    return <span className="t-caption">{t("format.someTooLargeExact")}</span>;
+  }
   const money = (minor: number) =>
     formatAnalyticsMoney(minor, progress.currency, locale);
   return (

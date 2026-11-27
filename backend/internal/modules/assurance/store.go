@@ -295,11 +295,12 @@ func (s *Store) FinishRun(
 
 // noInputCheckYet answers before the first nightly input check. A bare
 // not-found would read as a check hidden from the caller, not one never run.
-// It is still ErrNotFound, so a caller asking "is there a run" reads it alike.
+// It is still ErrNotFound, so a caller asking "is there a run" reads it alike,
+// and nothing yet, so a caller that prefers it hears 204.
 type noInputCheckYet struct{ problem *httperr.DetailedError }
 
 func (e noInputCheckYet) Error() string   { return e.problem.Error() }
-func (e noInputCheckYet) Unwrap() []error { return []error{e.problem, apperrors.ErrNotFound} }
+func (e noInputCheckYet) Unwrap() []error { return []error{e.problem, apperrors.ErrNothingYet} }
 
 func noInputCheckYetError() error {
 	return noInputCheckYet{problem: &httperr.DetailedError{

@@ -29,6 +29,18 @@ function render(view: Contact360) {
 
 export const Standing: Story = { render: render(populated) };
 
+// The status line the newest mail wrote, in place of the page's own reading.
+export const WithStatusLine: Story = {
+  render: render({
+    ...populated,
+    standing_line: {
+      text: "In her mail on 24 November, Anna Weber confirmed the rollout plan and asked for the contract draft by Friday.",
+      activity_ids: ["a-1", "a-2"],
+      written_at: "2026-11-24T10:00:00Z",
+    },
+  }),
+};
+
 // A visit logged by its day alone, on the day the page was read. It has
 // begun by the morning read, and its mark names the day without a clock.
 const visitedToday: Contact360 = {

@@ -27,6 +27,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/compose/proposeroles"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -88,7 +89,7 @@ type introFacts struct {
 // entry beyond the model call's own. What comes back is for the reader to send
 // under their own name, from their own mail client.
 func (s *Service) IntroRequestDraft(
-	ctx context.Context, lane Completer, companyID ids.CompanyID, req IntroRequest,
+	ctx context.Context, lane Completer, rules draftvoice.RulesReader, companyID ids.CompanyID, req IntroRequest,
 ) (crmcontracts.CompanyEmailDraft, error) {
 	// It spends the workspace's model budget on prose the user sends under their
 	// own name, so passportless automatic work may not ask for it.
@@ -140,7 +141,7 @@ func (s *Service) IntroRequestDraft(
 	// colleague's relationship with them is — so an erasure reaching that
 	// contact must reach this call's payloads.
 	return writeIntroRequest(ai.WithSubject(ctx, req.ContactID.Ref(), facts.contact),
-		lane, facts), nil
+		lane, rules, facts)
 }
 
 // introFactsFor assembles the draft's material under the caller's own scope.

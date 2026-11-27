@@ -119,7 +119,7 @@ type UseClarifyAnswersArgs = Readonly<{
   locale: Locale;
   /** Live view of the latest proposal; a ref because the proposal query
    * depends on this hook's answers (the two would otherwise cycle). */
-  proposalRef: Readonly<{ current: Proposal | undefined }>;
+  proposalRef: Readonly<{ current: Proposal | null | undefined }>;
   draftRef: Readonly<{ current: CompanyDraft }>;
   /** Live view of the read's own candidates, for the legal-entity fill
    * below; a ref for the same reason draftRef and proposalRef are. */

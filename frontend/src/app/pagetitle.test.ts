@@ -29,6 +29,7 @@ const OUTSIDE_THE_SHELL = new Set<string>([
   "preferences",
   "unsubscribe",
   "confirm",
+  "confirm-merge",
   "room",
   "oauth-consent",
   "reset-password",

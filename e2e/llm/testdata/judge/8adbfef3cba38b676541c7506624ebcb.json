@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer says Margince has no way to block mail to one contact and only tells colleagues to avoid writing to her, so it neither reports a recorded stop nor proposes recording one and asking for approval.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer either reports a stop recorded on Mai Nguyen because she asked us to stop writing, or proposes recording that stop and asks the user's yes first. Answer no if it offers a tag, a note, a marketing opt-out alone or a field change instead, or says it cannot stop mail to her.",
+  "answer": "I found Mai Nguyen, but Margince has no way to block mail to one contact. Tell your colleagues not to write to her."
+}

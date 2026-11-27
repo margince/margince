@@ -280,6 +280,12 @@ expect_actions "a red all-stories render files its issue" \
 expect_actions "a green all-stories render closes it" \
 	"close 40" "$(printf '40\t%s\n' "$STORIES_TITLE")" STORIES_RESULT=success
 
+SECONDARY_TITLE="a smoke flow fails in WebKit or Firefox on main"
+expect_actions "a red secondary-browser smoke run files its issue" \
+	"create $SECONDARY_TITLE" "" SECONDARY_RESULT=failure
+expect_actions "a green secondary-browser smoke run closes it" \
+	"close 41" "$(printf '41\t%s\n' "$SECONDARY_TITLE")" SECONDARY_RESULT=success
+
 SPEED_TITLE="the speed records pull request could not be opened"
 MCP_RECORDS_TITLE="the MCP verdicts pull request could not be opened"
 expect_actions "records/a failed render or proposal files its part's issue" \

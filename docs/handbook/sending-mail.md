@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/modules/consent/instructioncorrection.go backend/internal/modules/consent/instructionconsume.go backend/internal/modules/activities/wordingcorrection.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/activityfiling.ts frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go -->
+<!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/modules/consent/instructioncorrection.go backend/internal/modules/consent/instructionconsume.go backend/internal/modules/activities/wordingcorrection.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/activityfiling.ts frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go backend/internal/compose/bounceresend backend/internal/platform/mailresend backend/internal/modules/comms/resend.go frontend/src/features/worklist/worklist.acknowledge.tsx -->
 # Writing and sending mail
 
 ### How do I send an email to a contact?
@@ -97,10 +97,11 @@ To attach a file to an email in Margince, press **Attach** beside the text forma
 
 **Attach from this record** shows the 25 newest files filed on the record. **Upload
 file** first files the upload on the record, then attaches it, so the history
-keeps every file you sent.
+keeps every file you sent. A file the record already holds is not filed a second
+time: the upload attaches the one that is there.
 
-One message carries at most 10 files. Past that, the composer asks you to send
-the rest in a second message. A reply does not offer back the files that came in
+One message carries at most 10 files. With 10 attached, **Upload file** is off,
+and the composer asks you to send the rest in a second message. A reply does not offer back the files that came in
 with the message you answer.
 Also called: add an attachment, send a document, attach a PDF.
 
@@ -335,7 +336,7 @@ Also called: double opt-in, consent request, GDPR confirmation.
 Mail from the contact does not create an Article 14 task. If a duty is still owed, open **Privacy notice owed** on your Worklist (**Home**, then **Show Worklist**) and press **Send privacy notice**.
 1. Open the **Privacy notice owed** item.
 2. Press **Send privacy notice**, or **Ask them to confirm their details**, which tells them too.
-3. If they already know, or the law lets you skip it, press **End the duty…** and record why.
+3. If they already know, or the law lets you skip it, press **Close without sending…** and record why.
 
 Before it goes, Margince shows you the notice and lets you pick its language, as it does for the confirmation request. The notice goes to the contact's own recorded address. If it comes back, the duty is owed again.
 Also called: GDPR Art. 14 notice, disclosure duty, information obligation.
@@ -351,8 +352,20 @@ If the details come from the contact, the review ends. Data from someone else ma
 ### Why does Margince say "this installation cannot send mail"?
 "Not sent: this installation cannot send mail" means your installation has no server set up to send its own mail. So the privacy notice or confirmation link was not sent, and the duty stays open.
 
-This mail never goes through your connected mailbox. It carries a private link to the contact's own record, which must not sit in your sent mail. Ask your administrator to set up the installation's own mail. Until then, tell the contact another way and press **End the duty…**.
+This mail never goes through your connected mailbox. It carries a private link to the contact's own record, which must not sit in your sent mail. Ask your administrator to set up the installation's own mail. Until then, tell the contact another way and press **Close without sending…**.
 Also called: privacy notice not sent, cannot send notice.
+
+### What do I do when an email comes back?
+An email that did not arrive shows on your Worklist under its subject. The row names the address that refused it and the reason. Open the contact to fix the address yourself, or press **Send again** on the row.
+
+1. Press **Send again** on the returned email's row.
+2. Type the corrected address and press **Save**.
+3. Margince replaces the address that refused the email on the contact, and sends the same email to the new one.
+
+The email is the one you wrote, with the same subject, text, files and copies. It is filed under the same records and sent for the same reason, so the consent check asks the same question about the new address. If the contact has since withdrawn consent or asked you to stop, the email is refused and the row says why. The contact keeps the address it had before.
+
+An email can be sent again once. If the corrected address also refuses it, the row offers **Open** only: fix the address on the contact. **Send again** is not offered for emails sent before Margince kept the text you wrote, nor for emails that someone else or an agent sent. Only a colleague can press it, never an agent.
+Also called: resend an email, fix a wrong address, email did not arrive.
 
 ### Which mailbox does Margince send from?
 Mail you write in Margince goes out from your own connected mailbox, so the contact sees your address.

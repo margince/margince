@@ -662,6 +662,34 @@ describe("archived lists", () => {
   });
 });
 
+describe("a group while the archived toggle's read is out", () => {
+  it("says it holds nothing only once the fresh read answers with nothing", async () => {
+    let answer = () => {};
+    const { wrapper } = mountFilters({
+      listsOn: true,
+      lists: [liveList],
+      archivedAnswered: new Promise((resolve) => {
+        answer = resolve;
+      }),
+    });
+    const user = userEvent.setup();
+    render(<FiltersScreen />, { wrapper });
+    await screen.findByText(liveList.name);
+    expect(
+      screen.getByText(en["filters.library.sharedEmpty"]),
+    ).toBeInTheDocument();
+    await user.click(
+      screen.getByRole("button", { name: en["filters.library.showArchived"] }),
+    );
+    expect(screen.getByText(liveList.name)).toBeInTheDocument();
+    expect(screen.queryByText(en["filters.library.sharedEmpty"])).toBeNull();
+    answer();
+    expect(
+      await screen.findByText(en["filters.library.sharedEmpty"]),
+    ).toBeInTheDocument();
+  });
+});
+
 describe("a group's own address", () => {
   it("lands on the reader's own group for #/filters/lists when it holds one of their lists", async () => {
     const { wrapper } = mountFilters({

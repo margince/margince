@@ -53,6 +53,18 @@ export const AtRisk: Story = { render: overview(deliveringProject360()) };
  *  current bar is neutral. Nothing is due, so the next bar says so. */
 export const NotAssessed: Story = { render: overview(project360()) };
 
+/** The status line the newest activity wrote, in place of the derived one. */
+export const WithStatusLine: Story = {
+  render: overview({
+    ...deliveringProject360(),
+    standing_line: {
+      text: "In the kickoff notes from 24 November, Lena Hoffmann agreed the rollout order with the plant managers.",
+      activity_ids: ["a-1", "a-2", "a-3"],
+      written_at: "2026-11-24T10:00:00Z",
+    },
+  }),
+};
+
 /** On track, with no note: the sentence says who judged it and when. */
 export const OnTrack: Story = {
   render: overview(

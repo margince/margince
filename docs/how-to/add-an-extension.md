@@ -875,6 +875,25 @@ Set the types on a company with `Core().Companies().SetExtensionTypes(ctx, compa
 
 A user or an agent can also set a declared value with `PATCH /v1/companies/{id}`, in `extension_relationship_types`. A value that no unit declares is refused with a 422 on that field and the code `invalid_enum`. A company that already holds a value keeps it when its unit is later removed, and a save that does not change it is accepted. `GET /v1/company-types` lists every declared value with its label, for any signed-in user. The company list takes a declared value in `extension_relationship_type`. The `relationship_type` filter stays core's own list.
 
+## Declare a language
+
+Core ships German, English and Vietnamese. Each column that holds a language, such as the language of a consent notice, points at the `language` table. So a typo cannot be stored. A unit that works in another language adds it with no core migration.
+
+```go
+Languages: []extension.Language{
+	{Code: "ar", Label: "Arabic"},
+},
+```
+
+| Field | Meaning |
+|---|---|
+| `Code` | A lower-case two-letter ISO 639-1 code. A code core already ships is refused. |
+| `Label` | The language's name in English. Required, at most 120 characters. |
+
+The start writes each declared language into the table before anything serves. It refuses a bad declaration with a message that names the unit. Two units may declare the same code. The row stays when a unit is removed, because stored rows still name it.
+
+A declared language does not change the screens. They show English for a language with no words of their own. An offer, a product text or a legal entity takes a language only if core ships it or a unit declares it.
+
 ## Declare a record kind
 
 A unit that keeps records core does not know, such as a ledger account, can declare them as a record kind. Core then
@@ -902,17 +921,19 @@ RecordKinds: []extension.RecordKindDeclaration{{
 | `Defaults` | Starting rights per system role. Leave it out and every role is refused until an admin ticks the kind's object. |
 | `DeletePolicy` | `extension.DeleteArchiveOnly` (the default) or `extension.DeleteErasable`. |
 | `View` | Optional. The name of the page under your screen that shows one record of the kind, such as `room-page`. A notice about a record of the kind opens `#/ext/<unit>/<view>`, with `record_type` and `record_id` in the query. Leave it out and the notice opens your screen itself. Read both in the screen with `useEntryContext`. |
+| `OwnerColumn` | Optional. The `uuid` column that holds the member who owns a row. Core then shows a reader the rows their role's own, team or all row scope allows, as for deals, and a row with no owner to every reader. Leave it out and the `read` right on the kind shows every row. Core's readers apply the scope. Your unit's own routes read the table with your own SQL, so apply the scope in that SQL too. |
 
 The kind is gated on the RBAC object `ext_<unit>_<kind>`. The unit's hyphens become `_` in that name. Before core links,
-tags or lists a record, it checks the `read` right and a live row. A caller without the right gets `404`. The start
+tags or lists a record, it checks the `read` right and a live row inside the kind's row scope. A caller without the right gets `404`. The start
 refuses a declaration that breaks the table above.
 
-Ship two more indexes in the unit's migrations, because core's reads over your table use them:
+Ship these indexes in the unit's migrations, because core's reads over your table use them:
 
 | Read | Index the table must hold |
 |---|---|
 | Search | A text search index over the lower-cased title column: `CREATE INDEX ON ext.<table> USING gin (lower(<title>) public.gin_trgm_ops)`. The title column is the `LabelField` of the `Timeline`, or else the first `NaturalKey` field. |
 | History, for each entry of `Timeline.Subjects` | An index whose first column is the subject's `Column` and whose second is the `AtColumn`: `CREATE INDEX ON ext.<table> (<column>, <at column>)`. |
+| Row scope, when `OwnerColumn` is set | An index whose first column is the owner column: `CREATE INDEX ON ext.<table> (<owner column>)`. |
 
 Each index covers every row, so give it no `WHERE`. The service reports itself unready while your table, a column,
 the unique index or one of these indexes is missing. It does the same while such an index is not valid, as after a
@@ -1365,9 +1386,9 @@ Declare each group of reads your unit makes:
 
 ```go
 SystemReads: []extension.SystemRead{
-	extension.SystemReadDeals,     // Deals().Get and Deals().Responsible
-	extension.SystemReadAuthority, // Authority().CanRead and CanWrite
-	extension.SystemReadDirectory, // Directory().Emails and ByRole (as actAs)
+	extension.SystemReadDeals,     // Deals().GetAs and ResponsibleAs (as actAs)
+	extension.SystemReadAuthority, // Authority().CanReadAs and CanWriteAs (as actAs)
+	extension.SystemReadDirectory, // Directory().EmailsAs and ByRole (as actAs)
 	extension.SystemReadActivities, // Activities().Mail
 	extension.SystemReadSetAside, // SetAside().Contact and Contacts
 	extension.SystemReadCompanies, // Companies().Get and List (as actAs)
@@ -1382,9 +1403,9 @@ unit reads without opening its source. `fixtures/extensions/crm-hello` is the sm
 subscription that reads the deal its event names.
 
 ```go
-deal, err := rt.Deals().Get(ctx, d.Entity.ID)            // extension.ErrNotFound once the deal is gone
-team, err := rt.Deals().Responsible(ctx, d.Entity.ID)    // owner first, then by email
-emails, err := rt.Directory().Emails(ctx, ids)           // active human members only
+deal, err := rt.Deals().GetAs(ctx, actAs, d.Entity.ID)           // extension.ErrNotFound once the deal is gone or out of the seat's scope
+team, err := rt.Deals().ResponsibleAs(ctx, actAs, d.Entity.ID)   // owner first, then by email
+emails, err := rt.Directory().EmailsAs(ctx, actAs, ids)          // active human members only
 mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{}) // the deal's shared emails as that member may see the deal, newest first
 ```
 
@@ -1472,8 +1493,11 @@ mail, err := rt.Activities().Mail(ctx, member, d.Entity.ID, extension.MailQuery{
 
   A read is never bound to a colleague, so it does not
   stop when a colleague leaves. Each read writes one `system_log` row that names the unit, the read, the record
-  and `actAs`. `Deals().Get`, `Authority` and `Directory().Emails` keep their old shape until seat-bound
-  variants replace them.
+  and `actAs`.
+- **The forms without `actAs` are deprecated.** `Deals().Get`, `Deals().Responsible`, `Authority().CanRead`,
+  `CanWrite` and `Directory().Emails` run as the system, so no grant, row scope or field mask limits them. Use
+  the `As` form of each. A deal the service member cannot open answers `ErrNotFound`. A value field its role
+  masks comes back empty.
 - **A private reply is not seen.** A reply that sits only in a private mailbox is not in `Mail`. So "no reply
   yet" is a reminder for a colleague to check, not a fact. Never act on it alone, for example by sending a
   message.
@@ -1491,6 +1515,10 @@ writable, err := rt.Authority().CanWrite(ctx, user, deal)
 
 - **`CanRead(user, record, fields)`**: may `user` open the deal and read every field in `fields`? A field
   mask that hides one of them answers no. A mask counts even when users who may change the deal can see past it.
+- **`CanReadAs(actAs, user, record, fields)` and `CanWriteAs(actAs, user, record)`** ask the same on a job
+  tick or a bus delivery, as the service member. The member must open the deal, or the answer is
+  `ErrNotFound`. A question about a colleague also needs the `user_admin` read grant, or the answer is
+  `ErrForbidden`.
 - **`CanWrite(user, record)`**: could `user` change the deal now? The deal is live, and they hold a full
   seat. Their role holds `read` and `update` on deals, and they may change this deal, not only open it. A
   deal shared with them read-only answers no. It takes no fields.
@@ -1895,6 +1923,18 @@ func TestNewDeclaresTheFloors(t *testing.T) {
 ```
 
 Check the floors, not only that `New()` returns. A test with no check proves nothing (`P3`, `tests-as-spec`).
+
+A unit that declares record kinds, link types or signal types checks them with `backend/pkg/extension/extensiontest`.
+Each check runs the rule core's start runs, and fails the test with the start's own message. The shape is in
+`extensions/finance-demo/financedemo_test.go`.
+
+| Check | What it fails |
+|---|---|
+| `extensiontest.Check(t, ext)` | A record kind, link type or signal type the start refuses, and a name the unit declares twice. |
+| `extensiontest.CheckLink(t, ext, linkType, from, to)` | A link type the unit does not declare, or one that does not join a `from` record to a `to` record. |
+| `extensiontest.CheckSignal(t, ext, kind, fields)` | A signal type the unit does not declare, or evidence its layout refuses. |
+
+The kit does not see other units, so a conflict between two units still shows only when the set is composed.
 
 ## Compose and check
 

@@ -224,3 +224,5 @@ func TestTheGuestLengthDoesNotChangeTheHostsSavedDefault(t *testing.T) {
 		t.Fatalf("host profile changed: %+v,%v", current, err)
 	}
 }
+
+func (acceptingConsent) BookingPrivacyInformation(context.Context) (string, error) { return "", nil }

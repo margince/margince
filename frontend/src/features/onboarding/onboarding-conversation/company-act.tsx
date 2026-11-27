@@ -78,7 +78,7 @@ export function CompanyAct({
   const machine = useRef(state);
   machine.current = state;
 
-  const proposalRef = useRef<Proposal | undefined>(undefined);
+  const proposalRef = useRef<Proposal | null | undefined>(undefined);
   // The read's own candidates for the legal-entity fill, kept current once
   // `read` is computed below.
   const legalEntitiesRef = useRef<readonly LegalEntity[]>([]);
