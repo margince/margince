@@ -11,6 +11,8 @@ const OBJECTS: readonly ImportObject[] = [
   "contact",
   "deal",
   "activity",
+  "project",
+  "product",
 ];
 
 // The plural the server names a type by: the stem of that type's template file.
@@ -20,6 +22,8 @@ const OBJECT_OF_PLURAL: Readonly<Record<string, ImportObject>> = {
   contacts: "contact",
   deals: "deal",
   activities: "activity",
+  projects: "project",
+  products: "product",
 };
 
 function objectOf(value: string): ImportObject | undefined {

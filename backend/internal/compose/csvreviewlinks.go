@@ -7,6 +7,7 @@ import (
 	"context"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/importrecords"
 	"github.com/margince/margince/backend/internal/modules/migration"
 )
 
@@ -20,8 +21,12 @@ func (w *csvWriters) reviewLinks(ctx context.Context, row migration.Row) ([]migr
 		} else if key := strings.TrimSpace(fields[csvEmployerName]); key != "" && w.companyNameColumn != "" {
 			links = append(links, migration.ReviewLink{Object: migration.ObjectCompany, Key: key, ByName: true})
 		}
-	case migration.ObjectDeal:
-		for _, edge := range []struct{ field, object string }{{csvTargetCompanyRef, migration.ObjectCompany}, {dealTargetContactRef, migration.ObjectContact}} {
+	case migration.ObjectDeal, migration.ObjectProject:
+		edges := []struct{ field, object string }{{csvTargetCompanyRef, migration.ObjectCompany}, {dealTargetContactRef, migration.ObjectContact}}
+		if w.object == migration.ObjectProject {
+			edges[1] = struct{ field, object string }{importrecords.ProjectDealRef, migration.ObjectDeal}
+		}
+		for _, edge := range edges {
 			if key := strings.TrimSpace(fields[edge.field]); key != "" && columnFor(w.columns, edge.field) != "" {
 				links = append(links, migration.ReviewLink{Object: edge.object, Key: key})
 			}

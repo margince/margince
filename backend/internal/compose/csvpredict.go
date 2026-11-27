@@ -169,6 +169,9 @@ func (w *csvWriters) predictCreatePath(ctx context.Context, row migration.Row, t
 	if why, err := w.newRecordRefusal(ctx, row, typed); err != nil || why.Code != "" {
 		return predictUnwritable, why, err
 	}
+	if why, err := w.record.PredictCreate(ctx, textFields(row.Fields), typed); err != nil || why.Code != "" {
+		return predictUnwritable, why, err
+	}
 	collides, err := w.collidesWithExisting(ctx, row)
 	if err == nil && !collides {
 		collides, err = w.collidesInFile(ctx, row)
@@ -212,6 +215,9 @@ func (w *csvWriters) reconcilePrediction(
 	}
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return predictUnwritable, cannotEditWhy(w.object), nil
+	}
+	if why := w.record.RefuseChange(current, changed, typed); why.Code != "" {
+		return predictUnwritable, why, nil
 	}
 	why, err := w.movedKeyRefusal(ctx, id, row, typed, changed)
 	if err != nil || why.Code != "" {

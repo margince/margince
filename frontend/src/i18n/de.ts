@@ -10824,6 +10824,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.object.contact": "Kontakte",
   "import.object.deal": "Deals",
   "import.object.activity": "Aktivitäten",
+  "import.object.project": "Projekte",
+  "import.object.product": "Produkte",
   "import.profiled_one":
     "„Ausgefüllt“ und „Werte“ stammen aus der ersten Zeile der Datei.",
   "import.profiled_other":
@@ -11315,6 +11317,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{value}“ braucht die Landesvorwahl, zum Beispiel +49 30 1234567.",
   "import.reason.record_archived":
     "Der Datensatz dieser Zeile wurde archiviert und wird daher nicht aktualisiert. Stelle ihn wieder her, um ihn zu aktualisieren.",
+  "import.reason.project_unnamed": "Gib dem Projekt einen Namen.",
+  "import.reason.project_company_missing":
+    "Ein Projekt gehört zu einem Unternehmen. Nenne es in der Unternehmensspalte.",
+  "import.reason.project_company_fixed":
+    "Ein Projekt behält das Unternehmen, für das es erstellt wurde, daher wird diese Zeile nicht übernommen. Lass die Unternehmensspalte unverändert oder importiere die Zeile als neues Projekt.",
+  "import.reason.project_phase_unknown":
+    "„{value}“ ist keine Startphase eines Projekts. Mögliche Phasen: {names}.",
+  "import.reason.project_phase_closed":
+    "Ein Projekt wird nicht geschlossen erstellt, weil das Schließen einen Grund braucht. Importiere es in einer anderen Phase und schließe es dann in der App.",
+  "import.reason.project_dates_inverted":
+    "Das geplante Enddatum liegt vor dem Startdatum.",
+  "import.reason.project_deal_refused":
+    "Der Deal kann dieses Projekt nicht starten: {detail}",
+  "import.reason.product_unnamed": "Gib dem Produkt einen Namen.",
+  "import.reason.product_sku_held":
+    "Ein anderes aktives Produkt hat bereits die Artikelnummer „{value}“.",
   "import.reason.ref_taken_by_another_company":
     "Die Referenz „{ref}“ steht bereits für ein anderes Unternehmen aus einem früheren Import, daher wird diese Zeile nicht übernommen. Verwende eine neue Referenz für dieses Unternehmen oder korrigiere die ID-Spalte.",
   "import.reason.row_key_empty":

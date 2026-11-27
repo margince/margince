@@ -10,6 +10,7 @@ import (
 	"slices"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/compose/importrecords"
 	"github.com/margince/margince/backend/internal/compose/recordexport"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
@@ -88,6 +89,10 @@ var csvTargets = map[string][]string{
 		activityTargetType, activityTargetSubject, activityTargetBody, activityTargetOccurredAt, activityTargetLinks,
 		activityTargetDuration, activityTargetMeetingStatus, activityTargetDirection, csvTargetAuthor, csvTargetOwner,
 	},
+	// A project keeps its company and phase from its birth. A product has no owner,
+	// tags or custom fields.
+	migration.ObjectProject: importrecords.ProjectTargets,
+	migration.ObjectProduct: importrecords.ProductTargets,
 }
 
 // csvTargetID is the column that names the record this row IS, by the id the CRM
@@ -147,6 +152,8 @@ var csvSourceKeyDefault = map[string]string{
 	migration.ObjectDeal: csvTargetRef,
 	// An activity has no natural key at all.
 	migration.ObjectActivity: csvTargetRef,
+	migration.ObjectProject:  csvTargetRef,
+	migration.ObjectProduct:  importrecords.ProductSKU,
 }
 
 // rowKeyTargets are the targets partMappingFrom tells an object's rows apart
@@ -191,8 +198,10 @@ func importTargets(object string, cat importCatalog) ([]string, error) {
 }
 
 // hasCustomFields reports whether an object's store takes custom-field cells.
-// The activities store has no member for them.
-func hasCustomFields(object string) bool { return object != migration.ObjectActivity }
+// The activities and products stores have no member for them.
+func hasCustomFields(object string) bool {
+	return object != migration.ObjectActivity && object != migration.ObjectProduct
+}
 
 // selectsByID reports whether an object's rows may name the record they are.
 //
@@ -200,7 +209,7 @@ func hasCustomFields(object string) bool { return object != migration.ObjectActi
 // natural key can be empty or shared.
 func selectsByID(object string) bool {
 	switch object {
-	case migration.ObjectCompany, migration.ObjectContact, migration.ObjectLead, migration.ObjectDeal:
+	case migration.ObjectCompany, migration.ObjectContact, migration.ObjectLead, migration.ObjectDeal, migration.ObjectProject:
 		return true
 	}
 	return false
@@ -226,7 +235,7 @@ func linksEmployer(object string) bool {
 // report every unedited row as changed on each re-import.
 func isNonFieldTarget(field string) bool {
 	return field == csvTargetID || field == csvEmployerName || field == csvTargetRef ||
-		field == csvTargetCompanyRef || field == dealTargetContactRef || field == csvTargetTags
+		field == csvTargetCompanyRef || field == dealTargetContactRef || field == csvTargetTags || field == importrecords.ProjectDealRef
 }
 
 // changedFields reports which mapped values differ from what the stored record
@@ -296,6 +305,9 @@ func storedValue(current map[string]json.RawMessage, field string) json.RawMessa
 		return current[column]
 	}
 	if column, renamed := activityStoredColumns[field]; renamed {
+		return current[column]
+	}
+	if column, renamed := importrecords.StoredColumns[field]; renamed {
 		return current[column]
 	}
 	if field == activityTargetOccurredAt {
@@ -441,28 +453,12 @@ func checkedString(fields map[string]string, typed map[string]any, name string) 
 	return importString(fields, name)
 }
 
-func importString(fields map[string]string, name string) *string {
-	value, ok := fields[name]
-	if !ok {
-		return nil
-	}
-	trimmed := strings.TrimSpace(value)
-	if trimmed == "" {
-		return nil
-	}
-	return &trimmed
-}
-
-// textFields narrows the engine's JSON-shaped row to the text a delimited file
-// actually carried. Every value in it came from a CSV cell, so the map the rest
-// of this file works with says so in its type.
-func textFields(fields map[string]any) map[string]string {
-	out := make(map[string]string, len(fields))
-	for name, value := range fields {
-		out[name] = strings.TrimSpace(fmt.Sprint(value))
-	}
-	return out
-}
+var (
+	importString = importrecords.Text
+	// textFields narrows the engine's JSON-shaped row to the text a delimited
+	// file carried.
+	textFields = importrecords.TextFields
+)
 
 // canonicalIndustry renders an imported industry the way the store holds it.
 // A file that spells the industry another way is then no change. Text that

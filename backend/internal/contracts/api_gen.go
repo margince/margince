@@ -15428,6 +15428,8 @@ const (
 	ImportObjectContact  ImportObject = "contact"
 	ImportObjectDeal     ImportObject = "deal"
 	ImportObjectLead     ImportObject = "lead"
+	ImportObjectProduct  ImportObject = "product"
+	ImportObjectProject  ImportObject = "project"
 )
 
 // Valid indicates whether the value is a known member of the ImportObject enum.
@@ -15442,6 +15444,10 @@ func (e ImportObject) Valid() bool {
 	case ImportObjectDeal:
 		return true
 	case ImportObjectLead:
+		return true
+	case ImportObjectProduct:
+		return true
+	case ImportObjectProject:
 		return true
 	default:
 		return false
@@ -15659,6 +15665,15 @@ const (
 	ImportReasonCodePipelineNoOpenStage           ImportReasonCode = "pipeline_no_open_stage"
 	ImportReasonCodePipelineUnknown               ImportReasonCode = "pipeline_unknown"
 	ImportReasonCodePipelineUnnamed               ImportReasonCode = "pipeline_unnamed"
+	ImportReasonCodeProductSkuHeld                ImportReasonCode = "product_sku_held"
+	ImportReasonCodeProductUnnamed                ImportReasonCode = "product_unnamed"
+	ImportReasonCodeProjectCompanyFixed           ImportReasonCode = "project_company_fixed"
+	ImportReasonCodeProjectCompanyMissing         ImportReasonCode = "project_company_missing"
+	ImportReasonCodeProjectDatesInverted          ImportReasonCode = "project_dates_inverted"
+	ImportReasonCodeProjectDealRefused            ImportReasonCode = "project_deal_refused"
+	ImportReasonCodeProjectPhaseClosed            ImportReasonCode = "project_phase_closed"
+	ImportReasonCodeProjectPhaseUnknown           ImportReasonCode = "project_phase_unknown"
+	ImportReasonCodeProjectUnnamed                ImportReasonCode = "project_unnamed"
 	ImportReasonCodeRecordArchived                ImportReasonCode = "record_archived"
 	ImportReasonCodeRefTakenByAnotherCompany      ImportReasonCode = "ref_taken_by_another_company"
 	ImportReasonCodeRefTakenByAnotherRecord       ImportReasonCode = "ref_taken_by_another_record"
@@ -15926,6 +15941,24 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodePipelineUnknown:
 		return true
 	case ImportReasonCodePipelineUnnamed:
+		return true
+	case ImportReasonCodeProductSkuHeld:
+		return true
+	case ImportReasonCodeProductUnnamed:
+		return true
+	case ImportReasonCodeProjectCompanyFixed:
+		return true
+	case ImportReasonCodeProjectCompanyMissing:
+		return true
+	case ImportReasonCodeProjectDatesInverted:
+		return true
+	case ImportReasonCodeProjectDealRefused:
+		return true
+	case ImportReasonCodeProjectPhaseClosed:
+		return true
+	case ImportReasonCodeProjectPhaseUnknown:
+		return true
+	case ImportReasonCodeProjectUnnamed:
 		return true
 	case ImportReasonCodeRecordArchived:
 		return true
@@ -48576,6 +48609,16 @@ type CreateImportRunRequest struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects. It takes a single CSV only, never a ZIP. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products, and takes a single CSV only. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -55091,6 +55134,16 @@ type ImportFormatFile struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects. It takes a single CSV only, never a ZIP. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products, and takes a single CSV only. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -55138,6 +55191,16 @@ type ImportIgnoredEntryReason string
 // ImportObject What the file's rows are, and therefore what the run creates.
 //
 // `company` creates companies.
+//
+// `project` creates projects. It takes a single CSV only, never a ZIP. A
+// row names the company it belongs to, by that company's `ref`, domain,
+// name or id, and may name the deal it comes from. A project is born in
+// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+// corrected export of projects, with its `id` column, updates them.
+//
+// `product` creates rate-card products, and takes a single CSV only. A
+// row is known by its `sku`, or by its `ref` when it has none. A price is
+// written in the major units of its `currency`.
 //
 // `deal` creates deals, after the companies and contacts of the same
 // upload. A deal row needs a `ref`, and names its pipeline and stage by
@@ -55221,6 +55284,16 @@ type ImportPartProfile struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects. It takes a single CSV only, never a ZIP. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products, and takes a single CSV only. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -55278,6 +55351,16 @@ type ImportPartReport struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects. It takes a single CSV only, never a ZIP. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products, and takes a single CSV only. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -55322,6 +55405,16 @@ type ImportPartRequest struct {
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
+	//
+	// `project` creates projects. It takes a single CSV only, never a ZIP. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products, and takes a single CSV only. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
 	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
@@ -55453,6 +55546,16 @@ type ImportRun struct {
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
+	//
+	// `project` creates projects. It takes a single CSV only, never a ZIP. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products, and takes a single CSV only. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
 	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
@@ -55622,6 +55725,16 @@ type ImportRunPart struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects. It takes a single CSV only, never a ZIP. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products, and takes a single CSV only. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -55781,6 +55894,16 @@ type ImportSourceProfile struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects. It takes a single CSV only, never a ZIP. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products, and takes a single CSV only. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -55888,6 +56011,16 @@ type ImportUndoReport struct {
 		//
 		// `company` creates companies.
 		//
+		// `project` creates projects. It takes a single CSV only, never a ZIP. A
+		// row names the company it belongs to, by that company's `ref`, domain,
+		// name or id, and may name the deal it comes from. A project is born in
+		// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+		// corrected export of projects, with its `id` column, updates them.
+		//
+		// `product` creates rate-card products, and takes a single CSV only. A
+		// row is known by its `sku`, or by its `ref` when it has none. A price is
+		// written in the major units of its `currency`.
+		//
 		// `deal` creates deals, after the companies and contacts of the same
 		// upload. A deal row needs a `ref`, and names its pipeline and stage by
 		// name.
@@ -55933,6 +56066,16 @@ type ImportUndoReport struct {
 		// Object What the file's rows are, and therefore what the run creates.
 		//
 		// `company` creates companies.
+		//
+		// `project` creates projects. It takes a single CSV only, never a ZIP. A
+		// row names the company it belongs to, by that company's `ref`, domain,
+		// name or id, and may name the deal it comes from. A project is born in
+		// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+		// corrected export of projects, with its `id` column, updates them.
+		//
+		// `product` creates rate-card products, and takes a single CSV only. A
+		// row is known by its `sku`, or by its `ref` when it has none. A price is
+		// written in the major units of its `currency`.
 		//
 		// `deal` creates deals, after the companies and contacts of the same
 		// upload. A deal row needs a `ref`, and names its pipeline and stage by
@@ -72716,6 +72859,16 @@ type UpdateImportRunRequest struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects. It takes a single CSV only, never a ZIP. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products, and takes a single CSV only. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -82874,6 +83027,16 @@ type UploadImportSourceMultipartBody struct {
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
+	//
+	// `project` creates projects. It takes a single CSV only, never a ZIP. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products, and takes a single CSV only. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
 	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by

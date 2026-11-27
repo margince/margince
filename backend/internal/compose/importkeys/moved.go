@@ -70,6 +70,8 @@ func MovedKeyWhy(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, object 
 		return LinkedInHeldWhy, nil
 	case held.Kind == Domain:
 		return DomainHeldWhy, nil
+	case held.Kind == SKU:
+		return ProductSKUHeldWhy(keys[SKU]), nil
 	case object == migration.ObjectLead && held.Object == migration.ObjectContact:
 		return ContactHoldsLeadWhy, nil
 	case object == migration.ObjectLead:
@@ -90,9 +92,12 @@ func MovedKeyHeld(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, object
 		}
 		var holder string
 		var err error
-		if object == migration.ObjectCompany {
+		switch object {
+		case migration.ObjectProduct:
+			holder, err = productKeyHolder(ctx, pool, ledger, value, self)
+		case migration.ObjectCompany:
 			holder, err = companyKeyHolder(ctx, pool, ledger, kind, value, self)
-		} else {
+		default:
 			holder, err = leadOrContactKeyHolder(ctx, pool, ledger, object, kind, value, self)
 		}
 		if err != nil || holder != "" {
@@ -172,6 +177,18 @@ func companyKeyHolder(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, ki
 	})
 	if held {
 		return migration.ObjectCompany, err
+	}
+	return "", err
+}
+
+// productKeyHolder is MovedKeyHeld for the SKU a product moves.
+func productKeyHolder(ctx context.Context, pool *pgxpool.Pool, ledger Ledger, sku string, self ids.UUID) (string, error) {
+	if ledger.Held(SKU, sku, migration.ObjectProduct) {
+		return migration.ObjectProduct, nil
+	}
+	held, err := ProductSKUHeld(ctx, pool, sku, self)
+	if held {
+		return migration.ObjectProduct, err
 	}
 	return "", err
 }

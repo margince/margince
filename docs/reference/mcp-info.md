@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 244.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 64088 |
+| Approx. wire tokens | 64102 |
 | Largest tool | `read_details` (15.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -36,7 +36,7 @@ tool adds to that listing, and what it costs each scheduled agent, agent by agen
 | Descriptions (incl. governance clause) | 51.1 KB | 20% | Yes, every step |
 | Input schemas | 148.5 KB | 60% | Yes, every step |
 | _Names, annotations, punctuation_ | 11.6 KB | 4% | Partly |
-| **Description + input schema** | **199.6 KB** | **81%** | **the recurring cost** |
+| **Description + input schema** | **199.7 KB** | **81%** | **the recurring cost** |
 
 Output schemas count in the total but are never sent to a model;
 descriptions and input schemas are what each step pays for.
@@ -83,14 +83,14 @@ descriptions and input schemas are what each step pays for.
 | [`change_tags`](#change_tags) | Change tags |  |  | 650 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 375 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 275 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 888 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 893 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 463 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 523 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 446 |
 | [`find_records`](#find_records) | Find records | yes |  | 2053 |
 | [`list_approvals`](#list_approvals) | List what is waiting for a decision | yes | [`ui://margince/approval-queue.html`](#approval_queue_view) | 475 |
 | [`list_documents`](#list_documents) | List a record's documents or read one | yes |  | 351 |
-| [`preview_import`](#preview_import) | Preview an import |  |  | 1008 |
+| [`preview_import`](#preview_import) | Preview an import |  |  | 1018 |
 | [`read_analytics`](#read_analytics) | Write a report or query data | yes |  | 1373 |
 | [`read_approval`](#read_approval) | Read one staged action in full | yes | [`ui://margince/approval.html`](#approval_view) | 153 |
 | [`read_attention`](#read_attention) | See what needs attention | yes | [`ui://margince/attention.html`](#attention_view) | 365 |
@@ -2641,28 +2641,28 @@ the run used, each column by the field it went to. (Ask the user first.)
 
 ```text
 Create ONE contact, company, deal, lead, project, activity or relationship that does not exist yet.
-Rows from a file, a CSV or a pasted list, each a company, lead, contact, deal, activity, go through
-preview_import and then commit_import, never one create_record each: the preview checks every row,
-duplicates included, and its counts are what the user weighs. Creating a deal requires a pipeline_id
-and a stage_id, and the workspace's pipeline list is what yields them for a deal that does not exist
-yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a
-neighboring type is refused rather than dropped. A CONTACT created here is visible to everyone in
-the workspace, the same as one a human types in. No occurred_at means now; a past day with no time:
-its date, occurred_precision "day". Set meeting_status held only when the user says the meeting took
-place. Record a signed contract with change_offers action record_contract, never as a deal. A vCard
-file goes through change_capture. Before creating one contact or company that might already exist,
-ask find_records engine identify: it runs the duplicate check a create runs, on name spellings,
-emails, phones and domains. A second copy is a problem that then needs resolve_duplicates to undo. A
-record that shares only a name, with a different email, phone or employer, is not proof of a
-duplicate. When the check finds a contact with the same name at the same employer, ask the human
-whether it is the same contact before you link anything to it; two colleagues can share a name.
-Giving a contact its employer by creating an employment relationship files any same-name contact at
-that employer for review: the result carries it as duplicate_candidates, and you report the pair as
-filed, unresolved until the reviewer decides. When the user says where they met the contact, pass
-that word as offer_tag, also when they want to decide on the tag themselves: it puts no tag on the
-record and stores nothing, the answer says whether that tag already exists, and change_tags still
-needs their yes. The new record's id comes back in the result; keep it for anything that links to
-it.
+Rows from a file, a CSV or a pasted list, each a company, lead, contact, deal, activity, project,
+product, go through preview_import and then commit_import, never one create_record each: the preview
+checks every row, duplicates included, and its counts are what the user weighs. Creating a deal
+requires a pipeline_id and a stage_id, and the workspace's pipeline list is what yields them for a
+deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted,
+and a field belonging to a neighboring type is refused rather than dropped. A CONTACT created here
+is visible to everyone in the workspace, the same as one a human types in. No occurred_at means now;
+a past day with no time: its date, occurred_precision "day". Set meeting_status held only when the
+user says the meeting took place. Record a signed contract with change_offers action
+record_contract, never as a deal. A vCard file goes through change_capture. Before creating one
+contact or company that might already exist, ask find_records engine identify: it runs the duplicate
+check a create runs, on name spellings, emails, phones and domains. A second copy is a problem that
+then needs resolve_duplicates to undo. A record that shares only a name, with a different email,
+phone or employer, is not proof of a duplicate. When the check finds a contact with the same name at
+the same employer, ask the human whether it is the same contact before you link anything to it; two
+colleagues can share a name. Giving a contact its employer by creating an employment relationship
+files any same-name contact at that employer for review: the result carries it as
+duplicate_candidates, and you report the pair as filed, unresolved until the reviewer decides. When
+the user says where they met the contact, pass that word as offer_tag, also when they want to decide
+on the tag themselves: it puts no tag on the record and stores nothing, the answer says whether that
+tag already exists, and change_tags still needs their yes. The new record's id comes back in the
+result; keep it for anything that links to it.
 ```
 
 Renders its result in [`ui://margince/create-followups.html`](#create_followups_view), visible to `model`.
@@ -4495,7 +4495,9 @@ did not write is a decision they did not make.
               "lead",
               "contact",
               "deal",
-              "activity"
+              "activity",
+              "project",
+              "product"
             ],
             "type": "string"
           }
@@ -4507,7 +4509,7 @@ did not write is a decision they did not make.
         ],
         "type": "object"
       },
-      "maxItems": 5,
+      "maxItems": 7,
       "minItems": 1,
       "type": "array"
     },
@@ -4528,7 +4530,9 @@ did not write is a decision they did not make.
         "lead",
         "contact",
         "deal",
-        "activity"
+        "activity",
+        "project",
+        "product"
       ],
       "type": "string"
     },

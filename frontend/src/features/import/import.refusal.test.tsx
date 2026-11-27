@@ -204,8 +204,8 @@ describe("a refused file says what is wrong in the reader's words", () => {
         "“deals.csv” is not in the ZIP.",
       ],
       [
-        { reason: "type_not_importable", object: "project" },
-        "“project” is not a record type an import takes.",
+        { reason: "type_not_importable", object: "invoice" },
+        "“invoice” is not a record type an import takes.",
       ],
       [
         { reason: "spreadsheet" },

@@ -190,8 +190,9 @@ func (s *Store) RefuseArchiveProject(ctx context.Context, id ids.ProjectID) erro
 // project keeps its rollup readable — which is what "the history does not
 // die" means in practice.
 //
-// ifVersion pins the row where the caller's authority named a version.
-func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion *int64) (crmcontracts.Project, error) {
+// ifVersion pins the row where the caller's authority named a version. A guard
+// refuses the archive of a project a colleague worked on since the import.
+func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion *int64, guards ...storekit.ArchiveGuard) (crmcontracts.Project, error) {
 	if err := auth.Require(ctx, projectObject, principal.ActionDelete); err != nil {
 		return crmcontracts.Project{}, err
 	}
@@ -202,6 +203,9 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 			return err
 		}
 		if err := auth.EnsureWritable(ctx, tx, projectObject, id.UUID); err != nil {
+			return err
+		}
+		if err := storekit.RefuseIfHumanActedSince(ctx, tx, projectObject, id.UUID, guards...); err != nil {
 			return err
 		}
 		// A liveness probe, not a wire read — no custom columns needed.

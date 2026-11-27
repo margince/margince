@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/importkeys"
+	"github.com/margince/margince/backend/internal/compose/importrecords"
 	"github.com/margince/margince/backend/internal/compose/importtextbounds"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -105,6 +106,8 @@ type csvWriters struct {
 	deals *deals.Store
 	// activities is the store an activity part's rows land through.
 	activities *activities.Store
+	// record is the record type a project or product part lands through.
+	record importrecords.Record
 	// columns is the part's mapping, file header → target.
 	columns map[string]string
 	// now is the clock an activity's timestamp is held against; nil is the
@@ -163,6 +166,10 @@ func newCSVWriters(
 		authors:    authorSeats{},
 		cols:       cols,
 		columns:    part.Fields,
+	}
+	w.record = importrecords.None
+	if importrecords.Is(part.Object) {
+		w.record = importrecords.For(importrecords.Stores{Pool: w.pool, Projects: ProjectsStoreOver(db), Products: w.deals}, part.Object, cols.records)
 	}
 	if run.FromZip && linksEmployer(part.Object) {
 		w.companyNameColumn = columnFor(part.Fields, csvEmployerName)
@@ -329,6 +336,8 @@ func (w *csvWriters) create(ctx context.Context, object string, row migration.Ro
 		return w.createDeal(ctx, row, typed)
 	case migration.ObjectActivity:
 		return w.createActivity(ctx, row, typed)
+	case migration.ObjectProject, migration.ObjectProduct:
+		return w.record.Create(ctx, w.land, row, typed, w.sourceSystem)
 	default:
 		return migration.EnsureResult{}, fmt.Errorf("import: %q is not an importable object", object)
 	}
@@ -362,6 +371,9 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	if !auth.Allows(ctx, w.object, principal.ActionUpdate) {
 		return skippedFor(cannotEditWhy(w.object)), nil
 	}
+	if why := w.record.RefuseChange(current, changed, typed); why.Code != "" {
+		return skippedFor(why), nil
+	}
 	why, err := w.movedKeyRefusal(ctx, id, row, typed, changed)
 	if err != nil {
 		return migration.EnsureResult{}, err
@@ -387,6 +399,9 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 			return skippedFor(addressErasedWhy), nil
 		}
 		if why, over := importtextbounds.NameTooLong(err); over {
+			return skippedFor(why), nil
+		}
+		if why, refused := w.record.Refusal(err, textFields(row.Fields)); refused {
 			return skippedFor(why), nil
 		}
 		return migration.EnsureResult{}, err
@@ -442,6 +457,8 @@ func (w *csvWriters) apply(
 		return w.contacts.ApplyCompanyUpdate(ctx, ids.From[ids.CompanyKind](id), in)
 	case migration.ObjectContact:
 		return w.applyContact(ctx, id, contactUpdateFrom(changed, typed), changed, current, source)
+	case migration.ObjectProject, migration.ObjectProduct:
+		return w.record.Update(ctx, id, changed, typed, current, w.reviewedVersion(id))
 	default:
 		return fmt.Errorf("import: %q is not an importable object", w.object)
 	}

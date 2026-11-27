@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 250734,
+    "tool_catalog_bytes": 250792,
     "resource_catalog_bytes": 5619,
-    "approx_wire_tokens_total": 64088,
+    "approx_wire_tokens_total": 64102,
     "largest_tool_bytes": 15665,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 52333,
-      "input_schema_bytes": 152066,
+      "description_bytes": 52351,
+      "input_schema_bytes": 152106,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 204399
+      "description_plus_input_schema_bytes": 204457
     }
   },
   "tools": {
@@ -2100,7 +2100,7 @@
           "readOnlyHint": false,
           "title": "Create a record"
         },
-        "description": "Create ONE contact, company, deal, lead, project, activity or relationship that does not exist yet. Rows from a file, a CSV or a pasted list, each a company, lead, contact, deal, activity, go through preview_import and then commit_import, never one create_record each: the preview checks every row, duplicates included, and its counts are what the user weighs. Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipeline list is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighboring type is refused rather than dropped. A CONTACT created here is visible to everyone in the workspace, the same as one a human types in. No occurred_at means now; a past day with no time: its date, occurred_precision \"day\". Set meeting_status held only when the user says the meeting took place. Record a signed contract with change_offers action record_contract, never as a deal. A vCard file goes through change_capture. Before creating one contact or company that might already exist, ask find_records engine identify: it runs the duplicate check a create runs, on name spellings, emails, phones and domains. A second copy is a problem that then needs resolve_duplicates to undo. A record that shares only a name, with a different email, phone or employer, is not proof of a duplicate. When the check finds a contact with the same name at the same employer, ask the human whether it is the same contact before you link anything to it; two colleagues can share a name. Giving a contact its employer by creating an employment relationship files any same-name contact at that employer for review: the result carries it as duplicate_candidates, and you report the pair as filed, unresolved until the reviewer decides. When the user says where they met the contact, pass that word as offer_tag, also when they want to decide on the tag themselves: it puts no tag on the record and stores nothing, the answer says whether that tag already exists, and change_tags still needs their yes. The new record's id comes back in the result; keep it for anything that links to it.",
+        "description": "Create ONE contact, company, deal, lead, project, activity or relationship that does not exist yet. Rows from a file, a CSV or a pasted list, each a company, lead, contact, deal, activity, project, product, go through preview_import and then commit_import, never one create_record each: the preview checks every row, duplicates included, and its counts are what the user weighs. Creating a deal requires a pipeline_id and a stage_id, and the workspace's pipeline list is what yields them for a deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted, and a field belonging to a neighboring type is refused rather than dropped. A CONTACT created here is visible to everyone in the workspace, the same as one a human types in. No occurred_at means now; a past day with no time: its date, occurred_precision \"day\". Set meeting_status held only when the user says the meeting took place. Record a signed contract with change_offers action record_contract, never as a deal. A vCard file goes through change_capture. Before creating one contact or company that might already exist, ask find_records engine identify: it runs the duplicate check a create runs, on name spellings, emails, phones and domains. A second copy is a problem that then needs resolve_duplicates to undo. A record that shares only a name, with a different email, phone or employer, is not proof of a duplicate. When the check finds a contact with the same name at the same employer, ask the human whether it is the same contact before you link anything to it; two colleagues can share a name. Giving a contact its employer by creating an employment relationship files any same-name contact at that employer for review: the result carries it as duplicate_candidates, and you report the pair as filed, unresolved until the reviewer decides. When the user says where they met the contact, pass that word as offer_tag, also when they want to decide on the tag themselves: it puts no tag on the record and stores nothing, the answer says whether that tag already exists, and change_tags still needs their yes. The new record's id comes back in the result; keep it for anything that links to it.",
         "inputSchema": {
           "additionalProperties": false,
           "properties": {
@@ -3841,7 +3841,9 @@
                       "lead",
                       "contact",
                       "deal",
-                      "activity"
+                      "activity",
+                      "project",
+                      "product"
                     ],
                     "type": "string"
                   }
@@ -3853,7 +3855,7 @@
                 ],
                 "type": "object"
               },
-              "maxItems": 5,
+              "maxItems": 7,
               "minItems": 1,
               "type": "array"
             },
@@ -3874,7 +3876,9 @@
                 "lead",
                 "contact",
                 "deal",
-                "activity"
+                "activity",
+                "project",
+                "product"
               ],
               "type": "string"
             },
@@ -14159,13 +14163,15 @@
                 "type": "object"
               },
               "object": {
-                "description": "What the file's rows are, and therefore what the run creates. `company` creates companies. `deal` creates deals, after the companies and contacts of the same upload. A deal row needs a `ref`, and names its pipeline and stage by name. `activity` creates notes, calls, meetings and emails, after every other type of the same upload. A row needs a `ref` and at least one link to a company, contact, lead or deal. `lead` and `contact` are two answers to one question about a file of humans, and the caller picks the one that matches where the file came from. `lead` is the right answer for a machine-sourced list — a scraped export, a purchased list, a conference badge dump. Those rows land in the unworked `new` status and a human promotes the ones worth keeping. Landing them as contacts would put unqualified rows in the same table as the contacts the business actually deals with. `contact` is for a file of humans the business already knows — a migration off another CRM, a re-import of a corrected export, a customer list from a system being retired. Those rows were qualified somewhere else, and routing them through the lead table would force a human to re-approve records nobody doubts. Neither value bypasses anything. A `contact` run runs the same identity ladder every other contact create runs, refuses a row whose email already belongs to another contact, and files a review pair for a near match — so a file of duplicates produces a review queue, not a silent merge.",
+                "description": "What the file's rows are, and therefore what the run creates. `company` creates companies. `project` creates projects. It takes a single CSV only, never a ZIP. A row names the company it belongs to, by that company's `ref`, domain, name or id, and may name the deal it comes from. A project is born in the `initiative`, `pursuing` or `delivering` phase, never closed. A corrected export of projects, with its `id` column, updates them. `product` creates rate-card products, and takes a single CSV only. A row is known by its `sku`, or by its `ref` when it has none. A price is written in the major units of its `currency`. `deal` creates deals, after the companies and contacts of the same upload. A deal row needs a `ref`, and names its pipeline and stage by name. `activity` creates notes, calls, meetings and emails, after every other type of the same upload. A row needs a `ref` and at least one link to a company, contact, lead or deal. `lead` and `contact` are two answers to one question about a file of humans, and the caller picks the one that matches where the file came from. `lead` is the right answer for a machine-sourced list — a scraped export, a purchased list, a conference badge dump. Those rows land in the unworked `new` status and a human promotes the ones worth keeping. Landing them as contacts would put unqualified rows in the same table as the contacts the business actually deals with. `contact` is for a file of humans the business already knows — a migration off another CRM, a re-import of a corrected export, a customer list from a system being retired. Those rows were qualified somewhere else, and routing them through the lead table would force a human to re-approve records nobody doubts. Neither value bypasses anything. A `contact` run runs the same identity ladder every other contact create runs, refuses a row whose email already belongs to another contact, and files a review pair for a near match — so a file of duplicates produces a review queue, not a silent merge.",
                 "enum": [
                   "company",
                   "lead",
                   "contact",
                   "deal",
-                  "activity"
+                  "activity",
+                  "project",
+                  "product"
                 ],
                 "type": "string",
                 "x-extensible-enum": true
@@ -14204,13 +14210,15 @@
                       "type": "object"
                     },
                     "object": {
-                      "description": "What the file's rows are, and therefore what the run creates. `company` creates companies. `deal` creates deals, after the companies and contacts of the same upload. A deal row needs a `ref`, and names its pipeline and stage by name. `activity` creates notes, calls, meetings and emails, after every other type of the same upload. A row needs a `ref` and at least one link to a company, contact, lead or deal. `lead` and `contact` are two answers to one question about a file of humans, and the caller picks the one that matches where the file came from. `lead` is the right answer for a machine-sourced list — a scraped export, a purchased list, a conference badge dump. Those rows land in the unworked `new` status and a human promotes the ones worth keeping. Landing them as contacts would put unqualified rows in the same table as the contacts the business actually deals with. `contact` is for a file of humans the business already knows — a migration off another CRM, a re-import of a corrected export, a customer list from a system being retired. Those rows were qualified somewhere else, and routing them through the lead table would force a human to re-approve records nobody doubts. Neither value bypasses anything. A `contact` run runs the same identity ladder every other contact create runs, refuses a row whose email already belongs to another contact, and files a review pair for a near match — so a file of duplicates produces a review queue, not a silent merge.",
+                      "description": "What the file's rows are, and therefore what the run creates. `company` creates companies. `project` creates projects. It takes a single CSV only, never a ZIP. A row names the company it belongs to, by that company's `ref`, domain, name or id, and may name the deal it comes from. A project is born in the `initiative`, `pursuing` or `delivering` phase, never closed. A corrected export of projects, with its `id` column, updates them. `product` creates rate-card products, and takes a single CSV only. A row is known by its `sku`, or by its `ref` when it has none. A price is written in the major units of its `currency`. `deal` creates deals, after the companies and contacts of the same upload. A deal row needs a `ref`, and names its pipeline and stage by name. `activity` creates notes, calls, meetings and emails, after every other type of the same upload. A row needs a `ref` and at least one link to a company, contact, lead or deal. `lead` and `contact` are two answers to one question about a file of humans, and the caller picks the one that matches where the file came from. `lead` is the right answer for a machine-sourced list — a scraped export, a purchased list, a conference badge dump. Those rows land in the unworked `new` status and a human promotes the ones worth keeping. Landing them as contacts would put unqualified rows in the same table as the contacts the business actually deals with. `contact` is for a file of humans the business already knows — a migration off another CRM, a re-import of a corrected export, a customer list from a system being retired. Those rows were qualified somewhere else, and routing them through the lead table would force a human to re-approve records nobody doubts. Neither value bypasses anything. A `contact` run runs the same identity ladder every other contact create runs, refuses a row whose email already belongs to another contact, and files a review pair for a near match — so a file of duplicates produces a review queue, not a silent merge.",
                       "enum": [
                         "company",
                         "lead",
                         "contact",
                         "deal",
-                        "activity"
+                        "activity",
+                        "project",
+                        "product"
                       ],
                       "type": "string",
                       "x-extensible-enum": true

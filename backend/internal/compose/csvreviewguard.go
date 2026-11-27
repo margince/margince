@@ -360,6 +360,8 @@ func (w *csvWriters) lockReviewedImportRow(ctx context.Context, tx pgx.Tx, id id
 		return tableDeal, err
 	case migration.ObjectActivity:
 		return tableActivity, activities.LockActivityLive(ctx, tx, ids.From[ids.ActivityKind](id))
+	case migration.ObjectProject, migration.ObjectProduct:
+		return w.record.Lock(ctx, tx, id)
 	default:
 		return "", apperrors.ErrVersionSkew
 	}

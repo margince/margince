@@ -211,7 +211,9 @@ type rowLink struct {
 func (w *csvWriters) linkProblemOf(ctx context.Context, row migration.Row) (rowLink, error) {
 	switch w.object {
 	case migration.ObjectDeal:
-		return w.dealLinkProblemOf(ctx, row)
+		return w.edgeLinkProblemOf(ctx, row, w.dealEdges())
+	case migration.ObjectProject:
+		return w.edgeLinkProblemOf(ctx, row, w.projectEdges())
 	case migration.ObjectActivity:
 		return w.activityLinkProblemOf(ctx, row)
 	}

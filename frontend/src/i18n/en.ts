@@ -10795,6 +10795,8 @@ export const en = {
   "import.object.contact": "Contacts",
   "import.object.deal": "Deals",
   "import.object.activity": "Activities",
+  "import.object.project": "Projects",
+  "import.object.product": "Products",
   "import.profiled_one":
     "“Filled in” and “Values” come from the first row of the file.",
   "import.profiled_other":
@@ -11271,6 +11273,22 @@ export const en = {
     "“{value}” needs its country code, like +49 30 1234567.",
   "import.reason.record_archived":
     "This row’s record was archived, so it is not updated. Restore the record to update it.",
+  "import.reason.project_unnamed": "Give the project a name.",
+  "import.reason.project_company_missing":
+    "A project belongs to a company. Name it in the company column.",
+  "import.reason.project_company_fixed":
+    "A project keeps the company it was created for, so this row is not applied. Leave the company column as it is, or import the row as a new project.",
+  "import.reason.project_phase_unknown":
+    "“{value}” is not a phase a project starts in. The phases are: {names}.",
+  "import.reason.project_phase_closed":
+    "A project is not created closed, because closing needs a reason. Import it in another phase, then close it in the app.",
+  "import.reason.project_dates_inverted":
+    "The target end date is before the start date.",
+  "import.reason.project_deal_refused":
+    "The deal cannot start this project: {detail}",
+  "import.reason.product_unnamed": "Give the product a name.",
+  "import.reason.product_sku_held":
+    "Another live product already has the SKU “{value}”.",
   "import.reason.ref_taken_by_another_company":
     "The reference “{ref}” already stands for another company from an earlier import, so this row is not applied. Use a new reference for this company or fix the id column.",
   "import.reason.row_key_empty":
