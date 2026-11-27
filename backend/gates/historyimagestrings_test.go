@@ -145,95 +145,77 @@ func (r historyImageReader) sliceStrings(in historyImageArg, depth int) ([]strin
 		if bound, ok := in.bound[object]; ok {
 			return r.sliceStrings(bound, depth+1)
 		}
-		if in.decl != nil {
-			if at, parameter := historyParameter(in.pkg.info, in.decl, object); parameter {
-				var out []string
-				known := true
-				uses := r.index.uses[auditFuncKey(in.pkg.info, in.decl)]
-				for _, use := range uses {
-					if use.call == nil || at+use.shift >= len(use.call.Args) {
-						known = false
-						continue
-					}
-					keys, ok := r.sliceStrings(historyImageArg{expr: use.call.Args[at+use.shift], pkg: use.pkg, decl: use.decl}, depth+1)
-					out = append(out, keys...)
-					known = known && ok
-				}
-				return out, known && len(uses) > 0
-			}
+		if in.decl == nil {
+			return r.globalSliceStrings(in, object, depth)
+		}
+		if at, parameter := historyParameter(in.pkg.info, in.decl, object); parameter {
 			var out []string
 			known := true
-			found := false
-			ast.Inspect(in.decl.Body, func(node ast.Node) bool {
-				if spec, ok := node.(*ast.ValueSpec); ok {
-					for at, name := range spec.Names {
-						if in.pkg.info.Defs[name] != object {
-							continue
-						}
-						found = true
-						if at < len(spec.Values) {
-							child := in
-							child.expr = spec.Values[at]
-							child.before = spec.Pos()
-							keys, ok := r.sliceStrings(child, depth+1)
-							out = append(out, keys...)
-							known = known && ok
-						}
-					}
+			uses := r.index.uses[auditFuncKey(in.pkg.info, in.decl)]
+			for _, use := range uses {
+				if use.call == nil || at+use.shift >= len(use.call.Args) {
+					known = false
+					continue
 				}
-				assignment, ok := node.(*ast.AssignStmt)
-				if !ok || (in.before > 0 && assignment.Pos() >= in.before) {
-					return true
-				}
-				for at, target := range assignment.Lhs {
-					name, ok := target.(*ast.Ident)
-					if !ok || in.pkg.info.ObjectOf(name) != object {
+				keys, ok := r.sliceStrings(historyImageArg{expr: use.call.Args[at+use.shift], pkg: use.pkg, decl: use.decl}, depth+1)
+				out = append(out, keys...)
+				known = known && ok
+			}
+			return out, known && len(uses) > 0
+		}
+		var out []string
+		known := true
+		found := false
+		ast.Inspect(in.decl.Body, func(node ast.Node) bool {
+			if spec, ok := node.(*ast.ValueSpec); ok {
+				for at, name := range spec.Names {
+					if in.pkg.info.Defs[name] != object {
 						continue
 					}
-					child := in
-					child.before = assignment.Pos()
-					child.result = 0
-					if len(assignment.Rhs) == 1 {
-						child.expr = assignment.Rhs[0]
-						child.result = at
-					} else if at < len(assignment.Rhs) {
-						child.expr = assignment.Rhs[at]
-					} else {
-						known = false
-						continue
-					}
-					keys, ok := r.sliceStrings(child, depth+1)
-					out = append(out, keys...)
-					known = known && ok
 					found = true
-				}
-				return true
-			})
-			if found {
-				return out, known
-			}
-		}
-		for _, file := range in.pkg.files {
-			var keys []string
-			known := false
-			ast.Inspect(file, func(node ast.Node) bool {
-				spec, ok := node.(*ast.ValueSpec)
-				if !ok {
-					return true
-				}
-				for i, name := range spec.Names {
-					if in.pkg.info.Defs[name] == object && i < len(spec.Values) {
+					if at < len(spec.Values) {
 						child := in
-						child.expr = spec.Values[i]
-						keys, known = r.sliceStrings(child, depth+1)
+						child.expr = spec.Values[at]
+						child.before = spec.Pos()
+						keys, ok := r.sliceStrings(child, depth+1)
+						out = append(out, keys...)
+						known = known && ok
 					}
 				}
-				return true
-			})
-			if known {
-				return keys, true
 			}
+			assignment, ok := node.(*ast.AssignStmt)
+			if !ok || (in.before > 0 && assignment.Pos() >= in.before) {
+				return true
+			}
+			for at, target := range assignment.Lhs {
+				name, ok := target.(*ast.Ident)
+				if !ok || in.pkg.info.ObjectOf(name) != object {
+					continue
+				}
+				child := in
+				child.before = assignment.Pos()
+				child.result = 0
+				switch {
+				case len(assignment.Rhs) == 1:
+					child.expr = assignment.Rhs[0]
+					child.result = at
+				case at < len(assignment.Rhs):
+					child.expr = assignment.Rhs[at]
+				default:
+					known = false
+					continue
+				}
+				keys, ok := r.sliceStrings(child, depth+1)
+				out = append(out, keys...)
+				known = known && ok
+				found = true
+			}
+			return true
+		})
+		if found {
+			return out, known
 		}
+		return r.globalSliceStrings(in, object, depth)
 	case *ast.SelectorExpr:
 		if r.storedFieldBusy == nil {
 			r.storedFieldBusy = map[*types.Var]bool{}
@@ -294,4 +276,29 @@ func historyRangeRewritesOwnKeys(in historyImageArg, key ast.Expr, object types.
 		return true
 	})
 	return same
+}
+
+func (r historyImageReader) globalSliceStrings(in historyImageArg, object types.Object, depth int) ([]string, bool) {
+	for _, file := range in.pkg.files {
+		var keys []string
+		known := false
+		ast.Inspect(file, func(node ast.Node) bool {
+			spec, ok := node.(*ast.ValueSpec)
+			if !ok {
+				return true
+			}
+			for i, name := range spec.Names {
+				if in.pkg.info.Defs[name] == object && i < len(spec.Values) {
+					child := in
+					child.expr = spec.Values[i]
+					keys, known = r.sliceStrings(child, depth+1)
+				}
+			}
+			return true
+		})
+		if known {
+			return keys, true
+		}
+	}
+	return nil, false
 }

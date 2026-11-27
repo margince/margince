@@ -68,24 +68,7 @@ func historyReachEntities(t *testing.T) []string {
 
 func (r historyImageReader) metadataStrings(in historyImageArg, expr ast.Expr) ([]string, bool) {
 	if selector, ok := expr.(*ast.SelectorExpr); ok {
-		typ := in.pkg.info.TypeOf(selector.X)
-		if pointer, ok := typ.(*types.Pointer); ok {
-			typ = pointer.Elem()
-		}
-		if named, ok := typ.(*types.Named); ok && named.Obj().Pkg() != nil {
-			path := named.Obj().Pkg().Path()
-			if strings.HasSuffix(path, "/platform/sweepreach") && named.Obj().Name() == "Relinked" && selector.Sel.Name == "Entity" {
-				return r.reachEntities, len(r.reachEntities) > 0
-			}
-			if strings.HasSuffix(path, "/modules/contacts") {
-				switch named.Obj().Name() + "." + selector.Sel.Name {
-				case "SignatureField.Name":
-					return r.evidenceFields["contact"], len(r.evidenceFields["contact"]) > 0
-				case "MeetingProfileField.Field":
-					return r.evidenceFields["company"], len(r.evidenceFields["company"]) > 0
-				}
-			}
-		}
+		return r.selectorMetadataStrings(in, selector)
 	}
 	// These scans return the company field_name protected by the same CHECK.
 	name, ok := expr.(*ast.Ident)
@@ -127,4 +110,29 @@ func (r historyImageReader) metadataStrings(in historyImageArg, expr ast.Expr) (
 		return true
 	})
 	return r.evidenceFields["company"], scanned && constrained && len(r.evidenceFields["company"]) > 0
+}
+
+func (r historyImageReader) selectorMetadataStrings(in historyImageArg, selector *ast.SelectorExpr) ([]string, bool) {
+	typ := in.pkg.info.TypeOf(selector.X)
+	if pointer, ok := typ.(*types.Pointer); ok {
+		typ = pointer.Elem()
+	}
+	named, ok := typ.(*types.Named)
+	if !ok || named.Obj().Pkg() == nil {
+		return nil, false
+	}
+	path := named.Obj().Pkg().Path()
+	if strings.HasSuffix(path, "/platform/sweepreach") && named.Obj().Name() == "Relinked" && selector.Sel.Name == "Entity" {
+		return r.reachEntities, len(r.reachEntities) > 0
+	}
+	if !strings.HasSuffix(path, "/modules/contacts") {
+		return nil, false
+	}
+	switch named.Obj().Name() + "." + selector.Sel.Name {
+	case "SignatureField.Name":
+		return r.evidenceFields["contact"], len(r.evidenceFields["contact"]) > 0
+	case "MeetingProfileField.Field":
+		return r.evidenceFields["company"], len(r.evidenceFields["company"]) > 0
+	}
+	return nil, false
 }

@@ -10,7 +10,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 

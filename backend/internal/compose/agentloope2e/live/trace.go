@@ -12,9 +12,8 @@ import (
 	"slices"
 	"sync"
 
-	"github.com/margince/margince/backend/internal/compose/aitasks"
-
 	"github.com/margince/margince/backend/internal/compose/agentloope2e"
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )

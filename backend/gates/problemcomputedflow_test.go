@@ -96,35 +96,9 @@ func (r *problemFileReader) flowBody(body tsSpan, path []string, depth int) (cod
 		}
 
 		if tr.word(at) == "if" && tr.is(at+1, "(") {
-			end := tr.match[at+1]
-			condition, decided := r.flowCondition(tsSpan{at + 2, end})
-			start := end + 1
-			branch := r.flowStatement(start, body.to-1)
-			after := branch.to
-			var otherwise tsSpan
-			if tr.word(after) == "else" {
-				otherwise = r.flowStatement(after+1, body.to-1)
-				after = otherwise.to
-			}
-			terminated := false
-			if !decided || condition {
-				read, ok, ends := r.flowBody(branch, path, depth+1)
-				result.literals = append(result.literals, read.literals...)
-				known = known && ok
-				terminated = ends
-			}
-			if otherwise.to > otherwise.from && (!decided || !condition) {
-				read, ok, ends := r.flowBody(otherwise, path, depth+1)
-				result.literals = append(result.literals, read.literals...)
-				known = known && ok
-				if !decided {
-					terminated = terminated && ends
-				} else {
-					terminated = ends
-				}
-			} else if !decided || !condition {
-				terminated = false
-			}
+			read, ok, terminated, after := r.flowIf(at, body.to-1, path, depth)
+			result.literals = append(result.literals, read.literals...)
+			known = known && ok
 			if terminated {
 				return result, known, true
 			}
@@ -266,4 +240,40 @@ func (r *problemFileReader) localCalculatedValue(at int, name string) (tsSpan, b
 		}
 	}
 	return value, best >= 0
+}
+
+func (r *problemFileReader) flowIf(at, limit int, path []string, depth int) (codeRead, bool, bool, int) {
+	tr := r.tree
+	var result codeRead
+	known := true
+	end := tr.match[at+1]
+	condition, decided := r.flowCondition(tsSpan{at + 2, end})
+	start := end + 1
+	branch := r.flowStatement(start, limit)
+	after := branch.to
+	var otherwise tsSpan
+	if tr.word(after) == "else" {
+		otherwise = r.flowStatement(after+1, limit)
+		after = otherwise.to
+	}
+	terminated := false
+	if !decided || condition {
+		read, ok, ends := r.flowBody(branch, path, depth+1)
+		result.literals = append(result.literals, read.literals...)
+		known = known && ok
+		terminated = ends
+	}
+	if otherwise.to > otherwise.from && (!decided || !condition) {
+		read, ok, ends := r.flowBody(otherwise, path, depth+1)
+		result.literals = append(result.literals, read.literals...)
+		known = known && ok
+		if !decided {
+			terminated = terminated && ends
+		} else {
+			terminated = ends
+		}
+	} else if !decided || !condition {
+		terminated = false
+	}
+	return result, known, terminated, after
 }

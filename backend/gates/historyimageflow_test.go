@@ -195,16 +195,16 @@ func (r historyImageReader) namedKeys(in historyImageArg, name *ast.Ident, depth
 		}
 		for i, target := range assignment.Lhs {
 			if index, ok := target.(*ast.IndexExpr); ok {
-				if receiver, ok := index.X.(*ast.Ident); ok && in.pkg.info.ObjectOf(receiver) == object {
-					if historyRangeRewritesOwnKeys(in, index.Index, object) {
-						continue
-					}
-					found, ok := r.strings(in, index.Index, depth+1)
-					known = known && ok
-					if ok {
-						keys = append(keys, found...)
-					}
+				receiver, named := index.X.(*ast.Ident)
+				if !named || in.pkg.info.ObjectOf(receiver) != object || historyRangeRewritesOwnKeys(in, index.Index, object) {
+					continue
 				}
+				found, ok := r.strings(in, index.Index, depth+1)
+				known = known && ok
+				if ok {
+					keys = append(keys, found...)
+				}
+				continue
 			}
 			ident, ok := target.(*ast.Ident)
 			if !ok || in.pkg.info.ObjectOf(ident) != object {
@@ -213,12 +213,13 @@ func (r historyImageReader) namedKeys(in historyImageArg, name *ast.Ident, depth
 			child := in
 			child.before = assignment.Pos()
 			child.result = 0
-			if len(assignment.Rhs) == 1 {
+			switch {
+			case len(assignment.Rhs) == 1:
 				child.expr = assignment.Rhs[0]
 				child.result = i
-			} else if i < len(assignment.Rhs) {
+			case i < len(assignment.Rhs):
 				child.expr = assignment.Rhs[i]
-			} else {
+			default:
 				known = false
 				continue
 			}
@@ -303,21 +304,19 @@ func (r historyImageReader) returnedValues(in historyImageArg, call *ast.CallExp
 			}
 		}
 		child.result = 0
-		if in.result >= len(returned.Results) {
-			if len(returned.Results) == 1 {
-				if _, call := returned.Results[0].(*ast.CallExpr); call {
-					child.expr = returned.Results[0]
-					child.result = in.result
-				} else {
-					known = false
-					return false
-				}
-			} else {
+		switch {
+		case in.result < len(returned.Results):
+			child.expr = returned.Results[in.result]
+		case len(returned.Results) == 1:
+			if _, call := returned.Results[0].(*ast.CallExpr); !call {
 				known = false
 				return false
 			}
-		} else {
-			child.expr = returned.Results[in.result]
+			child.expr = returned.Results[0]
+			child.result = in.result
+		default:
+			known = false
+			return false
 		}
 		got, ok := read(child, depth+1)
 		keys = append(keys, got...)
