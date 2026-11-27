@@ -101,8 +101,8 @@ func setupSourceAdmin(t *testing.T) *sourceAdmin {
 	// The package's tests share one database, and readConnection takes the
 	// newest live connection. Retiring the earlier tests' connections keeps a
 	// disconnect here from surfacing one of theirs.
-	e.ownerExec(t, `UPDATE finance_connection SET archived_at = now()
-		 WHERE id <> $1 AND archived_at IS NULL`, e.connection)
+	e.ownerExec(t, `UPDATE finance_connection SET status = 'disconnected'
+		 WHERE id <> $1 AND status <> 'disconnected'`, e.connection)
 	queue := &recordingQueue{}
 	return &sourceAdmin{
 		financeEnv: e,

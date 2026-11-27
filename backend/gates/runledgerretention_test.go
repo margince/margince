@@ -156,6 +156,10 @@ func windowedLedgers(t *testing.T) map[string]bool {
 			if readErr != nil {
 				return readErr
 			}
+			// Every windowed delete spells DELETE FROM.
+			if text := string(raw); !mayHoldFolded(text, "delete") || !mayHoldFolded(text, "from") {
+				return nil
+			}
 			for _, m := range windowedDelete.FindAllStringSubmatch(string(raw), -1) {
 				if timeBound.MatchString(m[2]) {
 					bounded[m[1]] = true

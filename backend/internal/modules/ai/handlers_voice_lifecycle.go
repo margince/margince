@@ -244,17 +244,12 @@ func float64To32(value *float64) *float32 {
 	return &converted
 }
 
+// wireLearningSummary serves no transformations: nothing extracts an edit
+// pattern from a sent draft, so there is none to report.
 func wireLearningSummary(summary VoiceLearningSummary) crmcontracts.VoiceLearningSummary {
-	transformations := make([]crmcontracts.VoiceLearningTransformation, 0, len(summary.Transformations))
-	for _, transformation := range summary.Transformations {
-		transformations = append(transformations, crmcontracts.VoiceLearningTransformation{
-			Key: transformation.Key, ObservationCount: transformation.ObservationCount,
-			Description: transformation.Description,
-		})
-	}
 	return crmcontracts.VoiceLearningSummary{
 		Drafted: summary.Drafted, Accepted: summary.Accepted, EditedSent: summary.EditedSent,
 		Rejected: summary.Rejected, QualifyingSourceCount: summary.QualifyingSourceCount,
-		QualifyingWords: summary.QualifyingWords, Transformations: transformations,
+		QualifyingWords: summary.QualifyingWords, Transformations: []crmcontracts.VoiceLearningTransformation{},
 	}
 }

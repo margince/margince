@@ -196,8 +196,15 @@ func testFunctions(t *testing.T) map[string][]string {
 			if readErr != nil {
 				return readErr
 			}
-			for _, match := range goTestFunc.FindAllStringSubmatch(string(source), -1) {
-				found[match[1]] = append(found[match[1]], filepath.ToSlash(path))
+			// goTestFunc never spans a newline and opens at a line start, so
+			// asking it line by line finds the same matches in the same order.
+			for line := range strings.Lines(string(source)) {
+				if goTestFuncWords != nil && !mayHoldFolded(line, goTestFuncWords...) {
+					continue
+				}
+				if match := goTestFunc.FindStringSubmatch(line); match != nil {
+					found[match[1]] = append(found[match[1]], filepath.ToSlash(path))
+				}
 			}
 			return nil
 		})
@@ -207,6 +214,10 @@ func testFunctions(t *testing.T) map[string][]string {
 	}
 	return found
 }
+
+// goTestFuncWords are the words every goTestFunc match holds, derived so an
+// edit to the pattern cannot leave the line filter stale.
+var goTestFuncWords = requiredWords(goTestFunc)
 
 func TestEveryUniquenessClaimNamesItsGateOrIsRegisteredDebt(t *testing.T) {
 	t.Parallel()

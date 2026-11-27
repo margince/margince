@@ -104,6 +104,7 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 	// one asks whether a row is live, the other whether a room still is.
 	for _, dir := range moduleDirsWith(t, "WritableLive", liveProbeStanding) {
 		graph := packageCallGraph(t, dir)
+		inserts := map[string]string{}
 		for name := range graph {
 			// Through reaches, which reads identifiers rather than call
 			// edges: both of these are cross-package, and packageCallGraph
@@ -114,7 +115,7 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 				continue
 			}
 			probed++
-			table := firstErasureClearedInsert(graph, name, erasureClears)
+			table := firstErasureClearedInsert(graph, name, erasureClears, inserts)
 			if table == "" {
 				continue
 			}
@@ -244,9 +245,21 @@ func reaches(graph map[string]*graphFunc, name, identifier string) bool {
 	return walk(name)
 }
 
+func ownErasureClearedInsert(entry *graphFunc, erasureClears map[string]bool) string {
+	for _, statement := range entry.statements {
+		for _, write := range sqlWrites(statement) {
+			if write.verb == "insert" && erasureClears[write.table] {
+				return write.table
+			}
+		}
+	}
+	return ""
+}
+
 // firstErasureClearedInsert names a table the function, or anything it calls,
-// INSERTs into and Art. 17 erasure clears — or "" when it writes none.
-func firstErasureClearedInsert(graph map[string]*graphFunc, name string, erasureClears map[string]bool) string {
+// INSERTs into and Art. 17 erasure clears, or "" when it writes none. inserts
+// holds each visited function's own answer, so a statement is parsed once per graph.
+func firstErasureClearedInsert(graph map[string]*graphFunc, name string, erasureClears map[string]bool, inserts map[string]string) string {
 	seen := map[string]bool{}
 	var walk func(string) string
 	walk = func(fn string) string {
@@ -258,15 +271,13 @@ func firstErasureClearedInsert(graph map[string]*graphFunc, name string, erasure
 		if !known {
 			return ""
 		}
-		for _, statement := range entry.statements {
-			for _, write := range sqlWrites(statement) {
-				if write.verb != "insert" {
-					continue
-				}
-				if erasureClears[write.table] {
-					return write.table
-				}
-			}
+		table, read := inserts[fn]
+		if !read {
+			table = ownErasureClearedInsert(entry, erasureClears)
+			inserts[fn] = table
+		}
+		if table != "" {
+			return table
 		}
 		for called := range entry.calls {
 			if table := walk(called); table != "" {
