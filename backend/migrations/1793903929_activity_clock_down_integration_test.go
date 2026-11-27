@@ -26,7 +26,7 @@ func TestActivityClockRollbackRespectsAnEarlierInstalledAdvance(t *testing.T) {
 	migration := through.Migrations[len(through.Migrations)-1]
 	// The statement-level link triggers replaced the function this rollback
 	// keeps, so each case first rewinds the schema to before them.
-	statementTriggers := namespaceThroughVersion(t, core, "1795596652")
+	statementTriggers := namespaceThroughVersion(t, core, "1795766231")
 	rewind := statementTriggers.Migrations[len(statementTriggers.Migrations)-1]
 	// By name: each case creates the function anew, and a cached plan would
 	// keep the regprocedure OID of the case before.
