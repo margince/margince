@@ -31,9 +31,9 @@ func TestAuditLogEnumCoherence(t *testing.T) {
 	t.Parallel()
 	contract := auditLogContractActorType(t)
 	const column = "audit_log.actor_type"
-	got, ok := tableCheckSets(t)[column]
+	got, ok := checkVocabularies(t)[column]
 	if !ok {
-		t.Fatalf("%s: no CHECK (col IN (...)) constraint found in migrations", column)
+		t.Fatalf("%s: no CHECK vocabulary found in the head catalog", column)
 	}
 	ddlSet, conSet := auditStrSet(got), auditStrSet(contract)
 	// Every contract value must be a legal DB value, else code that emits it
@@ -64,10 +64,10 @@ func TestAuditLogEnumCoherence(t *testing.T) {
 // So this reads the tree the way the other direction reads the migrations.
 func TestEveryAuditVerbTheCodeWritesIsLegal(t *testing.T) {
 	t.Parallel()
-	ddl := tableCheckSets(t)
+	ddl := checkVocabularies(t)
 	allowed, ok := ddl["audit_log.action"]
 	if !ok {
-		t.Fatal("audit_log.action: no CHECK (col IN (...)) constraint found in migrations")
+		t.Fatal("audit_log.action: no CHECK vocabulary found in the head catalog")
 	}
 	allowedSet := auditStrSet(allowed)
 
