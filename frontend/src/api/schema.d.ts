@@ -86345,6 +86345,15 @@ export interface operations {
                     "application/json": components["schemas"]["SavedView"];
                 };
             };
+            /** @description `view_name_taken` — another live view of this resource owned by the caller has this name. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -86433,7 +86442,15 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            /** @description `version_skew` — the view changed since it was read; or `view_name_taken` — another live view of this resource owned by the caller has this name. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };

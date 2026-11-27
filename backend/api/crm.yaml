@@ -17669,6 +17669,11 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SavedView' }
+        '409':
+          description: '`view_name_taken` — another live view of this resource owned by the caller has this name.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /views/{id}:
@@ -17708,7 +17713,11 @@ paths:
             application/json:
               schema: { $ref: '#/components/schemas/SavedView' }
         '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
+        '409':
+          description: '`version_skew` — the view changed since it was read; or `view_name_taken` — another live view of this resource owned by the caller has this name.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
     delete:
       tags: [Views]

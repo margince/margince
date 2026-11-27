@@ -78,7 +78,7 @@ type Write = Readonly<{
 }>;
 
 // A /views that answers `views`, and records each write it is sent.
-function stubViews(views: unknown[], refuseWrites = false) {
+function stubViews(views: unknown[], refuseWrites: boolean | string = false) {
   const writes: Write[] = [];
   vi.stubGlobal(
     "fetch",
@@ -97,7 +97,13 @@ function stubViews(views: unknown[], refuseWrites = false) {
       });
       return refuseWrites
         ? Response.json(
-            { code: "version_skew", detail: "The view changed." },
+            {
+              code:
+                typeof refuseWrites === "string"
+                  ? refuseWrites
+                  : "version_skew",
+              detail: "The view changed.",
+            },
             { status: 409 },
           )
         : Response.json(VIP);
@@ -167,6 +173,29 @@ describe("Save view beside the reader's saved views", () => {
     await screen.findByRole("button", { name: en["views.manage"] });
     expect(saveView()).toBeTruthy();
     expect(update()).toBeNull();
+  });
+
+  it("puts a stale-list server name conflict on the name field", async () => {
+    const user = userEvent.setup();
+    const writes = stubViews([VIP], "view_name_taken");
+    wrap(
+      <SaveViewAction
+        resource="contacts"
+        state={{ query: { ...BY_NAME, sort: "-created_at" } }}
+      />,
+    );
+    await screen.findByRole("button", { name: en["views.manage"] });
+    await user.click(screen.getByRole("button", { name: en["views.save"] }));
+    const name = screen.getByRole("textbox", { name: en["views.name"] });
+    await user.type(name, "New in another tab");
+    await user.click(
+      screen.getByRole("button", { name: en["views.saveConfirm"] }),
+    );
+    expect(await screen.findByText(en["views.nameTaken"])).toBeTruthy();
+    expect(name.getAttribute("aria-invalid")).toBe("true");
+    expect(writes).toHaveLength(1);
+    await user.type(name, " revised");
+    expect(screen.queryByText(en["views.nameTaken"])).toBeNull();
   });
 
   it("refuses a name one of the reader's views already has, whatever its case", async () => {
@@ -413,7 +442,10 @@ describe("a saved view another writer changed after the reader opened it", () =>
         server.ifMatch.push(ifMatch);
         if (ifMatch !== String(server.view.version)) {
           return Response.json(
-            { code: "version_skew", detail: "The view changed." },
+            {
+              code: "version_skew",
+              detail: "The view changed.",
+            },
             { status: 409 },
           );
         }
