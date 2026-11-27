@@ -3057,7 +3057,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "amount.refused.grouping":
     "Nhập số tiền không có dấu phân cách hàng nghìn, ví dụ {example}.",
   "amount.refused.notNumber": "Nhập số tiền bằng chữ số, ví dụ {example}.",
-  "amount.refused.tooLarge": "Số tiền này quá lớn để lưu.",
+  "amount.refused.tooLarge": "Nhập số tiền không vượt quá {max}.",
   "amount.refused.noCurrency": "Số tiền này cần có loại tiền trước.",
   "amount.waitsForCurrency": "Mở khi đã có loại tiền.",
   "amount.currencyUnread":

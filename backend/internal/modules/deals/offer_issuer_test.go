@@ -93,3 +93,17 @@ func TestATemplateLocaleGivesItsLanguageOrTheDefault(t *testing.T) {
 		}
 	}
 }
+
+// A language about to be stored names a language. One stored before that
+// check still has the shape a delete takes, so it can be removed.
+func TestAStoredLanguageNamesALanguageAndAnOldOneCanStillGo(t *testing.T) {
+	if checkLanguage("zz") == nil || checkLanguage("FR") == nil {
+		t.Error("checkLanguage took a code that names no language")
+	}
+	if err := checkLanguage("fr"); err != nil {
+		t.Errorf("checkLanguage(fr) = %v", err)
+	}
+	if err := checkLanguageShape("zz"); err != nil {
+		t.Errorf("a stored zz translation could not be named for deletion: %v", err)
+	}
+}

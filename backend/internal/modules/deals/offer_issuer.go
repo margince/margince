@@ -358,13 +358,11 @@ func languageOf(language *string) string {
 func (s *Store) issuerPatch(ctx context.Context, tx pgx.Tx, p *storekit.Patch, current crmcontracts.Offer,
 	in UpdateOfferInput, dropped *string,
 ) (*string, error) {
-	if in.Language != nil {
+	if in.Language != nil && (current.Language == nil || *current.Language != *in.Language) {
 		if err := checkLanguage(*in.Language); err != nil {
 			return dropped, err
 		}
-		if current.Language == nil || *current.Language != *in.Language {
-			p.Set(languageField, current.Language, *in.Language)
-		}
+		p.Set(languageField, current.Language, *in.Language)
 	}
 	if in.LegalEntityID == nil {
 		return dropped, nil

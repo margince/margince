@@ -9,9 +9,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
-// comparedExpr is the side of a scalar comparison the column sits on: the
-// column itself, or its lowercase for a field compared case-insensitively.
+// comparedExpr is the side of a scalar comparison the column sits on. That is
+// the column under the text rule, its lowercase for a FoldCase field, or the
+// column itself.
 func comparedExpr(field Field) string {
+	if foldsText(field) {
+		return textFoldSQL(field.Expr)
+	}
 	if field.FoldCase {
 		return "lower(" + field.Expr + ")"
 	}

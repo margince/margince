@@ -3065,7 +3065,7 @@ export const en = {
   "amount.refused.grouping":
     "Enter the amount without thousands separators, such as {example}.",
   "amount.refused.notNumber": "Enter the amount in digits, such as {example}.",
-  "amount.refused.tooLarge": "This amount is too large to store.",
+  "amount.refused.tooLarge": "Enter an amount of at most {max}.",
   "amount.refused.noCurrency": "This amount needs a currency first.",
   "amount.waitsForCurrency": "Opens once a currency is set.",
   "amount.currencyUnread":
