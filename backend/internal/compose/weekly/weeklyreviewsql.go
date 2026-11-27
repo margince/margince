@@ -52,7 +52,11 @@ func (e *Engine) LatestReview(ctx context.Context, weekStart *time.Time) (Review
 			 ORDER BY local_week_start DESC
 			 LIMIT 1`, userID, weekStart)
 		var err error
-		if review, err = scanReview(ctx, tx, row); err != nil {
+		review, err = scanReview(ctx, tx, row)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return apperrors.ErrNothingYet
+		}
+		if err != nil {
 			return err
 		}
 		review.Prior, err = readPriorWeek(ctx, tx, review)

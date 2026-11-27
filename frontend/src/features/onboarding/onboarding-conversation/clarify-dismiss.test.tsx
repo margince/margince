@@ -242,7 +242,7 @@ function stubApi(read: CompanySiteRead, proposal: Proposal) {
         });
       }
       if (path.endsWith("/onboarding/state") && request.method === "GET") {
-        return jsonResponse({ detail: "not started" }, 404);
+        return new Response(null, { status: 204 });
       }
       if (path.endsWith("/onboarding/state") && request.method === "PUT") {
         const body = (await request.clone().json()) as Record<string, unknown>;
@@ -279,7 +279,7 @@ function stubApi(read: CompanySiteRead, proposal: Proposal) {
         );
       }
       if (path.endsWith("/company") && request.method === "GET") {
-        return jsonResponse({ detail: "no company yet" }, 404);
+        return new Response(null, { status: 204 });
       }
       throw new Error(`unstubbed request: ${request.method} ${request.url}`);
     }),

@@ -77,8 +77,8 @@ export function TechnicalProfilePanel({
     },
   });
 
-  // 404 is the honest "never looked up", and leaves the card empty rather
-  // than reporting a failure nobody caused.
+  // 204 means "never looked up". The card stays empty rather than reporting a
+  // failure nobody caused.
   //
   // Read once, not polled. The lookup is queued by the site read that
   // preceded it, so by the time a reader is looking at this card the work is
@@ -91,7 +91,7 @@ export function TechnicalProfilePanel({
         "/companies/{id}/technical-enrich/latest",
         { params: { path: { id: companyId } } },
       );
-      if (response.status === 404) {
+      if (response.status === 204) {
         return null;
       }
       if (error) {

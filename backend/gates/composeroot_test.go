@@ -120,8 +120,10 @@ const (
 	// context; the cases drive the contact page.
 	// Raised by 197 test lines for the re-ingest vector reuse cases, which drive
 	// the unexported knowledge ingest worker and its embedder fixture.
+	// Raised by 3 test lines for the generated Prefer parameter the unwired
+	// transcript read now takes.
 	composeRootProductionLines = 231_477
-	composeRootTestLines       = 362_414
+	composeRootTestLines       = 362_417
 )
 
 // A read under these floors stopped early or read the wrong place, and would

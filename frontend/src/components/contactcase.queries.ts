@@ -19,7 +19,7 @@ export function contactCaseKey(contactId: string) {
 }
 
 /**
- * The case that holds this contact, or null when it is in none. A 404 is the
+ * The case that holds this contact, or null when it is in none. A 204 is the
  * normal answer for a contact with no duplicates, so it is data and not a
  * failure.
  */
@@ -31,8 +31,8 @@ export function useContactCase(contactId: string, enabled = true) {
       const answer = await api.GET("/dedupe/contact-cases/{contact_id}", {
         params: { path: { contact_id: contactId } },
       });
-      if (answer.response.status === 404) return null;
-      return unwrap(answer);
+      if (answer.response.status === 204) return null;
+      return unwrap(answer) ?? null;
     },
   });
 }
@@ -64,10 +64,11 @@ export function useContactCaseMerge() {
     // Not awaited: the refreshed case can unmount the form before the other
     // reads land, and a per-call onSuccess then never runs.
     onSuccess: (outcome, { body }) => {
-      void invalidateAfterContactMerge(client, [
-        ...body.member_ids,
+      void invalidateAfterContactMerge(
+        client,
+        [...body.member_ids, outcome.survivor_id],
         outcome.survivor_id,
-      ]);
+      );
     },
   });
 }
