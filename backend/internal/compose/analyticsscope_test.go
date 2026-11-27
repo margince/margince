@@ -39,8 +39,7 @@ func TestAnOmittedScopeResolvesToTheCallersOwnLens(t *testing.T) {
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
 			ctx := principal.WithActor(individualPerformanceShown(), tc.actor)
-			// The decision reads nothing — labelling does, and happens after —
-			// so a nil tx proves the policy never depended on a database.
+			// A nil transaction proves scope policy needs no database read.
 			got, err := resolveAnalyticsScope(ctx, nil, tc.actor, RequestedScope{})
 			if err != nil {
 				t.Fatalf("resolving an omitted scope: %v", err)
