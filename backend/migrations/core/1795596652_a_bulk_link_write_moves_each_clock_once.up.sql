@@ -3,17 +3,8 @@
 
 SET LOCAL lock_timeout = '2s';
 
--- The link clock triggers fire once per statement and move each record they
--- reach once. AFTER ROW triggers also run when the statement ends, so each row
--- read the same tables a statement trigger reads. Advancing a clock to the
--- latest of several values gives the value the row-by-row advances reached.
--- The records are locked in (kind, id) order over the whole statement, the
--- order one row's firing already took. The project triggers sort after the
--- others, so a link still locks its project after its contact, as an activity
--- update does.
-
--- Moves each named record's clock to the latest of its values when that is
--- later than the stored one. A NULL id or value moves nothing.
+-- The later strength trigger locks contacts even when their activity cannot
+-- advance a clock, so those contacts must be locked before the project clock.
 CREATE FUNCTION advance_last_activities(tbl regclass, rids uuid[], ats timestamptz[]) RETURNS void
 LANGUAGE plpgsql AS $$
 DECLARE
@@ -23,26 +14,30 @@ BEGIN
   SELECT array_agg(u.rid ORDER BY u.rid), array_agg(u.at ORDER BY u.rid)
     INTO moved_ids, moved_ats
     FROM (SELECT p.rid, max(p.at) AS at FROM unnest(rids, ats) p(rid, at)
-           WHERE p.rid IS NOT NULL AND p.at IS NOT NULL GROUP BY p.rid) u;
+           WHERE p.rid IS NOT NULL GROUP BY p.rid) u;
   IF moved_ids IS NULL THEN RETURN; END IF;
   PERFORM set_config('margince.last_activity_move', 'on', true);
   CASE tbl
     WHEN 'contact'::regclass THEN
       PERFORM 1 FROM contact WHERE id = ANY (moved_ids) ORDER BY id FOR UPDATE;
       UPDATE contact SET last_activity_at = m.at FROM unnest(moved_ids, moved_ats) m(rid, at)
-       WHERE contact.id = m.rid AND (contact.last_activity_at IS NULL OR contact.last_activity_at < m.at);
+       WHERE contact.id = m.rid AND m.at IS NOT NULL
+         AND (contact.last_activity_at IS NULL OR contact.last_activity_at < m.at);
     WHEN 'deal'::regclass THEN
       PERFORM 1 FROM deal WHERE id = ANY (moved_ids) ORDER BY id FOR UPDATE;
       UPDATE deal SET last_activity_at = m.at FROM unnest(moved_ids, moved_ats) m(rid, at)
-       WHERE deal.id = m.rid AND (deal.last_activity_at IS NULL OR deal.last_activity_at < m.at);
+       WHERE deal.id = m.rid AND m.at IS NOT NULL
+         AND (deal.last_activity_at IS NULL OR deal.last_activity_at < m.at);
     WHEN 'company'::regclass THEN
       PERFORM 1 FROM company WHERE id = ANY (moved_ids) ORDER BY id FOR UPDATE;
       UPDATE company SET last_activity_at = m.at FROM unnest(moved_ids, moved_ats) m(rid, at)
-       WHERE company.id = m.rid AND (company.last_activity_at IS NULL OR company.last_activity_at < m.at);
+       WHERE company.id = m.rid AND m.at IS NOT NULL
+         AND (company.last_activity_at IS NULL OR company.last_activity_at < m.at);
     WHEN 'project'::regclass THEN
       PERFORM 1 FROM project WHERE id = ANY (moved_ids) ORDER BY id FOR UPDATE;
       UPDATE project SET last_activity_at = m.at FROM unnest(moved_ids, moved_ats) m(rid, at)
-       WHERE project.id = m.rid AND (project.last_activity_at IS NULL OR project.last_activity_at < m.at);
+       WHERE project.id = m.rid AND m.at IS NOT NULL
+         AND (project.last_activity_at IS NULL OR project.last_activity_at < m.at);
   END CASE;
   PERFORM set_config('margince.last_activity_move', 'off', true);
 END;
@@ -104,7 +99,6 @@ BEGIN
                               WHEN 'deal' THEN t.deal_at ELSE t.at END AS at
          FROM timed t
         CROSS JOIN LATERAL last_activity_reach(ARRAY[t.contact_id], ARRAY[t.deal_id], ARRAY[t.company_id]) reach
-        WHERE t.at IS NOT NULL OR t.deal_at IS NOT NULL
      )
      SELECT reached.kind, array_agg(reached.id) AS ids, array_agg(reached.at) AS ats
        FROM reached GROUP BY reached.kind ORDER BY reached.kind
