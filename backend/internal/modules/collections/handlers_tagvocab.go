@@ -203,6 +203,7 @@ func wireTagDetail(t tagRow, usage TagUsage) crmcontracts.TagDetail {
 		CreatedAt:   &t.CreatedAt,
 		UpdatedAt:   &t.UpdatedAt,
 		ArchivedAt:  t.ArchivedAt,
+		MergedInto:  wireMergedInto(t),
 		Usage: crmcontracts.TagUsage{
 			Contacts:  usage.Contacts,
 			Companies: usage.Companies,
@@ -233,7 +234,16 @@ func wireTag(t tagRow) crmcontracts.Tag {
 		CreatedAt:   &t.CreatedAt,
 		UpdatedAt:   &t.UpdatedAt,
 		ArchivedAt:  t.ArchivedAt,
+		MergedInto:  wireMergedInto(t),
 	}
+}
+
+// wireMergedInto names the survivor of a merge, or nothing on a tag no merge archived.
+func wireMergedInto(t tagRow) *crmcontracts.RowTag {
+	if t.MergedIntoID == nil || t.MergedIntoName == nil {
+		return nil
+	}
+	return &crmcontracts.RowTag{TagId: openapi_types.UUID(t.MergedIntoID.UUID), Name: *t.MergedIntoName}
 }
 
 func wireTaggable(tg taggableRow) crmcontracts.Taggable {

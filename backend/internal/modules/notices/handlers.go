@@ -24,12 +24,22 @@ import (
 type Handlers struct {
 	store *Store
 	reach CoachReach
+	// emailDelivery says whether the installation's own relay is wired; the
+	// settings read reports it so a screen does not promise mail that never leaves.
+	emailDelivery bool
 }
 
 // NewHandlers binds the transport to its store and to the reads coaching is
 // gated on: the membership question, and the deal a next-step notice names.
 func NewHandlers(store *Store, reach CoachReach) Handlers {
 	return Handlers{store: store, reach: reach}
+}
+
+// WithEmailDelivery records that the installation's own relay is wired, the one
+// that sends the approval message and the morning digest.
+func (h Handlers) WithEmailDelivery() Handlers {
+	h.emailDelivery = true
+	return h
 }
 
 // RaiseNotice records one colleague's coaching nudge to a teammate.
@@ -126,7 +136,7 @@ func (h Handlers) ListNotificationPreferences(w http.ResponseWriter, r *http.Req
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, preferenceListWire(chosen))
+	httperr.WriteJSON(w, http.StatusOK, preferenceListWire(chosen, h.emailDelivery))
 }
 
 // SaveNotificationPreference records where the acting contact wants ONE class
@@ -142,7 +152,7 @@ func (h Handlers) SaveNotificationPreference(w http.ResponseWriter, r *http.Requ
 		httperr.Write(w, r, err)
 		return
 	}
-	httperr.WriteJSON(w, http.StatusOK, preferenceListWire(chosen))
+	httperr.WriteJSON(w, http.StatusOK, preferenceListWire(chosen, h.emailDelivery))
 }
 
 // centrePageWire is one window of the centre as the contract returns it.
@@ -197,7 +207,7 @@ func centreItemWire(item CentreItem) crmcontracts.NotificationItem {
 // preferenceListWire is the seat's whole set as both the read and the save
 // answer it — one shape, because a client that renders the list must not have to
 // tell which call produced it.
-func preferenceListWire(chosen []Preference) crmcontracts.NotificationPreferenceList {
+func preferenceListWire(chosen []Preference, emailDelivery bool) crmcontracts.NotificationPreferenceList {
 	items := make([]crmcontracts.NotificationPreference, 0, len(chosen))
 	for _, p := range chosen {
 		items = append(items, crmcontracts.NotificationPreference{
@@ -206,5 +216,5 @@ func preferenceListWire(chosen []Preference) crmcontracts.NotificationPreference
 			Chosen:   p.Chosen,
 		})
 	}
-	return crmcontracts.NotificationPreferenceList{Items: items}
+	return crmcontracts.NotificationPreferenceList{Items: items, EmailDeliveryAvailable: emailDelivery}
 }

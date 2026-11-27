@@ -379,7 +379,7 @@ Also called: label, add a label, categorise a record.
 Renaming a tag renames it everywhere, because every record shares the one tag.
 
 - **Retire** takes a tag out of use without changing the records that have it, and **Restore** brings it back.
-- **Merge** puts one tag into another and **cannot be undone**. The warning reads: "Records carrying {name} will carry the other tag instead, and the name is released for anyone to use again". After that it reports what moved: "{moved} records moved to the surviving tag. {collapsed} already carried both, so their duplicate was dropped". An agent may not merge tags on its own; it can only suggest a merge for a human to approve.
+- **Merge** puts one tag into another and **cannot be undone**. The warning reads: "Records carrying {name} will carry the other tag instead, and the name is released for anyone to use again". After that it reports what moved: "{moved} records moved to the surviving tag. {collapsed} already carried both, so their duplicate was dropped". An agent may not merge tags on its own; it can only suggest a merge for a human to approve. The merged tag stays in the list as "Merged into {name}", with no **Restore**, and its page links the tag that was kept.
 
 ### Can Margince suggest a tag from mail and meeting notes?
 Yes, for tags an admin marks as suggested. Margince never adds such a tag by itself: you accept or dismiss each suggestion.
