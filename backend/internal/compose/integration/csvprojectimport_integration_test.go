@@ -139,8 +139,7 @@ func TestAProjectFileCreatesProjectsOnTheirCompaniesAndDeals(t *testing.T) {
 	rollout, second := projects["Plant rollout"], projects["Second line"]
 	if rollout.CompanyID != w.acme || rollout.Phase != "pursuing" || rollout.DealID == nil || *rollout.DealID != w.acmeDeal ||
 		rollout.Description == nil || *rollout.Description != "First, then second" ||
-		rollout.StartedAt == nil || *rollout.StartedAt != startDay || rollout.TargetEnd == nil || *rollout.TargetEnd != endDay || rollout.SourceSystem == nil ||
-		rollout.SourceID == nil || *rollout.SourceID != "P-1" {
+		rollout.StartedAt == nil || *rollout.StartedAt != startDay || rollout.TargetEnd == nil || *rollout.TargetEnd != endDay || rollout.SourceSystem == nil || rollout.SourceID != nil {
 		t.Fatalf("project = %+v, want it on Acme, pursuing, started from its deal, with its dates and text", rollout)
 	}
 	if second.CompanyID != w.other || second.Phase != "initiative" || second.DealID != nil {
@@ -362,4 +361,27 @@ func TestAProjectOnAnUploadsNewCompanyIsCheckedAgainstAnExistingDeal(t *testing.
 	}
 	approveAndRead(t, e, run.ID)
 	wantSameAnswers(t, preview, readImportReport(t, e, run.ID))
+}
+
+// A row ref is kept in the import's own identity table, never on the project.
+// Another import that uses the same ref cannot collide with a project it did not
+// make, so no import learns that a ref is taken.
+func TestTwoImportsUsingOneRowRefDoNotCollide(t *testing.T) {
+	e := setupImportApp(t)
+	w := newProjectWorld(t, e)
+	for _, source := range []string{"first-crm", "second-crm"} {
+		files := map[string]string{"projects.csv": "ref,name,company_ref\nP-1,From " + source + "," + w.acme + "\n"}
+		parts := []AnyMap{{"file": "projects.csv", "object": "project", "mapping": AnyMap{"ref": "ref", "name": "name", "company_ref": "company_ref"}}}
+		run := stageBundle(t, e, uploadZip(t, e, source+".zip", zipBytes(t, files)).SourceRef, source, parts)
+		preview := readImportReport(t, e, run.ID)
+		approveAndRead(t, e, run.ID)
+		committed := readImportReport(t, e, run.ID)
+		if committed.Disposition.Created != 1 || len(committed.Issues) != 0 {
+			t.Fatalf("%s: commit = %+v issues %+v, want its project created with no issue", source, committed.Disposition, committed.Issues)
+		}
+		wantSameAnswers(t, preview, committed)
+	}
+	if projects := importedProjects(t, e); len(projects) != 2 {
+		t.Fatalf("projects = %v, want one from each import", projects)
+	}
 }

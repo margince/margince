@@ -251,14 +251,7 @@ func (s *Store) ArchiveProject(ctx context.Context, id ids.ProjectID, ifVersion 
 			return fmt.Errorf("detach tags: %w", err)
 		}
 
-		after := p.After()
-		if storekit.ReleasesSourceKey(guards...) {
-			if _, err := tx.Exec(ctx, `UPDATE project SET source_id = NULL WHERE id = $1`, id); err != nil {
-				return fmt.Errorf("release the project's source key: %w", err)
-			}
-			after["source_id"] = nil
-		}
-		auditID, err := storekit.Audit(ctx, tx, "archive", projectObject, id.UUID, p.Before(), after)
+		auditID, err := storekit.Audit(ctx, tx, "archive", projectObject, id.UUID, p.Before(), p.After())
 		if err != nil {
 			return fmt.Errorf("audit project archive: %w", err)
 		}

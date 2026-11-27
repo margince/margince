@@ -120,11 +120,10 @@ func (r projectRecord) RefuseNew(fields map[string]string, typed map[string]any)
 
 // birthOf is what a row asks the projects store to birth. The test run and the
 // commit both build it here.
-func (r projectRecord) birthOf(fields map[string]string, typed map[string]any, sourceSystem string, externalID *string) projects.CreateProjectInput {
+func (r projectRecord) birthOf(fields map[string]string, typed map[string]any, sourceSystem string) projects.CreateProjectInput {
 	in := projects.CreateProjectInput{
 		Source:        string(provenance.RecordSourceImport),
 		SourceSystem:  &sourceSystem,
-		SourceID:      externalID,
 		OwnerID:       OwnerFrom(fields, typed),
 		Description:   Text(fields, targetDescribed),
 		StartedAt:     dayFrom(fields, typed, ProjectStartedAt),
@@ -151,7 +150,7 @@ func (r projectRecord) birthOf(fields map[string]string, typed map[string]any, s
 // the checks that need it, and a company still to be created matches no deal that
 // already names one.
 func (r projectRecord) PredictCreate(ctx context.Context, fields map[string]string, typed map[string]any) (migration.Reason, error) {
-	in := r.birthOf(fields, typed, "", nil)
+	in := r.birthOf(fields, typed, "")
 	err := database.WithWorkspaceTx(ctx, r.stores.Pool, func(tx pgx.Tx) error {
 		return r.stores.Projects.RefuseImportCreate(ctx, tx, in, r.cols)
 	})
@@ -163,8 +162,7 @@ func (r projectRecord) PredictCreate(ctx context.Context, fields map[string]stri
 
 func (r projectRecord) Create(ctx context.Context, land Landing, row migration.Row, typed map[string]any, sourceSystem string) (migration.EnsureResult, error) {
 	fields := TextFields(row.Fields)
-	externalID := row.ExternalID
-	in := r.birthOf(fields, typed, sourceSystem, &externalID)
+	in := r.birthOf(fields, typed, sourceSystem)
 	err := land(ctx, row, func(tx pgx.Tx) (ids.UUID, error) {
 		project, err := r.stores.Projects.CreateProjectTx(ctx, tx, in, r.cols)
 		if err != nil {
@@ -216,7 +214,7 @@ func (r projectRecord) Update(ctx context.Context, id ids.UUID, changed map[stri
 }
 
 func (r projectRecord) Undo(ctx context.Context, id ids.UUID, importedAt time.Time) error {
-	_, err := r.stores.Projects.ArchiveProject(ctx, ids.From[ids.ProjectKind](id), nil, storekit.NotTouchedByHumanSince(importedAt), storekit.ReleasingSourceKey())
+	_, err := r.stores.Projects.ArchiveProject(ctx, ids.From[ids.ProjectKind](id), nil, storekit.NotTouchedByHumanSince(importedAt))
 	return err
 }
 
@@ -258,8 +256,8 @@ func (r projectRecord) Lock(ctx context.Context, tx pgx.Tx, id ids.UUID) (string
 
 // ProjectPreview is the project a row would create, as the store admits it for
 // the user who approves the run. An agent's import waits on that review.
-func ProjectPreview(ctx context.Context, store *projects.Store, cols Columns, fields map[string]string, typed map[string]any, sourceSystem string, externalID *string, creator principal.Principal) (projects.CreateProjectInput, error) {
-	return store.PreviewProjectCreationForActor(ctx, projectRecord{cols: cols.projects}.birthOf(fields, typed, sourceSystem, externalID), creator)
+func ProjectPreview(ctx context.Context, store *projects.Store, cols Columns, fields map[string]string, typed map[string]any, sourceSystem string, creator principal.Principal) (projects.CreateProjectInput, error) {
+	return store.PreviewProjectCreationForActor(ctx, projectRecord{cols: cols.projects}.birthOf(fields, typed, sourceSystem), creator)
 }
 
 // ProjectDealKey is what the run's claim on a deal is keyed by. It is the deal

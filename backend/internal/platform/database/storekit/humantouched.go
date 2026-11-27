@@ -72,24 +72,7 @@ func (e *HumanTouchedError) Is(target error) bool { return target == apperrors.E
 
 // ArchiveGuard is a precondition on an archive: the record must not have been
 // worked on by a colleague since the import landed it.
-type ArchiveGuard struct {
-	since             time.Time
-	releasesSourceKey bool
-}
-
-// ReleasingSourceKey makes the archive free the record's id in its source
-// system, so the same file imports it again after an undo.
-func ReleasingSourceKey() ArchiveGuard { return ArchiveGuard{releasesSourceKey: true} }
-
-// ReleasesSourceKey reports whether any guard asks the archive to free the key.
-func ReleasesSourceKey(guards ...ArchiveGuard) bool {
-	for _, guard := range guards {
-		if guard.releasesSourceKey {
-			return true
-		}
-	}
-	return false
-}
+type ArchiveGuard struct{ since time.Time }
 
 // NotTouchedByHumanSince guards an archive against a record a user or their agent
 // has acted on after `at`.
@@ -100,9 +83,6 @@ func NotTouchedByHumanSince(at time.Time) ArchiveGuard { return ArchiveGuard{sin
 // before the question or wholly after the commit.
 func RefuseIfHumanActedSince(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, guards ...ArchiveGuard) error {
 	for _, guard := range guards {
-		if guard.since.IsZero() {
-			continue
-		}
 		touched, err := HumanActedSince(ctx, tx, entityType, id, guard.since)
 		if err != nil {
 			return err

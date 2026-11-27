@@ -201,7 +201,7 @@ func TestEveryProjectAndProductTargetReachesTheStoresInput(t *testing.T) {
 		ProjectStartedAt: openapiDay("2026-09-01"), ProjectTargetEndDate: openapiDay("2026-10-01"),
 	}
 	record := projectRecord{}
-	in, up := record.birthOf(fields, typed, "src", new("ref")), record.updateFrom(fields, typed)
+	in, up := record.birthOf(fields, typed, "src"), record.updateFrom(fields, typed)
 	created := map[string]bool{
 		ProjectName: in.Name != "", ProjectPhase: in.Phase != "", targetCompanyRef: !in.CompanyID.IsZero(), ProjectDealRef: in.DealID != nil,
 		targetOwner: in.OwnerID != nil, targetDescribed: in.Description != nil, ProjectStartedAt: in.StartedAt != nil, ProjectTargetEndDate: in.TargetEndDate != nil,
