@@ -393,3 +393,5 @@ jobs:
           MAIN_SONAR_RESULT: ${{ needs.sonar.result }}
           MAIN_SUSPECTS: ${{ steps.range.outputs.suspects }}
         run: ./scripts/scheduled-report.sh
+
+# CI POC calibration branch: this line changes nothing; it makes the same path scopes run as on the POC branch.

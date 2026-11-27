@@ -1758,3 +1758,5 @@ jobs:
       - name: Unit-test time budget per package
         if: ${{ !cancelled() && needs.deterministic-gates.result != 'skipped' }}
         run: ./scripts/check-test-budget.sh "$RUNNER_TEMP"/logs/*/check-backend.log
+
+# CI POC calibration branch: this line changes nothing; it makes the same path scopes run as on the POC branch.

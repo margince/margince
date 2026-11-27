@@ -590,3 +590,5 @@ jobs:
             echo "no enabled unit declares a migrations/ layer — the gate stays hermetic"
           fi
           make check-ext-migrations
+
+# CI POC calibration branch: this line changes nothing; it makes the same path scopes run as on the POC branch.

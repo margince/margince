@@ -1212,3 +1212,5 @@ infra-reset: ## Stop + wipe volumes, then bring the stack back up (clean + db-up
 	$(MAKE) clean && $(MAKE) db-up
 
 tools-go: tools ## Alias for tools — install the Go gate binaries
+
+# CI POC calibration branch: this line changes nothing; it makes the same path scopes run as on the POC branch.
