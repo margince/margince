@@ -26,6 +26,7 @@ describe("the drawer rows", () => {
       (group) => group.headingKey === "nav.group.work",
     );
     expect(work?.items.map((row) => row.id)).toEqual([
+      "worklist",
       "projects",
       "filters",
       "notes",

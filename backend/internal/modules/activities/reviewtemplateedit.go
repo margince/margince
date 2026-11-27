@@ -4,6 +4,7 @@
 package activities
 
 import (
+	"bytes"
 	"context"
 	"encoding/json"
 	"errors"
@@ -140,6 +141,9 @@ func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmco
 		if before.Version == nil || *before.Version != req.Version {
 			return apperrors.ErrConflict
 		}
+		if raw, err = unlessStoredQuestions(ctx, tx, id, raw); err != nil {
+			return err
+		}
 		// The audit pair holds only the fields the request changed.
 		was, now := map[string]any{}, map[string]any{}
 		if raw != nil {
@@ -174,6 +178,36 @@ func (s *Store) UpdateReviewTemplate(ctx context.Context, id ids.UUID, req crmco
 	return result, err
 }
 
+// unlessStoredQuestions is raw, or nil when the template already holds those
+// questions. The stored side is read into the question shape and written out
+// again. The comparison is then of questions, not of JSON spelling.
+func unlessStoredQuestions(ctx context.Context, tx pgx.Tx, id ids.UUID, raw []byte) ([]byte, error) {
+	if raw == nil {
+		return nil, nil
+	}
+	var stored []byte
+	if err := tx.QueryRow(ctx, `SELECT questions FROM activity_review_template WHERE id = $1`, id).Scan(&stored); err != nil {
+		return nil, fmt.Errorf("compare template questions: %w", err)
+	}
+	held, readable := storedQuestions(stored)
+	if !readable {
+		// Questions this shape cannot read are not the ones being saved.
+		return raw, nil
+	}
+	// The catalog key is the table trigger's to name, and a save never carries it.
+	for i := range held {
+		held[i].LabelKey = ""
+	}
+	canonical, err := json.Marshal(held)
+	if err != nil {
+		return nil, fmt.Errorf("compare template questions: %w", err)
+	}
+	if bytes.Equal(canonical, raw) {
+		return nil, nil
+	}
+	return raw, nil
+}
+
 func reviewQuestionsFromWire(wire []crmcontracts.ReviewQuestion) []ReviewQuestion {
 	questions := make([]ReviewQuestion, len(wire))
 	for i, q := range wire {
@@ -183,4 +217,11 @@ func reviewQuestionsFromWire(wire []crmcontracts.ReviewQuestion) []ReviewQuestio
 		}
 	}
 	return questions
+}
+
+// storedQuestions reads a template's stored questions, and reports whether they
+// were in the question shape at all.
+func storedQuestions(stored []byte) ([]ReviewQuestion, bool) {
+	var held []ReviewQuestion
+	return held, json.Unmarshal(stored, &held) == nil
 }

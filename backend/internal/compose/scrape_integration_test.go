@@ -169,6 +169,9 @@ func TestScrapeDegradesHonestly(t *testing.T) {
 
 func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
 	e := integration.Setup(t)
+	// The effect writes under the approver's live grants, and the harness
+	// seeds seats with no role.
+	e.GrantRole(t, e.Rep2, "admin")
 	// Human already set the industry; legal_name is empty.
 	companyID := insertCompany(t, e, e.Rep1, "acme.example", "Handcrafted Industry")
 	fake := ai.NewFakeClient().Script(acmeExtraction, acmeExtraction)
@@ -215,6 +218,11 @@ func TestScrapeAcceptFillsOnlyEmptyFields(t *testing.T) {
 	// captured_by and the source URL identify the executing agent and dossier.
 	if source != "site_read" {
 		t.Fatalf("evidence source = %q, want site_read", source)
+	}
+	// The apply is the scrape agent's, acting for the admin who approved it.
+	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'company' AND entity_id = $1
+		AND actor_type = 'agent' AND actor_id = 'agent:scrape' AND on_behalf_of = $2`, companyID, e.Rep2); n != 1 {
+		t.Fatalf("%d company updates by agent:scrape for the decider, want 1", n)
 	}
 
 	// Exactly-once: the approval is consumed and a re-decide is refused.

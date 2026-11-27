@@ -37,7 +37,12 @@ func Of(resp *http.Response) time.Duration {
 	if resp == nil {
 		return 0
 	}
-	return Header(resp.Header.Get("Retry-After"))
+	return OfHeader(resp.Header)
+}
+
+// OfHeader is Of, for a caller that holds the response headers but no *http.Response.
+func OfHeader(h http.Header) time.Duration {
+	return Header(h.Get("Retry-After"))
 }
 
 // Header is Of, for a caller that already holds the value.

@@ -68,7 +68,7 @@ var (
 	AIActivityTypes            = NewTypeSet("ai_task.state_changed")
 	ScheduledSendStopTypes     = NewTypeSet("consent.suppressed", "consent.changed")
 	CommitmentSettleTypes      = NewTypeSet("activity.updated", "conversation_claim.changed")
-	NoticeCaseOpenTypes        = NewTypeSet("contact.created", "activity.captured")
+	NoticeCaseOpenTypes        = NewTypeSet("contact.created", "contact.updated", "contact.merged", "activity.captured", "activity.updated")
 	CompanyAutoEnrichTypes     = NewTypeSet("company.created", "company.updated", "company.merged")
 	ContactAutoEnrichTypes     = NewTypeSet("contact.created", "contact.updated", "contact.restored", "contact.merged")
 	CohortPromoteTypes         = NewTypeSet("contact.created", "contact.updated", "contact.restored", "contact.merged")

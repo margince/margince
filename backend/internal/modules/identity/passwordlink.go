@@ -36,9 +36,15 @@ import (
 //
 // `baseURL` arrives with any trailing slash already trimmed (see
 // `Handlers.WithPasswordLinkBase`), so this concatenation cannot produce `//#/`.
-func passwordLink(baseURL, rawToken string) string {
-	return baseURL + "/#/reset-password?token=" + rawToken
+func passwordLink(baseURL, route, rawToken string) string {
+	return baseURL + "/#/" + route + "?token=" + rawToken
 }
+
+// The hash routes a mailed token opens, both read by the app's router.
+const (
+	resetPasswordRoute = "reset-password"
+	confirmMergeRoute  = "confirm-merge"
+)
 
 // WithPasswordLinkBase injects the canonical external base set-password deep
 // links are built on — the installation's public base URL. The trailing slash

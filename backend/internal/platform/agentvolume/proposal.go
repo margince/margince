@@ -15,6 +15,7 @@ package agentvolume
 
 import (
 	"encoding/json"
+	"errors"
 	"fmt"
 	"strconv"
 	"time"
@@ -60,8 +61,8 @@ type ReleaseProposal struct {
 	Passport string `json:"passport"`
 	// Subject is whose counter crossed (SubjectOf): the connection for a
 	// passport minted under one. It keys the identity, so a renewed passport
-	// joins the question its predecessor raised. Empty means Passport.
-	Subject string `json:"subject,omitempty"`
+	// joins the question its predecessor raised.
+	Subject string `json:"subject"`
 	// Tool is the call that was refused, for the screen to name. It is not
 	// authority: releasing the window releases the counter, not one tool.
 	Tool string `json:"tool"`
@@ -132,22 +133,18 @@ func (p ReleaseProposal) Length() (time.Duration, error) {
 // of the identity: the question is about the counter, and answering it for one
 // tool answers it for all of them.
 func (p ReleaseProposal) Identity() (json.RawMessage, error) {
+	// The identity is matched against the stored payload by containment, so it
+	// keys on "subject", a member the payload carries under the same name.
+	if p.Subject == "" {
+		return nil, errors.New("agentvolume: a release proposal names no subject to ask about")
+	}
 	raw, err := json.Marshal(struct {
-		Counter  Counter `json:"counter"`
-		Bucket   string  `json:"bucket"`
-		Passport string  `json:"passport"`
-	}{p.Counter, p.Bucket, p.subject()})
+		Counter Counter `json:"counter"`
+		Bucket  string  `json:"bucket"`
+		Subject string  `json:"subject"`
+	}{p.Counter, p.Bucket, p.Subject})
 	if err != nil {
 		return nil, fmt.Errorf("agentvolume: naming a release proposal's identity: %w", err)
 	}
 	return raw, nil
-}
-
-// subject is whose counter the question is about. A proposal with no Subject
-// names a passport counted as itself.
-func (p ReleaseProposal) subject() string {
-	if p.Subject != "" {
-		return p.Subject
-	}
-	return p.Passport
 }

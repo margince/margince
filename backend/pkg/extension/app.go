@@ -25,10 +25,8 @@ const (
 	AppGroupIntelligence AppGroup = "intelligence"
 )
 
-// AppGroups is every heading the drawer offers. The frontend's list mirrors
-// it.
-//
-// Held by: TestTheFrontendAppGroupsMatchTheGoOnes (backend/gates/frontendentryslots_test.go)
+// AppGroups lists the headings the drawer offers. gen-composition writes the
+// list into the SPA's @composition/extensions as EXTENSION_APP_GROUPS.
 func AppGroups() []AppGroup {
 	return []AppGroup{AppGroupRecords, AppGroupWork, AppGroupIntelligence}
 }

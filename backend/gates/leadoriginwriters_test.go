@@ -13,8 +13,8 @@ package gates
 // two writers today are the contacts store (every typed, imported and tool
 // create) and the capture sink (every connector). The corpus is every
 // production string literal in backend/internal that opens `INSERT INTO lead (`,
-// so a third writer is judged the day it appears. A census that finds fewer
-// than two statements has read a smaller tree than the one that exists and
+// so a third writer is judged the day it appears. Each also names the origin
+// the lead arrived with. The count of statements is pinned, so a short census
 // fails instead of passing.
 
 import (
@@ -31,7 +31,14 @@ import (
 
 var insertsLead = regexp.MustCompile(`(?is)\bINSERT\s+INTO\s+lead\s*\(`)
 
-var namesOrigin = regexp.MustCompile(`(?is)\borigin\b`)
+var (
+	namesOrigin        = regexp.MustCompile(`(?is)\borigin\b`)
+	namesArrivalOrigin = regexp.MustCompile(`(?is)\barrival_origin\b`)
+)
+
+// leadInsertStatements is how many production statements insert a lead. A
+// count that moves either way is a writer this gate has not judged by name.
+const leadInsertStatements = 2
 
 func TestEveryLeadInsertNamesTheOrigin(t *testing.T) {
 	t.Parallel()
@@ -69,11 +76,16 @@ func TestEveryLeadInsertNamesTheOrigin(t *testing.T) {
 				t.Errorf("%s inserts a lead without naming `origin`. Give the column a value, even NULL, so the "+
 					"lead's classification is a decision of the writer and not an omission", fset.Position(lit.Pos()))
 			}
+			if !namesArrivalOrigin.MatchString(columns) {
+				t.Errorf("%s inserts a lead without naming `arrival_origin` in the statement's own text. Source quality "+
+					"would then credit the lead to whatever origin it is given later", fset.Position(lit.Pos()))
+			}
 			return true
 		})
 	}
-	if statements < 2 {
-		t.Fatalf("found %d statements that insert a lead, want at least two (the contacts store and the capture sink): "+
-			"the walk read a smaller tree than the one that exists", statements)
+	if statements != leadInsertStatements {
+		t.Fatalf("found %d statements that insert a lead, want %d (the contacts store and the capture sink). Fewer means "+
+			"the walk read a smaller tree; more means a new writer: judge it here, then raise the count",
+			statements, leadInsertStatements)
 	}
 }

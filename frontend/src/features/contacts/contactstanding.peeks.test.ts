@@ -11,17 +11,19 @@ const fill = (text: string, params?: Record<string, string>) =>
     (out, [name, value]) => out.replace(`{${name}}`, value),
     text,
   );
-const words = {
-  t: (key: keyof typeof en, params?: Record<string, string>) =>
-    fill(en[key], params),
-  plural: (base: string, count: number, params?: Record<string, string>) =>
-    fill(
-      en[`${base}_${count === 1 ? "one" : "other"}` as keyof typeof en],
-      params,
-    ),
-  locale: "en",
-  zone: UTC_ZONE,
-} as never;
+const wordsIn = (zone: string) =>
+  ({
+    t: (key: keyof typeof en, params?: Record<string, string>) =>
+      fill(en[key], params),
+    plural: (base: string, count: number, params?: Record<string, string>) =>
+      fill(
+        en[`${base}_${count === 1 ? "one" : "other"}` as keyof typeof en],
+        params,
+      ),
+    locale: "en",
+    zone,
+  }) as never;
+const words = wordsIn(UTC_ZONE);
 
 const mail = (
   id: string,
@@ -113,6 +115,32 @@ describe("contactPeeks", () => {
     );
 
     expect(reach?.items.map((item) => item.title)).toEqual(["Demo Admin"]);
+  });
+
+  it("dates a colleague's date-only last exchange by its own date far east of UTC", () => {
+    const colleague = (precision: "day" | "instant") =>
+      contactPeeks(
+        view({
+          network: {
+            colleagues: [
+              {
+                user_id: "u1",
+                display_name: "Demo Admin",
+                interactions_90d: 9,
+                inbound_90d: 4,
+                outbound_90d: 5,
+                two_way: true,
+                last_at: "2026-10-20T12:00:00Z",
+                last_precision: precision,
+              },
+            ],
+          },
+        }),
+        wordsIn("Pacific/Kiritimati"),
+        () => undefined,
+      ).reach?.items[0]?.sub;
+    expect(colleague("day")).toContain("20 Oct");
+    expect(colleague("instant")).toContain("21 Oct");
   });
 
   it("lists only open commitments of ours, and marks a slipped one", () => {

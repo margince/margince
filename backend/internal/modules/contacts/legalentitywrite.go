@@ -78,6 +78,9 @@ func (s *Store) CreateLegalEntity(ctx context.Context, in LegalEntityInput) (Leg
 		if err := refuseTheDefaultsName(ctx, tx, after[companyNameColumn]); err != nil {
 			return err
 		}
+		if err := checkEntityLanguage(ctx, tx, after); err != nil {
+			return err
+		}
 		_, err := tx.Exec(ctx, fmt.Sprintf(`INSERT INTO legal_entity (%s) VALUES (%s)`,
 			strings.Join(columns, ", "), storekit.Placeholders(args)), args...)
 		if storekit.IsUniqueViolation(err) {
@@ -129,6 +132,9 @@ func (s *Store) UpdateLegalEntity(ctx context.Context, id ids.LegalEntityID, in 
 			return nil
 		}
 		if err := refuseTheDefaultsName(ctx, tx, p.After()[companyNameColumn]); err != nil {
+			return err
+		}
+		if err := checkEntityLanguage(ctx, tx, p.After()); err != nil {
 			return err
 		}
 		if err := p.ApplyLocked(ctx, tx, lock); storekit.IsUniqueViolation(err) {
@@ -281,4 +287,18 @@ func refuseTheDefaultsName(ctx context.Context, tx pgx.Tx, name any) error {
 func requiredFieldError(wire string) error {
 	_, _, err := entityField{wire: wire, value: new(string), required: true}.cleaned(false)
 	return err
+}
+
+// checkEntityLanguage asks the language table about the code a write sets, in
+// the writer's transaction. A write that leaves the language alone asks nothing.
+func checkEntityLanguage(ctx context.Context, tx pgx.Tx, set map[string]any) error {
+	switch code := set[wireDefaultLanguage].(type) {
+	case *string:
+		if code != nil {
+			return storekit.CheckLanguage(ctx, tx, wireDefaultLanguage, *code)
+		}
+	case string:
+		return storekit.CheckLanguage(ctx, tx, wireDefaultLanguage, code)
+	}
+	return nil
 }

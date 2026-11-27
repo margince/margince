@@ -44,6 +44,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -208,21 +209,22 @@ func extensionTargetTypes() []string {
 // would read a core table of the same name the day one existed.
 const extensionSchema = "ext"
 
-// extensionExistenceQuery is the probe for a registered table: existence
-// alone, which is the same floor every other workspace-shared target takes.
-//
-// No archived_at predicate, and that is a decision rather than an omission:
-// this surface cannot know whether a unit's table has such a column, and
-// demanding one would refuse a table with no archive concept at all. What the
-// probe owes is that the staged row still EXISTS — a staging against a deleted
-// row is not decidable — and the unit's own handler is what refuses a row it
-// considers retired, exactly as it does outside an approval.
-//
-// The identifier is sanitized here as well as grammar-checked at registration:
-// two independent reasons the name cannot carry a statement, because this is
-// the line that writes one.
-func extensionExistenceQuery(table string) string {
-	return `SELECT id FROM ` + pgx.Identifier{extensionSchema, table}.Sanitize() + ` WHERE id = ANY($1)`
+// extensionExistenceQuery is the probe for a registered table: the row exists
+// and lies inside the caller's row scope. The rowIDs are $1; the returned
+// arguments follow them. It reads no archived_at, because a unit's table may
+// have none; the unit's own handler refuses a row it considers retired.
+func extensionExistenceQuery(ctx context.Context, table string) (string, []any, error) {
+	var more []any
+	arg := func(v any) int { more = append(more, v); return len(more) + 1 }
+	query := `SELECT t.id FROM ` + pgx.Identifier{extensionSchema, table}.Sanitize() + ` t WHERE t.id = ANY($1)`
+	scope, err := auth.ExtensionTableScopeClause(ctx, table, "t", arg)
+	if err != nil {
+		return "", nil, err
+	}
+	if scope != "" {
+		query += ` AND ` + scope
+	}
+	return query, more, nil
 }
 
 // ExtensionTargetExists answers whether a registered unit row is still there.
@@ -238,6 +240,10 @@ func ExtensionTargetExists(ctx context.Context, tx pgx.Tx, table string, id ids.
 	if !extensionTableGrammar.MatchString(table) {
 		return false, fmt.Errorf("crmapprovals: %q is not a namespaced extension table", table)
 	}
-	exists, err := idsAmong(ctx, tx, extensionExistenceQuery(table), []ids.UUID{id})
+	query, more, err := extensionExistenceQuery(ctx, table)
+	if err != nil {
+		return false, err
+	}
+	exists, err := idsAmong(ctx, tx, query, []ids.UUID{id}, more...)
 	return exists[id], err
 }

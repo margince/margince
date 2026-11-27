@@ -132,6 +132,11 @@ func PublishTextVersionTx(ctx context.Context, tx pgx.Tx, in TextVersion) (ids.U
 			Reason: "a version with no body names nothing a proof row could point at",
 		}
 	}
+	if in.Locale != "" {
+		if err := storekit.CheckLanguage(ctx, tx, "locale", in.Locale); err != nil {
+			return ids.UUID{}, err
+		}
+	}
 	hash := ContentHashOf(in.Subject, in.Body)
 
 	var existingID ids.UUID

@@ -49,7 +49,7 @@ func seedDirectSenderDuty(t *testing.T, e *integration.Env, kind, state, actor s
 	return contact
 }
 
-func TestDirectSenderCorrectionPagesReplaysAndPreservesOtherSources(t *testing.T) {
+func TestDirectSenderCorrectionPagesReplaysAndClosesEverySource(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	now := clocktest.Now(t)
@@ -87,7 +87,7 @@ func TestDirectSenderCorrectionPagesReplaysAndPreservesOtherSources(t *testing.T
 	runMachineAddressTask(ctx, t, e, task)
 	for i, contact := range contacts {
 		want := "open"
-		if i < 2 {
+		if i != 3 {
 			want = "exempt_with_reason"
 		}
 		if i == 3 {
@@ -103,8 +103,8 @@ func TestDirectSenderCorrectionPagesReplaysAndPreservesOtherSources(t *testing.T
 			t.Fatalf("case %d = %s, want %s", i, state, want)
 		}
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'privacy_notice_case'`); got != 2 {
-		t.Fatalf("settlement audit count = %d, want 2", got)
+	if got := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type = 'privacy_notice_case'`); got != 4 {
+		t.Fatalf("settlement audit count = %d, want 4", got)
 	}
 	if err := e.DB().Tx(ctx, func(tx pgx.Tx) error {
 		count, _, err := task.Steps[1].Estimate(ctx, tx, 1)

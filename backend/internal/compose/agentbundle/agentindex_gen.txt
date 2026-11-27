@@ -127,6 +127,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `POST /companies/{id}/view-ack` | acknowledgeCompanyView | Record that the user has now seen this company — the baseline `since_last_visit` counts from. | Change records | at once |
 | `PUT /companies/{id}/partner` | upsertPartner | Create/update the partner extension on a company (adds `partner` to its relationship types). | Change records | at once |
 | `GET /companies/{id}/partner` | getPartner | Read the partner extension on a company (404 if the company is not a partner). | Read records | at once |
+| `DELETE /companies/{id}/partner` | endPartnerProgram | End the partner program while keeping the company and commission history. | Change records | at once |
 | `POST /companies/{id}/partner/setup` | setUpPartner | Set up a partner program on a company that has none, with no margin tier. | Change records | waits for approval |
 | `POST /companies/{id}/enrich` | scrapeCompany | Enrich this company from its website (evidence-or-omit) — a staged proposal. | Use AI and buy data | waits for approval |
 | `POST /companies/{id}/deep-read` | deepReadCompany | Read the company's WHOLE site in the background — a crawl that ends in staged proposals. | Use AI and buy data | waits for approval |
@@ -142,6 +143,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /companies/{id}/facts` | listCompanyFacts | The company's confirmed facts, grouped by category on the client. Site-read facts carry evidence (snippet, source URL, confidence); human/migration values may omit it. | Read records | at once |
 | `POST /companies/{id}/facts` | createCompanyFact | State a fact about this company by hand. | Change records | at once |
 | `GET /companies/{id}/profile-fields` | listCompanyProfileFields | The company's confirmed profile fields. A field with no stored value is absent (evidence-or-omit); site-read values carry evidence, human/migration values may omit it. | Read records | at once |
+| `GET /company-types` | listCompanyTypes | Which company types installed extensions add beside core's own. | Read records | at once |
 | `GET /onboarding/company/proposal` | getOnboardingCompanyProposal | The deterministic evidence-backed company proposal derived from the onboarding website read. | Read records | at once |
 | `GET /company` | getAnchorCompany | The installation's own company (the anchor company). | Read records | at once |
 | `PUT /company` | putAnchorCompany | Save the installation's own company. | Change records | at once |
@@ -268,6 +270,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
+| `GET /link-types` | listLinkTypes | The types a link between two records may have. | Read records | at once |
 | `GET /records/references` | readRecordReferences | Read names and archive state for a bounded set of records. | Read records | at once |
 
 ## Pipelines
@@ -350,6 +353,9 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /activities/{id}/meeting-brief` | getMeetingBrief | The pre-meeting brief for one booked meeting — goal, commitments, where the deal stands. | Read records | at once |
 | `GET /activities/{id}/pipeline` | readActivityPipelineTrace | Every ingress stage this message passed through, and why each did or did not run. | Read records | at once |
 | `POST /activities/{id}/relink` | relinkActivity | Re-associate a captured activity to a chosen deal/entity (idempotent, source-preserving). | Change records | may wait for approval |
+| `GET /link-suggestions` | listLinkSuggestions | The link suggestions waiting for the caller to decide. | Read records | at once |
+| `POST /link-suggestions/{id}/accept` | acceptLinkSuggestion | Accept a suggestion, filing the message under its record. | Change records | at once |
+| `POST /link-suggestions/{id}/reject` | rejectLinkSuggestion | Reject a suggestion. The message stays where it is, and the suggestion is not offered again. | Change records | at once |
 | `POST /activities/{id}/deal-decline` | declineActivityDeal | Say a captured message is not about a deal, or about none of the deals its question offered. | Change records | at once |
 | `PUT /activities/{id}/deal-relevance` | setActivityDealRelevance | Say whether an activity linked to a deal is about that deal, or take that back. | Change records | at once |
 | `GET /activities/{id}/project-filing` | getActivityProjectFiling | What filing this activity under a project did to its retention, and whether it can be undone. | Read records | at once |
@@ -740,6 +746,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 | `GET /knowledge/corpora/{id}` | readCorpus | One corpus and how much of it is searchable. | Read records | at once |
 | `PATCH /knowledge/corpora/{id}` | updateCorpus | Edit a corpus — its words, its floor, or which one the palette asks. | Change records | at once |
 | `DELETE /knowledge/corpora/{id}` | archiveCorpus | Archive a corpus and everything filed in it. | Change records | at once |
+| `POST /knowledge/corpora/{id}/restore` | restoreCorpus | Bring an archived corpus back with everything filed in it. | Change records | at once |
 | `POST /knowledge/corpora/{id}/documents` | uploadCorpusDocument | Add a document to this corpus. | Change records | at once |
 | `GET /knowledge/corpora/{id}/documents` | listCorpusDocuments | The documents filed in this corpus, and how far each one's ingest got. | Read records | at once |
 | `GET /knowledge/documents/{id}` | downloadCorpusDocument | Download a document's own bytes. | Read records | at once |
@@ -961,6 +968,7 @@ Every call a passport can make, grouped by area. Find the operationId in openapi
 
 | Call | operationId | What it does | Permission | Runs |
 | --- | --- | --- | --- | --- |
+| `GET /record-kinds` | listRecordKinds | Which kinds of record installed extensions add beside core's own. | Read records | at once |
 | `GET /extensions` | listExtensions | List the composed extension units and what each contributes. Read-only; needs the extension_access read grant. | Read records | at once |
 | `GET /extensions/{name}/settings` | getExtensionSettings | Read what the core does with a unit's feed. Needs the extension_access read grant. | Read records | at once |
 

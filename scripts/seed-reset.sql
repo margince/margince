@@ -46,6 +46,7 @@ DECLARE
     'activity_review_template',
     'auth_token',
     'channel_provider',
+    'language',
     'communication_instruction',
     'currency_minor_digits',
     'data_task_run',

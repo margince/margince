@@ -7,12 +7,8 @@ import { Badge } from "../../design-system/atoms";
 import { CellStrip, type ListColumn } from "../../design-system/listtable";
 import type { BoardMoneyColumn } from "../../design-system/pipelineboard";
 import { FieldGuard } from "../../design-system/rbac";
-import {
-  formatAge,
-  formatDate,
-  formatMoney,
-  formatPercent,
-} from "../../format/format";
+import { activityAge } from "../../format/activitywhen";
+import { formatDate, formatMoney, formatPercent } from "../../format/format";
 import type { Locale, useT } from "../../i18n";
 import { closeDayOf } from "../../lib/closeday";
 import type { StageTotals } from "../../lib/deals.queries";
@@ -238,7 +234,15 @@ export function dealColumns(
         deal.last_activity_at ? (
           <CellStrip>
             <span>
-              {formatAge(deal.last_activity_at, Date.now(), locale, recordZone)}
+              {activityAge(
+                {
+                  at: deal.last_activity_at,
+                  precision: deal.last_activity_precision ?? "instant",
+                },
+                Date.now(),
+                locale,
+                recordZone,
+              )}
             </span>
             {deal.stalled && (
               <Badge tone="warning">{t("deal.stalledBadge")}</Badge>

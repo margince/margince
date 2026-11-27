@@ -52,6 +52,39 @@ export function useReassignTask() {
   });
 }
 
+// Take one task nobody holds.
+//
+// Its own endpoint, because the reassignment patch needs write access to the
+// task. A reader who may only see an unassigned task has none.
+export function useTakeTask() {
+  const queryClient = useQueryClient();
+  return useMutation({
+    mutationFn: async (input: {
+      activityId: string;
+      version: number | undefined;
+    }) =>
+      unwrap(
+        await api.POST("/activities/{id}/take", {
+          params: {
+            path: { id: input.activityId },
+            ...ifMatch(requireVersion(input.version)),
+          },
+        }),
+      ),
+    onSuccess: (activity, input) =>
+      refetchAfterAssignment(queryClient, input.activityId, activity),
+    onError: (error, input) => {
+      // A lost race reads the row again, so the list shows who holds it now.
+      if (
+        problemCodeOf(error) === "version_skew" ||
+        problemCodeOf(error) === "conflict"
+      ) {
+        return refetchAfterAssignment(queryClient, input.activityId, undefined);
+      }
+    },
+  });
+}
+
 // Give one record a new owner, through the module that owns it.
 //
 // The exception's subject decides the endpoint, and this table is the whole

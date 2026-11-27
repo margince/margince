@@ -74,148 +74,6 @@ function spokenByTheReader(key: string): boolean {
   );
 }
 
-// Owned by the Vocabulary table's Never column on the German style page. That
-// column sets each of these words in code format, and the last test holds the
-// two equal.
-// Whole words and case-sensitive, so the noun "Versprechen" is retired and a
-// closed compound such as "Nutzerkonto" is not.
-const RETIRED_WORDS = [
-  "Firma",
-  "Firmen",
-  "Workspace",
-  "Arbeitsbereich",
-  "Account",
-  "Accounts",
-  "Mandant",
-  "Ansprechpartner",
-  "Opportunity",
-  "Opportunities",
-  "Verkaufschance",
-  "Verkaufschancen",
-  "Trichter",
-  "Funnel",
-  "Forecast",
-  "Forecasts",
-  "Arbeitsliste",
-  "Briefing",
-  "Tagesbericht",
-  "genehmigen",
-  "genehmigt",
-  "Genehmigung",
-  "Genehmigungen",
-  "Urteil",
-  "Urteile",
-  "Verdikt",
-  "Versprechen",
-  "Owner",
-  "Besitzer",
-  "Inhaber",
-  "Aufbewahrungssperre",
-  "Einkaufskomitee",
-  "Kaufgremium",
-  "Deployment",
-  "Instanz",
-  "Administrator",
-  "Administratoren",
-  "Verwalter",
-  "Systemadministrator",
-  "Systembetreiber",
-  "Betreiber",
-  "Kollege",
-  "Kollegin",
-  "Kollegen",
-  "Nutzer",
-  "Nutzern",
-  "Benutzer",
-  "Benutzern",
-  "Benutzende",
-  "Anwender",
-  "Anwenders",
-  "Anwendern",
-  "Mitarbeiter",
-  "Mitarbeitern",
-  "Vertriebsmitarbeiter",
-  "Empfänger",
-  "Empfängern",
-  "Absender",
-  "Absenders",
-  "Absendern",
-  "Autor",
-  "Autors",
-  "Autoren",
-  "Eigentümer",
-  "Eigentümers",
-  "Eigentümern",
-  "Teilnehmer",
-  "Teilnehmers",
-  "Teilnehmern",
-  "Käufer",
-  "Käufers",
-  "Käufern",
-  "Verkäufer",
-  "Verkäufers",
-  "Verkäufern",
-  "Ersteller",
-  "Erstellers",
-  "Erstellern",
-  "Leser",
-  "Lesers",
-  "Lesern",
-  "Deal-Room",
-  "Spine",
-  "Backread",
-  "Gastgeber",
-  "Organisator",
-  "Organisatoren",
-  "Deep Read",
-  "Zulassungsprüfung",
-  "Audit-Trail",
-  "Prüfprotokoll",
-  "AI",
-  "einloggen",
-  "eingeloggt",
-  "Nochmal",
-  "nochmal",
-  "uploaden",
-  "downloaden",
-  "Email",
-  "Emails",
-  "eMail",
-  "Mailbox",
-  "Meeting",
-  "Meetings",
-  "Task",
-  "Tasks",
-  "Schlagwort",
-  "Report",
-  "Reports",
-  "Allowance",
-  "Seat",
-  "Seats",
-  "Privatsphäre",
-  "GDPR",
-  "Gegenbuchung",
-  "Ctrl",
-  "anlegen",
-  "Anlegen",
-  "angelegt",
-  "anzulegen",
-  "erfolgt",
-  "seitens",
-  "Seitens",
-  "hinsichtlich",
-  "Hinsichtlich",
-  "bezüglich",
-  "Bezüglich",
-  "mittels",
-  "Mittels",
-  "zwecks",
-  "Zwecks",
-  "Durchführung",
-  "Vornahme",
-  "Inanspruchnahme",
-];
-
 // Keys where a retired word keeps a sense the table does not retire.
 const RETIRED_WORD_KEPT = new Map<string, string>([
   ["firstRun.platform.google", "Google Workspace is a product name"],
@@ -261,17 +119,43 @@ function retiredWordPattern(retired: string): RegExp {
   return word(retired.replace(/[.*+?^${}()|[\]\\]/g, "\\$&"));
 }
 
-// The words the Never column marks as gated. A plain word there is the
-// reviewer's, held only in the sense its row gives.
+// The words the Never column marks as gated, which the backend gate
+// germanvocabulary_test.go reads for the server's German too. A plain word
+// there is the reviewer's, held only in the sense its row gives. Whole words
+// and case-sensitive, so the noun "Versprechen" is retired and a closed
+// compound such as "Nutzerkonto" is not.
 function gatedNeverWords(neverColumn: string): string[] {
   return [...neverColumn.matchAll(/`([^`]+)`/g)].map(([, gated]) => gated);
 }
 
-export function vocabularyNeverColumn(): string {
-  const page = readFileSync(
+function stylePage(): string {
+  return readFileSync(
     join(repoRoot, "docs", "reference", "ui-copy-style-de.md"),
     "utf8",
   );
+}
+
+/**
+ * Fails a parse of the Never column that reads a different number of words
+ * than the page states. A lost row then cannot shorten the list. The backend
+ * gate germanvocabulary_test.go holds the same count.
+ */
+export function neverColumnCountFindings(page: string = stylePage()): string[] {
+  const stated = /The Never column\s+retires\s+(\d+)\s+words/.exec(page)?.[1];
+  if (stated === undefined) {
+    return [
+      "the style page states no count of the words its Never column retires",
+    ];
+  }
+  const parsed = gatedNeverWords(vocabularyNeverColumn(page)).length;
+  return String(parsed) === stated
+    ? []
+    : [
+        `parsed ${parsed} retired words from the Never column, and the page states ${stated}`,
+      ];
+}
+
+export function vocabularyNeverColumn(page: string = stylePage()): string {
   const section = page.split("\n## Vocabulary\n")[1]?.split("\n## ")[0] ?? "";
   return section
     .split("\n")
@@ -362,15 +246,15 @@ export function styleFindings(
   // A „…“ pair is removed first, so what remains is a mark used some other
   // way: an English pair, guillemets, or an opening „ nothing closes.
   const unpaired = (value: string) => value.replace(/„[^„“]*“/g, "");
+  const retiredWords = gatedNeverWords(neverColumn);
   const stale = [...RETIRED_WORD_KEPT.keys()].filter((key) => {
     const carried = copies
       .map(({ catalog }) => catalog[key])
       .find((value) => value !== undefined);
-    return !RETIRED_WORDS.some((retired) =>
+    return !retiredWords.some((retired) =>
       retiredWordPattern(retired).test(prose(carried ?? "")),
     );
   });
-  const gated = gatedNeverWords(neverColumn);
   return [
     ...copies
       .filter(({ catalog }) => Object.keys(catalog).length === 0)
@@ -444,7 +328,7 @@ export function styleFindings(
           key.startsWith(CONTROLLER_SPEAKS_PREFIX) || spokenByTheReader(key),
       },
     ),
-    ...RETIRED_WORDS.flatMap((retired) =>
+    ...retiredWords.flatMap((retired) =>
       offenders("uses no retired word", retiredWordPattern(retired), {
         text: prose,
         exempt: (key) => RETIRED_WORD_KEPT.has(key),
@@ -453,23 +337,19 @@ export function styleFindings(
     ...stale.map(
       (key) => `keeps a retired word only where a catalog carries it: ${key}`,
     ),
-    ...(gated.length > 0
+    ...(retiredWords.length > 0
       ? []
       : ["the Vocabulary table's Never column sets no word in code"]),
-    ...RETIRED_WORDS.filter((retired) => !gated.includes(retired)).map(
-      (retired) => `retires a word the Vocabulary table does not: ${retired}`,
-    ),
-    ...gated
-      .filter((one) => !RETIRED_WORDS.includes(one))
-      .map((one) => `misses a word the Vocabulary table retires: ${one}`),
   ];
 }
 
 export const rule: CensusRule = {
   name: "copy-style-de",
   corpus: (tree) => tree.files.filter((file) => file.path === coreCatalog),
-  floors: () =>
-    listedUnitCopy("de").length > 0 ? [] : ["no unit ships a de.json"],
+  floors: () => [
+    ...(listedUnitCopy("de").length > 0 ? [] : ["no unit ships a de.json"]),
+    ...neverColumnCountFindings(),
+  ],
   across: (corpus) => {
     const core = corpus[0]?.source;
     return core ? styleFindings(germanCopies(core)) : [];

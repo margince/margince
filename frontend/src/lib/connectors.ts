@@ -145,3 +145,19 @@ export function sendingMailboxes(
 ): CaptureConnection[] {
   return connections.filter((c) => holdsSendGrant(c) && isLiveConnection(c));
 }
+
+/** The shared mailboxes the signed-in member may reply as. The server lists only
+ *  those the member's team reads and an admin let it reply as, so an empty
+ *  answer also stands for a mailbox the member must not know exists. */
+export function useReplyableSharedMailboxes() {
+  return useQuery({
+    queryKey: ["shared-mailboxes", "replyable"],
+    queryFn: async () => {
+      const { data, error } = await api.GET("/shared-mailboxes/replyable");
+      if (error) {
+        throwProblem(error);
+      }
+      return data.items;
+    },
+  });
+}

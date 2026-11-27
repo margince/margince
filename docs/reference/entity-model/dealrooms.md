@@ -6,7 +6,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 
 ## deal_room
 
-14 columns · primary key `(id)` · referenced by 6 foreign keys
+15 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -21,6 +21,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Server-stamped from the authenticated principal; never client-supplied. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
+| `search_tsv` | `tsvector`, generated as `(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(title, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(title, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(welcome_message, ''::text))), 'B'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(welcome_message, ''::text))), 'B'::"char"))` |  | Computed by the database. It cannot be written directly. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -45,6 +46,7 @@ The 8 tables owned by `dealrooms`, as the migrations build them. [Back to the en
 - `deal_room_one_open_room_per_deal`: `gist (deal_id, tstzrange(created_at, expires_at)) WHERE ((state = ANY (ARRAY['draft', 'building', 'ready', 'publishing', 'live', 'paused'])) AND (archived_at IS NULL))`
 - `deal_room_pkey`: `unique, btree (id)`
 - `idx_deal_room_deal`: `btree (deal_id)`
+- `idx_deal_room_search`: `gin (search_tsv)`
 
 **Triggers**
 

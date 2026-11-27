@@ -102,6 +102,7 @@ func TestVoiceStagesAreFencedToTheClaimGeneration(t *testing.T) {
 
 func TestDocumentRetryUsesSessionDeathInsteadOfTheOldTimer(t *testing.T) {
 	env := integration.Setup(t)
+	env.GrantRole(t, env.AdminUser, "admin")
 	ctx := env.Admin()
 	pipeline, stage, _ := integration.DealFixture(t, env)
 	deal := env.SeedDeal(t, "Document recovery", pipeline, stage, &env.Rep1)
@@ -141,7 +142,7 @@ func TestDocumentRetryUsesSessionDeathInsteadOfTheOldTimer(t *testing.T) {
 		t.Fatalf("replacement offers=%d", enqueued)
 	}
 	worker := newDocumentExtractWorker(env.Pool, nil, blob, discardLogger())
-	if err := worker.Work(context.Background(), &river.Job[DocumentExtractArgs]{Args: DocumentExtractArgs{Workspace: env.WS, AttachmentID: attachmentID, ExtractionReadID: reading.ID, RequestedBy: env.AdminUser.String()}}); err != nil {
+	if err := worker.Work(context.Background(), &river.Job[DocumentExtractArgs]{Args: DocumentExtractArgs{Workspace: env.WS, AttachmentID: attachmentID, ExtractionReadID: reading.ID, RequestedBy: "human:" + env.AdminUser.String()}}); err != nil {
 		t.Fatal(err)
 	}
 	finished, err := store.GetExtractionRead(ctx, attachmentID, reading.ID)
@@ -248,6 +249,9 @@ func (b failingDocumentBrain) Complete(context.Context, model.Request) (model.Re
 // instead of leaving it queued with no job behind it.
 func TestADocumentReadingIsHandedBackAndClosedOnItsLastTry(t *testing.T) {
 	env := integration.Setup(t)
+	// The reading works as an agent under the requester's live grants, and the
+	// harness seeds seats with no role.
+	env.GrantRole(t, env.AdminUser, "admin")
 	pipeline, stage, _ := integration.DealFixture(t, env)
 	deal := env.SeedDeal(t, "Document tries", pipeline, stage, &env.Rep1)
 	blob := blobstore.NewMemory()

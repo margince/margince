@@ -96,6 +96,7 @@ export const E2E_ADMIN_GRANTS: GrantSpec = {
   // AI usage, model calls and the health card, all three.
   ai_diagnostics: ["read"],
   ai_budget: ["read", "update"],
+  ai_team_rules: ["read", "update"],
   // The purposes card's own verb. The read stays on `contact` above, the gate
   // the endpoint applies, and nothing here updates or deletes a purpose.
   consent_config: ["create"],

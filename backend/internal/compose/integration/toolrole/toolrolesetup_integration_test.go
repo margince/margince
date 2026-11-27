@@ -92,6 +92,7 @@ var setupFixtures = map[string]func(p *recordPool) map[string]any{
 	},
 	"archive_pipeline": byID("pipeline"),
 	"restore_pipeline": byID("archived_pipeline"),
+	"restore_corpus":   byID("archived_corpus"),
 	"update_pipeline": func(p *recordPool) map[string]any {
 		return unversioned(p, "pipeline", map[string]any{"name": uniqueName()})
 	},
@@ -121,6 +122,7 @@ var setupFixtures = map[string]func(p *recordPool) map[string]any{
 	"update_partner_stage": func(p *recordPool) map[string]any {
 		return unversioned(p, "partner_stage", map[string]any{"label": uniqueName()})
 	},
+	"end_partner_program": byID("live_partner"),
 	"upsert_partner": func(p *recordPool) map[string]any {
 		return map[string]any{"id": p.take("live_partner"), "request_body": map[string]any{"partner_kinds": []any{"referral"}}}
 	},
@@ -234,6 +236,15 @@ func sweepPNG() []byte {
 	return png
 }
 
+// archivedVia makes a record and archives it through its DELETE route.
+func archivedVia(s sweepSeed, create func() string, path string) func() string {
+	return func() string {
+		id := create()
+		s.call("DELETE", path+id, nil, nil, nil)
+		return id
+	}
+}
+
 // setupSeeders make the records the setup calls act on.
 func setupSeeders(s sweepSeed) map[string]func() string {
 	versioned := func(path string, body integration.AnyMap) string {
@@ -313,12 +324,9 @@ func setupSeeders(s sweepSeed) map[string]func() string {
 			s.pool.note(id, "revision", budget.Revision)
 			return id
 		},
-		"pipeline": pipeline,
-		"archived_pipeline": func() string {
-			id := pipeline()
-			s.call("DELETE", "/v1/pipelines/"+id, nil, nil, nil)
-			return id
-		},
+		"pipeline":          pipeline,
+		"archived_pipeline": archivedVia(s, pipeline, "/v1/pipelines/"),
+		"archived_corpus":   archivedVia(s, func() string { return s.create["corpus"]() }, "/v1/knowledge/corpora/"),
 		"pipeline_order": func() string {
 			var list struct {
 				Data []struct {

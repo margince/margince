@@ -57,6 +57,17 @@ SELECT EXISTS (SELECT 1 FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid 
                   AND i.indkey[0] = (SELECT attnum FROM pg_attribute WHERE attrelid = i.indrelid AND attname = $2)
                   AND i.indkey[1] = (SELECT attnum FROM pg_attribute WHERE attrelid = i.indrelid AND attname = $3))`
 
+// kindOwnerShape reads whether one ext table's owner column is a uuid, and
+// whether a valid btree index over every row starts with it. Every row-scoped
+// read filters on that column.
+const kindOwnerShape = `
+SELECT COALESCE((SELECT a.atttypid = 'uuid'::regtype FROM pg_attribute a
+                  WHERE a.attrelid = to_regclass($1) AND a.attname = $2 AND NOT a.attisdropped), false),
+       EXISTS (SELECT 1 FROM pg_index i JOIN pg_class c ON c.oid = i.indexrelid JOIN pg_am am ON am.oid = c.relam
+                WHERE i.indrelid = to_regclass($1) AND am.amname = 'btree'
+                  AND i.indisvalid AND i.indisready AND i.indpred IS NULL
+                  AND i.indkey[0] = (SELECT attnum FROM pg_attribute WHERE attrelid = i.indrelid AND attname = $2))`
+
 // VerifyRecordKinds checks each declared kind against the schema the unit
 // shipped. The table must exist in the ext schema and keep `id`, `archived_at`
 // and every declared field. A unique index must cover the natural key and
@@ -86,6 +97,30 @@ func VerifyRecordKinds(ctx context.Context, q recordKindQuerier, kinds []recordk
 		if err := verifyKindReadIndexes(ctx, q, k, qualified); err != nil {
 			return err
 		}
+		if err := verifyKindOwner(ctx, q, k, qualified); err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
+// verifyKindOwner refuses an owner column core cannot scope rows by. It may be
+// missing, of a type other than uuid, or without an index to filter on.
+func verifyKindOwner(ctx context.Context, q recordKindQuerier, k recordkinds.Declared, qualified string) error {
+	if k.OwnerColumn == "" {
+		return nil
+	}
+	var isUUID, indexed bool
+	if err := q.QueryRow(ctx, kindOwnerShape, qualified, k.OwnerColumn).Scan(&isUUID, &indexed); err != nil {
+		return fmt.Errorf("record kind %s: reading the owner column of %s: %w", k.Name, qualified, err)
+	}
+	column := pgx.Identifier{k.OwnerColumn}.Sanitize()
+	if !isUUID {
+		return fmt.Errorf("record kind %s: table %s has no uuid column %s to hold the owner", k.Name, qualified, column)
+	}
+	if !indexed {
+		return fmt.Errorf("record kind %s: table %s has no index for the row scope; add CREATE INDEX ON %s (%s)",
+			k.Name, qualified, qualified, column)
 	}
 	return nil
 }

@@ -8,6 +8,7 @@ import {
   formatAnalyticsPercent,
   MONEY_ABSENT,
 } from "../../format/format";
+import { addMinor } from "../../format/minorsum";
 import { type Locale, useT } from "../../i18n";
 import { dealsFilteredBy } from "../../lib/dealsaddress";
 import {
@@ -55,18 +56,24 @@ function currencyScales(
 
 // Each currency's open total, the whole a company's share is taken of. The
 // sums are native, so a share is only ever of the pipeline in its own currency.
+// A currency whose total passes the exact range has none, so no share is drawn.
 function currencyTotals(
   rows: readonly ReportRow[],
 ): ReadonlyMap<string, number> {
-  const totals = new Map<string, number>();
+  const totals = new Map<string, number | undefined>();
   for (const row of rows) {
     const currency = rowCurrency(row);
     const rawMinor = rowMoney(row, "raw_minor");
     if (currency && rawMinor != null) {
-      totals.set(currency, (totals.get(currency) ?? 0) + rawMinor);
+      const running = totals.has(currency) ? totals.get(currency) : 0;
+      totals.set(currency, addMinor(running, rawMinor));
     }
   }
-  return totals;
+  const exact = new Map<string, number>();
+  for (const [currency, total] of totals) {
+    if (total !== undefined) exact.set(currency, total);
+  }
+  return exact;
 }
 
 export function CompanyTable({

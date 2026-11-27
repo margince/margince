@@ -5,13 +5,11 @@
 
 package gates
 
-// Every approval but a rule's says why it was staged: the reason in words, or
+// Every approval says why it was staged: the reason in words, or
 // the quoted evidence it rests on. A card with neither leads with its headline alone.
 //
 // It reads each approvals.StageInput literal that names a Summary, the shape
 // every producer stages through. The literal itself sets Why or Evidence.
-// Rule-staged actions in internal/compose/workflows.go are waived until they
-// know the rule that fired them.
 
 import (
 	"go/ast"
@@ -34,9 +32,7 @@ const approvalWhyFloor = 20
 const noticeWhyFloor = 12
 
 // approvalWhyWaived names the producers that cannot say why yet.
-var approvalWhyWaived = gatekit.Waive(map[string]string{
-	"internal/compose/workflows.go": "a rule-staged action knows neither the rule nor the event that fired it, so its card shows the action alone (#13377)",
-})
+var approvalWhyWaived = gatekit.Waive(map[string]string{})
 
 // TestEveryNoticeNamesWhatItIsAbout holds notices to the same rule: a notice
 // links its record or says in its body what happened.

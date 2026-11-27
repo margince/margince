@@ -34,7 +34,7 @@ func TestOfferDraftRequestFencesEveryReadItIsHandedUnderTheMarkerItDeclares(t *t
 	req := offerDraftRequest(
 		[]dealContextItem{{SourceID: "activity:1", Snippet: hostile}},
 		[]crmcontracts.Product{{Name: "Support Plan", UnitPriceMinor: 5000, Currency: "EUR"}},
-		string(textlang.English),
+		string(textlang.English), "",
 	)
 
 	marker, declared := promptfence.MarkerIn(req.System)
@@ -62,11 +62,11 @@ func TestOfferDraftRequestFencesEveryReadItIsHandedUnderTheMarkerItDeclares(t *t
 func TestOfferDraftRequestMintsAFreshBoundaryPerCall(t *testing.T) {
 	items := []dealContextItem{{SourceID: "activity:1", Snippet: "Client wants a workshop."}}
 
-	first, declared := promptfence.MarkerIn(offerDraftRequest(items, nil, string(textlang.English)).System)
+	first, declared := promptfence.MarkerIn(offerDraftRequest(items, nil, string(textlang.English), "").System)
 	if !declared {
 		t.Fatal("the offer-draft system prompt declares no data boundary")
 	}
-	second, declared := promptfence.MarkerIn(offerDraftRequest(items, nil, string(textlang.English)).System)
+	second, declared := promptfence.MarkerIn(offerDraftRequest(items, nil, string(textlang.English), "").System)
 	if !declared {
 		t.Fatal("the second offer-draft system prompt declares no data boundary")
 	}
@@ -304,7 +304,7 @@ func TestOfferDraftRequestHoldsTheModelToTheShapeTheParserReads(t *testing.T) {
 	req := offerDraftRequest(
 		[]dealContextItem{{SourceID: offerDraftKickoffSource, Snippet: "agreed to 20000 cents for it"}},
 		[]crmcontracts.Product{{Name: offerDraftSupportPlan, UnitPriceMinor: 5000, Currency: "EUR"}},
-		string(textlang.English),
+		string(textlang.English), "",
 	)
 	if len(req.ResponseSchema) == 0 {
 		t.Fatal("the offer-draft request sends no response schema")

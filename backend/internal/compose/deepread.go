@@ -269,7 +269,7 @@ func (w *siteDeepReadWorker) limitedCrawler(ctx context.Context, args SiteDeepRe
 // (crawlAndExtract): page calls launch as pages commit, so the crawl's slow
 // tail hides behind extraction, and the crawler owns the wall clock.
 func (w *siteDeepReadWorker) readSite(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim) (siteCrawl, siteExtraction, error) {
-	if err := w.contacts.UpdateSiteReadProgress(ctx, args.SiteReadID, claim.ClaimedAt, "crawling", nil, w.reclaimAfter()); err != nil {
+	if err := w.contacts.UpdateSiteReadProgress(runBooks(ctx), args.SiteReadID, claim.ClaimedAt, "crawling", nil, w.reclaimAfter()); err != nil {
 		w.log.WarnContext(ctx, "site read progress update failed", "read", args.SiteReadID.String(), "err", err)
 	}
 	crawler, err := w.limitedCrawler(ctx, args, claim)
@@ -302,7 +302,13 @@ func (w *siteDeepReadWorker) run(ctx context.Context, args SiteDeepReadArgs) err
 	// Everything past the claim runs as the requester the ROW names — the
 	// dossier row is the authority on who asked, never the job payload — so the
 	// provenance on what this read writes is the row's answer too.
-	ctx = withClaimedRequester(ctx, claim.RequestedBy, args.SiteReadID)
+	ctx, err = readPrincipals(ctx, identity.NewService(w.pool), claim.RequestedBy, args.SiteReadID)
+	if workRefused(err) {
+		return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: the colleague who asked for it can no longer act: %w", args.SiteReadID, err))
+	}
+	if err != nil {
+		return w.fail(ctx, args.SiteReadID, fmt.Errorf("site deep read %s: %w", args.SiteReadID, err))
+	}
 
 	if settled, err := w.routeClaimedRead(ctx, args, claim); settled || err != nil {
 		return err
@@ -391,7 +397,7 @@ func (w *siteDeepReadWorker) routeClaimedRead(ctx context.Context, args SiteDeep
 
 func (w *siteDeepReadWorker) progressiveCallbacks(ctx context.Context, readID ids.UUID, claimedAt time.Time) (func(string, []crawlPage), func(pageFactsResult)) {
 	progress := func(phase string, pages []crawlPage) {
-		if err := w.contacts.UpdateSiteReadProgress(ctx, readID, claimedAt, phase, siteReadPages(pages), w.reclaimAfter()); err != nil {
+		if err := w.contacts.UpdateSiteReadProgress(runBooks(ctx), readID, claimedAt, phase, siteReadPages(pages), w.reclaimAfter()); err != nil {
 			w.log.WarnContext(ctx, "site read progress update failed", "read", readID.String(), "err", err)
 		}
 	}
@@ -403,7 +409,7 @@ func (w *siteDeepReadWorker) progressiveCallbacks(ctx context.Context, readID id
 			w.log.WarnContext(ctx, "site read progressive draft hash failed", "read", readID.String(), "err", err)
 			return
 		}
-		if err := w.contacts.UpdateSiteReadDraft(ctx, readID, partial.facts, found, entities, hash); err != nil {
+		if err := w.contacts.UpdateSiteReadDraft(runBooks(ctx), readID, partial.facts, found, entities, hash); err != nil {
 			w.log.WarnContext(ctx, "site read progressive draft update failed", "read", readID.String(), "err", err)
 		}
 	}
@@ -466,7 +472,7 @@ func (w *siteDeepReadWorker) finish(ctx context.Context, readID ids.UUID, claim 
 		reason := string(*crawl.Stopped)
 		in.StoppedReason = &reason
 	}
-	tctx, cancel := terminalCtx(ctx)
+	tctx, cancel := terminalCtx(runBooks(ctx))
 	defer cancel()
 	if err := w.contacts.FinishSiteRead(tctx, readID, in); err != nil {
 		return fmt.Errorf("site deep read %s: finish: %w", readID, err)

@@ -42,7 +42,7 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"strings"
+	"errors"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -55,6 +55,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
+	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
 func TestATierFlooredForOneRecordTypeBindsTheToolDoorToo(t *testing.T) {
@@ -67,13 +68,13 @@ func TestATierFlooredForOneRecordTypeBindsTheToolDoorToo(t *testing.T) {
 	company := seedCompanyForTierFloor(human, t, native)
 
 	// The identical effect POST /v1/projects performs, asked for through the
-	// verb whose tier the contract never tightened. Automatic work may not stage
-	// the approval the floor asks for. So the floor reaching this door shows as
-	// the staging refusal, and nothing is written.
+	// verb whose tier the contract never tightened. Automatic work stages the
+	// approval the floor asks for, for the colleague it acts for. So the floor
+	// reaching this door shows as a staged approval, and nothing is written.
 	_, err := registry.Invoke(tierFloorAgent(t, e), "create_record",
 		json.RawMessage(`{"record_type":"project","fields":{"name":"Unapproved",`+
 			`"company_id":"`+company.String()+`"}}`))
-	if !refusedForWantOfAPassport(err) {
+	if !stagedByTheFloor(err) {
 		t.Errorf("create_record{project} answered %v, want the floor to hold it back — a tier tightened "+
 			"for one record type is a decision the tool door must see", err)
 	}
@@ -114,7 +115,7 @@ func TestATightenedUpdateAlsoHoldsBackTheToolDoor(t *testing.T) {
 	_, err := registry.Invoke(tierFloorAgent(t, e), "update_record",
 		json.RawMessage(`{"why":"A test asks for this change.","record_type":"project","id":"`+project.String()+
 			`","fields":{"name":"Renamed without asking"}}`))
-	if !refusedForWantOfAPassport(err) {
+	if !stagedByTheFloor(err) {
 		t.Errorf("update_record{project} answered %v, want the floor to hold the patch back", err)
 	}
 	if n := liveProjectsNamed(human, t, e, "Renamed without asking"); n != 0 {
@@ -185,11 +186,11 @@ func composedRegistryFlooring(e *integration.Env, recordType string) *agents.Reg
 	return registry
 }
 
-// refusedForWantOfAPassport reports the staging engine's refusal of an agent
-// with no passport, which is how a floor answers automatic work. The engine
-// answers it with a plain error, so its words are matched.
-func refusedForWantOfAPassport(err error) bool {
-	return err != nil && strings.Contains(err.Error(), "an agent stages on its passport")
+// stagedByTheFloor reports the floor holding automatic work back: the call is
+// staged as an approval for the colleague the work acts for, not done.
+func stagedByTheFloor(err error) bool {
+	staged, ok := errors.AsType[*workflow.StagedApprovalError](err)
+	return ok && !staged.AlreadyApproved
 }
 
 // seedProjectForTierFloor creates one project through the real writer, so the

@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/shared/kernel/dormancy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // The list filter puts each company on the rung the page's reading names, on
@@ -69,7 +70,11 @@ func TestTheDormancyFilterAgreesWithTheLadderOnEveryBoundaryDay(t *testing.T) {
 			t.Fatalf("listing the %s companies: %v", rung, err)
 		}
 		for id, at := range lastActivity {
-			want := dormancy.Default.Read(at, now, berlin).Rung == rung
+			var last *occurredday.Moment
+			if at != nil {
+				last = &occurredday.Moment{At: *at}
+			}
+			want := dormancy.Default.Read(last, now, berlin).Rung == rung
 			got := slices.ContainsFunc(listed, func(c crmcontracts.Company) bool { return c.Id == openapiUUID(ids.From[ids.CompanyKind](id)) })
 			if got != want {
 				t.Errorf("rung %s: company with last activity %v listed=%v, want %v", rung, at, got, want)

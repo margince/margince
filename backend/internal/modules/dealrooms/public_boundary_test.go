@@ -130,7 +130,7 @@ func TestSessionScopedStoreNeverConsultsTheSeatGates(t *testing.T) {
 			t.Fatal(err)
 		}
 		text := string(src)
-		for _, gate := range []string{"auth.Require(", "auth.RequireHuman(", "auth.EnsureVisible(", "auth.EnsureWritable(", "dealScopeClause(", "readRoom("} {
+		for _, gate := range []string{"auth.Require(", "auth.RequireHuman(", "auth.EnsureVisible(", "auth.EnsureWritable(", "DealChildScopeClause(", "readRoom("} {
 			if strings.Contains(text, gate) {
 				t.Errorf("%s calls %s: the seat gates refuse a buyer and the deal-scoped room read assumes one; a buyer's authority is the session predicate", file, strings.TrimSuffix(gate, "("))
 			}

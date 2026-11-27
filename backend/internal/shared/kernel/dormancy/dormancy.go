@@ -14,7 +14,6 @@ import (
 	"strings"
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
@@ -76,12 +75,13 @@ type Reading struct {
 }
 
 // Read places an account whose last activity was last. A nil last is an
-// account with no activity at all.
-func (l Ladder) Read(last *time.Time, now time.Time, zone *time.Location) Reading {
+// account with no activity at all. A date-only last activity counts its silence
+// from its own date.
+func (l Ladder) Read(last *occurredday.Moment, now time.Time, zone *time.Location) Reading {
 	if last == nil {
 		return Reading{Rung: Stale, NoActivity: true}
 	}
-	days := max(elapsed.Days(*last, now, zone), 0)
+	days := max(occurredday.DaysSince(*last, now, zone), 0)
 	return Reading{Rung: l.rungAt(days), SilentDays: days}
 }
 
@@ -129,6 +129,20 @@ func next(r Rung) (Rung, bool) {
 type Window struct {
 	FromDaysBack, BeforeDaysBack *int
 	IncludesNone                 bool
+}
+
+// DateStartLead bounds how many days after its date's start a date-only clock
+// is stored. Far east of UTC its noon UTC is a day and a few hours later.
+const DateStartLead = 2
+
+// Loosened is the window with its later bound moved DateStartLead days later.
+// Every clock the window admits on its date's start is inside it as stored, so
+// it can be an indexed range on the column.
+func (w Window) Loosened() Window {
+	if w.BeforeDaysBack != nil {
+		w.BeforeDaysBack = new(*w.BeforeDaysBack - DateStartLead)
+	}
+	return w
 }
 
 // WindowOf answers the window of rung r. A last activity dated d days before

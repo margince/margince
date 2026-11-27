@@ -1925,7 +1925,7 @@ paths:
             type: string
             pattern: '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z0-9]+(_[a-z0-9]+)*$'
           description: >-
-            Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both.
+            Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. `listCompanyTypes` lists the values, and an agent reads them with the `read_workspace` action `company_types`.
         - name: owner_team_id
           in: query
           schema: {type: string, format: uuid}
@@ -3061,6 +3061,25 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: Read the partner extension on a company (404 if the company is not a partner).
+    delete:
+      tags: [Companies, Partners]
+      operationId: endPartnerProgram
+      security: [{bearerAuth: []}]
+      summary: End the partner program while keeping the company and commission history.
+      description: |-
+        Retires the partner extension. Company update authority is required. Existing terms and commission entries stay on record. The partner relationship type is removed in the same transaction; other relationship types stay.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204': {description: Partner program ended.}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/partner/setup:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -4362,7 +4381,7 @@ paths:
         - name: link_type
           in: query
           description: >-
-            A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter.
+            A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. `listLinkTypes` lists the values, and an agent reads them with the `read_workspace` action `link_types`.
           schema: {type: string, maxLength: 68}
         - name: tag_id
           in: query
@@ -6652,6 +6671,41 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/ChannelProviderDirectory'}
         '401': {$ref: '#/components/responses/Unauthorized'}
+  /company-types:
+    get:
+      tags: [Companies]
+      operationId: listCompanyTypes
+      security: [{bearerAuth: []}]
+      summary: Which company types installed extensions add beside core's own.
+      description: |-
+        The values a company can carry in `extension_relationship_types`, and the label a
+        screen shows for each. Which extensions are installed is a fact of the binary, so the
+        contract cannot list the values; this operation does.
+      responses:
+        '200':
+          description: Every declared type, ordered by value.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/CompanyTypeDirectory'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+  /record-kinds:
+    get:
+      tags: [Extensions]
+      operationId: listRecordKinds
+      security: [{bearerAuth: []}]
+      summary: Which kinds of record installed extensions add beside core's own.
+      description: |-
+        The record kinds this caller may read, each named `ext:<unit>:<kind>`, with the label a
+        screen shows, its fields, its natural key, its delete policy and the actions this caller
+        holds on it. Which extensions are installed is a fact of the binary, so the contract
+        cannot list the kinds; this operation does.
+      responses:
+        '200':
+          description: Every readable kind, ordered by name.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/RecordKindDirectory'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
   /tasks:
     post:
       tags: [Activities]
@@ -7278,6 +7332,99 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/Activity'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /link-types:
+    get:
+      tags: [Links]
+      operationId: listLinkTypes
+      security: [{bearerAuth: []}]
+      summary: The types a link between two records may have.
+      description: |-
+        Core's types, then each extension's, with the records each may start and end on. An
+        extension's type is named `ext:<unit>:<type>`.
+      responses:
+        '200':
+          description: Every link type.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LinkTypeList'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /link-suggestions:
+    get:
+      tags: [Activities]
+      operationId: listLinkSuggestions
+      security: [{bearerAuth: []}]
+      summary: The link suggestions waiting for the caller to decide.
+      description: |-
+        An extension may suggest which deal, company, contact or project a message belongs to. A
+        suggestion attaches nothing. It waits here until a reader accepts or rejects it. Margince
+        itself asks one question here: when several open deals fit a captured mail, it suggests each
+        of them to the one colleague the mailbox confirms is responsible. Such a suggestion has no
+        `unit`, and only that colleague sees and decides it. An agent acting for a colleague sees
+        and decides what that colleague would, and never another colleague's question.
+      responses:
+        '200':
+          description: The pending suggestions the caller may see.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LinkSuggestionList'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+  /link-suggestions/{id}/accept:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: acceptLinkSuggestion
+      security: [{bearerAuth: []}]
+      summary: Accept a suggestion, filing the message under its record.
+      description: |-
+        Files the message under the suggested record through the same relink as any other filing,
+        and closes the suggestion in the same transaction. The caller needs the right to update the
+        message and to attach to the target. Accepting a suggestion that is already accepted is the
+        same success. A rejected one answers `409`.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '200':
+          description: The suggestion, now accepted.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LinkSuggestion'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/VersionConflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /link-suggestions/{id}/reject:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Activities]
+      operationId: rejectLinkSuggestion
+      security: [{bearerAuth: []}]
+      summary: Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
+      description: |-
+        Closes the suggestion and attaches nothing. The same target is not proposed for the same
+        message a second time. Rejecting a suggestion that is already rejected is the same success.
+        An accepted one answers `409`.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '200':
+          description: The suggestion, now rejected.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/LinkSuggestion'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/Forbidden'}
         '404': {$ref: '#/components/responses/NotFound'}
         '409': {$ref: '#/components/responses/VersionConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
@@ -10722,7 +10869,8 @@ paths:
         - name: resource
           in: query
           required: true
-          description: The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared.
+          description: >-
+            The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. `listRecordKinds` lists the kinds the caller may read, and an agent reads them with the `read_workspace` action `record_kinds`.
           schema: {$ref: '#/components/schemas/FilterResource'}
       responses:
         '200':
@@ -12567,6 +12715,11 @@ paths:
           content:
             application/json:
               schema: {$ref: '#/components/schemas/SavedView'}
+        '409':
+          description: '`view_name_taken` — another live view of this resource owned by the caller has this name.'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Save a per-user view (columns, sort, filter state) for a resource.
@@ -12610,7 +12763,11 @@ paths:
             application/json:
               schema: {$ref: '#/components/schemas/SavedView'}
         '404': {$ref: '#/components/responses/NotFound'}
-        '409': {$ref: '#/components/responses/Conflict'}
+        '409':
+          description: '`version_skew` — the view changed since it was read; or `view_name_taken` — another live view of this resource owned by the caller has this name.'
+          content:
+            application/problem+json:
+              schema: {$ref: '#/components/schemas/Problem'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
         Update a saved view's name or query state.
@@ -13838,7 +13995,7 @@ paths:
           in: query
           schema:
             type: array
-            items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
+            items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|deal_room|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
           style: form
           explode: false
           description: >-
@@ -18412,7 +18569,7 @@ paths:
       summary: Rename a custom field or change whether create dialogs offer it (not a schema change).
       description: |-
         Audited catalog update of `label`, `show_in_create`, `reportable`
-        or `activity_kinds`;
+        `activity_kinds` or `pipeline_ids`;
         `column_name` never moves — the physical column identity is stable across rename.
         Merge-PATCH: `column_name`, `object`, and `type` are absent from the request schema
         entirely, and a body with neither setting is refused with a 422. A retired field
@@ -20092,7 +20249,7 @@ paths:
       operationId: mergeMembers
       summary: Merge a duplicate into the selected surviving member.
       description: |-
-        The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+        An unused source merges at once. A used source merges only after the holder of each side that is not deactivated has confirmed through `requestMemberMerge`; a deactivated side needs no confirmation, so two deactivated accounts merge on an administrator's say alone. The acting administrator can be neither side.
 
         Needs the passport permission Change records.
 
@@ -26810,6 +26967,8 @@ paths:
       operationId: listCorpora
       security: [{bearerAuth: []}]
       summary: The document corpora this workspace has defined.
+      parameters:
+        - $ref: '#/components/parameters/IncludeArchived'
       responses:
         '200':
           description: The corpora.
@@ -26818,6 +26977,7 @@ paths:
               schema: {$ref: '#/components/schemas/KnowledgeCorpusList'}
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
+        '422': {$ref: '#/components/responses/ValidationError'}
       description: The document corpora this workspace has defined.
     post:
       tags: [Knowledge]
@@ -26928,6 +27088,31 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
+        '422': {$ref: '#/components/responses/ValidationError'}
+  /knowledge/corpora/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Knowledge]
+      operationId: restoreCorpus
+      security: [{bearerAuth: []}]
+      summary: Bring an archived corpus back with everything filed in it.
+      description: |-
+        The undo half of `archiveCorpus`. The set, its documents and their passages return in one transaction, and the ask finds the passages again.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      responses:
+        '200':
+          description: The restored corpus.
+          content:
+            application/json:
+              schema: {$ref: '#/components/schemas/KnowledgeCorpus'}
+        '401': {$ref: '#/components/responses/Unauthorized'}
+        '403': {$ref: '#/components/responses/PermissionDenied'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/NameTakenConflict'}
         '422': {$ref: '#/components/responses/ValidationError'}
   /knowledge/corpora/{id}/documents:
     parameters:
@@ -28921,6 +29106,7 @@ components:
             readable by colleagues the moment it lands. `classified` — held to its participants
             until a classifier judges the thread ordinary. `held` — held whatever any classifier
             concludes.
+        history_narrowing: {$ref: '#/components/schemas/MailHistoryNarrowing'}
         context_tag: {$ref: '#/components/schemas/ConnectorContextTag'}
         history_baseline: {$ref: '#/components/schemas/MailHistoryBaseline'}
         created_at: {type: string, format: date-time, readOnly: true}
@@ -29023,7 +29209,20 @@ components:
             Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
             narrows: a move towards `shared` leaves history where it is, because opening what was
             captured under a stricter answer is a separate decision from what to do next. Rows a
-            human set to `selected` are never touched.
+            human set to `selected` are never touched. A background job does the narrowing after
+            the answer; a narrowing to `held` still pending is never loosened to `classified`.
+    MailHistoryNarrowing:
+      type: object
+      additionalProperties: false
+      readOnly: true
+      required: [posture, remaining]
+      description: |-
+        Earlier mail of this mailbox that a background job is still narrowing, after a change
+        asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+        yet keeps the audience it had.
+      properties:
+        posture: {type: string, enum: [classified, held], description: What the earlier mail is narrowed to.}
+        remaining: {type: integer, minimum: 0, description: Messages still to narrow.}
     WorkspaceEmailDomain:
       type: object
       required: [domain, source, verified]
@@ -29222,8 +29421,10 @@ components:
           description: The ledger's own lifecycle for this sender.
         decision:
           type: string
-          enum: [business, keep_out]
-          description: What YOU decided instead, absent when you have not.
+          enum: [business, keep_out, personal]
+          description: |-
+            What YOU decided instead, absent when you have not. `personal` is the standing decision a
+            private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
         overruled_kind:
           type: string
           description: |-
@@ -29593,6 +29794,12 @@ components:
           type: [string, 'null']
           format: date-time
           description: When the provider accepted it. Null unless the state is `sent`.
+        can_send_again:
+          type: boolean
+          description: |-
+            True when the reader may send this bounced message again to a corrected address,
+            by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+            message that bounced hard qualifies, once, and not one an agent wrote.
         files:
           type: array
           items: {$ref: '#/components/schemas/EmailDeliveryFile'}
@@ -31049,7 +31256,8 @@ components:
         p50_ms: {type: integer, format: int64}
         gave_up: {type: object, additionalProperties: {type: integer, format: int64}, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).'}
         switched: {type: integer, format: int64, description: 'Calls this step answered with another model than the one bound, by the provider''s own report; out of `answered`.'}
-        switched_to: {type: string, description: 'The model the provider named most often on those calls; absent when switched is 0.'}
+        switched_to: {type: string, description: 'The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step''s own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read.'}
+        switched_to_certification: {$ref: '#/components/schemas/AiRouteCertification'}
     AiDeferredWork:
       type: object
       required: [carrier, unit, available]
@@ -31585,7 +31793,7 @@ components:
       description: 'What kind of problem a report issue names, so a screen can group them. One closed list, the same one the server reports from.'
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_link_ambiguous_will_drop, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, amount_needs_currency, amount_too_many_decimals, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_far, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_not_found_will_drop, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_not_money, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_not_found_will_drop, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_column_empty_will_drop, employer_not_found, employer_not_found_dropped, employer_not_found_will_drop, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_a_record_id, id_not_visible, id_record_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_not_found_will_drop, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_ambiguous_will_drop, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_not_found_will_drop, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_row_skipped_will_drop, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_a_phone, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, ref_taken_by_another_record, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_link_ambiguous_will_drop, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, amount_needs_currency, amount_too_many_decimals, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_far, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_not_found_will_drop, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_not_money, currency_unset, deal_already_closed, deal_company_has_contracts, deal_field_not_for_pipeline, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_not_found_will_drop, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_column_empty_will_drop, employer_not_found, employer_not_found_dropped, employer_not_found_will_drop, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_a_record_id, id_not_visible, id_record_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_not_found_will_drop, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_ambiguous_will_drop, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_not_found_will_drop, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_row_skipped_will_drop, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_a_phone, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, ref_taken_by_another_record, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
     CreateImportRunRequest:
       type: object
@@ -32255,6 +32463,27 @@ components:
             code names other values carries them in `params`, an object of text values by
             name, so a screen can word the code in the reader's language; `message` stays
             the English sentence.
+    HiddenRecords:
+      type: object
+      description: >-
+        What the caller's row scope withheld from one list on a record page, so a short list never reads as the whole one. It states how many entries were withheld and which live colleagues own them, so the reader knows whom to ask. A withheld record's name, value and every other field stay withheld. Count 0 with no holders when nothing was withheld.
+      required: [count, holders]
+      properties:
+        count:
+          type: integer
+          minimum: 0
+          description: >-
+            How many entries the list would have shown under an unbounded scope and did not. It includes entries owned by a colleague who has left, who is not in `holders`.
+        holders:
+          type: array
+          description: The live colleagues who own at least one withheld entry, each once, by name.
+          items: {$ref: '#/components/schemas/HiddenRecordHolder'}
+    HiddenRecordHolder:
+      type: object
+      required: [user_id, display_name]
+      properties:
+        user_id: {type: string, format: uuid}
+        display_name: {type: string}
     PageInfo:
       type: object
       required: [has_more]
@@ -33104,12 +33333,19 @@ components:
           items: {$ref: '#/components/schemas/Relationship'}
     VCardImportReport:
       type: object
-      required: [results]
+      required: [results, staged_for_review]
       description: One entry per card in the file, in the order the file listed them.
       properties:
         results:
           type: array
           items: {$ref: '#/components/schemas/VCardImportResult'}
+        staged_for_review:
+          type: integer
+          minimum: 0
+          description: |-
+            How many cards were staged as a review in the approvals inbox, so
+            the reader knows how many answers are waiting. An undecided one
+            expires after 30 days, and the expiry deletes the card's data.
     VCardImportResult:
       type: object
       required: [index, full_name, outcome]
@@ -33123,7 +33359,8 @@ components:
             `created` — nobody matched, so the card became a contact, their company and the edge
             between them. `updated` — an exact match: what the card states replaces an older value, which
             stays in `superseded_value`, and a field a human corrected stands.
-            `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+            `needs_review` — a resemblance, so nothing was written; the card waits in the approvals
+            inbox, where whoever uploaded it merges it into the candidate or keeps it separate.
             `proposed` — a card read from a photo that nobody matched, waiting on an approval.
             `skipped` — the card states no name or one over 120 characters, carries a sending
             system's address, holds a value that is not readable text or cannot be stored, or
@@ -33435,6 +33672,12 @@ components:
           minimum: 0
           description: >-
             How many distinct live contacts THE CALLER MAY SEE hold a current job at this account. Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+        hidden_contact_holders:
+          type: array
+          readOnly: true
+          description: >-
+            The live colleagues who own at least one current contact at this account that the caller may not see, each once, so the reader knows whom to ask for an introduction ("Dana and Minh have contacts here you can't see"). It names who to ask and nothing else: no contact's name, role or id, and no count per colleague or in total. Empty when nothing is hidden, and a colleague who left or an agent seat is never listed. It reads the same employment set as `contact_count` with the contact scope turned around, so the two never describe different populations. Present exactly when `contact_count` is, and absent entirely on a write response. Never client-supplied.
+          items: {$ref: '#/components/schemas/HiddenRecordHolder'}
         open_deal_count:
           type: integer
           readOnly: true
@@ -33467,6 +33710,10 @@ components:
             Who created this company in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
         raw: {type: [object, 'null'], additionalProperties: true}
         partner: {$ref: '#/components/schemas/Partner'}
+        partner_program_ended:
+          type: boolean
+          readOnly: true
+          description: An ended partner program has commission and deal history. Omitted without partner read permission.
         version: {$ref: '#/components/schemas/RowVersion'}
         last_activity_at:
           type: [string, 'null']
@@ -33474,6 +33721,10 @@ components:
           readOnly: true
           description: >-
             When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable.
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
         archived_at: {type: [string, 'null'], format: date-time}
@@ -34296,6 +34547,10 @@ components:
           description: >-
             Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
           items: {$ref: '#/components/schemas/BillingContact'}
+        billing_contacts_hidden:
+          allOf: [{$ref: '#/components/schemas/HiddenRecords'}]
+          description: >-
+            The billing entries the caller's contact row scope withheld from `billing_contacts`, the same answer the company page gives. Absent exactly when `billing_contacts` is.
         provider:
           type: [string, 'null']
           description: >-
@@ -34509,6 +34764,10 @@ components:
           type: [string, 'null']
           format: date-time
           description: The account's stored last activity the rung is counted from. Null when it has none.
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         silent_days:
           type: integer
           minimum: 0
@@ -34718,6 +34977,10 @@ components:
         last_interaction_at:
           type: [string, 'null']
           format: date-time
+        last_interaction_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_interaction_at`, from the activity it names. Absent when that is null.
     Company360DealRole:
       type: object
       description: One contact's stakeholder role on one of the account's deals.
@@ -34794,6 +35057,10 @@ components:
         key: {type: [string, 'null'], description: 'The subject-line handle, when the project has one.'}
         phase: {$ref: '#/components/schemas/Company360ProjectPhase'}
         last_activity_at: {type: [string, 'null'], format: date-time}
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null.
         target_end_date: {type: [string, 'null'], format: date}
         owner_id: {type: [string, 'null'], format: uuid}
         owner_name:
@@ -35116,11 +35383,19 @@ components:
           properties:
             data: {type: array, items: {$ref: '#/components/schemas/Company360Contact'}}
             page: {$ref: '#/components/schemas/PageInfo'}
+        contacts_hidden:
+          allOf: [{$ref: '#/components/schemas/HiddenRecords'}]
+          description: >-
+            The account's current employees the caller may not see, by the contact row scope or by the employment tie's own read scope. Absent exactly when `contacts` is.
         billing_contacts:
           type: array
           description: >-
-            Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`; a contact outside the caller's row scope is simply not listed, and no count states how many were withheld.
+            Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`. A contact outside the caller's row scope is not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
           items: {$ref: '#/components/schemas/BillingContact'}
+        billing_contacts_hidden:
+          allOf: [{$ref: '#/components/schemas/HiddenRecords'}]
+          description: >-
+            The billing entries the caller's contact row scope withheld from `billing_contacts`. Absent exactly when `billing_contacts` is.
         deals: {$ref: '#/components/schemas/Company360Deals'}
         projects:
           type: array
@@ -36414,6 +36689,10 @@ components:
         outbound_90d: {type: integer}
         sent_90d: {type: integer, minimum: 0, description: "Messages in the last 90 days the colleague sent to the contact as the sender (participant role `from`). Being copied does not count. Absent for a reader without activity read, and on an edge folded before the count existed. The two-way reading then falls back to `outbound_90d`, which also counts mail the colleague was copied on."}
         last_at: {type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` among the activities the edge counts. A client orders edges by it.'}
+        last_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_at`, from the activity it names. Absent when that is null.
         receipts:
           type: array
           maxItems: 3
@@ -36515,6 +36794,10 @@ components:
           type: boolean
           description: Correspondence has gone both ways in the window — the claim that separates a relationship from a mailing list.
         last_at: {type: [string, 'null'], format: date-time}
+        last_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_at`, from the activity it names. Absent when that is null.
         days_since_last:
           type: [integer, 'null']
           description: Whole days from the last interaction to now, so a client renders "2 days ago" without re-deriving today from a timestamp.
@@ -36960,6 +37243,10 @@ components:
         interactions_90d: {type: integer, minimum: 0}
         two_way: {type: boolean, description: "Whether both sides have written within the relationship window, decided by the shared direction rule."}
         last_at: {type: [string, 'null'], format: date-time}
+        last_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_at`, from the activity it names. Absent when that is null.
         inbound_90d: {type: integer, minimum: 0, description: Interactions in the last 90 days where they wrote to this colleague.}
         outbound_90d: {type: integer, minimum: 0, description: "Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent."}
         sent_90d: {type: integer, minimum: 0, description: "Messages in the last 90 days this colleague sent to the contact as the sender (participant role `from`). Being copied on a colleague's mail does not count, so it can be lower than outbound_90d."}
@@ -39596,6 +39883,10 @@ components:
         wait_ends_at: {type: [string, 'null'], format: date-time, readOnly: true, description: "The instant the pause ends: the start of the `wait_until` day in the deal owner's own time zone, the installation's when the owner has none. Clients judge a pause against this, never against the date."}
         closed_at: {type: [string, 'null'], format: date-time}
         last_activity_at: {type: [string, 'null'], format: date-time, description: 'The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.'}
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
         stalled: {type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off.'}
         last_email:
           allOf: [{$ref: '#/components/schemas/DealLastEmail'}]
@@ -40131,6 +40422,10 @@ components:
           format: date-time
           readOnly: true
           description: 'The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
         source: {type: string, description: 'The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal; never client-supplied.'}
         author:
@@ -40459,6 +40754,10 @@ components:
           type: [string, 'null']
           format: date-time
           description: 'The newest WORKSPACE-AUDIENCE activity filed under the project, a task never counting; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.'
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
         activity_count: {type: integer, minimum: 0, description: Every live activity filed under the project.}
     CreateProjectRequest:
       type: object
@@ -41136,6 +41435,23 @@ components:
           type: string
           enum: [human, classifier]
           description: Who set `deal_relevance`. The classifier never changes a mark a human set.
+        filed_by: {$ref: '#/components/schemas/LinkFiler'}
+    LinkFiler:
+      type: object
+      readOnly: true
+      description: >-
+        On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again.
+      required: [actor]
+      properties:
+        actor: {type: string}
+        hook:
+          type: string
+          enum: [parties, deal]
+          description: 'Which hook point filed it, for an extension actor. Absent for `core`.'
+        reason:
+          type: string
+          description: >-
+            For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations. Absent for `core`.
     RelinkThreadRequest:
       type: object
       description: |-
@@ -41196,6 +41512,10 @@ components:
       type: object
       required: [enabled, provider, calendar_id, duration_minutes, notice_minutes, horizon_days, buffer_minutes, title, location]
       properties:
+        privacy_information:
+          type: string
+          readOnly: true
+          description: The installation's privacy page, falling back to its privacy contact. Absent when neither is stated.
         enabled: {type: boolean}
         provider: {type: string, enum: ['', gcal, graphcal]}
         calendar_id: {type: string, maxLength: 512}
@@ -41513,6 +41833,14 @@ components:
           type: boolean
           readOnly: true
           description: Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
+        mailbox_imported:
+          type: boolean
+          readOnly: true
+          description: Whether an import brought this in; the per-message audience write refuses it.
+        thread_audience_yours:
+          type: boolean
+          readOnly: true
+          description: Whether the thread audience write acts on this row for the caller.
         writable:
           type: boolean
           readOnly: true
@@ -41792,6 +42120,81 @@ components:
         any extension unit present under `extensions/` — so an enum here would assert that
         the legal set is identical in every installation, which is false. The contract
         states the invariant; `GET /v1/channel-providers` resolves the live set.
+    CompanyTypeDirectory:
+      type: object
+      description: The company types installed extensions add, ordered by value.
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/CompanyTypeOption'}
+    CompanyTypeOption:
+      type: object
+      required: [value, label, unit]
+      properties:
+        value:
+          type: string
+          description: The value a company carries, `ext:<unit>:<type>`.
+        label:
+          type: string
+          description: What a screen shows, in English, as the extension declared it.
+        unit:
+          type: string
+          description: The extension that declared the type.
+    RecordKindDirectory:
+      type: object
+      description: The record kinds installed extensions add that this caller may read, ordered by name.
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/RecordKindOption'}
+    RecordKindOption:
+      type: object
+      required: [name, unit, kind, display_name, fields, natural_key, view, delete_policy, actions]
+      properties:
+        name:
+          type: string
+          description: |-
+            The kind as every table that names a kind stores it, `ext:<unit>:<kind>`. The unit is a
+            unit name and the kind is a lower-case letter followed by up to 31 lower-case letters,
+            digits or underscores.
+        unit:
+          type: string
+          description: The extension that declared the kind.
+        kind:
+          type: string
+          description: The short name inside the unit.
+        display_name:
+          type: string
+          description: What a screen calls one record of the kind, in English.
+        fields:
+          type: array
+          items: {$ref: '#/components/schemas/RecordKindField'}
+        natural_key:
+          type: array
+          description: The fields that together identify one record. The unit's table holds them unique.
+          items: {type: string}
+        view:
+          type: string
+          description: |-
+            The path segment under the unit's screen that shows one record of the kind, as the unit
+            declared it. Absent when the unit's screen itself shows it. A link to a record opens
+            `#/ext/<unit>/<view>` with `record_type` and `record_id` in the query.
+        delete_policy:
+          type: string
+          enum: [archive_only, erasable]
+          description: What removing a record of the kind means. `archive_only` keeps the row.
+        actions:
+          type: array
+          description: The actions this caller holds on the kind. Every other action is denied.
+          items: {type: string, enum: [create, read, update, delete]}
+    RecordKindField:
+      type: object
+      required: [name, label]
+      properties:
+        name: {type: string, description: "The column the unit's table keeps the value in."}
+        label: {type: string, description: "What a screen shows, in English."}
     ChannelProviderDirectory:
       type: object
       description: Every messaging transport this installation has registered.
@@ -42241,6 +42644,74 @@ components:
             Stop following this contact for good, for this reader only. It has no end
             date; the reader resumes it with the DELETE verb. A colleague, or a later
             owner, keeps their own choice.
+    LinkedRecordType:
+      type: string
+      enum: [deal, company, contact]
+    LinkType:
+      type: object
+      additionalProperties: false
+      required: [name, label, from, to]
+      properties:
+        name: {type: string, description: 'A core word, or `ext:<unit>:<type>` for an extension''s.'}
+        label: {type: string}
+        unit:
+          type: [string, 'null']
+          description: The extension that declared it. Absent for core's own.
+        from: {type: array, items: {$ref: '#/components/schemas/LinkedRecordType'}}
+        to: {type: array, items: {$ref: '#/components/schemas/LinkedRecordType'}}
+    LinkTypeList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/LinkType'}
+    LinkSuggestion:
+      type: object
+      additionalProperties: false
+      required: [id, activity_id, entity_type, entity_id, unit, reason, score, status, created_at]
+      properties:
+        id: {type: string, format: uuid}
+        activity_id: {type: string, format: uuid}
+        activity_subject:
+          type: [string, 'null']
+          description: The subject of the message. Empty when the message has none.
+        entity_type: {type: string, enum: [contact, company, deal, project]}
+        entity_id: {type: string, format: uuid}
+        entity_name:
+          type: [string, 'null']
+          description: The name of the suggested record, for the screen. Absent on a decision's answer.
+        deal_amount_minor:
+          type: [integer, 'null']
+          format: int64
+          description: For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+        deal_currency:
+          type: [string, 'null']
+          pattern: '^[A-Z]{3}$'
+          description: The currency of `deal_amount_minor`, withheld with it.
+        deal_expected_close_date:
+          type: [string, 'null']
+          format: date
+          description: For a suggested deal, when it is expected to close. Absent on a decision's answer.
+        unit:
+          type: [string, 'null']
+          description: The extension that proposed it. Null when Margince itself asks which deal a mail is about.
+        reason:
+          type: string
+          maxLength: 200
+          description: One short sentence from the extension on why, or Margince's own question.
+        score: {type: number, minimum: 0, maximum: 1}
+        status: {type: string, enum: [pending, accepted, rejected]}
+        created_at: {type: string, format: date-time}
+    LinkSuggestionList:
+      type: object
+      additionalProperties: false
+      required: [data]
+      properties:
+        data:
+          type: array
+          items: {$ref: '#/components/schemas/LinkSuggestion'}
     DeclineActivityDealRequest:
       type: object
       additionalProperties: false
@@ -42311,7 +42782,7 @@ components:
         questions_closed:
           type: integer
           minimum: 0
-          description: The open deal questions of the conversation this call marked done.
+          description: The messages of the conversation whose open deal question this call closed.
     SetActivityDispositionRequest:
       type: object
       additionalProperties: false
@@ -43013,7 +43484,8 @@ components:
             `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
             conversation arrived in, and a new message from the sender's default mailbox. A mailbox
             that is not the sender's, or cannot send, is refused with 422
-            `mailbox_not_send_capable`.
+            `mailbox_not_send_capable`. A shared mailbox with `reply_enabled` can be named here by
+            its id, and only by a member of its reader team.
         subject: {type: string, description: The subject line. Blank or only white space is refused with 422 `required`.}
         body: {type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`.}
         html_body:
@@ -48042,12 +48514,25 @@ components:
           description: >-
             Moves the member to this legal entity, from `listLegalEntities`, in the same transaction as the rest of the edit. Omit to keep their entity. An unknown or archived entity is refused as 422 `unknown_legal_entity`.
         expected_updated_at: {type: string, format: date-time}
+    MemberUnavailableAction:
+      type: object
+      required: [action, reason]
+      description: One member verb the caller holds the grant for and this member refuses, with why.
+      properties:
+        action:
+          type: string
+          enum: [merge]
+        reason:
+          type: string
+          enum: [sole_admin, self, agent_seat]
+          description: >-
+            Why the verb is refused. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent. A used account is not refused: see `merge_needs_confirmation`.
     MemberRetirementBlocker:
       type: string
-      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, source_used, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
+      enum: [approval_decisions, automations, booking_pages, data_requests, deal_rooms, introductions, lists, stewarded_lists, mail_drafts, meeting_invitations, meeting_proposals, privacy_notices, record_responsibilities, reports, report_schedules, saved_views, scheduled_mail, handoffs, voice_profiles, web_forms, webhooks, weekly_plans, analytics_shares, confirmation_missing, suspended_side, self_survivor, deactivate_first, choose_survivor, choose_receiver, private_tasks, work_not_transferable, state_changed]
     MemberRetirementConsequence:
       type: string
-      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive]
+      enum: [source_signed_out, connectors_reconnect, survivor_access, original_attribution, private_alerts_archived, crm_private_records_move, private_audiences_retained, email_reserved, survivor_inactive, sign_in_dropped]
     MemberRetirementPreview:
       type: object
       required: [owned, signal_count, blockers, token, source_name, source_email, consequences]
@@ -48071,6 +48556,23 @@ components:
         source_email: {type: string, format: email}
         survivor_name: {type: string}
         survivor_email: {type: string, format: email}
+        confirmations:
+          type: array
+          items: {$ref: '#/components/schemas/MemberMergeConfirmation'}
+          description: >-
+            Present for a merge whose source account has been used: one entry per side, saying whether that side's holder has confirmed. `confirmation_missing` is in `blockers` while any side is `requested` or `not_requested`.
+    MemberMergeConfirmation:
+      type: object
+      required: [user_id, side, display_name, state]
+      properties:
+        user_id: {type: string, format: uuid}
+        side: {type: string, enum: [source, survivor]}
+        display_name: {type: string}
+        state:
+          type: string
+          enum: [confirmed, requested, not_requested, not_needed]
+          description: >-
+            `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
     MemberRetirementBlockingRecords:
       type: object
       description: |-
@@ -48145,7 +48647,7 @@ components:
           type: [string, 'null']
           maxLength: 120
           description: >-
-            The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster.
+            The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the given name of `display_name` (the last word after a Vietnamese family name, else the first). Present on the caller's own seat; absent on the roster.
         timezone:
           type: string
           description: >-
@@ -48218,6 +48720,15 @@ components:
             enum: [change_role, issue_password_link, resend_invite, remove_mfa, deactivate, reactivate, hand_over, edit, merge, remove]
           description: >-
             The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer.
+        merge_needs_confirmation:
+          type: boolean
+          description: >-
+            True when `merge` is in `allowed_actions` and this account has been used (a password, a sign-in or a linked provider), so merging it waits for the holder of each side that can still sign in to confirm. Absent otherwise, and on the same views as `allowed_actions`.
+        unavailable_actions:
+          type: array
+          items: {$ref: '#/components/schemas/MemberUnavailableAction'}
+          description: >-
+            The member verbs the caller holds the `user_admin` grant for and this member refuses, each with the reason, so a client explains the missing button instead of hiding it. An action never appears here and in `allowed_actions`. Present wherever `allowed_actions` is; empty when nothing is refused.
         last_active_at:
           type: [string, 'null']
           format: date-time
@@ -48299,7 +48810,7 @@ components:
           type: [string, 'null']
           maxLength: 120
           description: >-
-            The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset.
+            The name the member's greetings use, when the given name read off `display_name` is not it. Optional; absent, empty or null leaves it unset.
         role:
           type: string
           maxLength: 64
@@ -51300,6 +51811,11 @@ components:
           items: {type: string, enum: [call, email, meeting, message, note, task]}
           description: >-
             The activity kinds an activity field applies to; null means every kind, and every other object's field is null. A logged or edited activity of another kind refuses a value for the field with `422 field_not_valid_for_kind`. A value stored before the field was narrowed stays readable, and sending null clears it.
+        pipeline_ids:
+          type: [array, 'null']
+          items: {type: string, format: uuid}
+          description: >-
+            The pipelines a deal field applies to; null means every pipeline, and every other object's field is null. A created or edited deal of another pipeline refuses a value for the field with `422 field_not_valid_for_pipeline`. A pipeline that is archived matches nothing. A value stored before the field was narrowed, or on a deal that moved pipeline, stays stored and readable, and sending null clears it.
         created_by: {type: string, format: uuid}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
@@ -51384,10 +51900,15 @@ components:
           items: {type: string, enum: [call, email, meeting, message, note, task]}
           description: >-
             The activity kinds the field applies to. Only an activity field may name any; omitted or empty means every kind. An unknown kind, or kinds on another object's field, is refused with a 422.
+        pipeline_ids:
+          type: array
+          items: {type: string, format: uuid}
+          description: >-
+            The pipelines the field applies to. Only a deal field may name any; omitted or empty means every pipeline. An id that is not a live pipeline, or ids on another object's field, is refused with a 422.
     RenameCustomFieldRequest:
       type: object
       description: >-
-        Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field.
+        Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable`, `activity_kinds` and `pipeline_ids`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. `pipeline_ids` does the same for the pipelines a deal field applies to.
       properties:
         label: {type: string, maxLength: 120}
         label_translations: {$ref: '#/components/schemas/LabelTranslations'}
@@ -51397,6 +51918,9 @@ components:
         activity_kinds:
           type: array
           items: {type: string, enum: [call, email, meeting, message, note, task]}
+        pipeline_ids:
+          type: array
+          items: {type: string, format: uuid}
     UpdateCustomFieldOptionsRequest:
       type: object
       description: >-
@@ -51610,7 +52134,7 @@ components:
           type: array
           items: {type: object, additionalProperties: true}
           description: >-
-            Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
+            Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. A total past ±(2^53−1) is null, and the row's `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the report is answered.
         total_rows:
           type: integer
           description: >-
@@ -51670,7 +52194,7 @@ components:
         aggregates:
           type: object
           additionalProperties: true
-          description: The requested aggregates recomputed over exactly these source rows — equals the explained cell.
+          description: The requested aggregates recomputed over exactly these source rows — equals the explained cell. A total past ±(2^53−1) is null and named in `_out_of_range`, as on the report row.
         total_rows: {type: integer, description: Source rows matched (rows is capped at the report row limit).}
         excluded_by_permission: {type: [integer, 'null'], description: 'Visible rows a field mask withheld — the same exclusion the explained report applied, so the drill-through reconciles exactly.'}
         population_narrowed: {$ref: '#/components/schemas/PopulationNarrowed'}
@@ -51689,7 +52213,7 @@ components:
       type: object
       required: [type, id]
       properties:
-        type: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
+        type: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|deal_room|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
         id: {type: string, format: uuid}
         title: {type: [string, 'null'], description: 'Display label (name/subject). An activity Margince wrote is titled in the reader''s language, as its History row names it.'}
         snippet: {type: [string, 'null']}
@@ -51710,6 +52234,12 @@ components:
           nullable: true
           description: >-
             On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included.
+        deal_id:
+          type: [string, 'null']
+          format: uuid
+          readOnly: true
+          description: >-
+            Absent on every other hit type.
         logo_url:
           type: [string, 'null']
           readOnly: true
@@ -51767,6 +52297,10 @@ components:
           format: date-time
           description: >-
             When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
+        last_activity_precision:
+          allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
+          readOnly: true
+          description: How to read `last_activity_at`, from the activity it names. Absent when that is null.
         masked_fields:
           type: array
           items: {type: string}
@@ -51787,12 +52321,12 @@ components:
         page: {$ref: '#/components/schemas/PageInfo'}
         types_with_more:
           type: array
-          items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
+          items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|deal_room|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
           description: >-
             On a `per_type` answer only: the types that matched more hits than the page carries for them. Absent on a ranked answer, whose `page.has_more` says the same thing for the list as a whole.
         types_timed_out:
           type: array
-          items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
+          items: {type: string, pattern: '^(contact|company|deal|activity|lead|project|product|offer_template|deal_room|tag)$|^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'}
           description: >-
             On a `per_type` answer only: the types whose search did not finish within the time budget. `data` holds no hits of these types, and none of them is in `types_with_more`. Empty when every type answered. Absent on a ranked answer, which answers 422 `query_too_broad` instead.
         near_matches:
@@ -54560,6 +55094,10 @@ components:
       type: object
       required: [preview_token, rule, notice_required, timezone, deadline_is_upper_bound]
       properties:
+        subject_reached_out:
+          type: boolean
+          readOnly: true
+          description: The contact's own mail or meeting removes the duty, regardless of the source selected. Does not disclose unreadable activity identifiers.
         preview_token: {type: string}
         rule: {type: string, enum: [none, art13, art14]}
         notice_required: {type: boolean}
@@ -55771,10 +56309,11 @@ components:
         One thread of the room's conversation, with its comments. Served to both
         sides in the same shape: the buyer and the seller read the same
         conversation, and neither side's ids beyond the thread's own are in it.
-      required: [id, room_id, required_change, state, author, created_at, comments]
+      required: [id, room_id, required_change, state, author, created_at, comments, visible_to_buyer]
       properties:
         id: {type: string, format: uuid}
         room_id: {type: string, format: uuid}
+        visible_to_buyer: {type: boolean}
         document_id: {type: [string, 'null'], format: uuid, description: Null for a room-level thread.}
         required_change: {type: boolean}
         state: {type: string, description: '`open` or `resolved`. A plain string, not an inline enum, for the reason `DealRoomParticipantCapability` gives.'}
@@ -58584,7 +59123,7 @@ components:
             The way back from work that was APPLIED rather than approved.
         actions:
           type: array
-          items: {type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel]}
+          items: {type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel, send_again]}
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string
@@ -59438,6 +59977,10 @@ components:
           description: A re-embed is in flight; every ask answers not_ready until it finishes.
         coverage: {$ref: '#/components/schemas/KnowledgeCoverage'}
         created_at: {type: string, format: date-time}
+        archived_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the set was archived; absent or null while it is live.
     KnowledgeCorpusList:
       type: object
       description: >-

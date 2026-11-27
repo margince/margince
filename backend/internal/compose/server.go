@@ -210,7 +210,7 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		projectsHandlers: projects.HandlersOver(ProjectsStore(pool)),
 		contractsHandlers: contracts.NewHandlers(InstallationDB(pool), ContractFreezeRate(pool), ContractTimezone()).
 			WithFieldCatalog(customfields.NewService(pool, nil)),
-		dealroomsHandlers:   dealrooms.NewHandlers(InstallationDB(pool)),
+		dealroomsHandlers:   dealrooms.NewHandlers(InstallationDB(pool)).WithCompanyName(identity.InstallationNameOf),
 		commissionsHandlers: commissions.NewHandlers(InstallationDB(pool)),
 		activitiesHandlers:  newActivitiesHandlers(pool).WithUploadLimit(limits.Attachment),
 		// The ranking lane is the one read a page limit does not bound.
@@ -282,7 +282,8 @@ func newServer(pool *pgxpool.Pool, log *slog.Logger, authH authHandlers, dealsH 
 		// through it on demand, exactly as the time scan drives one on a tick.
 		automationHandlers: newAutomationHandlers(pool),
 		voiceHandlers: ai.NewHandlers(InstallationDB(pool), NewSeatBudget(pool)).WithLocks(loadedLocks).
-			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)).WithVoiceSentMail(voiceSentMail(pool)),
+			WithVoiceKnownSpeakers(voiceKnownSpeakers(pool)).WithVoiceSentMail(voiceSentMail(pool)).
+			WithRoutingSettings(StoredConfig(pool)),
 		// The names seam is the WEB surface's: a reader reading "explain this
 		// number" meets the deals by name, while the MCP provider leaves it
 		// unwired because a tool answers in ids.

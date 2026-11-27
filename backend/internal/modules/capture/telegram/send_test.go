@@ -391,3 +391,22 @@ func TestSendMessageWithFilesKeepsTheGuardsTheTextPathHas(t *testing.T) {
 		})
 	}
 }
+
+func TestAContactCardAndAReplyAreDecodedForTheAnswerPath(t *testing.T) {
+	update := `{"update_id":9,"business_message":{"business_connection_id":"b1","message_id":7,"date":1790000000,
+		"chat":{"id":5001,"type":"private"},"from":{"id":5001,"first_name":"Rep"},
+		"reply_to_message":{"message_id":501},
+		"contact":{"phone_number":"+4915112345678","first_name":"Anna","last_name":"Weber","user_id":6002}}}`
+	raw, err := BuildRawEnvelope("123", []byte(update))
+	if err != nil {
+		t.Fatal(err)
+	}
+	_, chat, err := ParseChatMessage(raw, &BusinessLink{AccountID: "8800"})
+	if err != nil {
+		t.Fatal(err)
+	}
+	card := chat.SharedContact
+	if chat.ReplyToID != "501" || card == nil || card.UserID != "6002" || card.DisplayName != "Anna Weber" || card.Phones[0] != "+4915112345678" {
+		t.Fatalf("chat message = %+v, card = %+v", chat, card)
+	}
+}

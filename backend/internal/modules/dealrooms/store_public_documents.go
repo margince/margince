@@ -46,6 +46,13 @@ func visibleDocuments(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) ([]
 	if !servesContent(st.access()) {
 		return []buyerDocument{}, nil
 	}
+	return documentsInView(ctx, tx, roomID)
+}
+
+// documentsInView is the document rule alone, with no room-state check. Both
+// sides ask it, so the seller's mark on a thread and the buyer's filtering of
+// it read one answer.
+func documentsInView(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) ([]buyerDocument, error) {
 	rows, err := tx.Query(ctx, `
 		SELECT d.id, d.attachment_id, d.group_key, d.title, d.position,
 		       a.filename, a.content_type, a.byte_size

@@ -156,8 +156,8 @@ func (s *Service) seatInvitedTx(
 		return userRow{}, err
 	}
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO auth_token (user_id, token_hash, expires_at, mail_queued_at)
-		 VALUES ($1, $2, now() + $3::interval, CASE WHEN $4 THEN now() END)`,
+		`INSERT INTO auth_token (user_id, purpose, token_hash, expires_at, mail_queued_at)
+		 VALUES ($1, 'password_reset', $2, now() + $3::interval, CASE WHEN $4 THEN now() END)`,
 		seat.user, seat.tokenHash, inviteTokenTTL.String(), in.Mailed); err != nil {
 		return userRow{}, err
 	}

@@ -59,7 +59,7 @@ func (s *Store) ImportDealTx(
 		return crmcontracts.Deal{}, err
 	}
 	birth := in
-	birthStage, err := s.RefuseImportBirth(ctx, tx, in, terminal)
+	birthStage, err := s.RefuseImportBirth(ctx, tx, in, terminal, cols)
 	if err != nil {
 		return crmcontracts.Deal{}, err
 	}
@@ -81,14 +81,16 @@ func (s *Store) ImportDealTx(
 }
 
 // RefuseImportBirth asks, without writing, the refusals an import birth meets
-// outside the row's own cells. These are no open stage to be born on, a stage
-// past a legal gate, and a closing with no FX rate to freeze. It answers the
-// birth stage.
-// ImportDealTx runs it before writing and the dry run runs it alone, so the
-// preview and the commit refuse the same rows.
+// outside the row's own cells. They are no open stage, a stage past a legal
+// gate, a closing with no FX rate, and a custom value outside the field's
+// pipelines. It answers the birth stage. ImportDealTx runs it before writing
+// and the dry run runs it alone, so the preview and the commit refuse the same rows.
 func (s *Store) RefuseImportBirth(
-	ctx context.Context, tx pgx.Tx, in CreateDealInput, terminal *ImportTerminal,
+	ctx context.Context, tx pgx.Tx, in CreateDealInput, terminal *ImportTerminal, cols CustomColumns,
 ) (ids.StageID, error) {
+	if err := checkPipelineScope(in.PipelineID, cols.cols, in.CustomFields); err != nil {
+		return ids.StageID{}, err
+	}
 	birthStage := in.StageID
 	if terminal != nil {
 		var err error

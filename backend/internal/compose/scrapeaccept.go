@@ -12,14 +12,12 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // scrapeAcceptEffect builds the approvals.ApprovedEffect compose injects for
@@ -30,20 +28,11 @@ func scrapeAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals
 		if err != nil {
 			return err
 		}
-		// The write executes as the scrape executor: captured_by = agent:scrape
-		// on behalf of the human whose approval released it — that human is on
-		// the decision's own audit row, this one carries the machine
-		// provenance the 360 renders as "read from the company's site".
-		decider, ok := principal.Actor(ctx)
-		if !ok {
-			return errors.New("compose: enrich effect without a deciding principal")
-		}
-		execCtx := principal.WithActor(ctx, principal.Principal{
-			Type:       principal.PrincipalSystem,
-			ID:         "agent:scrape",
-			UserID:     decider.UserID,
-			OnBehalfOf: decider.UserID,
-		})
+		// The write executes as the scrape agent acting for the human whose
+		// approval released it, under that human's grants: captured_by =
+		// agent:scrape. That human is on the decision's own audit row, and
+		// this one carries the machine provenance the 360 renders as "read
+		// from the company's site".
 		// The single-use redemption IS the idempotency claim: whoever consumes
 		// the approval executes; anyone else finds it consumed. Redeemed in the
 		// write's OWN transaction, so a failed apply leaves the approval
@@ -53,7 +42,7 @@ func scrapeAcceptEffect(svc *approvals.Service, store *contacts.Store) approvals
 		// Redeemed under the DECIDER's context and applied under the executor's:
 		// the redemption is an assertion of that human's authority, and the
 		// write carries the machine provenance the 360 renders.
-		return svc.RedeemAndApply(ctx, approvalID, enrichProposalKind, diffHash, func(tx pgx.Tx) error {
+		return redeemForApprover(ctx, svc, approvalID, enrichProposalKind, diffHash, "agent:scrape", func(execCtx context.Context, tx pgx.Tx) error {
 			return store.ApplyEnrichmentTx(execCtx, tx, companyID, contacts.ApplyColdStartProfileInput{
 				SourceURL: sourceURL,
 				Fields:    fields,

@@ -1,7 +1,5 @@
-import { useQuery } from "@tanstack/react-query";
 import { ArrowLeft, PenLine } from "lucide-react";
 import { useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Badge, Button } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -9,7 +7,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { formatMoney, formatNumber } from "../../format/format";
 import { offerStatusLabel } from "../../format/offerstatus";
 import { type Locale, useLocale, usePlural, useT } from "../../i18n";
-import { unwrap } from "../../lib/problem";
+import { useOffer } from "../../lib/offer.queries";
 import { navigate } from "../../lib/router";
 import { OfferTotalsPanel } from "./offerrecurring";
 import "./offers.css";
@@ -157,21 +155,7 @@ function AiDisclosureBanner({ offer }: Readonly<{ offer: Offer }>) {
 export function OfferScreen({ id }: Readonly<{ id: string }>) {
   const t = useT();
   const [editing, setEditing] = useState(false);
-  const offerQuery = useQuery({
-    queryKey: ["offer", id],
-    queryFn: async () => {
-      return unwrap(
-        await api.GET("/offers/{id}", {
-          params: { path: { id } },
-        }),
-      );
-    },
-    // RegenerateOfferAction seeds this exact key with its 201 response right
-    // before navigating here. Only that response carries ai_disclosure and
-    // diff_from_previous, and a re-GET on mount would wipe both. Every
-    // other cached offer is re-read, since its status may have moved on.
-    refetchOnMount: (query) => query.state.data?.ai_generated !== true,
-  });
+  const offerQuery = useOffer(id);
 
   return (
     <div className="wrap">

@@ -160,6 +160,13 @@ func (s *Store) Update(ctx context.Context, id ids.UUID, in Definition, ifVersio
 				return err
 			}
 		}
+		// The same column list as the UPDATE, so a resend writes no revision nobody made.
+		var unchanged bool
+		if err := tx.QueryRow(ctx, `SELECT (name, description, owner_id, objective_metric, target_value, deadline, lead_rule, deal_rule, include_future) IS NOT DISTINCT FROM ($2::text, $3::text, $4::uuid, $5::text, $6::bigint, $7::date, $8::jsonb, $9::jsonb, $10::boolean) FROM sales_initiative WHERE id = $1`,
+			id, in.Name, in.Description, owner, in.Objective, in.Target, in.Deadline, leadRule, dealRule, include).Scan(&unchanged); err != nil || unchanged {
+			out = before
+			return err
+		}
 		tag, err := tx.Exec(ctx, `UPDATE sales_initiative SET name = $2, description = $3, owner_id = $4, objective_metric = $5, target_value = $6, deadline = $7, lead_rule = $8, deal_rule = $9, include_future = $10, version = version + 1, updated_at = now() WHERE id = $1 AND archived_at IS NULL AND version = $11`,
 			id, in.Name, in.Description, owner, in.Objective, in.Target, in.Deadline, leadRule, dealRule, include, versionOf(before))
 		if err != nil {

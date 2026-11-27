@@ -42,6 +42,9 @@ type DeliveryState struct {
 	// FromAddress is the address it records.
 	Controller  bool
 	FromAddress *string
+	// CanSendAgain is the one rule platform/mailresend states, read here so the
+	// timeline cannot contradict the Worklist row for the same message.
+	CanSendAgain bool
 }
 
 // applyEmailStates stamps onto the email rows of a page what happened to
@@ -112,6 +115,8 @@ func contractDelivery(state DeliveryState, known bool) *crmcontracts.EmailDelive
 		State: crmcontracts.EmailDeliveryState(state.Status),
 		Files: contractDeliveryFiles(state.Files),
 	}
+	sendAgain := state.CanSendAgain
+	out.CanSendAgain = &sendAgain
 	switch {
 	case state.BouncedAt != nil:
 		out.State = crmcontracts.EmailDeliveryStateBounced

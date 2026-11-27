@@ -20,6 +20,11 @@ func (h Handlers) GetSchedulingProfile(w http.ResponseWriter, r *http.Request) {
 		writeStoreErr(w, r, err)
 		return
 	}
+	privacy, ok := h.readBookingPrivacy(w, r)
+	if !ok {
+		return
+	}
+	profile.PrivacyInformation = privacy
 	httperr.WriteJSON(w, http.StatusOK, profile)
 }
 
@@ -37,11 +42,16 @@ func (h Handlers) PutSchedulingProfile(w http.ResponseWriter, r *http.Request) {
 			return
 		}
 	}
+	privacy, ok := h.readBookingPrivacy(w, r)
+	if !ok {
+		return
+	}
 	profile, err := h.store.SaveSchedulingProfile(r.Context(), req)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
+	profile.PrivacyInformation = privacy
 	httperr.WriteJSON(w, http.StatusOK, profile)
 }
 
@@ -52,11 +62,16 @@ func (h Handlers) PutSchedulingAlias(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
+	privacy, ok := h.readBookingPrivacy(w, r)
+	if !ok {
+		return
+	}
 	profile, err := h.store.SetSchedulingAlias(r.Context(), req.Alias)
 	if err != nil {
 		writeStoreErr(w, r, err)
 		return
 	}
+	profile.PrivacyInformation = privacy
 	httperr.WriteJSON(w, http.StatusOK, profile)
 }
 
@@ -157,4 +172,13 @@ func (h Handlers) GetSchedulingCalendars(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, calendars)
+}
+
+func (h Handlers) readBookingPrivacy(w http.ResponseWriter, r *http.Request) (*string, bool) {
+	address, err := h.bookingPrivacyInformation(r.Context())
+	if err != nil {
+		writeStoreErr(w, r, err)
+		return nil, false
+	}
+	return address, true
 }

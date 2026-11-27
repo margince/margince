@@ -250,6 +250,26 @@ describe("CompaniesScreen — how many work here, how many deals are open", () =
     expect(within(quiet).getAllByText("0").length).toBe(2);
   });
 
+  it("says who holds the contacts a reader cannot see beside a count of 0", async () => {
+    stubFetch(async () =>
+      jsonResponse({
+        data: [
+          {
+            ...company,
+            contact_count: 0,
+            hidden_contact_holders: [{ user_id: "u-1", display_name: "Dana" }],
+          },
+        ],
+        page: { next_cursor: null, has_more: false },
+      }),
+    );
+    render(<CompaniesScreen />);
+    await showContacts();
+    await screen.findByText(
+      "Dana has contacts here you cannot see. Ask for an introduction.",
+    );
+  });
+
   it("leaves the deal count blank when the server withheld it", async () => {
     // A role without computed_field:read gets no key at all (STATE-4), and
     // the column must not turn that absence into a confident 0.

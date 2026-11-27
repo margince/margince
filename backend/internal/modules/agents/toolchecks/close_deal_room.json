@@ -1,6 +1,7 @@
 {
   "verb": "close_deal_room",
   "checks": [
+    "deal.read",
     "deal_room.update"
   ],
   "takes": [

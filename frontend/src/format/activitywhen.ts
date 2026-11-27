@@ -11,12 +11,15 @@ import type { components } from "../api/schema";
 import type { Locale, Translator } from "../i18n";
 import { calendarDay } from "./calendarday";
 import { calendarDaysUntil } from "./daysuntil";
+import { formatAge } from "./format";
 import {
   calendarDaysBetween,
   formatDate,
   formatDateTime,
   formatTimeOfDay,
 } from "./format.dates";
+import { numberFormat } from "./formatters";
+import { daysPast } from "./lateness";
 import { formatTimeRange } from "./meetingtime";
 import { formatElapsed } from "./now";
 import { formatRelativeTime } from "./relativetime";
@@ -113,6 +116,21 @@ export function activityStartsIn(
 }
 
 /**
+ * When an activity happened, relative to `now` ("3 days ago"). A `day` entry
+ * names its date instead, drawn by `format`.
+ */
+export function activitySince(
+  { at, precision }: ActivityMoment,
+  now: Date,
+  locale: Locale,
+  format: DayFormatter = formatDate,
+): string {
+  return precision === "day"
+    ? format(at, locale, UTC_ZONE)
+    : formatRelativeTime(at, locale, now);
+}
+
+/**
  * How long before `now` an activity happened. A `day` entry names its date
  * instead: an age in hours would count from a noon nobody said.
  */
@@ -132,6 +150,54 @@ export function activityAgo(
         locale,
         Math.max(0, calendarDaysBetween(new Date(at), new Date(now), zone)),
       );
+}
+
+/**
+ * How long ago an activity happened, as a short age. A `day` entry counts whole
+ * dates from its own date to today in `zone`; an instant keeps its hours today.
+ */
+export function activityAge(
+  { at, precision }: ActivityMoment,
+  now: number,
+  locale: Locale,
+  zone: string,
+): string {
+  if (precision !== "day") {
+    return formatAge(at, now, locale, zone);
+  }
+  const days = Math.max(0, -activityDaysAway(at, precision, now, zone, zone));
+  return numberFormat(locale, {
+    style: "unit",
+    unit: "day",
+    unitDisplay: "narrow",
+  }).format(days);
+}
+
+/**
+ * Where a timeline places an activity: an instant at its time, a `day` entry at
+ * the start of its date in `zone`.
+ */
+export function activityPlacedAt(
+  { at, precision }: ActivityMoment,
+  zone: string,
+): string {
+  return precision === "day"
+    ? startOfDayInZone(activityDate(at, precision, zone), zone)
+    : at;
+}
+
+/**
+ * Whole days from an activity to `now`. An instant counts elapsed days; a
+ * `day` entry counts dates from its own date to today in `zone`.
+ */
+export function activityDaysAgo(
+  { at, precision }: ActivityMoment,
+  now: number,
+  zone: string,
+): number {
+  return precision === "day"
+    ? Math.max(0, -activityDaysAway(at, precision, now, zone, zone))
+    : daysPast(Date.parse(at), now).days;
 }
 
 /** A meeting's start and end as one span, or null when only its day is known. */

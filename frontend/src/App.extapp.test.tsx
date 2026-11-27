@@ -15,7 +15,8 @@ import { type GrantSpec, meFixture } from "./testing/mefixture";
 // whose package ships the app but no default export. The labels are core keys,
 // because the merged catalogue holds no unit copy in this lane and a core key
 // renders the same way.
-vi.mock("@composition/extensions", () => ({
+vi.mock("@composition/extensions", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("@composition/extensions")>()),
   extensions: [
     {
       name: "notes",

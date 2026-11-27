@@ -146,7 +146,7 @@ export function TaskDetails({
         ? null
         : row.effective_candidates.map((candidate) => (
             <p className="t-caption" key={candidate.tier}>
-              {certificationNote(candidate, t)}
+              {certificationNote(candidate.model, candidate.certification, t)}
             </p>
           ))}
       {keyGap ? (

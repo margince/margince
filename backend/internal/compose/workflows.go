@@ -89,6 +89,7 @@ type automationApprovalsAdapter struct{ svc *approvals.Service }
 
 func (a automationApprovalsAdapter) Stage(ctx context.Context, in automation.StageRequest) (ids.ApprovalID, error) {
 	return a.svc.Stage(ctx, approvals.StageInput{
+		Why:            approvals.Grounds{Sentence: in.Why},
 		Kind:           in.Kind,
 		ProposedChange: in.ProposedChange,
 		DiffHash:       in.DiffHash,
