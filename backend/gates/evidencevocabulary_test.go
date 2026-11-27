@@ -7,8 +7,6 @@ import (
 	"fmt"
 	"regexp"
 	"strings"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // evidenceVocabularies maps each field_provenance CHECK whose list is the whole
@@ -33,12 +31,12 @@ var evidenceVocabularyCheck = regexp.MustCompile(
 // CHECK the catalog no longer states in that shape fails, so the vocabulary
 // cannot drop out of the census unseen.
 func readEvidenceVocabularies() (map[string][]string, error) {
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
+	raw, err := headCatalogText()
 	if err != nil {
 		return nil, err
 	}
 	out := map[string][]string{}
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		m := evidenceVocabularyCheck.FindStringSubmatch(line)
 		if m == nil {
 			continue
@@ -56,7 +54,7 @@ func readEvidenceVocabularies() (map[string][]string, error) {
 	for constraint, column := range evidenceVocabularies {
 		if len(out[column]) == 0 {
 			return nil, fmt.Errorf("%s states no list for %s, which holds the vocabulary of %s",
-				vocabularyCatalog, constraint, column)
+				headCatalogPath, constraint, column)
 		}
 	}
 	return out, nil

@@ -24,12 +24,9 @@ package gates
 // the right answer for some of them, an unfilled multi-select among them.
 
 import (
-	"path/filepath"
 	"regexp"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // bareArrayBound finds a length-ish array function that is not already wrapped
@@ -38,21 +35,12 @@ import (
 var bareArrayBound = regexp.MustCompile(
 	`(?:^|[^_[:alnum:]])(array_(?:length|upper|lower|ndims))\s*\(`)
 
-// catalogEntryStart marks the first line of a catalog entry. A definition that
-// wraps — a CASE inside a CHECK does — continues on lines that match nothing
-// here, and scanning those pieces separately would read a bare call as a line
-// carrying no CHECK at all: a census that fails short reports PASS.
-var catalogEntryStart = regexp.MustCompile(`^(?:public\.|defacl |schema )`)
-
 func TestNoCheckBoundsAnArrayLengthThatCanBeNull(t *testing.T) {
 	t.Parallel()
-	path := filepath.Join(repoRoot, "backend", "migrations", "testdata", "head_catalog.txt")
-	raw, err := gatekit.ReadFile(path)
-	if err != nil {
-		t.Fatalf("reading %s: %v", path, err)
-	}
 	var offenders []string
-	for _, entry := range catalogEntries(string(raw)) {
+	// Whole records, not lines: a CASE inside a CHECK wraps. A bare call on a
+	// continuation line would read as a line carrying no CHECK at all.
+	for _, entry := range catalogRecords(t) {
 		if !strings.Contains(entry, "CHECK") || !hasBareArrayBound(entry) {
 			continue
 		}
@@ -66,21 +54,6 @@ func TestNoCheckBoundsAnArrayLengthThatCanBeNull(t *testing.T) {
 		"Postgres accepts the empty array the constraint exists to refuse. Write "+
 		"cardinality(c) or coalesce(array_length(c, 1), 0) in a new migration:\n  %s",
 		strings.Join(offenders, "\n  "))
-}
-
-// catalogEntries folds each entry's continuation lines back onto it. Joining
-// with a space rather than a newline keeps a wrapped expression readable as
-// one statement, which is how the scan below reads it.
-func catalogEntries(raw string) []string {
-	var entries []string
-	for line := range strings.SplitSeq(raw, "\n") {
-		if len(entries) == 0 || catalogEntryStart.MatchString(line) {
-			entries = append(entries, line)
-			continue
-		}
-		entries[len(entries)-1] += " " + line
-	}
-	return entries
 }
 
 // hasBareArrayBound reports whether any such call in the entry is not the

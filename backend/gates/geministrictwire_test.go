@@ -13,6 +13,7 @@ import (
 	"maps"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/santhosh-tekuri/jsonschema/v6"
@@ -73,8 +74,30 @@ func TestEveryToolsArgumentsSurviveTheGeminiStrictWire(t *testing.T) {
 }
 
 // wireSchemas holds the schemas a Gemini tool call is sent under: each
-// registered tool's arguments, and the runner's step schemas over them.
+// registered tool's arguments, and the runner's step schemas over them. Each
+// caller gets its own copy of the one set built per test binary.
 func wireSchemas(t *testing.T) map[string]json.RawMessage {
+	t.Helper()
+	builtWireSchemas.Lock()
+	defer builtWireSchemas.Unlock()
+	if builtWireSchemas.schemas == nil {
+		builtWireSchemas.schemas = buildWireSchemas(t)
+	}
+	schemas := make(map[string]json.RawMessage, len(builtWireSchemas.schemas))
+	for name, schema := range builtWireSchemas.schemas {
+		schemas[name] = bytes.Clone(schema)
+	}
+	return schemas
+}
+
+// builtWireSchemas stays nil when a build fails, so the next caller fails the
+// same way.
+var builtWireSchemas struct {
+	sync.Mutex
+	schemas map[string]json.RawMessage
+}
+
+func buildWireSchemas(t *testing.T) map[string]json.RawMessage {
 	t.Helper()
 	registry := compose.NewRegistry(nil, compose.SendPath{})
 	specs := registry.Specs()

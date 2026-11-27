@@ -15,8 +15,6 @@ import (
 	"regexp"
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // updatedAtLine reads an updated_at column: its table and its definition.
@@ -43,11 +41,8 @@ func offShapeUpdatedAt(catalog string) (off []string, seen int) {
 
 func TestEveryUpdatedAtIsNeverNullAndDefaultsToNow(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
-	off, seen := offShapeUpdatedAt(string(raw))
+	raw := headCatalog(t)
+	off, seen := offShapeUpdatedAt(raw)
 	// A short census would pass on a catalog whose line shape had moved.
 	if seen < 100 {
 		t.Fatalf("read %d updated_at columns from the catalog, and the schema has over a hundred", seen)

@@ -83,6 +83,7 @@ const mergeHistory = "history of the retired record, which is never rewritten"
 var stayOnTheRetiredRecord = gatekit.Waive(map[string]string{
 	"contact_address_country.contact_id":       "a check of the merged-away contact's own postal code and city, which says nothing about the survivor's address. The survivor keeps its own check, and the trigger deletes it when the merge moves the survivor's address; the next sweep checks the address the survivor ends with",
 	"generated_summary.contact_id":             "a cached sentence about one record. relinkReaderJudgements forgets the summaries of both halves (generatedsummary.ForgetContacts), so the next read writes one about the record that stands",
+	"standing_line.entity_id":                  "a cached status line about one record. generatedsummary.ForgetContacts deletes the lines of both halves, and the next activity on the survivor writes its own",
 	"contact.converted_from_lead_id":           "names the lead a contact was promoted from. Only an open lead merges, and a promoted lead is archived, so no contact names a lead that a merge retires",
 	"dedupe_candidate.left_contact_id":         "the duplicate pair the reviewer judged. The merge settles that pair and archives every other open pair naming the retired record, so each row stays the record of a decision about the two it named",
 	"dedupe_candidate.right_contact_id":        "the duplicate pair the reviewer judged. The merge settles that pair and archives every other open pair naming the retired record, so each row stays the record of a decision about the two it named",
@@ -217,23 +218,32 @@ func movesOutOfSight(t *testing.T, contacts map[string]*graphFunc, reached map[s
 	return fmt.Errorf("%s writes no %s statement", by, table)
 }
 
-// headCatalogLines reads the head catalog with each multi-line definition
-// folded onto the line that opens it (catalogEntryStart).
+// headCatalogLines is the catalog's records with every run of whitespace folded
+// to one space, so a definition Postgres wraps reads as one line.
 func headCatalogLines(t *testing.T) []string {
 	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
+	records := catalogRecords(t)
+	for i, record := range records {
+		records[i] = strings.Join(strings.Fields(record), " ")
 	}
-	var lines []string
-	for line := range strings.SplitSeq(string(raw), "\n") {
-		if catalogEntryStart.MatchString(line) || len(lines) == 0 {
-			lines = append(lines, line)
-			continue
+	return records
+}
+
+// The records are shared by every gate that reads them, and headCatalogLines
+// rewrites its slice in place. Its rewrite must stay its own.
+func TestFoldingTheCatalogLeavesTheSharedRecordsAsTheyWere(t *testing.T) {
+	t.Parallel()
+	folded := headCatalogLines(t)
+	records := catalogRecords(t)
+	if len(records) == 0 || len(folded) != len(records) {
+		t.Fatalf("read %d records and folded %d", len(records), len(folded))
+	}
+	for i, record := range records {
+		if strings.Contains(record, "  ") && folded[i] != record {
+			return
 		}
-		lines[len(lines)-1] += " " + strings.TrimSpace(line)
 	}
-	return lines
+	t.Fatal("no record differs from its folded copy, so this test proves nothing about a write reaching the shared slice")
 }
 
 // referencesTo returns every table.column that can name the record:
