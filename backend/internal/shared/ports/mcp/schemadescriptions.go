@@ -28,30 +28,44 @@ func rewriteDescriptions(node any, fn func(string) string, names bool) bool {
 	switch v := node.(type) {
 	case map[string]any:
 		for key, child := range v {
-			if names {
-				changed = rewriteDescriptions(child, fn, false) || changed
-				continue
+			if rewriteMember(v, key, child, fn, names) {
+				changed = true
 			}
-			if dataKeys[key] {
-				continue
-			}
-			if text, ok := child.(string); ok && key == "description" {
-				if kept := fn(text); kept != text {
-					changed = true
-					if kept == "" {
-						delete(v, key)
-					} else {
-						v[key] = kept
-					}
-				}
-				continue
-			}
-			changed = rewriteDescriptions(child, fn, namedSchemas[key]) || changed
 		}
 	case []any:
 		for _, child := range v {
-			changed = rewriteDescriptions(child, fn, false) || changed
+			if rewriteDescriptions(child, fn, false) {
+				changed = true
+			}
 		}
 	}
 	return changed
+}
+
+// rewriteMember handles one member of a schema object: a name under a named
+// schemas keyword, a data value left alone, a description rewritten, or a
+// sub-schema walked.
+//
+//craft:ignore naked-any a decoded JSON schema is any by construction; the walk reads its maps, slices and strings
+func rewriteMember(object map[string]any, key string, child any, fn func(string) string, names bool) bool {
+	if names {
+		return rewriteDescriptions(child, fn, false)
+	}
+	if dataKeys[key] {
+		return false
+	}
+	text, isText := child.(string)
+	if !isText || key != "description" {
+		return rewriteDescriptions(child, fn, namedSchemas[key])
+	}
+	kept := fn(text)
+	if kept == text {
+		return false
+	}
+	if kept == "" {
+		delete(object, key)
+		return true
+	}
+	object[key] = kept
+	return true
 }
