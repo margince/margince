@@ -152,6 +152,34 @@ describe("Save view beside the reader's saved views", () => {
     expect(update()).toBeNull();
   });
 
+  it("does not count a view that opens in the builder as holding the list, even when its list state matches", async () => {
+    const built = {
+      ...VIP,
+      query: {
+        ...VIP.query,
+        filter: { and: [{ field: "city", op: "eq", value: "Berlin" }] },
+      },
+    };
+    stubViews([built]);
+    function Tabs() {
+      const tabs = useSavedViewTabs("contacts");
+      return <p>{tabs.map((tab) => tab.link?.name ?? tab.label).join("|")}</p>;
+    }
+    wrap(
+      <>
+        <SaveViewAction resource="contacts" state={{ query: BY_NAME }} />
+        <Tabs />
+      </>,
+      { id: built.id, version: built.version },
+    );
+
+    expect(await screen.findByText(en["views.save"])).toBeTruthy();
+    expect(update()).toBeNull();
+    expect(
+      screen.getByText("VIP by name, opens in Filters and views"),
+    ).toBeTruthy();
+  });
+
   it("treats another page size as the same list", async () => {
     stubViews([VIP]);
     wrap(

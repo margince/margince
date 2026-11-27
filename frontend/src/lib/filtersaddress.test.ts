@@ -17,7 +17,9 @@ import {
   tabOfViewResource,
   tabWords,
   viewOf,
+  viewPageHref,
 } from "./filtersaddress";
+import { parseHash } from "./router";
 
 // Every address the Filters and views destination answers, and what each
 // opens. The library is the answer to anything unrecognised, so a stale link
@@ -50,6 +52,19 @@ describe("a Filters and views address", () => {
   it.each(ADDRESSES)("%j opens %j", (route, opens) => {
     expect(filtersAddressOf(route)).toEqual(opens);
   });
+
+  it.each(OBJECT_TABS)(
+    "reads back the view page address written for %s",
+    (tab) => {
+      const route = parseHash(viewPageHref(tab, "v1"));
+      expect(route.screen).toBe("filters");
+      expect(filtersAddressOf(route)).toEqual({
+        kind: "view",
+        tab,
+        viewId: "v1",
+      });
+    },
+  );
 
   it("heads itself exactly where a filter page or one list opens", () => {
     for (const [route, opens] of ADDRESSES) {
