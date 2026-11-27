@@ -527,7 +527,7 @@ a decision only a human makes: a named user who holds `activity.update`, with a 
   no project link left. The declared undo may delete project-filing proof and nothing else. Every other
   change to the class or its timestamp is still refused.
 - An agent never decides it, even with an admin's passport. It can stage the new link that files an
-  activity under a project, and release it on an attended call. It can do so only while the undo could
+  activity under a project, and release it outside a built-in scheduled run. It can do so only while the undo could
   still take the filing back. In three cases a member releases the new link in the CRM. The activity is restricted, held
   through a link, or covered by an open erasure request. There, that filing would
   last for good.

@@ -87,6 +87,11 @@ counts as approval; the client must ask before sending without your request. Sta
 is not approval, and the server cannot read the client's conversation. Margince runs with no human present
 stage sends for a human decision, even on your passport.
 
+External MCP clients act as their user whether the client is part of a chat or runs automatically.
+There is no attended flag. On the same credential, both have the same grants, scopes and approval rules.
+An OAuth-connected credential can confirm in its conversation; a passport minted in Settings uses the approval inbox.
+Margince's built-in runner marks its own calls for its separate scheduled-run restrictions.
+
 Your own limits still apply. They are RBAC, row scope, the seat limit, and the end date of the
 passport. They are also the scopes you picked when you created it.
 

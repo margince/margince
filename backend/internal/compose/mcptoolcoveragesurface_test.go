@@ -366,8 +366,8 @@ func corpusGradedTools(dir string, names []string, routes map[string]string) (co
 // its headline number was unreadable.
 //
 // There are TWO menus and they are not comparable. Your AI assistant is
-// offered the whole MCP catalog, because a user is there to correct a wrong
-// reach. A night helper gets its declared allowlist of five to seven tools.
+// offered the whole MCP catalog under its user grant, whether chatting or
+// automatic. A night helper gets its declared allowlist of five to seven tools.
 // Its run is unattended, and every listed tool is paid for on every step.
 // One coverage number over both reports a menu nobody is served.
 //
@@ -378,10 +378,10 @@ func writeCoverageSurfaces(p *strings.Builder, r mcpToolCoverage) {
 	p.WriteString("A tool being \"untried\" means something different for each, so the numbers above " +
 		"are your AI assistant's.\n\n")
 	p.WriteString("| | Your AI assistant, over MCP | The night helpers: scheduled agents of Margince AI |\n|---|---|---|\n")
-	p.WriteString("| Who drives it | a user, watching | a job on a timer, unattended |\n")
+	p.WriteString("| Who drives it | a client acting for its user, chatting or automatic | a job on a timer, unattended |\n")
 	fmt.Fprintf(p, "| Menu | %d tools, the whole catalog | %s tools, declared per agent |\n",
 		r.Totals.Tools, agentMenuRange(r.Agents))
-	p.WriteString("| A wrong reach | the user corrects it | nobody is there |\n")
+	p.WriteString("| A wrong reach | the same user grants and credential scopes apply | nobody is there |\n")
 	p.WriteString("| Graded by | the use-case lane on this page | " +
 		"[ai-certification.md](ai-certification.md) |\n\n")
 

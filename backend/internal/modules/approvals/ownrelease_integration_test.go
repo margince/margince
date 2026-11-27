@@ -15,7 +15,7 @@ import (
 )
 
 // What an agent is told it can release is what decide would let it release: the
-// classification says undoable, the session is attended, the credential carries
+// classification says undoable, the call is not a built-in scheduled run, the credential carries
 // write and the decision grants, and the target is one it may act on.
 func TestAStagedCallIsReleasableByTheCallerOnlyWhenDecideWouldAllowIt(t *testing.T) {
 	e := setupStaging(t)
@@ -43,9 +43,10 @@ func TestAStagedCallIsReleasableByTheCallerOnlyWhenDecideWouldAllowIt(t *testing
 		ctx  context.Context
 		want bool
 	}{
-		{"an undoable call, attended, with write and the grants", e.svc.WithUndoableRelease(undoable), agent, true},
+		{"an undoable MCP call with write and the grants", e.svc.WithUndoableRelease(undoable), agent, true},
 		{"a call that is not undoable", NewService(e.svc.db).WithUndoableRelease(func(context.Context, Queryer, StagedCall) bool { return false }), agent, false},
-		{"an unattended run", NewService(e.svc.db).WithUndoableRelease(undoable), principal.WithAgentRunID(agent, ids.NewV7()), false},
+		{"a built-in scheduled run", NewService(e.svc.db).WithUndoableRelease(undoable), principal.WithAgentRunID(agent, ids.NewV7()), false},
+		{"a built-in runner before a run row exists", NewService(e.svc.db).WithUndoableRelease(undoable), principal.WithUnattended(agent), false},
 		{"no classification installed", NewService(e.svc.db), agent, false},
 		{
 			"a credential without the write cap", NewService(e.svc.db).WithUndoableRelease(undoable),

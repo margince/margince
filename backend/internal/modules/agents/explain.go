@@ -89,7 +89,7 @@ func (s *Dispatcher) explain(tool string, err error) string {
 	case errors.As(err, &staged):
 		// A 🟡 call that reached the inbox, and the branch that says WHAT is
 		// waiting there. The contact answers it — in the CRM, or through this
-		// credential when the change can be undone and the call is attended
+		// credential when the change can be undone outside a built-in scheduled run
 		// (stagedReleasePath) — so the caller's job is to relay, and it can only
 		// relay a description it was given: an agent sent
 		// to read_approval for the sentence tells the user a change is pending
