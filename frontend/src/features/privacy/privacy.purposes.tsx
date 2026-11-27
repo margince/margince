@@ -91,14 +91,15 @@ function purposeKey(typed: string): string {
 const PURPOSE_KEY_PATTERN = /^[a-z0-9_]+$/;
 
 // The key a label suggests: accents dropped, every other run of characters a
-// key may not hold turned into one underscore.
+// key may not hold turned into one underscore. A run is one underscore by then,
+// so the trim takes one from each end.
 function keyFromLabel(label: string): string {
   return label
     .normalize("NFD")
     .replace(/\p{M}/gu, "")
     .toLowerCase()
     .replace(/[^a-z0-9]+/g, "_")
-    .replace(/^_+|_+$/g, "");
+    .replace(/^_|_$/g, "");
 }
 
 // A label or key as a reader tells it apart: case, spacing and underscores
