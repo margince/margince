@@ -17,6 +17,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -242,10 +243,11 @@ func (s *Store) FinishSiteRead(ctx context.Context, readID ids.UUID, in FinishSi
 		if err != nil {
 			return fmt.Errorf("finish site read: %w", err)
 		}
-		if err := storeSiteReadProposals(ctx, tx, readID, in.ProposalIDs); err != nil {
+		stored, err := storeSiteReadProposals(ctx, tx, readID, in.ProposalIDs)
+		if err != nil {
 			return err
 		}
-		finished.ProposalIDs = in.ProposalIDs
+		finished.ProposalIDs = stored
 		return logSiteReadActivity(ctx, tx, finished, 0)
 	})
 }
@@ -256,17 +258,18 @@ const siteReadProposalsSQL = `ARRAY(SELECT p.approval_id FROM site_read_proposal
 	WHERE p.site_read_id = site_read.id ORDER BY p.position) AS proposal_ids`
 
 // storeSiteReadProposals replaces the approvals a dossier lists with proposals,
-// keeping their order; a repeated id keeps its first place. The caller holds the site_read row lock, so two writers
-// never interleave their lists.
-func storeSiteReadProposals(ctx context.Context, tx pgx.Tx, readID ids.UUID, proposals []ids.UUID) error {
+// keeping their order; a repeated id keeps its first place, and the list kept
+// is returned. The caller holds the site_read row lock, so two writers never
+// interleave their lists.
+func storeSiteReadProposals(ctx context.Context, tx pgx.Tx, readID ids.UUID, proposals []ids.UUID) ([]ids.UUID, error) {
+	kept := storekit.FirstOccurrences(proposals)
 	if _, err := tx.Exec(ctx, `DELETE FROM site_read_proposal WHERE site_read_id = $1`, readID); err != nil {
-		return fmt.Errorf("clear the site read's proposals: %w", err)
+		return nil, fmt.Errorf("clear the site read's proposals: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `INSERT INTO site_read_proposal (site_read_id, approval_id, position)
-		SELECT $1, staged.approval_id, min(staged.n) FROM unnest($2::uuid[]) WITH ORDINALITY AS staged(approval_id, n)
-		GROUP BY staged.approval_id`,
-		readID, proposals); err != nil {
-		return fmt.Errorf("store the site read's proposals: %w", err)
+		SELECT $1, staged.approval_id, staged.n FROM unnest($2::uuid[]) WITH ORDINALITY AS staged(approval_id, n)`,
+		readID, kept); err != nil {
+		return nil, fmt.Errorf("store the site read's proposals: %w", err)
 	}
-	return nil
+	return kept, nil
 }

@@ -45,7 +45,7 @@ func recordSiteReadConfirmation(ctx context.Context, tx pgx.Tx, read SiteRead, c
 		WHERE id = $1`, read.ID, confirmation.target.id); err != nil {
 		return nil, fmt.Errorf("mark website read confirmed: %w", err)
 	}
-	if err := storeSiteReadProposals(ctx, tx, read.ID, confirmation.proposalIDs); err != nil {
+	if _, err := storeSiteReadProposals(ctx, tx, read.ID, confirmation.proposalIDs); err != nil {
 		return nil, err
 	}
 	return after, nil

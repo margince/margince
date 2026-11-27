@@ -98,16 +98,17 @@ func finishTranscriptReadTx(ctx context.Context, tx pgx.Tx, readID ids.UUID, out
 	if err != nil {
 		return fmt.Errorf("finish transcript read: %w", err)
 	}
-	if err := storeTranscriptReadProposals(ctx, tx, readID, outcome.ProposalIDs); err != nil {
+	stored, err := storeTranscriptReadProposals(ctx, tx, readID, outcome.ProposalIDs)
+	if err != nil {
 		return err
 	}
-	settled.ProposalIDs = outcome.ProposalIDs
+	settled.ProposalIDs = stored
 	// AuditEvent, not Audit: the compare-and-set above proves the row was
 	// running, so a prior state exists — it is simply a run record's own
 	// progress rather than a field a contact edited, and nothing would ever
 	// be restored to it.
 	if _, err := storekit.AuditEvent(ctx, tx, "update", "transcript_read", readID, map[string]any{
-		fieldStatus: outcome.Status, "proposals": len(outcome.ProposalIDs),
+		fieldStatus: outcome.Status, "proposals": len(stored),
 	}); err != nil {
 		return fmt.Errorf("audit transcript read finish: %w", err)
 	}
@@ -129,14 +130,14 @@ const transcriptReadProposalsSQL = `ARRAY(SELECT p.approval_id FROM transcript_r
 	WHERE p.transcript_read_id = transcript_read.id ORDER BY p.position) AS proposal_ids`
 
 // storeTranscriptReadProposals records the approvals a reading staged, keeping
-// their order; a repeated id keeps its first place. A reading finishes once,
-// under the row lock its UPDATE took.
-func storeTranscriptReadProposals(ctx context.Context, tx pgx.Tx, readID ids.UUID, proposals []ids.UUID) error {
+// their order; a repeated id keeps its first place, and the list kept is
+// returned. A reading finishes once, under the row lock its UPDATE took.
+func storeTranscriptReadProposals(ctx context.Context, tx pgx.Tx, readID ids.UUID, proposals []ids.UUID) ([]ids.UUID, error) {
+	kept := storekit.FirstOccurrences(proposals)
 	if _, err := tx.Exec(ctx, `INSERT INTO transcript_read_proposal (transcript_read_id, approval_id, position)
-		SELECT $1, staged.approval_id, min(staged.n) FROM unnest($2::uuid[]) WITH ORDINALITY AS staged(approval_id, n)
-		GROUP BY staged.approval_id`,
-		readID, proposals); err != nil {
-		return fmt.Errorf("store the transcript read's proposals: %w", err)
+		SELECT $1, staged.approval_id, staged.n FROM unnest($2::uuid[]) WITH ORDINALITY AS staged(approval_id, n)`,
+		readID, kept); err != nil {
+		return nil, fmt.Errorf("store the transcript read's proposals: %w", err)
 	}
-	return nil
+	return kept, nil
 }
