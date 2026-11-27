@@ -368,6 +368,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `extinboundnonce_test.go` | H1 | A unit that takes an anonymous inbound webhook refuses a replay of one. |
 | `fiscalperiodsingle_test.go` | H2 | Which fiscal period holds a day is computed in one place. |
 | `forecastscopeauthority_test.go` | H2 | Every forecasting store entry point that records against a scope asks whether its caller answers for that scope. |
+| `frontendlanereads_test.go` | H2 | The frontend lane runs on a change to every path outside frontend/ it reads. |
 | `frontendsendpermission_test.go` | H2 | Every surface that posts to a send door asks the engine first, through the one component that says what it answered. |
 | `gatecensus_test.go` | H2 | The census over this repo's own gate machinery: a gate's exceptions are held to the standard the gate holds its subjects to. |
 | `gateinventory_test.go` | H3 | The gate inventory: every gate in this package declares its own shape, and the reference page listing them is rendered from those declarations. |

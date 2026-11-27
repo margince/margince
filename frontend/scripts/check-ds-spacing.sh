@@ -30,8 +30,9 @@
 # folder is what this gates.
 #
 # DIFF-SCOPED, by design: it inspects only the lines THIS branch adds versus the
-# merge-base with origin/main. The large pre-existing backlog of raw px is NOT
-# gated — write it right the first time, exactly like craft static's comment checks.
+# merge-base with origin/main, or versus DS_SPACING_BASE when CI names the commit.
+# The large pre-existing backlog of raw px is NOT gated — write it right the
+# first time, exactly like craft static's comment checks.
 # A genuine one-off is waived in-line with a reason, in the file's own comment
 # syntax: `// ds:ignore <reason>` in .tsx, `/* ds:ignore <reason> */` in .css.
 #
@@ -42,20 +43,35 @@ set -euo pipefail
 SCRIPT_DIR="$(cd "$(dirname "$0")" && pwd)"
 REPO_ROOT="$(cd "$SCRIPT_DIR" && git rev-parse --show-toplevel 2>/dev/null || true)"
 
+# A skip in CI reads as a pass, so CI fails where a local run may skip.
+in_ci() {
+  [[ -n "${CI:-}" && "${CI}" != "false" && "${CI}" != "0" ]]
+}
+
 if [[ -z "$REPO_ROOT" ]]; then
+  if in_ci; then
+    echo "FAIL: DS spacing check: not a git checkout, so there is no base to compare with" >&2
+    exit 1
+  fi
   echo "==> DS spacing check: not a git checkout — skipped"
   exit 0
 fi
 
-# The comparison point: the merge-base with origin/main (what this branch adds).
-# Fall back to origin/main directly, then to a no-op if neither resolves (e.g.
-# a shallow CI clone without the remote ref) — fail-open so the gate never
-# blocks on missing history, only on real new violations it can see.
 BASE=""
-if git -C "$REPO_ROOT" rev-parse --verify --quiet origin/main >/dev/null; then
+if [[ -n "${DS_SPACING_BASE:-}" ]]; then
+  if ! git -C "$REPO_ROOT" cat-file -e "${DS_SPACING_BASE}^{commit}" 2>/dev/null; then
+    echo "FAIL: DS spacing check: DS_SPACING_BASE=$DS_SPACING_BASE is not a commit in this clone; fetch it before the check" >&2
+    exit 1
+  fi
+  BASE="$DS_SPACING_BASE"
+elif git -C "$REPO_ROOT" rev-parse --verify --quiet origin/main >/dev/null; then
   BASE="$(git -C "$REPO_ROOT" merge-base origin/main HEAD 2>/dev/null || echo origin/main)"
 fi
 if [[ -z "$BASE" ]]; then
+  if in_ci; then
+    echo "FAIL: DS spacing check: no base to compare with. Set DS_SPACING_BASE to the commit this change is judged against" >&2
+    exit 1
+  fi
   echo "==> DS spacing check: no origin/main baseline — skipped"
   exit 0
 fi

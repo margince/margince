@@ -267,6 +267,24 @@ jobs:
               - 'third-party-files.txt'
               - 'frontend/**'
               - 'backend/api/**'
+              # What frontend tests and census rules read outside frontend/.
+              # backend/gates/frontendlanereads_test.go fails on a read missing here.
+              - 'docs/reference/ui-copy-style*.md'
+              - 'docs/handbook/**'
+              - 'backend/gates/marketingquestion_test.go'
+              - 'backend/gates/testdata/servertrim.json'
+              - 'backend/gates/testdata/sourcecensus.json'
+              - 'backend/internal/shared/kernel/*/testdata/*'
+              - 'backend/internal/compose/approvalpreviewcoverage.go'
+              - 'backend/internal/compose/approvalpreviewevidence.go'
+              - 'backend/internal/compose/lifecyclereview/latest.go'
+              - 'backend/internal/compose/contact360/testdata/**'
+              - 'backend/internal/modules/activities/testdata/replysubjects.txt'
+              - 'backend/internal/modules/ai/callsentinels.go'
+              - 'backend/internal/modules/ai/callstore.go'
+              - 'backend/internal/modules/automation/catalog_actions.go'
+              - 'backend/internal/modules/identity/testdata/passwordrule.json'
+              - 'backend/internal/modules/identity/testdata/redirecturi.json'
               # Built from frontend/ by fe-drift, which alone sees a stale copy.
               - 'backend/internal/modules/agents/previewcatalog_gen.json'
               # The frontend job runs BOTH SPA lanes (ADR-0120), and the
