@@ -219,7 +219,6 @@ public.assurance_resolution.evidence_ref document
 public.assurance_resolution.outcome document
 public.assurance_resolution.reason note
 public.assurance_run.captured_by document
-public.assurance_run.digest document
 public.assurance_run.readiness document
 public.assurance_run.status document
 public.assurance_source_coverage.captured_by document
@@ -635,7 +634,6 @@ public.contact_provider_claim.claim_key document
 public.contact_provider_claim.employment_processing_error document checked: one fixed sentence
 public.contact_provider_claim.provider document
 public.contact_provider_claim.source document
-public.contact_provider_claim.validation_status document
 public.contact_social.handle document
 public.contact_social.platform document
 public.contract.captured_by document
@@ -827,7 +825,6 @@ public.finance_external_customer.sync_hash document
 public.finance_invoice.captured_by document
 public.finance_invoice.external_id document
 public.finance_invoice.number document
-public.finance_invoice.raw_status document
 public.finance_invoice.source document
 public.finance_invoice.status document
 public.finance_invoice.sync_hash document

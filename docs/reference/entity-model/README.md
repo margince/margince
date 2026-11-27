@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 355 |
-| Columns | 4350 |
+| Columns | 4345 |
 | Foreign keys | 621 |
 | Owning areas | 40 |
 
@@ -176,14 +176,14 @@ erDiagram
 | [`analytics_share`](compose.md#analytics_share) | compose | 14 | 0 |
 | [`app_user`](identity.md#app_user) | identity | 39 | 151 |
 | [`approval`](approvals.md#approval) | approvals | 38 | 4 |
-| [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 12 | 0 |
+| [`approval_autonomy_policy`](approvals.md#approval_autonomy_policy) | approvals | 10 | 0 |
 | [`approval_preference`](approvals.md#approval_preference) | approvals | 3 | 0 |
 | [`assurance_cycle`](assurance.md#assurance_cycle) | assurance | 4 | 1 |
 | [`assurance_deal_receipt`](assurance.md#assurance_deal_receipt) | assurance | 11 | 0 |
 | [`assurance_exception`](assurance.md#assurance_exception) | assurance | 20 | 3 |
 | [`assurance_input_change`](assurance.md#assurance_input_change) | assurance | 4 | 0 |
 | [`assurance_resolution`](assurance.md#assurance_resolution) | assurance | 12 | 0 |
-| [`assurance_run`](assurance.md#assurance_run) | assurance | 14 | 3 |
+| [`assurance_run`](assurance.md#assurance_run) | assurance | 13 | 3 |
 | [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 3 | 0 |
 | [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 6 | 0 |
 | [`assurance_task_item`](assurance.md#assurance_task_item) | assurance | 12 | 0 |
@@ -264,7 +264,7 @@ erDiagram
 | [`contact_moment_dismissal`](compose.md#contact_moment_dismissal) | compose | 4 | 0 |
 | [`contact_phone`](contacts.md#contact_phone) | contacts | 14 | 1 |
 | [`contact_profile_field_legacy`](contacts.md#contact_profile_field_legacy) | contacts | 18 | 0 |
-| [`contact_provider_claim`](contacts.md#contact_provider_claim) | contacts | 16 | 1 |
+| [`contact_provider_claim`](contacts.md#contact_provider_claim) | contacts | 15 | 1 |
 | [`contact_signature_enrich_state`](contacts.md#contact_signature_enrich_state) | contacts | 13 | 0 |
 | [`contact_social`](contacts.md#contact_social) | contacts | 5 | 0 |
 | [`contract`](contracts.md#contract) | contracts | 29 | 3 |
@@ -315,7 +315,7 @@ erDiagram
 | [`finance_connection`](finance.md#finance_connection) | finance | 10 | 4 |
 | [`finance_customer_link`](finance.md#finance_customer_link) | finance | 10 | 2 |
 | [`finance_external_customer`](finance.md#finance_external_customer) | finance | 11 | 1 |
-| [`finance_invoice`](finance.md#finance_invoice) | finance | 30 | 4 |
+| [`finance_invoice`](finance.md#finance_invoice) | finance | 29 | 4 |
 | [`finance_payment`](finance.md#finance_payment) | finance | 17 | 0 |
 | [`forecast_call`](forecasting.md#forecast_call) | forecasting | 14 | 2 |
 | [`forecast_capture_status`](forecasting.md#forecast_capture_status) | forecasting | 6 | 0 |

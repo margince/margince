@@ -14,9 +14,9 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [agents](agents.md) | 3 | 28 | 0 | 5 | 1 |
 | [ai](ai.md) | 12 | 191 | 0 | 3 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 24 | 0 | 2 | 0 |
-| [approvals](approvals.md) | 3 | 53 | 4 | 8 | 2 |
+| [approvals](approvals.md) | 3 | 51 | 4 | 8 | 2 |
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
-| [assurance](assurance.md) | 9 | 86 | 0 | 7 | 5 |
+| [assurance](assurance.md) | 9 | 85 | 0 | 7 | 5 |
 | [automation](automation.md) | 3 | 32 | 1 | 2 | 0 |
 | [capture](capture.md) | 25 | 261 | 6 | 27 | 14 |
 | [chatlinks](chatlinks.md) | 2 | 29 | 0 | 4 | 2 |
@@ -25,13 +25,13 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [comms](comms.md) | 1 | 47 | 5 | 6 | 1 |
 | [compose](compose.md) | 42 | 390 | 3 | 30 | 26 |
 | [consent](consent.md) | 23 | 319 | 2 | 42 | 23 |
-| [contacts](contacts.md) | 49 | 718 | 75 | 36 | 13 |
+| [contacts](contacts.md) | 49 | 717 | 75 | 36 | 13 |
 | [continuity](continuity.md) | 1 | 7 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 19 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 92 | 0 | 8 | 1 |
 | [deals](deals.md) | 26 | 379 | 26 | 16 | 2 |
-| [finance](finance.md) | 5 | 78 | 0 | 3 | 0 |
+| [finance](finance.md) | 5 | 77 | 0 | 3 | 0 |
 | [forecasting](forecasting.md) | 4 | 94 | 1 | 2 | 0 |
 | [identity](identity.md) | 22 | 204 | 154 | 6 | 5 |
 | [initiatives](initiatives.md) | 5 | 40 | 0 | 2 | 1 |
