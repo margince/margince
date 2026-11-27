@@ -228,7 +228,7 @@ export const EndingADuty: Story = {
       await canvas.findByRole("button", { name: /^Actions for/ }),
     );
     await userEvent.click(
-      await screen.findByRole("button", { name: "End without sending" }),
+      await screen.findByRole("button", { name: englishCopy["notice.excuse"] }),
     );
     const dialog = within(await screen.findByRole("dialog"));
     await dialog.findByText(englishCopy["notice.excuseGround"]);
