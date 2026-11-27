@@ -60,24 +60,23 @@ type grantSource struct {
 
 func loadGrantSource(t *testing.T) *grantSource {
 	t.Helper()
-	fset, files := parseGoFilesUnder(t, "internal")
-	return grantSourceFrom(t, fset, files)
+	return grantSourceOf(t, importCallGraphOf(gatekit.SourceFileSet(), typedCallGraphUnder(t, "internal")))
 }
 
-// grantSourceFrom type-checks parsed files, keyed by the directory each one names.
+// grantSourceFrom type-checks planted files, keyed by the directory each one names.
 func grantSourceFrom(t *testing.T, fset *token.FileSet, files []*ast.File) *grantSource {
 	t.Helper()
 	byDir := map[string][]*ast.File{}
 	for _, file := range files {
-		// The generated contract adds no gate, and reading it costs most of the
-		// type check. Its types stand in empty, as third-party imports do.
 		name := filepath.ToSlash(fset.Position(file.Pos()).Filename)
-		if !strings.HasSuffix(name, "_gen.go") {
-			byDir[filepath.Dir(name)] = append(byDir[filepath.Dir(name)], file)
-		}
+		byDir[filepath.Dir(name)] = append(byDir[filepath.Dir(name)], file)
 	}
-	graph := newImportCallGraph(fset, packagesInImportOrder(byDir))
-	source := &grantSource{graph: graph, entries: settingEntryObjects(byDir, graph), methods: map[string]*types.Func{}}
+	return grantSourceOf(t, newImportCallGraph(fset, packagesInImportOrder(byDir)))
+}
+
+func grantSourceOf(t *testing.T, graph *importCallGraph) *grantSource {
+	t.Helper()
+	source := &grantSource{graph: graph, entries: settingEntryObjects(graph), methods: map[string]*types.Func{}}
 	for _, pkg := range graph.packages {
 		if pkg.Path() != composeImportPath {
 			continue
@@ -99,8 +98,8 @@ func grantSourceFrom(t *testing.T, fset *token.FileSet, files []*ast.File) *gran
 	return source
 }
 
-// packagesInImportOrder puts each package after the ones it imports, so a checked
-// package sees the real types of the module's other packages.
+// packagesInImportOrder puts each planted package after the ones it imports, so
+// a checked package sees the real types of the others.
 func packagesInImportOrder(byDir map[string][]*ast.File) [][]*ast.File {
 	var ordered [][]*ast.File
 	visited := map[string]bool{}
@@ -130,17 +129,15 @@ func packagesInImportOrder(byDir map[string][]*ast.File) [][]*ast.File {
 // settingEntryObjects maps each package-level stored setting to the RBAC object
 // it declares. platform/settings checks that object at run time, so a walk that
 // did not read the declaration would see an unknown grant on every setting.
-func settingEntryObjects(byDir map[string][]*ast.File, graph *importCallGraph) map[types.Object]string {
+func settingEntryObjects(graph *importCallGraph) map[types.Object]string {
 	out := map[types.Object]string{}
-	for _, files := range byDir {
-		for _, file := range files {
-			for _, decl := range file.Decls {
-				gen, ok := decl.(*ast.GenDecl)
-				if !ok || gen.Tok != token.VAR {
-					continue
-				}
-				collectSettingEntries(gen, graph.fileInfos[file], out)
+	for file, info := range graph.fileInfos {
+		for _, decl := range file.Decls {
+			gen, ok := decl.(*ast.GenDecl)
+			if !ok || gen.Tok != token.VAR {
+				continue
 			}
+			collectSettingEntries(gen, info, out)
 		}
 	}
 	return out

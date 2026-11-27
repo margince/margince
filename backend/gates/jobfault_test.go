@@ -120,8 +120,13 @@ func TestEveryWorkerReturnsThroughJobsFault(t *testing.T) {
 	}
 	nilAfterLogging := gatekit.Waive(census.NilAfterLoggingWaivers())
 
-	fset, files := parseGoFilesUnder(t, filepath.Join("internal", "compose"))
-	packages := indexPackageFuncs(fset, files)
+	fset := gatekit.SourceFileSet()
+	packages := map[string]*packageFuncs{}
+	var files []*ast.File
+	for _, typed := range typedCallGraphUnder(t, workerHome) {
+		packages[filepath.FromSlash(typed.dir)] = newPackageFuncs(typed.info, typed.files)
+		files = append(files, typed.files...)
+	}
 	workers := 0
 	for _, file := range files {
 		pkg := packages[filepath.Dir(fset.Position(file.Pos()).Filename)]
@@ -181,15 +186,13 @@ func TestEveryWorkerReturnsThroughJobsFault(t *testing.T) {
 	nilAfterLogging.AssertAllMatched(t)
 }
 
-// assertCallsResolve fails when the loose type-check stopped resolving this
-// tree's calls. The log census follows a call only when it resolves to a
-// declaration here, so a check that resolved nothing would follow nothing and
-// find no log anywhere — a clean result from a census that read nothing.
+// assertCallsResolve fails when the census stopped resolving this tree's
+// calls. The log census follows a call only when it resolves to a declaration
+// here. A census that resolved nothing would find no log anywhere and pass.
 func assertCallsResolve(t *testing.T, packages map[string]*packageFuncs) {
 	t.Helper()
-	resolving, unresolved := 0, 0
+	resolving := 0
 	for _, pkg := range packages {
-		unresolved += pkg.unresolved
 		for _, fn := range pkg.decls {
 			if fn.Name.Name == "Work" && fn.Recv != nil && pkg.resolvesACall(fn) {
 				resolving++
@@ -200,8 +203,7 @@ func assertCallsResolve(t *testing.T, packages map[string]*packageFuncs) {
 		t.Fatalf("only %d Work methods make a call the census resolves into their own package, "+
 			"expected at least %d — the type-check has stopped resolving this tree", resolving, workerFloor)
 	}
-	t.Logf("%d Work methods make a call into their own package; %d references into stood-in imports left unresolved",
-		resolving, unresolved)
+	t.Logf("%d Work methods make a call into their own package", resolving)
 }
 
 // resolvesACall reports whether fn makes any call the census follows.
@@ -254,62 +256,39 @@ func errorLogsAndReturnsNil(fn *ast.FuncDecl, pkg *packageFuncs) string {
 	return pkg.loggerIn(fn, map[*ast.FuncDecl]bool{})
 }
 
-// packageFuncs is one package's declarations, type-checked so a call from a
-// worker can be followed to the body it runs and a variable told from another
-// of the same name.
+// packageFuncs is one package's declarations, type-checked. A call from a
+// worker is followed to the body it runs, and a variable is told from another
+// of the same name. The walk follows only this package's own declarations.
 type packageFuncs struct {
 	info  *types.Info
 	decls map[*types.Func]*ast.FuncDecl
-	// unresolved counts the references the check could not resolve — each
-	// one into an import, which stands in empty; see typeCheckLoosely.
-	unresolved int
 }
 
-// indexPackageFuncs type-checks the files of each directory — each package —
-// on its own.
-func indexPackageFuncs(fset *token.FileSet, files []*ast.File) map[string]*packageFuncs {
-	byDir := map[string][]*ast.File{}
+func newPackageFuncs(info *types.Info, files []*ast.File) *packageFuncs {
+	pkg := &packageFuncs{info: info, decls: map[*types.Func]*ast.FuncDecl{}}
 	for _, file := range files {
-		dir := filepath.Dir(fset.Position(file.Pos()).Filename)
-		byDir[dir] = append(byDir[dir], file)
-	}
-	packages := map[string]*packageFuncs{}
-	for dir, group := range byDir {
-		info, unresolved := typeCheckLoosely(fset, dir, group)
-		pkg := &packageFuncs{info: info, decls: map[*types.Func]*ast.FuncDecl{}, unresolved: unresolved}
-		for _, file := range group {
-			for _, decl := range file.Decls {
-				if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
-					if obj, ok := info.Defs[fn.Name].(*types.Func); ok {
-						pkg.decls[obj] = fn
-					}
+		for _, decl := range file.Decls {
+			if fn, ok := decl.(*ast.FuncDecl); ok && fn.Body != nil {
+				if obj, ok := info.Defs[fn.Name].(*types.Func); ok {
+					pkg.decls[obj] = fn
 				}
 			}
 		}
-		packages[dir] = pkg
 	}
-	return packages
+	return pkg
 }
 
-// typeCheckLoosely checks one package with every import standing in as an
-// empty package, and reports how many references that left unresolved.
-//
-// The walk follows only this package's own declarations, and those resolve
-// without the imports: a local, a field of a local type, a method on one. What
-// a stand-in costs is a call on a value of an IMPORTED type, which the walk
-// would not follow in any case. The checker reports each reference into a
-// stand-in and moves past it, so one pass resolves everything else.
-func typeCheckLoosely(fset *token.FileSet, dir string, files []*ast.File) (*types.Info, int) {
+// typeCheckLoosely checks one planted package with every import standing in
+// as an empty package. The checker moves past each reference into a stand-in,
+// so a probe resolves its own declarations without real imports.
+func typeCheckLoosely(fset *token.FileSet, dir string, files []*ast.File) *types.Info {
 	info := &types.Info{
 		Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{},
 		Types: map[ast.Expr]types.TypeAndValue{}, Selections: map[*ast.SelectorExpr]*types.Selection{},
 	}
-	unresolved := 0
-	conf := types.Config{Importer: standInImports{}, Error: func(error) { unresolved++ }}
-	if _, err := conf.Check(dir, fset, files, info); err == nil {
-		return info, 0
-	}
-	return info, unresolved
+	conf := types.Config{Importer: standInImports{}, Error: func(error) {}}
+	_, _ = conf.Check(dir, fset, files, info)
+	return info
 }
 
 // standInImports answers every import with an empty package named for the
@@ -455,9 +434,9 @@ func (pkg *packageFuncs) handsBack(fn *ast.FuncDecl, stmt ast.Stmt, lhs []ast.Ex
 	return !paths.Unsettled(stmt)
 }
 
-// returnsAFailure reports whether ret hands back an error that is not the nil
-// identifier: a jobs.Fault or river control return, read by its spelling since
-// those packages stand in empty, or any other value typed as an error.
+// returnsAFailure reports whether ret hands back an error other than nil. That
+// is a jobs.Fault or river control return, or any value typed as an error. The
+// first two are read by spelling, as a probe's imports stand in empty.
 func (pkg *packageFuncs) returnsAFailure(ret *ast.ReturnStmt) bool {
 	for _, result := range ret.Results {
 		if ident, ok := ast.Unparen(result).(*ast.Ident); ok && ident.Name == "nil" {
@@ -797,7 +776,7 @@ func plantedWorker(t *testing.T, src string) (*packageFuncs, *ast.FuncDecl) {
 	if err != nil {
 		t.Fatalf("parse the planted worker: %v", err)
 	}
-	pkg := indexPackageFuncs(fset, []*ast.File{file})["planted"]
+	pkg := newPackageFuncs(typeCheckLoosely(fset, "planted", []*ast.File{file}), []*ast.File{file})
 	work := pkg.method("worker", "Work")
 	if work == nil {
 		t.Fatal("the planted worker declares no Work method the index can see")
