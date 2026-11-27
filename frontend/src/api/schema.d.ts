@@ -29222,6 +29222,11 @@ export interface components {
             /** @description ISO-4217 code every money roll-up converts to. */
             base_currency: string;
             /**
+             * @description The UI languages active members chose, each once and with no member named. Stage
+             *     settings mark an admin-named label with no name in one of them.
+             */
+            member_languages?: ("en" | "de" | "vi")[];
+            /**
              * @description The language AI writes in when what it writes is read by the whole team — claims,
              *     signals, extracted facts, agent answers. Not a user's display language, which is
              *     per-user.

@@ -301,8 +301,8 @@ export function RecordFormBody({
                     t,
                     Object.hasOwn(prefilled, field.key),
                   )
-                : withFill(field, values, (next) =>
-                    setVisibleValues({ ...values, [field.key]: next }),
+                : withFill(field, values, (next, latest) =>
+                    setVisibleValues({ ...latest, [field.key]: next }),
                   )
             }
             error={said(field.key)}
@@ -460,7 +460,7 @@ function ownCheck(
 function withFill(
   field: CreateField,
   values: Record<string, string>,
-  setValue: (next: string) => void,
+  setValue: (next: string, latest: Record<string, string>) => void,
 ) {
   if (!field.fill) return field.hint;
   return (

@@ -16372,6 +16372,27 @@ func (e InstallationSettingsForecastForwardMeasure) Valid() bool {
 	}
 }
 
+// Defines values for InstallationSettingsMemberLanguages.
+const (
+	InstallationSettingsMemberLanguagesDe InstallationSettingsMemberLanguages = "de"
+	InstallationSettingsMemberLanguagesEn InstallationSettingsMemberLanguages = "en"
+	InstallationSettingsMemberLanguagesVi InstallationSettingsMemberLanguages = "vi"
+)
+
+// Valid indicates whether the value is a known member of the InstallationSettingsMemberLanguages enum.
+func (e InstallationSettingsMemberLanguages) Valid() bool {
+	switch e {
+	case InstallationSettingsMemberLanguagesDe:
+		return true
+	case InstallationSettingsMemberLanguagesEn:
+		return true
+	case InstallationSettingsMemberLanguagesVi:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InstallationSettingsTimeFormat.
 const (
 	InstallationSettingsTimeFormatLocale InstallationSettingsTimeFormat = "locale"
@@ -56574,6 +56595,10 @@ type InstallationSettings struct {
 	// little room rather than compare a file against it exactly.
 	MaxUploadBytes int64 `json:"max_upload_bytes"`
 
+	// MemberLanguages The UI languages active members chose, each once and with no member named. Stage
+	// settings mark an admin-named label with no name in one of them.
+	MemberLanguages *[]InstallationSettingsMemberLanguages `json:"member_languages,omitempty"`
+
 	// Name The company's display name. An administrator saving the anchor company's `display_name`
 	// (`PUT /company`, a profile-field correction or a company edit) sets it in the same
 	// transaction; before the first save it is the name the installation was configured with.
@@ -56635,6 +56660,9 @@ type InstallationSettingsDateFormat string
 // With no measure saved, the landing uses `likely`. A saved measure is used as saved.
 // The set can grow, so a client shows an unknown value by its name.
 type InstallationSettingsForecastForwardMeasure string
+
+// InstallationSettingsMemberLanguages defines model for InstallationSettings.MemberLanguages.
+type InstallationSettingsMemberLanguages string
 
 // InstallationSettingsTimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
 type InstallationSettingsTimeFormat string

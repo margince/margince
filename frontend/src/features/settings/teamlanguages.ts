@@ -3,30 +3,23 @@
 
 import { LOCALES, type Locale } from "../../i18n/locale";
 import { useInstallationSettings } from "../../lib/uploadlimit";
-import { type User, useMembers } from "./users-members";
 
 /**
  * The UI languages an admin-named label needs a name in: those some active
  * member chose, less the installation's base language, which the stored name
- * is written in. Empty until both reads answer, so nothing is marked early.
+ * is written in. Empty until the settings answer, so nothing is marked early.
  */
 export function teamLanguages(
-  members: readonly Pick<User, "status" | "locale">[] | undefined,
+  memberLanguages: readonly string[] | undefined,
   baseLanguage: Locale | undefined,
 ): Locale[] {
-  if (!members || !baseLanguage) return [];
-  const chosen = new Set(
-    members
-      .filter((member) => member.status === "active" && member.locale)
-      .map((member) => member.locale),
-  );
+  if (!memberLanguages || !baseLanguage) return [];
   return LOCALES.filter(
-    (locale) => locale !== baseLanguage && chosen.has(locale),
+    (locale) => locale !== baseLanguage && memberLanguages.includes(locale),
   );
 }
 
 export function useTeamLanguages(): Locale[] {
-  const members = useMembers();
-  const settings = useInstallationSettings();
-  return teamLanguages(members.data, settings.data?.base_language);
+  const settings = useInstallationSettings().data;
+  return teamLanguages(settings?.member_languages, settings?.base_language);
 }

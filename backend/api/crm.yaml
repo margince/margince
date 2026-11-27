@@ -43068,6 +43068,12 @@ components:
         base_currency:
           type: string
           description: ISO-4217 code every money roll-up converts to.
+        member_languages:
+          type: array
+          items: { type: string, enum: [en, de, vi], x-extensible-enum: true }
+          description: |
+            The UI languages active members chose, each once and with no member named. Stage
+            settings mark an admin-named label with no name in one of them.
         base_language:
           type: string
           enum: [en, de, vi]

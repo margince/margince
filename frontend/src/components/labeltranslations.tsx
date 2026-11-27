@@ -40,8 +40,8 @@ export function translationFields(
     fill: source
       ? {
           label: "translation.suggest",
-          ready: (values) => named(values) !== "",
-          from: (values) => suggestLabelTranslation(named(values), locale),
+          source: named,
+          suggest: (text) => suggestLabelTranslation(text, locale),
         }
       : undefined,
   }));

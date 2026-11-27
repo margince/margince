@@ -12,7 +12,7 @@ import { type CreateField, CreateRecordModal } from "./create";
 
 afterEach(cleanup);
 
-function modal(from: () => Promise<string>, onSubmit = vi.fn()) {
+function modal(suggest: (text: string) => Promise<string>, onSubmit = vi.fn()) {
   const fields: CreateField[] = [
     { key: "name", labelText: "Name", type: "text" },
     {
@@ -20,8 +20,8 @@ function modal(from: () => Promise<string>, onSubmit = vi.fn()) {
       labelText: "Name in Vietnamese",
       fill: {
         label: "translation.suggest",
-        ready: (values) => Boolean(values.name),
-        from,
+        source: (values) => values.name ?? "",
+        suggest,
       },
     },
   ];
@@ -62,6 +62,19 @@ describe("Suggest translation under a name field", () => {
     fireEvent.click(suggest());
     await waitFor(() => expect(vietnamese().value).toBe("Đã gửi báo giá"));
     expect(onSubmit).not.toHaveBeenCalled();
+  });
+
+  it("keeps what was typed while the model ran, and drops an answer for a changed name", async () => {
+    let answer: (text: string) => void = () => {};
+    modal(() => new Promise((resolve) => (answer = resolve)));
+    const name = screen.getByRole("textbox", { name: /^Name\s*$/ });
+    fireEvent.change(name, { target: { value: "Proposal sent" } });
+    fireEvent.click(suggest());
+    fireEvent.change(name, { target: { value: "Offer sent" } });
+    answer("Đã gửi báo giá");
+    await waitFor(() => expect(suggest()).toHaveProperty("disabled", false));
+    expect(vietnamese().value).toBe("");
+    expect((name as HTMLInputElement).value).toBe("Offer sent");
   });
 
   it("says so when no suggestion comes back, and keeps the field as typed", async () => {
