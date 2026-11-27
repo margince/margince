@@ -4,6 +4,8 @@
 // The Filters and views library as data. Pure, so the rules the page draws by
 // are proved here without a page.
 
+import { listOpening } from "../../components/listquery.options";
+import { arrivalParams } from "../../components/listqueryparams";
 import {
   forReader,
   holdsEveryWord,
@@ -11,6 +13,7 @@ import {
   stable,
 } from "../../format/collate";
 import type { Locale } from "../../i18n";
+import { VIEW_PARAM } from "../../lib/deals.queries";
 import { isExtensionEntityKind } from "../../lib/entity";
 import type { FilterResource } from "../../lib/filterdata";
 import {
@@ -19,14 +22,26 @@ import {
   libraryTypeOfList,
   type ObjectTab,
   resourceOf as resourceOfTab,
-  tabOfViewResource,
+  viewPageHref,
 } from "../../lib/filtersaddress";
 import type { List } from "../../lib/lists.queries";
-import { filterTreeOf, type SavedView } from "../../lib/savedviews.queries";
-import { decode, type Node, rootGroup } from "../../lib/segmentpredicate";
+import { routeHash } from "../../lib/router";
+import type { SavedView } from "../../lib/savedviews.queries";
+import { decode, type Node } from "../../lib/segmentpredicate";
+import { hashWithParams } from "../../lib/urlstate";
+import { type SavedListState, viewOpening } from "./savedviews.state";
+
+/** A view saved on a list screen, which opens on that list. */
+export type ListViewItem = Readonly<{
+  kind: "listView";
+  view: SavedView;
+  state: SavedListState;
+  type: CoreLibraryType;
+}>;
 
 export type LibraryItem =
   | Readonly<{ kind: "view"; view: SavedView; tree: Node; tab: ObjectTab }>
+  | ListViewItem
   | Readonly<{ kind: "list"; list: List }>;
 
 /** `mine`: what the reader owns. `shared`: what someone else or nobody owns. */
@@ -40,20 +55,21 @@ export type LibraryCut = Readonly<{
 }>;
 
 /**
- * Saved views and lists as one set of rows. A view whose filter this build
- * cannot read, or that keeps a list's dials rather than a filter, is left out:
- * a row that opens onto nothing is worse than no row. A stored single clause
- * is wrapped in a group, the shape every editor of it expects.
+ * Saved views and lists as one set of rows. A view opens where `viewOpening`
+ * says. One that opens nowhere is left out: a row that opens onto nothing is
+ * worse than no row.
  */
 export function libraryItems(
   views: readonly SavedView[],
   lists: readonly List[],
 ): LibraryItem[] {
   const fromViews = views.flatMap((view): LibraryItem[] => {
-    const tab = tabOfViewResource(view.resource);
-    const tree = filterTreeOf(view);
-    return tab && tree
-      ? [{ kind: "view", view, tree: rootGroup(tree), tab }]
+    const opens = viewOpening(view);
+    if (opens?.kind === "builder") {
+      return [{ kind: "view", view, tree: opens.tree, tab: opens.tab }];
+    }
+    return opens?.kind === "list"
+      ? [{ kind: "listView", view, state: opens.state, type: opens.type }]
       : [];
   });
   const fromLists = lists.map((list): LibraryItem => ({ kind: "list", list }));
@@ -73,33 +89,93 @@ export function withFound(
 }
 
 export function nameOf(item: LibraryItem): string {
-  return item.kind === "view" ? item.view.name : item.list.name;
+  return item.kind === "list" ? item.list.name : item.view.name;
 }
 
 /** Unique across both kinds, since a view and a list may share an id. */
 export function keyOf(item: LibraryItem): string {
-  return item.kind === "view" ? `v:${item.view.id}` : `l:${item.list.id}`;
+  return item.kind === "list" ? `l:${item.list.id}` : `v:${item.view.id}`;
 }
 
 export function typeOf(item: LibraryItem): LibraryType {
-  return item.kind === "view"
-    ? item.tab
-    : libraryTypeOfList(item.list.entity_type);
+  switch (item.kind) {
+    case "view":
+      return item.tab;
+    case "listView":
+      return item.type;
+    case "list":
+      return libraryTypeOfList(item.list.entity_type);
+  }
 }
 
 /** The record type whose vocabulary names this row's fields. */
 export function resourceOf(item: LibraryItem): FilterResource {
-  return item.kind === "view" ? resourceOfTab(item.tab) : item.list.entity_type;
+  switch (item.kind) {
+    case "view":
+      return resourceOfTab(item.tab);
+    case "listView":
+      return item.type === "projects" ? "project" : resourceOfTab(item.type);
+    case "list":
+      return item.list.entity_type;
+  }
 }
 
-/** The filter a row selects by, or null for a Shortlist or an unreadable one. */
+/** The filter a row selects by, or null for a Shortlist, a list's view or an unreadable one. */
 export function treeOf(item: LibraryItem): Node | null {
-  if (item.kind === "view") {
-    return item.tree;
+  switch (item.kind) {
+    case "view":
+      return item.tree;
+    case "listView":
+      return null;
+    case "list":
+      return item.list.list_type === "dynamic"
+        ? decode(item.list.definition)
+        : null;
   }
-  return item.list.list_type === "dynamic"
-    ? decode(item.list.definition)
-    : null;
+}
+
+/**
+ * Where a row opens. `leadsOpening` is what the leads queue opens on for this
+ * reader; while it is unknown, a view saved on that queue opens nowhere yet.
+ */
+export function hrefOf(
+  item: LibraryItem,
+  leadsOpening: Readonly<Record<string, string>> | undefined,
+): string | undefined {
+  switch (item.kind) {
+    case "view":
+      return viewPageHref(item.tab, item.view.id);
+    case "listView":
+      if (item.type !== "leads") {
+        return listViewHref(item, {});
+      }
+      return leadsOpening && listViewHref(item, leadsOpening);
+    case "list":
+      return routeHash({ screen: "lists", id: item.list.id });
+  }
+}
+
+/**
+ * Where a view saved on a list opens: that list, with the view's dials in an
+ * address the list reads as the reader's choice. `openingFilters` are the
+ * filters that list opens on for this reader.
+ */
+export function listViewHref(
+  item: ListViewItem,
+  openingFilters: Readonly<Record<string, string>>,
+): string {
+  const opening = listOpening(undefined, openingFilters);
+  const dials = new Map(
+    arrivalParams(
+      { ...item.state, perPage: item.state.perPage ?? opening.perPage },
+      opening,
+    ),
+  );
+  if (item.type === "deals") {
+    // Deals saves a view from its table alone, so the view opens there.
+    dials.set(VIEW_PARAM, "table");
+  }
+  return hashWithParams(routeHash({ screen: item.type }), dials);
 }
 
 export function isArchived(item: LibraryItem): boolean {
@@ -122,7 +198,7 @@ export function groupOf(
   item: LibraryItem,
   readerId: string | undefined,
 ): LibraryGroup {
-  if (item.kind === "view") {
+  if (item.kind !== "list") {
     return "mine";
   }
   return ownedByReader(item.list, readerId) ? "mine" : "shared";

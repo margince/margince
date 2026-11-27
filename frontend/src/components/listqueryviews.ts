@@ -99,12 +99,15 @@ export function useActiveView(
   const [litId, setLitId] = useState<string | null>(null);
   // A tab that claims no order keeps its light while the reader re-sorts it,
   // once picked. Unpicked, it claims the order the list opens in, so it never
-  // takes over a saved view the reader is changing.
-  const matched = views.findIndex((spec) =>
-    matchesView(
-      { ...spec, sort: spec.sort ?? opening.initialSort ?? "" },
-      query,
-    ),
+  // takes over a saved view the reader is changing. A link tab opens another
+  // page, so it never stands for this list.
+  const matched = views.findIndex(
+    (spec) =>
+      !spec.link &&
+      matchesView(
+        { ...spec, sort: spec.sort ?? opening.initialSort ?? "" },
+        query,
+      ),
   );
   const pinned = views.findIndex((spec) => spec.id === pickedId);
   const pinnedView = views[pinned];

@@ -410,6 +410,36 @@ describe("view tabs — two views can ask for the same thing", () => {
   });
 });
 
+describe("a link tab", () => {
+  it("never lights, even over a list its dials would describe", async () => {
+    const fetchPage = vi.fn(async (_query: ListQuery, _cursor: string | null) =>
+      emptyPage(),
+    );
+    render(
+      <ListTableHarness
+        fetchPage={fetchPage}
+        dataViews={[
+          {
+            ...savedTab({ id: "v-vip", label: "VIP", sort: "-created_at" }),
+            link: { href: "#/filters/contacts/v-vip", name: "VIP, elsewhere" },
+          },
+          savedTab({ id: "v-new", label: "Newest", sort: "-created_at" }),
+        ]}
+      />,
+    );
+    await waitFor(() => expect(fetchPage).toHaveBeenCalled());
+
+    expect(
+      screen
+        .getByRole("button", { name: "Newest" })
+        .getAttribute("aria-pressed"),
+    ).toBe("true");
+    expect(
+      screen.getByRole("link", { name: "VIP, elsewhere" }).classList,
+    ).not.toContain("on");
+  });
+});
+
 describe("saved view tabs restore the whole list state", () => {
   it("restores the archived toggle and the page size the view was saved with", async () => {
     const user = userEvent.setup();

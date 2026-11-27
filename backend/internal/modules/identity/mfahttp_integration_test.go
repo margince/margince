@@ -70,7 +70,7 @@ func TestMFAEndpointsEnrolConfirmAndDisable(t *testing.T) {
 	}
 	confirmRec := httptest.NewRecorder()
 	h.ConfirmMyTotp(confirmRec, jsonRequest(ctx, t, http.MethodPost, "/v1/me/mfa/totp/confirm",
-		crmcontracts.TotpConfirmRequest{Code: code}))
+		crmcontracts.TotpConfirmRequest{CurrentPassword: memberPassword, Code: code}))
 	if confirmRec.Code != http.StatusOK {
 		t.Fatalf("confirm = %d, want 200 (body %s)", confirmRec.Code, confirmRec.Body.String())
 	}
@@ -142,6 +142,55 @@ func TestMFADisableNeedsNoCodeWhereNoConfirmedFactorGuards(t *testing.T) {
 	}
 	if mfaStatus(t, h, e).Enrolled {
 		t.Error("the pending enrolment survived a codeless disable")
+	}
+}
+
+// The confirmation answers a missing or wrong password with the refusals
+// change-password gives, so the client tells them from a wrong code.
+func TestMFAConfirmOverHTTPRefusesWithoutTheCurrentPassword(t *testing.T) {
+	e := setupRevocationEnv(t, "mfa-http-password")
+	e.withVault()
+	h := NewHandlers(e.svc)
+	ctx := e.asMember()
+
+	startRec := httptest.NewRecorder()
+	h.StartMyTotpEnrolment(startRec, httptest.NewRequest(http.MethodPost, "/v1/me/mfa/totp", nil).WithContext(ctx))
+	if startRec.Code != http.StatusOK {
+		t.Fatalf("start enrolment = %d, want 200", startRec.Code)
+	}
+	var enrol crmcontracts.TotpEnrolment
+	if err := json.Unmarshal(startRec.Body.Bytes(), &enrol); err != nil {
+		t.Fatalf("decode enrolment: %v", err)
+	}
+	code, err := totpCodeAt(enrol.Secret, e.svc.now(), totpDigits)
+	if err != nil {
+		t.Fatal(err)
+	}
+
+	missingRec := httptest.NewRecorder()
+	h.ConfirmMyTotp(missingRec, jsonRequest(ctx, t, http.MethodPost, "/v1/me/mfa/totp/confirm",
+		crmcontracts.TotpConfirmRequest{Code: code}))
+	if missingRec.Code != http.StatusUnprocessableEntity {
+		t.Fatalf("confirm without a password = %d, want 422 (body %s)", missingRec.Code, missingRec.Body.String())
+	}
+
+	wrongRec := httptest.NewRecorder()
+	h.ConfirmMyTotp(wrongRec, jsonRequest(ctx, t, http.MethodPost, "/v1/me/mfa/totp/confirm",
+		crmcontracts.TotpConfirmRequest{CurrentPassword: "not the password", Code: code}))
+	if wrongRec.Code != http.StatusUnauthorized {
+		t.Fatalf("confirm with a wrong password = %d, want 401 (body %s)", wrongRec.Code, wrongRec.Body.String())
+	}
+	var problem struct {
+		Code string `json:"code"`
+	}
+	if err := json.Unmarshal(wrongRec.Body.Bytes(), &problem); err != nil {
+		t.Fatalf("decode problem: %v", err)
+	}
+	if problem.Code != "current_password_invalid" {
+		t.Errorf("problem code = %q, want current_password_invalid", problem.Code)
+	}
+	if mfaStatus(t, h, e).Confirmed {
+		t.Error("a refused confirmation still confirmed the factor")
 	}
 }
 

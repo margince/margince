@@ -3649,6 +3649,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "views.none": "Chưa có chế độ xem đã lưu",
   "views.rename": "Đổi tên",
   "views.renameNamed": "Đổi tên {name}",
+  "views.opensInFilters": "{name}, mở trong Danh sách và bộ lọc",
   "views.delete": "Xóa",
   "views.deleteNamed": "Xóa {name}",
   "views.deleteAsk":
@@ -13981,6 +13982,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "mfa.turningOn": "Đang bật…",
   "mfa.codeRefused": "Mã không hợp lệ. Kiểm tra lại rồi thử lại.",
   "mfa.tooManyCodes": "Sai mã quá nhiều lần. Chờ vài phút rồi thử lại.",
+  "mfa.tooManyPasswords":
+    "Sai mật khẩu quá nhiều lần. Chờ một phút rồi thử lại.",
+  "mfa.passwordHint":
+    "Mật khẩu Margince của bạn, không phải mật khẩu Google hay Microsoft.",
   "mfa.confirmFailedTitle": "Chưa bật đăng nhập hai bước",
   "mfa.onTitle": "Đã bật đăng nhập hai bước",
   "mfa.onBody": "Mọi thiết bị khác đã bị đăng xuất.",
@@ -20786,6 +20791,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.library.shared": "Được chia sẻ với tôi",
   "filters.library.views": "Chế độ xem đã lưu",
   "filters.library.kindView": "Chế độ xem đã lưu",
+  "filters.library.savedOn.contacts": "Đã lưu trên danh sách Liên hệ",
+  "filters.library.savedOn.companies": "Đã lưu trên danh sách Công ty",
+  "filters.library.savedOn.deals": "Đã lưu trên danh sách Deal",
+  "filters.library.savedOn.leads": "Đã lưu trên danh sách Lead",
+  "filters.library.savedOn.projects": "Đã lưu trên danh sách Dự án",
   "filters.library.rowMore": "Thao tác khác cho {name}",
   "filters.library.records.contact_one": "{count} liên hệ",
   "filters.library.records.contact_other": "{count} liên hệ",
