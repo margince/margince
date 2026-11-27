@@ -663,7 +663,6 @@ describe("DealsScreen", () => {
     dropOnStage("s3");
     await askedToClose("Won");
 
-    // Asked on opening, and Confirm waits for the answer. Nothing is posted yet.
     await screen.findByText("How was it won?");
     expect(
       screen.getByRole("button", { name: "Confirm" }).hasAttribute("disabled"),
