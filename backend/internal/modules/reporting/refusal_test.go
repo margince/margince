@@ -12,7 +12,23 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
+
+func TestRefusedFieldPrefixesANamedChildWithoutChangingItsCause(t *testing.T) {
+	cause := &values.ParseError{Field: "scope", Code: "invalid", Message: "an owner scope names which owner"}
+	fault, ok := httperr.Classify(refusedField("selection.scope", cause))
+	if !ok || len(fault.Fields) != 1 || fault.Fields[0].Field != "selection.scope" ||
+		fault.Fields[0].Code != cause.Code || fault.Fields[0].Message != cause.Message {
+		t.Fatalf("fault %+v, want the same refusal on selection.scope", fault)
+	}
+	if cause.Field != "scope" {
+		t.Fatalf("renaming the refusal changed its cause: %+v", cause)
+	}
+	if got := refusedField("scope", cause); got != cause {
+		t.Fatalf("a correctly named cause was replaced: %v", got)
+	}
+}
 
 func TestRefusedFieldNamesTheFieldAndKeepsTheHelpersSentence(t *testing.T) {
 	err := refusedField("scope", invalid("an owner scope names which owner"))

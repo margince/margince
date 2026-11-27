@@ -47703,7 +47703,10 @@ export interface components {
             revision: number;
             /** Format: date-time */
             created_at: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Always equal to `created_at`: a review is not edited after it is submitted.
+             */
             updated_at: string;
         };
         OutcomeReviewListResponse: {

@@ -318,6 +318,11 @@ func (s *Store) UpdateTag(ctx context.Context, id ids.TagID, in TagUpdate, expec
 		}
 		name = &normalized
 	}
+	if in.Color != nil {
+		if err := refuseUnknownColor(*in.Color); err != nil {
+			return tagRow{}, err
+		}
+	}
 	var out tagRow
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		// Lock before reading: the version check below and the UPDATE that
