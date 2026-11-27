@@ -116,7 +116,7 @@ func bodiesIn(t *testing.T, path string, pattern *regexp.Regexp, groups []caseGr
 	if err != nil {
 		t.Fatalf("reading %s: %v", path, err)
 	}
-	text := commentPattern.ReplaceAllString(string(source), "")
+	text := gatekit.TSWithoutComments(string(source))
 	out := map[string]bool{}
 	for _, match := range pattern.FindAllStringSubmatch(text, -1) {
 		// Whichever alternative matched: reading only the first would drop
@@ -145,5 +145,3 @@ func bodiesIn(t *testing.T, path string, pattern *regexp.Regexp, groups []caseGr
 	}
 	return out
 }
-
-var commentPattern = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)

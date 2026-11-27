@@ -14,10 +14,10 @@ package ai
 // omission was silent — a manually activated version read back
 // indistinguishable from one with genuinely no review reasons.
 //
-// A struct with a field per column turns that into a compile-time question:
-// a column added to the table is a field nobody fills, and a path that means
-// "no reasons" has to SAY so. TestVoiceVersionsHaveOneWriter
-// (backend/gates/onevoiceversionwriter_test.go) holds the uniqueness.
+// A struct with a field per column turns that into a compile-time question.
+// A column added to the table is a field nobody fills, and a path that means
+// "no reasons" has to say so. TestEachFactHasOneWriter
+// (backend/gates/onewriters_test.go) holds the uniqueness.
 
 import (
 	"context"

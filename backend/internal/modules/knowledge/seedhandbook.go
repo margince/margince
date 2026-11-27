@@ -293,11 +293,11 @@ func filePage(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, page handbook.P
 // built from, so replacing the row would break every link in an answer a reader
 // still has open, in order to say that a paragraph was reworded.
 func replacePage(ctx context.Context, tx pgx.Tx, corpusID ids.UUID, page handbook.Page, checksum string, size int64, prior managedDoc, queue QueueIngest) error {
-	// The passages came from the OLD bytes. Clearing them HERE rather than
-	// leaving it to the ingest means a reader between this commit and the
-	// ingest finishing gets not_ready — honest — instead of an answer grounded
-	// in prose this release replaced.
-	if err := deleteChunksOf(ctx, tx, prior.id); err != nil {
+	// The passages came from the old bytes. Retiring them in this transaction
+	// means a reader before the ingest finishes gets not_ready, not an answer
+	// grounded in prose this release replaced. They are retired, not deleted, so
+	// the ingest can carry the vector of every passage the release left as it was.
+	if err := retireChunksOf(ctx, tx, prior.id); err != nil {
 		return err
 	}
 	if _, err := tx.Exec(ctx,
