@@ -146,13 +146,9 @@ func refusedOwners(ctx context.Context, pool *pgxpool.Pool, owners *ownerResolve
 	self := migration.OwnSeat(ctx)
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		for _, email := range slices.Sorted(maps.Keys(owners.seats)) {
-			// A member importing their own records owns every row they import.
-			if self != nil && self.UUID != owners.seats[email] {
-				refused = append(refused, email)
-				continue
-			}
 			err := auth.EnsureNewRecordOwner(ctx, tx, owners.seats[email])
-			if _, notAllowed := errors.AsType[*auth.AssigneeNotAllowedError](err); notAllowed || errors.Is(err, apperrors.ErrPermissionDenied) {
+			notSelf := self != nil && self.UUID != owners.seats[email]
+			if _, notAllowed := errors.AsType[*auth.AssigneeNotAllowedError](err); notAllowed || notSelf || errors.Is(err, apperrors.ErrPermissionDenied) {
 				refused = append(refused, email)
 				continue
 			}

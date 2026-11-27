@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 356 |
-| Columns | 4407 |
+| Columns | 4408 |
 | Foreign keys | 630 |
 | Owning areas | 40 |
 
@@ -337,7 +337,7 @@ erDiagram
 | [`home_read_forgotten`](compose.md#home_read_forgotten) | compose | 2 | 0 |
 | [`idempotency_key`](compose.md#idempotency_key) | compose | 10 | 0 |
 | [`import_record_map`](migration.md#import_record_map) | migration | 7 | 0 |
-| [`import_run`](migration.md#import_run) | migration | 35 | 1 |
+| [`import_run`](migration.md#import_run) | migration | 36 | 1 |
 | [`installation_state`](platform.md#installation_state) | platform | 3 | 0 |
 | [`intro_request`](introductions.md#intro_request) | introductions | 31 | 0 |
 | [`knowledge_chunk`](knowledge.md#knowledge_chunk) | knowledge | 10 | 0 |

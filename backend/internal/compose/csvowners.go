@@ -66,8 +66,7 @@ func foldedEmail(email string) string {
 
 // ownerResolver holds the seat of every owner address a run names, read once.
 type ownerResolver struct {
-	// own is the importer of an own import, who owns every row it imports.
-	own   *ids.UserID
+	own   *ids.UserID // an own import's importer, who owns every row it imports
 	seats map[string]ids.UUID
 	// refused are addresses whose seat the importer may not name; the test run
 	// reports each once, and its rows keep the importer as owner.
