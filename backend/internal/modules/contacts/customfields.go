@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -62,15 +63,10 @@ func (c CustomColumns) Has(name string) bool {
 	return slices.ContainsFunc(c.cols, func(col fieldcatalog.Column) bool { return col.Name == name })
 }
 
-// Allows reports whether text is an option of the named picklist column. Any
-// other column is not this check's to refuse, and the write's own CHECK keeps it.
-func (c CustomColumns) Allows(name, text string) bool {
-	for _, col := range c.cols {
-		if col.Name == name && len(col.Options) > 0 {
-			return slices.Contains(col.Options, text)
-		}
-	}
-	return true
+// Check refuses a value the active columns cannot hold, a picklist choice among
+// them. It is the verdict the write itself would reach, taken without writing.
+func (c CustomColumns) Check(values map[string]any) error {
+	return storekit.CheckCustomValues(c.cols, values)
 }
 
 // ActiveContactColumns is the caller-side half of GetContactTx. A caller that

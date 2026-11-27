@@ -79,6 +79,16 @@ func (s *Store) SetCustomFieldsTx(ctx context.Context, tx pgx.Tx, id ids.Company
 	return err
 }
 
+// LockCompanyTx holds the company row on the caller's transaction.
+// A read after it sees every edit committed before the lock, and no edit lands between that read and the write.
+func (s *Store) LockCompanyTx(ctx context.Context, tx pgx.Tx, id ids.CompanyID) error {
+	if err := auth.Require(ctx, companyEntity, principal.ActionUpdate); err != nil {
+		return err
+	}
+	_, err := storekit.LockRow(ctx, tx, companyEntity, id.UUID, storekit.LiveOnly)
+	return err
+}
+
 // ApplyLeadUpdate is UpdateLead for a caller that does not read the lead back,
 // so it costs no read for the caller.
 func (s *Store) ApplyLeadUpdate(ctx context.Context, id ids.LeadID, in UpdateLeadInput) error {

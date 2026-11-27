@@ -48,18 +48,8 @@ func (d CompanyDoor) SetCustomFields(ctx context.Context, id string, values map[
 	if err != nil {
 		return nil, d.Refuse(err)
 	}
-	for key, value := range values {
-		if !cols.Has(key) {
-			return nil, fmt.Errorf("%w: %q is not an active custom field", extension.ErrInvalid, key)
-		}
-		if text, ok := value.(string); ok && !cols.Allows(key, text) {
-			return nil, fmt.Errorf("%w: %q is not an option of %s", extension.ErrInvalid, value, key)
-		}
-	}
-	// The lock comes before the ownership read, so a user edit that commits
-	// meanwhile is seen and the write cannot overwrite it.
-	if _, err := storekit.LockRow(ctx, d.Tx, "company", companyID.UUID, storekit.LiveOnly); err != nil {
-		return nil, d.Refuse(err)
+	if err := d.admit(ctx, companyID, cols, values); err != nil {
+		return nil, err
 	}
 	current, err := d.Store.GetCompanyTx(ctx, d.Tx, companyID, storekit.LiveOnly, cols)
 	if err != nil {
@@ -90,4 +80,21 @@ func (d CompanyDoor) SetCustomFields(ctx context.Context, id string, values map[
 		return nil, d.Refuse(err)
 	}
 	return withheld, nil
+}
+
+// admit refuses a key that is no active field or a value its field cannot hold.
+// It then holds the company, so the ownership read after it cannot go stale.
+func (d CompanyDoor) admit(ctx context.Context, company ids.CompanyID, cols contacts.CustomColumns, values map[string]any) error {
+	for key := range values {
+		if !cols.Has(key) {
+			return fmt.Errorf("%w: %q is not an active custom field", extension.ErrInvalid, key)
+		}
+	}
+	if err := cols.Check(values); err != nil {
+		return fmt.Errorf("%w: %s", extension.ErrInvalid, err)
+	}
+	if err := d.Store.LockCompanyTx(ctx, d.Tx, company); err != nil {
+		return d.Refuse(err)
+	}
+	return nil
 }
