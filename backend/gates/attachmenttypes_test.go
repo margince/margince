@@ -58,7 +58,7 @@ func tsArrayEntries(t *testing.T, source []byte, name string) []string {
 		t.Fatalf("%s no longer declares %s as an array literal — this gate is reading a shape that is gone", frontendAttachmentUpload, name)
 	}
 	var entries []string
-	for _, m := range tsAttachmentEntry.FindAllSubmatch([]byte(tsWithoutComments(string(list[1]))), -1) {
+	for _, m := range tsAttachmentEntry.FindAllSubmatch([]byte(gatekit.TSWithoutComments(string(list[1]))), -1) {
 		entries = append(entries, string(m[1]))
 	}
 	if len(entries) == 0 {

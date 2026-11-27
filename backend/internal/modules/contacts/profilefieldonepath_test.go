@@ -5,8 +5,8 @@ package contacts
 
 import (
 	"go/ast"
-	"go/token"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -222,63 +222,15 @@ func closureTakesTx(closure *ast.FuncLit) bool {
 
 // writesTable reports whether fn contains a statement writing the named table.
 //
-// It reads a query the way the SQL census does — folding a `+` chain and
-// resolving a name to the string it stands for — because a verb that escapes
-// this leaves the POPULATION, and a population short by one reports a clean
-// module. Two shapes escaped a single-literal walk, and both are ordinary:
-//
-//	"UPDATE " + profileFieldTable + " SET …"   the table named by identifier
-//	const q = `INSERT INTO …`; tx.Exec(ctx, q) the query held outside the body
-//
-// That is the under-recognition this PR closes elsewhere, reappearing in the
-// fix for it. The prefilter has to be at least as wide as the detector.
+// It folds `+` chains and resolves package constants, because a verb that
+// escapes this leaves the population, and a population short by one reports a
+// clean module. `"UPDATE " + profileFieldTable + " SET …"` and a query held in
+// a constant are both ordinary here.
 func writesTable(fn *ast.FuncDecl, table string, known map[string]string) bool {
 	if fn.Body == nil {
 		return false
 	}
-	writes := tableWriteStatement(table)
-	found := false
-	folded := map[ast.Node]bool{}
-	ast.Inspect(fn.Body, func(node ast.Node) bool {
-		binary, isBinary := node.(*ast.BinaryExpr)
-		if !isBinary || binary.Op != token.ADD || folded[ast.Node(binary)] {
-			return !found
-		}
-		text, parts := concatenatedText(binary, known)
-		for _, part := range parts {
-			folded[part] = true
-		}
-		ast.Inspect(binary, func(inner ast.Node) bool {
-			if nested, isNested := inner.(*ast.BinaryExpr); isNested {
-				folded[ast.Node(nested)] = true
-			}
-			return true
-		})
-		if writes.MatchString(text) {
-			found = true
-		}
-		return !found
-	})
-	if found {
-		return true
-	}
-	ast.Inspect(fn.Body, func(node ast.Node) bool {
-		switch operand := node.(type) {
-		case *ast.BasicLit:
-			if folded[ast.Node(operand)] {
-				return true
-			}
-			if text, isText := gatekit.LiteralText(operand); isText && writes.MatchString(text) {
-				found = true
-			}
-		case *ast.Ident:
-			if writes.MatchString(known[operand.Name]) {
-				found = true
-			}
-		}
-		return !found
-	})
-	return found
+	return slices.ContainsFunc(gatekit.SQLStatementsWithConstants(fn.Body, known), tableWriteStatement(table).MatchString)
 }
 
 // tableWriteStatement matches a statement that changes the named table's rows.

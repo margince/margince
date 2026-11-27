@@ -13,6 +13,7 @@ package gates
 
 import (
 	"bufio"
+	"go/ast"
 	"regexp"
 	"slices"
 	"strings"
@@ -151,10 +152,8 @@ func sqlSelectedKinds(t *testing.T, file, constName string) []string {
 	if err != nil {
 		t.Fatal(err)
 	}
-	recorded := map[string]map[string]bool{}
-	recordStringConsts(recorded, parsed)
 	var kinds []string
-	for text := range recorded[constName] {
+	for _, text := range gatekit.StringConstantValues(t, []*ast.File{parsed})[constName] {
 		for _, m := range selectedLiteral.FindAllStringSubmatch(text, -1) {
 			kinds = append(kinds, m[1])
 		}

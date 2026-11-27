@@ -31,7 +31,7 @@ import (
 )
 
 // tsAgentLabelKey reads one `"agentJob.<name>":` key out of the English
-// catalogue, after tsComment has stripped its comments.
+// catalogue, after gatekit.TSWithoutComments has stripped its comments.
 var tsAgentLabelKey = regexp.MustCompile(`"agentJob\.([a-z0-9_]+)"\s*:`)
 
 // agentPrincipalText is a string that is a whole named agent principal.

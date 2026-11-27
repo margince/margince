@@ -28,7 +28,7 @@ import (
 const frontendCatalogue = "../frontend/src/i18n/en.ts"
 
 // tsJobLabelKey reads one `"systemJob.<name>":` key out of the English
-// catalogue. Comments are stripped first (tsComment), so a line that only
+// catalogue. Comments are stripped first (gatekit.TSWithoutComments), so a line that only
 // mentions a key cannot stand in for one that was deleted.
 var tsJobLabelKey = regexp.MustCompile(`"systemJob\.([a-z0-9_]+)"\s*:`)
 
@@ -67,7 +67,7 @@ func assertPrincipalLabels(t *testing.T, row principalLabels) {
 		t.Fatalf("reading the frontend catalogue: %v", err)
 	}
 	labelled := map[string]bool{}
-	for _, m := range row.key.FindAllStringSubmatch(tsComment.ReplaceAllString(string(source), " "), -1) {
+	for _, m := range row.key.FindAllStringSubmatch(gatekit.TSWithoutComments(string(source)), -1) {
 		labelled[m[1]] = true
 	}
 	if len(row.bound) == 0 || len(labelled) == 0 {
