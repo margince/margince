@@ -229,9 +229,7 @@ func (t ownershipTransfers) Withdraw(ctx context.Context, recordType string, id 
 	})
 }
 
-// ownRequestTx answers the caller's open transfer on the record when it runs
-// in direction. A record the caller may not see is ErrNotFound; a visible one
-// with no such transfer is ErrNothingYet.
+// ownRequestTx answers a hidden record without disclosing whether a transfer exists.
 func ownRequestTx(ctx context.Context, tx pgx.Tx, recordType string, id ids.UUID, direction transferDirection) (ownershipRequestView, error) {
 	if err := auth.EnsureVisibleLive(ctx, tx, recordType, id); err != nil {
 		return ownershipRequestView{}, err

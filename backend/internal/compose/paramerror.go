@@ -42,8 +42,6 @@ func contractRouter(srv crmcontracts.ServerInterface, outer ...crmcontracts.Midd
 	return router
 }
 
-// declaresAbsentPreference says whether the routed operation declares the
-// Prefer header, from the table the contract generates.
 func declaresAbsentPreference(r *http.Request) bool {
 	return absentPreferenceRoutes[r.Method+" "+chiRoutePattern(r)]
 }
