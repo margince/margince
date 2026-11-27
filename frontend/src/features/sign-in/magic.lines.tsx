@@ -1,6 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import {
+  RECORD_CHIP_ICONS,
+  RecordMarkChip,
+} from "../../components/recordlinks";
 import { AppLink } from "../../design-system/applink";
 import { Disclosure } from "../../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../../design-system/panel";
@@ -9,7 +13,6 @@ import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import type { Locale } from "../../i18n/locale";
 import { approvalHref } from "../../lib/approvalhref";
-import { approvalKindLabel } from "../../lib/approvalkindlabel";
 import { ENTITY, isEntityKind } from "../../lib/entity";
 import type { MagicLane, MagicLine } from "../../lib/magic.queries";
 import { lineSentence } from "../../lib/magiccopy";
@@ -20,7 +23,7 @@ import {
   magicWhyKey,
 } from "../../lib/magickeys";
 import { routeHash } from "../../lib/router";
-import { MagicApproval } from "./magic.approval";
+import { MagicApprovalCard } from "./magic.approval";
 import { axisLabel, markKind } from "./magic.marks";
 import { LineRecordsOpener } from "./magic.records";
 import { MagicUndoButton, undoPress } from "./magic.undo";
@@ -50,21 +53,29 @@ export function MagicLaneSection({
   /** A caveat on the whole lane, read under its lines. */
   note?: string;
 }>) {
-  const lines = (
-    <ul className="magic-lines" aria-label={title}>
-      {rows.map((row) => (
-        // The lanes mint their ids independently, so an id alone can name a
-        // row in a lane the reader was not looking at.
-        <MagicLineRow
-          key={`${lane}-${row.id}`}
-          line={row}
-          since={since}
-          zone={zone}
-          byDay={byDay}
-        />
-      ))}
-    </ul>
-  );
+  const lines =
+    lane === "needs_you" ? (
+      <WaitingApprovalCards
+        title={title}
+        rows={rows}
+        zone={zone}
+        byDay={byDay}
+      />
+    ) : (
+      <ul className="magic-lines" aria-label={title}>
+        {rows.map((row) => (
+          // The lanes mint their ids independently, so an id alone can name a
+          // row in a lane the reader was not looking at.
+          <MagicLineRow
+            key={`${lane}-${row.id}`}
+            line={row}
+            since={since}
+            zone={zone}
+            byDay={byDay}
+          />
+        ))}
+      </ul>
+    );
   return (
     <>
       <PanelGroupHead title={title} level="h3" />
@@ -79,6 +90,54 @@ export function MagicLaneSection({
         {note && <p className="t-caption">{note}</p>}
       </PanelBody>
     </>
+  );
+}
+
+/**
+ * The decisions waiting on the reader, one task card each, in the order the
+ * receipt lists them.
+ */
+export function WaitingApprovalCards({
+  title,
+  rows,
+  zone,
+  byDay,
+}: Readonly<{
+  title: string;
+  rows: readonly MagicLine[];
+  zone: string;
+  byDay: boolean;
+}>) {
+  return (
+    <ul className="brief-triage" aria-label={title}>
+      {rows.map((row) => (
+        <li key={row.id}>
+          <MagicApprovalCard
+            line={row}
+            subject={<SubjectChip line={row} />}
+            when={<LineWhen line={row} zone={zone} byDay={byDay} />}
+            decide={<LineUndo line={row} />}
+          />
+        </li>
+      ))}
+    </ul>
+  );
+}
+
+const CHIP_ICONS = new Map(Object.entries(RECORD_CHIP_ICONS));
+
+// The record a decision is about, as the chip a Home card names its record with.
+function SubjectChip({ line }: Readonly<{ line: MagicLine }>) {
+  const label = subjectLabel(line);
+  const entity = line.entity;
+  if (!label) return null;
+  return (
+    <RecordMarkChip
+      id={entity?.id ?? line.id}
+      name={label}
+      icon={entity && CHIP_ICONS.get(entity.type)}
+      href={recordHref(line)}
+    />
   );
 }
 
@@ -111,36 +170,22 @@ function MagicLineRow({
         data-kind={markKind(line) ?? "restore"}
         aria-hidden="true"
       />
-      {line.lane === "needs_you" && line.approval_preview ? (
-        <div className="magic-line-text">
-          <MagicApproval
-            action={
-              line.approval_kind
-                ? approvalKindLabel(line.approval_kind, t)
-                : t("magic.approval.reviewChange")
-            }
-            line={line}
-            subject={<LineSubject line={line} since={since} />}
-          />
-        </div>
-      ) : (
-        <p className="magic-line-text">
-          {lineSentence(line, t)}{" "}
-          {SUBJECT_AS_LABEL.has(line.summary.key) && subjectLabel(line) && (
-            <span className="magic-line-sep" aria-hidden="true">
-              ·
-            </span>
-          )}
-          <LineSubject line={line} since={since} />{" "}
-          {detail.length > 0 && (
-            <span className="t-caption">
-              {detail.map((part) => (
-                <span key={part}>{part} </span>
-              ))}
-            </span>
-          )}
-        </p>
-      )}
+      <p className="magic-line-text">
+        {lineSentence(line, t)}{" "}
+        {SUBJECT_AS_LABEL.has(line.summary.key) && subjectLabel(line) && (
+          <span className="magic-line-sep" aria-hidden="true">
+            ·
+          </span>
+        )}
+        <LineSubject line={line} since={since} />{" "}
+        {detail.length > 0 && (
+          <span className="t-caption">
+            {detail.map((part) => (
+              <span key={part}>{part} </span>
+            ))}
+          </span>
+        )}
+      </p>
       <LineUndo line={line} />
       <LineWhen line={line} zone={zone} byDay={byDay} />
     </li>
@@ -228,9 +273,9 @@ export function LineUndo({ line }: Readonly<{ line: MagicLine }>) {
   const t = useT();
   if (line.lane === "needs_you") {
     return (
-      <div className="magic-line-controls">
-        <AppLink href={approvalHref(line.id)}>{t("magic.decide")}</AppLink>
-      </div>
+      <AppLink className="btn btn-ghost" href={approvalHref(line.id)}>
+        {t("magic.decide")}
+      </AppLink>
     );
   }
   const entity = line.entity;
