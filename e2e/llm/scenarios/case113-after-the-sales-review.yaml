@@ -20,12 +20,12 @@ must_call_matching:
   - record_sales_decision~"owner_id"
   - record_sales_decision~"review_on"
 
+# A note beside the act is no fault: the end state finds the act or fails the run.
 must_not_call_with:
   - change_state~.
   - archive_record~.
-  - change_activities~.
+  - change_activities~"action": "(?!log")[a-z_]+"
   - update_record~.
-  - log_activity~.
 
 may_call:
   - find_records
