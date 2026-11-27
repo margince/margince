@@ -77,7 +77,7 @@ func exerciseActivityIdempotentCapture(t *testing.T, e *apptest.AppEnv, dealID s
 	logReq := AnyMap{
 		"kind":          "email",
 		"subject":       "Signed!",
-		"source":        "email:msg-1",
+		"source":        "api",
 		"source_system": "gmail",
 		"source_id":     "msg-1",
 		"links":         []AnyMap{{"entity_type": "deal", "entity_id": dealID}},

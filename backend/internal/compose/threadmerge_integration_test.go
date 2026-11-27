@@ -253,7 +253,7 @@ func TestAMailboxTakingOverAnImportJoinsItsThread(t *testing.T) {
 			OccurredAt:   &occurred,
 			SourceSystem: &system,
 			SourceId:     &sourceID,
-			Source:       "hubspot_import:1",
+			Source:       "import",
 			RfcMessageId: &messageID,
 			ThreadKey:    &key,
 			Participants: &struct {

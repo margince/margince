@@ -155,7 +155,7 @@ func (e coreEnv) runtime(t *testing.T) (*callRuntime, context.Context, context.C
 func (e coreEnv) aNote(subject ids.UUID) crm.CreateActivityRequest {
 	body := "filed by the unit"
 	return crm.CreateActivityRequest{
-		Kind: crm.CreateActivityRequestKindNote, Body: &body, Source: "extension:" + coreUnit,
+		Kind: crm.CreateActivityRequestKindNote, Body: &body, Source: "api",
 	}.LinkTo(crm.CreateActivityRequestLinksEntityTypeContact, subject.String())
 }
 
