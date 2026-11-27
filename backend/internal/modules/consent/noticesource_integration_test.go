@@ -13,7 +13,6 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestAssessedSourceControlsTheDisclosureAndSurvivesAutomaticCorrections(t *testing.T) {
