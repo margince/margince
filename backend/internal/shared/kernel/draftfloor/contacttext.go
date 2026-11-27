@@ -81,9 +81,9 @@ func FirstName(full string) string {
 	return fields[0]
 }
 
-// GreetingName is the name a greeting to a colleague uses: the greeting name
-// they chose when there is one, else the given name of their display name
-// (GivenName), which is still wrong for "Dr. Sofia Meier".
+// GreetingName is the name a greeting to a colleague uses. It is the greeting
+// name they chose, else GivenName of their display name. "Dr. Sofia Meier"
+// still reads wrong.
 // The screen applies the same rule in frontend/src/format/greetingname.ts.
 func GreetingName(greeting, display string) string {
 	if chosen := NameLine(greeting); chosen != "" {

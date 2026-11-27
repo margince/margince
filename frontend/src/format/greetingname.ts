@@ -59,8 +59,9 @@ const foldName = (word: string) =>
 
 /**
  * The name a greeting to a colleague uses: the greeting name they chose, else
- * the given name of their display name (the last word after a Vietnamese
- * family name, else the first word), else null when neither names anybody.
+ * the given name of their display name, else null.
+ * The given name is the last word after a Vietnamese family name, else the
+ * first word.
  *
  * The same rule as `draftfloor.GreetingName` on the server, so the brief's
  * "Good morning" and a drafted message greet a colleague by the same name.

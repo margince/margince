@@ -113,9 +113,9 @@ export function RollupPeriodControl({
 }
 
 /**
- * A period label as a reader says it. The server sends the bucket key it groups
- * by (`2026-Q4`, `FY2025/26-Q4`); a quarter becomes a sentence in the reader's
- * language, and a year passes through as it is.
+ * A period label as a reader says it. The server sends the bucket key it
+ * groups by (`2026-Q4`, `FY2025/26-Q4`). A quarter becomes a sentence in the
+ * reader's language, and a year passes through as it is.
  */
 export function periodWords(label: string, t: Translator): string {
   const quarter = /^(.+)-Q([1-4])$/.exec(label);

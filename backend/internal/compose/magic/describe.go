@@ -147,8 +147,8 @@ var calendarGuestFields = setOf(
 	"guest answers changed", "guest links added", "guests added", "guests left out", "guests retired",
 )
 
-// plainChangeKey names a change that reads as one action rather than a list of
-// moved fields: a calendar sync of guests, and a task marked done or reopened.
+// plainChangeKey names a change that reads as one action, not a list of fields.
+// Those are a calendar sync of guests, and a task marked done or reopened.
 func plainChangeKey(fields []string, after map[string]any) (string, bool) {
 	if len(fields) == 1 && fields[0] == "is done" {
 		if done, _ := after["is_done"].(bool); done {

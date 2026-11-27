@@ -32,8 +32,8 @@ func VietnameseFamilyNames() []string {
 	return out
 }
 
-// GivenName is the word of a display name a greeting uses: the last word when
-// the name starts with a Vietnamese family name, else the first word.
+// GivenName is the word of a display name a greeting uses. That is the last
+// word after a Vietnamese family name, else the first word.
 func GivenName(display string) string {
 	fields := strings.Fields(OneLine(display))
 	switch {
