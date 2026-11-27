@@ -140,9 +140,9 @@ func (s *Sink) consumeEcho(ctx context.Context, binding connector.ChatBinding, m
 			   AND coalesce(r.ask_sent_at, r.ask_claimed_at) > now() - make_interval(secs => @window))`,
 			pgx.StrictNamedArgs{
 				"connection": nullable(binding.Connection),
-				"question":   clarifyMessageKey(binding.Provider, msg.ConversationID, msg.IdempotencyKey),
+				"question":   clarifyMessageKey(binding.Provider, chatKeys(binding, msg).ThreadKey, msg.IdempotencyKey),
 				"window":     pendingforward.Window.Seconds(), "legacy": msg.IdempotencyKey,
-				"thread": clarificationThread(binding, msg),
+				"thread": chatKeys(binding, msg).ThreadKey,
 			}).Scan(&echoed); err != nil {
 			return fmt.Errorf("capture: looking for the question an echo copies: %w", err)
 		}
@@ -154,16 +154,11 @@ func (s *Sink) consumeEcho(ctx context.Context, binding connector.ChatBinding, m
 	return echoed, err
 }
 
-func clarifyMessageKey(provider, conversation, message string) string {
+func clarifyMessageKey(provider, thread, message string) string {
 	if provider == zalo.Provider {
-		conversation = strings.ReplaceAll(conversation, ":", "_")
-		message = strings.ReplaceAll(message, ":", "_")
+		message = zalo.ChatKeyPart(message)
 	}
-	return conversation + ":" + message
-}
-
-func clarificationThread(binding connector.ChatBinding, msg connector.ChatMessage) string {
-	return binding.Provider + ":" + binding.ThreadScope + ":" + msg.ConversationID
+	return thread + ":" + message
 }
 
 func nullable(id ids.UUID) *ids.UUID {
@@ -199,7 +194,7 @@ func (s *Sink) consumeAnswer(ctx context.Context, binding connector.ChatBinding,
 		if err != nil || !isMember {
 			return err
 		}
-		asked, err = askedMessagesTx(ctx, tx, member, binding.Connection, clarificationThread(binding, msg))
+		asked, err = askedMessagesTx(ctx, tx, member, binding.Connection, chatKeys(binding, msg).ThreadKey)
 		return err
 	})
 	if err != nil || member.IsZero() || len(asked) == 0 {
@@ -207,9 +202,9 @@ func (s *Sink) consumeAnswer(ctx context.Context, binding connector.ChatBinding,
 	}
 	quoted := msg.ReplyToID
 	if quoted != "" {
-		quoted = clarifyMessageKey(binding.Provider, msg.ConversationID, quoted)
+		quoted = clarifyMessageKey(binding.Provider, chatKeys(binding, msg).ThreadKey, quoted)
 	}
-	target, quotesAsked, ambiguous := answeredBatch(asked, quoted)
+	target, quotesAsked, ambiguous := answeredBatch(asked, quoted, msg.ReplyToID)
 	switch {
 	case ambiguous:
 		return true, s.askWhichBatch(ctx, member, binding.Connection, msg.StoredOriginal)
@@ -229,7 +224,7 @@ func (s *Sink) consumeAnswer(ctx context.Context, binding connector.ChatBinding,
 	return true, s.fileAnswered(ctx, binding, member, target, identity, name, msg.StoredOriginal)
 }
 
-// askedMessagesTx lists the forwards of one member on one account that a
+// askedMessagesTx lists the forwards of one member in one chat that a
 // question was sent about, newest first. It reads back as far as a held forward
 // lives.
 func askedMessagesTx(ctx context.Context, tx pgx.Tx, member, connection ids.UUID, thread string) ([]askedMessage, error) {
@@ -259,12 +254,12 @@ func askedMessagesTx(ctx context.Context, tx pgx.Tx, member, connection ids.UUID
 // no quote bind to nothing, and the caller asks which is meant. The messages it
 // returns are the ones still held. quotesAsked says the answer quoted a question
 // of ours, so an empty target means the batch was filed already.
-func answeredBatch(asked []askedMessage, quoted string) (target []askedMessage, quotesAsked, ambiguous bool) {
+func answeredBatch(asked []askedMessage, quoted, legacy string) (target []askedMessage, quotesAsked, ambiguous bool) {
 	if quoted != "" {
 		var matched ids.UUID
 		found := false
 		for _, m := range asked {
-			if hasClarifyQuote(m.askIDs, quoted) {
+			if hasClarifyQuote(m.askIDs, quoted, legacy) {
 				if found && matched != m.batch {
 					return nil, true, true
 				}
@@ -292,13 +287,9 @@ func answeredBatch(asked []askedMessage, quoted string) (target []askedMessage, 
 	return nil, false, true
 }
 
-// Legacy ids have no chat prefix; their caller reads only the current chat.
-func hasClarifyQuote(questions []string, quoted string) bool {
-	if slices.Contains(questions, quoted) {
-		return true
-	}
-	_, legacy, namespaced := strings.Cut(quoted, ":")
-	return namespaced && slices.Contains(questions, legacy)
+// Legacy ids have no thread prefix; their caller reads only the current chat.
+func hasClarifyQuote(questions []string, quoted, legacy string) bool {
+	return slices.Contains(questions, quoted) || (legacy != "" && slices.Contains(questions, legacy))
 }
 
 func pendingOf(asked []askedMessage, batch ids.UUID) []askedMessage {

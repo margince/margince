@@ -472,6 +472,22 @@ func TestAQuestionIDInAnotherChatNeverDeletesItsStoredOriginal(t *testing.T) {
 			if wsCount(t, c.e, `SELECT count(*) FROM raw_capture WHERE id = $1`, msg.StoredOriginal) != 1 {
 				t.Fatal("a message in another chat lost its stored original")
 			}
+			if legacy {
+				msg.ConversationID = c.n.colleague
+				consumed, err = sink.HandleClarification(c.ctx, c.n.bindingOf(), msg)
+				if err != nil || !consumed {
+					t.Fatalf("legacy echo in its own chat: consumed=%v, err=%v", consumed, err)
+				}
+				if wsCount(t, c.e, `SELECT count(*) FROM raw_capture WHERE id = $1`, msg.StoredOriginal) != 0 {
+					t.Fatal("the legacy question's own echo survived")
+				}
+				if err := c.reply("legacy-answer", c.n.askID(1), "[contacts]", c.n.card); !errors.Is(err, capturemod.ErrChatMessageConsumed) {
+					t.Fatal(err)
+				}
+				if !c.filedOnCustomer(a) {
+					t.Fatal("a legacy question's answer did not file its batch")
+				}
+			}
 		}
 	})
 }

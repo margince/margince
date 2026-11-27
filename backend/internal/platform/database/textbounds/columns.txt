@@ -1217,7 +1217,7 @@ public.provider_run.trigger document
 public.provider_run_category.category document
 public.provider_run_category.provider document
 public.provider_run_reservation.pool document
-public.raw_capture.ask_message_ids exempt system-written provider message ids of the questions a company account asked, appended by the sweep; a guard would serialize each whole row
+public.raw_capture.ask_message_ids exempt system-written thread-qualified provider message keys for clarification questions, with legacy unqualified ids; a guard would serialize each whole row
 public.raw_capture.channel_subjects exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.raw_capture.parts_slim_outcome exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.raw_capture.source_id exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row

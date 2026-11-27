@@ -125,7 +125,7 @@ func (a *ChatAsker) ask(ctx context.Context, batch ClarifyBatch) error {
 	receipt, sendErr := a.send(ctx, batch.Provider, batch.Connection, account, clarifyQuestion(account.Locale, batch.Provider), "ask:"+batch.ID.String(), attempt)
 	messageID := receipt.ProviderMessageID
 	if messageID != "" {
-		messageID = clarifyMessageKey(batch.Provider, account.ID, messageID)
+		messageID = clarifyMessageKey(batch.Provider, batch.ThreadKey, messageID)
 	}
 	return a.settle(ctx, batch.ID, messageID, sendErr)
 }
@@ -229,7 +229,7 @@ func (a *ChatAsker) sendFollowUp(ctx context.Context, f *followUp) error {
 	}
 	return a.DB.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE raw_capture SET ask_message_ids = array_append(ask_message_ids, $2) WHERE id = ANY($1)`,
-			f.raws, clarifyMessageKey(f.provider, account.ID, receipt.ProviderMessageID))
+			f.raws, clarifyMessageKey(f.provider, f.thread, receipt.ProviderMessageID))
 		return err
 	})
 }

@@ -31,15 +31,15 @@ func ChatMessage(ev Event) (connector.ChatMessage, error) {
 		direction = connector.DirectionOutbound
 	}
 	chat := connector.ChatMessage{
-		ConversationID: safeKeyPart(ev.UserID),
-		IdempotencyKey: safeKeyPart(ev.Message.ID),
+		ConversationID: ChatKeyPart(ev.UserID),
+		IdempotencyKey: ChatKeyPart(ev.Message.ID),
 		Direction:      direction,
 		Counterparty:   connector.ChatParty{UserID: ev.UserID},
 		Body:           body(ev.Message),
 		OccurredAt:     ev.OccurredAt,
 	}
 	if direction == connector.DirectionInbound {
-		chat.ReplyToID = ev.Message.ReplyToID
+		chat.ReplyToID = ChatKeyPart(ev.Message.ReplyToID)
 		chat.SharedContact = businessCardOf(ev.Message)
 	}
 	return chat, nil
@@ -60,7 +60,8 @@ func businessCardOf(msg *Message) *connector.ChatSharedContact {
 	return nil
 }
 
-func safeKeyPart(id string) string { return strings.ReplaceAll(id, ":", "_") }
+// ChatKeyPart keeps provider ids inside one colon-delimited chat key.
+func ChatKeyPart(id string) string { return strings.ReplaceAll(id, ":", "_") }
 
 func body(msg *Message) string {
 	if msg.Text != "" {
@@ -78,7 +79,7 @@ func body(msg *Message) string {
 // ChatBinding is what the connection says about the message: the OA whose it is,
 // and the seat it files through. The customer's identity is scoped to the OA.
 func ChatBinding(ev Event, link connector.ChatLink) connector.ChatBinding {
-	scope := connector.CaptureOnlyThreadScope + ":" + safeKeyPart(link.AccountID)
+	scope := connector.CaptureOnlyThreadScope + ":" + ChatKeyPart(link.AccountID)
 	return connector.ChatBinding{
 		Provider:     Provider,
 		CapturedBy:   CapturedBy,
