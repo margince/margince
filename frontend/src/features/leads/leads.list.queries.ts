@@ -3,7 +3,12 @@
 
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
-import type { ListQuery } from "../../components/listquery";
+import {
+  type ListPage,
+  type ListQuery,
+  type ListReach,
+  listFetchLimit,
+} from "../../components/listquery";
 import type { MessageKey } from "../../i18n/en";
 import { salutationChoice } from "../../lib/contactsalutation";
 import { ProblemError, unwrap } from "../../lib/problem";
@@ -100,4 +105,34 @@ export async function createLead(
     }),
     t,
   );
+}
+
+// One page of the lead list, at the cursor or, for a pager, at an offset.
+export async function fetchLeadsPage(
+  query: ListQuery,
+  cursor: string | null,
+  signal?: AbortSignal,
+  reach?: ListReach,
+): Promise<ListPage<Lead>> {
+  const data = unwrap(
+    await api.GET("/leads", {
+      signal,
+      params: {
+        query: {
+          ...leadsQueryParams(query),
+          cursor: cursor || undefined,
+          limit: listFetchLimit(query.perPage, reach),
+          offset: reach?.offset,
+        },
+      },
+    }),
+  );
+  return {
+    data: data.data,
+    page: {
+      next_cursor: data.page.next_cursor ?? null,
+      has_more: data.page.has_more,
+      total: data.page.total,
+    },
+  };
 }

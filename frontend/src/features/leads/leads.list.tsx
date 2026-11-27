@@ -3,7 +3,6 @@
 // leadpresentation.tsx.
 
 import { useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { usePageName } from "../../app/pagemeta";
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
@@ -11,14 +10,7 @@ import { BULK_MAX_ITEMS } from "../../components/bulkchangeapi";
 import { CreateAction } from "../../components/create";
 import { useObjectCustomFields } from "../../components/customfields.form";
 import { useRosterHint, useRosterPartial } from "../../components/entityref";
-import {
-  type ListPage,
-  type ListQuery,
-  type ListReach,
-  ListTable,
-  listFetchLimit,
-  useListQuery,
-} from "../../components/listquery";
+import { ListTable, useListQuery } from "../../components/listquery";
 import {
   mineEmptyLine,
   standardViews,
@@ -41,7 +33,6 @@ import {
 } from "../../lib/leadorigins";
 import { leadsOpeningFilters, leadsOpenOnAll } from "../../lib/leads.address";
 import { LEADS_INITIAL_SORT } from "../../lib/listopenings";
-import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
@@ -67,7 +58,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { leadPartnerCreateFields, useLeadPartnerOptions } from "./leadpartner";
 import {
   createLead,
-  leadsQueryParams,
+  fetchLeadsPage,
   UNASSIGNED_OWNER,
 } from "./leads.list.queries";
 
@@ -91,35 +82,6 @@ const LEAD_SLA_STATES = [
   { value: "at_risk", label: "lead.sla.atRisk" },
   { value: "within_target", label: "lead.sla.withinTarget" },
 ] as const;
-
-export async function fetchLeadsPage(
-  query: ListQuery,
-  cursor: string | null,
-  signal?: AbortSignal,
-  reach?: ListReach,
-): Promise<ListPage<Lead>> {
-  const data = unwrap(
-    await api.GET("/leads", {
-      signal,
-      params: {
-        query: {
-          ...leadsQueryParams(query),
-          cursor: cursor || undefined,
-          limit: listFetchLimit(query.perPage, reach),
-          offset: reach?.offset,
-        },
-      },
-    }),
-  );
-  return {
-    data: data.data,
-    page: {
-      next_cursor: data.page.next_cursor ?? null,
-      has_more: data.page.has_more,
-      total: data.page.total,
-    },
-  };
-}
 
 export function LeadsScreen({
   startCreating = false,
