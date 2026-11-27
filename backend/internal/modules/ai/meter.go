@@ -6,6 +6,7 @@ package ai
 import (
 	"context"
 	"fmt"
+	"log/slog"
 	"time"
 
 	"github.com/jackc/pgx/v5"
@@ -50,11 +51,21 @@ type Meter struct {
 	db *database.DB
 	// now is injectable so tests pin the day/month boundaries.
 	now func() time.Time
+	// log carries the warning for a negative provider count.
+	log *slog.Logger
 }
 
 // NewMeter binds the AI usage meter to the pool its counters are folded in.
 func NewMeter(db *database.DB) *Meter {
-	return &Meter{db: db, now: time.Now}
+	return &Meter{db: db, now: time.Now, log: slog.Default()}
+}
+
+// WithLogger points the meter's warnings at a caller's logger.
+func (m *Meter) WithLogger(log *slog.Logger) *Meter {
+	if log != nil {
+		m.log = log
+	}
+	return m
 }
 
 // billingContext is ctx for writing what a provider already billed. A caller
@@ -79,6 +90,9 @@ func (m *Meter) Record(ctx context.Context, u Usage) error {
 	if u.Cached {
 		cachedHit = 1
 	}
+	source := usageSource{task: u.Task, tier: u.Tier}
+	tokensIn := storedTokenCount(ctx, m.log, source, "tokens_in", u.TokensIn)
+	tokensOut := storedTokenCount(ctx, m.log, source, "tokens_out", u.TokensOut)
 	return m.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO ai_usage (day, task, tier, calls, cached_hits, tokens_in, tokens_out)
@@ -88,7 +102,7 @@ func (m *Meter) Record(ctx context.Context, u Usage) error {
 			  cached_hits = ai_usage.cached_hits + EXCLUDED.cached_hits,
 			  tokens_in   = ai_usage.tokens_in + EXCLUDED.tokens_in,
 			  tokens_out  = ai_usage.tokens_out + EXCLUDED.tokens_out`,
-			day, string(u.Task), string(u.Tier), cachedHit, u.TokensIn, u.TokensOut)
+			day, string(u.Task), string(u.Tier), cachedHit, tokensIn, tokensOut)
 		if err != nil {
 			return fmt.Errorf("ai: metering: %w", err)
 		}

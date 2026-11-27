@@ -38,7 +38,7 @@ func sarSections(ctx context.Context, pkg *SARPackage, contactID ids.ContactID, 
 	sections = append(sections, sarRequestSections(pkg, contactID)...)
 	sections = append(sections, sarConsentLinkSections(pkg)...)
 	sections = append(sections, sarCommunicationSections(pkg, emails, leads, identities)...)
-	sections = append(sections, sarJudgementSections(pkg, contactID, authored)...)
+	sections = append(append(sections, sarJudgementSections(pkg, contactID, authored)...), sarEvidenceSections(pkg, leads)...)
 	return append(sections, sarProvenanceSections(pkg, contactID, external)...), nil
 }
 
@@ -216,7 +216,7 @@ var sarRawCaptureLink = storekit.StoredOriginalSQL("a", "rc")
 // behind it — what the subject agreed to, and every change of mind on record.
 func sarConsentSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) []sarSection {
 	return []sarSection{
-		{&pkg.Consent, `SELECT cp.key AS purpose, pc.state, pc.lawful_basis, pc.captured_at
+		{&pkg.Consent, `SELECT cp.key AS purpose, pc.state, pc.lawful_basis, pc.policy_version, pc.captured_at
 		   FROM contact_consent pc JOIN consent_purpose cp ON cp.id = pc.purpose_id
 		   WHERE pc.contact_id = $1`, nil},
 		// The proof row in full, not a summary of it.

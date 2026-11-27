@@ -83,7 +83,26 @@ function typeFilterFrom(value: string | undefined): TypeFilter {
 export function SearchRoute(
   props: Readonly<{ q: string; openActivityId?: string }>,
 ) {
-  return <SearchScreen {...props} openAs={useRoute().id3} />;
+  const [params] = useUrlParams();
+  // A link from outside may carry the term as `?q=`, the way most sites spell
+  // a search address; the path segment wins when both are there. Keyed on the
+  // term, so a new `?q=` starts a fresh field, as a new path segment does.
+  const q = props.q || params.get(QUERY_PARAM) || "";
+  return <SearchScreen key={q} {...props} q={q} openAs={useRoute().id3} />;
+}
+
+const QUERY_PARAM = "q";
+
+// How much of the term an empty answer repeats. A pasted paragraph is still
+// the reader's search, but the sentence about it must stay a sentence.
+const ECHO_MAX = 80;
+
+/** The term as an empty answer repeats it, cut with an ellipsis past ECHO_MAX. */
+export function echoedQuery(q: string): string {
+  const points = Array.from(q);
+  return points.length > ECHO_MAX
+    ? `${points.slice(0, ECHO_MAX).join("")}…`
+    : q;
 }
 
 export function SearchScreen({
@@ -226,7 +245,9 @@ function GroupedResults({
             {data.data.length === 0 ? (
               <>
                 {timedOut.length === 0 && (
-                  <EmptyState>{t("search.empty", { q })}</EmptyState>
+                  <EmptyState>
+                    {t("search.empty", { q: echoedQuery(q) })}
+                  </EmptyState>
                 )}
                 <NearMatches matches={data.near_matches} />
               </>
@@ -282,7 +303,7 @@ function NarrowedResults({
     <QueryStates query={query} pendingLabel={t("search.pending")}>
       {hits.length === 0 ? (
         <>
-          <EmptyState>{t("search.empty", { q })}</EmptyState>
+          <EmptyState>{t("search.empty", { q: echoedQuery(q) })}</EmptyState>
           <NearMatches matches={query.data?.pages[0]?.near_matches} />
         </>
       ) : (

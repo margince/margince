@@ -32,6 +32,7 @@ package gates
 
 import (
 	"bytes"
+	"fmt"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -92,10 +93,10 @@ var standardKey = regexp.MustCompile(`org\.opencontainers\.`)
 var hostname = regexp.MustCompile(
 	"(?:^|[\\s\"'`(<,=|/@\\[])(?:[a-z0-9][a-z0-9.\\\\-]*)?\\\\?\\.orgs?(?:\\.[a-z]{2}(?:[^A-Za-z0-9_]|$)|\\.(?:\\s|$)|[^A-Za-z0-9_.]|$)")
 
-// exempt names a path and says why the word is right there. The reason is the
-// point: a waiver nobody had to justify is how the second spelling survived
-// review for a year.
-var exempt = gatekit.Waive(map[string]string{
+// companyExempt names a path and says why the word is right there. Each entry
+// needs a reason, because a waiver nobody had to justify is how the second
+// spelling survived review for a year.
+var companyExempt = gatekit.Waive(map[string]string{
 	"backend/migrations/core": "shipped migrations are never edited — the SQL that built the " +
 		"old names is the record of how the schema got here",
 	"backend/migrations/custom": "the same, one namespace over — and the migration that MOVES a\n\t\tstored value has to name the value it is moving",
@@ -103,10 +104,7 @@ var exempt = gatekit.Waive(map[string]string{
 		"baseline commit by rbacbaselineerafixture_test.go; it IS the matrix the server seeded then",
 	"docs/plain-words-project.txt": "a plain word list holds every word its pages use, " +
 		"and a page that quotes a word to avoid puts it here; the pages themselves are checked",
-	"docs/how-to/plain-words.txt":      "the same, for the how-to pages",
-	"docs/explanation/plain-words.txt": "the same, for the explanation pages",
-	"docs/reference/plain-words.txt":   "the same, for the reference pages",
-	"sbom-schemas":                     "a vendored SPDX schema, not ours to rename",
+	"sbom-schemas": "a vendored SPDX schema, not ours to rename",
 	"MAINTAINERS.md": "github.com/orgs/ is GitHub's own path to the public roadmap project; " +
 		"the README links this page instead of the project, so only here does the path appear",
 	"backend/internal/modules/capture/graphcal/data/README.md": "unicode-org is the GitHub owner of " +
@@ -127,20 +125,13 @@ var exempt = gatekit.Waive(map[string]string{
 	// Microsoft's authority alias: `companies` is a literal path segment at
 	// login.microsoftonline.com beside `common` and `consumers`, and renaming
 	// it stops sign-in working.
-	"backend/internal/compose/microsoftsignin.go":                  "Microsoft's `companies` authority alias",
-	"backend/internal/compose/microsoftsignin_test.go":             "Microsoft's `companies` authority alias",
-	"backend/internal/compose/capturegraph.go":                     "Microsoft's `common` authority, which admits any tenant",
 	"backend/internal/modules/capture/connectorapp.go":             "Microsoft's `companies` authority alias",
 	"backend/internal/modules/capture/connectorapp_test.go":        "Microsoft's `companies` authority alias",
-	"backend/internal/modules/capture/graph/client.go":             "Microsoft's `common` authority, which admits any tenant",
 	"backend/internal/modules/capture/graph/sharedmailbox_test.go": "Microsoft's multi-tenant authority aliases, which a shared mailbox's tenant must never be",
-	"backend/cmd/api/config.go":                                    "flag help for the Microsoft authority aliases",
 	"docs/reference/connectors-and-sign-in.md":                     "the Microsoft authority aliases",
 
-	"backend/internal/platform/licensecheck/host.go": "the licence payload's `company` key. The Go " +
-		"name is ours; the key belongs to whoever signs the licence, and renaming it would stop " +
-		"every licence already issued from decoding",
-	"backend/internal/platform/licensecheck/licensecheck_test.go": "the licence payload's `company` key",
+	"backend/internal/platform/licensecheck/host.go":              "the license module's `org` wire key; Company is the application's name",
+	"backend/internal/platform/licensecheck/licensecheck_test.go": "the license module's `org` wire key",
 
 	"backend/internal/modules/contacts/companynamegate.go": "the .org TLD, in the stopword list that " +
 		"stops a brand written as its own domain from reducing to its suffix",
@@ -149,17 +140,12 @@ var exempt = gatekit.Waive(map[string]string{
 		"`{\"target\":\"organisation\"}` is the call the schema has to refuse",
 	"backend/internal/modules/agents/tools_vocabulary_test.go": "the same deliberately wrong argument",
 
-	"backend/internal/platform/webread/schemaorg.go": "schema.org's Company type — its word " +
-		"for this thing, published by the sites we read",
 	"backend/internal/platform/webread/schemaorg_test.go":  "schema.org's Company type",
 	"backend/internal/platform/webread/logoimages_test.go": "schema.org's Company type",
 
 	"backend/internal/modules/contacts/vcard.go":                                "vCard's ORG property (RFC 6350)",
 	"backend/internal/modules/contacts/vcard_test.go":                           "vCard's ORG property (RFC 6350)",
-	"backend/internal/modules/contacts/vcardimport.go":                          "vCard's ORG property (RFC 6350)",
-	"backend/internal/modules/contacts/vcardarms.go":                            "vCard's ORG property (RFC 6350)",
 	"backend/internal/modules/contacts/vcardsourceliveness_integration_test.go": "vCard's ORG property (RFC 6350)",
-	"backend/internal/compose/vcardproposal_integration_test.go":                "vCard's ORG property (RFC 6350)",
 	"extensions/apac/README.md": "an organisation in the ordinary sense — the party holding data and " +
 		"the party advertising need not be the same one",
 
@@ -189,38 +175,43 @@ var exempt = gatekit.Waive(map[string]string{
 
 func TestTheRecordTypeIsCalledCompany(t *testing.T) {
 	t.Parallel()
+	// Asked only about a file that offends, so an entry whose path stopped
+	// offending is reported stale instead of standing as a silent permission.
+	defer companyExempt.AssertAllMatched(t)
 
 	read := 0
 	for _, f := range trackedFiles(t) {
 		if f.symlink || !readableAsText(f.path) {
 			continue
 		}
-		if exemptionCovers(t, f.path) {
-			continue
-		}
+		var offences []string
 		// The PATH says the word as loudly as the contents do, and a census
 		// that read only the contents let graphorgreach.go, csvorgwriter.go
 		// and linkedinorgplace.go through — three files whose bodies had been
 		// renamed and whose names had not.
 		if pathNamesTheOtherWord(f.path) {
-			t.Errorf("%s is NAMED for the record type's old name. It is called company.", f.path)
+			offences = append(offences, f.path+" is NAMED for the record type's old name. It is called company.")
 		}
 		body, err := gatekit.ReadFile(filepath.Join(repoRoot, f.path))
 		if err != nil {
 			t.Fatalf("reading %s: %v", f.path, err)
 		}
-		if binary(body) {
+		if !binary(body) {
+			read++
+			for i, line := range strings.Split(string(body), "\n") {
+				if namesTheOtherWord(line) {
+					offences = append(offences, fmt.Sprintf("%s:%d calls the record type by its old name:\n\t%s\n"+
+						"It is called company. If this one is something else — a .org host, a meeting "+
+						"organizer, Microsoft's authority alias — add the path to companyExempt, with the reason.",
+						f.path, i+1, strings.TrimSpace(line)))
+				}
+			}
+		}
+		if len(offences) == 0 || exemptionCovers(t, f.path) {
 			continue
 		}
-		read++
-		for i, line := range strings.Split(string(body), "\n") {
-			if !namesTheOtherWord(line) {
-				continue
-			}
-			t.Errorf("%s:%d calls the record type by its old name:\n\t%s\n"+
-				"It is called company. If this one is something else — a .org host, a meeting "+
-				"organizer, Microsoft's authority alias — add the path to exempt, with the reason.",
-				f.path, i+1, strings.TrimSpace(line))
+		for _, offence := range offences {
+			t.Error(offence)
 		}
 	}
 
@@ -354,9 +345,9 @@ func namesTheOtherWord(line string) bool {
 // The waiver set holds each reason to a standard and reports the entries that
 // stopped matching, so a path that moves does not leave a standing permission.
 func exemptionCovers(t *testing.T, path string) bool {
-	for _, prefix := range exempt.Subjects() {
+	for _, prefix := range companyExempt.Subjects() {
 		if path == prefix || strings.HasPrefix(path, prefix+"/") {
-			return exempt.Waived(t, prefix)
+			return companyExempt.Waived(t, prefix)
 		}
 	}
 	return false

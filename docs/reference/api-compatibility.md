@@ -22,8 +22,9 @@ and removal checks.
 
 ## The notice window
 
-A deprecated API stays supported for at least 3 calendar months from the release
-that announces its deprecation. The clock starts at that release's publication
+A deprecated API keeps its callable behaviour and remains in the contract for
+at least 3 calendar months from the release that announces its deprecation.
+The clock starts at that release's publication
 instant. It starts neither at the implementation commit nor when an installation
 upgrades. Dates use UTC. A month that lacks the starting day ends on its last day.
 
@@ -33,9 +34,11 @@ An unknown release format cannot authorize removal. The ordinary compatibility
 gate must also approve the change; the end of the window does not remove an API
 or grant an exception by itself.
 
-The current CI lane supplies no removal release version, and the current release
-format cannot authorize removal. Whole operations therefore stay supported. A
-supported non-patch release lane must be added before retiring an operation.
+The current CI lane supplies no removal release version, so whole operations
+remain in the contract. A supported non-patch release lane must be added before
+removing an operation or retiring its callable behaviour. Deprecation alone
+does not authorize replacing callable behaviour with a refusal before these
+conditions hold.
 
 A maintainer may ratify removing a named operation without a notice, for an
 operation no stable release ever served. Each one is a line in
@@ -49,11 +52,32 @@ The shared rules are in
 The check refuses a removal without a recorded announcement and prevents changes
 that backdate a published notice or bring its sunset forward.
 
+## A retired operation
+
+An operation whose behaviour is already gone stays in the contract, still
+deprecated, and declares the shared `Retired` response. Calls that pass the
+route's authentication and parameter checks answer `410 Gone` with the problem
+code `endpoint_retired`. A malformed path parameter receives the parameter
+error response instead. A client can act on the declared refusal.
+
+This records an existing retirement; it does not authorize removing more
+behaviour before the notice window ends or outside a supported non-patch
+release lane. The operation leaves the contract only under the removal rules
+above.
+
+A deprecated operation that does not declare `Retired` stays callable. The test
+`TestEveryRetiredOperationAnswersItsDeclaredRefusal` in
+[retiredroutes_test.go](../../backend/internal/compose/retiredroutes/retiredroutes_test.go)
+reads the deprecated operations from the contract. It sends each retired one
+through the route table and expects the `410`. It fails when a handler answers
+`endpoint_retired` for an operation the contract does not declare retired.
+
 ## Mark an operation
 
 Set `deprecated: true` on the operation in `crm.yaml`. Until its announcing release
-is published, leave `x-deprecation` absent. This keeps the operation callable and
-publishes a `Link` header pointing to the API document and this policy. The absence
+is published, leave `x-deprecation` absent. This publishes a `Link` header pointing
+to the API document and this policy. The operation keeps its callable behaviour
+unless it already declares `Retired`. The absence
 of a publication date gives no permission to remove the operation.
 
 Record the actual announcing release and publication time in `x-deprecation`.

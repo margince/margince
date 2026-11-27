@@ -20,7 +20,7 @@ const offeredFilters = [
   t("list.owner"),
   t("list.team"),
   ...dealFilterChips([], t, undefined).map((chip) => chip.label),
-  t("tags.columnHeader"),
+  t("tags.filterLabel"),
   ...dealRangeChips({
     words: { t, locale: "en", zone: "UTC" },
     filters: {},

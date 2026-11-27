@@ -55,6 +55,7 @@ function savedTab(
     filters: tab.filters ?? {},
     includeArchived: tab.includeArchived ?? false,
     perPage: tab.perPage ?? LIST_PAGE_SIZES[0],
+    version: 1,
   };
 }
 
@@ -73,6 +74,7 @@ function tabWithoutPageSize(
     sort: "",
     filters: {},
     includeArchived: false,
+    version: 1,
   };
 }
 

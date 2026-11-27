@@ -6,7 +6,7 @@
     "required_only_as_one_of_a_set": 0,
     "never_driven": 4,
     "permitted_but_never_required": 0,
-    "tokens_served_but_never_driven": 2698,
+    "tokens_served_but_never_driven": 2695,
     "use_case_cases": 83,
     "acceptance_criteria_named": 133,
     "tools_added_by_shipped_units": 0,
@@ -1325,6 +1325,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -1360,6 +1361,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -1391,6 +1393,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         }
@@ -1588,6 +1591,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -1619,6 +1623,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         }
@@ -1670,6 +1675,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -1705,6 +1711,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -1736,6 +1743,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         }
@@ -2135,6 +2143,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -2170,6 +2179,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -2201,6 +2211,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         }
@@ -2284,6 +2295,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -2315,6 +2327,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         }
@@ -2834,6 +2847,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -2869,6 +2883,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -2900,6 +2915,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         }
@@ -3298,6 +3314,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -3333,6 +3350,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -3364,6 +3382,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         }
@@ -3880,6 +3899,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -3915,6 +3935,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -4000,6 +4021,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -4035,6 +4057,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -4343,6 +4366,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -4378,6 +4402,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -4458,6 +4483,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -4493,6 +4519,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -4684,6 +4711,7 @@
             "retries": null
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources",
             "harness"
           ]
@@ -4735,6 +4763,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -4770,6 +4799,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -4851,6 +4881,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -4886,6 +4917,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -4969,6 +5001,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5004,6 +5037,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5085,6 +5119,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5120,6 +5155,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5202,6 +5238,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5237,6 +5274,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5318,6 +5356,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5353,6 +5392,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5438,6 +5478,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5473,6 +5514,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5559,6 +5601,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5594,6 +5637,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5675,6 +5719,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5710,6 +5755,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5792,6 +5838,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5908,6 +5955,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -5943,6 +5991,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -6140,6 +6189,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -6175,6 +6225,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -6404,6 +6455,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -6593,6 +6645,7 @@
             "retries": null
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources",
             "harness"
           ]
@@ -6788,6 +6841,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -6904,6 +6958,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -7018,6 +7073,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -7131,6 +7187,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -7358,6 +7415,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -7584,6 +7642,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -7815,6 +7874,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -7933,6 +7993,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -8047,6 +8108,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -8159,6 +8221,7 @@
             }
           },
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -8277,6 +8340,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -8391,6 +8455,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -8617,6 +8682,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -9183,6 +9249,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -10539,6 +10606,7 @@
           },
           "regraded": true,
           "measured_on_an_earlier_listing": [
+            "tool copy",
             "server instructions and resources"
           ]
         },
@@ -11440,7 +11508,7 @@
     },
     {
       "name": "enrich",
-      "tokens": 448,
+      "tokens": 446,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -11454,7 +11522,7 @@
     },
     {
       "name": "annotate_brief",
-      "tokens": 417,
+      "tokens": 416,
       "agents": [
         "morning_brief"
       ],
@@ -11569,7 +11637,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3307,
+      "tokens": 3309,
       "agents": [],
       "required_by_cases": [
         "case116_the_rate_and_the_logo",
@@ -11613,7 +11681,7 @@
     },
     {
       "name": "change_activities",
-      "tokens": 3029,
+      "tokens": 3006,
       "agents": [
         "overnight_at_risk_sweep"
       ],
@@ -11827,7 +11895,7 @@
     },
     {
       "name": "change_state",
-      "tokens": 2365,
+      "tokens": 2362,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12054,7 +12122,7 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1958,
+      "tokens": 1959,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12151,7 +12219,7 @@
     },
     {
       "name": "send_outbound",
-      "tokens": 1678,
+      "tokens": 1679,
       "agents": [],
       "required_by_cases": [
         "case44_chase_what_is_slipping"
@@ -12190,7 +12258,7 @@
     },
     {
       "name": "run_research",
-      "tokens": 1419,
+      "tokens": 1421,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12313,7 +12381,7 @@
     },
     {
       "name": "preview_import",
-      "tokens": 1012,
+      "tokens": 1008,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12363,7 +12431,7 @@
     },
     {
       "name": "bulk_update_records",
-      "tokens": 892,
+      "tokens": 894,
       "agents": [],
       "required_by_cases": [
         "case131_no_to_the_hand_over"
@@ -12392,7 +12460,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 891,
+      "tokens": 888,
       "agents": [],
       "required_by_cases": [
         "case56_not_the_same"
@@ -12479,7 +12547,7 @@
     },
     {
       "name": "read_lists",
-      "tokens": 797,
+      "tokens": 796,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12503,7 +12571,7 @@
     },
     {
       "name": "update_record",
-      "tokens": 698,
+      "tokens": 695,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company"
@@ -12545,7 +12613,7 @@
     },
     {
       "name": "change_tags",
-      "tokens": 652,
+      "tokens": 650,
       "agents": [],
       "required_by_cases": [
         "case32_two_words_for_one_thing"
@@ -12606,7 +12674,7 @@
     },
     {
       "name": "resolve_duplicates",
-      "tokens": 618,
+      "tokens": 617,
       "agents": [],
       "required_by_cases": [
         "case33_two_cards_for_one_company",
@@ -12684,7 +12752,7 @@
     },
     {
       "name": "draft_outbound",
-      "tokens": 524,
+      "tokens": 523,
       "agents": [],
       "required_by_cases": [
         "case60_send_one_draft_one"
@@ -12726,7 +12794,7 @@
     },
     {
       "name": "list_approvals",
-      "tokens": 474,
+      "tokens": 475,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [
@@ -12756,7 +12824,7 @@
     },
     {
       "name": "decide_approvals",
-      "tokens": 465,
+      "tokens": 463,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -12898,6 +12966,34 @@
       }
     },
     {
+      "name": "read_relationships",
+      "tokens": 366,
+      "agents": [],
+      "required_by_cases": [],
+      "required_as_one_of_a_set_by_cases": [],
+      "permitted_in_cases": [
+        "case108_ask_sofia_for_an_intro",
+        "case120_what_the_pump_customer_wants",
+        "case33_two_cards_for_one_company",
+        "case49_who_can_introduce_us",
+        "case5_before_the_meeting"
+      ],
+      "called_in_held_runs": [
+        "case105_what_changed_there",
+        "case108_ask_sofia_for_an_intro",
+        "case124_log_it_with_read_access",
+        "case44_chase_what_is_slipping",
+        "case49_who_can_introduce_us",
+        "case5_before_the_meeting",
+        "case63_is_she_already_here"
+      ],
+      "driven": true,
+      "required_only_as_one_of_a_set": false,
+      "graded_by_certification_tasks": [],
+      "near_miss_in_certification_tasks": [],
+      "measured_by_model": {}
+    },
+    {
       "name": "read_attention",
       "tokens": 365,
       "agents": [
@@ -12951,36 +13047,8 @@
       "measured_by_model": {}
     },
     {
-      "name": "read_relationships",
-      "tokens": 359,
-      "agents": [],
-      "required_by_cases": [],
-      "required_as_one_of_a_set_by_cases": [],
-      "permitted_in_cases": [
-        "case108_ask_sofia_for_an_intro",
-        "case120_what_the_pump_customer_wants",
-        "case33_two_cards_for_one_company",
-        "case49_who_can_introduce_us",
-        "case5_before_the_meeting"
-      ],
-      "called_in_held_runs": [
-        "case105_what_changed_there",
-        "case108_ask_sofia_for_an_intro",
-        "case124_log_it_with_read_access",
-        "case44_chase_what_is_slipping",
-        "case49_who_can_introduce_us",
-        "case5_before_the_meeting",
-        "case63_is_she_already_here"
-      ],
-      "driven": true,
-      "required_only_as_one_of_a_set": false,
-      "graded_by_certification_tasks": [],
-      "near_miss_in_certification_tasks": [],
-      "measured_by_model": {}
-    },
-    {
       "name": "read_tags",
-      "tokens": 358,
+      "tokens": 357,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -13036,7 +13104,7 @@
     },
     {
       "name": "read_project",
-      "tokens": 318,
+      "tokens": 316,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -13063,7 +13131,7 @@
     },
     {
       "name": "archive_record",
-      "tokens": 300,
+      "tokens": 299,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],
@@ -13082,7 +13150,7 @@
     },
     {
       "name": "read_record",
-      "tokens": 284,
+      "tokens": 283,
       "agents": [
         "morning_brief",
         "overnight_at_risk_sweep"
@@ -13257,7 +13325,7 @@
     },
     {
       "name": "read_approval",
-      "tokens": 154,
+      "tokens": 153,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [
@@ -13279,7 +13347,7 @@
     },
     {
       "name": "whoami",
-      "tokens": 129,
+      "tokens": 127,
       "agents": [],
       "required_by_cases": [],
       "required_as_one_of_a_set_by_cases": [],

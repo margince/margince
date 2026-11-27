@@ -39,6 +39,7 @@ import {
   type ToolCall,
   type Warning,
 } from "../types";
+import { ABSENT } from "../values";
 import { tagOfferPanel } from "./tag-offer";
 import "../view.css";
 
@@ -106,8 +107,8 @@ function evidenceTable(candidate: Candidate): HTMLElement {
     const tr = el("tr");
     tr.append(
       el("th", "meta", row.label),
-      el("td", "name", row.mine || "—"),
-      el("td", "name", row.theirs || "—"),
+      el("td", "name", row.mine || ABSENT),
+      el("td", "name", row.theirs || ABSENT),
     );
     body.appendChild(tr);
   }

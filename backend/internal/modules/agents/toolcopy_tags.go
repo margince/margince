@@ -20,7 +20,7 @@ var getTagCopy = toolCopy{
 var getRecordTagsCopy = toolCopy{
 	Purpose: "Read the tags on one contact, company, deal or lead, with who applied each and when.",
 	Limits: "Those four record types only. `withheld` true means the vocabulary is not visible " +
-		"to this caller, so the list is empty for that reason — NOT because the record carries no " +
+		"to this caller, so the list is empty for that reason, NOT because the record carries no " +
 		"tags, and it must not be reported as none. An archived tag stays on whatever carries it.",
 }
 
@@ -34,7 +34,7 @@ var applyTagCopy = toolCopy{
 }
 
 var removeTagCopy = toolCopy{
-	Purpose: "Take one tag off one record — by tag_id or tag_name — leaving the word itself.",
+	Purpose: "Take one tag off one record (by tag_id or tag_name), leaving the word itself.",
 	Limits:  "Removing one that is not there succeeds. archive_record on a tag retires it for all.",
 }
 
@@ -45,7 +45,7 @@ var createTagCopy = toolCopy{
 	Purpose: "Coin a new word in the workspace vocabulary, so records can be grouped by it.",
 	Limits: "list_tags FIRST: a workspace with \"Key Customer\" does not want \"key customers\" " +
 		"beside it, and the two then split the records that belong together. A name already " +
-		"taken is a conflict, matched case-insensitively — including a RETIRED word holding " +
+		"taken is a conflict, matched case-insensitively, including a RETIRED word holding " +
 		"it, which change_tags restores. Needs the tag.create grant, " +
 		"which an ordinary seat does not hold.",
 }
@@ -59,16 +59,16 @@ var mergeTagsCopy = toolCopy{
 	// The governance sentence the surface appends already says a human approves
 	// this, so that is not repeated. What only this copy can say is that the act
 	// cannot be walked back, and which of the two words is the one that dies.
-	Limits: "NOT UNDOABLE once approved: the source is retired, its name is released — links " +
-		"to it stop working and someone may coin it again — and no pointer home is kept, " +
+	Limits: "NOT UNDOABLE once approved: the source is retired, its name is released (links " +
+		"to it stop working and someone may coin it again), and no pointer home is kept, " +
 		"unlike a contact or company merge. The TARGET is the word that survives; read both " +
 		"with read_tags first. Needs the tag.update grant.",
 }
 
 var updateTagCopy = toolCopy{
-	Purpose: "Rename, recolour or describe a word that already exists. Fields left out are " +
-		"unchanged, so a recolour need not restate the name.",
-	Limits: "The word keeps every record carrying it — this changes what it is CALLED, not what " +
+	Purpose: "Rename, recolor or describe a word that already exists. Fields left out are " +
+		"unchanged, so a recolor need not restate the name.",
+	Limits: "The word keeps every record carrying it: this changes what it is CALLED, not what " +
 		"it is on. LAST WRITE WINS: this tool sends no version, so an edit made between your " +
 		"read and your write is overwritten without a conflict. Read with get_tag immediately " +
 		"before editing. A name another word already holds is a conflict.",
@@ -81,13 +81,13 @@ var archiveTagCopy = toolCopy{
 
 var readTagsCopy = toolCopy{
 	Purpose: "Read the workspace's tags. list: every word, with the tag_id the other tag calls " +
-		"take. get: one tag and how many contacts, companies, deals and leads carry it — the " +
-		"records themselves come from list_records. record: " +
+		"take. get: one tag and how many contacts, companies, deals and leads carry it (the " +
+		"records themselves come from list_records). record: " +
 		"the tags on one contact, company, deal or lead, with who applied each and when.",
 	Limits: "list returns archived words only with include_archived, and they cannot be applied; " +
 		"`truncated` means a word missing from the list may still exist. In record, `withheld` " +
-		"true means the vocabulary is hidden from this caller, NOT that the record has no tags — " +
-		"never report it as none.",
+		"true means the vocabulary is hidden from this caller, NOT that the record has no tags. " +
+		"Never report it as none.",
 	Retain: "A word the user says fits a contact you are creating goes to create_record as " +
 		"offer_tag, which applies and stores nothing and says whether the tag exists.",
 }
@@ -96,7 +96,7 @@ var changeTagsCopy = toolCopy{
 	Purpose: "Change the workspace's tags: the words themselves, and which records carry them.",
 	Limits: "apply never creates a tag: an unknown name is refused, a name matches " +
 		"case-insensitively, an archived word is refused as archived, and the same tag twice is a " +
-		"conflict. Before create, read the list — a near-duplicate splits records that belong " +
+		"conflict. Before create, read the list: a near-duplicate splits records that belong " +
 		"together, and a taken name is a conflict, even a retired one, which restore brings back. create and update need tag grants an ordinary seat lacks. update " +
 		"changes only the fields it is sent, and sends no version, so read the tag right before editing; it changes what a word is " +
 		"called, never what carries it. Removing a tag that is not there succeeds. archive retires " +

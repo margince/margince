@@ -18,8 +18,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -66,7 +64,7 @@ func TestTheTwoBackendJobsRunEveryCheckLeg(t *testing.T) {
 		t.Fatalf("reading %s: %v", aggregateWorkflow, err)
 	}
 	var wf stepRuns
-	if err := yaml.Unmarshal(raw, &wf); err != nil {
+	if err := unmarshalYAML(raw, &wf); err != nil {
 		t.Fatalf("%s: %v", aggregateWorkflow, err)
 	}
 	testLegs, ok := legsRunBy(t, wf, testLegsJob, "check-backend", "CHECK_LEGS", all)
@@ -102,7 +100,7 @@ func TestOneBackendLegRunsTheTreeGates(t *testing.T) {
 		t.Fatalf("reading %s: %v", aggregateWorkflow, err)
 	}
 	var wf stepRuns
-	if err := yaml.Unmarshal(raw, &wf); err != nil {
+	if err := unmarshalYAML(raw, &wf); err != nil {
 		t.Fatalf("%s: %v", aggregateWorkflow, err)
 	}
 	values, ok := legsRunBy(t, wf, testLegsJob, "check-backend", "CHECK_TREE_GATES", []string{"on"})
@@ -146,7 +144,7 @@ func readStepRuns(t *testing.T, path string) stepRuns {
 		t.Fatalf("reading %s: %v", path, err)
 	}
 	var wf stepRuns
-	if err := yaml.Unmarshal(raw, &wf); err != nil {
+	if err := unmarshalYAML(raw, &wf); err != nil {
 		t.Fatalf("%s: %v", path, err)
 	}
 	return wf

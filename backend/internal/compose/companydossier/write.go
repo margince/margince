@@ -84,7 +84,7 @@ func WriteDossier(ctx context.Context, lane Completer, in Input, lang string) ([
 	if lane == nil {
 		return floor, crmcontracts.WrittenByDeterministic, false
 	}
-	written, err := writeWithModel(ctx, lane, in, lang)
+	written, err := writeWithModel(ai.WithFloor(ctx), lane, in, lang)
 	if err != nil {
 		// The interactive degrade posture (execution_mode: interactive), not a
 		// swallowed error. A lane that is unavailable, over budget or answering

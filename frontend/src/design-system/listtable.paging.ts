@@ -140,6 +140,8 @@ export type PagingControl<Row> = Readonly<{
   onPerPage?: (next: number) => void;
   hasMore: boolean;
   onLoadMore?: () => void;
+  /** How many rows match on the server, when it counts them. */
+  total?: number;
   /** False where a body outside the table owns the paging; default true. */
   reachAsked?: boolean;
   /** True when the page in hand was named with the narrowing, so no reset. */
@@ -149,7 +151,12 @@ export type PagingControl<Row> = Readonly<{
 /** The rows the table slices out, and the pager's state. */
 export type Paging<Row> = Readonly<{
   current: number;
+  /** The last page the pager numbers, which a count puts past the rows in hand. */
   lastPage: number;
+  /** `lastPage` is the list's real end: counted, or every row is in hand. */
+  endKnown: boolean;
+  /** The page a press or an address named, while the cursor walks to it. */
+  asked?: number;
   from: number;
   pageRows: readonly Row[];
   perPage: number;
@@ -195,6 +202,11 @@ export function usePaging<Row>(
 ): Paging<Row> {
   const { page, setPage, perPage, setPerPage } = usePageState(control);
   const lastPage = Math.max(1, Math.ceil(control.rows.length / perPage));
+  // A count is read once, so rows added since can outrun it; the rows in hand win.
+  const counted =
+    control.hasMore && control.total !== undefined
+      ? Math.max(lastPage, Math.ceil(control.total / perPage))
+      : undefined;
   const current = Math.min(page, lastPage);
   const from = (current - 1) * perPage;
   const { rows } = control;
@@ -232,7 +244,9 @@ export function usePaging<Row>(
   };
   return {
     current,
-    lastPage,
+    lastPage: counted ?? lastPage,
+    endKnown: counted !== undefined || !control.hasMore,
+    asked: control.hasMore && page > lastPage ? page : undefined,
     from,
     pageRows,
     perPage,
@@ -250,9 +264,9 @@ const PAGE_WINDOW = 3;
  */
 export type PagerSlot = number | "gap" | "room";
 
-/** Page one stays reachable because a lost reader goes back there. A gap marks
- *  only skipped pages: Next speaks for pages the cursor could still fetch.
- *  Six slots at every position, so Next never slides out between clicks. */
+/** Page one stays reachable because a lost reader goes back there, and the
+ *  last page is numbered so the strip says how long the list is. Seven slots
+ *  at every position, so Next never slides out between clicks. */
 export function pagerSlots(current: number, lastPage: number): PagerSlot[] {
   const first = Math.min(
     Math.max(1, current - Math.floor(PAGE_WINDOW / 2)),
@@ -260,12 +274,13 @@ export function pagerSlots(current: number, lastPage: number): PagerSlot[] {
   );
   const span = Math.min(PAGE_WINDOW, lastPage - first + 1);
   const window = Array.from({ length: span }, (_, index) => first + index);
-  const last = window.at(-1);
+  const last = first + span - 1;
   return [
     first > 1 ? 1 : "room",
     first > 2 ? "gap" : "room",
     ...window,
     ...Array.from({ length: PAGE_WINDOW - span }, () => "room" as const),
-    last !== undefined && last < lastPage ? "gap" : "room",
+    last < lastPage - 1 ? "gap" : "room",
+    last < lastPage ? lastPage : "room",
   ];
 }

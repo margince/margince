@@ -128,7 +128,7 @@ function meetingCard(answer: Record<string, unknown>): HTMLElement {
   body.appendChild(
     rowAction("Draft my opening", () =>
       askAssistant(
-        "Draft what I should say in the first two minutes of this meeting, in my own voice, from the brief you just read.",
+        "Draft what to say in the first two minutes of this meeting, in my own voice, from the brief you just read.",
       ),
     ),
   );
@@ -217,9 +217,9 @@ function catchUpCard(answer: Record<string, unknown>): HTMLElement {
     }
   }
   body.appendChild(
-    rowAction("What should I do next", () =>
+    rowAction("What to do next", () =>
       askAssistant(
-        `From what you just read about this ${noun}, what is the one thing I should do next, and why?`,
+        `From what you just read about this ${noun}, what is the one thing for me to do next, and why?`,
       ),
     ),
   );
@@ -232,7 +232,7 @@ function briefCard(answer: Record<string, unknown>): HTMLElement {
   const count = (state: string) =>
     items.filter((i) => asText(i.state) === state).length;
   const fresh = count("new");
-  const card = panel("This morning's brief", {
+  const card = panel("This morning’s brief", {
     level: "h1",
     action: badge(day(answer.local_day)),
   });
@@ -263,7 +263,7 @@ function briefCard(answer: Record<string, unknown>): HTMLElement {
   body.appendChild(
     rowAction("Walk me through it", () =>
       askAssistant(
-        "Walk me through this morning's brief, top deal first: what each one needs from me today, with its link.",
+        "Walk me through this morning’s brief, top deal first: what each one needs from me today, with its link.",
       ),
     ),
   );

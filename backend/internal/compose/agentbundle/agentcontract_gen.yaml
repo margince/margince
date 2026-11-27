@@ -41588,7 +41588,7 @@ components:
         assignee_id: {type: [string, 'null'], format: uuid, description: Task only.}
         is_done: {type: boolean, default: false, description: Task only.}
         done_at: {type: [string, 'null'], format: date-time}
-        duration_seconds: {type: [integer, 'null'], description: Meeting/call only.}
+        duration_seconds: {type: [integer, 'null'], minimum: 0, description: Meeting/call only.}
         host_user_id:
           type: [string, 'null']
           format: uuid
@@ -42058,7 +42058,7 @@ components:
           format: uuid
           description: >-
             Inbound message, call, meeting or email only: the linked contact who wrote or said it. Set it whenever one contact sent the message, for example the one member of a group chat who asked for a follow-up. Only that contact counts as its author, so only they asked to hear from us. Without it, an inbound activity linked to one contact names that contact as the sender. One linked to two or more contacts names no sender, and each contact is kept as copied. The stated `participants` of an email win over this field. A contact that is not in `links` returns `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`, returns `422 code: field_not_valid_for_kind`.
-        duration_seconds: {type: [integer, 'null']}
+        duration_seconds: {type: [integer, 'null'], minimum: 0}
         direction: {type: [string, 'null'], enum: [null, inbound, outbound]}
         call_outcome:
           type: [string, 'null']

@@ -33,6 +33,10 @@ var claimedByInSubquery = regexp.MustCompile(`(?is)(?:\bIN|=\s*ANY)\s*\(\s*SELEC
 // skipLockedSite matches one use of the lock clause, so the walk can tell it read the sites.
 var skipLockedSite = regexp.MustCompile(`(?i)SKIP\s+LOCKED`)
 
+// skipLockedWords holds a word of every lock clause. A claim through an IN subquery
+// ends in one too, so a file without these words holds neither.
+var skipLockedWords = requiredWords(skipLockedSite)
+
 // claimPickFloor is how many hand-written Go files the walk must read, and claimSitesFloor how
 // many uses of SKIP LOCKED it must see among them. A walk that reads none would report a
 // clean tree from nothing.
@@ -48,6 +52,9 @@ func TestNoClaimQueryPicksItsRowsInAnInSubquery(t *testing.T) {
 	for _, root := range []string{"internal", "cmd", "pkg", "../extensions"} {
 		walkGoFiles(t, root, func(rel string, body []byte) {
 			read++
+			if !mayHoldFolded(string(body), skipLockedWords...) {
+				return
+			}
 			sites += len(skipLockedSite.FindAll(body, -1))
 			if claimedByInSubquery.Match(body) {
 				t.Errorf("%s claims rows through an IN subquery with FOR UPDATE SKIP LOCKED. The planner can "+

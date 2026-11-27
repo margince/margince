@@ -407,7 +407,7 @@ func isFilterSetType(expr ast.Expr) bool {
 
 func parsedSources(t *testing.T, dir string) []*ast.File {
 	t.Helper()
-	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	sources, err := gatekit.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s: %v", dir, err)
 	}

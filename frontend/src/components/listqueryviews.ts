@@ -1,9 +1,13 @@
-import { useState } from "react";
+import { createContext, createElement, type ReactNode, useState } from "react";
 import type { ListChip, ListView } from "../design-system/listtable";
 import type { useT } from "../i18n";
 import { withoutStrandedTagMode } from "../lib/tagfilter";
 import type { FilterSpec, RailView, ViewSpec } from "./listquery";
-import type { ListQuery } from "./listqueryparams";
+import {
+  isNarrowed,
+  type ListOpening,
+  type ListQuery,
+} from "./listqueryparams";
 
 type Translate = ReturnType<typeof useT>;
 
@@ -88,8 +92,11 @@ export function translateView(spec: ViewSpec, t: Translate): ListView {
 export function useActiveView(
   views: readonly RailView[],
   query: ListQuery,
-): [number, (index: number) => void] {
+  opening: ListOpening,
+): [number, (index: number) => void, OpenedView | null] {
   const [pickedId, setPickedId] = useState<string | null>(null);
+  const [opened, setOpened] = useState<OpenedView | null>(null);
+  const [litId, setLitId] = useState<string | null>(null);
   const matched = views.findIndex((spec) => matchesView(spec, query));
   const pinned = views.findIndex((spec) => spec.id === pickedId);
   const pinnedView = views[pinned];
@@ -97,11 +104,54 @@ export function useActiveView(
     pinnedView !== undefined && matchesView(pinnedView, query)
       ? pinned
       : matched;
+  // The opened view is the tab last lit or pressed, at the version it lit
+  // with. With no tab lit the reader is changing that view. A refetch that
+  // brings a newer version then leaves it alone, until the list is back to how
+  // it opens.
+  const lit = views[view];
+  if ((lit?.id ?? null) !== litId) {
+    setLitId(lit?.id ?? null);
+    if (lit !== undefined) {
+      setOpened(openedOf(lit));
+    }
+  }
+  if (lit === undefined && opened !== null && !isNarrowed(query, opening)) {
+    setOpened(null);
+  }
   // The press reports an index into the rail just rendered, which is where the
   // id it names comes from. A press on nothing (the surface's own "clear
   // everything" reports index 0 against an empty rail) unpins rather than
   // pinning a view that is not there.
-  return [view, (index: number) => setPickedId(views[index]?.id ?? null)];
+  const pick = (index: number) => {
+    const picked = views[index];
+    setPickedId(picked?.id ?? null);
+    setOpened(picked === undefined ? null : openedOf(picked));
+  };
+  return [view, pick, opened];
+}
+
+/** The view the reader opened, and the version they opened it at. */
+export type OpenedView = Readonly<{ id: string; version?: number }>;
+
+function openedOf(view: RailView): OpenedView {
+  return { id: view.id, version: view.version };
+}
+
+/**
+ * The view the reader opened and may since have changed, for the Save view
+ * verbs in the View panel. A preset's id names no saved view.
+ */
+export const OpenedViewContext = createContext<OpenedView | null>(null);
+
+/** A surface's save verbs, told which view the reader opened. */
+export function withOpenedView(
+  saveView: ReactNode,
+  opened: OpenedView | null,
+): ReactNode {
+  return (
+    saveView &&
+    createElement(OpenedViewContext.Provider, { value: opened }, saveView)
+  );
 }
 
 /**
@@ -122,7 +172,7 @@ export function useActiveView(
  * names, down to the search box. Page size and the order of a tab that claims
  * none are the exceptions: they change how the rows are drawn, not which.
  */
-function matchesView(
+export function matchesView(
   spec: Readonly<{
     q?: string;
     sort?: string;

@@ -93,7 +93,7 @@ func assertViewDeclaration(spec mcp.ToolSpec) error {
 	// well-formed URI in any other scheme is not a near miss — it is a tool that
 	// advertises a view no host will ever render, silently.
 	if !strings.HasPrefix(spec.UI.ResourceURI, mcp.AppURIScheme) {
-		return fmt.Errorf("%s declares the view %q, which is not a %s URI — a host tells a view from an ordinary document by that scheme, "+
+		return fmt.Errorf("%s declares the view %q, which is not a %s URI. A host tells a view from an ordinary document by that scheme, "+
 			"so this tool would advertise a view nothing renders", spec.Name, spec.UI.ResourceURI, mcp.AppURIScheme)
 	}
 	modelReaches := len(spec.UI.Visibility) == 0
@@ -107,8 +107,8 @@ func assertViewDeclaration(spec mcp.ToolSpec) error {
 			// narrows the tool: a host reads the entries it knows and this one
 			// is not among them, so the reach the author meant is not the reach
 			// the tool gets.
-			return fmt.Errorf("%s declares the audience %q, which is not %q or %q — a host reads only the audiences it knows, "+
-				"so an unrecognised one narrows this tool rather than widening it",
+			return fmt.Errorf("%s declares the audience %q, which is not %q or %q. A host reads only the audiences it knows, "+
+				"so an unrecognized one narrows this tool rather than widening it",
 				spec.Name, audience, mcp.VisibilityModel, mcp.VisibilityApp)
 		}
 	}
@@ -119,8 +119,8 @@ func assertViewDeclaration(spec mcp.ToolSpec) error {
 	// serves views as a second renderer for an answer a tool already gives, and
 	// that promise is exactly this check.
 	if !modelReaches {
-		return fmt.Errorf("%s is declared visible to %q alone, which makes it a capability only a rendered view can reach — "+
-			"a view is a second renderer for an answer this tool already gives, never its only door",
+		return fmt.Errorf("%s is declared visible to %q alone, which makes it a capability only a rendered view can reach. "+
+			"A view is a second renderer for an answer this tool already gives, never its only door",
 			spec.Name, mcp.VisibilityApp)
 	}
 	return nil
