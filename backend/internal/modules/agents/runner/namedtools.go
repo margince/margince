@@ -55,6 +55,7 @@ func withoutSentencesNaming(spec mcp.ToolSpec, offered map[string]bool) mcp.Tool
 
 // dropFromDescriptions rewrites every "description" string under node and
 // reports whether any changed.
+//
 //craft:ignore naked-any a decoded JSON schema is any by construction; this walk reads its maps, slices and strings
 func dropFromDescriptions(node any, gone []string) bool {
 	changed := false
