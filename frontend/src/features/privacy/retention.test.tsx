@@ -242,12 +242,12 @@ describe("RetentionCard rows", () => {
           return attempts === 1
             ? jsonResponse(
                 {
-                  title: "Bad Gateway",
-                  status: 502,
+                  title: "Internal Server Error",
+                  status: 500,
                   code: "internal",
                   detail: "the policy store is unreachable",
                 },
-                502,
+                500,
               )
             : jsonResponse({
                 data: [WON_DEALS],
@@ -620,12 +620,12 @@ describe("the retain-only posture", () => {
         "GET /retention/settings": () =>
           jsonResponse(
             {
-              title: "Bad Gateway",
-              status: 502,
+              title: "Internal Server Error",
+              status: 500,
               code: "internal",
               detail: "the settings store is unreachable",
             },
-            502,
+            500,
           ),
       },
     });

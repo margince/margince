@@ -105,9 +105,9 @@ export const EstimateFailed: Story = {
     { state: "none" },
     {
       "POST /connectors/gmail/backfill/preview": () =>
-        jsonResponse(
-          { code: "internal", detail: "The mailbox did not answer in time." },
-          502,
+        Response.json(
+          { code: "provider_unreachable", detail: "The mailbox did not answer in time." },
+          {status:502,headers:{ "Content-Type": "application/problem+json" }},
         ),
     },
   ),

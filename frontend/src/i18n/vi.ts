@@ -8709,8 +8709,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotConnected":
     "Chưa kết nối hộp thư nào. Hãy kết nối một hộp thư để gửi từ Margince.",
   "compose.mailboxNotConnectedGoto": "Kết nối hộp thư",
-  "compose.sharedUnsubscribeToken":
-    "Tin nhắn có liên kết hủy đăng ký chỉ gửi cho một người nhận mỗi lần, vì liên kết đó gắn với sự đồng ý của riêng người nhận đó. Gửi riêng cho từng người nhận, không dùng Cc.",
   "compose.relinkTitle": "Liên kết hoạt động với hồ sơ khác",
   "compose.relinkTarget": "Tìm liên hệ, công ty, deal, lead hoặc dự án",
   "compose.relinkNoVersion":

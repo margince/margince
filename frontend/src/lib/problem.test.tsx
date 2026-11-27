@@ -196,7 +196,7 @@ describe("problemFieldErrors", () => {
           errors: [
             {
               field: "recipients",
-              code: "shared_unsubscribe_token",
+              code: "invalid",
               message: "one addressee at a time",
             },
           ],
@@ -205,7 +205,7 @@ describe("problemFieldErrors", () => {
     ).toEqual([
       {
         field: "recipients",
-        code: "shared_unsubscribe_token",
+        code: "invalid",
         message: "one addressee at a time",
       },
     ]);
@@ -235,7 +235,7 @@ describe("problemFieldErrors", () => {
           errors: [
             {
               field: "recipients",
-              code: "shared_unsubscribe_token",
+              code: "invalid",
               message: "one addressee at a time",
             },
           ],
@@ -252,8 +252,8 @@ describe("problemFieldErrors", () => {
         code: "validation_error",
         details: {
           errors: [
-            { field: "recipients", code: "shared_unsubscribe_token" },
-            { code: "shared_unsubscribe_token", message: "one at a time" },
+            { field: "recipients", code: "invalid" },
+            { code: "invalid", message: "one at a time" },
             null,
           ],
         },

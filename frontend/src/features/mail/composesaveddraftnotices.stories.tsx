@@ -48,7 +48,7 @@ const SAVE_WAIT = { timeout: 4000 };
 function refused() {
   return new Response(
     JSON.stringify({ code: "internal", title: "The draft store is down." }),
-    { status: 503, headers: { "Content-Type": "application/problem+json" } },
+    { status: 500, headers: { "Content-Type": "application/problem+json" } },
   );
 }
 

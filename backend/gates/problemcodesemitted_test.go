@@ -87,11 +87,14 @@ type paramRef struct {
 }
 
 type emittedCensus struct {
-	units    []*goUnit
-	consts   map[string]map[string]string
-	structs  map[string]map[string]*ast.StructType
-	structAt map[*ast.StructType]*goUnit
-	named    map[string]namedDecl
+	fieldCodes    bool
+	fieldBindings map[*ast.Object]fieldCodeExpr
+	fieldDepth    int
+	units         []*goUnit
+	consts        map[string]map[string]string
+	structs       map[string]map[string]*ast.StructType
+	structAt      map[*ast.StructType]*goUnit
+	named         map[string]namedDecl
 	// problemDir holds each package a file of which imports httperr: only
 	// there may a Code this census cannot type be a carrier's.
 	problemDir map[string]bool
@@ -448,6 +451,7 @@ func (c *emittedCensus) holdCarrierLists() {
 type sentinelRow struct {
 	unit         *goUnit
 	status, code ast.Expr
+	sentinel     ast.Expr
 }
 
 // readSentinelTable reads the code column of httperr's sentinel mapping.
@@ -503,7 +507,8 @@ func (c *emittedCensus) rowsOf(unit *goUnit, table ast.Expr) []sentinelRow {
 				"can find; write the row as a struct literal with both")
 			continue
 		}
-		rows = append(rows, sentinelRow{unit: unit, status: status, code: code})
+		sentinel, _ := fieldValue(entry, shape, "sentinel")
+		rows = append(rows, sentinelRow{unit: unit, status: status, code: code, sentinel: sentinel})
 	}
 	return rows
 }
@@ -571,6 +576,16 @@ func fieldIndex(shape *ast.StructType, field string) (int, bool) {
 // read folds a code expression to the codes it can hold. It follows the code
 // to the caller, literal or table that sets it, since the census keeps no list.
 func (c *emittedCensus) read(expr ast.Expr, unit *goUnit, in *ast.FuncDecl) {
+	if c.fieldCodes {
+		if ident, ok := expr.(*ast.Ident); ok {
+			if bound, found := c.fieldBindings[ident.Obj]; found && bound.expr != expr {
+				delete(c.fieldBindings, ident.Obj)
+				defer func() { c.fieldBindings[ident.Obj] = bound }()
+				c.read(bound.expr, bound.unit, bound.in)
+				return
+			}
+		}
+	}
 	if code, ok := c.constant(expr, unit, 0); ok {
 		if _, seen := c.codes[code]; !seen {
 			c.codes[code] = c.at(unit, expr)
@@ -599,6 +614,9 @@ func (c *emittedCensus) read(expr ast.Expr, unit *goUnit, in *ast.FuncDecl) {
 			return
 		}
 	}
+	if c.fieldCodes && c.readFieldFlow(expr, unit, in) {
+		return
+	}
 	c.faults = append(c.faults, fmt.Sprintf("%s: a Problem code this census cannot read; pass a literal, a package "+
 		"constant or a parameter whose callers pass one", c.at(unit, expr)))
 }
@@ -622,6 +640,18 @@ func (c *emittedCensus) readSelected(sel *ast.SelectorExpr, unit *goUnit, in *as
 			}
 		}
 		return true
+	}
+	if c.fieldCodes {
+		if typ, owner, typed := c.typeOf(sel.X, unit, 0); typed {
+			if shape, declaredIn, ok := c.structOf(typ, owner); ok {
+				for name, known := range c.structs[declaredIn.dir] {
+					if known == shape {
+						c.readField(declaredIn, name, sel.Sel.Name, sel)
+						return true
+					}
+				}
+			}
+		}
 	}
 	return c.relaysACode(sel, unit)
 }
