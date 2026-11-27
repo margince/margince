@@ -9,8 +9,9 @@ package gates
 //
 // A map[textlang.Lang]T table no test walks through langcopytest ships a dash
 // or a "we" unseen. A test holds a table by naming it or a variable built from
-// it. Unseen: a table filled by assignment, a walk of part of a table, and a
-// named map type that another package declares.
+// it. Unseen: a table filled by assignment, and a walk of part of a table. Also
+// unseen: a named map type that another package declares. So is a generic map
+// type whose key is a type parameter, instantiated with textlang.Lang.
 
 import (
 	"go/ast"
@@ -236,7 +237,8 @@ func TestAliased(t *testing.T) { register, _ := reader(); register.EnglishText(t
 }
 
 // TestBothCensusesReadEachSpellingOfATable holds the two arms to one answer for
-// spellings one of them once misread. A declaration or a comment is no literal.
+// spellings one of them once misread. A declaration, a comment, a string or a
+// conversion is no literal, and a name is not built by its neighbour's value.
 // A type may be declared in a group or with type parameters, and a local type
 // may share a package type's name.
 func TestBothCensusesReadEachSpellingOfATable(t *testing.T) {
@@ -252,6 +254,11 @@ func TestBothCensusesReadEachSpellingOfATable(t *testing.T) {
 		{"a type switch", "func f(v any) any {\n\tswitch v.(type) {\n\tdefault:\n\t\treturn map[textlang.Lang]string{}\n\t}\n}\n", "f"},
 		{"a local type named like a key alias", "type locale = textlang.Lang\n" +
 			"func f() any { type locale string; return map[locale]string{} }\n", "f"},
+		{"a conversion beside a literal", "var empty = map[textlang.Lang]string(nil)\n" +
+			"var x = map[textlang.Lang]struct{ Saved string }{textlang.English: {Saved: \"a\"}}\n", "x"},
+		{"a string that spells a literal", "var s = \"y = map[textlang.Lang]string{}\"\nvar r = `z = map[textlang.Lang]string{}`\n" +
+			"var x = map[textlang.Lang]string{textlang.English: \"a\"}\n", "x"},
+		{"two names given one value each", "var x, count = map[textlang.Lang]string{textlang.English: \"a\"}, 1\n", "x"},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			files := map[string]string{"copy.go": header + tc.source}
@@ -391,13 +398,13 @@ func (p *languagePackage) resolve() {
 		lang := textlangQualifier(file)
 		for _, decl := range file.Decls {
 			for name, part := range declParts(decl) {
-				if !p.holdsLanguageLiteral(part, lang) {
+				if !p.holdsLanguageLiteral(part.builds, lang) {
 					continue
 				}
 				if _, seen := p.tables[name]; !seen {
 					p.tables[name] = p.paths[i] + ": " + name
 				}
-				span := [2]int{int(part.Pos() - file.FileStart), int(part.End() - file.FileStart)}
+				span := [2]int{int(part.declares.Pos() - file.FileStart), int(part.declares.End() - file.FileStart)}
 				p.spans[p.paths[i]] = append(p.spans[p.paths[i]], span)
 			}
 		}
@@ -492,8 +499,8 @@ func (p *languagePackage) held(checks styleChecks) map[string]bool {
 	for _, file := range p.files {
 		for _, decl := range file.Decls {
 			for name, part := range declParts(decl) {
-				_, funcs[name] = part.(*ast.FuncDecl)
-				built[name] = append(built[name], packageNames(part)...)
+				_, funcs[name] = part.builds.(*ast.FuncDecl)
+				built[name] = append(built[name], packageNames(part.builds)...)
 			}
 		}
 	}
@@ -519,18 +526,28 @@ func (p *languagePackage) held(checks styleChecks) map[string]bool {
 	return held
 }
 
+// declPart is the syntax that builds one top-level name, and the declaration
+// it stands in. That range holds the = the text census reads a literal at.
+type declPart struct{ builds, declares ast.Node }
+
 // declParts names each top-level function and variable of a declaration with
-// the syntax that builds it.
-func declParts(decl ast.Decl) map[string]ast.Node {
-	parts := map[string]ast.Node{}
+// the syntax that builds it. Names given one value each are built apart, and
+// names that share a call's results are all built by it.
+func declParts(decl ast.Decl) map[string]declPart {
+	parts := map[string]declPart{}
 	switch d := decl.(type) {
 	case *ast.FuncDecl:
-		parts[d.Name.Name] = d
+		parts[d.Name.Name] = declPart{d, d}
 	case *ast.GenDecl:
 		for _, spec := range d.Specs {
-			if value, ok := spec.(*ast.ValueSpec); ok {
-				for _, name := range value.Names {
-					parts[name.Name] = value
+			value, ok := spec.(*ast.ValueSpec)
+			if !ok {
+				continue
+			}
+			for i, name := range value.Names {
+				parts[name.Name] = declPart{value, value}
+				if len(value.Values) == len(value.Names) {
+					parts[name.Name] = declPart{value.Values[i], value}
 				}
 			}
 		}

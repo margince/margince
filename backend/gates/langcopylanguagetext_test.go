@@ -16,6 +16,7 @@ import (
 	"path/filepath"
 	"regexp"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -29,10 +30,12 @@ const containerPrefix = `(?:map\[[^\[\]]*\]|\[[^\[\]]*\]|\*)*`
 // typeParams spells the type parameters of a generic type or its instance.
 const typeParams = `(?:\[[^\]]*\])?`
 
-var (
-	textlangImported = regexp.MustCompile(`(\w+)[ \t]+"` + regexp.QuoteMeta(textlangImport) + `"`)
-	namedType        = regexp.MustCompile(`^type\s+(\w+)\s+(?:=\s*)?(\w+)\s*$`)
-)
+// valueType spells a map's value type up to the { of a literal, so a
+// conversion such as map[textlang.Lang]string(nil) is no literal.
+const valueType = `(?:\*|\[[^\]]*\]|map\[[^\]]*\])*` +
+	`(?:struct\s*\{[^{}]*\}|interface\s*\{[^{}]*\}|func\s*\([^()]*\)[\w.\s*\[\]]*?|[\w.]+` + typeParams + `)\s*\{`
+
+var namedType = regexp.MustCompile(`^type\s+(\w+)\s+(?:=\s*)?(\w+)\s*$`)
 
 // languageSpelling is how one directory's text spells a language-keyed map
 // and the named types that hold one.
@@ -44,7 +47,7 @@ type languageSpelling struct {
 // literal matches a literal of a language map, of a named type that holds one,
 // or of a container whose elements are either.
 func (s languageSpelling) literal() *regexp.Regexp {
-	spelled := []string{s.keyedMap}
+	spelled := []string{s.keyedMap + valueType}
 	for _, name := range s.mapTypes {
 		spelled = append(spelled, name+typeParams+`\{`)
 	}
@@ -140,9 +143,7 @@ func spellingIn(files []languageText) languageSpelling {
 	qualifiers, namedAs := []string{"textlang"}, map[string]string{}
 	var declarations []string
 	for _, file := range files {
-		for _, imported := range textlangImported.FindAllSubmatch(file.code, -1) {
-			qualifiers = append(qualifiers, string(imported[1]))
-		}
+		qualifiers = append(qualifiers, file.qualifiers...)
 		declarations = append(declarations, file.typeDeclarations()...)
 	}
 	for _, declaration := range declarations {
@@ -170,11 +171,13 @@ func declaredAs(declarations []string, pattern string, namedAs map[string]string
 	return slices.Sorted(maps.Keys(declared))
 }
 
-// languageText is one file's text with its comments blanked, which keeps every
-// byte offset, and the byte range of each type spec, grouped or not.
+// languageText is one file's text with its comments and string contents
+// blanked, which keeps every byte offset. It keeps the byte range of each type
+// spec, grouped or not, and each name the file imports textlang under.
 type languageText struct {
-	code      []byte
-	typeSpecs [][2]int
+	code       []byte
+	typeSpecs  [][2]int
+	qualifiers []string
 }
 
 // typeDeclarations spells each type spec as a declaration of its own.
@@ -198,22 +201,34 @@ func lexLanguageText(text []byte) languageText {
 	file := token.NewFileSet().AddFile("", -1, len(text))
 	var lexer scanner.Scanner
 	lexer.Init(file, text, nil, scanner.ScanComments)
-	lexed, specs := languageText{code: bytes.Clone(text)}, typeSpecReader{}
+	lexed, specs, alias := languageText{code: bytes.Clone(text)}, typeSpecReader{}, ""
 	for {
-		pos, tok, _ := lexer.Scan()
-		if tok == token.EOF {
+		pos, tok, lit := lexer.Scan()
+		start := file.Offset(pos)
+		switch tok {
+		case token.EOF:
 			return lexed
+		case token.COMMENT:
+			blankComment(lexed.code, start)
+			continue
+		case token.STRING:
+			if path, err := strconv.Unquote(lit); err == nil && path == textlangImport && alias != "" {
+				lexed.qualifiers = append(lexed.qualifiers, alias)
+			}
+			blankString(lexed.code, start, lit)
 		}
-		if tok == token.COMMENT {
-			blankComment(lexed.code, file.Offset(pos))
-		} else if spec, ended := specs.read(tok, file.Offset(pos)); ended {
+		if spec, ended := specs.read(tok, start); ended {
 			lexed.typeSpecs = append(lexed.typeSpecs, spec)
+		}
+		alias = ""
+		if tok == token.IDENT {
+			alias = lit
 		}
 	}
 }
 
-// blankComment overwrites a comment with spaces and keeps its newlines. The
-// lexer strips a comment's carriage returns, so its end is found in the text.
+// blankComment overwrites a comment. The lexer strips a comment's carriage
+// returns, so its end is found in the text.
 func blankComment(code []byte, start int) {
 	end := len(code)
 	if bytes.HasPrefix(code[start:], []byte("//")) {
@@ -223,9 +238,25 @@ func blankComment(code []byte, start int) {
 	} else if closing := bytes.Index(code[start+2:], []byte("*/")); closing >= 0 {
 		end = start + 2 + closing + 2
 	}
-	for i := start; i < end; i++ {
-		if code[i] != '\n' {
-			code[i] = ' '
+	blank(code[start:end])
+}
+
+// blankString overwrites what a string literal holds and keeps its quotes. A
+// raw string's carriage returns are stripped from lit too.
+func blankString(code []byte, start int, lit string) {
+	end := start + len(lit) - 1
+	if code[start] == '`' {
+		end = start + 1 + bytes.IndexByte(code[start+1:], '`')
+	}
+	blank(code[start+1 : end])
+}
+
+// blank overwrites text with spaces and keeps its newlines, so offsets and
+// line numbers stay as they were.
+func blank(text []byte) {
+	for i := range text {
+		if text[i] != '\n' {
+			text[i] = ' '
 		}
 	}
 }

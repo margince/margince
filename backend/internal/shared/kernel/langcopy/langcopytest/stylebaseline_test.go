@@ -8,6 +8,7 @@ import (
 	"cmp"
 	"crypto/sha256"
 	"encoding/hex"
+	"errors"
 	"flag"
 	"fmt"
 	"go/ast"
@@ -237,7 +238,7 @@ func TestRecutStyleBaseline(t *testing.T) {
 			kept = append(kept, w)
 		}
 	}
-	if err := recutFiles("stylebaseline.txt", "stylebaseline_test.go", kept); err != nil {
+	if err := recutFiles(os.Rename, "stylebaseline.txt", "stylebaseline_test.go", kept); err != nil {
 		t.Fatal(err)
 	}
 	t.Logf("kept %d of %d waivers", len(kept), len(waivers))
@@ -257,15 +258,18 @@ func TestTheRecutCommandReadsTheSameWhereverItIsShown(t *testing.T) {
 	}
 }
 
+var stalePins = "package x\n\nconst wantStyleWaivers = 160\n\nconst wantStyleDigest = \"" + strings.Repeat("0", 64) + "\"\n"
+
 func TestTheRecutRewritesBothPinsToTheLinesItKept(t *testing.T) {
 	t.Parallel()
 	kept, dir := syntheticWaivers, t.TempDir()
 	pins, baseline := filepath.Join(dir, "pin_test.go"), filepath.Join(dir, "stylebaseline.txt")
-	stale := "package x\n\nconst wantStyleWaivers = 160\n\nconst wantStyleDigest = \"" + strings.Repeat("0", 64) + "\"\n"
-	if err := os.WriteFile(pins, []byte(stale), 0o600); err != nil {
-		t.Fatal(err)
+	for path, text := range map[string]string{pins: stalePins, baseline: ""} {
+		if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+			t.Fatal(err)
+		}
 	}
-	if err := recutFiles(baseline, pins, kept); err != nil {
+	if err := recutFiles(os.Rename, baseline, pins, kept); err != nil {
 		t.Fatal(err)
 	}
 	written, err := os.ReadFile(baseline)
@@ -282,29 +286,49 @@ func TestTheRecutRewritesBothPinsToTheLinesItKept(t *testing.T) {
 	}
 }
 
-func TestARecutWhosePinsCannotBeRewrittenWritesNeitherFile(t *testing.T) {
+func TestARecutThatCannotFinishLeavesBothFilesAsTheyWere(t *testing.T) {
 	t.Parallel()
-	dir := t.TempDir()
-	pins, baseline := filepath.Join(dir, "pin_test.go"), filepath.Join(dir, "stylebaseline.txt")
-	const unpinned, held = "package x\n", "en.we\t\"We saved it.\"\n"
-	for path, text := range map[string]string{pins: unpinned, baseline: held} {
-		if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
-			t.Fatal(err)
-		}
-	}
-	if recutFiles(baseline, pins, syntheticWaivers) == nil {
-		t.Fatal("a recut into a file that declares no pins reported no error")
-	}
-	for path, want := range map[string]string{pins: unpinned, baseline: held} {
-		if got, err := os.ReadFile(path); err != nil || string(got) != want {
-			t.Errorf("the failed recut left %s as %q, want it untouched as %q: %v", path, got, want, err)
-		}
+	for _, tc := range []struct {
+		name, pinned    string
+		pinsRenameFails bool
+	}{
+		{"pins it cannot rewrite", "package x\n", false},
+		{"a pins rename that fails", stalePins, true},
+	} {
+		t.Run(tc.name, func(t *testing.T) {
+			dir := t.TempDir()
+			pins, baseline := filepath.Join(dir, "pin_test.go"), filepath.Join(dir, "stylebaseline.txt")
+			before := map[string]string{pins: tc.pinned, baseline: "en.we\t\"We saved it.\"\n"}
+			for path, text := range before {
+				if err := os.WriteFile(path, []byte(text), 0o600); err != nil {
+					t.Fatal(err)
+				}
+			}
+			rename := func(from, to string) error {
+				if tc.pinsRenameFails && to == pins {
+					return errors.New("the disk is full")
+				}
+				return os.Rename(from, to)
+			}
+			if recutFiles(rename, baseline, pins, syntheticWaivers) == nil {
+				t.Fatal("a recut that could not finish reported no error")
+			}
+			for path, want := range before {
+				if got, err := os.ReadFile(path); err != nil || string(got) != want {
+					t.Errorf("the failed recut left %s as %q, want it untouched as %q: %v", path, got, want, err)
+				}
+			}
+			if entries, err := os.ReadDir(dir); err != nil || len(entries) != len(before) {
+				t.Errorf("the failed recut left %d files behind in its directory, want %d: %v", len(entries), len(before), err)
+			}
+		})
 	}
 }
 
-// recutFiles prepares the baseline and its pins before it writes either, so a
-// pin it cannot rewrite leaves both files as they were.
-func recutFiles(baselineFile, pinsFile string, kept []Waiver) error {
+// recutFiles prepares the baseline and its pins, writes each beside its file
+// and renames both into place. A pin it cannot rewrite leaves both files as
+// they were, and so does a pins rename that fails: the old baseline goes back.
+func recutFiles(rename func(from, to string) error, baselineFile, pinsFile string, kept []Waiver) error {
 	source, err := os.ReadFile(pinsFile)
 	if err != nil {
 		return err
@@ -316,10 +340,43 @@ func recutFiles(baselineFile, pinsFile string, kept []Waiver) error {
 	}
 	source = styleWaiverPin.ReplaceAllLiteral(source, []byte("const wantStyleWaivers = "+strconv.Itoa(len(kept))))
 	source = styleDigestPin.ReplaceAllLiteral(source, []byte(`const wantStyleDigest = "`+styleDigest(kept)+`"`))
-	if err := os.WriteFile(baselineFile, baselineHolding(kept), 0o600); err != nil {
+	original, err := os.ReadFile(baselineFile)
+	if err != nil {
 		return err
 	}
-	return os.WriteFile(pinsFile, source, 0o600)
+	baselineStaged, err := stageBeside(baselineFile, baselineHolding(kept))
+	if err != nil {
+		return err
+	}
+	pinsStaged, err := stageBeside(pinsFile, source)
+	if err != nil {
+		return errors.Join(err, os.Remove(baselineStaged))
+	}
+	if err := rename(baselineStaged, baselineFile); err != nil {
+		return errors.Join(err, os.Remove(baselineStaged), os.Remove(pinsStaged))
+	}
+	if err := rename(pinsStaged, pinsFile); err != nil {
+		return errors.Join(err, os.Remove(pinsStaged), os.WriteFile(baselineFile, original, 0o600))
+	}
+	return nil
+}
+
+// stageBeside writes content to a new file beside path, with path's mode, so a
+// rename puts it in place whole. The leading dot keeps it out of a build.
+func stageBeside(path string, content []byte) (string, error) {
+	info, err := os.Stat(path)
+	if err != nil {
+		return "", err
+	}
+	staged, err := os.CreateTemp(filepath.Dir(path), "."+filepath.Base(path)+".*")
+	if err != nil {
+		return "", err
+	}
+	_, writeErr := staged.Write(content)
+	if err := errors.Join(writeErr, staged.Chmod(info.Mode().Perm()), staged.Close()); err != nil {
+		return "", errors.Join(err, os.Remove(staged.Name()))
+	}
+	return staged.Name(), nil
 }
 
 // baselineHolding is the baseline's header comments, then the kept lines.

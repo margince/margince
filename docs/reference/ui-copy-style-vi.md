@@ -389,12 +389,12 @@ surface. Nor do they see the register (Không thể, bị, a status line led by 
 and edge spaces against the English, sentence case, hand-formatted numbers, length, or the plain words of the Never
 column. Those are the author's and the reviewer's judgement.
 
-In Go, `langcopytest.Census` holds the Vietnamese of every `langcopy.Phrase` table, and `VietnameseText` a table of another shape. They hold tone marks, no combining
-mark, quotes, no dashes, no !, no "nhé", "nha" or "ạ", the three Never rows, formal and outsider address and retired vocabulary. The retired words and the patterns
-of `copy-style-vi.census.ts` come from a snapshot a test holds to both; formal address is a hand port pinned to its census pattern. A table is member copy unless its
-test names another register with a reason. Agent allows tôi. Outsider allows quý khách and vui lòng and fails bạn. Controller also allows chúng tôi. Own voice keeps
-only tone marks, NFC, quotes, dashes and !, and Verbatim none. `langcopytest/stylebaseline.txt` lists the findings to rewrite and only shrinks:
-`make style-baseline-shrinks` fails a line its copy at the merge base with `main` lacks, a swap included. `wantStyleWaivers` and `wantStyleDigest` pin its count and
-SHA-256, and the [recut](ui-copy-style.md#copy-the-server-writes) only drops passing or gone lines. Not reached: a member's own draft (`draftfloor`, intro notes),
-the demo mail of `capture/offlinedemo`, the word lists of `draftcheck`, `salutation` and `searchplan`, text returned from a `switch`, and strings outside a table:
-problem details, `crm.yaml` and MCP tool copy (#13561, #13562). A table whose map type another package declares is not reached either.
+In Go, `langcopytest.Census` holds the Vietnamese of every `langcopy.Phrase` table, `StyleByLanguage` a table keyed by language, or `CensusByLanguage` when its test
+also checks placeholders and that every language is written, and `VietnameseText` a sentence of another shape. They hold tone marks, no combining mark, quotes, no
+dashes, no !, no "nhé", "nha" or "ạ", the three Never rows, formal and outsider address and retired vocabulary. The retired words and the patterns of
+`copy-style-vi.census.ts` come from a snapshot a test holds to both; formal address is a hand port pinned to its census pattern. A table is member copy unless its test
+names another register with a reason. Agent allows tôi. Outsider allows quý khách and vui lòng and fails bạn. Controller also allows chúng tôi. Own voice keeps only
+tone marks, NFC, quotes, dashes and !, and Verbatim none. `langcopytest/stylebaseline.txt` lists the findings to rewrite and only shrinks: `make style-baseline-shrinks`
+fails a line its copy at the merge base with `main` lacks, a swap included. `wantStyleWaivers` and `wantStyleDigest` pin its count and SHA-256, and the
+[recut](ui-copy-style.md#copy-the-server-writes) only drops passing or gone lines. The [English page](ui-copy-style.md#copy-the-server-writes) lists what the check does
+not reach.

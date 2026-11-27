@@ -224,8 +224,10 @@ outside its list. And `you` used where no one needed it.
 
 The Go copy tables answer to part of this page. `langcopytest.Census` checks the
 English of every `langcopy.Phrase` table, and `langcopytest.StyleByLanguage` a
-table keyed by language. `langcopytest.EnglishText` checks a table of another
-shape from its own test. All three live in
+table keyed by language. `langcopytest.CensusByLanguage` takes that table when
+its test also checks placeholders and that every language is written.
+`langcopytest.EnglishText` checks a sentence of another shape from its own test.
+All four live in
 `backend/internal/shared/kernel/langcopy/langcopytest/`.
 
 They fail a dash as punctuation: an em dash, an en dash, `--` or a spaced
@@ -274,6 +276,8 @@ The check does not reach:
 - text a function returns from a `switch` and not from a table;
 - a table whose map type another package declares, which the census of
   language-keyed tables cannot resolve;
+- a generic map type whose key is a type parameter, instantiated with
+  `textlang.Lang`;
 - strings outside a table: problem details, `crm.yaml` and the copy of MCP tools,
   which issues #13561 and #13562 track.
 
