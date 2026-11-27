@@ -55,12 +55,13 @@ Other states you may see:
 
 ## How does a manager set sales goals?
 
-Open **Insights → Sales goals** and pick the year. A manager picks a team member from the list beside the plan. Each row shows the published yearly goal, or the sum of a draft, and the state of the plan. The 12 months show as bars above the amounts when they differ. Reps can read their own goals here but cannot change them. A rep can also read a draft and the reason for each change.
+Open **Insights → Sales goals** and pick the year. A manager picks a team member from the list beside the plan, or under it on a phone. Each row shows the published yearly goal, or the sum of a draft, and the state of the plan. The 12 months show as bars above the amounts when they differ. Reps can read their own goals here but cannot change them. A rep can also read a draft and the reason for each change.
 
 A published plan opens as text, with the year so far against it and a link to Progress. Click **Change goals** to open the editor.
 
 1. Type the yearly goal and click **Spread equally**, or type each month. **Spread equally** gives each month the same part of the year.
    If the year does not split evenly, the first months get one cent more each. In other currencies it is their smallest unit.
+   Each field shows its amount to the cent. **Spread equally** needs a yearly goal over zero, and the field says when it is not.
 2. Write a reason and click **Save draft**. A draft changes nothing in Progress until it is published.
 3. Click **Publish**, confirm that the goals were agreed together, and publish. The months now count in Progress and in Analytics.
 
