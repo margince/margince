@@ -558,6 +558,10 @@ paths:
         Default view excludes archived rows and contacts carrying a
         `relationship_mark`. A text search (`q`) still finds a marked contact. Leads never appear here.
       parameters:
+        - name: salutation
+          in: query
+          schema: {type: string, enum: [mr, ms, none, unset]}
+          description: Filter by an explicit salutation; unset finds records whose choice is null.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
@@ -8914,6 +8918,10 @@ paths:
         (breached, at risk, within SLA), then score descending, then oldest first.
         Explicit sort values retain their documented field ordering.
       parameters:
+        - name: salutation
+          in: query
+          schema: {type: string, enum: [mr, ms, none, unset]}
+          description: Filter by an explicit salutation; unset finds records whose choice is null.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
@@ -33024,11 +33032,16 @@ components:
         kind: {type: string, enum: [location, department, seniority]}
         value: {type: string}
         retrieved_at: {type: string, format: date-time, description: When the run that last reported this value retrieved it.}
+    Salutation:
+      type: [string, 'null']
+      enum: [mr, ms, none, null]
+      description: Explicitly supplied by a person, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
     Contact:
       type: object
       description: A contact. Mirrors the `contact` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         acquisition_request:
           readOnly: true
           allOf: [{$ref: '#/components/schemas/ContactAcquisitionRequest'}]
@@ -33218,6 +33231,7 @@ components:
       type: object
       required: [full_name, source]
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         full_name: {type: string, maxLength: 120}
         created_from_activity_id:
           type: [string, 'null']
@@ -33432,6 +33446,7 @@ components:
       type: object
       description: Partial update. Omitted fields are unchanged.
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         greeting_register:
           type: [string, 'null']
           enum: [formal, familiar, null]
@@ -34888,6 +34903,7 @@ components:
       description: One current employee of the account, as the company view shows them.
       required: [contact_id, full_name, strength, deal_roles, consent, attachable]
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         contact_id: {type: string, format: uuid}
         full_name: {type: string}
         attachable:
@@ -44273,6 +44289,7 @@ components:
       description: A thin, segregated prospect. Mirrors the `lead` table.
       required: [id, status, score, source, captured_by, created_at, updated_at]
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         legal_hold:
           type: boolean
           readOnly: true
@@ -44394,6 +44411,7 @@ components:
     CreateLeadRequest:
       type: object
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         full_name: {type: [string, 'null'], maxLength: 120}
         email: {type: [string, 'null'], format: email}
         phone: {type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes."}
@@ -44436,6 +44454,7 @@ components:
         "disqualified ⇒ archived" is enforced on that one path); `promoted` is reachable only via
         POST /leads/{id}/promote. Both terminal states are therefore excluded from this enum.
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         full_name: {type: [string, 'null'], maxLength: 120}
         email: {type: [string, 'null'], format: email}
         phone: {type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes."}

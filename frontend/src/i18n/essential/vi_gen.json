@@ -2915,6 +2915,7 @@
   "create.saving": "Đang tạo…",
   "vcardImport.action": "Nhập vCard",
   "vcardImport.title": "Nhập danh thiếp",
+  "history.field.salutation": "Danh xưng",
   "create.addressLine1": "Số nhà và tên đường",
   "create.addressLine2": "Địa chỉ dòng 2",
   "create.city": "Thành phố",

@@ -1,3 +1,6 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
 // The lead Details form: which identity fields it offers, and what a submit
 // sends. Status and score have their own domain actions and are not here.
 //
@@ -6,6 +9,7 @@
 
 import type { components } from "../../api/schema";
 import type { CreateField, CreateFieldOption } from "../../components/create";
+import { salutationChoice } from "../../lib/personsalutation";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 
 type UpdateLeadRequest = components["schemas"]["UpdateLeadRequest"];
@@ -28,6 +32,7 @@ export function mapLeadUpdate(
     email: field("email"),
     phone: field("phone"),
     title: field("title"),
+    salutation: salutationChoice(values),
     company_name: field("company_name"),
     industry: field("industry"),
     origin: field("origin"),
@@ -42,6 +47,7 @@ export function mapLeadUpdate(
 /** The choices of the lead's select fields, each with its own unset option first. */
 export type LeadFieldChoices = Readonly<{
   industries: CreateFieldOption[];
+  salutations: CreateFieldOption[];
   origins: CreateFieldOption[];
   partners: CreateFieldOption[];
 }>;
@@ -67,6 +73,12 @@ export const LEAD_IDENTITY_CREATE_FIELDS: readonly CreateField[] = [
 
 export function leadEditFields(choices: LeadFieldChoices): CreateField[] {
   return [
+    {
+      key: "salutation",
+      label: "create.salutation",
+      type: "select",
+      options: choices.salutations,
+    },
     {
       key: "full_name",
       label: "create.fullName",

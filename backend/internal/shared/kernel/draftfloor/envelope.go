@@ -40,6 +40,7 @@ type Envelope struct {
 	// GreetingRegister is formal or familiar when a rep set it on the
 	// addressee, empty otherwise. Unlike Register it holds in every language.
 	GreetingRegister string `json:"greeting_register,omitempty"`
+	Salutation       string `json:"salutation,omitempty"`
 	// SilenceDays is whole days since the last message either way, empty at
 	// band none where there is no last message to count from.
 	SilenceDays string `json:"silence_days,omitempty"`
@@ -160,12 +161,29 @@ func (e Envelope) Formal() bool {
 	return e.GreetingRegister == "" && e.Lang() == textlang.German && e.Register == string(textlang.RegisterSie)
 }
 
-// Greeting renders the opening line in this envelope's language, band and
-// register. A formal draft names the surname beside the first name, because no
-// gender is ever known; without a surname it is the familiar greeting. Both
-// names are folded to one line first, so a stored name cannot open a paragraph
-// of its own.
+// Greeting uses the stored salutation for formal English and German mail.
+// An unset or neutral choice keeps the full name. Names are folded to one
+// line so they cannot open a paragraph of their own.
 func (e Envelope) Greeting(firstName, lastName string) string {
+	lastName = NameLine(lastName)
+	if e.Formal() && lastName != "" {
+		if e.Lang() == textlang.German {
+			if e.Salutation == "mr" {
+				return "Sehr geehrter Herr " + lastName + ","
+			}
+			if e.Salutation == "ms" {
+				return "Sehr geehrte Frau " + lastName + ","
+			}
+		}
+		if e.Lang() == textlang.English {
+			if e.Salutation == "mr" {
+				return "Dear Mr " + lastName + ","
+			}
+			if e.Salutation == "ms" {
+				return "Dear Ms " + lastName + ","
+			}
+		}
+	}
 	return OpeningLine(e.Lang(), e.Band(), e.Formal(), firstName, lastName)
 }
 
@@ -190,4 +208,17 @@ func langOrDefault(lang textlang.Lang) textlang.Lang {
 		return lang
 	}
 	return DefaultLang
+}
+
+// SalutationValue reads an explicitly stored choice without deriving one from
+// the person's name, signature or language.
+func SalutationValue[T ~string](value *T) string {
+	if value == nil {
+		return ""
+	}
+	switch string(*value) {
+	case "mr", "ms", "none":
+		return string(*value)
+	}
+	return ""
 }

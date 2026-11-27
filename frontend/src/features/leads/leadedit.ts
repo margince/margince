@@ -9,6 +9,7 @@ import { useT } from "../../i18n";
 import { useIndustryOptions } from "../../lib/industryoptions";
 import { leadWriteKeys } from "../../lib/leadkeys";
 import { originPickOptions, useLeadOrigins } from "../../lib/leadorigins";
+import { salutationOptions } from "../../lib/personsalutation";
 import { ProblemError } from "../../lib/problem";
 import { useLeadPartnerOptions } from "./leadpartner";
 import type { Lead, LeadWriter } from "./leads";
@@ -32,6 +33,7 @@ export function useLeadEdit(
   const partners = useLeadPartnerOptions() ?? [];
   const industries = useIndustryOptions(lead.industry);
   const fields = leadEditFields({
+    salutations: salutationOptions(t),
     industries: [{ value: "", label: t("field.unset") }, ...industries],
     // "Not set" is a real choice: choosing it sends null and the lead scores neutral.
     origins: [

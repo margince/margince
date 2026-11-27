@@ -36,6 +36,7 @@ import {
 } from "../../lib/employmentcurrency";
 import { labelFor } from "../../lib/labelfor";
 import { useMemberName } from "../../lib/membernames";
+import { salutationLabel } from "../../lib/personsalutation";
 import { routeHash } from "../../lib/router";
 import { useRecordCarriesTags } from "../../lib/tags.queries";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -124,6 +125,11 @@ export function useContactAboutSections(
             />
           ),
         }),
+        field(
+          "salutation",
+          t("create.salutation"),
+          salutationLabel(contact.salutation, t),
+        ),
         field("first_name", t("create.firstName"), contact.first_name),
         field("last_name", t("create.lastName"), contact.last_name),
         ...tagsRows,

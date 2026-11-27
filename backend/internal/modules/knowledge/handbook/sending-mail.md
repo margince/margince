@@ -2,6 +2,11 @@
 <!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/modules/consent/instructioncorrection.go backend/internal/modules/consent/instructionconsume.go backend/internal/modules/activities/wordingcorrection.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/activityfiling.ts frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go backend/internal/compose/bounceresend backend/internal/platform/mailresend backend/internal/modules/comms/resend.go frontend/src/features/worklist/worklist.acknowledge.tsx -->
 # Writing and sending mail
 
+### How does a draft address a contact?
+A draft in **Formal** uses the contact's saved **Salutation**. In English, **Mr** gives “Dear Mr Smith,” and **Ms** gives “Dear Ms Smith,”. In German, the same choices give “Sehr geehrter Herr Smith,” and “Sehr geehrte Frau Smith,”.
+
+**No gendered salutation** and **Not set** keep a greeting with the full name. A draft in **Familiar** uses the first name. Margince never chooses this field from a name or an email signature.
+
 ### How do I send an email to a contact?
 To send an email to a contact in Margince, open the contact's page and choose **Email** in its header. Fill in the composer and press **Send**.
 1. Open the contact. The button may read **Write**, or **Message on {transport}** when chat is the only channel.

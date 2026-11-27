@@ -227,7 +227,13 @@ func DeterministicEmailDraft(answering DraftContext) (subject, body string) {
 	if topic != "" {
 		thread = draftfloor.Fill(draftfloor.SubstanceFor(lang).Thread, topic)
 	}
-	greeting := draftfloor.OpeningLine(lang, band, answering.Formal, answering.Recipient, answering.LastName)
+	envelope := draftfloor.Envelope{Language: string(lang), ConversationState: string(band), Salutation: answering.Salutation}
+	if answering.Formal {
+		envelope.GreetingRegister = "formal"
+	} else {
+		envelope.GreetingRegister = "familiar"
+	}
+	greeting := envelope.Greeting(answering.Recipient, answering.LastName)
 	return subject, draftfloor.Body(lang, greeting, phrases.Opener, thread, phrases.Ask)
 }
 
@@ -262,8 +268,9 @@ type DraftContext struct {
 	Language textlang.Lang
 	// LastName and Formal choose the opening: a formal draft names the
 	// surname beside the first name, in every language.
-	LastName string
-	Formal   bool
+	LastName   string
+	Salutation string
+	Formal     bool
 	// Band is where the correspondence stands. The zero value is BandNone.
 	Band convstate.Band
 }

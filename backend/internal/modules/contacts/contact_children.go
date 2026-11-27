@@ -283,7 +283,7 @@ func scanContact(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		&mergedInto, &fromLead, &p.Source, &p.CapturedBy,
 		&p.SourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LastActivityAt, &p.LegalHold,
-		&mark, &greetingRegister, &warnedAt, &warnedFor, &createdFrom,
+		&mark, &greetingRegister, &p.Salutation, &warnedAt, &warnedFor, &createdFrom,
 	}
 	cf := storekit.ScanDests(active)
 	if err := row.Scan(append(append(dests, cf...), extra...)...); err != nil {

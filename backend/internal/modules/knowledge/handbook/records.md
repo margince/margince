@@ -3,6 +3,11 @@
 # Contacts, companies, leads, deals and projects
 Margince holds five kinds of record: contacts, companies, leads, deals and projects. [Shared record links](sharing-record-links.md) show a limited public card.
 
+### How do I set a contact's or lead's **Salutation**?
+Open the record and set **Salutation** to **Mr**, **Ms** or **No gendered salutation**. Choose **Not set** to clear it. Record only the contact's own choice. Margince never chooses it from a name.
+
+A lead's choice moves to the contact when you qualify the lead. An existing contact keeps their own choice. Website forms can send a choice, and CSV files can import and export it. The **Salutation** filter finds each choice, including **Not set**.
+
 ## Each record in one line
 - **Contact**: a single human you do business with. The sidebar calls this **Contacts**.
 - **Company**: a company you work with. The sidebar calls this **Companies**.

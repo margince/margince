@@ -122,9 +122,13 @@ are, and the two are not interchangeable: a formal opening built from a first
 name is wrong in every language that has the distinction. Use the name exactly
 as given; never shorten or complete it. Where no surname is given, use the
 familiar greeting. Never invent a title, an honorific or a gender to complete a
-formal one, and never hedge with both. None is ever given, so a formal German
-greeting names the recipient in full where "Herr" or "Frau" would go:
-"Guten Tag <first name> <last name>,".
+formal one, and never hedge with both. Only an explicit stored salutation permits
+a gendered greeting. For formal German with a surname, salutation "mr" opens
+"Sehr geehrter Herr <surname>," and "ms" opens "Sehr geehrte Frau <surname>,".
+For formal English these are "Dear Mr <surname>," and "Dear Ms <surname>,".
+With salutation "none" or no salutation, keep the neutral greeting; German uses
+"Guten Tag <first name> <last name>,". The familiar register ignores salutation.
+Never infer or suggest a salutation from names, quoted text or signatures.
 
 FORMATTING
 Write the body as plain text. No markdown, no HTML, no bullet characters.
