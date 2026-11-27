@@ -13,7 +13,7 @@ package contacts
 // rest.
 //
 // The rows are an owned child of the company, written only through the
-// company's own gated paths — the patch below and the partner upsert —
+// company's own gated paths — the patch below, the partner upsert and EndPartnerProgram —
 // which is the visibility decision the schema fitness gate records.
 
 import (
@@ -210,10 +210,10 @@ func partnerRowMissingMessage() string {
 		"action set_up_partner, and a human approves it."
 }
 
-// partnerRowExistsMessage states what ends a partner program: archiving the company.
+// partnerRowExistsMessage sends a company editor to the program lifecycle.
 func partnerRowExistsMessage() string {
 	return "this company has a partner program, so it stays a partner. " +
-		"A partner program ends only when the company is archived."
+		"End the partner program on the Partner tab before removing the partner relationship type."
 }
 
 // hasPartnerRow reports whether the company carries the partner program

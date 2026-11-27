@@ -3463,6 +3463,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "partner.kind.referral": "Empfehlung",
   "partner.kinds": "Partnerarten",
   "partner.kindsAll": "Alle Arten",
+  "partner.endProgram": "Partnerprogramm beenden",
+  "partner.endProgramHelp":
+    "Das Unternehmen, die vereinbarten Konditionen und der Provisionsverlauf bleiben erhalten. Der Beziehungstyp Partner wird entfernt.",
+  "partner.stageNeedsActivation":
+    "Aktivieren Sie den Partner, bevor Sie eine aktive Stufe wählen.",
   "partner.stageAll": "Alle Phasen",
   "partner.stageMeaning": "Bedeutung der Phase",
   "partner.stageMeaningAll": "Alle Bedeutungen",

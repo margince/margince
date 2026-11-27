@@ -30,6 +30,7 @@ var Declared = map[string][]string{
 	"DELETE /v1/channel-links/{record_type}/{id}":                              {},
 	"DELETE /v1/companies/{id}":                                                {},
 	"DELETE /v1/companies/{id}/facts/{factKey}":                                {},
+	"DELETE /v1/companies/{id}/partner":                                        {},
 	"DELETE /v1/companies/{id}/suggestions/dismiss":                            {"fingerprint"},
 	"DELETE /v1/company/logo":                                                  {},
 	"DELETE /v1/company/logo/icon":                                             {},

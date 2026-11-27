@@ -3361,6 +3361,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "partner.kind.referral": "Giới thiệu",
   "partner.kinds": "Loại đối tác",
   "partner.kindsAll": "Tất cả loại",
+  "partner.endProgram": "Kết thúc chương trình đối tác",
+  "partner.endProgramHelp":
+    "Công ty, các điều khoản đã thống nhất và lịch sử hoa hồng vẫn được lưu. Loại quan hệ Đối tác sẽ được bỏ.",
+  "partner.stageNeedsActivation":
+    "Hãy kích hoạt đối tác trước khi chọn giai đoạn Đang hoạt động.",
   "partner.stageAll": "Tất cả giai đoạn",
   "partner.stageMeaning": "Ý nghĩa giai đoạn",
   "partner.stageMeaningAll": "Tất cả ý nghĩa",

@@ -3364,6 +3364,11 @@ export const en = {
   "partner.kind.referral": "Referral",
   "partner.kinds": "Partner kinds",
   "partner.kindsAll": "All kinds",
+  "partner.endProgram": "End partner program",
+  "partner.endProgramHelp":
+    "The company, agreed terms and commission history stay on record. The Partner relationship type is removed.",
+  "partner.stageNeedsActivation":
+    "Activate the partner before choosing an Active stage.",
   "partner.stageAll": "All stages",
   "partner.stageMeaning": "Stage meaning",
   "partner.stageMeaningAll": "All meanings",

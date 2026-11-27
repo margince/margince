@@ -40,6 +40,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { PartnerCommissions } from "./partnercommissions";
 import { PartnerDeals } from "./partnerdeals";
 import { ActivationNote, MarginTierRow } from "./partners.detailrows";
+import { EndPartnerProgramAction } from "./partners.end";
 import { PartnerNextStep } from "./partners.nextstep";
 import {
   CERT_LABELS,
@@ -143,6 +144,12 @@ function PartnerForm({
     partner?.relationship_stage,
   );
 
+  const initialStage =
+    stages.find((stage) => stage.active && stage.meaning === "candidate")
+      ?.key ?? "";
+  const stage = values.relationship_stage || initialStage;
+  const stageNeedsActivation = !partner?.activated_at;
+
   const mutation = useMutation({
     // The prior row rides the variables rather than the closure, and its
     // presence decides the precondition. First creation has no version to pin.
@@ -157,7 +164,10 @@ function PartnerForm({
               ? {}
               : ifMatch(requireVersion(prior.version))),
           },
-          body: buildUpsertBody(values, setsTier),
+          body: buildUpsertBody(
+            { ...values, relationship_stage: stage },
+            setsTier,
+          ),
         }),
       );
     },
@@ -244,18 +254,23 @@ function PartnerForm({
           />
         )}
       </Field>
-      <Field label={t("partner.stage")}>
+      <Field
+        label={t("partner.stage")}
+        hint={
+          stageNeedsActivation ? t("partner.stageNeedsActivation") : undefined
+        }
+      >
         {(control) => (
           <Select
             {...control}
-            value={values.relationship_stage}
-            placeholder={t("partner.stageAll")}
+            value={stage}
             onChange={(value) =>
               setValues({ ...values, relationship_stage: value })
             }
             options={stages.map((stage) => ({
               value: stage.key,
               label: stage.label,
+              disabled: stageNeedsActivation && stage.meaning === "active",
             }))}
           />
         )}
@@ -352,6 +367,14 @@ function PartnerDetail({
   return (
     <Panel
       title={t("tab.partner")}
+      actions={
+        <EndPartnerProgramAction
+          companyId={companyId}
+          version={partner.version}
+          refusal={refusal}
+          onEnded={onSaved}
+        />
+      }
       titleAction={
         <Button
           onClick={() => setEditing(true)}
@@ -413,7 +436,10 @@ function PartnerDetail({
 // both PUT the same UpsertPartnerRequest. The first creation carries no
 // If-Match, since there is no prior version; an edit carries the partner's
 // own `version`.
-export function PartnerTab({ companyId }: Readonly<{ companyId: string }>) {
+export function PartnerTab({
+  companyId,
+  programEnded,
+}: Readonly<{ companyId: string; programEnded?: boolean }>) {
   const t = useT();
   const queryClient = useQueryClient();
   // Every partner write needs the company grant; the tier alone also needs
@@ -442,48 +468,44 @@ export function PartnerTab({ companyId }: Readonly<{ companyId: string }>) {
 
   return (
     <QueryGate query={query} pendingLabel={t("nav.partners")}>
-      {(partner) =>
-        partner ? (
-          // The record's own stack. This tab is three panes, and the work
-          // column draws its children with no interval. As bare siblings they
-          // would meet at the border and read as one card ruled into thirds.
-          <div className="record-stack">
+      {(partner) => (
+        <div className="record-stack">
+          {partner ? (
             <PartnerDetail
               companyId={companyId}
               partner={partner}
               refusal={refusal}
               onSaved={invalidateAfterSave}
             />
-            {/* The work, then the money it produced. These deals belong to the
-                customers, so the account's own Deals tab never shows them and
-                this is the only page they surface on. */}
-            <PartnerDeals companyId={companyId} />
-            {/* What the tier above has actually produced. A margin tier with no
-                money beside it is a number nobody can check. */}
-            <PartnerCommissions companyId={companyId} />
-          </div>
-        ) : (
-          // Two bodies: the panel's own seam divides what there is none of
-          // from how the first one is made.
-          <Panel title={t("tab.partner")}>
-            <PanelBody>
-              <EmptyState>{t("partner.none")}</EmptyState>
-            </PanelBody>
-            <PanelBody>
-              <SectionHeader title={t("partner.setup")} />
-              {refusal ? (
-                <p>{refusal}</p>
-              ) : (
-                <PartnerForm
-                  companyId={companyId}
-                  intent="create"
-                  onSaved={invalidateAfterSave}
-                />
-              )}
-            </PanelBody>
-          </Panel>
-        )
-      }
+          ) : (
+            // Two bodies: the panel's own seam divides what there is none of
+            // from how the first one is made.
+            <Panel title={t("tab.partner")}>
+              <PanelBody>
+                <EmptyState>{t("partner.none")}</EmptyState>
+              </PanelBody>
+              <PanelBody>
+                <SectionHeader title={t("partner.setup")} />
+                {refusal ? (
+                  <p>{refusal}</p>
+                ) : (
+                  <PartnerForm
+                    companyId={companyId}
+                    intent="create"
+                    onSaved={invalidateAfterSave}
+                  />
+                )}
+              </PanelBody>
+            </Panel>
+          )}
+          {(partner || programEnded) && (
+            <>
+              <PartnerDeals companyId={companyId} />
+              <PartnerCommissions companyId={companyId} />
+            </>
+          )}
+        </div>
+      )}
     </QueryGate>
   );
 }

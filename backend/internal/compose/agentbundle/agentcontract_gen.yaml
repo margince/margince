@@ -3070,6 +3070,25 @@ paths:
         '404': {$ref: '#/components/responses/NotFound'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: Read the partner extension on a company (404 if the company is not a partner).
+    delete:
+      tags: [Companies, Partners]
+      operationId: endPartnerProgram
+      security: [{bearerAuth: []}]
+      summary: End the partner program while keeping the company and commission history.
+      description: |-
+        Retires the partner extension. Company update authority is required. Existing terms and commission entries stay on record. The partner relationship type is removed in the same transaction; other relationship types stay.
+
+        Needs the passport permission Change records.
+
+        Runs at once.
+      parameters:
+        - $ref: '#/components/parameters/IfMatch'
+      responses:
+        '204': {description: Partner program ended.}
+        '403': {$ref: '#/components/responses/Forbidden'}
+        '404': {$ref: '#/components/responses/NotFound'}
+        '409': {$ref: '#/components/responses/Conflict'}
+        '422': {$ref: '#/components/responses/ValidationError'}
   /companies/{id}/partner/setup:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -33692,6 +33711,10 @@ components:
             Who created this company in the system it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a company somebody entered here has no author but the one `captured_by` already names.
         raw: {type: [object, 'null'], additionalProperties: true}
         partner: {$ref: '#/components/schemas/Partner'}
+        partner_program_ended:
+          type: boolean
+          readOnly: true
+          description: An ended partner program has commission and deal history. Omitted without partner read permission.
         version: {$ref: '#/components/schemas/RowVersion'}
         last_activity_at:
           type: [string, 'null']
