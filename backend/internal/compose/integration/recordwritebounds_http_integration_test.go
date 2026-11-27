@@ -14,7 +14,10 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/getkin/kin-openapi/openapi3"
+
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 func TestRecordWritesHoldTheContractsSizeBounds(t *testing.T) {
@@ -66,5 +69,40 @@ func TestRecordWritesHoldTheContractsSizeBounds(t *testing.T) {
 	var lead AnyMap
 	if status := e.Call(t, http.MethodPatch, "/v1/leads/"+leadID, AnyMap{"full_name": strings.Repeat("n", 120)}, nil, &lead); status != http.StatusOK {
 		t.Errorf("a lead name at the limit → %d, want 200", status)
+	}
+}
+
+//craft:ignore naked-any JSON Schema validates decoded request bodies
+func TestContactAddressContractAdmitsLegacyReplacementAndBoundsCreation(t *testing.T) {
+	t.Parallel()
+	doc, err := openapi3.NewLoader().LoadFromFile("../../../api/crm.yaml")
+	if err != nil {
+		t.Fatal(err)
+	}
+	limit := values.MaxEmailLength
+	for _, method := range []string{http.MethodPost, http.MethodPatch} {
+		path := "/contacts"
+		if method == http.MethodPatch {
+			path += "/{id}"
+		}
+		operation := doc.Paths.Value(path).GetOperation(method)
+		httpSchema := operation.RequestBody.Value.Content.Get("application/json").Schema.Value
+		for _, size := range []int{limit, limit + 1} {
+			t.Run(fmt.Sprintf("%s/%d", method, size), func(t *testing.T) {
+				address := strings.Repeat("a", size-len("@legacy.test")) + "@legacy.test"
+				body := map[string]any{
+					"full_name": "Legacy contact",
+					"emails":    []any{map[string]any{"email": address}},
+				}
+				if method == http.MethodPost {
+					body["source"] = "manual"
+				}
+				err := httpSchema.VisitJSON(body)
+				refused := method == http.MethodPost && size > limit
+				if (err != nil) != refused {
+					t.Errorf("%s address length %d: schema error %v, want refused %t", method, size, err, refused)
+				}
+			})
+		}
 	}
 }

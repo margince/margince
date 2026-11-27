@@ -18,14 +18,11 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
-	"net/http"
 	"reflect"
 	"slices"
 	"strconv"
 	"strings"
 	"testing"
-
-	"github.com/getkin/kin-openapi/openapi3"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -215,45 +212,6 @@ func TestContactEmailReplacementMirrorsTheCreateShape(t *testing.T) {
 	delete(textLimitSchema(t, doc, schemaProperty("ContactEmailInput", "email")), "maxLength")
 	if !reflect.DeepEqual(create, replace) {
 		t.Error("contact email creation and replacement differ beyond the address ceiling")
-	}
-}
-
-//craft:ignore naked-any JSON Schema validates decoded request bodies
-func TestContactAddressContractAdmitsLegacyReplacementAndBoundsCreation(t *testing.T) {
-	t.Parallel()
-	raw, err := gatekit.ReadFile("api/crm.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	doc, err := openapi3.NewLoader().LoadFromData(raw)
-	if err != nil {
-		t.Fatal(err)
-	}
-	limit := appliedIntConst(t, "internal/shared/kernel/values/email.go", "MaxEmailLength")
-	for _, method := range []string{http.MethodPost, http.MethodPatch} {
-		path := "/contacts"
-		if method == http.MethodPatch {
-			path += "/{id}"
-		}
-		operation := doc.Paths.Value(path).GetOperation(method)
-		httpSchema := operation.RequestBody.Value.Content.Get("application/json").Schema.Value
-		for _, size := range []int{limit, limit + 1} {
-			t.Run(method+"/"+strconv.Itoa(size), func(t *testing.T) {
-				address := strings.Repeat("a", size-len("@legacy.test")) + "@legacy.test"
-				body := map[string]any{
-					"full_name": "Legacy contact",
-					"emails":    []any{map[string]any{"email": address}},
-				}
-				if method == http.MethodPost {
-					body["source"] = "manual"
-				}
-				err := httpSchema.VisitJSON(body)
-				refused := method == http.MethodPost && size > limit
-				if (err != nil) != refused {
-					t.Errorf("%s address length %d: schema error %v, want refused %t", method, size, err, refused)
-				}
-			})
-		}
 	}
 }
 
