@@ -11,7 +11,7 @@ A `Record` carries one payload. Set `Company` or `Deal` instead of `Activity`. `
 | Outside id | `System` + `Key` on the record | `System` + `Key` on the record |
 | Required | `DisplayName` | `Name`, `PipelineID`, `StageID` (core ids) |
 | Belongs to | none | `CompanyID`, a core company id the member can see, set when the deal is born and never moved by a later record |
-| Optional values | `LegalName`, `Industry`, `Description`, `Domain` | `AmountMinor`, `Currency`, `CustomFields` (`cf_*` keys of active custom fields, at most `extension.MaxLandedCustomFields`, which is 50) |
+| Optional values | `LegalName`, `Industry`, `Description`, `Domain`, `CustomFields` (as for a deal) | `AmountMinor`, `Currency`, `CustomFields` (`cf_*` keys of active custom fields, at most `extension.MaxLandedCustomFields`, which is 50) |
 | Natural key to adopt by | `AdoptOn: extension.AdoptKeyDomain`, which needs a non-empty `Domain` | none |
 | Stage move | none | a different `StageID`; `LostReason` for a lost stage |
 | Move activities onto it | `RelinkActivities` (activity keys, at most `extension.MaxRelinkActivities`, which is 50) | `RelinkActivities` (same cap) |
@@ -38,7 +38,7 @@ flowchart TD
 ```
 
 - **The pair is unique across the workspace.** `(source_system, source_id)` is one record, whoever may see it. A clash with a record the member may not see answers the same fixed conflict (`ErrConflict`) as any other taken pair. It reveals only that the pair is taken, and never the record, its owner or its name.
-- **Updates leave what a user edited.** The core writes the optional values you send, except a field a user last edited. It reads that from the audit trail, the same rule agents follow. The company fields it checks are `LegalName`, `Industry` and `Description`. The deal fields are `AmountMinor`, `Currency` and each key of `CustomFields`. It never checks the stage.
+- **Updates leave what a user edited.** The core writes the optional values you send, except a field a user last edited. It reads that from the audit trail, the same rule agents follow. The company fields it checks are `LegalName`, `Industry`, `Description` and each key of `CustomFields`. The deal fields are `AmountMinor`, `Currency` and each key of `CustomFields`. It never checks the stage.
 - **An amount and its currency go together.** If a user edited either one, even one you did not send, the core withholds both, so the user's amount is never re-priced in another currency.
 - **The withheld fields come back.** `Result.Withheld` lists them by name, for example `industry`, or `amount_minor` and `currency` together. It is empty when nothing was withheld. The record is still accepted: this is not the `Skipped` disposition, which drops the whole record.
 - **An admin can let a unit overwrite.** With the setting on, the core writes the field and `Withheld` stays empty. The core reads the setting on each call, before it checks the fields, so a change applies to the next record.
@@ -48,6 +48,20 @@ flowchart TD
 - **Relink keys.** A key that matches nothing the member may read is skipped. The list cannot be used to learn which activities exist. A list over 50 keys refuses the whole record, and an empty key does too.
 
 A feed that runs as a [service member](declare-a-service-member.md) holds create, read and update on companies and deals through the `service_ingest` role. A new installation gets the deal grant when the first service member is declared. An installation that already has the role gets it from a migration. The migration adds the deal grant only where the role holds the company grant and has no deal grant yet. If an admin changed the role by hand, check that it still holds create, read and update on deals. Without that grant a deal record is refused with `ErrForbidden`.
+
+## React to a new company
+
+A unit can set a company's custom values and hand an admin a task when a company is created, with no program of its own outside the core. Subscribe to `company.created` and read the record back in the handler instead of trusting the payload.
+
+| Step | Call | Rule |
+|---|---|---|
+| Run as the service account | The delivery itself | The delivery runs as the unit's [service member](declare-a-service-member.md). `rt.Caller()` names it, and `tx.Core()` obeys its grants and row scope. A unit with no such member gets `ErrForbidden` from `tx.Core()`. |
+| Read the company | `tx.Core().Companies().Get(ctx, d.Entity.ID)` | A company the member cannot read is `ErrNotFound`. |
+| Set custom values | `tx.Core().Companies().SetCustomFields(ctx, id, values)` | The rules of `CompanyFields.CustomFields`, which are those of a deal: `cf_` keys of active fields, at most 50, and a pick-list value must be an option. A refused key or value is `ErrInvalid`. It returns the names it kept because a user last edited them. |
+| Find an admin | `tx.Core().Members().List(ctx, extension.MemberQuery{Role: "admin"})` | The unit lists `extension.CapabilityMembers` in `Needs` with a reason, else `ErrNotDeclared`. See [extension-capabilities.md](../reference/extension-capabilities.md#read-who-holds-a-role). |
+| File the task | `rt.Ingest(ctx, extension.UserID(rt.Caller().UserID), rec)` with an activity of kind task, outside any `Tx`; or `tx.Core().Activities().Create` | Key an `Ingest` record on your own stable id, such as the company id. Core already refuses a task for an agent seat. |
+
+The bus may deliver an event twice. `SetCustomFields` writes the same value again as no change, and a task record with the same key lands once, so a redelivery adds nothing. Skip the agent seats the roster lists with `IsAgent`.
 
 ## Let a unit overwrite edited fields
 

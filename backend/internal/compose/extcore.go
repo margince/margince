@@ -63,6 +63,10 @@ type extensionCore struct {
 	// is refused is about the INVOCATION, not about the context the handler
 	// passes in.
 	unattended bool
+	// actsAsSeat lifts the port's refusal of an unattended invocation. The
+	// principal is the unit's service member, so each verb is checked against
+	// its grants.
+	actsAsSeat bool
 	// notifies lets an unattended invocation send a notice, and nothing else.
 	notifies bool
 	deps     extensionRuntimeBinding
@@ -174,20 +178,12 @@ func (c extensionCore) invocationCtx(ctx context.Context) (context.Context, erro
 
 // refuseUnattended refuses the invocation that has no caller behind it.
 func (c extensionCore) refuseUnattended() error {
-	if c.unattended {
-		// A job tick and a bus delivery both run with nobody behind them. Core
-		// reads and writes are checked against the caller's live RBAC, and there
-		// is no caller to check. A system principal passes every check ever
-		// written. The workspace's agent seat is a governance surface of its own.
-		// Both are features, and this is a refusal.
-		//
-		// The refusal matters most for a delivery. That one runs as
-		// PrincipalSystem, which auth.Require bypasses, so without this refusal
-		// the governed door would be open to a caller nothing checks. Tx's SQL
-		// cannot reach a core table, so this door was the only way for an
-		// unattended run to file a core record. The unit's own tables stay
-		// writable, which is what an unattended run is for.
-		return fmt.Errorf("%w: a scheduled job and a bus delivery run with no caller, and a core read or write is checked against the caller's own permissions", extension.ErrForbidden)
+	if c.unattended && !c.actsAsSeat {
+		// A job tick, and a delivery to a unit with no service member, run with
+		// nobody behind them. A core read or write is checked against a caller's
+		// live RBAC, and there is none. A system principal passes every check
+		// ever written, so the door answers a refusal instead.
+		return fmt.Errorf("%w: a scheduled job, and a bus delivery to a unit with no service member, run with no caller, and a core read or write is checked against the caller's own permissions", extension.ErrForbidden)
 	}
 	return nil
 }

@@ -153,6 +153,17 @@ const literalOfDefault = `CASE
 // tie goes to asking them. A human who typed exactly the default reads as one
 // who left it.
 func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType string, id ids.UUID, patch json.RawMessage) ([]string, error) {
+	var conflicts []string
+	err := database.WithWorkspaceTx(ctx, f.pool, func(tx pgx.Tx) (err error) {
+		conflicts, err = humanOwnedConflictsIn(ctx, tx, entityType, id, patch)
+		return err
+	})
+	return conflicts, err
+}
+
+// humanOwnedConflictsIn is HumanOwnedConflicts on a transaction already held,
+// for a door that may not take a second connection.
+func humanOwnedConflictsIn(ctx context.Context, tx pgx.Tx, entityType string, id ids.UUID, patch json.RawMessage) ([]string, error) {
 	if len(patch) == 0 {
 		return nil, nil
 	}
@@ -178,57 +189,54 @@ func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType stri
 	if precedenceTables[entityType] {
 		table = entityType
 	}
-	var conflicts []string
-	err := database.WithWorkspaceTx(ctx, f.pool, func(tx pgx.Tx) error {
-		rows, err := tx.Query(ctx, `
-			WITH proposed AS (
-			  SELECT key, value FROM jsonb_each($3::jsonb)
-			),
-			latest AS (
-			  SELECT DISTINCT ON (p.key) p.key, p.value AS proposed_value,
-			         a.actor_type, a.after -> p.key AS current_value
-			  FROM proposed p
-			  JOIN audit_log a
-			    ON a.entity_type = ANY($1) AND a.entity_id = $2 AND a.after ? p.key
-			  ORDER BY p.key, a.occurred_at DESC, a.id DESC
-			),
-			human_created AS (
-			  SELECT EXISTS (
-			    SELECT 1 FROM audit_log a
-			    WHERE a.entity_type = ANY($1) AND a.entity_id = $2
-			      AND a.action = 'create' AND a.actor_type = 'human'
-			  ) AS yes
-			)
-			SELECT key, true, current_value,
-			       proposed_value IS DISTINCT FROM current_value,
-			       proposed_value IS DISTINCT FROM `+liveValueOf(table)+`
-			FROM latest
-			WHERE actor_type = 'human'
-			UNION ALL
-			SELECT p.key, false, NULL::jsonb, true, true FROM proposed p, human_created h
-			WHERE h.yes
-			  AND NOT EXISTS (SELECT 1 FROM latest l WHERE l.key = p.key)
-			  AND `+unauditedHolder(table)+`
-			ORDER BY 1`,
-			auditTypesFor(entityType), id, patch)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var field string
-			var audited bool
-			var latest humanWrite
-			if err := rows.Scan(&field, &audited, &latest.image, &latest.differsFromImage, &latest.differsFromLive); err != nil {
-				return err
-			}
-			if !audited || latest.moved(entityType, table) {
-				conflicts = append(conflicts, field)
-			}
-		}
-		return rows.Err()
-	})
+	rows, err := tx.Query(ctx, `
+		WITH proposed AS (
+		  SELECT key, value FROM jsonb_each($3::jsonb)
+		),
+		latest AS (
+		  SELECT DISTINCT ON (p.key) p.key, p.value AS proposed_value,
+		         a.actor_type, a.after -> p.key AS current_value
+		  FROM proposed p
+		  JOIN audit_log a
+		    ON a.entity_type = ANY($1) AND a.entity_id = $2 AND a.after ? p.key
+		  ORDER BY p.key, a.occurred_at DESC, a.id DESC
+		),
+		human_created AS (
+		  SELECT EXISTS (
+		    SELECT 1 FROM audit_log a
+		    WHERE a.entity_type = ANY($1) AND a.entity_id = $2
+		      AND a.action = 'create' AND a.actor_type = 'human'
+		  ) AS yes
+		)
+		SELECT key, true, current_value,
+		       proposed_value IS DISTINCT FROM current_value,
+		       proposed_value IS DISTINCT FROM `+liveValueOf(table)+`
+		FROM latest
+		WHERE actor_type = 'human'
+		UNION ALL
+		SELECT p.key, false, NULL::jsonb, true, true FROM proposed p, human_created h
+		WHERE h.yes
+		  AND NOT EXISTS (SELECT 1 FROM latest l WHERE l.key = p.key)
+		  AND `+unauditedHolder(table)+`
+		ORDER BY 1`,
+		auditTypesFor(entityType), id, patch)
 	if err != nil {
+		return nil, fmt.Errorf("compose: human-edit precedence: %w", err)
+	}
+	defer rows.Close()
+	var conflicts []string
+	for rows.Next() {
+		var field string
+		var audited bool
+		var latest humanWrite
+		if err := rows.Scan(&field, &audited, &latest.image, &latest.differsFromImage, &latest.differsFromLive); err != nil {
+			return nil, fmt.Errorf("compose: human-edit precedence: %w", err)
+		}
+		if !audited || latest.moved(entityType, table) {
+			conflicts = append(conflicts, field)
+		}
+	}
+	if err := rows.Err(); err != nil {
 		return nil, fmt.Errorf("compose: human-edit precedence: %w", err)
 	}
 	return conflicts, nil

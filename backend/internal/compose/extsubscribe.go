@@ -81,14 +81,9 @@ func (c ComposedSubscription) Group() (kevents.Group, error) {
 // types, binds the delivery's authority, and runs the unit's handler under a
 // Runtime that lives exactly as long as the delivery.
 //
-// WHAT A DELIVERY RUNS AS. There is nobody behind it, so the actor is the
-// system principal — the same one every core bus consumer writes under — and
-// the Runtime is minted unattended, which shuts the core port. Those two facts
-// belong together. auth.Require does not check PrincipalSystem, so without the
-// port's refusal the governed door would stand open to a caller nothing checks.
-// Core tables are out of reach of Tx's SQL verbs here as everywhere else. The
-// unit's own tables stay writable, auditable and publishable, which is what
-// reacting to a fact consists of.
+// A delivery runs as the unit's service member when it has a live one that
+// holds the unit's secret. Without one the actor is the system principal and
+// the core port refuses, because auth.Require does not check that principal.
 //
 // The correlation id CARRIES THROUGH from the triggering event and the event
 // itself becomes the causation, so a fact, the reaction to it, and whatever the
@@ -148,8 +143,16 @@ func (c ComposedSubscription) handlerOver(db *database.DB, log *slog.Logger) fun
 		ctx = principal.WithCorrelationID(ctx, env.Trace.CorrelationID)
 		ctx = principal.WithCausationEvent(ctx, env.EventID)
 
-		rt := deliveryRuntimeFor(ctx, string(c.Unit), string(c.Version),
-			"subscription/"+c.Sub.Name, boundExtensionRuntime())
+		deps := boundExtensionRuntime()
+		seat, hasSeat, err := deliveryServiceMember(ctx, deps.pool, string(c.Unit))
+		if err != nil {
+			return err
+		}
+		if hasSeat {
+			ctx = principal.WithActor(ctx, seat)
+		}
+		rt := deliveryRuntimeFor(ctx, string(c.Unit), string(c.Version), "subscription/"+c.Sub.Name, deps)
+		rt.actsAsSeat = hasSeat
 		defer rt.release()
 		return instrument.Work(ctx, extension.Work{Kind: extension.WorkSubscription, Name: c.Sub.Name, Unit: string(c.Unit)},
 			func(ctx context.Context) error {

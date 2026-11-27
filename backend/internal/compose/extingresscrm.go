@@ -21,7 +21,6 @@ import (
 	"errors"
 	"fmt"
 	"maps"
-	"reflect"
 	"slices"
 
 	"github.com/jackc/pgx/v5"
@@ -97,12 +96,18 @@ func (r *callRuntime) ingestOtherKind(ctx context.Context, on extension.UserID, 
 // overwritesEditedFields reads this unit's setting. The read is ungated: the
 // feed's service member holds no settings grant, and the posture must bind it.
 func (r *callRuntime) overwritesEditedFields(ctx context.Context) (bool, error) {
-	var perUnit map[string]bool
+	var on bool
 	err := database.WithWorkspaceTx(ctx, r.deps.pool, func(tx pgx.Tx) (err error) {
-		perUnit, err = settings.ApplyTx(ctx, tx, identity.ExtensionOverwritesEditedFields)
+		on, err = overwritesEditedFieldsIn(ctx, tx, r.unit)
 		return err
 	})
-	return perUnit[r.unit], err
+	return on, err
+}
+
+// overwritesEditedFieldsIn is overwritesEditedFields on a transaction already held.
+func overwritesEditedFieldsIn(ctx context.Context, tx pgx.Tx, unit string) (bool, error) {
+	perUnit, err := settings.ApplyTx(ctx, tx, identity.ExtensionOverwritesEditedFields)
+	return perUnit[unit], err
 }
 
 // upsertByOutsideID finds the holder of an outside id, or creates one.
@@ -157,7 +162,7 @@ func (l crmLanding) company(ctx context.Context, key string, f extension.Company
 		made, err := l.contacts.CreateCompany(ctx, contacts.CreateCompanyInput{
 			DisplayName: f.DisplayName, LegalName: nonEmpty(f.LegalName), Description: nonEmpty(f.Description),
 			Industry: nonEmpty(f.Industry), Source: l.system, SourceSystem: &l.system, SourceID: &key,
-			Domains: domainsOf(f.Domain),
+			Domains: domainsOf(f.Domain), CustomFields: f.CustomFields,
 		})
 		return ids.UUID(made.Id), err
 	}
@@ -229,11 +234,23 @@ func (l crmLanding) fillCompany(ctx context.Context, id ids.UUID, f extension.Co
 	if err != nil {
 		return contacts.UpdateCompanyInput{}, nil, err
 	}
+	custom, heldBack, err := customValuesToWrite(ctx, current.AdditionalProperties, f.CustomFields, l.heldBy(string(recordTypeCompany), id))
+	if err != nil {
+		return contacts.UpdateCompanyInput{}, nil, err
+	}
 	return contacts.UpdateCompanyInput{
-		LegalName:   writable(offer, skipped, fieldLegalName),
-		Industry:    writable(offer, skipped, fieldIndustry),
-		Description: writable(offer, skipped, descriptionField),
-	}, skipped, nil
+		LegalName:    writable(offer, skipped, fieldLegalName),
+		Industry:     writable(offer, skipped, fieldIndustry),
+		Description:  writable(offer, skipped, descriptionField),
+		CustomFields: custom,
+	}, append(skipped, heldBack...), nil
+}
+
+// heldBy answers which of a patch's fields a user last edited on one record.
+func (l crmLanding) heldBy(entityType string, id ids.UUID) func(context.Context, map[string]any) ([]string, error) {
+	return func(ctx context.Context, patch map[string]any) ([]string, error) {
+		return l.skippedFields(ctx, entityType, id, patch)
+	}
 }
 
 // skippedFields names the fields of patch that a user last edited, unless
@@ -361,7 +378,7 @@ func (l crmLanding) moveDeal(ctx context.Context, id, stage ids.UUID, f extensio
 	} else {
 		in.AmountMinor, in.Currency = amount, currency
 	}
-	custom, heldBack, err := l.customToWrite(ctx, id, current, f.CustomFields)
+	custom, heldBack, err := customValuesToWrite(ctx, current.AdditionalProperties, f.CustomFields, l.heldBy(string(recordTypeDeal), id))
 	if err != nil {
 		return nil, err
 	}
@@ -371,40 +388,6 @@ func (l crmLanding) moveDeal(ctx context.Context, id, stage ids.UUID, f extensio
 		return nil, err
 	}
 	return skipped, l.advanceDeal(ctx, dealID, current, stage, f)
-}
-
-// customToWrite answers the offered custom fields that differ from the deal and
-// that no user last edited, and names the ones a user owns. A field has no
-// pairing like amount and currency, so each is held back on its own.
-func (l crmLanding) customToWrite(ctx context.Context, id ids.UUID, current crmcontracts.Deal, offered map[string]any) (map[string]any, []string, error) {
-	if len(offered) == 0 {
-		return nil, nil, nil
-	}
-	// The stored value reads back as decoded JSON. The offer is put through JSON
-	// too, or a []string would never equal the []any it was saved as.
-	raw, err := json.Marshal(offered)
-	if err != nil {
-		return nil, nil, fmt.Errorf("compose: encoding the offered custom fields: %w", err)
-	}
-	var normalized map[string]any
-	if err := json.Unmarshal(raw, &normalized); err != nil {
-		return nil, nil, fmt.Errorf("compose: reading the offered custom fields back: %w", err)
-	}
-	changed := map[string]any{}
-	for key, value := range normalized {
-		if !reflect.DeepEqual(current.AdditionalProperties[key], value) {
-			changed[key] = value
-		}
-	}
-	held, err := l.skippedFields(ctx, string(recordTypeDeal), id, changed)
-	if err != nil {
-		return nil, nil, err
-	}
-	for _, key := range held {
-		delete(changed, key)
-	}
-	slices.Sort(held)
-	return changed, held, nil
 }
 
 // advanceDeal moves the stage when it differs. A stage move is the one change

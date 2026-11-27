@@ -25,6 +25,10 @@ const testKitUse = "the unit test kit; units call it from their tests, which thi
 // outside document source files into its own corpus. No unit in this tree does yet.
 const knowledgeFiling = "the managed-corpus filing; no unit in this tree files outside documents yet"
 
+// companyReaction is the reason for the doors a unit uses to react to a new
+// company. No unit in this tree subscribes to company.created yet.
+const companyReaction = "the company reaction doors; no unit in this tree reacts to a new company yet"
+
 // exportWaivers are the exported pkg/extension names with no caller in this
 // tree, each with why it stays.
 var exportWaivers = gatekit.Waive(map[string]string{
@@ -53,6 +57,9 @@ var exportWaivers = gatekit.Waive(map[string]string{
 	"extension.CallerSystem":                         publishedInV1,
 	"extension.CallerType":                           publishedInV1,
 	"extension.CompanyRepo.SetExtensionTypes":        publishedInV1,
+	"extension.CompanyRepo.SetCustomFields":          companyReaction,
+	"extension.Core.Members":                         companyReaction,
+	"extension/exttest.Core.Members":                 companyReaction,
 	"extension.ConnectionLiveChecker":                publishedInV1,
 	"extension.Core.LinkSuggestions":                 publishedInV1,
 	"extension.Core.Notices":                         publishedInV1,
