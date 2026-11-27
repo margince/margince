@@ -26,7 +26,7 @@ function card(
 }
 
 const BODY =
-  'Promiser: Lena Fischer. Commitment in the email "Contract", sent 2026-10-01.';
+  'Lena Fischer promised this in the email "Contract", sent 2026-10-01.';
 
 const mailProposal = {
   summary: "Send the signed form by Friday",

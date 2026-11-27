@@ -34,6 +34,7 @@ import { consequenceLine } from "./worklist.consequence";
 import type { WorklistItem } from "./worklist.queries";
 import { codedDetail } from "./worklist.reader";
 import { inlineDecision, rowAnswer } from "./worklist.row.answer";
+import { TaskExplanationSections } from "./worklist.taskexplanation";
 
 import "./worklist.why.css";
 
@@ -53,6 +54,82 @@ export function WorklistWhy({
   // The pane's first section under its own heading, not a card inside it.
   plain?: boolean;
 }>) {
+  if (item.source === "task") {
+    return <TaskWhy item={item} answer={answer} plain={plain} />;
+  }
+  return (
+    <RowWhy
+      item={item}
+      answer={answer}
+      groundsShown={groundsShown}
+      plain={plain}
+    />
+  );
+}
+
+// A task is explained from its own records, so no template speaks for it.
+function TaskWhy({
+  item,
+  answer,
+  plain,
+}: Readonly<{ item: WorklistItem; answer: boolean; plain: boolean }>) {
+  const t = useT();
+  const clock = useHappenedClock();
+  // Nothing else here dates the task, so its due reasons stay.
+  const reasons = whyReasons(item, false, t, clock.locale, clock.zone);
+  const open = saysOpen(item);
+  const subLevel = plain ? "h4" : "h3";
+  return (
+    <WhyFrame plain={plain}>
+      <div className="worklist-why">
+        {item.website_inquiry && (
+          <WebsiteInquiryFacts facts={item.website_inquiry} />
+        )}
+        <TaskExplanationSections
+          taskId={item.id}
+          section={(heading, children) => (
+            <WhySection level={subLevel} heading={heading}>
+              {children}
+            </WhySection>
+          )}
+          todo={
+            (open || answer) && (
+              <>
+                {item.request_check && <p>{todoLine(item, t, false)}</p>}
+                <OurLastReply item={item} />
+                {answer && <RowVerbs item={item} />}
+              </>
+            )
+          }
+        />
+        {reasons.length > 0 && (
+          <WhySection level={subLevel} heading={t("worklist.why.now")}>
+            <ol
+              className="worklist-why-reasons"
+              aria-label={t("worklist.why.reasons")}
+            >
+              {reasons.map((reason) => (
+                <li key={reason}>{reason}</li>
+              ))}
+            </ol>
+          </WhySection>
+        )}
+      </div>
+    </WhyFrame>
+  );
+}
+
+function RowWhy({
+  item,
+  answer,
+  groundsShown,
+  plain,
+}: Readonly<{
+  item: WorklistItem;
+  answer: boolean;
+  groundsShown: boolean;
+  plain: boolean;
+}>) {
   const t = useT();
   const clock = useHappenedClock();
   const { lines: happened, told } = happenedLines(item, t, clock, groundsShown);
@@ -67,7 +144,6 @@ export function WorklistWhy({
   const detail = codedDetail(item, t);
   // A row asking whether our later mail kept its promise has no ask to say.
   const open = saysOpen(item);
-  const headingId = useId();
   // Plain, the title is an h3 of its own, so each part sits a level under it.
   const subLevel = plain ? "h4" : "h3";
   const sections = (
@@ -125,19 +201,29 @@ export function WorklistWhy({
       )}
     </div>
   );
+  return <WhyFrame plain={plain}>{sections}</WhyFrame>;
+}
+
+// The pane draws the reason as its first section; elsewhere it is a card.
+function WhyFrame({
+  plain,
+  children,
+}: Readonly<{ plain: boolean; children: ReactNode }>) {
+  const t = useT();
+  const headingId = useId();
   if (plain) {
     return (
       <section className="worklist-why-plain" aria-labelledby={headingId}>
         <Heading size="medium" as="h3" id={headingId}>
           {t("worklist.why.title")}
         </Heading>
-        {sections}
+        {children}
       </section>
     );
   }
   return (
     <Panel title={t("worklist.why.title")} tone="accent">
-      <PanelBody>{sections}</PanelBody>
+      <PanelBody>{children}</PanelBody>
     </Panel>
   );
 }
