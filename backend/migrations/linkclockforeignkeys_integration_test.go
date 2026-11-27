@@ -53,9 +53,10 @@ func TestConcurrentLinkClockWritersKeepForeignKeyLocksCompatible(t *testing.T) {
 						expectedAt = nil
 					}
 					write := insertPrefix + ` VALUES (@activity, @kind, @parent)`
-					if operation == "update" {
+					switch operation {
+					case "update":
 						write = `UPDATE activity SET occurred_at = occurred_at + interval '1 day' WHERE id = @activity`
-					} else if operation == "delete" {
+					case "delete":
 						write = `DELETE FROM activity_link WHERE activity_id = @activity AND entity_type = @kind AND ` +
 							pgx.Identifier{kind + "_id"}.Sanitize() + ` = @parent`
 					}
