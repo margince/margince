@@ -349,3 +349,5 @@
 1795802761_missing_import_grants_follow_the_seed.up.sql | role | fills missing import_run entries on the six named system roles; existing grants and custom roles are untouched
 1795802761_missing_import_grants_follow_the_seed.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795787423_a_merged_tag_names_the_tag_it_went_into.up.sql | tag | only tags a merge archived are written, one per merge an admin ran by hand; each is found through the indexed audit trail of the archived tags, so the set is a handful of rows
+1795807306_installation_keeps_its_own_identity.up.sql | *, installation_state | copies at most three facts from the one live workspace row into installation_state, which holds a handful of rows; the procedural marker is the check that refuses a second live workspace
+1795807306_installation_keeps_its_own_identity.down.sql | installation_state | one DELETE of the three keys the up migration wrote

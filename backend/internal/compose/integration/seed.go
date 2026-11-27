@@ -12,6 +12,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -218,4 +219,17 @@ func WonByImport() *string {
 func SeedBeforeSourceCheck(t *testing.T, owner *pgx.Conn, table, sql string, args ...any) ids.UUID {
 	t.Helper()
 	return testdb.SeedBeforeSourceCheck(t, owner, table, sql, args...)
+}
+
+// seedCompany inserts the installation's company the way setup writes it: the
+// workspace row, and the facts installation_state keeps about it.
+func seedCompany(ctx context.Context, t *testing.T, owner *pgx.Conn, ws ids.UUID) {
+	t.Helper()
+	var created time.Time
+	if err := owner.QueryRow(ctx, `INSERT INTO workspace (id) VALUES ($1) RETURNING created_at`, ws).Scan(&created); err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.RecordInstallationTx(ctx, owner, ws, created); err != nil {
+		t.Fatal(err)
+	}
 }

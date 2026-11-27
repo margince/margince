@@ -8,8 +8,14 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"time"
 
 	"github.com/jackc/pgx/v5"
+	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
+
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // InstallationStateKey names one row of installation_state: the bookkeeping of
@@ -84,4 +90,134 @@ func readInstallationState[T any](ctx context.Context, tx pgx.Tx, key Installati
 		return state, false, fmt.Errorf("storekit: decoding the %s state: %w", key, err)
 	}
 	return state, true, nil
+}
+
+// The installation's own facts. The migration that made them copied each from
+// the workspace table, and setup writes them when it creates the company.
+const (
+	StateStoredKeyWorkspace  InstallationStateKey = "stored_key_workspace"
+	StateInstallationTrial   InstallationStateKey = "installation_trial"
+	StateArchivedPredecessor InstallationStateKey = "archived_predecessor"
+)
+
+// StoredKeyWorkspace is the id that object-store keys and sealed-secret scopes
+// were written under. Data already stored names it, so it never changes.
+type StoredKeyWorkspace struct {
+	ID ids.UUID `json:"id"`
+}
+
+// InstallationTrial is when the installation's first company was created, the
+// day its trial counts from.
+type InstallationTrial struct {
+	StartedAt time.Time `json:"started_at"`
+}
+
+// ArchivedPredecessor counts the companies an earlier install archived into
+// this one.
+type ArchivedPredecessor struct {
+	ArchivedCompanies int `json:"archived_companies"`
+}
+
+// Execer is what a fixture connection and a transaction both offer.
+type Execer interface {
+	Exec(ctx context.Context, sql string, args ...any) (pgconn.CommandTag, error)
+}
+
+// RecordInstallationTx writes the facts of a newly created company. Both rows
+// keep an earlier value. The stored-key id must not move once data is stored
+// under it, and a later company never restarts the trial.
+func RecordInstallationTx(ctx context.Context, tx Execer, company ids.UUID, createdAt time.Time) error {
+	for key, state := range map[InstallationStateKey]any{
+		StateStoredKeyWorkspace: StoredKeyWorkspace{ID: company},
+		StateInstallationTrial:  InstallationTrial{StartedAt: createdAt},
+	} {
+		encoded, err := json.Marshal(state)
+		if err != nil {
+			return fmt.Errorf("storekit: encoding the %s state: %w", key, err)
+		}
+		if _, err := tx.Exec(ctx, `
+			INSERT INTO installation_state (key, value) VALUES ($1, $2::jsonb)
+			ON CONFLICT (key) DO NOTHING`, string(key), string(encoded)); err != nil {
+			return fmt.Errorf("storekit: recording the %s state: %w", key, err)
+		}
+	}
+	return nil
+}
+
+// ErrNoStoredKeyWorkspace means the installation has no company yet, so nothing
+// is stored under a workspace id.
+var ErrNoStoredKeyWorkspace = errors.New("storekit: the installation has no stored-key workspace yet")
+
+// StoredKeyWorkspaceTx reads the id stored keys are scoped by.
+func StoredKeyWorkspaceTx(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
+	state, found, err := InstallationStateTx[StoredKeyWorkspace](ctx, tx, StateStoredKeyWorkspace)
+	if err != nil {
+		return ids.UUID{}, err
+	}
+	if !found {
+		return ids.UUID{}, ErrNoStoredKeyWorkspace
+	}
+	return state.ID, nil
+}
+
+// KeptInstallationFacts is the part of installation_state a reset must not
+// lose. A company is cleared, the installation is not, and the leftover seats of
+// an archived predecessor are still there after a reset.
+type KeptInstallationFacts struct {
+	company     ids.UUID
+	trial       time.Time
+	held        bool
+	predecessor ArchivedPredecessor
+	hasArchived bool
+}
+
+// KeptInstallationFactsTx reads the facts before a sweep clears the table.
+func KeptInstallationFactsTx(ctx context.Context, tx pgx.Tx) (KeptInstallationFacts, error) {
+	var kept KeptInstallationFacts
+	var err error
+	kept.predecessor, kept.hasArchived, err = InstallationStateTx[ArchivedPredecessor](ctx, tx, StateArchivedPredecessor)
+	if err != nil {
+		return KeptInstallationFacts{}, err
+	}
+	kept.company, err = StoredKeyWorkspaceTx(ctx, tx)
+	if errors.Is(err, ErrNoStoredKeyWorkspace) {
+		return kept, nil
+	}
+	if err != nil {
+		return KeptInstallationFacts{}, err
+	}
+	trial, found, err := InstallationStateTx[InstallationTrial](ctx, tx, StateInstallationTrial)
+	if err != nil {
+		return KeptInstallationFacts{}, err
+	}
+	if !found {
+		return KeptInstallationFacts{}, errors.New("storekit: the installation has a stored-key workspace and no trial start")
+	}
+	kept.trial, kept.held = trial.StartedAt, true
+	return kept, nil
+}
+
+// RestoreTx writes the facts back after the sweep.
+func (k KeptInstallationFacts) RestoreTx(ctx context.Context, tx pgx.Tx) error {
+	if k.hasArchived {
+		if err := StoreInstallationStateTx(ctx, tx, StateArchivedPredecessor, k.predecessor); err != nil {
+			return err
+		}
+	}
+	if !k.held {
+		return nil
+	}
+	return RecordInstallationTx(ctx, tx, k.company, k.trial)
+}
+
+// ReadStoredKeyWorkspace reads the id stored keys are scoped by, for a caller that
+// holds a pool and no transaction.
+func ReadStoredKeyWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, error) {
+	var company ids.UUID
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
+		var err error
+		company, err = StoredKeyWorkspaceTx(ctx, tx)
+		return err
+	})
+	return company, err
 }
