@@ -237,6 +237,10 @@ func startEventLanes(laneCtx context.Context, background *sync.WaitGroup, cfg wo
 		modelPath.StageEvidenceExtract != nil, lanes.background, logger, stdout); err != nil {
 		return lanes, err
 	}
+	if err := startStandingLineTrigger(laneCtx, pool, rdb,
+		modelPath.Summarize != nil, lanes.background, logger, stdout); err != nil {
+		return lanes, err
+	}
 
 	// A card attached to that same mail, imported on arrival — and deliberately
 	// NOT gated on the enrich lane, because parsing a .vcf needs no model.

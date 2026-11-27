@@ -2,11 +2,11 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Trash2 } from "lucide-react";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { DataTable } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { IconAction } from "../../design-system/iconaction";
-import { formatMoney, ordinalNumber } from "../../format/format";
+import { formatMoney, formatNumber, ordinalNumber } from "../../format/format";
 import { useLocale, useT } from "../../i18n";
 import { labelFor } from "../../lib/labelfor";
 import { BillingCell } from "./offerlinebilling";
@@ -59,11 +59,14 @@ function UnpricedCaption({ label }: Readonly<{ label: string }>) {
   return <span className="t-caption">{label}</span>;
 }
 
-// The draft's lines, each cell saving itself on blur through `onSave`.
+// The draft's lines, each cell saving itself on blur through `onSave`, and
+// each line moved by its grip through `onMove`.
 export function EditableLineTable({
   offer,
   refusals,
   onSave,
+  onMove,
+  moving,
   onRemove,
   removing,
 }: Readonly<{
@@ -74,17 +77,21 @@ export function EditableLineTable({
     lineItemId: string,
     patch: UpdateOfferLineItemRequest,
   ) => Promise<Offer>;
+  // The line's new place, counted from 1; the server shifts the others.
+  onMove: (lineItemId: string, position: number) => void;
+  moving: boolean;
   onRemove: (lineItemId: string) => void;
   removing: boolean;
 }>) {
   const t = useT();
   const { locale } = useLocale();
+  const hintId = useId();
   // Every row holds the same controls, so each is named for its line as well.
   const cellLabel = (column: string, line: OfferLineItem) =>
     t("offer.lineCell", { column, position: ordinalNumber(line.position) });
   const numeric = (
     line: OfferLineItem,
-    field: "position" | "quantity" | "discount_pct" | "tax_rate",
+    field: "quantity" | "discount_pct" | "tax_rate",
     shape: Readonly<{ width: number; testId: string }>,
     header: string,
     check?: (text: string) => string | undefined,
@@ -105,18 +112,22 @@ export function EditableLineTable({
   const save = (line: OfferLineItem) => (patch: UpdateOfferLineItemRequest) =>
     onSave(line.id, patch);
 
+  // A line with no description is named by its place alone.
+  const placeLabel =
+    (
+      named: "offer.lineHandle" | "offer.lineMoved",
+      unnamed: "offer.lineHandleUnnamed" | "offer.lineMovedUnnamed",
+    ) =>
+    (line: OfferLineItem, position: number, count: number) => {
+      const place = {
+        position: formatNumber(position, locale),
+        total: formatNumber(count, locale),
+      };
+      const name = line.description.trim();
+      return name ? t(named, { ...place, name }) : t(unnamed, place);
+    };
+
   const columns = [
-    {
-      key: "position",
-      header: t("offer.position"),
-      render: (line: OfferLineItem) =>
-        numeric(
-          line,
-          "position",
-          { width: 60, testId: "line-position" },
-          t("offer.position"),
-        ),
-    },
     {
       key: "description",
       header: t("offer.description"),
@@ -246,12 +257,28 @@ export function EditableLineTable({
   ];
 
   return (
-    <DataTable
-      label={t("offer.lines")}
-      columns={columns}
-      rows={offer.line_items}
-      rowKey={(line) => line.id}
-      rowTestId={(line) => `line-row-${line.id}`}
-    />
+    <>
+      <span id={hintId} className="sr-only">
+        {t("offer.lineOrderHint")}
+      </span>
+      <DataTable
+        label={t("offer.lines")}
+        columns={columns}
+        rows={offer.line_items}
+        rowKey={(line) => line.id}
+        rowTestId={(line) => `line-row-${line.id}`}
+        reorder={{
+          header: t("offer.position"),
+          hintId,
+          busy: moving,
+          labels: {
+            handle: placeLabel("offer.lineHandle", "offer.lineHandleUnnamed"),
+            moved: placeLabel("offer.lineMoved", "offer.lineMovedUnnamed"),
+          },
+          onReorder: (keys, moved) =>
+            onMove(moved.id, keys.indexOf(moved.id) + 1),
+        }}
+      />
+    </>
   );
 }

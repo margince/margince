@@ -256,6 +256,7 @@ type ModelWait = "always" | "on-miss";
 
 const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
   "GET /activities/{id}/meeting-brief": "always",
+  "GET /activities/{id}/task-explanation": "on-miss",
   "GET /deals/{id}/status": "on-miss",
   "GET /deal-rooms/{id}/brief": "always",
   "GET /companies/{id}/brief": "on-miss",

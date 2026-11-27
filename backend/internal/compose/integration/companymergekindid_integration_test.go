@@ -43,6 +43,7 @@ var kindIDPairsTheMergeLeaves = gatekit.Waive(map[string]string{
 	"report_edition_question_source.source_id": "a kept question answer is frozen evidence of the records a sent edition counted; its sources are the question's population, a deal, lead, project or activity, and a reader is shown the answer only while each still answers to it",
 	"record_link.from_id":                      "moved, but not by an UPDATE: the table is insert and delete only, so moveRecordLinks copies each end onto the survivor, keeps the survivor's own link where the pair already holds one, and deletes the retired record's rows",
 	"record_link.to_id":                        "the second end of the same link, moved by the same copy and delete in moveRecordLinks",
+	"standing_line.entity_id":                  "deleted, not moved: generatedsummary.CarryCompany drops both companies' lines, because a sentence about the retired record would misstate the survivor. The survivor's next activity writes its own",
 })
 
 // TestEveryCompanyKindIDReferenceJoinsTheMerge derives the pairs from the
