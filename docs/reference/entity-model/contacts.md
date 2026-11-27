@@ -977,7 +977,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_provider_claim
 
-16 columns · primary key `(id)` · referenced by 1 foreign key
+15 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -992,7 +992,6 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `provider` | `text` | yes |  |
 | `retrieved_at` | `timestamp with time zone` | yes |  |
 | `run_id` | `uuid` | yes | Points at `provider_run.id`. |
-| `validation_status` | `text` |  |  |
 | `value_json` | `jsonb` | yes |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -1020,8 +1019,8 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "provider": 20000, "claim_key": 20000, "captured_by": 20000, "validation_status": 20000, "employment_processing_error": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"employment_processing_error":20000,"provider":20000,"source":20000,"validation_status":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "provider": 20000, "claim_key": 20000, "captured_by": 20000, "validation_status": 20000, "employment_processing_error": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"employment_processing_error":20000,"provider":20000,"source":20000,"validation_status":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "provider": 20000, "claim_key": 20000, "captured_by": 20000, "employment_processing_error": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"employment_processing_error":20000,"provider":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "provider": 20000, "claim_key": 20000, "captured_by": 20000, "employment_processing_error": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"employment_processing_error":20000,"provider":20000,"source":20000}')`
 
 ## contact_signature_enrich_state
 
