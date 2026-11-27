@@ -43,7 +43,7 @@ func TestThePreferHeaderAndThe204AreDeclaredTogether(t *testing.T) {
 	var doc struct {
 		Paths map[string]map[string]yaml.Node `yaml:"paths"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	declared := 0
