@@ -23,7 +23,6 @@ export const companyZoneSites: { file: string; why: string }[] = [
     "analytics.decisions.tsx",
     "analytics.forecast.accuracy.tsx",
     "analytics.forecast.checktable.tsx",
-    "analytics.forecast.tsx",
     "analytics.overview.donext.tsx",
     "analytics.overview.initiative.tsx",
     "analytics.overview.interventions.tsx",

@@ -27,13 +27,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// The committed head catalog is the authority: it is the schema the migrations
-// actually build, so a CHECK read from it is the one the database enforces.
-// Reading a named migration file instead would pin this gate to a filename and
-// miss a later migration that widened the set — the gate would keep measuring
-// history while production moved.
-const replyVerdictCatalog = "migrations/testdata/head_catalog.txt"
-
 // Postgres renders an IN list as `= ANY (ARRAY[...])` once the constraint is in
 // the catalog, so this reads the catalog's own spelling rather than the
 // migration's.
@@ -126,32 +119,26 @@ func TestTheReplyVerdictVocabularyIsSpelledOnceEverywhere(t *testing.T) {
 // constraint, so the two copies are compared rather than assumed equal.
 func replyVerdictsFromHistoryCheck(t *testing.T) []string {
 	t.Helper()
-	raw, err := gatekit.ReadFile(replyVerdictCatalog)
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	raw := headCatalog(t)
 	re := regexp.MustCompile(`activity_reply_verdict_history_verdict CHECK .*verdict = ANY \(ARRAY\[([^\]]*)\]`)
-	match := re.FindSubmatch(raw)
+	match := re.FindStringSubmatch(raw)
 	if match == nil {
-		t.Fatalf("no activity_reply_verdict_history_verdict constraint in %s", replyVerdictCatalog)
+		t.Fatalf("no activity_reply_verdict_history_verdict constraint in %s", headCatalogPath)
 	}
-	return splitCatalogTokens(string(match[1]))
+	return splitCatalogTokens(match[1])
 }
 
 // replyVerdictsFromMigration reads the closed set off the CHECK constraint that
 // enforces it.
 func replyVerdictsFromMigration(t *testing.T) []string {
 	t.Helper()
-	raw, err := gatekit.ReadFile(replyVerdictCatalog)
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
-	match := replyVerdictCheckRE.FindSubmatch(raw)
+	raw := headCatalog(t)
+	match := replyVerdictCheckRE.FindStringSubmatch(raw)
 	if match == nil {
 		t.Fatalf("no activity_reply_verdict_check in %s — the constraint this gate "+
-			"measures everything else against has moved or been renamed", replyVerdictCatalog)
+			"measures everything else against has moved or been renamed", headCatalogPath)
 	}
-	return splitCatalogTokens(string(match[1]))
+	return splitCatalogTokens(match[1])
 }
 
 // splitCatalogTokens turns a catalog ARRAY[...] body into its bare words.

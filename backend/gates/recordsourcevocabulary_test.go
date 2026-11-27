@@ -151,10 +151,7 @@ func recordSourceFindings(vocabulary []string, checks, triggers, requests map[st
 
 func TestTheRecordSourceVocabularyIsTheCatalogsCheck(t *testing.T) {
 	t.Parallel()
-	catalog, err := gatekit.ReadFile(replyVerdictCatalog)
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	catalog := headCatalog(t)
 	contract, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
@@ -170,7 +167,7 @@ func TestTheRecordSourceVocabularyIsTheCatalogsCheck(t *testing.T) {
 		}
 	}
 	vocabulary := provenance.RecordSources()
-	checks, triggers, mapping := recordSourceLists(string(catalog))
+	checks, triggers, mapping := recordSourceLists(catalog)
 	if !equalSets(vocabulary, mapping) {
 		t.Errorf("record_source_channel passes %v through unchanged; provenance.RecordSources() spells %v", mapping, vocabulary)
 	}
