@@ -521,8 +521,8 @@ test("AC-deal-6: a pointer drag onto Won opens the 🟡 confirm, and nothing is 
   await dragOnto(page, card, won);
 
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
-  expect(writes).toEqual([]);
   await expect(page.getByText(closedWonNote)).toHaveCount(0);
+  expect(writes).toEqual([]);
 });
 
 /** A board card's "…" trigger, reached from the card's own link with Tab. */
