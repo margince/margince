@@ -299,13 +299,14 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 ## tag
 
-10 columns · primary key `(id)` · referenced by 3 foreign keys
+11 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `color` | `text` |  | One of `teal`, `amber`, `rose`, `slate`, `sky`, `violet` and 2 more. |
 | `description` | `text` |  |  |
+| `merged_into_id` | `uuid` |  | Points at `tag.id`. |
 | `name` | `text` | yes |  |
 | `suggestible` | `boolean`, default `false` | yes | Whether captured mail and meeting notes may suggest this tag. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -313,6 +314,12 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 | `search_tsv` | `tsvector`, generated as `(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))` |  | Computed by the database. It cannot be written directly. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
+
+**Points at**
+
+| Columns | Table | When the parent goes |
+|---|---|---|
+| `merged_into_id` | `tag` | deleting the parent keeps this row and clears the link |
 
 **Rules**
 
@@ -322,6 +329,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 **Indexes**
 
+- `idx_tag_merged_into`: `btree (merged_into_id) WHERE (merged_into_id IS NOT NULL)`
 - `idx_tag_search`: `gin (search_tsv)`
 - `tag_pkey`: `unique, btree (id)`
 - `uq_tag_name`: `unique, btree (lower(name)) WHERE (archived_at IS NULL)`
