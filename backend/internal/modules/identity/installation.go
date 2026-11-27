@@ -216,6 +216,21 @@ func (in InstallationBootstrap) underClaimedZone(ctx context.Context, tx pgx.Tx,
 	return in, nil
 }
 
+// insertCompany creates the workspace row and records the facts the installation
+// keeps about its company: the id stored keys use and the trial start.
+func insertCompany(ctx context.Context, tx pgx.Tx) (ids.WorkspaceID, error) {
+	var wsID ids.WorkspaceID
+	var createdAt time.Time
+	if err := tx.QueryRow(ctx,
+		`INSERT INTO workspace DEFAULT VALUES RETURNING id, created_at`).Scan(&wsID, &createdAt); err != nil {
+		return ids.WorkspaceID{}, err
+	}
+	if err := storekit.RecordInstallationTx(ctx, tx, wsID.UUID, createdAt); err != nil {
+		return ids.WorkspaceID{}, err
+	}
+	return wsID, nil
+}
+
 // createInstallation writes company + first admin + system roles +
 // module seeds in the caller's transaction — either everything exists
 // afterwards or nothing does (the ADR-0043 bootstrap atomicity, kept).
@@ -256,12 +271,8 @@ func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in Ins
 	// The row is identity and lifecycle now, nothing else: ADR-0090 moved the
 	// installation's configuration into `setting`, and ADR-0091 retired the
 	// slug it used to carry.
-	var createdAt time.Time
-	if err := tx.QueryRow(ctx,
-		`INSERT INTO workspace DEFAULT VALUES RETURNING id, created_at`).Scan(&wsID, &createdAt); err != nil {
-		return ids.WorkspaceID{}, err
-	}
-	if err := storekit.RecordInstallationTx(ctx, tx, wsID.UUID, createdAt); err != nil {
+	wsID, err = insertCompany(ctx, tx)
+	if err != nil {
 		return ids.WorkspaceID{}, err
 	}
 	// The installation's identity is written HERE, not read back off the row

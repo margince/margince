@@ -24,7 +24,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -114,13 +113,7 @@ func Setup(t *testing.T) *Env {
 		AdminUser: ids.NewV7(),
 		Team1:     ids.NewV7(), Team2: ids.NewV7(),
 	}
-	var workspaceCreated time.Time
-	if err := owner.QueryRow(ctx, `INSERT INTO workspace (id) VALUES ($1) RETURNING created_at`, e.WS).Scan(&workspaceCreated); err != nil {
-		t.Fatal(err)
-	}
-	if err := storekit.RecordInstallationTx(ctx, owner, e.WS, workspaceCreated); err != nil {
-		t.Fatal(err)
-	}
+	seedCompany(ctx, t, owner, e.WS)
 	seedInstallationIdentity(ctx, t, owner)
 	// The boot seals these in RegisterExtensions, which no test here runs.
 	if err := corereach.Install(nil); err != nil {

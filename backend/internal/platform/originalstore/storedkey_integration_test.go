@@ -12,11 +12,11 @@ import (
 	"encoding/hex"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/originalstore"
@@ -52,7 +52,7 @@ func TestAnOriginalStoredUnderTheCompanyIdIsStillFound(t *testing.T) {
 	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, company); err != nil {
 		t.Fatal(err)
 	}
-	if err := storekit.RecordInstallationTx(ctx, owner, company, time.Now()); err != nil {
+	if err := storekit.RecordInstallationTx(ctx, owner, company, clocktest.Now(t)); err != nil {
 		t.Fatal(err)
 	}
 	pool, err := testdb.OwnPool(ctx, appDSN)

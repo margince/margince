@@ -124,8 +124,8 @@ type Execer interface {
 }
 
 // RecordInstallationTx writes the facts of a newly created company. Both rows
-// keep an earlier value: the stored-key id must not move once data is stored
-// under it, and an archived company never starts a second trial.
+// keep an earlier value. The stored-key id must not move once data is stored
+// under it, and a later company never restarts the trial.
 func RecordInstallationTx(ctx context.Context, tx Execer, company ids.UUID, createdAt time.Time) error {
 	for key, state := range map[InstallationStateKey]any{
 		StateStoredKeyWorkspace: StoredKeyWorkspace{ID: company},

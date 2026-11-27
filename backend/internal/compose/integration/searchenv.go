@@ -10,14 +10,12 @@ import (
 	"fmt"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -77,13 +75,7 @@ func SetupSearch(t *testing.T) *SearchEnv {
 		Owner: owner, WS: ids.NewV7(),
 		Rep1: ids.NewV7(), Rep3: ids.NewV7(), Team1: ids.NewV7(), Team2: ids.NewV7(),
 	}
-	var workspaceCreated time.Time
-	if err := owner.QueryRow(ctx, `INSERT INTO workspace (id) VALUES ($1) RETURNING created_at`, e.WS).Scan(&workspaceCreated); err != nil {
-		t.Fatal(err)
-	}
-	if err := storekit.RecordInstallationTx(ctx, owner, e.WS, workspaceCreated); err != nil {
-		t.Fatal(err)
-	}
+	seedCompany(ctx, t, owner, e.WS)
 	// This harness builds its installation by raw SQL, so bootstrap never wrote
 	// the settings rows — the case seedInstallationIdentity exists for. A report
 	// resolves the basis it reports money in, and the zone it buckets dates by,

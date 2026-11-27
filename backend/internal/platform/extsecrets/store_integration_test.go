@@ -20,11 +20,11 @@ import (
 	"errors"
 	"os"
 	"testing"
-	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/extsecrets"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -85,7 +85,7 @@ func setup(t *testing.T) *env {
 			`INSERT INTO workspace (id) VALUES ($1)`, ws); err != nil {
 			t.Fatal(err)
 		}
-		if err := storekit.RecordInstallationTx(ctx, owner, ws, time.Now()); err != nil {
+		if err := storekit.RecordInstallationTx(ctx, owner, ws, clocktest.Now(t)); err != nil {
 			t.Fatal(err)
 		}
 		if _, err := owner.Exec(ctx,

@@ -36,9 +36,9 @@ func migrateToBeforeInstallationIdentity(t *testing.T) (context.Context, *pgx.Co
 	return ctx, conn, namespaceThroughVersion(t, core, installationIdentity)
 }
 
-// An installation with an archived predecessor keeps the live company's id,
-// the first company's creation time and the archived count, and a rollback
-// removes only those copies.
+// An installation with an archived predecessor keeps the live company's id.
+// It also keeps the first company's creation time and the archived count.
+// A rollback removes only those copies.
 func TestInstallationIdentityMovesIntoInstallationState(t *testing.T) {
 	ctx, conn, through := migrateToBeforeInstallationIdentity(t)
 	for _, seed := range []string{

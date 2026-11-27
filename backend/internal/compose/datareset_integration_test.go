@@ -263,6 +263,9 @@ func TestResetRunRestoresBootstrapState(t *testing.T) {
 	if got := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE stream = 'pre-reset'`); got != 0 {
 		t.Errorf("pre-reset staged events = %d, want 0 — the relay would ship them into the streams the reset just purged", got)
 	}
+	if got := e.WsCount(t, `SELECT count(*) FROM installation_state WHERE key IN ('stored_key_workspace', 'installation_trial')`); got != 2 {
+		t.Errorf("installation facts after reset = %d, want 2 — stored keys and the trial start outlive a reset", got)
+	}
 }
 
 // TestDropResetCustomFieldColumns proves the DDL finalize in isolation — a
