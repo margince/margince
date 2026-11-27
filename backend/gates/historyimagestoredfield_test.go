@@ -55,7 +55,10 @@ func (r historyImageReader) storedFieldValues(in historyImageArg, selected *ast.
 	}
 	cacheKey := historyStoredCacheKey{r.index, field, flavor}
 	if cached, ok := historyStoredReads.Load(cacheKey); ok {
-		value := cached.(historyStoredCacheValue)
+		value, valid := cached.(historyStoredCacheValue)
+		if !valid {
+			return nil, false
+		}
 		return slices.Clone(value.values), value.known
 	}
 	outer := len(r.storedFieldBusy) == 0
@@ -244,7 +247,10 @@ func (r historyImageReader) privateFieldStrings(in historyImageArg, selected *as
 	}
 	cacheKey := historyStoredCacheKey{r.index, field, 3}
 	if cached, ok := historyStoredReads.Load(cacheKey); ok {
-		value := cached.(historyStoredCacheValue)
+		value, valid := cached.(historyStoredCacheValue)
+		if !valid {
+			return nil, false
+		}
 		return slices.Clone(value.values), value.known
 	}
 	if len(r.stringFieldBusy) == 0 {

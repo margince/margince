@@ -22,7 +22,10 @@ func TestAReadFailureKeepsTheRoutedArchiveInterfaces(t *testing.T) {
 	if _, err := registry.tools["read_record"].Handle(ctx, args); !errors.Is(err, refused) {
 		t.Fatalf("read_record bypassed the configured refusal: %v", err)
 	}
-	archive := registry.tools["archive_record"].(archiveRecord)
+	archive, ok := registry.tools["archive_record"].(archiveRecord)
+	if !ok {
+		t.Fatal("archive_record is not the core archive implementation")
+	}
 	if _, err := archive.StageInfo(ctx, args); err != nil {
 		t.Fatalf("read-only fault changed archive staging: %v", err)
 	}
