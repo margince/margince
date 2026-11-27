@@ -134,6 +134,26 @@ func TestReportingSharedManagersCanReviseOnlyVisibleReports(t *testing.T) {
 	}
 }
 
+func TestReportingWritesNameTheirNestedScope(t *testing.T) {
+	f := reportingBusiness(t)
+	for _, scope := range []crmcontracts.ReportingScope{
+		{Kind: "owner"}, {Kind: "team"}, {Kind: "unknown"}, {Kind: "workspace", Id: ptrUUID(f.env.Rep1)},
+	} {
+		target := f.target.Definition
+		target.Scope = scope
+		_, err := f.service.CreateTarget(f.human, target)
+		requireRefusedField(t, err, "scope")
+		_, err = f.service.UpdateTarget(f.human, ids.UUID(f.target.Id), f.target.Version, target)
+		requireRefusedField(t, err, "scope")
+		selection := f.selection()
+		selection.Scope = scope
+		_, err = f.service.Evaluate(f.human, selection)
+		requireRefusedField(t, err, "scope")
+		_, err = f.service.CreateReport(f.human, crmcontracts.ReportingReportInput{Name: "Refused scope", Audience: "private", Selection: selection})
+		requireRefusedField(t, err, "selection.scope")
+	}
+}
+
 func TestReportingTargetsRejectAmbiguousPeriodsAndIdentityChanges(t *testing.T) {
 	f := reportingBusiness(t)
 	cases := []struct {

@@ -65242,7 +65242,7 @@ components:
         answers: { type: object, additionalProperties: { type: string }, description: 'Keyed by question key. Every key here has a question in `questions`.' }
         revision: { type: integer }
         created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, description: 'Always equal to `created_at`: a review is not edited after it is submitted.' }
 
     OutcomeReviewListResponse:
       type: object

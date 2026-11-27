@@ -81,6 +81,9 @@ func shapeCode(t reflect.Type) string {
 // codeInvalidType answers a value whose shape has no code of its own.
 const codeInvalidType = "invalid_type"
 
+// codeOutOfRange answers a number or time past the range its field holds.
+const codeOutOfRange = "out_of_range"
+
 // The two shape phrases repeated across this file, named so the array form and
 // the bare form cannot drift apart.
 const (

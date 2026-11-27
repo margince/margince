@@ -10,6 +10,7 @@ import (
 	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // fieldRefusal refuses one field of a write. It unwraps to ErrInvalidArgument,
@@ -49,12 +50,15 @@ func refuseLongReason(reason string) error {
 	}
 }
 
-// refusedField names the request field behind a refusal that a shared helper
-// raised without one, and keeps the helper's own sentence. Any other failure
-// is the server's and keeps its own answer.
+// A helper knows its child field; the caller owns the parent path.
 func refusedField(field string, err error) error {
+	if named, ok := errors.AsType[*values.ParseError](err); ok && strings.HasSuffix(field, "."+named.Field) {
+		nested := *named
+		nested.Field = field
+		return &nested
+	}
 	if _, named := errors.AsType[*fieldRefusal](err); named || !errors.Is(err, apperrors.ErrInvalidArgument) {
 		return err
 	}
-	return refuse(field, "invalid", strings.TrimSuffix(err.Error(), ": "+apperrors.ErrInvalidArgument.Error()))
+	return refuse(field, "invalid", err.Error())
 }
