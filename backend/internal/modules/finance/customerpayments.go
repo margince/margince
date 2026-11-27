@@ -68,7 +68,13 @@ func paymentCursor(cursor *string) (paymentPosition, error) {
 		return paymentPosition{}, nil
 	}
 	after, err := storekit.DecodeOpaque[paymentPosition](*cursor)
-	if err != nil || after.Connection == (ids.UUID{}) || after.Invoice == (ids.UUID{}) || after.Due.IsZero() || after.Currency == "" || after.Amount <= 0 {
+	if err != nil || after.Connection == (ids.UUID{}) || after.Invoice == (ids.UUID{}) || after.Due.IsZero() {
+		return paymentPosition{}, &storekit.MalformedCursorError{}
+	}
+	if after.Currency == "" && after.Amount == 0 {
+		return paymentPosition{}, httperr.Validation("cursor", "cursor_param_mismatch", "the invoice order changed; restart the list")
+	}
+	if after.Currency == "" || after.Amount <= 0 {
 		return paymentPosition{}, &storekit.MalformedCursorError{}
 	}
 	return after, nil
