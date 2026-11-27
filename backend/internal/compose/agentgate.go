@@ -273,6 +273,12 @@ type admissionOutcome struct {
 // falls, because only one of them has a human's approval already committed
 // behind it.
 func admitAgentCall(w http.ResponseWriter, r *http.Request, next http.Handler, outcome admissionOutcome) {
+	if outcome.registry != nil {
+		if asked, applies := outcome.registry.AskToContinue(r.Context(), outcome.spec, outcome.err); applies {
+			httperr.Write(w, r, asked)
+			return
+		}
+	}
 	switch {
 	case outcome.err == nil:
 		runAutoExecuted(w, r, next, outcome)
