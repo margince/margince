@@ -191,6 +191,7 @@ func flipCarriedWithdrawals(ctx context.Context, tx pgx.Tx, spec consentCarrySpe
 	_, err := tx.Exec(ctx, storekit.SQLf(`
 		WITH flipped AS (
 		  UPDATE contact_consent b SET state = 'withdrawn', captured_at = @now, source = @origin,
+		         policy_version = @version,
 		         recorded_for_addresses = a.recorded_for_addresses
 		  FROM contact_consent a
 		  WHERE a.%[1]s = @source AND b.%[2]s = @target

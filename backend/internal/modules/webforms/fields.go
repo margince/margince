@@ -15,40 +15,42 @@ import (
 // The lead fields a submission is read into, by the names a field_map
 // targets and the snippet posts.
 const (
-	fieldEmail     = "email"
-	fieldFullName  = "full_name"
-	fieldFirstName = "first_name"
-	fieldLastName  = "last_name"
-	fieldPhone     = "phone"
-	fieldCompany   = "company"
-	fieldTitle     = "title"
-	fieldMessage   = "message"
-	fieldConsent   = "consent"
-	fieldPageURL   = "page_url"
-	fieldReferrer  = "referrer"
+	fieldEmail      = "email"
+	fieldFullName   = "full_name"
+	fieldFirstName  = "first_name"
+	fieldLastName   = "last_name"
+	fieldPhone      = "phone"
+	fieldCompany    = "company"
+	fieldTitle      = "title"
+	fieldSalutation = "salutation"
+	fieldMessage    = "message"
+	fieldConsent    = "consent"
+	fieldPageURL    = "page_url"
+	fieldReferrer   = "referrer"
 )
 
 // leadFieldNames lists the targets a field_map may name.
 var leadFieldNames = []string{
 	fieldEmail, fieldFullName, fieldFirstName, fieldLastName, fieldPhone, fieldCompany,
-	fieldTitle, fieldMessage, fieldConsent, fieldPageURL, fieldReferrer,
+	fieldTitle, fieldSalutation, fieldMessage, fieldConsent, fieldPageURL, fieldReferrer,
 }
 
 // aliasSpellings are the field names form plugins and builders commonly use
 // for each target, folded: lower case, letters and digits only. So
 // "Your-Email", "your_email" and "youremail" are one spelling.
 var aliasSpellings = map[string]string{
-	fieldEmail:     "email emailaddress youremail mail",
-	fieldFullName:  "name fullname yourname",
-	fieldFirstName: "firstname fname givenname vorname",
-	fieldLastName:  "lastname lname surname familyname nachname",
-	fieldPhone:     "phone phonenumber tel telephone mobile telefon",
-	fieldCompany:   "company companyname organization organisation firma unternehmen",
-	fieldTitle:     "title jobtitle position",
-	fieldMessage:   "message yourmessage comments comment enquiry inquiry nachricht",
-	fieldConsent:   "consent privacy gdpr datenschutz",
-	fieldPageURL:   "pageurl",
-	fieldReferrer:  "referrer referer",
+	fieldEmail:      "email emailaddress youremail mail",
+	fieldFullName:   "name fullname yourname",
+	fieldFirstName:  "firstname fname givenname vorname",
+	fieldLastName:   "lastname lname surname familyname nachname",
+	fieldPhone:      "phone phonenumber tel telephone mobile telefon",
+	fieldCompany:    "company companyname organization organisation firma unternehmen",
+	fieldTitle:      "title jobtitle position",
+	fieldSalutation: "salutation anrede titlesalutation",
+	fieldMessage:    "message yourmessage comments comment enquiry inquiry nachricht",
+	fieldConsent:    "consent privacy gdpr datenschutz",
+	fieldPageURL:    "pageurl",
+	fieldReferrer:   "referrer referer",
 }
 
 // fieldAliases reads a folded field name as its target.
@@ -89,20 +91,21 @@ type Field struct {
 // Enquiry is a submission read into lead fields. Extra keeps every field the
 // lead has no column for, so nothing the visitor wrote is dropped.
 type Enquiry struct {
-	Email     string
-	FullName  string
-	Phone     string
-	Company   string
-	Title     string
-	Message   string
-	Consent   bool
-	PageURL   string
-	Referrer  string
-	UTM       []Field
-	Extra     []Field
-	controls  map[string]string
-	firstName string
-	lastName  string
+	Email      string
+	FullName   string
+	Phone      string
+	Company    string
+	Title      string
+	Salutation string
+	Message    string
+	Consent    bool
+	PageURL    string
+	Referrer   string
+	UTM        []Field
+	Extra      []Field
+	controls   map[string]string
+	firstName  string
+	lastName   string
 }
 
 func fold(name string) string {
@@ -183,6 +186,8 @@ func (e *Enquiry) set(target, value string) {
 		e.Company = textcut.Runes(value, maxValueLength)
 	case fieldTitle:
 		e.Title = textcut.Runes(value, maxValueLength)
+	case fieldSalutation:
+		e.Salutation = textcut.Runes(value, maxValueLength)
 	case fieldMessage:
 		e.Message = textcut.Runes(value, maxMessageChars)
 	case fieldConsent:

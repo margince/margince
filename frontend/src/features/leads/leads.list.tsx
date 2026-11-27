@@ -31,6 +31,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { useOwnToast } from "../../design-system/toast";
 import { industryOptions } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
+import { salutationField, salutationFilter } from "../../lib/contactsalutation";
 import { leadIdentityName } from "../../lib/leadname";
 import {
   originFilterOptions,
@@ -293,6 +294,7 @@ function LeadsWorkbench({
             }
             fields={[
               ...LEAD_IDENTITY_CREATE_FIELDS,
+              salutationField(t),
               {
                 key: "industry",
                 label: "create.industry",
@@ -387,6 +389,7 @@ function LeadsWorkbench({
         }}
         rowRoute={(lead) => ({ screen: "leads", id: lead.id })}
         chips={[
+          salutationFilter(),
           {
             key: "status",
             label: "lead.filterStatus",

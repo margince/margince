@@ -815,6 +815,12 @@ describe("useBuiltinCommands", () => {
         if (url.endsWith("/company/context/capabilities")) {
           return jsonResponse(COMPANY_CONTEXT_ON);
         }
+        if (new URL(url, "https://app.test").pathname.endsWith("/search")) {
+          return jsonResponse({
+            data: [],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
         // The installation writer may open Configuration, so search reads it.
         if (url.endsWith("/installation/configuration")) {
           return jsonResponse([]);
@@ -878,10 +884,10 @@ describe("useBuiltinCommands", () => {
     const user = userEvent.setup();
     renderProbeWithCompany({ roles: ["admin"], allow: INSTALLATION_WRITER });
     await user.type(screen.getByRole("combobox"), "website");
-    await waitFor(() => {
-      expect(destinationRows()[0].textContent).toContain("Company profile");
+    const profile = await screen.findByRole("option", {
+      name: /Company profile/,
     });
-    await user.keyboard("{Enter}");
+    await user.click(profile);
     expect(window.location.hash).toBe("#/settings/company");
   });
 

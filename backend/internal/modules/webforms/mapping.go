@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -39,6 +41,7 @@ func WireForm(f Form) crmcontracts.WebForm {
 		ProductId:            wireUUID(f.ProductID),
 		FieldMap:             fieldMap,
 		ConsentRequired:      f.ConsentRequired,
+		NotifyOwner:          new(f.NotifyOwner),
 		ConsentPolicyVersion: f.ConsentPolicyVersion,
 		ConsentWording:       f.ConsentWording,
 		PrivacyNotice:        f.PrivacyNotice,
@@ -62,7 +65,7 @@ func wireCreated(f Form, secret string) crmcontracts.WebFormCreated {
 		Id: w.Id, Name: w.Name, FormKey: w.FormKey, Sender: w.Sender, AllowedOrigins: w.AllowedOrigins,
 		HandlingAutomationId: w.HandlingAutomationId, HandlingCutoverAt: w.HandlingCutoverAt,
 		SecretConfigured: w.SecretConfigured, LeadOrigin: w.LeadOrigin, OwnerId: w.OwnerId, ProductId: w.ProductId, FieldMap: w.FieldMap,
-		ConsentRequired: w.ConsentRequired, ConsentPolicyVersion: w.ConsentPolicyVersion,
+		ConsentRequired: w.ConsentRequired, NotifyOwner: w.NotifyOwner, ConsentPolicyVersion: w.ConsentPolicyVersion,
 		ConsentWording: w.ConsentWording, PrivacyNotice: w.PrivacyNotice, PrivacyNoticeUrl: w.PrivacyNoticeUrl,
 		RedirectUrl: w.RedirectUrl, SuccessMessage: w.SuccessMessage,
 		State: crmcontracts.WebFormCreatedState(w.State), Version: w.Version,
@@ -124,5 +127,6 @@ func refusal(err error) error {
 }
 
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
+	ratelimit.SetRefusalHeaders(w.Header(), err)
 	httperr.Write(w, r, refusal(err))
 }

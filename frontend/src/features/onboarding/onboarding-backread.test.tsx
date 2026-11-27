@@ -284,9 +284,12 @@ describe("the scope preview", () => {
     const starts: unknown[] = [];
     installFetchStub({
       [PREVIEW_ROUTE]: () =>
-        jsonResponse(
-          { code: "internal", detail: "The mailbox went quiet." },
-          502,
+        Response.json(
+          { code: "provider_unreachable", detail: "The mailbox went quiet." },
+          {
+            status: 502,
+            headers: { "Content-Type": "application/problem+json" },
+          },
         ),
       [START_ROUTE]: (body) => {
         starts.push(body);

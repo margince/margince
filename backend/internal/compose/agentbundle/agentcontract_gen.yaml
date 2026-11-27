@@ -558,6 +558,10 @@ paths:
         Default view excludes archived rows and contacts carrying a
         `relationship_mark`. A text search (`q`) still finds a marked contact. Leads never appear here.
       parameters:
+        - name: salutation
+          in: query
+          schema: {type: string, enum: [mr, ms, none, unset]}
+          description: Filter by an explicit salutation; unset finds records whose choice is null.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
@@ -8933,6 +8937,10 @@ paths:
         (breached, at risk, within SLA), then score descending, then oldest first.
         Explicit sort values retain their documented field ordering.
       parameters:
+        - name: salutation
+          in: query
+          schema: {type: string, enum: [mr, ms, none, unset]}
+          description: Filter by an explicit salutation; unset finds records whose choice is null.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
@@ -28120,6 +28128,7 @@ components:
         A website form: a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored.
       required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at, last_post_at]
       properties:
+        notify_owner: {type: boolean, description: Tell the final active owner about accepted posts through their notification preference. Defaults to false.}
         id: {type: string, format: uuid}
         name: {type: string}
         form_key: {type: string, description: 'The last segment of the intake address. Public; it is an address, not a credential.'}
@@ -28184,6 +28193,7 @@ components:
       type: object
       required: [name, sender]
       properties:
+        notify_owner: {type: boolean, description: Tell the final active owner about accepted posts through their notification preference. Defaults to false.}
         name: {type: string, minLength: 1, maxLength: 120}
         sender: {$ref: '#/components/schemas/WebFormSender'}
         sender_secret: {type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.'}
@@ -28209,6 +28219,7 @@ components:
     UpdateWebFormRequest:
       type: object
       properties:
+        notify_owner: {type: boolean, description: Tell the final active owner about accepted posts through their notification preference. Defaults to false.}
         handling_automation_id:
           type: [string, 'null']
           format: uuid
@@ -32355,7 +32366,7 @@ components:
         than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
         is waiting on your approval", so the choice is made per class and every kind the product
         raises is placed in one of them.
-      enum: [automation, lead_sla, approval_pending, capture, coach, system, project_health]
+      enum: [automation, lead_sla, approval_pending, website_lead, capture, coach, system, project_health]
     NotificationDelivery:
       type: string
       description: |-
@@ -33052,11 +33063,16 @@ components:
         kind: {type: string, enum: [location, department, seniority]}
         value: {type: string}
         retrieved_at: {type: string, format: date-time, description: When the run that last reported this value retrieved it.}
+    Salutation:
+      type: [string, 'null']
+      enum: [mr, ms, none, null]
+      description: Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
     Contact:
       type: object
       description: A contact. Mirrors the `contact` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         acquisition_request:
           readOnly: true
           allOf: [{$ref: '#/components/schemas/ContactAcquisitionRequest'}]
@@ -33246,6 +33262,7 @@ components:
       type: object
       required: [full_name, source]
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         full_name: {type: string, maxLength: 120}
         created_from_activity_id:
           type: [string, 'null']
@@ -33468,6 +33485,7 @@ components:
       type: object
       description: Partial update. Omitted fields are unchanged.
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         greeting_register:
           type: [string, 'null']
           enum: [formal, familiar, null]
@@ -34934,6 +34952,7 @@ components:
       description: One current employee of the account, as the company view shows them.
       required: [contact_id, full_name, strength, deal_roles, consent, attachable]
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         contact_id: {type: string, format: uuid}
         full_name: {type: string}
         attachable:
@@ -36042,7 +36061,7 @@ components:
         needs_review:
           type: boolean
           description: >-
-            Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution.
+            This commitment does not pass the current evidence checks. Show the warning instead of presenting it as a current obligation.
         corrected_at:
           type: [string, 'null']
           format: date-time
@@ -44323,6 +44342,7 @@ components:
       description: A thin, segregated prospect. Mirrors the `lead` table.
       required: [id, status, score, source, captured_by, created_at, updated_at]
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         legal_hold:
           type: boolean
           readOnly: true
@@ -44444,6 +44464,7 @@ components:
     CreateLeadRequest:
       type: object
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         full_name: {type: [string, 'null'], maxLength: 120}
         email: {type: [string, 'null'], format: email}
         phone: {type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes."}
@@ -44486,6 +44507,7 @@ components:
         "disqualified ⇒ archived" is enforced on that one path); `promoted` is reachable only via
         POST /leads/{id}/promote. Both terminal states are therefore excluded from this enum.
       properties:
+        salutation: {$ref: '#/components/schemas/Salutation'}
         full_name: {type: [string, 'null'], maxLength: 120}
         email: {type: [string, 'null'], format: email}
         phone: {type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes."}
@@ -44746,7 +44768,7 @@ components:
         data: {type: array, items: {$ref: '#/components/schemas/ActivityReviewTemplate'}}
     OutcomeReview:
       type: object
-      required: [id, activity_id, deal_id, closing_occurrence_id, outcome, template_key, template_version, questions, answers, revision, created_at, updated_at]
+      required: [id, activity_id, deal_id, closing_occurrence_id, outcome, template_key, template_version, questions, answers, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}
         activity_id: {type: string, format: uuid, description: 'The note this review was written as. It is where the prose, the author and the audience rules live.'}
@@ -44761,7 +44783,6 @@ components:
           description: 'The questions as they were asked, FROZEN at submission. The template they came from is editable, and an edit must not change what this review appears to have asked.'
         choice_answers: {type: object, additionalProperties: {type: array, items: {type: string}}, description: 'Selected options by question key; values must belong to the frozen question vocabulary.'}
         answers: {type: object, additionalProperties: {type: string}, description: 'Keyed by question key. Every key here has a question in `questions`.'}
-        revision: {type: integer}
         created_at: {type: string, format: date-time}
         updated_at: {type: string, format: date-time}
     OutcomeReviewListResponse:
@@ -48511,7 +48532,6 @@ components:
       properties:
         id: {type: string, format: uuid}
         owner_id: {type: string, format: uuid}
-        shared_scope: {type: string, enum: [private, team, workspace], default: private, description: V1 enforces private.}
         resource: {$ref: '#/components/schemas/SavedViewTarget'}
         name: {type: string}
         query:
@@ -54674,7 +54694,7 @@ components:
         What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
         given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
         what the consent rows say today.
-      required: [id, state, kind, reason_code, refusals]
+      required: [id, state, reason_code, refusals]
       properties:
         assessment_revision:
           type: string
@@ -54688,7 +54708,6 @@ components:
             and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
             answer — an objection, a dead address — where offering a context form would invite a rep
             to argue with a withdrawal.
-        kind: {type: string, enum: [single]}
         delivery_intent_id:
           type: [string, 'null']
           format: uuid

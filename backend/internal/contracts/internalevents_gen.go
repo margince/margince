@@ -8,6 +8,27 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 )
 
+// Defines values for InternalEventConsentPurposeChangedAction.
+const (
+	Archived InternalEventConsentPurposeChangedAction = "archived"
+	Created  InternalEventConsentPurposeChangedAction = "created"
+	Renamed  InternalEventConsentPurposeChangedAction = "renamed"
+)
+
+// Valid indicates whether the value is a known member of the InternalEventConsentPurposeChangedAction enum.
+func (e InternalEventConsentPurposeChangedAction) Valid() bool {
+	switch e {
+	case Archived:
+		return true
+	case Created:
+		return true
+	case Renamed:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for InternalEventLeadPrivacyNoticeCreatedFailure.
 const (
 	LeadNoticeCollision InternalEventLeadPrivacyNoticeCreatedFailure = "collision"
@@ -178,6 +199,14 @@ type InternalEventCaptureSettingsUpdated struct {
 	ChangedKeys []string `json:"changed_keys"`
 }
 
+// InternalEventConsentPurposeChanged A human created, renamed or archived a consent purpose.
+type InternalEventConsentPurposeChanged struct {
+	Action InternalEventConsentPurposeChangedAction `json:"action"`
+}
+
+// InternalEventConsentPurposeChangedAction defines model for InternalEventConsentPurposeChanged.Action.
+type InternalEventConsentPurposeChangedAction string
+
 // InternalEventDealSuggestionAccepted A rep accepted a suggestion and a deal was opened from it. The deal publishes its own deal.created; this records the decision.
 type InternalEventDealSuggestionAccepted struct{}
 
@@ -327,6 +356,10 @@ func (InternalEventBriefOpened) EntityType() string { return "" }
 func (InternalEventCaptureSettingsUpdated) EventType() string { return "capture_settings.updated" }
 
 func (InternalEventCaptureSettingsUpdated) EntityType() string { return "capture_settings" }
+
+func (InternalEventConsentPurposeChanged) EventType() string { return "consent_purpose.changed" }
+
+func (InternalEventConsentPurposeChanged) EntityType() string { return "consent_purpose" }
 
 func (InternalEventDealSuggestionAccepted) EventType() string { return "deal_suggestion.accepted" }
 

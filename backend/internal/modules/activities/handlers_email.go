@@ -21,17 +21,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// ConsentGate is the outbound suppression seam (B-EP07.12): the
-// consent module implements it, the composition root injects it. A
-// send path constructed WITHOUT one fails closed — absence of the gate
-// must never read as consent.
-//
-// ONE gate serves both transports, with two spellings of the same question,
-// because the alternative is two default-deny checks — and the one that stopped
-// applying would look exactly like the one that passes. Mail asks in addresses
-// because that is what a mail surface holds; a channel recipient has no address,
-// so the channel reply asks in recipients (connector.Recipient), which is the
-// union of the two vocabularies.
+// ConsentGate checks suppression for email and channel recipients.
+// A missing gate refuses sends.
 type ConsentGate interface {
 	RequireGrantedForEmails(ctx context.Context, recipients []string, purposeKey string) error
 	RequireGrantedForRecipients(ctx context.Context, recipients []connector.Recipient, purposeKey string) error
@@ -227,7 +218,13 @@ func DeterministicEmailDraft(answering DraftContext) (subject, body string) {
 	if topic != "" {
 		thread = draftfloor.Fill(draftfloor.SubstanceFor(lang).Thread, topic)
 	}
-	greeting := draftfloor.OpeningLine(lang, band, answering.Formal, answering.Recipient, answering.LastName)
+	envelope := draftfloor.Envelope{Language: string(lang), ConversationState: string(band), Salutation: answering.Salutation}
+	if answering.Formal {
+		envelope.GreetingRegister = "formal"
+	} else {
+		envelope.GreetingRegister = "familiar"
+	}
+	greeting := envelope.Greeting(answering.Recipient, answering.LastName)
 	return subject, draftfloor.Body(lang, greeting, phrases.Opener, thread, phrases.Ask)
 }
 
@@ -262,8 +259,9 @@ type DraftContext struct {
 	Language textlang.Lang
 	// LastName and Formal choose the opening: a formal draft names the
 	// surname beside the first name, in every language.
-	LastName string
-	Formal   bool
+	LastName   string
+	Salutation string
+	Formal     bool
 	// Band is where the correspondence stands. The zero value is BandNone.
 	Band convstate.Band
 }

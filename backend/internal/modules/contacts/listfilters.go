@@ -75,11 +75,13 @@ const (
 	filterSourceSystem        = "source_system"
 	filterSourceID            = "source_id"
 	filterRelationshipMark    = "relationship_mark"
+	filterSalutation          = "salutation"
 	filterPartnerAccepted     = "partner_accepted"
 	filterRelatedTo           = "related_to"
 )
 
 var contactListFilters = storekit.FilterSet[ListContactsInput]{
+	filterSalutation: storekit.FilterWord(func(in *ListContactsInput, v *string) { in.Salutation = v }),
 	filterListID: storekit.FilterID(func(in *ListContactsInput, id *ids.ID[ids.ListKind]) {
 		member := id.UUID
 		in.MemberOf = &member
@@ -151,6 +153,7 @@ var partnerListFilters = storekit.FilterSet[ListPartnersInput]{
 }
 
 var leadListFilters = storekit.FilterSet[ListLeadsInput]{
+	filterSalutation: storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.Salutation = v }),
 	filterListID: storekit.FilterID(func(in *ListLeadsInput, id *ids.ID[ids.ListKind]) {
 		member := id.UUID
 		in.MemberOf = &member

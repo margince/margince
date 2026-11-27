@@ -880,7 +880,6 @@ public.activity_review_response.activity_review_response_occurrence_fkey FOREIGN
 public.activity_review_response.activity_review_response_outcome_check CHECK ((outcome = ANY (ARRAY['won'::text, 'lost'::text])))
 public.activity_review_response.activity_review_response_pkey PRIMARY KEY (id)
 public.activity_review_response.activity_review_response_questions_shape CHECK (((jsonb_typeof(questions) = 'array'::text) AND (jsonb_array_length(questions) > 0)))
-public.activity_review_response.activity_review_response_revision_check CHECK ((revision >= 1))
 public.activity_review_response.answers jsonb NOT NULL gen=- def=-
 public.activity_review_response.captured_by text NOT NULL gen=- def=-
 public.activity_review_response.choice_answers jsonb NOT NULL gen=- def='{}'::jsonb
@@ -890,7 +889,6 @@ public.activity_review_response.deal_id uuid NOT NULL gen=- def=-
 public.activity_review_response.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_review_response.outcome text NOT NULL gen=- def=-
 public.activity_review_response.questions jsonb NOT NULL gen=- def=-
-public.activity_review_response.revision integer NOT NULL gen=- def=1
 public.activity_review_response.source text NOT NULL gen=- def=-
 public.activity_review_response.submission_id uuid NOT NULL gen=- def=-
 public.activity_review_response.template_key text NOT NULL gen=- def=-
@@ -1458,6 +1456,7 @@ public.approval.bundle_id uuid gen=- def=-
 public.approval.co_target_entity_id uuid gen=- def=-
 public.approval.co_target_entity_type text gen=- def=-
 public.approval.co_target_version bigint gen=- def=-
+public.approval.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT OR UPDATE OF proposed_change ON public.approval FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('json', 'live', 'proposed_change')
 public.approval.consumed_at timestamp with time zone gen=- def=-
 public.approval.context_digest text gen=- def=-
 public.approval.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2076,6 +2075,7 @@ public.automation.automation_pkey PRIMARY KEY (id)
 public.automation.automation_setter_passport_id_fkey FOREIGN KEY (setter_passport_id) REFERENCES passport(id) ON DELETE SET NULL
 public.automation.automation_tier_check CHECK ((tier = ANY (ARRAY['auto_execute'::text, 'confirmation_required'::text])))
 public.automation.automation_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.automation.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT OR UPDATE OF action, params ON public.automation FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('json', 'live', 'action,params')
 public.automation.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.automation.enabled boolean NOT NULL gen=- def=false
 public.automation.enabled_from timestamp with time zone gen=- def=-
@@ -2995,6 +2995,7 @@ public.comms_outbound.comms_outbound_template_is_controllers CHECK (((sender_kin
 public.comms_outbound.comms_outbound_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE RESTRICT
 public.comms_outbound.connection_id uuid gen=- def=-
 public.comms_outbound.consent_purpose text gen=- def=-
+public.comms_outbound.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT ON public.comms_outbound FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('consent_purpose', 'live')
 public.comms_outbound.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.comms_outbound.delivery_due_at timestamp with time zone gen=- def=-
 public.comms_outbound.execution_authority text NOT NULL gen=- def='supported'::text
@@ -3102,6 +3103,7 @@ public.communication_decision.communication_decision_ruleset_shape CHECK ((((rul
 public.communication_decision.communication_decision_subject_kind CHECK (((subject_kind IS NULL) OR (subject_kind = ANY (ARRAY['contact'::text, 'lead'::text]))))
 public.communication_decision.communication_decision_subject_shape CHECK (((subject_kind IS NULL) = (subject_id IS NULL)))
 public.communication_decision.communication_decision_verdict CHECK ((verdict = ANY (ARRAY['allow'::text, 'deny'::text, 'review'::text])))
+public.communication_decision.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT ON public.communication_decision FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('purpose_key', 'decision')
 public.communication_decision.content_fingerprint bytea gen=- def=-
 public.communication_decision.country_source text gen=- def=-
 public.communication_decision.data_protection_country text gen=- def=-
@@ -3261,7 +3263,6 @@ public.communication_override_pkey CREATE UNIQUE INDEX communication_override_pk
 public.communication_review acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.communication_review.communication_review_delivery_intent_id_fkey FOREIGN KEY (delivery_intent_id) REFERENCES scheduled_send(id) ON DELETE CASCADE
 public.communication_review.communication_review_initiated_by_fkey FOREIGN KEY (initiated_by) REFERENCES app_user(id) ON DELETE SET NULL
-public.communication_review.communication_review_kind CHECK ((kind = 'single'::text))
 public.communication_review.communication_review_pkey PRIMARY KEY (id)
 public.communication_review.communication_review_resolution_shape CHECK (((state = ANY (ARRAY['resolved'::text, 'superseded'::text, 'cancelled'::text])) = (resolved_at IS NOT NULL)))
 public.communication_review.communication_review_state CHECK ((state = ANY (ARRAY['needs_context'::text, 'needs_repair'::text, 'resolved'::text, 'superseded'::text, 'cancelled'::text])))
@@ -3270,15 +3271,14 @@ public.communication_review.communication_review_supersession_shape CHECK (((sta
 public.communication_review.delivery_intent_id uuid gen=- def=-
 public.communication_review.id uuid NOT NULL gen=- def=uuidv7()
 public.communication_review.initiated_by uuid gen=- def=-
-public.communication_review.kind text NOT NULL gen=- def='single'::text
 public.communication_review.opened_at timestamp with time zone NOT NULL gen=- def=now()
 public.communication_review.reason_code text NOT NULL gen=- def=-
 public.communication_review.refusals jsonb NOT NULL gen=- def='[]'::jsonb
 public.communication_review.resolved_at timestamp with time zone gen=- def=-
 public.communication_review.state text NOT NULL gen=- def='needs_context'::text
 public.communication_review.superseded_by uuid gen=- def=-
-public.communication_review.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.communication_review FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"kind": 20000, "state": 20000, "reason_code": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"reason_code":2000,"state":20000}')
-public.communication_review.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.communication_review FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"kind": 20000, "state": 20000, "reason_code": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"kind":20000,"reason_code":2000,"state":20000}')
+public.communication_review.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.communication_review FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 20000, "reason_code": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"reason_code":2000,"state":20000}')
+public.communication_review.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.communication_review FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 20000, "reason_code": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"reason_code":2000,"state":20000}')
 public.communication_review_by_initiator CREATE INDEX communication_review_by_initiator ON public.communication_review USING btree (initiated_by, opened_at DESC)
 public.communication_review_one_live_per_intent CREATE UNIQUE INDEX communication_review_one_live_per_intent ON public.communication_review USING btree (delivery_intent_id) WHERE ((delivery_intent_id IS NOT NULL) AND (resolved_at IS NULL))
 public.communication_review_pkey CREATE UNIQUE INDEX communication_review_pkey ON public.communication_review USING btree (id)
@@ -3304,6 +3304,7 @@ public.communication_suppression.id uuid NOT NULL gen=- def=uuidv7()
 public.communication_suppression.kept_until timestamp with time zone gen=- def=-
 public.communication_suppression.kind text NOT NULL gen=- def=-
 public.communication_suppression.lead_id uuid gen=- def=-
+public.communication_suppression.live_consent_purpose_reference CREATE TRIGGER live_consent_purpose_reference BEFORE INSERT OR UPDATE OF purpose_id ON public.communication_suppression FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')
 public.communication_suppression.purpose_id uuid gen=- def=-
 public.communication_suppression.received_at timestamp with time zone gen=- def=-
 public.communication_suppression.recorded_at timestamp with time zone NOT NULL gen=- def=now()
@@ -3389,6 +3390,7 @@ public.company.size_band text gen=- def=-
 public.company.source text NOT NULL gen=- def=-
 public.company.source_author_id uuid gen=- def=-
 public.company.source_author_name text gen=- def=-
+public.company.source_change_is_remembered CREATE TRIGGER source_change_is_remembered AFTER UPDATE ON public.company FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()
 public.company.source_id text gen=- def=-
 public.company.source_system text gen=- def=-
 public.company.status text NOT NULL gen=- def='unknown'::text
@@ -3978,6 +3980,7 @@ public.confirm_token.id uuid NOT NULL gen=- def=uuidv7()
 public.confirm_token.issued_at timestamp with time zone NOT NULL gen=- def=now()
 public.confirm_token.kind text NOT NULL gen=- def='record_confirmation'::text
 public.confirm_token.lead_id uuid gen=- def=-
+public.confirm_token.live_consent_purpose_reference CREATE TRIGGER live_consent_purpose_reference BEFORE INSERT OR UPDATE OF purpose_id ON public.confirm_token FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')
 public.confirm_token.opened_at timestamp with time zone gen=- def=-
 public.confirm_token.purpose_id uuid gen=- def=-
 public.confirm_token.question_key text gen=- def=-
@@ -4004,6 +4007,7 @@ public.consent_doi_token.contact_id uuid NOT NULL gen=- def=-
 public.consent_doi_token.expires_at timestamp with time zone NOT NULL gen=- def=-
 public.consent_doi_token.id uuid NOT NULL gen=- def=uuidv7()
 public.consent_doi_token.issued_at timestamp with time zone NOT NULL gen=- def=now()
+public.consent_doi_token.live_consent_purpose_reference CREATE TRIGGER live_consent_purpose_reference BEFORE INSERT OR UPDATE OF purpose_id ON public.consent_doi_token FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')
 public.consent_doi_token.purpose_id uuid NOT NULL gen=- def=-
 public.consent_doi_token.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.consent_doi_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')
 public.consent_doi_token.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.consent_doi_token FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"token_hash": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')
@@ -4032,6 +4036,7 @@ public.consent_event.issuance_trigger text gen=- def=-
 public.consent_event.kept_until timestamp with time zone gen=- def=-
 public.consent_event.lawful_basis text gen=- def=-
 public.consent_event.lead_id uuid gen=- def=-
+public.consent_event.live_consent_purpose_reference CREATE TRIGGER live_consent_purpose_reference BEFORE INSERT OR UPDATE OF purpose_id ON public.consent_event FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')
 public.consent_event.new_state text NOT NULL gen=- def=-
 public.consent_event.policy_text text gen=- def=-
 public.consent_event.policy_version text gen=- def=-
@@ -4057,7 +4062,44 @@ public.consent_purpose.label text NOT NULL gen=- def=-
 public.consent_purpose.requires_double_opt_in boolean NOT NULL gen=- def=false
 public.consent_purpose.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.consent_purpose FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "class": 20000, "label": 120, "frequency": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"frequency":20000,"key":20000,"label":120}')
 public.consent_purpose.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.consent_purpose FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "class": 20000, "label": 120, "frequency": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"class":20000,"frequency":20000,"key":20000,"label":120}')
+public.consent_purpose.used_purpose_does_not_change CREATE TRIGGER used_purpose_does_not_change BEFORE UPDATE OF key, label, archived_at ON public.consent_purpose FOR EACH ROW EXECUTE FUNCTION refuse_a_used_purpose_change()
+public.consent_purpose_has_references(target uuid, purpose_key text) secdef=false cfg=search_path=pg_catalog, public acl=- 
+DECLARE reference record; used boolean;
+BEGIN
+    FOR reference IN
+        SELECT ns.nspname AS schema_name, rel.relname AS table_name, col.attname AS column_name
+        FROM pg_constraint fk
+        JOIN pg_class rel ON rel.oid = fk.conrelid
+        JOIN pg_namespace ns ON ns.oid = rel.relnamespace
+        JOIN pg_attribute col ON col.attrelid = fk.conrelid AND col.attnum = ANY(fk.conkey)
+        WHERE fk.contype = 'f' AND fk.confrelid = 'public.consent_purpose'::regclass
+    LOOP
+        EXECUTE format('SELECT EXISTS (SELECT 1 FROM %I.%I WHERE %I = $1)',
+                       reference.schema_name, reference.table_name, reference.column_name)
+            INTO used USING target;
+        IF used THEN RETURN true; END IF;
+    END LOOP;
+    RETURN EXISTS (SELECT 1 FROM public.consent_text_version WHERE public.normalized_consent_purpose_key(key) = public.normalized_consent_purpose_key($2))
+        OR EXISTS (SELECT 1 FROM public.communication_decision WHERE public.normalized_consent_purpose_key(communication_decision.purpose_key) = public.normalized_consent_purpose_key($2))
+        OR EXISTS (SELECT 1 FROM public.comms_outbound WHERE public.normalized_consent_purpose_key(consent_purpose) = public.normalized_consent_purpose_key($2))
+        OR EXISTS (SELECT 1 FROM public.scheduled_send
+                   WHERE public.normalized_consent_purpose_key($2) = ANY(public.consent_purpose_keys_in(payload)))
+        OR EXISTS (SELECT 1 FROM public.automation
+                   WHERE public.normalized_consent_purpose_key($2) = ANY(public.consent_purpose_keys_in(jsonb_build_array(action, params))))
+        OR EXISTS (SELECT 1 FROM public.approval
+                   WHERE public.normalized_consent_purpose_key($2) = ANY(public.consent_purpose_keys_in(proposed_change)));
+END;
+
 public.consent_purpose_key_unique CREATE UNIQUE INDEX consent_purpose_key_unique ON public.consent_purpose USING btree (key)
+public.consent_purpose_keys_in(document jsonb) secdef=false cfg=search_path=pg_catalog, public acl=- 
+    SELECT coalesce(array_agg(DISTINCT public.normalized_consent_purpose_key(value #>> '{}'))
+                    FILTER (WHERE jsonb_typeof(value) = 'string'), ARRAY[]::text[])
+    FROM (
+        SELECT jsonb_path_query(document, '$.**.consent_purpose') AS value
+        UNION ALL
+        SELECT jsonb_path_query(document, '$.**.marketing_purpose') AS value
+    ) keys;
+
 public.consent_purpose_pkey CREATE UNIQUE INDEX consent_purpose_pkey ON public.consent_purpose USING btree (id)
 public.consent_qualifying_event acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.consent_qualifying_event.about_deal_id uuid gen=- def=-
@@ -4093,6 +4135,7 @@ public.consent_qualifying_event_source_unique CREATE UNIQUE INDEX consent_qualif
 public.consent_text_version acl=margince_owner=arwdDxt/margince_owner,margince_app=ar/margince_owner rls=false force=false
 public.consent_text_version.body text NOT NULL gen=- def=-
 public.consent_text_version.channel text gen=- def=-
+public.consent_text_version.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT OR UPDATE OF key ON public.consent_text_version FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('key', 'live')
 public.consent_text_version.consent_text_version_locale_fkey FOREIGN KEY (locale) REFERENCES language(code) ON UPDATE RESTRICT ON DELETE RESTRICT NOT VALID
 public.consent_text_version.consent_text_version_no_edit_after_publish CREATE TRIGGER consent_text_version_no_edit_after_publish BEFORE UPDATE ON public.consent_text_version FOR EACH ROW EXECUTE FUNCTION consent_text_version_is_immutable()
 public.consent_text_version.consent_text_version_pkey PRIMARY KEY (id)
@@ -4106,6 +4149,7 @@ public.consent_text_version.effective_until timestamp with time zone gen=- def=-
 public.consent_text_version.id uuid NOT NULL gen=- def=uuidv7()
 public.consent_text_version.jurisdiction text gen=- def=-
 public.consent_text_version.key text NOT NULL gen=- def=-
+public.consent_text_version.live_consent_purpose_reference CREATE TRIGGER live_consent_purpose_reference BEFORE INSERT OR UPDATE OF purpose_id ON public.consent_text_version FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')
 public.consent_text_version.locale text gen=- def=-
 public.consent_text_version.published_at timestamp with time zone gen=- def=-
 public.consent_text_version.purpose_id uuid gen=- def=-
@@ -4172,6 +4216,7 @@ public.contact.contact_quarantine_reason_check CHECK ((quarantine_reason = ANY (
 public.contact.contact_quarantine_reason_needs_a_verdict CHECK (((quarantine_reason IS NULL) OR (quarantined_at IS NOT NULL)))
 public.contact.contact_relationship_mark_check CHECK ((relationship_mark = ANY (ARRAY['vendor_marketing'::text])))
 public.contact.contact_relationship_mark_set_by_pairs CHECK (((relationship_mark IS NULL) = (relationship_mark_set_by IS NULL)))
+public.contact.contact_salutation_check CHECK ((salutation = ANY (ARRAY['mr'::text, 'ms'::text, 'none'::text])))
 public.contact.contact_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.contact.contact_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
 public.contact.contact_source_channel CREATE TRIGGER contact_source_channel BEFORE INSERT OR UPDATE ON public.contact FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_party_source_onto_its_channel()
@@ -4205,10 +4250,12 @@ public.contact.quarantine_reason text gen=- def=-
 public.contact.quarantined_at timestamp with time zone gen=- def=-
 public.contact.relationship_mark text gen=- def=-
 public.contact.relationship_mark_set_by text gen=- def=-
+public.contact.salutation text gen=- def=-
 public.contact.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(full_name, ''::text))), 'A'::"char") || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(full_name, ''::text))), 'A'::"char")) || setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(title, ''::text))), 'B'::"char")) || setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(title, ''::text))), 'B'::"char"))
 public.contact.source text NOT NULL gen=- def=-
 public.contact.source_author_id uuid gen=- def=-
 public.contact.source_author_name text gen=- def=-
+public.contact.source_change_is_remembered CREATE TRIGGER source_change_is_remembered AFTER UPDATE ON public.contact FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()
 public.contact.source_id text gen=- def=-
 public.contact.source_system text gen=- def=-
 public.contact.strength_folded boolean NOT NULL gen=- def=true
@@ -4331,6 +4378,7 @@ public.contact_consent.contact_id uuid gen=- def=-
 public.contact_consent.id uuid NOT NULL gen=- def=uuidv7()
 public.contact_consent.lawful_basis text gen=- def=-
 public.contact_consent.lead_id uuid gen=- def=-
+public.contact_consent.live_consent_purpose_reference CREATE TRIGGER live_consent_purpose_reference BEFORE INSERT OR UPDATE OF purpose_id ON public.contact_consent FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')
 public.contact_consent.policy_version text gen=- def=-
 public.contact_consent.purpose_id uuid NOT NULL gen=- def=-
 public.contact_consent.recorded_for_addresses text[] gen=- def=-
@@ -5049,7 +5097,6 @@ public.conversation_claim.due_at timestamp with time zone gen=- def=-
 public.conversation_claim.evidence_fingerprint text NOT NULL gen=- def=-
 public.conversation_claim.id uuid NOT NULL gen=- def=uuidv7()
 public.conversation_claim.kind text NOT NULL gen=- def=-
-public.conversation_claim.needs_review boolean NOT NULL gen=- def=false
 public.conversation_claim.source text NOT NULL gen=- def=-
 public.conversation_claim.source_activity_id uuid NOT NULL gen=- def=-
 public.conversation_claim.source_quote text NOT NULL gen=- def=-
@@ -5295,6 +5342,7 @@ public.deal.search_tsv tsvector gen=s def=((setweight(to_tsvector('simple'::regc
 public.deal.source text NOT NULL gen=- def=-
 public.deal.source_author_id uuid gen=- def=-
 public.deal.source_author_name text gen=- def=-
+public.deal.source_change_is_remembered CREATE TRIGGER source_change_is_remembered AFTER UPDATE ON public.deal FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()
 public.deal.source_id text gen=- def=-
 public.deal.source_system text gen=- def=-
 public.deal.stage_id uuid NOT NULL gen=- def=-
@@ -6067,6 +6115,7 @@ public.existing_customer_notice_purpose acl=margince_owner=arwdDxt/margince_owne
 public.existing_customer_notice_purpose.existing_customer_notice_purpose_notice_id_fkey FOREIGN KEY (notice_id) REFERENCES existing_customer_notice(id) ON DELETE CASCADE
 public.existing_customer_notice_purpose.existing_customer_notice_purpose_pkey PRIMARY KEY (notice_id, purpose_id)
 public.existing_customer_notice_purpose.existing_customer_notice_purpose_purpose_id_fkey FOREIGN KEY (purpose_id) REFERENCES consent_purpose(id) ON DELETE RESTRICT
+public.existing_customer_notice_purpose.live_consent_purpose_reference CREATE TRIGGER live_consent_purpose_reference BEFORE INSERT OR UPDATE OF purpose_id ON public.existing_customer_notice_purpose FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')
 public.existing_customer_notice_purpose.notice_id uuid NOT NULL gen=- def=-
 public.existing_customer_notice_purpose.purpose_id uuid NOT NULL gen=- def=-
 public.existing_customer_notice_purpose_pkey CREATE UNIQUE INDEX existing_customer_notice_purpose_pkey ON public.existing_customer_notice_purpose USING btree (notice_id, purpose_id)
@@ -7679,6 +7728,7 @@ public.lead.lead_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id)
 public.lead.lead_promoted_contact_id_fkey FOREIGN KEY (promoted_contact_id) REFERENCES contact(id) ON DELETE SET NULL (promoted_contact_id)
 public.lead.lead_promoted_names_its_contact CHECK (((status <> 'promoted'::text) OR ((promoted_contact_id IS NOT NULL) AND (archived_at IS NOT NULL))))
 public.lead.lead_qualified_deal_id_fkey FOREIGN KEY (qualified_deal_id) REFERENCES deal(id) ON DELETE SET NULL
+public.lead.lead_salutation_check CHECK ((salutation = ANY (ARRAY['mr'::text, 'ms'::text, 'none'::text])))
 public.lead.lead_score_computed_range CHECK (((score_computed IS NULL) OR ((score_computed >= 0) AND (score_computed <= 100))))
 public.lead.lead_score_override_reason_check CHECK (((score_override_reason IS NULL) OR (length(btrim(score_override_reason)) > 0)))
 public.lead.lead_score_range CHECK (((score >= 0) AND (score <= 100)))
@@ -7704,6 +7754,7 @@ public.lead.promoted_at timestamp with time zone gen=- def=-
 public.lead.promoted_contact_id uuid gen=- def=-
 public.lead.qualified_deal_id uuid gen=- def=-
 public.lead.routed_at timestamp with time zone gen=- def=-
+public.lead.salutation text gen=- def=-
 public.lead.score smallint NOT NULL gen=- def=0
 public.lead.score_computed smallint gen=- def=-
 public.lead.score_override_reason text gen=- def=-
@@ -7712,6 +7763,7 @@ public.lead.sla_breached_at timestamp with time zone gen=- def=-
 public.lead.source text NOT NULL gen=- def=-
 public.lead.source_author_id uuid gen=- def=-
 public.lead.source_author_name text gen=- def=-
+public.lead.source_change_is_remembered CREATE TRIGGER source_change_is_remembered AFTER UPDATE ON public.lead FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()
 public.lead.source_id text gen=- def=-
 public.lead.source_system text gen=- def=-
 public.lead.status text NOT NULL gen=- def='new'::text
@@ -8132,6 +8184,30 @@ public.list_visit.previous_visited_at timestamp with time zone gen=- def=-
 public.list_visit.user_id uuid NOT NULL gen=- def=-
 public.list_visit.visited_at timestamp with time zone NOT NULL gen=- def=-
 public.list_visit_pkey CREATE UNIQUE INDEX list_visit_pkey ON public.list_visit USING btree (user_id, list_id)
+public.lock_consent_purpose_keys() secdef=false cfg=search_path=pg_catalog, public acl=- 
+DECLARE keys text[]; item record; document jsonb; column_name text; refusal boolean := false;
+BEGIN
+    IF TG_ARGV[0] = 'json' THEN
+        document := '[]'::jsonb;
+        FOREACH column_name IN ARRAY string_to_array(TG_ARGV[2], ',') LOOP
+            document := document || jsonb_build_array(to_jsonb(NEW)->column_name);
+        END LOOP;
+        keys := public.consent_purpose_keys_in(document);
+    ELSE
+        keys := ARRAY[public.normalized_consent_purpose_key(to_jsonb(NEW)->>TG_ARGV[0])];
+    END IF;
+    IF TG_ARGV[1] = 'decision' THEN
+        refusal := NEW.verdict IN ('deny', 'review');
+    END IF;
+    FOR item IN SELECT id, archived_at FROM public.consent_purpose WHERE public.normalized_consent_purpose_key(key) = ANY(keys) ORDER BY key FOR KEY SHARE LOOP
+        IF item.archived_at IS NOT NULL AND NOT refusal THEN
+            RAISE EXCEPTION 'consent purpose is archived'
+                USING ERRCODE = '23514', CONSTRAINT = 'consent_purpose_in_use';
+        END IF;
+    END LOOP;
+    RETURN NEW;
+END;
+
 public.lock_last_activity_targets(contact_ids uuid[], deal_ids uuid[], company_ids uuid[], project_ids uuid[]) secdef=false cfg=- acl=- 
 DECLARE
   reached record;
@@ -8460,6 +8536,9 @@ BEGIN
  RETURN true;
 END
 
+public.normalized_consent_purpose_key(input text) secdef=false cfg=search_path=pg_catalog, public acl=- 
+    SELECT lower(btrim(input, U&'\0009\000A\000B\000C\000D\0020\0085\00A0\1680\2000\2001\2002\2003\2004\2005\2006\2007\2008\2009\200A\2028\2029\202F\205F\3000'));
+
 public.notice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.notice.body text NOT NULL gen=- def=''::text
 public.notice.captured_by text NOT NULL gen=- def=-
@@ -8650,6 +8729,7 @@ public.offer.offer_version_js_safe CHECK (((version >= '-9007199254740991'::bigi
 public.offer.pdf_asset_ref text gen=- def=-
 public.offer.revision integer NOT NULL gen=- def=1
 public.offer.source text NOT NULL gen=- def=-
+public.offer.source_change_is_remembered CREATE TRIGGER source_change_is_remembered AFTER UPDATE ON public.offer FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()
 public.offer.source_commercial_revision bigint gen=- def=-
 public.offer.status text NOT NULL gen=- def='draft'::text
 public.offer.tax_minor bigint NOT NULL gen=- def=0
@@ -9100,6 +9180,7 @@ public.project.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::re
 public.project.source text NOT NULL gen=- def=-
 public.project.source_author_id uuid gen=- def=-
 public.project.source_author_name text gen=- def=-
+public.project.source_change_is_remembered CREATE TRIGGER source_change_is_remembered AFTER UPDATE ON public.project FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()
 public.project.source_id text gen=- def=-
 public.project.source_system text gen=- def=-
 public.project.started_at date gen=- def=-
@@ -9647,6 +9728,18 @@ BEGIN
        AND EXISTS (SELECT 1 FROM activity_link l WHERE l.contact_id = named.id)));
 END;
 
+public.refuse_a_used_purpose_change() secdef=false cfg=search_path=pg_catalog, public acl=- 
+BEGIN
+    IF NEW.label IS NOT DISTINCT FROM OLD.label AND NEW.key IS NOT DISTINCT FROM OLD.key
+       AND NEW.archived_at IS NOT DISTINCT FROM OLD.archived_at THEN RETURN NEW; END IF;
+    PERFORM 1 FROM public.consent_purpose WHERE id = OLD.id FOR UPDATE;
+    IF public.consent_purpose_has_references(OLD.id, OLD.key) THEN
+        RAISE EXCEPTION 'consent is already recorded for this purpose'
+            USING ERRCODE = '23514', CONSTRAINT = 'consent_purpose_in_use';
+    END IF;
+    RETURN NEW;
+END;
+
 public.refuse_oversized_text() secdef=false cfg=search_path=pg_catalog acl=- 
 DECLARE
  bound record;
@@ -9754,6 +9847,24 @@ public.relationship_nudge_dismissal.text_bound_update CREATE TRIGGER text_bound_
 public.relationship_nudge_dismissal_by_reader CREATE INDEX relationship_nudge_dismissal_by_reader ON public.relationship_nudge_dismissal USING btree (reader_id, contact_id)
 public.relationship_nudge_dismissal_pkey CREATE UNIQUE INDEX relationship_nudge_dismissal_pkey ON public.relationship_nudge_dismissal USING btree (contact_id, reader_id)
 public.relationship_pkey CREATE UNIQUE INDEX relationship_pkey ON public.relationship USING btree (id)
+public.remember_a_triggered_source_change() secdef=false cfg=search_path=pg_catalog, public acl=- 
+DECLARE pending jsonb; identity text; prior jsonb;
+BEGIN
+    pending := coalesce(nullif(current_setting('margince.source_changes', true), ''), '{}')::jsonb;
+    identity := TG_TABLE_NAME || ':' || NEW.id::text;
+    prior := pending->identity;
+    pending := jsonb_set(pending, ARRAY[identity], jsonb_build_object(
+        'entity_type', TG_TABLE_NAME, 'id', NEW.id,
+        'change_id', coalesce(prior->'change_id', to_jsonb(public.uuidv7())),
+        'before_system', CASE WHEN prior IS NULL THEN to_jsonb(OLD)->'source_system' ELSE prior->'before_system' END,
+        'after_system', to_jsonb(NEW)->'source_system',
+        'system_changed', coalesce((prior->>'system_changed')::boolean,false) OR ((to_jsonb(OLD)->'source_system') IS DISTINCT FROM (to_jsonb(NEW)->'source_system')),
+        'before', coalesce(prior->'before', to_jsonb(OLD.source)), 'after', NEW.source,
+        'deal_id', to_jsonb(NEW)->'deal_id'));
+    PERFORM set_config('margince.source_changes', pending::text, true);
+    RETURN NEW;
+END;
+
 public.rename_legacy_capture_labels(subjects uuid[]) secdef=false cfg=- acl=- DECLARE
     moving text := current_setting('margince.last_activity_move', true);
     changed integer;
@@ -9991,6 +10102,20 @@ public.reporting_framework_revision.revision bigint NOT NULL gen=- def=-
 public.reporting_framework_revision_pkey CREATE UNIQUE INDEX reporting_framework_revision_pkey ON public.reporting_framework_revision USING btree (revision)
 public.reporting_primary_credit CREATE INDEX reporting_primary_credit ON public.sdr_handoff_event USING btree (deal_id_at_change, occurred_at, id) WHERE (to_status = 'accepted'::text)
 public.reporting_stage_events CREATE INDEX reporting_stage_events ON public.deal_stage_history USING btree (deal_id, changed_at, id)
+public.require_a_live_consent_purpose_reference() secdef=false cfg=search_path=pg_catalog, public acl=- 
+DECLARE target uuid; retired boolean;
+BEGIN
+    target := (to_jsonb(NEW)->>TG_ARGV[0])::uuid;
+    IF target IS NULL THEN RETURN NEW; END IF;
+    IF TG_OP = 'UPDATE' AND (to_jsonb(OLD)->>TG_ARGV[0])::uuid IS NOT DISTINCT FROM target THEN RETURN NEW; END IF;
+    SELECT archived_at IS NOT NULL INTO retired FROM public.consent_purpose WHERE id = target FOR KEY SHARE;
+    IF retired THEN
+        RAISE EXCEPTION 'consent purpose is archived'
+            USING ERRCODE = '23514', CONSTRAINT = 'consent_purpose_in_use';
+    END IF;
+    RETURN NEW;
+END;
+
 public.resolve_intent_time(wall_clock timestamp without time zone, zone_name text) secdef=false cfg=search_path=pg_catalog acl=- 
 DECLARE
  anchor timestamp with time zone := wall_clock AT TIME ZONE 'UTC';
@@ -10317,11 +10442,9 @@ public.saved_view.saved_view_owner_fkey FOREIGN KEY (owner_id) REFERENCES app_us
 public.saved_view.saved_view_owner_id_retirement_guard CREATE TRIGGER saved_view_owner_id_retirement_guard BEFORE INSERT OR UPDATE ON public.saved_view FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')
 public.saved_view.saved_view_pkey PRIMARY KEY (id)
 public.saved_view.saved_view_resource_check CHECK (((resource = ANY (ARRAY['contacts'::text, 'companies'::text, 'deals'::text, 'activities'::text, 'leads'::text, 'partners'::text, 'projects'::text])) OR (resource ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$'::text)))
-public.saved_view.saved_view_shared_scope_check CHECK ((shared_scope = ANY (ARRAY['private'::text, 'team'::text, 'workspace'::text])))
 public.saved_view.saved_view_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
-public.saved_view.shared_scope text NOT NULL gen=- def='private'::text
-public.saved_view.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.saved_view FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "resource": 20000, "shared_scope": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000,"shared_scope":20000}')
-public.saved_view.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.saved_view FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "resource": 20000, "shared_scope": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000,"shared_scope":20000}')
+public.saved_view.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.saved_view FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"name": 120, "resource": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000}')
+public.saved_view.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.saved_view FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "resource": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000}')
 public.saved_view.trg_saved_view_updated CREATE TRIGGER trg_saved_view_updated BEFORE UPDATE ON public.saved_view FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.saved_view.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.saved_view.version bigint NOT NULL gen=- def=1
@@ -10334,6 +10457,7 @@ public.scheduled_send.agent_on_behalf_of uuid gen=- def=-
 public.scheduled_send.agent_passport_id uuid gen=- def=-
 public.scheduled_send.also_links jsonb gen=- def=-
 public.scheduled_send.anchor_activity_id uuid gen=- def=-
+public.scheduled_send.consent_purpose_keys CREATE TRIGGER consent_purpose_keys BEFORE INSERT OR UPDATE OF payload ON public.scheduled_send FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('json', 'live', 'payload')
 public.scheduled_send.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.scheduled_send.delivery_id uuid gen=- def=-
 public.scheduled_send.held_reason text gen=- def=-
@@ -12260,6 +12384,7 @@ public.web_form.handling_cutover_at timestamp with time zone gen=- def=-
 public.web_form.id uuid NOT NULL gen=- def=uuidv7()
 public.web_form.lead_origin text gen=- def=-
 public.web_form.name text NOT NULL gen=- def=-
+public.web_form.notify_owner boolean NOT NULL gen=- def=false
 public.web_form.owner_id uuid gen=- def=-
 public.web_form.privacy_notice text gen=- def=-
 public.web_form.privacy_notice_url text gen=- def=-
@@ -12665,6 +12790,7 @@ public.withdrawal_credential.id uuid NOT NULL gen=- def=uuidv7()
 public.withdrawal_credential.issued_at timestamp with time zone NOT NULL gen=- def=now()
 public.withdrawal_credential.last_used_at timestamp with time zone gen=- def=-
 public.withdrawal_credential.lead_id uuid gen=- def=-
+public.withdrawal_credential.live_consent_purpose_reference CREATE TRIGGER live_consent_purpose_reference BEFORE INSERT OR UPDATE OF purpose_id ON public.withdrawal_credential FOR EACH ROW EXECUTE FUNCTION require_a_live_consent_purpose_reference('purpose_id')
 public.withdrawal_credential.purpose_id uuid gen=- def=-
 public.withdrawal_credential.revoked_at timestamp with time zone gen=- def=-
 public.withdrawal_credential.revoked_reason text gen=- def=-

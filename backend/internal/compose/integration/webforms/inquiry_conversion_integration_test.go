@@ -6,14 +6,19 @@
 package webforms
 
 import (
+	"crypto/sha256"
+	"encoding/hex"
 	"net/http"
 	"net/url"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 func TestAWebsiteRetryKeepsTheLegacyTaskThatPredatesItsAcceptedNote(t *testing.T) {
@@ -36,6 +41,20 @@ CREATE TRIGGER refuse_website_note BEFORE INSERT ON activity FOR EACH ROW EXECUT
 		t.Fatalf("failed note was acknowledged: %d %s", answer.Status, answer.Body)
 	}
 	if _, err := e.Owner.Exec(t.Context(), `DROP TRIGGER refuse_website_note ON activity; DROP FUNCTION refuse_website_note()`); err != nil {
+		t.Fatal(err)
+	}
+	if count, _, _ := leadsWithEmail(t, e, "retry@visitor.example"); count != 0 {
+		t.Fatalf("the failed note left %d leads", count)
+	}
+	// Older versions committed the lead before its note. Seed that retained state
+	// through the real writer so the conversion still covers an older retry.
+	system, email := provenance.WebFormSource, body.Get("email")
+	digest := sha256.Sum256([]byte(body.Get("_mrg_id")))
+	key := provenance.WebFormSourceID(form.ID, hex.EncodeToString(digest[:16]))
+	ctx := inquirySeatContext(t, e, ids.MustParse(apptest.SessionUserID(t, e)))
+	if _, _, err := contacts.NewStore(e.DB()).CreateLead(ctx, contacts.CreateLeadInput{
+		Email: &email, SourceSystem: &system, SourceID: &key, Source: system,
+	}); err != nil {
 		t.Fatal(err)
 	}
 	engine := compose.NewWorkflowEngine(e.DB())

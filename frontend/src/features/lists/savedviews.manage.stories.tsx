@@ -22,7 +22,6 @@ type Story = StoryObj;
 const view = (id: string, name: string): SavedView => ({
   id,
   owner_id: "00000000-0000-4000-8000-000000000001",
-  shared_scope: "private",
   resource: "companies",
   name,
   query: { list: { q: "", sort: "", includeArchived: false, filters: {} } },

@@ -25,7 +25,7 @@ func EnsureGreeting(body string, envelope draftfloor.Envelope, to Grounds) strin
 		return floor + "\n\n" + trimmed
 	}
 	opening, ok := salutation.Opening(trimmed)
-	if !ok || !opening.Closed || (!misaddressed(opening, to) && !foreign(opening, envelope.Lang())) {
+	if !ok || !opening.Closed || (!misaddressed(opening, to) && !foreign(opening, envelope.Lang()) && !wrongSalutation(trimmed[:opening.End], envelope, to)) {
 		return body
 	}
 	if message := strings.TrimSpace(trimmed[opening.End:]); message != "" {

@@ -30,6 +30,8 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -76,7 +78,7 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		Email string `json:"email"`
 	}
 	if !h.resetPerIP.Allow(httpserver.ClientIP(r)) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		httperr.Write(w, r, ratelimit.Refused(h.resetPerIP))
 		return
 	}
 	if !httperr.Decode(w, r, &req) {
@@ -88,7 +90,7 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 		return
 	}
 	if !h.resetPerEmail.Allow(strings.ToLower(email.String()) + "|" + httpserver.ClientIP(r)) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		httperr.Write(w, r, ratelimit.Refused(h.resetPerEmail))
 		return
 	}
 
@@ -142,7 +144,7 @@ func (h Handlers) RequestPasswordReset(w http.ResponseWriter, r *http.Request) {
 // to a human. A token nobody could have been given simply never verifies.
 func (h Handlers) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	if !h.resetPerIP.Allow(httpserver.ClientIP(r)) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		httperr.Write(w, r, ratelimit.Refused(h.resetPerIP))
 		return
 	}
 	var req struct {

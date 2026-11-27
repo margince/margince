@@ -124,7 +124,7 @@ func leadColumns(ctx context.Context, arg func(any) int) (string, error) {
 	if err != nil {
 		return "", err
 	}
-	return `id, full_name, email, phone, title, company_name, candidate_company_key,
+	return `id, full_name, salutation, email, phone, title, company_name, candidate_company_key,
 	linkedin_url, status, score, score_override_reason, score_computed, owner_id, project_id, product_id, source_system, source_id,
 	promoted_contact_id, promoted_at, merged_into_id, from_contact_id, source, captured_by,
 	source_author_id, source_author_name,
@@ -278,7 +278,7 @@ func scanLead(row pgx.Row, active []fieldcatalog.Column, policy leadSLAPolicy, n
 	var companyFacts, nextTask []byte
 
 	dests := []any{
-		&id, &l.FullName, &email, &l.Phone, &l.Title, &l.CompanyName, &l.CandidateCompanyKey,
+		&id, &l.FullName, &l.Salutation, &email, &l.Phone, &l.Title, &l.CompanyName, &l.CandidateCompanyKey,
 		&l.LinkedinUrl, &status, &l.Score, &l.ScoreOverrideReason, &l.ScoreComputed, &refs.owner, &refs.project, &refs.product, &l.SourceSystem, &l.SourceId,
 		&refs.promoted, &l.PromotedAt, &refs.mergedInto, &refs.fromContact, &l.Source, &l.CapturedBy,
 		&authorID, &authorName, &authorSeatName,

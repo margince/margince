@@ -104,7 +104,7 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 		`INSERT INTO custom_field (object, slug, label, type, column_name, created_by)
 		 VALUES ('contact', 'private_note', 'Private note', 'text', 'cf_private_note', $1)`, user)
 	mustExec(ctx, t, tx, `UPDATE contact SET cf_private_note = 'lives on Hauptstrasse' WHERE id = $1`, contact)
-	mustExec(ctx, t, tx, `UPDATE contact SET greeting_register = 'formal' WHERE id = $1`, contact)
+	mustExec(ctx, t, tx, `UPDATE contact SET greeting_register = 'formal', salutation = 'ms' WHERE id = $1`, contact)
 
 	// An introduction one colleague asked another for, about the subject. Two seats
 	// because intro_request_distinct_seats refuses a requester who is also the
@@ -158,10 +158,13 @@ func TestAnonymizeClearsWhatIsKeyedOnTheSubjectsAddress(t *testing.T) {
 			"re-match the subject on survived the action that stopped naming them", pending, subjectEmail)
 	}
 
-	var register *string
+	var register, salutation *string
 	if err := tx.QueryRow(ctx,
-		`SELECT greeting_register FROM contact WHERE id = $1`, contact).Scan(&register); err != nil {
+		`SELECT greeting_register, salutation FROM contact WHERE id = $1`, contact).Scan(&register, &salutation); err != nil {
 		t.Fatal(err)
+	}
+	if salutation != nil {
+		t.Errorf("salutation survived anonymization: %s", *salutation)
 	}
 	if register != nil {
 		t.Errorf("the greeting register %q survived the anonymize of the contact it was chosen for", *register)

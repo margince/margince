@@ -217,7 +217,7 @@ var chatRecordQueries = map[string]string{
 // tier when it belongs to a channel's records, and never when it is in
 // chatIgnoredEvents.
 func chatTier(env events.Envelope) (string, map[string]any, bool) {
-	if chatIgnoredEvents[env.Type] {
+	if (env.Type == "offer.updated" && crmcontracts.OfferSourceOnly(env.Payload)) || chatIgnoredEvents[env.Type] {
 		return "", nil, false
 	}
 	if tier, ok := chatMilestones[env.Type]; ok {

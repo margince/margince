@@ -31,7 +31,7 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 54161,
+    "tokens": 54168,
     "median_tool_tokens": 806,
     "mean_tool_tokens": 1128
   },
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 48,
-      "tokens": 4420,
-      "listing_tokens": 2044,
-      "step_schema_tokens": 1646,
+      "tokens": 4436,
+      "listing_tokens": 2052,
+      "step_schema_tokens": 1653,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 11964,
+      "headroom_tokens": 11948,
       "dangling_cross_references": [],
       "temptation_weight": 4
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6715,
-      "listing_tokens": 3357,
-      "step_schema_tokens": 2628,
+      "tokens": 6731,
+      "listing_tokens": 3364,
+      "step_schema_tokens": 2636,
       "percent_of_ceiling": 20,
-      "headroom_tokens": 9669,
+      "headroom_tokens": 9653,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -109,7 +109,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 2053
+      "tokens": 2060
     },
     {
       "name": "change_reports",
@@ -291,8 +291,13 @@
     }
   ],
   "corpus": {
-    "scenarios": 8,
-    "skipped_by_the_scan": null,
+    "scenarios": 12,
+    "skipped_by_the_scan": [
+      "morning_brief_recovers_bad_arguments.yaml (this scan could not read its expected step, so a wrong reach cannot be told from the right one)",
+      "morning_brief_recovers_field_shape.yaml (this scan could not read its expected step, so a wrong reach cannot be told from the right one)",
+      "morning_brief_recovers_unknown_field.yaml (this scan could not read its expected step, so a wrong reach cannot be told from the right one)",
+      "morning_brief_recovers_unsupported.yaml (this scan could not read its expected step, so a wrong reach cannot be told from the right one)"
+    ],
     "near_misses_not_offered": null,
     "read_by_prose": null
   }

@@ -4,6 +4,7 @@
 package database
 
 import (
+	"context"
 	"strings"
 	"sync"
 
@@ -18,9 +19,47 @@ type txMemo struct {
 	values map[string]any
 	marks  map[string]struct{}
 	after  []func()
+	before []func(context.Context, pgx.Tx) error
 }
 
 var txMemos sync.Map
+
+// CommitOwner returns the database-owned transaction that will commit tx.
+// Savepoints share its write bookkeeping, while their read memos stay separate.
+//
+//nolint:ireturn // pgx.Tx is the driver's transaction interface.
+func CommitOwner(tx pgx.Tx) pgx.Tx {
+	for {
+		if owned, ok := tx.(*ownedTx); ok {
+			return owned.root
+		}
+		if wrapped, ok := tx.(interface{ Unwrap() pgx.Tx }); ok {
+			tx = wrapped.Unwrap()
+			continue
+		}
+		return tx
+	}
+}
+
+// ownedTx carries commit ownership through nested pgx savepoints.
+type ownedTx struct {
+	pgx.Tx
+	root pgx.Tx
+}
+
+// Unwrap answers the driver's transaction, preserving separate read memos.
+//
+//nolint:ireturn // pgx.Tx is the driver's transaction interface.
+func (t *ownedTx) Unwrap() pgx.Tx { return t.Tx }
+
+//nolint:ireturn // pgx.Tx is the driver's transaction interface.
+func (t *ownedTx) Begin(ctx context.Context) (pgx.Tx, error) {
+	child, err := t.Tx.Begin(ctx)
+	if err != nil {
+		return nil, err
+	}
+	return &ownedTx{Tx: child, root: t.root}, nil
+}
 
 // openTxMemo gives tx a memo for its lifetime; the returned func ends it. A
 // savepoint's own pgx.Tx is a different value, so it has none and reads fresh.
@@ -136,4 +175,38 @@ func Marked(tx pgx.Tx, key string) bool {
 func Memoized(tx pgx.Tx) bool {
 	_, ok := memoOf(tx)
 	return ok
+}
+
+// BeforeCommit runs fn inside tx before it commits. Later registrations run first.
+// Work registered by a callback is drained before an earlier callback runs.
+func BeforeCommit(tx pgx.Tx, fn func(context.Context, pgx.Tx) error) bool {
+	memo, ok := memoOf(tx)
+	if !ok {
+		return false
+	}
+	memo.mu.Lock()
+	defer memo.mu.Unlock()
+	memo.before = append(memo.before, fn)
+	return true
+}
+
+func runBeforeCommit(ctx context.Context, tx pgx.Tx) error {
+	memo, ok := memoOf(tx)
+	if !ok {
+		return nil
+	}
+	for {
+		memo.mu.Lock()
+		count := len(memo.before)
+		if count == 0 {
+			memo.mu.Unlock()
+			return nil
+		}
+		fn := memo.before[count-1]
+		memo.before = memo.before[:count-1]
+		memo.mu.Unlock()
+		if err := fn(ctx, tx); err != nil {
+			return err
+		}
+	}
 }

@@ -196,10 +196,11 @@ func emitEnvelope(ctx context.Context, tx pgx.Tx, auditID ids.UUID, eventType, e
 	if err != nil {
 		return events.Envelope{}, err
 	}
-	if err := insertEvents(ctx, tx, []stagedEvent{staged}); err != nil {
+	stagedRows := []stagedEvent{staged}
+	if err := insertEvents(ctx, tx, stagedRows); err != nil {
 		return events.Envelope{}, err
 	}
-	return staged.env, nil
+	return stagedRows[0].env, nil
 }
 
 // stagedEvent is one outbox row ready to insert.
@@ -274,7 +275,11 @@ func insertEvents(ctx context.Context, tx pgx.Tx, staged []stagedEvent) error {
 	}
 	args := make([]any, 0, 3*len(staged))
 	rows := make([]string, 0, len(staged))
-	for _, event := range staged {
+	for index := range staged {
+		if err := stageSourceChange(tx, &staged[index]); err != nil {
+			return err
+		}
+		event := staged[index]
 		args = append(args, event.stream, event.body, assuranceInputsRead(event.env.Type))
 		rows = append(rows, "($"+strconv.Itoa(len(args)-2)+", $"+strconv.Itoa(len(args)-1)+", $"+strconv.Itoa(len(args))+")")
 	}

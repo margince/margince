@@ -2,6 +2,11 @@
 <!-- describes: frontend/src/features/mail frontend/src/design-system/emailthread.tsx frontend/src/components/sendpermission.tsx backend/internal/modules/activities/sendcore.go backend/internal/modules/activities/scheduledsend.go backend/internal/modules/activities/scheduledstop.go backend/internal/modules/activities/signature.go backend/internal/modules/comms/gates.go backend/internal/modules/consent/gate.go backend/internal/modules/consent/mailpreview.go backend/internal/modules/consent/instructioncorrection.go backend/internal/modules/consent/instructionconsume.go backend/internal/modules/activities/wordingcorrection.go backend/internal/compose/draftcore backend/internal/compose/replydraft.go backend/internal/compose/replyconversation.go frontend/src/lib/activityfiling.ts frontend/src/lib/messagevoice.ts backend/internal/modules/activities/signaturetemplate.go backend/internal/compose/bounceresend backend/internal/platform/mailresend backend/internal/modules/comms/resend.go frontend/src/features/worklist/worklist.acknowledge.tsx -->
 # Writing and sending mail
 
+### How does a draft address a contact?
+A draft in **Formal** uses the contact's saved **Salutation**. In English, **Mr** gives “Dear Mr Smith,” and **Ms** gives “Dear Ms Smith,”. In German, the same choices give “Sehr geehrter Herr Smith,” and “Sehr geehrte Frau Smith,”.
+
+**No gendered salutation** and **Not set** keep a greeting with the full name. A draft in **Familiar** uses the first name. Margince never chooses this field from a name or an email signature.
+
 ### How do I send an email to a contact?
 To send an email to a contact in Margince, open the contact's page and choose **Email** in its header. Fill in the composer and press **Send**.
 1. Open the contact. The button may read **Write**, or **Message on {transport}** when chat is the only channel.
@@ -50,22 +55,18 @@ The composer in Margince does not send until four things are filled in, and name
 - "Enter a message before sending.": the **Body** is empty.
 - "Select the reason for contact.": you picked no **Reason for contact**. A reply to their own message needs none.
 
-A channel reply, such as Telegram, has no subject, so Margince checks only the body and the reason.
-Also called: validation error, why is Send not working.
+A channel reply, such as Telegram, has no subject, so Margince checks only the body and the reason. Also called: validation error, why is Send not working.
 
 ### Can I use an email template?
 Margince has no email templates, snippets or canned replies in the composer. To start from something ready, press **Draft email**, which drafts in your own writing voice. Margince also keeps what you type as a draft, so you can come back to it. Only you can open your draft. If you leave and an admin hands over your work, your drafts go to the colleague who takes over. Margince adds your **Email signature** for you.
 
-Offer templates are a different thing: they shape an offer, not an email. See [Offers and the rate card](offers-and-products.md).
-Also called: canned response, saved reply, mail template, snippet.
+Offer templates are a different thing: they shape an offer, not an email. See [Offers and the rate card](offers-and-products.md). Also called: canned response, saved reply, mail template, snippet.
 
 ## The composer
 
-You reach the Margince composer from a contact, a company, a deal, a lead, or
-the reply action on any message.
+You reach the Margince composer from a contact, a company, a deal, a lead, or the reply action on any message.
 
-The composer opens as a window at the bottom of the page, so the page stays in view
-behind it. It stays open when you go to another page. Fold it to its title bar
+The composer opens as a window at the bottom of the page, so the page stays in view behind it. It stays open when you go to another page. Fold it to its title bar
 with **Minimize**, make it larger with **Expand**, or drag its top or left
 side. Drag its title bar to slide it left or right. On a phone it fills the
 screen.

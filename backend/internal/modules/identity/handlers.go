@@ -18,7 +18,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/mailer"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 )
 
 // SessionCookieName is the cookie a signed-in human's browser carries. It is
@@ -320,8 +319,12 @@ func (h Handlers) Login(w http.ResponseWriter, r *http.Request) {
 	// would let ten bogus posts lock the real owner out of their own
 	// account from anywhere.
 	accountKey := strings.ToLower(string(req.Email)) + "|" + httpserver.ClientIP(r)
-	if !h.loginPerIP.Allow(httpserver.ClientIP(r)) || h.loginFailures.Blocked(accountKey) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+	if !h.loginPerIP.Allow(httpserver.ClientIP(r)) {
+		httperr.Write(w, r, ratelimit.Refused(h.loginPerIP))
+		return
+	}
+	if h.loginFailures.Blocked(accountKey) {
+		httperr.Write(w, r, ratelimit.Refused(h.loginFailures))
 		return
 	}
 

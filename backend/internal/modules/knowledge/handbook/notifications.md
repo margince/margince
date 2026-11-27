@@ -12,6 +12,7 @@ The page lists these kinds under **Delivery by kind**. Each row has a short note
 
 | Kind | What it tells you | Standing choice |
 |---|---|---|
+| **New website leads** | An accepted post from a website form on a lead or contact you own. The form admin must enable this notice. | **In the app** |
 | **Approvals waiting on you** | Somebody needs your decision before their work can go on. A colleague who named you on one of their team links counts too. | **Email** |
 | **Project health set by the AI** | The AI marked a project of yours at risk, off track or back on track. | **In the app** |
 | **Automations that ran** | A rule your company set fired, or could not. | **In the app** |
@@ -30,7 +31,7 @@ The menu offers up to four choices:
 - **Daily digest**: the notices of this kind come in your daily digest.
 
 Not every row offers every choice. Margince leaves out a choice it cannot keep:
-- **Email** is on the menu for **Approvals waiting on you** only. No other kind sends a single email.
+- **Email** is on the menu for **Approvals waiting on you** and **New website leads**. Other kinds can reach you through the daily digest.
 - **Daily digest** is on the menu for every kind.
 - **Nudges from colleagues** has no **Off**. A colleague's words always reach you.
 

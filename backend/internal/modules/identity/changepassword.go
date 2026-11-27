@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/modules/identity/internal/password"
@@ -302,7 +304,7 @@ func (h Handlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	// verification, which is the second reason login caps it.
 	caller, hasCaller := callerUserID(r.Context())
 	if hasCaller && h.changeFailures.Blocked(caller.String()) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		httperr.Write(w, r, ratelimit.Refused(h.changeFailures))
 		return
 	}
 

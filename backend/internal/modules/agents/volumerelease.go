@@ -47,8 +47,11 @@ type VolumeReleaseRequest struct {
 // that cannot work. It unwraps to the budget sentinel instead, which is what the
 // refusal actually is: a volume threshold, now with a human looking at it.
 type StepUpStagedError struct {
-	ApprovalID ids.ApprovalID
-	Counter    agentvolume.Counter
+	// Ceiling and WaitSeconds carry the refused window without changing its approval semantics.
+	Ceiling     int
+	WaitSeconds int
+	ApprovalID  ids.ApprovalID
+	Counter     agentvolume.Counter
 }
 
 func (e *StepUpStagedError) Error() string {
@@ -60,6 +63,12 @@ func (e *StepUpStagedError) Error() string {
 // Unwrap keeps every budget-aware caller — the REST gate, the transports' error
 // mapping — seeing this for what it is.
 func (e *StepUpStagedError) Unwrap() error { return apperrors.ErrBudgetExceeded }
+
+// RateLimit carries pacing through the REST release-request refusal.
+func (e *StepUpStagedError) RateLimit() (int, int) { return e.Ceiling, e.WaitSeconds }
+
+// RetryAfterSeconds is the wait for the refused window to roll.
+func (e *StepUpStagedError) RetryAfterSeconds() int { return e.WaitSeconds }
 
 // StepUpUnavailableError answers a releasable refusal whose question could not be
 // put to a human. It unwraps to the refusal, so budget-aware callers still see
@@ -151,7 +160,7 @@ func (r *Registry) stageStepUp(ctx context.Context, refusal *auth.VolumeExceeded
 	if !staged {
 		return refusal
 	}
-	return &StepUpStagedError{ApprovalID: id, Counter: refusal.Reading.Counter}
+	return &StepUpStagedError{ApprovalID: id, Counter: refusal.Reading.Counter, Ceiling: refusal.Reading.Limit, WaitSeconds: max(1, refusal.RetryAfterSeconds())}
 }
 
 // stepUpSummary is the question, in the human's words rather than the counter's.

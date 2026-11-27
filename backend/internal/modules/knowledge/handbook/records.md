@@ -3,6 +3,11 @@
 # Contacts, companies, leads, deals and projects
 Margince holds five kinds of record: contacts, companies, leads, deals and projects. [Shared record links](sharing-record-links.md) show a limited public card.
 
+### How do I set a contact's or lead's **Salutation**?
+Open the record and set **Salutation** to **Mr**, **Ms** or **No gendered salutation**. Choose **Not set** to clear it. Record only the contact's own choice. Margince never chooses it from a name.
+
+A lead's choice moves to the contact when you qualify the lead. An existing contact keeps their own choice. Website forms can send a choice, and CSV files can import and export it. The **Salutation** filter finds each choice, including **Not set**.
+
 ## Each record in one line
 - **Contact**: a single human you do business with. The sidebar calls this **Contacts**.
 - **Company**: a company you work with. The sidebar calls this **Companies**.
@@ -13,12 +18,10 @@ Margince holds five kinds of record: contacts, companies, leads, deals and proje
 Next to these are **activities** (the timeline of emails, calls, meetings, notes and tasks) and **documents**. Each has its own page.
 
 ### What is the difference between a lead and a deal?
-A lead in Margince is someone you have not qualified yet. A deal is one piece of business with a value, moving through pipeline stages to won or lost. A lead lives on **Leads** and has no company record behind it. A deal lives on **Deals** and may name a company, contacts and a project. Qualifying a lead turns it into a contact, and can join an existing deal or open a new one in the same step.
-Also called: prospect versus opportunity.
+A lead in Margince is someone you have not qualified yet. A deal is one piece of business with a value, moving through pipeline stages to won or lost. A lead lives on **Leads** and has no company record behind it. A deal lives on **Deals** and may name a company, contacts and a project. Qualifying a lead turns it into a contact, and can join an existing deal or open a new one in the same step. Also called: prospect versus opportunity.
 
 ### What is the difference between a contact and a company?
-A contact in Margince is a single human you do business with. A company is the business they work for, or that you work with. A contact is linked to a company through a job link. That link is not required: a contact with no employer is still a contact.
-Also called: account, client or customer for a company.
+A contact in Margince is a single human you do business with. A company is the business they work for, or that you work with. A contact is linked to a company through a job link. That link is not required: a contact with no employer is still a contact. Also called: account, client or customer for a company.
 
 ## What connects to what
 
@@ -70,12 +73,10 @@ To edit a contact in Margince, open it and press **Edit** in a section of the **
 ### Why can't I edit a contact or company?
 A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator."
 
-Where you cannot edit, a section shows no **Edit**, a field shows no box, and other actions show a lock. The **View only** chip under the name gives the owner, the reason and **Ask … for edit access**; so does **Access** under **Ownership**. An archived record says why in the band at the top instead. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
-Also called: read-only record, edit greyed out, cannot change.
+Where you cannot edit, a section shows no **Edit**, a field shows no box, and other actions show a lock. The **View only** chip under the name gives the owner, the reason and **Ask … for edit access**; so does **Access** under **Ownership**. An archived record says why in the band at the top instead. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again." Also called: read-only record, edit greyed out, cannot change.
 
 ### What does "This sender may be pretending to be someone else" mean?
-The warning shows on a contact when any email from its addresses carried a sign that the sender is someone else. The warning names the sign when one was recorded, such as a mail domain in a coded spelling that can look like another domain. Check the address, then press **Looks fine** if the sender is right. The warning then goes for all users, even when a later email shows a sign, and the **History** tab records who cleared it. Only a user who can edit the contact can clear it, and an agent cannot.
-Also called: wrong sender, sender warning.
+The warning shows on a contact when any email from its addresses carried a sign that the sender is someone else. The warning names the sign when one was recorded, such as a mail domain in a coded spelling that can look like another domain. Check the address, then press **Looks fine** if the sender is right. The warning then goes for all users, even when a later email shows a sign, and the **History** tab records who cleared it. Only a user who can edit the contact can clear it, and an agent cannot. Also called: wrong sender, sender warning.
 ### How do I link a contact to a company?
 New contacts use the same company check from every source. A company name can find or create the employer; a work address can find a company or wait for a site check. Personal email domains create no company.
 To link a contact to a company in Margince, open the contact's **Companies** tab and choose **Add company** under **Work history**. The same list shows the companies they worked at before, with role and dates. When the first page holds the whole list, the number on the tab counts them.
@@ -87,8 +88,7 @@ To change or end the link later, use the row's **More actions** menu: **Edit emp
 
 A company name Margince read for a contact with no current job shows under **Work history** on the **Companies** tab and under **Employer** in **About**. **Link** opens **Add company** already searching for that name, and **Dismiss** removes the offer for good. **Create and link** creates and links the company, with the domain of the contact's work email unless that is consumer mail, blocked or another company's. If you can open the company that holds the domain, Margince uses it and links the contact. **Link** and **Create and link** also confirm the read company, as **Confirm value** does. Also called: set a contact's company, assign to an account, employer, company from a signature, past employers, former companies, job history.
 ### How do I change a contact's employer when they move company?
-To change a contact's employer in Margince, open the contact, press **Edit** in the **About** section, then **Change Employer**. Pick the new company under **Change employer**, or tick **No current employer**. Then answer **What about {company}?**: **They left {company}** keeps it as a former employer, ending today; **{company} was never their employer** deletes the link. When a contact's own mail, confirmed by their mail domain, names another company in Margince, their owner gets **Check a new employer**. **Accept** moves them and keeps the old employer as former; **Reject** means it never asks about that company again.
-Also called: changed jobs, new company, left the company, update employer, job change.
+To change a contact's employer in Margince, open the contact, press **Edit** in the **About** section, then **Change Employer**. Pick the new company under **Change employer**, or tick **No current employer**. Then answer **What about {company}?**: **They left {company}** keeps it as a former employer, ending today; **{company} was never their employer** deletes the link. When a contact's own mail, confirmed by their mail domain, names another company in Margince, their owner gets **Check a new employer**. **Accept** moves them and keeps the old employer as former; **Reject** means it never asks about that company again. Also called: changed jobs, new company, left the company, update employer, job change.
 
 ### How do I match a purchased job history entry to a company?
 Purchased job history can name an employer Margince cannot match. Then the contact's **Companies** tab shows **Company match needed.**; choose **Match company**. Pick a company that is already there, or enter its **Confirmed company website** to create it, then choose **Save company link**. Your choice counts for every role at that employer that has no match yet. **Dismiss evidence** drops an entry that should not become a link. A company name alone never creates a company.

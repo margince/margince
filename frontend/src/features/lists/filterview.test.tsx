@@ -41,7 +41,6 @@ const VIEW = {
   owner_id: "u-1",
   resource: "contacts",
   name: "Berlin contacts",
-  shared_scope: "private",
   query: { filter: BERLIN, columns: ["full_name"] },
   version: 3,
 };

@@ -7843,6 +7843,15 @@ export const en = {
   "create.company": "New company",
   "create.lead": "New lead",
   "create.deal": "New deal",
+  "create.salutation": "Salutation",
+  "salutation.any": "All salutations",
+  "salutation.unset": "Not set",
+  "salutation.mr": "Mr",
+  "salutation.ms": "Ms",
+  "salutation.none": "No gendered salutation",
+  "salutation.hint":
+    "Only record a choice the contact gave you. Never guess it from their name.",
+  "history.field.salutation": "Salutation",
   "create.fullName": "Full name",
   "create.firstName": "First name",
   "create.lastName": "Last name",
@@ -8943,8 +8952,6 @@ export const en = {
   "compose.mailboxNotConnected":
     "No mailbox is connected. Connect one to send from Margince.",
   "compose.mailboxNotConnectedGoto": "Connect a mailbox",
-  "compose.sharedUnsubscribeToken":
-    "A message with an unsubscribe link goes to one recipient at a time, because the link is that recipient’s consent record. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
   "compose.relinkTarget":
     "Search contacts, companies, deals, leads or projects",
@@ -11911,6 +11918,11 @@ export const en = {
   "privacy.correctionNote": "Reason (the contact may ask)",
   "privacy.correctionAccept": "Accept and update",
   "privacy.correctionReject": "Leave as it is",
+  "privacy.purposeRename": "Rename",
+  "privacy.purposeRenameTitle": "Rename {label}",
+  "privacy.purposeArchiveTitle": "Archive {label}",
+  "privacy.purposeInUse":
+    "Consent is already recorded for this purpose. Create a new purpose instead.",
   "privacy.purposesRegistry": "Registered purposes",
   "privacy.purposesReadOnly":
     "Read-only. Adding a purpose needs a permission your role does not have.",
@@ -11925,7 +11937,7 @@ export const en = {
   "privacy.purposeFrequency.quarterly": "About once a quarter",
   "privacy.purposeCreate": "Create purpose",
   "privacy.purposeAppendOnly":
-    "A purpose cannot be renamed or removed once created; the catalog is append-only. Choose the key carefully.",
+    "An unused purpose can be renamed or archived. Any consent, notice, wording or scheduled send fixes the purpose. To change it after use, create a new purpose.",
   "notice.title": "Disclosure duties",
   "notice.sub":
     "Duties sort by deadline; source reviews sort by recorded time.",
@@ -19057,6 +19069,12 @@ export const en = {
   "webForms.field.senderSecretHint":
     "The secret the Webflow API answers once when it makes the webhook. A webhook an OAuth app makes is signed with that app’s client secret instead. Leave it empty until you have it: the form takes no posts until then.",
   "webForms.field.senderSecretKeep": "Leave empty to keep the stored secret.",
+  "webForms.field.notifyOwnerHint":
+    "Tells the owner when the post lands, or after its handling plan assigns one. Later company routing raises no delayed notice.",
+  "webForms.field.notifyOwner": "Tell the owner about each new post",
+  "notifications.class.website_lead.label": "New website leads",
+  "notifications.class.website_lead.help":
+    "An accepted website form post on a lead or contact you own.",
   "webForms.field.consentRequired":
     "Require consent before a submission is taken",
   "webForms.field.consentWording": "Consent wording",

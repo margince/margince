@@ -207,7 +207,7 @@ func refuseHeldPromise(promise contacts.PromiseToTake) error {
 		return fmt.Errorf("this promise is already settled as %s: %w", promise.Status, apperrors.ErrConflict)
 	case promise.Task != nil || len(promise.Claims) == 0:
 		return fmt.Errorf("this promise is already somebody's task: %w", apperrors.ErrConflict)
-	case promise.NeedsReview || !promise.Current:
+	case !promise.Current:
 		return fmt.Errorf("this promise is disputed or no longer current, so it cannot be taken over: %w", apperrors.ErrConflict)
 	}
 	return nil

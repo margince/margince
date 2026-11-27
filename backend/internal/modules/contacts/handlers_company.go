@@ -8,6 +8,8 @@ import (
 	"net/http"
 	"strings"
 
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -231,6 +233,7 @@ func (h Handlers) RequestCompanyVatCheck(w http.ResponseWriter, r *http.Request,
 		return
 	}
 	if errors.Is(err, apperrors.ErrBudgetExceeded) {
+		ratelimit.SetHeaders(w.Header(), 1, int(vatRecheckCooldown.Seconds()))
 		// Written here rather than let through the default path, which passes
 		// the wrapped error's own text to the client — and that text ends in
 		// the sentinel's name. A rep reading "budget exceeded" learns nothing

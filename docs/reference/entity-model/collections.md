@@ -257,7 +257,7 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 
 ## saved_view
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -266,7 +266,6 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
 | `query` | `jsonb` | yes | The saved column choice, sort, and filter state, in the list-view vocabulary; persisted and restored verbatim. |
 | `resource` | `text` | yes |  |
-| `shared_scope` | `text`, default `'private'::text` | yes | V1 enforces private. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
@@ -281,7 +280,6 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 **Rules**
 
 - `saved_view_resource_check`: `CHECK (((resource = ANY (ARRAY['contacts', 'companies', 'deals', 'activities', 'leads', 'partners', 'projects'])) OR (resource ~ '^ext:[a-z0-9]+(-[a-z0-9]+)*:[a-z][a-z0-9_]{0,31}$')))`
-- `saved_view_shared_scope_check`: `CHECK ((shared_scope = ANY (ARRAY['private', 'team', 'workspace'])))`
 - `saved_view_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
@@ -293,8 +291,8 @@ The 13 tables owned by `collections`, as the migrations build them. [Back to the
 **Triggers**
 
 - `saved_view_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "resource": 20000, "shared_scope": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000,"shared_scope":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "resource": 20000, "shared_scope": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000,"shared_scope":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"name": 120, "resource": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"name": 120, "resource": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"name":120,"resource":20000}')`
 - `trg_saved_view_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## tag

@@ -345,7 +345,7 @@ describe("a refused file says what is wrong in the reader's words", () => {
   });
 
   it("keeps the server's sentence for a code this build does not know", () => {
-    refused({ field: "file", code: "from_a_newer_server" });
+    refused({ field: "file", code: "from_a_newer_server" }); // problem-code:unknown-field exercises an unfamiliar server refusal
     expect(body()).toBe(SERVER_SENTENCE);
   });
 });

@@ -87,6 +87,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"first_name":          in.FirstName != nil,
 				"last_name":           in.LastName != nil,
 				"title":               in.Title != nil,
+				"salutation":          in.Salutation != nil,
 				"email":               len(in.Emails) > 0,
 				"phone":               len(in.Phones) > 0,
 				"linkedin_url":        in.Social["linkedin"] != nil,
@@ -106,6 +107,7 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 				"first_name": up.FirstName != nil,
 				"last_name":  up.LastName != nil,
 				"title":      up.Title != nil,
+				"salutation": up.Salutation != nil,
 				// The half that did not exist before this object did: a
 				// contact's emails are child rows, and the patch input
 				// carried no member for them at all.
@@ -133,6 +135,9 @@ func TestEveryImportTargetRoundTripsThroughCreateAndUpdate(t *testing.T) {
 			fields, typed := make(map[string]string, len(targets)), map[string]any{}
 			for _, target := range targets {
 				fields[target] = "value"
+				if target == fieldSalutation {
+					fields[target] = "mr"
+				}
 				if datasource.IsCustomFieldKey(target) {
 					typed[target] = "value"
 				}

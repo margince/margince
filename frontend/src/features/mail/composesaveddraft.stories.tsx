@@ -54,7 +54,6 @@ const DEAL_NOT_REQUESTED = {
     review: {
       id: "01a0aaaa-bbbb-7ccc-8ddd-eeeeffff0003",
       state: "needs_context",
-      kind: "single",
       reason_code: "deal_not_requested",
       refusals: [
         {

@@ -545,7 +545,7 @@ func TestTheReplyPromptHasOnlySelectedContentAndDeclaredSteering(t *testing.T) {
 	t.Parallel()
 	// This boundary is explicit: deriving its policy from the payload would
 	// silently approve a newly added history field.
-	want := []string{"body", "conversation_state", "greeting_register", "intent", "now", "occurred_at", "output_language", "recipient", "recipient_last_name", "register", "rewrite_of", "sender_email", "sender_name", "silence_days", "subject", "thread"}
+	want := []string{"body", "conversation_state", "greeting_register", "intent", "now", "occurred_at", "output_language", "recipient", "recipient_last_name", "register", "rewrite_of", "salutation", "sender_email", "sender_name", "silence_days", "subject", "thread"}
 	var got []string
 	for _, field := range reflect.VisibleFields(reflect.TypeFor[replyActivityData]()) {
 		if field.PkgPath != "" {

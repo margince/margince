@@ -105,15 +105,18 @@ func contactName(ctx context.Context, t *testing.T, env *sarIdentifierEnv) strin
 func TestErasingAContactClearsItsGreetingRegister(t *testing.T) {
 	env := setupSARIdentifiers(t)
 	ctx := context.Background()
-	mustExec(ctx, t, env.owner, `UPDATE contact SET greeting_register = 'formal' WHERE id = $1`, env.contact)
+	mustExec(ctx, t, env.owner, `UPDATE contact SET greeting_register = 'formal', salutation = 'ms' WHERE id = $1`, env.contact)
 
 	if err := NewEraser(env.db).EraseContact(env.ctx, env.contact.UUID, "request"); err != nil {
 		t.Fatalf("erasing: %v", err)
 	}
-	var register *string
+	var register, salutation *string
 	if err := env.owner.QueryRow(ctx,
-		`SELECT greeting_register FROM contact WHERE id = $1`, env.contact).Scan(&register); err != nil {
+		`SELECT greeting_register, salutation FROM contact WHERE id = $1`, env.contact).Scan(&register, &salutation); err != nil {
 		t.Fatal(err)
+	}
+	if salutation != nil {
+		t.Errorf("salutation survived anonymization: %s", *salutation)
 	}
 	if register != nil {
 		t.Errorf("the greeting register %q survived the erasure", *register)
