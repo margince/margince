@@ -49,11 +49,18 @@ func (e *stagingEnv) asAgent(t *testing.T) context.Context {
 
 // stageStepUp puts one step-up in the inbox, exactly as the tool surface does.
 func (e *stagingEnv) stageStepUp(t *testing.T, counter agentvolume.Counter) ids.ApprovalID {
+	t.Helper()
+	return e.stageStepUpUnder(t, counter, ids.UUID{})
+}
+
+// stageStepUpUnder stages a step-up for a passport minted under connection, the
+// shape an OAuth-connected agent has; the zero uuid is a bare passport.
+func (e *stagingEnv) stageStepUpUnder(t *testing.T, counter agentvolume.Counter, connection ids.UUID) ids.ApprovalID {
 	passport := ids.NewV7()
 	t.Helper()
 	proposal := agentvolume.NewReleaseProposal(
 		agentvolume.Reading{Counter: counter, Observed: 2431, Limit: 2000, Allowance: 2000, Bucket: 42},
-		passport, ids.UUID{}, "search_records")
+		passport, connection, "search_records")
 	payload, err := json.Marshal(proposal)
 	if err != nil {
 		t.Fatal(err)
@@ -134,5 +141,27 @@ func TestAStepUpIsStillApprovableWithoutAnEdit(t *testing.T) {
 	}
 	if after.Status != approvalStatusApproved {
 		t.Errorf("the row is %q after a plain approval, want approved", after.Status)
+	}
+}
+
+// An agent connected through OAuth counts its window per connection. Its
+// question must stage, and a renewed passport under the same connection must
+// join the pending row rather than ask a second time.
+func TestAStepUpUnderAConnectionIsStagedOnceForTheConnection(t *testing.T) {
+	e := setupStaging(t)
+	connection := ids.NewV7()
+
+	first := e.stageStepUpUnder(t, agentvolume.Writes, connection)
+	renewed := e.stageStepUpUnder(t, agentvolume.Writes, connection)
+
+	if first != renewed {
+		t.Errorf("a renewed passport under one connection staged a second question: %s and %s", first, renewed)
+	}
+	row, err := e.svc.Get(e.as(), first)
+	if err != nil {
+		t.Fatalf("the lender cannot read the staged question: %v", err)
+	}
+	if row.Status != "pending" {
+		t.Errorf("the staged question is %q, want pending", row.Status)
 	}
 }
