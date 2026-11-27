@@ -161,7 +161,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `mailbodycompleteness_test.go` | H2 | TestAutomaticWorkReadsOnlyMailReadInFull holds the clauses that keep automatic work current to provenance.MailBodyCompleteSQL. |
 | `mailbrieflink_test.go` | H1 | The Brief's address is spelled twice: the frontend routes it, and outbound mail links to it before the app it opens is running. |
 | `mailcopy_test.go` | H2 | The weekly message's labels are the weekly panel's labels. |
-| `mcpparityareas_test.go` | H2 | The work-area table the server reads matches the parity catalog's placement and the contract's WorkArea enum. |
+| `mcpparityareas_test.go` | H2 | The work-area table offers the contract's WorkArea enum, and a limited passport reaches every verb. |
 | `mergedecidableauthority_test.go` | H2 | Who may settle a duplicate pair has one answer, and the card must ask the same thing the write asks. |
 | `minorunitscale_test.go` | H3 | A currency's minor-unit scale (100 for EUR, 1000 for KWD, 1 for VND) is one fact, and the table that holds it lives in shared/kernel/values. |
 | `mockproblemcodes_test.go` | H2 | Every Problem a frontend test, story or fixture answers carries a code the server can send. |
@@ -297,7 +297,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `clearablefields_test.go` | H2 | The fields a restore says it can clear are the fields the stores clear. |
 | `commsbasisnocountry_test.go` | H2 | The communication basis vocabulary is closed and names no market. |
 | `communityhealth_test.go` | H1 | The community-health files GitHub resolves from the repository root. |
-| `companyreaders_test.go` | H2 | `company` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `confidencecolumntype_test.go` | H2 | Every confidence column is numeric(4,3). |
 | `configregistry_test.go` | H3 | Every setting declared in the tree is one some program loads. |
 | `confirmcardfields_test.go` | H2 | The confirm page shows a data subject their own record, and only that. |
@@ -321,7 +320,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `dealevidencereaders_test.go` | H2 | A Go reader that judges whether a deal is alive asks relstrength.DealEvidenceSQL with the deal it reads. |
 | `deallinewriters_test.go` | H2 | A lines-priced deal has one value writer; every other writer must refuse line-owned columns and preserve its product projection. |
 | `dealmarkcarried_test.go` | H2 | A statement that copies deal links onto another activity carries each link's mark with it. |
-| `dealreaders_test.go` | H2 | `deal` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `dealtargettype_test.go` | H2 | Every deal-scoped staging names its target type through one constant. |
 | `decisioncoverage_test.go` | H2 | A message that reaches the send queue carries a decision saying why, written in the transaction that staged it. |
 | `declaredfilters_test.go` | H2 | A declared narrowing parameter is read by the handler it is declared on, or it is not declared. |
@@ -344,7 +342,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `draftsteering_test.go` | H2 | Every draft-email route takes the same steering. |
 | `duplicateindex_test.go` | H2 | One set of columns, one index. |
 | `edgeendpointcensus_test.go` | H2 | Every end a link can have is an end that link's history is read from. |
-| `edgereaders_test.go` | H2 | `relationship` is a first-class RBAC object, and it is the only join table in the schema that is one. |
 | `elapsedonespelling_test.go` | H2 | Every duration-to-day division is reviewed, including sites outside display packages. |
 | `emailpresentation_test.go` | H2 | A retained email reads the same everywhere, or it does not read the same anywhere. |
 | `emptyarraycheck_test.go` | H2 | array\_length answers NULL for an empty array rather than 0, so a CHECK that bounds a length with it evaluates to UNKNOWN for `{}`, and Postgres accepts a row on an UNKNOWN check. |
@@ -388,8 +385,8 @@ The eight shapes, what each is for, and how each one silently passes:
 | `laneinputscope_test.go` | H3 | A path-filtered lane runs on a change to the scripts it executes. |
 | `leadcontactlockorder_test.go` | H2 | One lock order over the lead and the contact it was promoted into. |
 | `leadoriginwriters_test.go` | H2 | Every statement that inserts a lead says where the lead came from. |
-| `leadreaders_test.go` | H2 | `lead` is an RBAC object, and until this gate nothing held the object half of that anywhere outside the module that owns it. |
 | `license_test.go` | H3 | Every hand-written Go file carries the BUSL-1.1 SPDX header, and the file list is derived from the tree. |
+| `lifecyclecolumnwriter_test.go` | H2 | A table that declares a lifecycle column has a statement that keeps it. |
 | `likeescape_test.go` | H2 | A LIKE whose pattern carries a caller's text escapes the wildcards in it. |
 | `linktargetvisiblecallers_test.go` | H3 | A read that shows the caller where an activity is filed asks auth.LinkTargetReadableClause, which also requires the read grant on the linked record's type. |
 | `lintbuildtagreach_test.go` | H2 | Every Go file in this repository is compiled by a pass the merge gate runs, analysed by one that lints, and read by both lint configs or neither. |
@@ -428,6 +425,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `nullablebodyfields_test.go` | H2 | The handler of a PATCH or PUT with a nullable body field processes explicit nulls, by clearing or refusing the field. |
 | `nullsentinelindex_test.go` | H2 | A nullable column in a unique key is held by NULLS NOT DISTINCT rather than by a sentinel. |
 | `numberboundscontract_test.go` | H3 | untaggableBounds are the bounds no generated field carries: an array item, a map value, a oneOf branch, an inline response. |
+| `objecttablereaders_test.go` | H2 | Every read of an RBAC object's table asks that object's gate, or sits in a verdict that says why it need not. |
 | `occurredatcompare_test.go` | H2 | Whether an activity has happened by a moment, or falls in a period, is asked of occurredday. |
 | `occurredprecisioncontract_test.go` | H2 | Every activity time on the wire says how precisely it is known. |
 | `onecallerpredicatebudget_test.go` | H2 | The ceiling on a statement whose predicate the caller wrote is one number, declared in platform/database as CallerPredicateBudget. |
@@ -436,11 +434,10 @@ The eight shapes, what each is for, and how each one silently passes:
 | `onedownloadheader_test.go` | H2 | A download's headers are spelled once, in platform/httperr's Download. |
 | `oneidlebase_test.go` | H2 | The idle base (a record's newest activity when one is recorded, else the instant it was created) is spelled once, in shared/kernel/idlebase. |
 | `onejitteredbackoff_test.go` | H2 | The jittered retry ladder is spelled once, in shared/kernel/backoff. |
-| `oneprojecthealthwriter_test.go` | H2 | project\_health\_assessment has one INSERT, in projects' insertHealthRow. |
 | `oneretryafter_test.go` | H2 | The Retry-After header is read in one place, shared/kernel/retryafter. |
 | `onesqlliteralreader_test.go` | H2 | A census over the censuses: whoever judges this tree's SQL must read it the way Postgres receives it. |
 | `onestringfolder_test.go` | H2 | A census over the censuses: nobody writes a second reader for "what string does this Go expression hold". |
-| `onevoiceversionwriter_test.go` | H2 | voice\_profile\_version and voice\_profile\_delta each have one writer. |
+| `onewriters_test.go` | H2 | Each fact here has one writer, and a second one fails. |
 | `operationiduniqueness_test.go` | H2 | No two operations share an operationId. |
 | `outboundanonymity_test.go` | H2 | Every outbound HTTP request either says who is calling, or is registered as anonymous by design with the reason. |
 | `outbounddisclosures_test.go` | H2 | Every outbound identity says what it discloses. |
@@ -483,8 +480,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `restrictedreaders_test.go` | H2 | A record held under a statutory retention obligation is unavailable in every ordinary read path: lists, timelines, search, exports, embeddings, agent grounding. |
 | `restrictionreach_test.go` | H2 | Every AI task declares how it treats a restriction of processing (GDPR Art. 18), read from the generated task table, never from a list typed here. |
 | `retentionactionset_test.go` | H2 | One set of retention actions, spelled in three places. |
-| `rightscasewriters_test.go` | H2 | Every proposal a data subject sends opens a case somebody owes an answer to. |
-| `rlsclaimsprose_test.go` | H2 | The prose says what bounds a read, and it is not row-level security. |
 | `rulebookdelegation_test.go` | H3 | AGENTS.md is the rulebook, at the root and in any directory that needs one of its own. |
 | `runledgerretention_test.go` | H3 | Every ledger of executions either states its window or says why it has none. |
 | `satellite_lifecycle_test.go` | H2 | Every contact\_ table with a contact\_id column is reached by the retention anonymizer and the archive cascade, or says why not. |
@@ -520,7 +515,6 @@ The eight shapes, what each is for, and how each one silently passes:
 | `tokenhashformat_test.go` | H2 | A column that stores the hash of a token states its format with a CHECK. |
 | `toolongcarriesmax_test.go` | H2 | Every too\_long field refusal states the limit it refused at, so the screen can say "at most 2,000 characters" in the reader's language. |
 | `uiautonomyclaims_test.go` | H2 | No shipped UI string promises that nothing sends without a human's approval while the generated policy table says the send verbs auto-execute. |
-| `uipermissionisapproval_test.go` | H2 | No shipped UI string says that granting the send permission approves a message. |
 | `undoreasoncensus_test.go` | H2 | One refusal set, three spellings. |
 | `uniquenessclaimscorpus_test.go` | H2 | Where the claim sweep looks, as against what it looks for. |
 | `unvalidatedconstraints_test.go` | H2 | A constraint left NOT VALID is declared, with the reason it stays that way. |
@@ -701,7 +695,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `reliabilityinterval_test.go` | H2 | A certification pass rate has one interval formula and is printed only with it. |
 | `requestbodybound_test.go` | H2 | Every JSON request body is bounded in one place. |
 | `retentionscope_test.go` | H2 | retentionScopeBuilder is the fixture whose reach these gates bound, retentionScopeSink is the one call it may feed, and retentionScopeSinkOwner is the package that call must live in. |
-| `rlsclaims_test.go` | H1 | Source comments may not name row-level security as a control on what a read reaches, because no table carries it. |
+| `rlsclaims_test.go` | H1 | No source comment or prose may name row-level security as a control on what a read reaches, because no table carries it. |
 | `rulebookdirection_test.go` | H1 | The reference direction is one-way: AGENTS.md links down into docs/, and nothing under docs/ links back up to a rulebook. |
 | `rulebooktally_test.go` | H1 | A rulebook must not spell out a tally of anything the tree can be asked for. |
 | `runnerjobconstruction_test.go` | H2 | Where a runner.Job may be built. |

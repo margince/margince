@@ -266,8 +266,11 @@ func TestAnUpsertOntoAPartialIndexRepeatsItsPredicate(t *testing.T) {
 	t.Parallel()
 	indexes := uniqueIndexesByTable(t)
 	var examined int
-	for _, statement := range everyUpsertInTheTree(t) {
-		if !mayHoldWordsOf(statement.sql, conflictWords) {
+	statements, _ := everyUpsertInTheTree(t)
+	for _, statement := range statements {
+		// A gate's fixture plants a statement for another gate to judge, and
+		// nothing runs it against the schema.
+		if strings.HasPrefix(statement.where, "backend/"+gateDir+"/") || !mayHoldWordsOf(statement.sql, conflictWords) {
 			continue
 		}
 		target := insertTarget.FindStringSubmatch(statement.sql)
@@ -324,48 +327,45 @@ type upsertStatement struct {
 	sql   string
 }
 
-// everyUpsertInTheTree collects SQL from both the places it lives: Go string
-// literals, and the .sql scripts that set a stack up.
+// everyUpsertInTheTree collects SQL from both places it lives. One is the
+// string literals of every Go file in the repository, tests included; the
+// other is the .sql scripts that set a stack up. It counts the Go files read,
+// for a floor. This census and TestNoUpsertInfersASentinelIndex both read it.
 //
-// Migrations are left out, and only they: a migration's statements run against the
-// schema AS IT WAS AT THAT VERSION, so checking them against the head catalog would
-// report a mismatch for a statement that was correct when it ran — and the
-// migration that creates a partial index necessarily precedes it.
-func everyUpsertInTheTree(t *testing.T) []upsertStatement {
+// Migrations' .sql is left out, and only it. A migration's statements run
+// against the schema as it was at that version. Checked against the head
+// catalog, a statement that was correct when it ran would read as a mismatch.
+func everyUpsertInTheTree(t *testing.T) ([]upsertStatement, int) {
 	t.Helper()
 	root := gatekit.ModuleRoot(t)
 	// Absolute, unlike root: the .sql walk compares paths across the module
 	// boundary. It reads no Go, so the parse cache never sees this spelling.
 	tree := absolutePath(t, filepath.Join(root, ".."))
 	var found []upsertStatement
-	for _, dir := range []string{filepath.Join(root, "internal"), filepath.Join(root, "cmd")} {
-		for _, path := range goSourceFiles(t, dir) {
-			src, err := gatekit.ReadFile(path)
-			if err != nil {
-				t.Fatalf("reading %s: %v", path, err)
-			}
-			if !mayHoldWordsOf(string(src), conflictWords) {
-				continue
-			}
-			// statementsIn rather than a per-literal reader: a statement written
-			// as `"INSERT … " + onConflictClause` is ONE statement to Postgres and
-			// several literals to the parser, and no literal on its own holds both
-			// halves this gate compares. Reading per literal passes the tree
-			// silently over exactly the form somebody reaches for when a line gets
-			// long — and it splits on `;`, so two statements in one literal are not
-			// paired with each other's clauses.
-			file, err := gatekit.ParseFile(path, 0)
-			if err != nil {
-				t.Fatalf("parsing %s: %v", path, err)
-			}
-			rel := relativeToTree(t, tree, path)
-			for _, sql := range statementsIn(file) {
-				found = append(found, upsertStatement{where: rel, sql: sql})
-			}
+	goFiles := goSourceFiles(t, filepath.Join(root, ".."))
+	for _, path := range goFiles {
+		src, err := gatekit.ReadFile(path)
+		if err != nil {
+			t.Fatalf("reading %s: %v", path, err)
+		}
+		if !mayHoldWordsOf(string(src), conflictWords) {
+			continue
+		}
+		// statementsIn rather than a per-literal reader. A statement written
+		// as `"INSERT … " + onConflictClause` is one statement to Postgres and
+		// several literals to the parser. No literal on its own holds both
+		// halves this gate compares. It splits on `;`, so two statements in one
+		// literal are not paired with each other's clauses.
+		file, err := gatekit.ParseFile(path, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", path, err)
+		}
+		rel := relativeToTree(t, tree, path)
+		for _, sql := range statementsIn(file) {
+			found = append(found, upsertStatement{where: rel, sql: sql})
 		}
 	}
-	found = append(found, sqlScriptsBelow(t, tree, root)...)
-	return found
+	return append(found, sqlScriptsBelow(t, tree, root)...), len(goFiles)
 }
 
 // sqlScriptsBelow reads each .sql file outside the migrations as one statement

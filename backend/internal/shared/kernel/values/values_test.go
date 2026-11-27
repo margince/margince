@@ -5,6 +5,7 @@ package values
 
 import (
 	"errors"
+	"strings"
 	"testing"
 )
 
@@ -31,6 +32,12 @@ func TestParseEmail(t *testing.T) {
 		{in: "not-an-email", code: "email_malformed"},
 		{in: "", code: "email_empty"},
 		{in: "a@b@c", code: "email_malformed"},
+		{in: "a@b", code: "email_malformed"},
+		{in: "a@localhost", code: "email_malformed"},
+		{in: "a@b.", code: "email_malformed"},
+		{in: "a@acme..de", code: "email_malformed"},
+		{in: strings.Repeat("a", 64) + "@" + strings.Repeat("b", 186) + ".de", want: strings.Repeat("a", 64) + "@" + strings.Repeat("b", 186) + ".de"},
+		{in: strings.Repeat("a", 64) + "@" + strings.Repeat("b", 187) + ".de", code: "too_long"},
 	} {
 		got, err := ParseEmail(tc.in)
 		if tc.code != "" {

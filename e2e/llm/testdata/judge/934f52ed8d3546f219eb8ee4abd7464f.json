@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states the list had twelve people, which gives the count of who was on the Messe Hannover list before the changes, satisfying the criterion.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer says who is on the Messe Hannover list, by name or by count, as it stood before the changes or after them. Answer no if it gives no account of who is on the list.",
+  "answer": "The list had twelve people, Mara Voigt among them. I archived Mara's contact, added Jens Falk, and handed everyone — including Mara — to Sofia Meier without showing you what it would change first."
+}

@@ -12,6 +12,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/platform/langcode"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
@@ -146,8 +147,6 @@ func (f entityField) cleaned(isDefault bool) (value *string, sent bool, err erro
 	return &text, true, nil
 }
 
-var entityLanguageShape = regexp.MustCompile(`^[a-z]{2}$`)
-
 // cleanEntityCountry stores the lower-case spelling installation.country uses.
 func cleanEntityCountry(raw string) (string, error) {
 	if _, ok := assignedCountry[strings.ToUpper(raw)]; !ok {
@@ -184,7 +183,7 @@ func (in LegalEntityInput) withDefaultJurisdiction() LegalEntityInput {
 
 func cleanEntityLanguage(raw string) (string, error) {
 	lower := strings.ToLower(raw)
-	if !entityLanguageShape.MatchString(lower) {
+	if !langcode.Known(lower) {
 		return "", &values.ParseError{
 			Field: wireDefaultLanguage, Code: "invalid_language",
 			Message: "default_language is an ISO 639-1 code, for example de",

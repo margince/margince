@@ -38925,7 +38925,10 @@ type AuditHistoryEntry struct {
 	// never had one. With `on_behalf_of` set and no `on_behalf_of_name`,
 	// the authority was recorded and the member no longer resolves.
 	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
-	Summary    string              `json:"summary"`
+
+	// Reason Why a project's phase was moved, in the words given with the move, so a walk through the history says why each move was made. Null on every other row, on a move made without a reason, and for a reader whose role does not read the phase.
+	Reason  *string `json:"reason,omitempty"`
+	Summary string  `json:"summary"`
 
 	// UndidAuditLogId The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
 	UndidAuditLogId *openapi_types.UUID `json:"undid_audit_log_id,omitempty"`
@@ -61223,6 +61226,12 @@ type OperationSettings struct {
 	// AgentRunnerIntervalSeconds How often scheduled agents are checked for a run that is due, in seconds. Default 30.
 	AgentRunnerIntervalSeconds int `json:"agent_runner_interval_seconds" maximum:"3600" minimum:"10"`
 
+	// CaptureConfidentialityVerdictIntervalSeconds How often captured threads are judged for whether colleagues may read them, in seconds. Default 600.
+	CaptureConfidentialityVerdictIntervalSeconds int `json:"capture_confidentiality_verdict_interval_seconds" maximum:"86400" minimum:"60"`
+
+	// CaptureCounterpartyVerdictIntervalSeconds How often new senders are judged by the model, in seconds. Default 600.
+	CaptureCounterpartyVerdictIntervalSeconds int `json:"capture_counterparty_verdict_interval_seconds" maximum:"86400" minimum:"60"`
+
 	// CloseDateSweepIntervalSeconds How often deals whose close date has passed are flagged, in seconds. Default 86400.
 	CloseDateSweepIntervalSeconds int `json:"close_date_sweep_interval_seconds" maximum:"604800" minimum:"3600"`
 
@@ -61351,7 +61360,9 @@ type OutcomeReview struct {
 	Revision        int              `json:"revision"`
 	TemplateKey     string           `json:"template_key"`
 	TemplateVersion int              `json:"template_version"`
-	UpdatedAt       time.Time        `json:"updated_at"`
+
+	// UpdatedAt Always equal to `created_at`: a review is not edited after it is submitted.
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // OutcomeReviewOutcome What the deal did, as the closing recorded it — not as the stage reads today. A stage can be renamed or reconfigured; what happened cannot.
@@ -72193,6 +72204,12 @@ type UpdateInstallationSettingsRequest struct {
 
 	// CallZalo Show the Zalo link next to a contact's phone number. Omit to leave it unchanged.
 	CallZalo *bool `json:"call_zalo,omitempty"`
+
+	// CaptureConfidentialityVerdictIntervalSeconds Set the value `OperationSettings.capture_confidentiality_verdict_interval_seconds` describes.
+	CaptureConfidentialityVerdictIntervalSeconds *int `json:"capture_confidentiality_verdict_interval_seconds,omitempty" maximum:"86400" minimum:"60"`
+
+	// CaptureCounterpartyVerdictIntervalSeconds Set the value `OperationSettings.capture_counterparty_verdict_interval_seconds` describes.
+	CaptureCounterpartyVerdictIntervalSeconds *int `json:"capture_counterparty_verdict_interval_seconds,omitempty" maximum:"86400" minimum:"60"`
 
 	// CloseDateSweepIntervalSeconds Set the value `OperationSettings.close_date_sweep_interval_seconds` describes.
 	CloseDateSweepIntervalSeconds *int `json:"close_date_sweep_interval_seconds,omitempty" maximum:"604800" minimum:"3600"`

@@ -6,11 +6,11 @@ package gates
 // The walk behind an object-half census: which functions read a table, and
 // which of them reach that table's object gate.
 //
-// Its own file because two censuses now ask it — the relationship edge and the
-// lead record — and the question is the same one both times: RBAC's object half
-// says whether a caller may read this KIND of record at all, the row half says
-// which ones, and a read that takes only the second is the defect neither
-// composerowscope_test.go nor rbacgate_test.go covers in the compose tier.
+// Its own file because two censuses ask it: the object-table rows and the
+// masked amount. RBAC's object half says whether a caller may read this kind
+// of record at all, and the row half says which ones. A read that takes only
+// the second is the defect neither composerowscope_test.go nor
+// rbacgate_test.go covers in the compose tier.
 //
 // It is deliberately NOT in gatekit. The shared walk moves there when a third
 // SHAPE needs it; what these two share is one shape used twice, and an

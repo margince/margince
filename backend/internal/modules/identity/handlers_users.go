@@ -45,6 +45,10 @@ func seatIdentity(
 	w http.ResponseWriter, r *http.Request, rawEmail, rawName string,
 ) (values.Email, string, bool) {
 	email, perr := values.ParseEmail(rawEmail)
+	if limited, ok := errors.AsType[*values.ParseError](perr); ok && limited.Max > 0 {
+		httperr.Write(w, r, perr)
+		return values.Email{}, "", false
+	}
 	if perr != nil {
 		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
 		return values.Email{}, "", false

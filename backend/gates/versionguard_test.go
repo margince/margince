@@ -101,7 +101,7 @@ func versionPinnedTables(t *testing.T) map[string]bool {
 	t.Helper()
 	fset := gatekit.SourceFileSet()
 	files := parsePackageDir(t, fset, approvalsDir)
-	consts := stringConsts(t, fset, files)
+	consts := gatekit.StringConstantsOf(t, files)
 
 	lit := packageVarCompositeLit(t, files, "versionTables")
 	tables := map[string]bool{}
@@ -170,44 +170,6 @@ func parsePackageDir(t *testing.T, fset *token.FileSet, dir string) []*ast.File 
 		files = append(files, file)
 	}
 	return files
-}
-
-// stringConsts indexes every package-level string constant by name. A literal
-// the parser accepted as token.STRING but that does not unquote is reported
-// rather than skipped: the constant would silently drop out of the index, and
-// every versionTables key spelled with it would then look unresolvable for a
-// reason that has nothing to do with the pin.
-func stringConsts(t *testing.T, fset *token.FileSet, files []*ast.File) map[string]string {
-	t.Helper()
-	consts := map[string]string{}
-	for _, file := range files {
-		for _, decl := range file.Decls {
-			gd, ok := decl.(*ast.GenDecl)
-			if !ok || gd.Tok != token.CONST {
-				continue
-			}
-			for _, spec := range gd.Specs {
-				vs, ok := spec.(*ast.ValueSpec)
-				if !ok || len(vs.Names) != len(vs.Values) {
-					continue
-				}
-				for i, name := range vs.Names {
-					lit, ok := vs.Values[i].(*ast.BasicLit)
-					if !ok || lit.Kind != token.STRING {
-						continue
-					}
-					value, err := strconv.Unquote(lit.Value)
-					if err != nil {
-						t.Errorf("%s: const %s holds a string literal that does not unquote (%s): %v — it cannot enter the constant index, so any versionTables key spelled with it resolves to nothing",
-							fset.Position(lit.Pos()), name.Name, lit.Value, err)
-						continue
-					}
-					consts[name.Name] = value
-				}
-			}
-		}
-	}
-	return consts
 }
 
 // packageVarCompositeLit returns the composite literal a named package-level

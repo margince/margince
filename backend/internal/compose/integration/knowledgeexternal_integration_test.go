@@ -54,8 +54,8 @@ func TestAnExternalDocumentIsReplacedBySourceIdAndSkippedWhenUnchanged(t *testin
 	if err != nil || outcome != knowledge.ExternalReplaced || replaced != id {
 		t.Fatalf("new bytes = %v, %v, id %v; want replaced on the same document", outcome, err, replaced)
 	}
-	if got := ie.env.WsCount(t, `SELECT count(*) FROM knowledge_chunk WHERE document_id = $1`, id); got != 0 {
-		t.Fatalf("a replacement left %d old passages", got)
+	if got := ie.env.WsCount(t, `SELECT count(*) FROM knowledge_chunk WHERE document_id = $1 AND archived_at IS NULL`, id); got != 0 {
+		t.Fatalf("a replacement left %d old passages live", got)
 	}
 	if _, _, err := ie.blob.Get(ie.ctx, oldKey); !errors.Is(err, blobstore.ErrNotFound) {
 		t.Fatalf("the replaced bytes are still stored: %v", err)

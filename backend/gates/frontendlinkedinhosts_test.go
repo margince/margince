@@ -44,11 +44,6 @@ const frontendWebURL = "../frontend/src/format/weburl.ts"
 // gate silently agrees with.
 var tsHostEntry = regexp.MustCompile(`["']([a-z0-9.-]+\.[a-z]{2,})["']`)
 
-// tsHostComment strips comments before the hosts are read, so a host merely
-// MENTIONED in prose beside the array cannot stand in for the entry that was
-// deleted.
-var tsHostComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
-
 func TestTheFrontendLinkedInHostsMatchTheGoDeclaration(t *testing.T) {
 	t.Parallel()
 	source, err := gatekit.ReadFile(frontendWebURL)
@@ -66,7 +61,7 @@ func TestTheFrontendLinkedInHostsMatchTheGoDeclaration(t *testing.T) {
 		t.Fatalf("%s's %s literal is unterminated", frontendWebURL, marker)
 	}
 
-	literal := tsHostComment.ReplaceAllString(string(source)[start:start+end], " ")
+	literal := gatekit.TSWithoutComments(string(source)[start : start+end])
 	var inTS []string
 	for _, m := range tsHostEntry.FindAllStringSubmatch(literal, -1) {
 		inTS = append(inTS, m[1])
