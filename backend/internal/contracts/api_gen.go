@@ -33903,7 +33903,7 @@ type AcceptDealSuggestionRequest struct {
 	ExistingDealId *openapi_types.UUID `json:"existing_deal_id,omitempty"`
 
 	// Name Without one the deal is named after the company.
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" singleline:"true"`
 
 	// NoAmount Open the deal with no amount, dropping the one the suggestion proposed. Refused together with amount_minor or currency.
 	NoAmount *bool               `json:"no_amount,omitempty"`
@@ -34833,7 +34833,7 @@ type AddDealRoomDocumentRequest struct {
 	Source   string `json:"source"`
 
 	// Title The buyer-facing name. Defaults to the attachment's filename.
-	Title *string `json:"title,omitempty"`
+	Title *string `json:"title,omitempty" singleline:"true"`
 }
 
 // Address Structured postal address.
@@ -44681,7 +44681,7 @@ type CompanyProfileInput struct {
 	DesiredOutcomes  *string `json:"desired_outcomes,omitempty"`
 
 	// DisplayName The installation's name too. The company's own record holds it, so a blank name answers `422 required` and a changed name past 120 characters `422 too_long`.
-	DisplayName string  `json:"display_name"`
+	DisplayName string  `json:"display_name" singleline:"true"`
 	History     *string `json:"history,omitempty"`
 	Icp         *string `json:"icp,omitempty"`
 	Industry    *string `json:"industry,omitempty"`
@@ -48193,7 +48193,7 @@ type CreateActivityReviewTemplateRequestOutcome string
 // CreateAutomationRequest defines model for CreateAutomationRequest.
 type CreateAutomationRequest struct {
 	Key    string                 `json:"key"`
-	Name   string                 `json:"name"`
+	Name   string                 `json:"name" singleline:"true"`
 	Params map[string]interface{} `json:"params"`
 }
 
@@ -48396,7 +48396,7 @@ type CreateContractRequest struct {
 	RenewalOn            *openapi_types.Date              `json:"renewal_on,omitempty"`
 	SignedOn             *openapi_types.Date              `json:"signed_on,omitempty"`
 	StartsOn             *openapi_types.Date              `json:"starts_on,omitempty"`
-	Title                string                           `json:"title"`
+	Title                string                           `json:"title" singleline:"true"`
 	ValueBasis           *CreateContractRequestValueBasis `json:"value_basis,omitempty"`
 	ValueMinor           *int64                           `json:"value_minor,omitempty"`
 	AdditionalProperties map[string]interface{}           `json:"-"`
@@ -48534,7 +48534,7 @@ type CreateDealRoomRequest struct {
 
 	// StewardUserId Defaults to the deal's owner when omitted.
 	StewardUserId  *openapi_types.UUID `json:"steward_user_id,omitempty"`
-	Title          string              `json:"title"`
+	Title          string              `json:"title" singleline:"true"`
 	WelcomeMessage *string             `json:"welcome_message,omitempty"`
 }
 
@@ -48814,7 +48814,7 @@ type CreateListRequest struct {
 	// EntityType A record type a filter may be built over: one of core's five, or `ext:<unit>:<kind>` for a kind an extension declared. A kind no installed extension declares answers 404 on the vocabulary and 422 on a preview.
 	EntityType FilterResource             `json:"entity_type"`
 	ListType   *CreateListRequestListType `json:"list_type,omitempty"`
-	Name       string                     `json:"name"`
+	Name       string                     `json:"name" singleline:"true"`
 	Purpose    *string                    `json:"purpose,omitempty"`
 	Sharing    *CreateListRequestSharing  `json:"sharing,omitempty"`
 	StewardId  *openapi_types.UUID        `json:"steward_id,omitempty"`
@@ -48919,7 +48919,7 @@ type CreatePartnerStageRequest struct {
 // CreatePipelineRequest defines model for CreatePipelineRequest.
 type CreatePipelineRequest struct {
 	IsDefault *bool  `json:"is_default,omitempty"`
-	Name      string `json:"name"`
+	Name      string `json:"name" singleline:"true"`
 	Position  *int   `json:"position,omitempty"`
 
 	// Stages Optional initial stages.
@@ -49149,7 +49149,7 @@ type CreateRoleRequest struct {
 	CopyFrom string `json:"copy_from"`
 
 	// Name The new role's name. Unique among live roles, ignoring case.
-	Name string `json:"name"`
+	Name string `json:"name" singleline:"true"`
 }
 
 // CreateSavedViewRequest defines model for CreateSavedViewRequest.
@@ -49211,7 +49211,7 @@ type CreateStageExitCriterionRequest struct {
 
 // CreateStageRequest defines model for CreateStageRequest.
 type CreateStageRequest struct {
-	Name string `json:"name"`
+	Name string `json:"name" singleline:"true"`
 
 	// NameTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
 	// language has an entry sees it; any other reader sees the stored label. On a write the
@@ -49284,7 +49284,7 @@ type CreateTaskRequestLinksEntityType string
 
 // CreateTeamRequest defines model for CreateTeamRequest.
 type CreateTeamRequest struct {
-	Name string `json:"name"`
+	Name string `json:"name" singleline:"true"`
 }
 
 // CreateVoiceBuildRequest defines model for CreateVoiceBuildRequest.
@@ -49309,7 +49309,7 @@ type CreateWebFormRequest struct {
 	ConsentWording       *string             `json:"consent_wording,omitempty"`
 	FieldMap             *map[string]string  `json:"field_map,omitempty"`
 	LeadOrigin           *string             `json:"lead_origin,omitempty"`
-	Name                 string              `json:"name"`
+	Name                 string              `json:"name" singleline:"true"`
 	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
 	PrivacyNotice        *string             `json:"privacy_notice,omitempty"`
 	PrivacyNoticeUrl     *string             `json:"privacy_notice_url,omitempty"`
@@ -54188,7 +54188,7 @@ type ForecastSufficiencyBasis string
 
 // FormerMemberRequest A colleague who already left, recorded so imported history can name them. No password and no invitation: this creates a seat that cannot be signed into.
 type FormerMemberRequest struct {
-	DisplayName string `json:"display_name"`
+	DisplayName string `json:"display_name" singleline:"true"`
 
 	// Email Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused.
 	Email openapi_types.Email `json:"email"`
@@ -56731,7 +56731,7 @@ type InviteDealRoomParticipantRequest struct {
 	// Capability Defaults to `view` — the least that lets someone read the room.
 	Capability *DealRoomParticipantCapability `json:"capability,omitempty"`
 	Email      openapi_types.Email            `json:"email"`
-	FullName   string                         `json:"full_name"`
+	FullName   string                         `json:"full_name" singleline:"true"`
 	Source     string                         `json:"source"`
 }
 
@@ -56751,7 +56751,7 @@ type InviteEmailHandoff struct {
 
 // InviteUserRequest Admin-supplied details for a new member. No password — the invite issues a set-password token.
 type InviteUserRequest struct {
-	DisplayName string              `json:"display_name"`
+	DisplayName string              `json:"display_name" singleline:"true"`
 	Email       openapi_types.Email `json:"email"`
 
 	// GreetingName The name the member's greetings use, when the given name read off `display_name` is not it. Optional; absent, empty or null leaves it unset.
@@ -58492,7 +58492,7 @@ type LinkContactEmployerRequest struct {
 	CompanyName *string `json:"company_name,omitempty"`
 
 	// Title Their job title at this company, stored as the employment's `role`.
-	Title *string `json:"title,omitempty"`
+	Title *string `json:"title,omitempty" singleline:"true"`
 }
 
 // LinkContactEmployerResult The contact with its employer, and what this call wrote.
@@ -63933,7 +63933,7 @@ type PutOnboardingStateRequestStep string
 type PutProductTranslationRequest struct {
 	// Description Left out or empty, the language has a name and no description.
 	Description *string `json:"description,omitempty"`
-	Name        string  `json:"name"`
+	Name        string  `json:"name" singleline:"true"`
 }
 
 // QualifyDealRequest Open a deal in the same transaction as the promotion. Omit both ids to use the
@@ -63948,7 +63948,7 @@ type QualifyDealRequest struct {
 	Currency *string `json:"currency,omitempty"`
 
 	// Name Defaults to "<company> — <stage>" or the lead's name.
-	Name       *string             `json:"name,omitempty"`
+	Name       *string             `json:"name,omitempty" singleline:"true"`
 	PipelineId *openapi_types.UUID `json:"pipeline_id,omitempty"`
 	StageId    *openapi_types.UUID `json:"stage_id,omitempty"`
 }
@@ -64003,7 +64003,7 @@ type QuickCaptureContactRequest struct {
 
 	// Email Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.
 	Email    *openapi_types.Email `json:"email,omitempty"`
-	FullName string               `json:"full_name"`
+	FullName string               `json:"full_name" singleline:"true"`
 	Phone    *string              `json:"phone,omitempty"`
 
 	// ProfileUrl The LinkedIn profile this was read from. Stored, never fetched. It must be a LinkedIn profile (`/in/<name>`): a page off LinkedIn is refused with 422 `linkedin_url_not_linkedin` on this field, and a company page with `linkedin_url_not_profile`.
@@ -64011,7 +64011,7 @@ type QuickCaptureContactRequest struct {
 
 	// Role What they do at that employer, when it differs from `title`.
 	Role  *string `json:"role,omitempty"`
-	Title *string `json:"title,omitempty"`
+	Title *string `json:"title,omitempty" singleline:"true"`
 }
 
 // QuickCaptureContactResult The contact as created, plus the employer when one was attached.
@@ -64893,7 +64893,7 @@ type RefusedRecipientSubjectKind string
 // RegisterAgentClientRequest defines model for RegisterAgentClientRequest.
 type RegisterAgentClientRequest struct {
 	// Name Shown on the consent screen and in the client list.
-	Name string `json:"name"`
+	Name string `json:"name" singleline:"true"`
 
 	// RedirectUris Exact callback URLs. https, or http on localhost or 127.0.0.1, where the port is ignored.
 	RedirectUris []string `json:"redirect_uris"`
@@ -65229,7 +65229,7 @@ type RenewContractRequest struct {
 	RenewalOn        *openapi_types.Date `json:"renewal_on,omitempty"`
 	SignedOn         *openapi_types.Date `json:"signed_on,omitempty"`
 	StartsOn         *openapi_types.Date `json:"starts_on,omitempty"`
-	Title            string              `json:"title"`
+	Title            string              `json:"title" singleline:"true"`
 
 	// ValueBasis Stated explicitly rather than inherited: an open-ended agreement becoming a fixed term changes what its value measures.
 	ValueBasis           RenewContractRequestValueBasis `json:"value_basis"`
@@ -66330,7 +66330,7 @@ type ReportingReportInput struct {
 
 	// Description What the report is for, in the author's words. Blank text clears it. Left out of an update, the stored one is kept.
 	Description *string            `json:"description,omitempty"`
-	Name        string             `json:"name"`
+	Name        string             `json:"name" singleline:"true"`
 	Selection   ReportingSelection `json:"selection"`
 }
 
@@ -67558,7 +67558,7 @@ type SalesInitiativeInput struct {
 
 	// LeadRule A predicate tree in the record type's list vocabulary, the same tree a dynamic list's definition carries. Untyped here for the reason that definition is: the predicate engine is the grammar's authority and answers a precise 422.
 	LeadRule        *SalesInitiativeRule `json:"lead_rule,omitempty"`
-	Name            string               `json:"name"`
+	Name            string               `json:"name" singleline:"true"`
 	ObjectiveMetric ReportingMetricID    `json:"objective_metric"`
 
 	// OwnerId Defaults to the caller.
@@ -67947,7 +67947,7 @@ type SaveEmailSignatureRequest struct {
 	Phone *string `json:"phone,omitempty"`
 
 	// Title The member's title, for the workspace template. Omitted leaves it as it is.
-	Title *string `json:"title,omitempty"`
+	Title *string `json:"title,omitempty" singleline:"true"`
 }
 
 // SaveLinkedInAccountRequest defines model for SaveLinkedInAccountRequest.
@@ -67969,7 +67969,7 @@ type SaveMyDisplayNameRequest struct {
 	// DisplayName The name colleagues see. Surrounding whitespace is trimmed and a name
 	// that is only whitespace is refused — the same bounds the invite form
 	// applies, because this writes the same column.
-	DisplayName string `json:"display_name"`
+	DisplayName string `json:"display_name" singleline:"true"`
 }
 
 // SaveMyGreetingNameRequest defines model for SaveMyGreetingNameRequest.
@@ -68031,7 +68031,7 @@ type SaveRetainedEmailSignatureRequest struct {
 	Phone *string `json:"phone,omitempty"`
 
 	// Title The member's title, for the workspace template. Omitted leaves it as it is.
-	Title *string `json:"title,omitempty"`
+	Title *string `json:"title,omitempty" singleline:"true"`
 }
 
 // SaveWorkingHoursRequest The hours and days to store. The zone they are read on is the caller's
@@ -68358,7 +68358,7 @@ type SchedulingTeamLinkRequest struct {
 
 	// TeamMembers Only `user_id` is read. A member's answer is theirs to give.
 	TeamMembers []SchedulingTeamMember `json:"team_members"`
-	Title       string                 `json:"title"`
+	Title       string                 `json:"title" singleline:"true"`
 }
 
 // SchedulingTeamMember defines model for SchedulingTeamMember.
@@ -68387,7 +68387,7 @@ type SchedulingTeamRequest struct {
 	State  SchedulingTeamRequestState `json:"state"`
 
 	// Title The team link's name, which is the meeting title it offers.
-	Title string `json:"title"`
+	Title string `json:"title" singleline:"true"`
 }
 
 // SchedulingTeamRequestState defines model for SchedulingTeamRequest.State.
@@ -69582,7 +69582,7 @@ type SendRefusalRecipient struct {
 
 // ServiceMemberRequest A member for an extension's unattended feed. No password and no way in.
 type ServiceMemberRequest struct {
-	DisplayName string `json:"display_name"`
+	DisplayName string `json:"display_name" singleline:"true"`
 
 	// Extension The extension unit the member serves, by its manifest name. Only that unit may act as the member. A name no installed unit carries is accepted and simply never used.
 	Extension string `json:"extension"`
@@ -72235,7 +72235,7 @@ type UpdateAttachmentMetadataRequestDocState string
 type UpdateAutomationRequest struct {
 	// InitialRunConfirmed Confirm the initial-run preview when enabling a scheduled rule or changing its active population. Existing matching records may receive work on the next scan.
 	InitialRunConfirmed *bool   `json:"initial_run_confirmed,omitempty"`
-	Name                *string `json:"name,omitempty"`
+	Name                *string `json:"name,omitempty" singleline:"true"`
 
 	// OwnerId Hand the rule to another member, who must be a seat the caller may make an owner (an active human seat that can write, inside the caller's write scope), else `422` with `code: owner_not_assignable`. Cannot be cleared.
 	OwnerId *openapi_types.UUID            `json:"owner_id,omitempty"`
@@ -72528,7 +72528,7 @@ type UpdateContractRequest struct {
 	RenewalOn            *openapi_types.Date              `json:"renewal_on,omitempty"`
 	SignedOn             *openapi_types.Date              `json:"signed_on,omitempty"`
 	StartsOn             *openapi_types.Date              `json:"starts_on,omitempty"`
-	Title                *string                          `json:"title,omitempty"`
+	Title                *string                          `json:"title,omitempty" singleline:"true"`
 	ValueBasis           *UpdateContractRequestValueBasis `json:"value_basis,omitempty"`
 	ValueMinor           *int64                           `json:"value_minor,omitempty"`
 	AdditionalProperties map[string]interface{}           `json:"-"`
@@ -72695,7 +72695,7 @@ type UpdateDealRoomDocumentRequest struct {
 	// for the reason `DealRoomParticipantCapability` gives.
 	GroupKey *DealRoomDocumentGroup `json:"group_key,omitempty"`
 	Position *int                   `json:"position,omitempty"`
-	Title    *string                `json:"title,omitempty"`
+	Title    *string                `json:"title,omitempty" singleline:"true"`
 }
 
 // UpdateDealRoomParticipantRequest Any subset; omit a field to leave it unchanged.
@@ -72715,7 +72715,7 @@ type UpdateDealRoomParticipantRequest struct {
 	// Email Only while their credential is unconsumed. Changing it invalidates the link
 	// already sent; resend to issue a new one.
 	Email    *openapi_types.Email `json:"email,omitempty"`
-	FullName *string              `json:"full_name,omitempty"`
+	FullName *string              `json:"full_name,omitempty" singleline:"true"`
 }
 
 // UpdateDealRoomRequest Any subset; omit a field to leave it unchanged. HUMAN-ONLY: an invited buyer
@@ -72726,7 +72726,7 @@ type UpdateDealRoomParticipantRequest struct {
 // operation rather than riding an auto-execute patch.
 type UpdateDealRoomRequest struct {
 	StewardUserId  *openapi_types.UUID `json:"steward_user_id,omitempty"`
-	Title          *string             `json:"title,omitempty"`
+	Title          *string             `json:"title,omitempty" singleline:"true"`
 	WelcomeMessage *string             `json:"welcome_message,omitempty"`
 }
 
@@ -72976,7 +72976,7 @@ type UpdateInstallationSettingsRequest struct {
 	// form still saves. Any other value is refused with `422 set_on_company_profile`: the
 	// installation's name is the anchor company's display name, changed through `PUT /company`.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" singleline:"true"`
 
 	// OauthAccessTokenTtlMinutes Set how long a connector's access token lives, in minutes. Reaches the next token minted.
 	OauthAccessTokenTtlMinutes *int `json:"oauth_access_token_ttl_minutes,omitempty" maximum:"129600" minimum:"5"`
@@ -73196,7 +73196,7 @@ type UpdateLegalEntityRequest struct {
 type UpdateListRequest struct {
 	// Definition A Live List's new filter tree.
 	Definition *map[string]interface{} `json:"definition,omitempty"`
-	Name       *string                 `json:"name,omitempty"`
+	Name       *string                 `json:"name,omitempty" singleline:"true"`
 
 	// Purpose Null removes the purpose.
 	Purpose   *string                   `json:"purpose,omitempty"`
@@ -73222,7 +73222,7 @@ type UpdateLossReasonRequest struct {
 
 // UpdateMemberRequest defines model for UpdateMemberRequest.
 type UpdateMemberRequest struct {
-	DisplayName string `json:"display_name"`
+	DisplayName string `json:"display_name" singleline:"true"`
 
 	// Email May change only before the account has been used to sign in.
 	Email             openapi_types.Email `json:"email"`
@@ -73318,7 +73318,7 @@ type UpdatePartnerStageRequest struct {
 // UpdatePipelineRequest defines model for UpdatePipelineRequest.
 type UpdatePipelineRequest struct {
 	IsDefault *bool   `json:"is_default,omitempty"`
-	Name      *string `json:"name,omitempty"`
+	Name      *string `json:"name,omitempty" singleline:"true"`
 	Position  *int    `json:"position,omitempty"`
 }
 
@@ -73442,7 +73442,7 @@ type UpdateRetentionSettingsRequest struct {
 
 // UpdateRoleRequest A sparse patch. An absent field is left as it is.
 type UpdateRoleRequest struct {
-	Name     *string                    `json:"name,omitempty"`
+	Name     *string                    `json:"name,omitempty" singleline:"true"`
 	RowScope *UpdateRoleRequestRowScope `json:"row_scope,omitempty"`
 }
 
@@ -73524,7 +73524,7 @@ type UpdateStageExitCriterionRequest struct {
 
 // UpdateStageRequest defines model for UpdateStageRequest.
 type UpdateStageRequest struct {
-	Name *string `json:"name,omitempty"`
+	Name *string `json:"name,omitempty" singleline:"true"`
 
 	// NameTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
 	// language has an entry sees it; any other reader sees the stored label. On a write the
@@ -73563,7 +73563,7 @@ type UpdateTagRequestColor string
 type UpdateTeamRequest struct {
 	// Archived true archives the team (its memberships stop resolving row scope and shares); false restores it.
 	Archived *bool   `json:"archived,omitempty"`
-	Name     *string `json:"name,omitempty"`
+	Name     *string `json:"name,omitempty" singleline:"true"`
 }
 
 // UpdateTelegramBusinessConnectionVisibilityRequest defines model for UpdateTelegramBusinessConnectionVisibilityRequest.
@@ -73601,7 +73601,7 @@ type UpdateWebFormRequest struct {
 	// HandlingAutomationId Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.
 	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
 	LeadOrigin           *string             `json:"lead_origin,omitempty"`
-	Name                 *string             `json:"name,omitempty"`
+	Name                 *string             `json:"name,omitempty" singleline:"true"`
 	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
 	PrivacyNotice        *string             `json:"privacy_notice,omitempty"`
 	PrivacyNoticeUrl     *string             `json:"privacy_notice_url,omitempty"`
@@ -74731,7 +74731,7 @@ type WebsiteInquiryHandlingRequest struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	AutomationVersion *RowVersion          `json:"automation_version,omitempty" minimum:"1"`
 	Enabled           bool                 `json:"enabled"`
-	Name              string               `json:"name"`
+	Name              string               `json:"name" singleline:"true"`
 	Policy            WebsiteInquiryPolicy `json:"policy"`
 }
 

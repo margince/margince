@@ -12,10 +12,8 @@ func TestAnAddressTypedTwoWaysIsOneAddress(t *testing.T) {
 		composed,
 		"jos" + "e" + r(0x0301) + "@x.com",
 		r(0x200B) + composed,
-		"jo" + r(0x200B) + "s" + r(0x00E9) + "@x.com",
 		composed + r(0xFEFF),
 		r(0x180E) + composed,
-		"jo" + r(0x202E) + "s" + r(0x00E9) + "@x.com",
 		composed + r(0x200E),
 		r(0x00A0) + composed + " ",
 	} {
@@ -26,9 +24,27 @@ func TestAnAddressTypedTwoWaysIsOneAddress(t *testing.T) {
 	}
 }
 
-func TestADomainDropsWhatDrawsNothing(t *testing.T) {
-	if got, err := ParseDomain(r(0xFEFF) + "Exa" + r(0x200B) + "mple.com" + r(0x200F)); err != nil || got.String() != "example.com" {
-		t.Errorf("ParseDomain = %q, %v; want example.com", got, err)
+// A typed address or domain that hides a character between visible ones is
+// refused. That is how one address or domain is made to pass for another.
+func TestATypedIdentifierHidingACharacterInsideIsRefused(t *testing.T) {
+	for _, typed := range []string{"jo" + r(0x200B) + "se@x.com", "jo" + r(0x202E) + "se@x.com", "jo\tse@x.com"} {
+		if got, err := ParseEmail(typed); err == nil {
+			t.Errorf("ParseEmail(%q) = %q, want a refusal", typed, got)
+		}
+	}
+	if got, err := ParseDomain("Exa" + r(0x200B) + "mple.com"); err == nil {
+		t.Errorf("ParseDomain = %q, want a refusal", got)
+	}
+	if got, err := ParseDomain(r(0xFEFF) + "Example.com" + r(0x200F)); err != nil || got.String() != "example.com" {
+		t.Errorf("ParseDomain with padding = %q, %v; want example.com", got, err)
+	}
+}
+
+// Received text is cleaned whole, controls included, so a value read from a
+// mail always meets the database check.
+func TestReceivedTextDropsEveryHiddenCharacter(t *testing.T) {
+	if got := IdentifierText("a\tb" + r(0x200B) + "c" + r(0x0085) + "@x.com"); got != "abc@x.com" {
+		t.Errorf("IdentifierText = %q, want abc@x.com", got)
 	}
 }
 
@@ -37,21 +53,5 @@ func TestADomainDropsWhatDrawsNothing(t *testing.T) {
 func TestANumberWithACharacterThatDrawsNothingIsRefused(t *testing.T) {
 	if got, err := ParsePhone(r(0x202A) + "+49 30 1234567" + r(0x202C)); err == nil {
 		t.Errorf("ParsePhone = %q, want a refusal", got)
-	}
-}
-
-func TestADirectionOverrideIsSeenAndAnAccentIsNot(t *testing.T) {
-	for in, want := range map[string]bool{
-		"Ada Lovelace":                 false,
-		"Jos" + "e" + r(0x0301):        false,
-		"Đội bán hàng":                 false,
-		"Ada" + r(0x200D) + "x":        false,
-		"Ada " + r(0x202E) + "gnp.exe": true,
-		r(0x2066) + "Ada" + r(0x2069):  true,
-		"Ada" + r(0x202A):              true,
-	} {
-		if got := HasDirectionOverride(in); got != want {
-			t.Errorf("HasDirectionOverride(%q) = %v, want %v", in, got, want)
-		}
 	}
 }

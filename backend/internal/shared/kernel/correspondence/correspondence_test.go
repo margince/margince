@@ -109,7 +109,7 @@ func TestFoldDropsWhatDrawsNothingAndComposesAccents(t *testing.T) {
 
 	for raw, want := range map[string]string{
 		"\u200bAnna@Company.example\ufeff": "anna@company.example",
-		"Jose\u0301@company.example":        "jos\u00e9@company.example",
+		"Jose\u0301@company.example":       "jos\u00e9@company.example",
 	} {
 		if got := Fold(raw); got != want {
 			t.Errorf("Fold(%q) = %q, want %q", raw, got, want)

@@ -64,7 +64,10 @@ func ParseEmail(raw string) (Email, error) {
 // constructor that refuses that address, or every legacy tombstone would read as an
 // ordinary one and the sweeps that skip reserved domains would stop skipping them.
 func parseAddress(raw string) (Email, error) {
-	trimmed := IdentifierText(raw)
+	trimmed, visible := typedIdentifier(raw)
+	if !visible {
+		return Email{}, &ParseError{Field: emailField, Code: "email_malformed", Message: "the address holds a character that cannot be seen"}
+	}
 	if trimmed == "" {
 		return Email{}, &ParseError{Field: emailField, Code: "email_empty", Message: "an email address is required"}
 	}

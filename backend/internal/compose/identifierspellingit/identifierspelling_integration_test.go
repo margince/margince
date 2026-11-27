@@ -66,8 +66,8 @@ func TestANameThatReversesItsOrderIsRefused(t *testing.T) {
 	var refusal map[string]any
 	status := e.Call(t, "POST", "/v1/contacts", body{"source": "manual", "linkedin_url": apptest.ContactProfile(),
 		"full_name": "Invoice \u202egnp.exe"}, nil, &refusal)
-	if status != http.StatusUnprocessableEntity || !strings.Contains(fmt.Sprint(refusal), "direction_override") {
-		t.Errorf("a contact name with a direction override → %d %v, want 422 direction_override", status, refusal)
+	if status != http.StatusUnprocessableEntity || !strings.Contains(fmt.Sprint(refusal), "invalid_characters") {
+		t.Errorf("a contact name with a direction override → %d %v, want 422 invalid_characters", status, refusal)
 	}
 	if status, _ := createContact(t, e, body{"linkedin_url": apptest.ContactProfile(), "full_name": "Đội José"}); status != http.StatusCreated {
 		t.Errorf("a name with accents → %d, want 201", status)

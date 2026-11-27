@@ -137,9 +137,6 @@ func decodeRaw(r *http.Request, raw json.RawMessage, into any, owned func(string
 		return Validation("body", "malformed_json",
 			"the request body must be valid UTF-8 without unpaired surrogate escapes; resend it as UTF-8 text")
 	}
-	if refused := nameOverrideRefusal(raw); refused != nil {
-		return refused
-	}
 	if datasource.HasCustomFieldMap(into) {
 		return decodeCustomFieldBody(r, raw, into, owned)
 	}

@@ -11,23 +11,34 @@ import (
 )
 
 // IdentifierText spells an address or domain the way a key compares it, typed
-// by a user or read from a mail. Characters that draw nothing are dropped before the trim, so the trim
-// reaches padding they hid. Accents are composed (NFC), so one address typed two
-// ways is one value. The is_identifier_text CHECK refuses any other spelling.
+// by a user or read from a mail. Characters that draw nothing are dropped before
+// the trim, so the trim reaches padding they hid. Accents are composed (NFC), so
+// one address typed two ways is one value. The is_identifier_text CHECK refuses
+// any other spelling.
 func IdentifierText(raw string) string {
-	visible := strings.Map(func(r rune) rune {
-		if unicode.Is(unicode.Cf, r) || fillerRunes[r] || (unicode.IsControl(r) && !unicode.IsSpace(r)) {
-			return -1
-		}
-		return r
-	}, raw)
-	return norm.NFC.String(strings.TrimFunc(visible, unicode.IsSpace))
+	return norm.NFC.String(strings.TrimFunc(strings.Map(dropHidden, raw), unicode.IsSpace))
 }
 
-// HasDirectionOverride reports a bidirectional embedding, override or isolate.
-// One in a name makes it display in an order other than the one stored.
-func HasDirectionOverride(s string) bool {
-	return strings.ContainsFunc(s, func(r rune) bool {
-		return (r >= 0x202A && r <= 0x202E) || (r >= 0x2066 && r <= 0x2069)
-	})
+// typedIdentifier is IdentifierText for what a user typed: padding is dropped,
+// and a hidden character between visible ones is reported. A host that hides
+// one inside is how one domain is made to pass for another.
+func typedIdentifier(raw string) (string, bool) {
+	inner := strings.TrimFunc(raw, func(r rune) bool { return unicode.IsSpace(r) || hiddenRune(r) })
+	if strings.ContainsFunc(inner, hiddenRune) {
+		return "", false
+	}
+	return norm.NFC.String(inner), true
+}
+
+// hiddenRune is a character that draws nothing: a format character, a filler
+// or any control, matching drop_hidden_characters in the database.
+func hiddenRune(r rune) bool {
+	return unicode.Is(unicode.Cf, r) || fillerRunes[r] || unicode.IsControl(r)
+}
+
+func dropHidden(r rune) rune {
+	if hiddenRune(r) {
+		return -1
+	}
+	return r
 }
