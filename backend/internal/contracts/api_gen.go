@@ -34316,7 +34316,7 @@ type ActingIdentity struct {
 // what the DB CHECK would reject, rather than 500-ing at write time).
 // `channel_provider` is the same kind of constraint in both directions: non-null exactly
 // when `kind=message` (ADR-0107).
-// **Custom fields**: the values of the organization's activity custom fields arrive as extra
+// **Custom fields**: the values of your company's activity custom fields arrive as extra
 // top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 // `withheld`.
 type Activity struct {
@@ -34333,10 +34333,10 @@ type Activity struct {
 	// AttendeeResponses Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`.
 	AttendeeResponses *[]MeetingAttendeeResponse `json:"attendee_responses,omitempty"`
 
-	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the organization's own domains.
+	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of your company's own domains.
 	Audience *ActivityAudience `json:"audience,omitempty"`
 
-	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the organization turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the organization; no result opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
+	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the company turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of your company; no result opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
 	AudienceReason *string `json:"audience_reason,omitempty"`
 
 	// Author Who wrote this where it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
@@ -34594,12 +34594,12 @@ type ActivityAuthor struct {
 	// IsReader The author is the signed-in caller.
 	IsReader bool `json:"is_reader"`
 
-	// Kind `colleague` is a seat in this organization, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+	// Kind `colleague` is a seat in your company, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
 	Kind   ActivityAuthorKind  `json:"kind"`
 	UserId *openapi_types.UUID `json:"user_id,omitempty"`
 }
 
-// ActivityAuthorKind `colleague` is a seat in this organization, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+// ActivityAuthorKind `colleague` is a seat in your company, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
 type ActivityAuthorKind string
 
 // ActivityDealDecline defines model for ActivityDealDecline.
@@ -35099,7 +35099,7 @@ type AgentAllowanceSettings struct {
 	// AgentCallsPerWindow How many calls of any kind one passport or connection may make per window, a tool call or an API request, reads included. Default 1000.
 	AgentCallsPerWindow int `json:"agent_calls_per_window" maximum:"20000" minimum:"50"`
 
-	// AgentEgressPerWindow How many calls that send something out of the organization one passport or connection may make per window. Default 20.
+	// AgentEgressPerWindow How many calls that send something out of your company one passport or connection may make per window. Default 20.
 	AgentEgressPerWindow int `json:"agent_egress_per_window" maximum:"200" minimum:"1"`
 
 	// AgentWindowHours How long the window in force lasts, in hours. Default 24. Every passport's window
@@ -35494,7 +35494,7 @@ type AgentTool struct {
 	// Description What the tool is for, as an MCP client is told it: the outcome it produces, its limits, when a neighbouring tool is the better call, and what to keep from its result — followed by this server's own governance clause, which is absent for a tool that runs immediately and needs only the read scope.
 	Description string `json:"description"`
 
-	// Egress True if the tool reaches outside the organization.
+	// Egress True if the tool reaches outside your company.
 	Egress bool `json:"egress"`
 
 	// Name The tool name (tools/list identity).
@@ -37045,7 +37045,7 @@ type AiTierBinding struct {
 // never stored or returned, and is accepted on any binding.
 type AiTierBindingThinkingLevel string
 
-// AiUsage AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from the organization's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total.
+// AiUsage AI usage + budget (AIRT-WIRE-1): the AIRT-PARAM-33 meter aggregated per day × task × tier, plus the budget band. Token-denominated; cost_est_minor is computed on read from your company's ai_model_rate price sheet as of each call's day (ADR-0067, price-on-read) — omitted, never a fabricated 0, when a task line's window carries no priced call, and accompanied by unpriced_calls when it is a partial total.
 type AiUsage struct {
 	Budget struct {
 		// Band < 80% / 80–100% soft-degrade / ≥ 100% non-interactive queued (AIRT-PARAM-9..11).
@@ -37395,7 +37395,7 @@ type AnalyticsScope struct {
 	// Assertable Whether this caller may record a forecast call or issue a share about this population. Absent from a server that predates the field; a screen then offers the controls and the write route decides.
 	Assertable *bool `json:"assertable,omitempty"`
 
-	// Id The team or contact measured. Absent for organization and managed_teams, which name no single subject.
+	// Id The team or contact measured. Absent for company and managed_teams, which name no single subject.
 	Id *openapi_types.UUID `json:"id,omitempty"`
 
 	// Kind `managed_teams` is a team manager's own default — their teams and themselves. It is RESOLVED, never requested: a caller names one team, or names nothing and is given this.
@@ -37404,7 +37404,7 @@ type AnalyticsScope struct {
 	// Label What to call this population on screen.
 	Label string `json:"label"`
 
-	// Measurable Whether this population is within the caller's own record access: the organization for a seat that reads every record, a team for its members. Analytics offers the totals of a scope outside it. Progress reads only a scope inside it.
+	// Measurable Whether this population is within the caller's own record access: your company for a seat that reads every record, a team for its members. Analytics offers the totals of a scope outside it. Progress reads only a scope inside it.
 	Measurable *bool `json:"measurable,omitempty"`
 }
 
@@ -39026,7 +39026,7 @@ type AttentionItem struct {
 	// reader may not see is counted in `contact_count` and never named.
 	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
 
-	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the organization language.
+	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in your company language.
 	DomainNote *string `json:"domain_note,omitempty"`
 
 	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
@@ -39338,7 +39338,7 @@ type AttentionStagedFacts struct {
 	// AccountTermination A current account termination intervention with a ready lifecycle approval preview and a named decision owner.
 	AccountTermination *bool `json:"account_termination,omitempty"`
 
-	// KnownCompany The address's domain already names a company in this organization.
+	// KnownCompany The address's domain already names a company in your company.
 	KnownCompany *bool `json:"known_company,omitempty"`
 
 	// MachineSender The address is a sending system rather than a contact.
@@ -39630,7 +39630,7 @@ type Authorization struct {
 	// RefusedLeadFilters The `listLeads` query parameters this caller is refused whatever their value: `403` where a grant the filter reads is missing, such as `industry`, `country` and `size_band` for a seat that may not read companies, and `list_id` where the caller may not read lists. Computed by the list resolution and clauses the list runs, so a client withholds exactly the dials the list would refuse. Absent from a server that does not compute it, and empty when nothing is refused.
 	RefusedLeadFilters *[]string `json:"refused_lead_filters,omitempty"`
 
-	// RowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in the organization. Widened to the maximum any of the caller's roles holds, the same union the server applies.
+	// RowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in your company. Widened to the maximum any of the caller's roles holds, the same union the server applies.
 	// It is a THIRD axis, independent of the seat ceiling and the object grants, and a client that ignores it will describe a team lead's reach as if it were an admin's.
 	// The server never sends a value outside this enum: an unresolved scope is narrowed to `own` before it reaches the wire, so a client reading a value it does not recognize is reading a newer server and should narrow it the same way.
 	// This does not let a client decide which rows it gets — the server's scope clauses do that on every query. It is what a client needs to EXPLAIN the answer it got, and to label a setting as reaching only the reader, their team, or the company.
@@ -39640,7 +39640,7 @@ type Authorization struct {
 	SeatType AuthorizationSeatType `json:"seat_type"`
 }
 
-// AuthorizationRowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in the organization. Widened to the maximum any of the caller's roles holds, the same union the server applies.
+// AuthorizationRowScope How far the grants above reach: the caller's own rows, every row belonging to a live team they share, or every row in your company. Widened to the maximum any of the caller's roles holds, the same union the server applies.
 // It is a THIRD axis, independent of the seat ceiling and the object grants, and a client that ignores it will describe a team lead's reach as if it were an admin's.
 // The server never sends a value outside this enum: an unresolved scope is narrowed to `own` before it reaches the wire, so a client reading a value it does not recognize is reading a newer server and should narrow it the same way.
 // This does not let a client decide which rows it gets — the server's scope clauses do that on every query. It is what a client needs to EXPLAIN the answer it got, and to label a setting as reaching only the reader, their team, or the company.
@@ -40087,7 +40087,7 @@ type BackfillPreview struct {
 	// EstimateIsFloor True when `estimated_messages` is a LOWER BOUND rather than a total — the window holds at least that many and how many more was not counted. Gmail counts by paging message ids under a cap, so a large mailbox hits it; Graph answers an exact `$count` and never does. A client MUST qualify the number when this is true ("at least 20,000"), because a floor shown as a count is short by multiples and a reader has no way to tell which kind they are looking at — and this is the number they are consenting to. Absent means the count is exact. It is NOT a reason to refuse: the scope being consented to is the mailbox and the period, and the count is supporting detail.
 	EstimateIsFloor *bool `json:"estimate_is_floor,omitempty"`
 
-	// EstimateQuality observed = priced from this organization's ai_call history; heuristic = cold-start work-shape floor or a defaulted ratio.
+	// EstimateQuality observed = priced from your company's ai_call history; heuristic = cold-start work-shape floor or a defaulted ratio.
 	EstimateQuality *BackfillPreviewEstimateQuality `json:"estimate_quality,omitempty"`
 
 	// EstimatedAiTokens The estimator's input-anchored token figure across classify+enrich+embeddings for that count; absent on estimator fault (ADR-0068).
@@ -40104,7 +40104,7 @@ type BackfillPreview struct {
 	Window       BackfillPreviewWindow       `json:"window"`
 }
 
-// BackfillPreviewEstimateQuality observed = priced from this organization's ai_call history; heuristic = cold-start work-shape floor or a defaulted ratio.
+// BackfillPreviewEstimateQuality observed = priced from your company's ai_call history; heuristic = cold-start work-shape floor or a defaulted ratio.
 type BackfillPreviewEstimateQuality string
 
 // BackfillPreviewWindow defines model for BackfillPreview.Window.
@@ -40958,7 +40958,7 @@ type CaptureActivityFunnel struct {
 	// Fault The derivation failed. The message itself is unaffected unless the reason says otherwise.
 	Fault *int `json:"fault,omitempty"`
 
-	// Internal Never landed: every party was on the organization's own mail domains.
+	// Internal Never landed: every party was on your company's own mail domains.
 	Internal *int `json:"internal,omitempty"`
 
 	// Suppressed Landed; the sender is mail infrastructure, so no record was derived.
@@ -41109,7 +41109,7 @@ type CaptureConnection struct {
 	//
 	// `classified` is the default for a new connection, and a rebind to a different account
 	// resets to `held`: the previous mailbox's answer is not the new one's to inherit.
-	// `shared` additionally needs the organization to allow it
+	// `shared` additionally needs your company to allow it
 	// (`CaptureSettings.shared_posture_allowed`), because a mailbox read into a shared CRM
 	// is what the works-council agreement in the DACH package is about.
 	//
@@ -41162,7 +41162,7 @@ type CaptureConnection struct {
 //
 // `classified` is the default for a new connection, and a rebind to a different account
 // resets to `held`: the previous mailbox's answer is not the new one's to inherit.
-// `shared` additionally needs the organization to allow it
+// `shared` additionally needs your company to allow it
 // (`CaptureSettings.shared_posture_allowed`), because a mailbox read into a shared CRM
 // is what the works-council agreement in the DACH package is about.
 //
@@ -41266,7 +41266,7 @@ type CaptureConsent struct {
 }
 
 // CaptureCounterpartyHold One seat's decision that their mail with a party is nobody else's. Per user, never
-// organization-wide: one seat's lawyer says nothing about another seat's, and a shared list
+// company-wide: one seat's lawyer says nothing about another seat's, and a shared list
 // would let anyone keep a colleague's customer out of the CRM by naming their domain.
 type CaptureCounterpartyHold struct {
 	CreatedAt *time.Time          `json:"created_at,omitempty"`
@@ -41300,7 +41300,7 @@ type CaptureExclusion struct {
 
 	// Kind What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
 	// A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
-	// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a organization rule would bind every colleague's connection to a place that does not exist there.
+	// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a company rule would bind every colleague's connection to a place that does not exist there.
 	Kind CaptureExclusionKind `json:"kind"`
 
 	// Scope Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
@@ -41312,7 +41312,7 @@ type CaptureExclusion struct {
 
 // CaptureExclusionKind What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
 // A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
-// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a organization rule would bind every colleague's connection to a place that does not exist there.
+// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a company rule would bind every colleague's connection to a place that does not exist there.
 type CaptureExclusionKind string
 
 // CaptureExclusionListResponse defines model for CaptureExclusionListResponse.
@@ -41342,7 +41342,7 @@ type CaptureHealth struct {
 	GeneratedAt        time.Time                  `json:"generated_at"`
 
 	// HeldMeetings Captured records already filed under a contact that are still held to their
-	// participants because, when they arrived, they named nobody the organization knew. The
+	// participants because, when they arrived, they named nobody your company knew. The
 	// nightly link reconcile lifts every one of them, so anything counted here is backlog.
 	// Counted with the pass's own selector and without its per-tick bound.
 	HeldMeetings CaptureHeldMeetings `json:"held_meetings"`
@@ -41370,7 +41370,7 @@ type CaptureHealthCategories struct {
 }
 
 // CaptureHeldMeetings Captured records already filed under a contact that are still held to their
-// participants because, when they arrived, they named nobody the organization knew. The
+// participants because, when they arrived, they named nobody your company knew. The
 // nightly link reconcile lifts every one of them, so anything counted here is backlog.
 // Counted with the pass's own selector and without its per-tick bound.
 type CaptureHeldMeetings struct {
@@ -41620,7 +41620,7 @@ type CaptureSenderListResponse struct {
 	Total      *int                    `json:"total,omitempty"`
 }
 
-// CaptureSettings The organization-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
+// CaptureSettings The company-shared capture posture (ADR-0072, CAP-PARAM-7). Read by every role,
 // changed only by admin/ops.
 type CaptureSettings struct {
 	// AutoEnrich When true, every company with a primary domain and no dossier gets a governed
@@ -41655,7 +41655,7 @@ type CaptureSettings struct {
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
 
-	// MailSharing The organization's capture-sharing posture, ON by default: captured correspondence is
+	// MailSharing The company's capture-sharing posture, ON by default: captured correspondence is
 	// readable by every colleague who can see the contact. Switched OFF, everything captured
 	// FROM THEN ON is held to its participants and the capturing member — already-captured
 	// correspondence keeps the audience it has. Turning it off makes shared pipeline work
@@ -41690,7 +41690,7 @@ type CaptureSettings struct {
 	// mail already captured. It governs what a seat may newly ask for.
 	SharedPostureAllowed bool `json:"shared_posture_allowed"`
 
-	// SignatureEnrich The organization DEFAULT for reading stated contact details — a title, a phone number, an
+	// SignatureEnrich The company DEFAULT for reading stated contact details — a title, a phone number, an
 	// address, a company — out of mail a contact sent us. It governs both readers: the
 	// signature of the message, and a vCard attached to it. Nothing is inferred: a value the
 	// mail does not state is not written. Reading happens within minutes of the mail arriving;
@@ -41701,7 +41701,7 @@ type CaptureSettings struct {
 	// out of capture by address or domain and says nothing about reading contact details.
 	// Default is ON.
 	//
-	// "Organization" here is the storage tenant, not the word the product shows a reader —
+	// "Company" here is the storage tenant, not the word the product shows a reader —
 	// the surface calls it the company's default.
 	SignatureEnrich bool `json:"signature_enrich"`
 
@@ -41743,7 +41743,7 @@ type CaptureSourceEntry struct {
 }
 
 // CaptureSweepHealth When one repair pass last ran and last succeeded, from the receipt each pass writes
-// per organization turn. Never names what the pass worked on.
+// per company turn. Never names what the pass worked on.
 type CaptureSweepHealth struct {
 	// CadenceSeconds How often the job that runs this pass is scheduled. Null when it has no fixed cadence.
 	CadenceSeconds *int `json:"cadence_seconds,omitempty"`
@@ -41909,7 +41909,7 @@ type ChangeUserRoleRequest struct {
 	Role string `json:"role"`
 }
 
-// ChannelConnection One organization-level messaging-channel binding. The bot token and the Dispact events secret never appear in this shape: both live sealed in the vault.
+// ChannelConnection One company-level messaging-channel binding. The bot token and the Dispact events secret never appear in this shape: both live sealed in the vault.
 type ChannelConnection struct {
 	// Address The web address of a self-hosted provider's install (Dispact). Absent for Telegram.
 	Address *string `json:"address,omitempty"`
@@ -42081,7 +42081,7 @@ type ChannelProviderEntry struct {
 	Provider ProviderRef `json:"provider"`
 
 	// SuppliesTransport Whether this provider can carry an outbound message at all; a capture-only
-	// transport reports false. Deliberately NOT "can this organization send" — that
+	// transport reports false. Deliberately NOT "can your company send" — that
 	// reads `channel_connection`, a tenant table, and answering both here would
 	// re-conflate a deployment fact with a tenant one.
 	SuppliesTransport bool `json:"supplies_transport"`
@@ -42617,7 +42617,7 @@ type Company struct {
 	// cannot be archived or merged. A caller that offers company actions should tell it apart.
 	IsAnchor *bool `json:"is_anchor,omitempty"`
 
-	// LastActivityAt When something last happened with this account: the newest `occurred_at` at or before now of a organization-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
+	// LastActivityAt When something last happened with this account: the newest `occurred_at` at or before now of a company-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
 	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
@@ -42642,7 +42642,7 @@ type Company struct {
 	LogoUrl      *string             `json:"logo_url,omitempty"`
 	MergedIntoId *openapi_types.UUID `json:"merged_into_id,omitempty"`
 
-	// OpenDealCount How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE organization — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it.
+	// OpenDealCount How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE company — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it.
 	OpenDealCount *int                `json:"open_deal_count,omitempty" minimum:"0"`
 	OwnerId       *openapi_types.UUID `json:"owner_id,omitempty"`
 
@@ -42688,7 +42688,7 @@ type Company struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
-	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the organization through a sender result, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches your company through a sender result, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 	Visibility *CompanyVisibility `json:"visibility,omitempty"`
 
 	// WebsiteUrl The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact company_domain already owns is the duplication ADR-0085 closes. Not accepted on write.
@@ -42711,7 +42711,7 @@ type CompanySizeBand string
 // CompanyStatus Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
 type CompanyStatus string
 
-// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the organization through a sender result, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
+// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches your company through a sender result, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 type CompanyVisibility string
 
 // Company360 The company record page in one payload. Every section except `company` is
@@ -43139,7 +43139,7 @@ type Company360NextStep struct {
 	ActivityId openapi_types.UUID  `json:"activity_id"`
 	AssigneeId *openapi_types.UUID `json:"assignee_id,omitempty"`
 
-	// AssigneeName The assignee's name while they are a live organization member. Null when the task has no
+	// AssigneeName The assignee's name while they are a live company member. Null when the task has no
 	// assignee or the name cannot be given, so a reader says nothing about who holds it
 	// instead of printing an id.
 	AssigneeName *string `json:"assignee_name,omitempty"`
@@ -43247,7 +43247,7 @@ type Company360StateStrip struct {
 
 	// Commercial Null when the caller has no deal grant.
 	Commercial *struct {
-		// BaseCurrency The ISO-4217 currency `open_pipeline_minor_base` is expressed in — the organization's base. Travels WITH the figure rather than being looked up separately, because a converted sum rendered under a currency fetched from somewhere else is exactly the unlabelled cross-currency total §4.2 forbids. Null whenever the figure is.
+		// BaseCurrency The ISO-4217 currency `open_pipeline_minor_base` is expressed in — the company's base. Travels WITH the figure rather than being looked up separately, because a converted sum rendered under a currency fetched from somewhere else is exactly the unlabelled cross-currency total §4.2 forbids. Null whenever the figure is.
 		BaseCurrency *string `json:"base_currency,omitempty"`
 
 		// ConvertedCount How many of `priced_count` needed a currency conversion to enter the sum — the rest were already in the base. Zero means the total is a same-currency sum and no rate stands behind it.
@@ -43260,7 +43260,7 @@ type Company360StateStrip struct {
 		NextCloseOn *openapi_types.Date `json:"next_close_on,omitempty"`
 		OpenCount   int                 `json:"open_count" minimum:"0"`
 
-		// OpenPipelineMinorBase The open pipeline in the organization's base currency, integer minor units. Null when NO open deal carries a figure that can be converted — distinct from zero, which would claim a priced pipeline worth nothing.
+		// OpenPipelineMinorBase The open pipeline in your company's base currency, integer minor units. Null when NO open deal carries a figure that can be converted — distinct from zero, which would claim a priced pipeline worth nothing.
 		OpenPipelineMinorBase *int `json:"open_pipeline_minor_base,omitempty"`
 
 		// PricedCount How many of `open_count` contributed to the sum. A deal with no amount, and one whose currency has no conversion rate on its date, both contribute nothing — so a total below `open_count` covers PART of the pipeline, and the page says so rather than showing a figure that is quietly short (plan §4.2: never a cross-currency sum without its conversion source).
@@ -43538,7 +43538,7 @@ type CompanyAnswer struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -43579,7 +43579,7 @@ type CompanyBrief struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -44026,7 +44026,7 @@ type CompanyDossier struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -44099,7 +44099,7 @@ type CompanyEmailDraft struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -44302,7 +44302,7 @@ type CompanyGraph struct {
 	// this" instead of "there is none". `contacts` withheld also withholds
 	// `deal_stakeholder` edges and the signal route, because both name a contact.
 	//
-	// `our_side` is the organization members connected to the account — the owner and the
+	// `our_side` is your company members connected to the account — the owner and the
 	// teammates who have interacted with its contacts. It needs BOTH the contact and the
 	// activity grant, because each of its edges names a contact and is derived from a
 	// recorded interaction; either one missing withholds the whole group.
@@ -44355,8 +44355,8 @@ type CompanyGraphEdge struct {
 	// points at it; the account points at each child).
 	// `partner_of` / `referred_by` / `co_sell_with` — the partner edges, from
 	// the company that records the edge to its counterparty.
-	// `owns` — `from` is the organization member who owns the account.
-	// `in_contact_with` — `from` is the organization member who has been IN recorded
+	// `owns` — `from` is your company member who owns the account.
+	// `in_contact_with` — `from` is your company member who has been IN recorded
 	// interactions (email, call, meeting) with the contact at `to`. It is drawn from
 	// the recorded participants of those interactions, so it holds for
 	// connector-captured mail as well as manually logged activity. Every participant
@@ -44381,7 +44381,7 @@ type CompanyGraphEdge struct {
 	// observed between two externals — so the score leans on recency and frequency.
 	//
 	// It is the per-user relationship strength (PO-F-3b): the same recency ×
-	// frequency × reciprocity arithmetic as the organization-wide contact score, over
+	// frequency × reciprocity arithmetic as your company-wide contact score, over
 	// only the interactions THIS colleague was in. It is deliberately not comparable
 	// by addition to the contact's own score — one answers "how warm is this contact
 	// to us", the other "to this contact among us", and neither is derivable from the
@@ -44416,8 +44416,8 @@ type CompanyGraphEdge struct {
 // points at it; the account points at each child).
 // `partner_of` / `referred_by` / `co_sell_with` — the partner edges, from
 // the company that records the edge to its counterparty.
-// `owns` — `from` is the organization member who owns the account.
-// `in_contact_with` — `from` is the organization member who has been IN recorded
+// `owns` — `from` is your company member who owns the account.
+// `in_contact_with` — `from` is your company member who has been IN recorded
 // interactions (email, call, meeting) with the contact at `to`. It is drawn from
 // the recorded participants of those interactions, so it holds for
 // connector-captured mail as well as manually logged activity. Every participant
@@ -44448,7 +44448,7 @@ type CompanyGraphNode struct {
 	Id     openapi_types.UUID `json:"id"`
 
 	// Kind `company`, `contact` and `deal` are the account's own records.
-	// `user` is a member of THIS organization — someone on our side who is connected to the
+	// `user` is a member of THIS company — someone on our side who is connected to the
 	// account. A user node carries its display name as the `label` and nothing else:
 	// `detail`, `strength` and `strength_bucket` are null and `on_signal_route` is ABSENT,
 	// because §4 measures our relationship with the account's contacts, not with each
@@ -44456,7 +44456,7 @@ type CompanyGraphNode struct {
 	// a client reads its absence as "not on the signal's route".
 	Kind CompanyGraphNodeKind `json:"kind"`
 
-	// Label The record's display name — the company's, the contact's full name, the deal's name, the organization member's display name.
+	// Label The record's display name — the company's, the contact's full name, the deal's name, your company member's display name.
 	Label string `json:"label"`
 
 	// LogoUrl The company node's resolved logo, same value `Company.logo_url` carries.
@@ -44486,7 +44486,7 @@ type CompanyGraphNode struct {
 }
 
 // CompanyGraphNodeKind `company`, `contact` and `deal` are the account's own records.
-// `user` is a member of THIS organization — someone on our side who is connected to the
+// `user` is a member of THIS company — someone on our side who is connected to the
 // account. A user node carries its display name as the `label` and nothing else:
 // `detail`, `strength` and `strength_bucket` are null and `on_signal_route` is ABSENT,
 // because §4 measures our relationship with the account's contacts, not with each
@@ -44516,7 +44516,7 @@ type CompanyGraphSignalRoute struct {
 	SignalId  openapi_types.UUID `json:"signal_id"`
 }
 
-// CompanyGrowthFit Cached per reader (DOSS-DDL-2), because it folds seat-dependent organization context
+// CompanyGrowthFit Cached per reader (DOSS-DDL-2), because it folds seat-dependent company context
 // and makes recommendations.
 //
 // Every claim below carries the records it was written from, exactly like a dossier
@@ -44548,7 +44548,7 @@ type CompanyGrowthFit struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -45381,7 +45381,7 @@ type ComposedExtension struct {
 	// Routes The unit's published operations, one entry per method+path pair. Sorted by path then method. A bare path would under-report the surface — one path serving GET and DELETE is two capabilities to an operator auditing what a unit can do, and collapsing them hides the destructive one behind the harmless one.
 	Routes []ComposedExtensionRoute `json:"routes"`
 
-	// SetupMissing What an admin still has to set before the unit can work: each organization secret the unit declares that holds no value, then each OAuth app it declares with no stored client. Empty means the unit is ready. Worked out on each read from the declaration and the stored values; nothing about it is stored. Each part needs the caller's right to read that setting: admin for a organization secret, capture_settings.read for an OAuth app. A part the caller may not read is left out. The field is absent when that hides a part and nothing visible is missing, and from an older server.
+	// SetupMissing What an admin still has to set before the unit can work: each company secret the unit declares that holds no value, then each OAuth app it declares with no stored client. Empty means the unit is ready. Worked out on each read from the declaration and the stored values; nothing about it is stored. Each part needs the caller's right to read that setting: admin for a company secret, capture_settings.read for an OAuth app. A part the caller may not read is left out. The field is absent when that hides a part and nothing visible is missing, and from an older server.
 	SetupMissing *[]ComposedExtensionSetupItem `json:"setup_missing,omitempty"`
 
 	// Version The unit's own declared version. It carries NO authority (ADR-0120 §7): operator decisions bind to manifest digests, never to this string. Display only.
@@ -45538,7 +45538,7 @@ type ConfirmFieldOrigin struct {
 
 // ConfirmPage What a confirm link answers, which depends on what the link was FOR.
 //
-// A record link asks the contact to check what the organization holds about them; a consent link
+// A record link asks the contact to check what your company holds about them; a consent link
 // asks one subscription question and must not disclose the record. Those are different
 // payloads and this endpoint has always returned both — the schema said only the first, so a
 // client that trusted the contract read `provenance` off a body that never carries it and
@@ -45707,7 +45707,7 @@ type ConnectConnectorRequest struct {
 	// open-redirect surface. Ignored by credential providers, which never redirect.
 	ReturnTo *ConnectConnectorRequestReturnTo `json:"return_to,omitempty"`
 
-	// ShareAcknowledged Accepted and ignored. Mail sharing is a organization setting (`CaptureSettings.mail_sharing`,
+	// ShareAcknowledged Accepted and ignored. Mail sharing is a company setting (`CaptureSettings.mail_sharing`,
 	// ON by default, admin-switchable) rather than a per-connect acknowledgment; this field
 	// remains only so a client that still sends it keeps working.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -45776,7 +45776,7 @@ type ConnectSharedMailboxRequest struct {
 	// BackupOwnerId The backup owner. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Absent names none on a new mailbox and keeps a reconnected one's.
 	BackupOwnerId *openapi_types.UUID `json:"backup_owner_id,omitempty"`
 
-	// Gmail A Google Organization service account the admin delegated `gmail.readonly` to.
+	// Gmail A Google Company service account the admin delegated `gmail.readonly` to.
 	Gmail *SharedGmailCredentials `json:"gmail,omitempty"`
 
 	// Graph The customer's own Entra app registration, which reads the mailbox with application permission.
@@ -45895,7 +45895,7 @@ type ConnectorContainers struct {
 // and needs no word at all.
 type ConnectorContextTag struct {
 	// Archived The chosen word has since been archived. The connector then files NOTHING —
-	// an archived word is one the organization retired, and applying it anyway would
+	// an archived word is one your company retired, and applying it anyway would
 	// keep a retired vocabulary alive from a setting nobody looks at.
 	//
 	// Said here rather than left silent, because the alternative is a connector that
@@ -46025,7 +46025,7 @@ type ConsumerMailBaselineResponse struct {
 	Total int `json:"total"`
 }
 
-// ConsumerMailDomain One entry on the organization's own consumer-mail list. `extra` marks a
+// ConsumerMailDomain One entry on your company's own consumer-mail list. `extra` marks a
 // consumer domain the shipped baseline missed; `never` takes one back out of the baseline
 // that claimed it. Either way the domain is stored in its registrable form, which is what
 // the matcher keys on.
@@ -46077,7 +46077,7 @@ type Contact struct {
 	CapturedBy *string `json:"captured_by,omitempty"`
 
 	// Consent Per-purpose consent summary (ADR-0011). Read-only derived view of the `contact_consent`
-	// rows; one entry per purpose the organization tracks. The single flat `consent_state` flag was
+	// rows; one entry per purpose your company tracks. The single flat `consent_state` flag was
 	// REMOVED — consent is per-purpose and demonstrable (data-model.md §3.4). Mutate via
 	// `POST /contacts/{id}/consent`; read the full proof log via `GET /contacts/{id}/consent`.
 	Consent *[]ContactConsentState `json:"consent,omitempty"`
@@ -46143,7 +46143,7 @@ type Contact struct {
 	// showing that a conversation exists even when a reply cannot currently be delivered.
 	Reachability *[]ContactReachability `json:"reachability,omitempty"`
 
-	// RelationshipMark Set when the organization's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+	// RelationshipMark Set when your company's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 	RelationshipMark *ContactRelationshipMark `json:"relationship_mark,omitempty"`
 
 	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
@@ -46172,7 +46172,7 @@ type Contact struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
-	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the organization through a result or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches your company through a result or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
 	Visibility *ContactVisibility `json:"visibility,omitempty"`
 
 	// Writable Whether THIS caller may change THIS row: the same question the server's write gate answers on a mutation — the owner, the owner's team where the role is team-scoped, a live `write` record grant, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed.
@@ -46183,10 +46183,10 @@ type Contact struct {
 // ContactGreetingRegister How a message to this contact opens: `formal` takes the surname, `familiar` the first name. A rep sets it once and every draft to the contact uses it ahead of what the thread suggests. Null means nobody set it, and a draft reads the register from the correspondence.
 type ContactGreetingRegister string
 
-// ContactRelationshipMark Set when the organization's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+// ContactRelationshipMark Set when your company's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 type ContactRelationshipMark string
 
-// ContactVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the organization through a result or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
+// ContactVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches your company through a result or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
 type ContactVisibility string
 
 // Contact360 The contact record page in one payload. Record sections may be absent when their
@@ -46272,7 +46272,7 @@ type Contact360 struct {
 	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
 	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
-	// LastTouchBasis Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole organization may see, so every colleague reads the same number. Absent together with the last-touch fields.
+	// LastTouchBasis Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole company may see, so every colleague reads the same number. Absent together with the last-touch fields.
 	LastTouchBasis *Contact360LastTouchBasis `json:"last_touch_basis,omitempty"`
 
 	// MailCoverage The calling reader's mail capture for the requested interval. This does
@@ -46349,7 +46349,7 @@ type Contact360 struct {
 	Strength *RelationshipStrength `json:"strength,omitempty"`
 }
 
-// Contact360LastTouchBasis Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole organization may see, so every colleague reads the same number. Absent together with the last-touch fields.
+// Contact360LastTouchBasis Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole company may see, so every colleague reads the same number. Absent together with the last-touch fields.
 type Contact360LastTouchBasis string
 
 // Contact360SectionsOmitted defines model for Contact360.SectionsOmitted.
@@ -46514,7 +46514,7 @@ type ContactBrief struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -46553,13 +46553,13 @@ type ContactCase struct {
 	Edges      []ContactCaseEdge   `json:"edges"`
 	Members    []ContactCaseMember `json:"members"`
 
-	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the organization policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.
+	// MergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and your company policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.
 	MergeMode ContactCaseMergeMode `json:"merge_mode"`
 
 	// Owners The live owners of the members. Each of them sees the case in their own Worklist.
 	Owners []ContactCaseOwner `json:"owners"`
 
-	// PolicyEnabled Whether the organization lets any owner of a member merge the case (`contacts.shared_merge_reviews`).
+	// PolicyEnabled Whether your company lets any owner of a member merge the case (`contacts.shared_merge_reviews`).
 	PolicyEnabled bool `json:"policy_enabled"`
 
 	// Reason Why `can_merge` is false.
@@ -46579,7 +46579,7 @@ type ContactCase struct {
 	TooLarge bool `json:"too_large"`
 }
 
-// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and the organization policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.
+// ContactCaseMergeMode `ordinary`: the caller may change every member. `delegated`: the caller owns a member and your company policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.
 type ContactCaseMergeMode string
 
 // ContactCaseReason Why `can_merge` is false.
@@ -47744,7 +47744,7 @@ type ContactStopLiftBlockedBy string
 type ContextEntityRef struct {
 	Id openapi_types.UUID `json:"id"`
 
-	// Type `user` is a organization MEMBER, not a record — it appears only in the
+	// Type `user` is a company MEMBER, not a record — it appears only in the
 	// `who_knows` section, where the item is a colleague who interacts with the
 	// anchor contact. It carries the member's display name as `summary` and
 	// routes nowhere: a client renders it as a name, not as a link to a record.
@@ -47754,7 +47754,7 @@ type ContextEntityRef struct {
 	Type ContextEntityRefType `json:"type"`
 }
 
-// ContextEntityRefType `user` is a organization MEMBER, not a record — it appears only in the
+// ContextEntityRefType `user` is a company MEMBER, not a record — it appears only in the
 // `who_knows` section, where the item is a colleague who interacts with the
 // anchor contact. It carries the member's display name as `summary` and
 // routes nowhere: a client renders it as a name, not as a link to a record.
@@ -48144,7 +48144,7 @@ type ConversationMemoryEntry struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy *WrittenBy `json:"generated_by,omitempty"`
@@ -48216,7 +48216,7 @@ type CreateAcquisitionSourceRequest struct {
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
-// CreateActivityRequest The organization's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
+// CreateActivityRequest The company's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
 type CreateActivityRequest struct {
 	// AiAssisted True when an AI model rewrote the subject or body the caller sends, as Polish wording (`POST /rewrites`) does. The activity then reads `ai_assisted`. Needs `ai_assisted_on`. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`. Absent means false.
 	AiAssisted *bool `json:"ai_assisted,omitempty"`
@@ -48225,7 +48225,7 @@ type CreateActivityRequest struct {
 	AiAssistedOn *ActivityLink       `json:"ai_assisted_on,omitempty"`
 	AssigneeId   *openapi_types.UUID `json:"assignee_id,omitempty"`
 
-	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this organization returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
+	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of your company returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
 	AttendeeUserIds *[]openapi_types.UUID `json:"attendee_user_ids,omitempty"`
 	Body            *string               `json:"body,omitempty"`
 
@@ -48386,7 +48386,7 @@ type CreateCaptureExclusionRequest struct {
 
 	// Kind What the rule names. `address` and `domain` match the parties a message names; `container` matches where the provider FILED it — a Gmail label, a Graph folder, an IMAP mailbox.
 	// A container value is `<provider>:<id>`, where the id is the provider's own token and is stored exactly as given: `gmail:Label_12` (a system label is its name, `gmail:CATEGORY_PROMOTIONS`), `graph:<folderId>`, `imap:INBOX/Family`. Qualified because an id means nothing without the namespace it belongs to, and unfolded because a Graph folder id is base64url and an IMAP mailbox name is case-sensitive — folding either would merge two containers into one rule.
-	// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a organization rule would bind every colleague's connection to a place that does not exist there.
+	// A container rule is `user` scope only: the list belongs to the mailbox's owner, and a company rule would bind every colleague's connection to a place that does not exist there.
 	Kind CaptureExclusionKind `json:"kind"`
 
 	// Scope Whose rule it is — the installation's, or the caller's own for the mailbox they connected.
@@ -49053,7 +49053,7 @@ type CreateOfferRequest struct {
 	// Source The channel this record arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the record's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
 	Source string `json:"source"`
 
-	// TemplateId Optional offer_template to render with; unset falls back to the organization's default template for the offer's locale.
+	// TemplateId Optional offer_template to render with; unset falls back to your company's default template for the offer's locale.
 	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
 	TermsText  *string             `json:"terms_text,omitempty"`
 	ValidUntil *openapi_types.Date `json:"valid_until,omitempty"`
@@ -49593,7 +49593,7 @@ type CreateZaloOAConnectionRequest struct {
 	RefreshToken string `json:"refreshToken"`
 }
 
-// CustomField A organization-defined runtime field on an existing core object. Mirrors the
+// CustomField A company-defined runtime field on an existing core object. Mirrors the
 // `custom_field` catalog table — the system-of-record for every runtime-added
 // column (CUSTOM-FIELDS-SCHEMA-1). `column_name` is the physical `cf_`-prefixed
 // identifier, stable across rename; `status=retired` hides the field from the API
@@ -50048,7 +50048,7 @@ type Deal struct {
 	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
 	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
-	// LastEmail The newest email on this deal that the whole organization may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: organization-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
+	// LastEmail The newest email on this deal that the whole company may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: company-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
 
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
@@ -50096,7 +50096,7 @@ type Deal struct {
 	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
 	StageWinProbability *int `json:"stage_win_probability,omitempty" maximum:"100" minimum:"0"`
 
-	// Stalled Derived — no activity past the threshold (absolute duration). A booked organization-audience meeting ahead keeps the deal off stalled until it starts or is called off.
+	// Stalled Derived — no activity past the threshold (absolute duration). A booked company-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool      `json:"stalled,omitempty"`
 	Status    DealStatus `json:"status"`
 	Tags      *[]RowTag  `json:"tags,omitempty"`
@@ -50230,7 +50230,7 @@ type DealAdvanced struct {
 	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
 	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
-	// LastEmail The newest email on this deal that the whole organization may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: organization-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
+	// LastEmail The newest email on this deal that the whole company may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: company-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
 
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
@@ -50279,7 +50279,7 @@ type DealAdvanced struct {
 	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
 	StageWinProbability *int `json:"stage_win_probability,omitempty" maximum:"100" minimum:"0"`
 
-	// Stalled Derived — no activity past the threshold (absolute duration). A booked organization-audience meeting ahead keeps the deal off stalled until it starts or is called off.
+	// Stalled Derived — no activity past the threshold (absolute duration). A booked company-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool              `json:"stalled,omitempty"`
 	Status    DealAdvancedStatus `json:"status"`
 	Tags      *[]RowTag          `json:"tags,omitempty"`
@@ -50611,7 +50611,7 @@ type DealFollowUpDrafts struct {
 	Segment string              `json:"segment"`
 }
 
-// DealLastEmail The newest organization-visible email on a deal, as `Deal.last_email` carries it.
+// DealLastEmail The newest company-visible email on a deal, as `Deal.last_email` carries it.
 type DealLastEmail struct {
 	// Direction Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
 	Direction  *DealLastEmailDirection `json:"direction"`
@@ -50855,7 +50855,7 @@ type DealRevisionRequest struct {
 type DealRoleProposalResult struct {
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -50969,7 +50969,7 @@ type DealRoomBrief struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy               `json:"generated_by"`
@@ -51313,7 +51313,7 @@ type DealStatusCard struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -51693,7 +51693,7 @@ type DeclineActivityDealRequest struct {
 type DedupeCandidate struct {
 	// CanDecide Whether THIS caller could dismiss the pair or undo a decision on it.
 	// That needs write authority over BOTH ends: dismissing suppresses both
-	// records as duplicates for the whole organization. Whether the caller may
+	// records as duplicates for the whole company. Whether the caller may
 	// merge the pair is `can_merge`.
 	//
 	// The pair is LISTED either way, because the contact who can see a
@@ -52025,7 +52025,7 @@ type DomainQuestion struct {
 	EffectiveUrl  *string                `json:"effective_url,omitempty"`
 	EvidenceAt    *time.Time             `json:"evidence_at,omitempty"`
 
-	// Note The site triage's own sentence on a `vendor_verdict` question, in the organization language.
+	// Note The site triage's own sentence on a `vendor_verdict` question, in your company language.
 	Note          *string   `json:"note,omitempty"`
 	ReasonCode    string    `json:"reason_code"`
 	RedirectChain *[]string `json:"redirect_chain,omitempty"`
@@ -52051,7 +52051,7 @@ type DomainQuestionContext struct {
 	HiddenSenders bool `json:"hidden_senders"`
 
 	// LinkedContactCount How many contacts the reader may see that confirming a company would employ there: every
-	// live contact with an address on the domain, less organization seats and anyone who already
+	// live contact with an address on the domain, less company seats and anyone who already
 	// holds a primary employment. Those keep the employer they have.
 	LinkedContactCount int `json:"linked_contact_count" minimum:"0"`
 
@@ -52486,7 +52486,7 @@ type EmailParty struct {
 	ContactId   *openapi_types.UUID `json:"contact_id,omitempty"`
 	DisplayName *string             `json:"display_name,omitempty"`
 
-	// UserId Set when the address belongs to a seat in this organization.
+	// UserId Set when the address belongs to a seat in your company.
 	UserId *openapi_types.UUID `json:"user_id,omitempty"`
 }
 
@@ -52599,7 +52599,7 @@ type EmailSignOff struct {
 
 	// Kind `signature`: the caller's own, from Settings. `closing`: the caller has written
 	// none, so the send closes with a plain greeting and their name when available.
-	// `template`: the organization's template, filled in with the caller's values. `none`:
+	// `template`: your company's template, filled in with the caller's values. `none`:
 	// this send appends nothing.
 	Kind EmailSignOffKind `json:"kind"`
 
@@ -52610,7 +52610,7 @@ type EmailSignOff struct {
 
 // EmailSignOffKind `signature`: the caller's own, from Settings. `closing`: the caller has written
 // none, so the send closes with a plain greeting and their name when available.
-// `template`: the organization's template, filled in with the caller's values. `none`:
+// `template`: your company's template, filled in with the caller's values. `none`:
 // this send appends nothing.
 type EmailSignOffKind string
 
@@ -52638,16 +52638,16 @@ type EmailSignature struct {
 	// expanding placeholders. Empty sanitized content uses the usual fallback.
 	Html string `json:"html"`
 
-	// Phone The member's phone number, filled into the organization template's `{phone}`.
+	// Phone The member's phone number, filled into your company template's `{phone}`.
 	Phone string `json:"phone"`
 
 	// TemplateActive The member's mail has a signature template: their legal entity's own, or else the
-	// organization's. Every send this member makes then signs with that template, filled in
+	// company's. Every send this member makes then signs with that template, filled in
 	// with their name, title and phone, instead of `body`, unless effective personal `html` is set.
 	// An agent's send carries no sign-off.
 	TemplateActive bool `json:"template_active"`
 
-	// Title The member's title, filled into the organization template's `{title}`.
+	// Title The member's title, filled into your company template's `{title}`.
 	Title     string     `json:"title"`
 	UpdatedAt *time.Time `json:"updated_at,omitempty"`
 }
@@ -52664,7 +52664,7 @@ type EmailSignatureDraft struct {
 	// Phone The caller's phone as edited.
 	Phone *string `json:"phone,omitempty"`
 
-	// Template The organization template as edited. Empty previews a organization with none.
+	// Template The company template as edited. Empty previews a company with none.
 	Template *string `json:"template,omitempty"`
 
 	// Title The caller's title as edited.
@@ -52677,7 +52677,7 @@ type EmailSignatureTemplate struct {
 	// shows each as read-only. Empty when nothing is locked. A write ignores it.
 	Locks *SettingLocks `json:"locks,omitempty"`
 
-	// Template The organization's signature layout as HTML, with the placeholders `{name}`, `{title}`,
+	// Template The company's signature layout as HTML, with the placeholders `{name}`, `{title}`,
 	// `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
 	// sender works for, sized for mail, in the message itself; the default entity's logo is
 	// the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
@@ -52868,7 +52868,7 @@ type EmbedReindexStatus struct {
 	// EntitiesPending Fleet-wide count of live entities lacking a current-identity embedding row.
 	EntitiesPending int `json:"entities_pending"`
 
-	// PopulatedIdentity The identity the last reindex run was RELEASED under (embed_store_binding.populated_identity) — a run releases when no organization of it has an outcome left to reach, exhausted attempts included, so this is not a claim that every organization was re-embedded under it. entities_pending is what tells you the difference.
+	// PopulatedIdentity The identity the last reindex run was RELEASED under (embed_store_binding.populated_identity) — a run releases when no company of it has an outcome left to reach, exhausted attempts included, so this is not a claim that all records in each company were re-embedded under it. entities_pending is what tells you the difference.
 	PopulatedIdentity string `json:"populated_identity"`
 
 	// ReindexNeeded Derived fresh on every read (never a stored flag): true when configured_identity != populated_identity, or entities_pending > 0.
@@ -53505,7 +53505,7 @@ type FilterVocabularyField struct {
 	// type, and where this reader may not learn the currency.
 	Currency *string `json:"currency,omitempty"`
 
-	// Custom Whether this is a organization-defined custom-field column. Where true,
+	// Custom Whether this is a company-defined custom-field column. Where true,
 	// `name` is the catalog's `column_name` — join on it to show an admin's
 	// `label`, which the catalog owns and this vocabulary does not.
 	//
@@ -53531,7 +53531,7 @@ type FilterVocabularyField struct {
 	// box: a value outside the set compiles and matches nothing, so a typo
 	// reads as a settled answer instead of a mistake.
 	//
-	// For a organization-defined field these are the catalog's own `options`
+	// For a company-defined field these are the catalog's own `options`
 	// for the same column. For a core field they are the values the
 	// contract enumerates, minus null — a null in one of those enums is the
 	// column's nullability, and `exists` is how a filter asks about that.
@@ -53737,7 +53737,7 @@ type FollowUpSettings struct {
 	PrivateMailRequests *bool `json:"private_mail_requests,omitempty"`
 
 	// SharePrivateQuoteRequests Whether a request for a quotation found in private mail is shared with the whole
-	// organization (`activities.share_private_quote_requests`, on by default). When on, what
+	// company (`activities.share_private_quote_requests`, on by default). When on, what
 	// the customer asked for becomes visible on the deal it opens. It needs
 	// `private_mail_requests` on as well. Only mail private by a mailbox setting is
 	// shared; mail held for any other reason never is. A GET always carries it; a PATCH
@@ -53858,7 +53858,7 @@ type ForecastAssurancePreview struct {
 	// Sources Which sources the preview could reach, and how far.
 	Sources []ForecastAssuranceSource `json:"sources"`
 
-	// Started Whether any pass has ever run in this organization. False is a organization the nightly sweep is skipping until somebody starts it — which is what makes this a first check rather than a recheck.
+	// Started Whether any pass has ever run in your company. False is a company the nightly sweep is skipping until somebody starts it — which is what makes this a first check rather than a recheck.
 	Started bool `json:"started"`
 }
 
@@ -54296,7 +54296,7 @@ type ForecastShare struct {
 	Id        openapi_types.UUID `json:"id"`
 	Kind      ForecastShareKind  `json:"kind"`
 
-	// ScopeId Whose forecast, for a team or owner scope. Absent for the organization.
+	// ScopeId Whose forecast, for a team or owner scope. Absent for your company.
 	ScopeId   *openapi_types.UUID    `json:"scope_id,omitempty"`
 	ScopeKind ForecastShareScopeKind `json:"scope_kind"`
 
@@ -54418,7 +54418,7 @@ type FormerMemberRequest struct {
 	Source *string `json:"source,omitempty"`
 }
 
-// FxRate One effective-dated FX rate converting from_currency into the organization base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
+// FxRate One effective-dated FX rate converting from_currency into your company base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
 type FxRate struct {
 	EffectiveDate openapi_types.Date `json:"effective_date"`
 	FromCurrency  string             `json:"from_currency"`
@@ -54426,20 +54426,20 @@ type FxRate struct {
 	// Rate Decimal rate (from -> base), always positive. Plain decimal, up to 10 integer and 10 fractional digits (numeric(20,10)).
 	Rate string `json:"rate"`
 
-	// ToCurrency The organization base currency.
+	// ToCurrency The company base currency.
 	ToCurrency string `json:"to_currency"`
 }
 
 // FxRateCurrencyListResponse defines model for FxRateCurrencyListResponse.
 type FxRateCurrencyListResponse struct {
-	// BaseCurrency The organization's base currency, which every code in `data` converts into. Served here as well as on the installation settings, so a role that may read deals but not those settings still learns which currency a picker leads with.
+	// BaseCurrency The company's base currency, which every code in `data` converts into. Served here as well as on the installation settings, so a role that may read deals but not those settings still learns which currency a picker leads with.
 	BaseCurrency string   `json:"base_currency"`
 	Data         []string `json:"data" unique:"items"`
 }
 
 // FxRateListResponse defines model for FxRateListResponse.
 type FxRateListResponse struct {
-	// BaseCurrency The organization's base currency — every rate in `data` converts TO this (AAD-PARAM-N-1, ADR-0085). Served from the organization itself rather than inferred from the first rate row, so a organization that has entered no rates can still state its own base.
+	// BaseCurrency The company's base currency — every rate in `data` converts TO this (AAD-PARAM-N-1, ADR-0085). Served from your company itself rather than inferred from the first rate row, so a company that has entered no rates can still state its own base.
 	BaseCurrency *string  `json:"base_currency,omitempty"`
 	Data         []FxRate `json:"data"`
 }
@@ -54462,7 +54462,7 @@ type GmailSignatureImportState string
 
 // GoogleDirectoryInput defines model for GoogleDirectoryInput.
 type GoogleDirectoryInput struct {
-	// AdminSubject The Organization admin the service account acts for. The Directory API refuses a delegated read that names no admin.
+	// AdminSubject The Company admin the service account acts for. The Directory API refuses a delegated read that names no admin.
 	AdminSubject *openapi_types.Email `json:"admin_subject,omitempty"`
 
 	// ServiceAccountJson The service account's JSON key file, as Google issues it.
@@ -54875,11 +54875,11 @@ type HeldThread struct {
 	// OccurredPrecision How to read `occurred_at`, present beside it. `day` means only its date is known, its UTC date, so a client draws no time.
 	OccurredPrecision *OccurredPrecision `json:"occurred_precision,omitempty"`
 
-	// ParticipantCount How many addresses outside the organization that message names, of which `participants`
+	// ParticipantCount How many addresses outside your company that message names, of which `participants`
 	// shows up to five. Absent when `participants` is.
 	ParticipantCount *int `json:"participant_count,omitempty" minimum:"0"`
 
-	// Participants Up to five addresses outside the organization on the message that opened the thread, so you
+	// Participants Up to five addresses outside your company on the message that opened the thread, so you
 	// can tell who a held thread is with. Colleagues are left out. Present exactly when
 	// `activity_id` is: a message you may not read, or one that was erased, names nobody.
 	Participants *[]HeldThreadParticipant `json:"participants,omitempty"`
@@ -54923,7 +54923,7 @@ type HeldThreadListResponse struct {
 	ThreadVerdict *CaptureVerdictClock `json:"thread_verdict,omitempty"`
 }
 
-// HeldThreadParticipant One address outside the organization on a held thread's opening message.
+// HeldThreadParticipant One address outside your company on a held thread's opening message.
 type HeldThreadParticipant struct {
 	// Address The folded address the message named.
 	Address string `json:"address"`
@@ -54952,7 +54952,7 @@ type HiddenBacklog struct {
 	// other numbers becomes decoration — this is what a check asserts on.
 	Clear bool `json:"clear"`
 
-	// Colleagues Mail from one of the organization's own email domains. ALSO NOBODY'S CHOICE, and
+	// Colleagues Mail from one of your company's own email domains. ALSO NOBODY'S CHOICE, and
 	// watched because the rule is only as good as the domain list behind it: a
 	// domain entered by mistake suppresses a real customer's correspondence for
 	// everybody, and this is the figure that would show it.
@@ -54970,7 +54970,7 @@ type HiddenBacklog struct {
 	InformsUs int `json:"informs_us" minimum:"0"`
 
 	// NotSales Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
-	// the judgement worth watching: it hides the thread from the WHOLE organization and
+	// the judgement worth watching: it hides the thread from the WHOLE company and
 	// never lifts, so one rep's mistake removes a customer from everybody's day
 	// permanently.
 	NotSales int `json:"not_sales" minimum:"0"`
@@ -55036,7 +55036,7 @@ type HiddenBacklog struct {
 	Truncated bool `json:"truncated"`
 
 	// Unlinked Inbound mail that qualifies in every other way and is attached to no record the
-	// organization sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
+	// company sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
 	// is right — a rep's dentist is not a customer — and it is also where a real
 	// customer lands when capture failed to link their thread. Its own figure for
 	// that reason rather than folded into a total.
@@ -55236,7 +55236,7 @@ type ImportColumn struct {
 // ImportDraftStep The wizard step a draft reopens on.
 type ImportDraftStep string
 
-// ImportFormat The files an import takes, for this organization. The template ZIP, the
+// ImportFormat The files an import takes, for your company. The template ZIP, the
 // column guide and the screen's file order are all read from it.
 type ImportFormat struct {
 	// Files One file per object, in `order`.
@@ -55260,7 +55260,7 @@ type ImportFormatVersion string
 // mapped onto; `label` is what the screen shows, set for a custom field.
 // A header shows `label` when present, else `name`.
 type ImportFormatColumn struct {
-	// Custom Whether this is one of the organization's custom fields.
+	// Custom Whether this is one of your company's custom fields.
 	Custom bool `json:"custom"`
 
 	// Description What goes in the column.
@@ -56932,13 +56932,13 @@ type IntroRequest struct {
 	// withdrew it).
 	//
 	// WHAT `replied` MEANS, exactly. It is set only by the server, from a message
-	// this organization's own connectors captured: inbound, sent BY the contact, and
+	// your company's own connectors captured: inbound, sent BY the contact, and
 	// after the introduction. Nothing a human types can reach it.
 	//
 	// It is a fact about the CONTACT, not about one thread. The colleague makes
 	// the introduction from their own mailbox, outside the product, so there is
 	// no thread for a reply to be matched against — what the server can honestly
-	// observe is that the contact wrote to this organization after being introduced.
+	// observe is that the contact wrote to your company after being introduced.
 	// Where several asks about one contact are awaiting a reply, that message
 	// answers all of them. Reading it as more than that — as proof they answered
 	// one specific introduction — is a claim the evidence does not carry.
@@ -57039,13 +57039,13 @@ type IntroRequestReplaceInput struct {
 // withdrew it).
 //
 // WHAT `replied` MEANS, exactly. It is set only by the server, from a message
-// this organization's own connectors captured: inbound, sent BY the contact, and
+// your company's own connectors captured: inbound, sent BY the contact, and
 // after the introduction. Nothing a human types can reach it.
 //
 // It is a fact about the CONTACT, not about one thread. The colleague makes
 // the introduction from their own mailbox, outside the product, so there is
 // no thread for a reply to be matched against — what the server can honestly
-// observe is that the contact wrote to this organization after being introduced.
+// observe is that the contact wrote to your company after being introduced.
 // Where several asks about one contact are awaiting a reply, that message
 // answers all of them. Reading it as more than that — as proof they answered
 // one specific introduction — is a claim the evidence does not carry.
@@ -57239,7 +57239,7 @@ type JobKindHealth struct {
 	Discarded          *int `json:"discarded,omitempty"`
 	ExpectationSeconds *int `json:"expectation_seconds,omitempty"`
 
-	// FleetWide True for a dispatcher — a job that fans work out and does no tenant work of its own. Its rows carry no organization.
+	// FleetWide True for a dispatcher — a job that fans work out and does no tenant work of its own. Its rows carry no company.
 	FleetWide bool `json:"fleet_wide"`
 
 	// Kind The stable job identifier River persists in river_job.kind.
@@ -57396,7 +57396,7 @@ type KnowledgeAnswer struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -57482,7 +57482,7 @@ type KnowledgeCorpus struct {
 	Coverage   KnowledgeCoverage `json:"coverage"`
 	CreatedAt  time.Time         `json:"created_at"`
 
-	// DefaultAsk The corpus the command palette's ask lands on. At most one per organization.
+	// DefaultAsk The corpus the command palette's ask lands on. At most one per company.
 	DefaultAsk  bool               `json:"default_ask"`
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
@@ -57500,11 +57500,11 @@ type KnowledgeCorpus struct {
 	// Shipped True for the handbook set that ships with Margince. It cannot be archived and takes no uploads. Its name, topic, floor and default can still be edited, and an update keeps those edits.
 	Shipped bool `json:"shipped"`
 
-	// TopicStatement What this corpus covers, in the organization's own words. Quoted back whenever the corpus refuses, so it is read by a contact at their least patient moment — write it as a sentence, not a label.
+	// TopicStatement What this corpus covers, in your company's own words. Quoted back whenever the corpus refuses, so it is read by a contact at their least patient moment — write it as a sentence, not a label.
 	TopicStatement string `json:"topic_statement"`
 }
 
-// KnowledgeCorpusList Every corpus, unpaged. A organization defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a commitment with no producer behind it.
+// KnowledgeCorpusList Every corpus, unpaged. A company defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a commitment with no producer behind it.
 type KnowledgeCorpusList struct {
 	Items []KnowledgeCorpus `json:"items"`
 }
@@ -57646,7 +57646,7 @@ type LastExchange struct {
 	// what the DB CHECK would reject, rather than 500-ing at write time).
 	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
 	// when `kind=message` (ADR-0107).
-	// **Custom fields**: the values of the organization's activity custom fields arrive as extra
+	// **Custom fields**: the values of your company's activity custom fields arrive as extra
 	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 	// `withheld`.
 	Activity Activity `json:"activity"`
@@ -57680,7 +57680,7 @@ type LatestInbound struct {
 	// what the DB CHECK would reject, rather than 500-ing at write time).
 	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
 	// when `kind=message` (ADR-0107).
-	// **Custom fields**: the values of the organization's activity custom fields arrive as extra
+	// **Custom fields**: the values of your company's activity custom fields arrive as extra
 	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 	// `withheld`.
 	Activity Activity `json:"activity"`
@@ -57708,7 +57708,7 @@ type LatestInboundList struct {
 	// what the DB CHECK would reject, rather than 500-ing at write time).
 	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
 	// when `kind=message` (ADR-0107).
-	// **Custom fields**: the values of the organization's activity custom fields arrive as extra
+	// **Custom fields**: the values of your company's activity custom fields arrive as extra
 	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 	// `withheld`.
 	LastInbound *Activity `json:"last_inbound,omitempty"`
@@ -57722,7 +57722,7 @@ type LatestInboundList struct {
 	// what the DB CHECK would reject, rather than 500-ing at write time).
 	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
 	// when `kind=message` (ADR-0107).
-	// **Custom fields**: the values of the organization's activity custom fields arrive as extra
+	// **Custom fields**: the values of your company's activity custom fields arrive as extra
 	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 	// `withheld`.
 	LastOutbound *Activity `json:"last_outbound,omitempty"`
@@ -58407,8 +58407,8 @@ type LegalEntity struct {
 
 	// SignatureTemplate The mail signature layout of a sender assigned to this entity, with the placeholders
 	// of `EmailSignatureTemplate.template`, up to 4000 characters. Null means the
-	// organization's template. Always null on the default entity, which signs with the
-	// organization's template (`/email-signature-template`).
+	// company's template. Always null on the default entity, which signs with the
+	// company's template (`/email-signature-template`).
 	SignatureTemplate *string   `json:"signature_template,omitempty"`
 	UpdatedAt         time.Time `json:"updated_at"`
 
@@ -58754,7 +58754,7 @@ type LicenseEntitlement struct {
 	// `state` is `absent` on a production installation that has been set up; a development or
 	// test installation runs unlicensed with no trial.
 	//
-	// The trial starts when the installation's oldest organization was created, archived ones
+	// The trial starts when the installation's oldest company was created, archived ones
 	// included, and lasts 14 days, with no grace period. Once `ended` is true, and until a
 	// license is configured, every agent tool call is refused with `trial_ended`, and so is
 	// every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
@@ -58820,7 +58820,7 @@ type LicenseHolder struct {
 // `state` is `absent` on a production installation that has been set up; a development or
 // test installation runs unlicensed with no trial.
 //
-// The trial starts when the installation's oldest organization was created, archived ones
+// The trial starts when the installation's oldest company was created, archived ones
 // included, and lasts 14 days, with no grace period. Once `ended` is true, and until a
 // license is configured, every agent tool call is refused with `trial_ended`, and so is
 // every HTTP change except these: the license routes, `POST /v1/exports`, the data-subject
@@ -58834,7 +58834,7 @@ type LicenseTrial struct {
 	// EndsAt The first instant the trial no longer covers.
 	EndsAt time.Time `json:"ends_at"`
 
-	// StartedAt When the installation's organization was created.
+	// StartedAt When the installation's company was created.
 	StartedAt time.Time `json:"started_at"`
 }
 
@@ -59692,7 +59692,7 @@ type MagicNotShown struct {
 	// `unknown_entity_type` — a CRM entity kind this build cannot scope, and therefore
 	// cannot safely show. Counted rather than served: showing a row this read cannot
 	// place is showing a row it cannot prove the reader may see. The count is
-	// organization-wide machine changes to CRM entities, not the reader's own. Infrastructure
+	// company-wide machine changes to CRM entities, not the reader's own. Infrastructure
 	// and configuration audits do not contribute. It is reported only to a
 	// seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
 	// `out_of_scope` — a row about a record outside the reader's own scope. Counted
@@ -59705,7 +59705,7 @@ type MagicNotShown struct {
 // `unknown_entity_type` — a CRM entity kind this build cannot scope, and therefore
 // cannot safely show. Counted rather than served: showing a row this read cannot
 // place is showing a row it cannot prove the reader may see. The count is
-// organization-wide machine changes to CRM entities, not the reader's own. Infrastructure
+// company-wide machine changes to CRM entities, not the reader's own. Infrastructure
 // and configuration audits do not contribute. It is reported only to a
 // seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
 // `out_of_scope` — a row about a record outside the reader's own scope. Counted
@@ -59741,13 +59741,13 @@ type MagicReceipt struct {
 	// in would turn internal churn into apparent value. Reporting the count instead
 	// means a preview showing five lines can never imply it is showing everything.
 	//
-	// The `unknown_entity_type` entry counts organization-wide machine changes to CRM entities
+	// The `unknown_entity_type` entry counts company-wide machine changes to CRM entities
 	// this build cannot place. Infrastructure and configuration audits do not contribute
 	// to this count. It is reported only to a seat holding `ai_diagnostics` read. Its
 	// absence for any other seat is not a zero.
 	NotShown []MagicNotShown `json:"not_shown"`
 
-	// NotShownCountWithheld True when the reader cannot inspect organization-wide unsupported record counts. Those counts are withheld; absence of described actions does not establish a complete receipt.
+	// NotShownCountWithheld True when the reader cannot inspect company-wide unsupported record counts. Those counts are withheld; absence of described actions does not establish a complete receipt.
 	NotShownCountWithheld *bool `json:"not_shown_count_withheld,omitempty"`
 
 	// Since The start of the window reported, resolved by the server. A client shows it, because "nothing happened" over an hour and over a day are different claims.
@@ -60215,7 +60215,7 @@ type MeetingBrief struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -60449,7 +60449,7 @@ type MeetingPlan struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -60955,7 +60955,7 @@ type MorningBrief struct {
 	// Stored with the run rather than resolved on read: the base currency can still be changed until deals freeze it, so a norm computed against EUR must not later be captioned with the USD in force by then. Absent on a run assembled before this field existed — a brief is one row per rep per local day, so those age out within a day.
 	RevenueNormCurrency *string `json:"revenue_norm_currency,omitempty"`
 
-	// RevenueNormMinor The organization-P90 (or fallback) base value the revenue factor normalized against.
+	// RevenueNormMinor The company-P90 (or fallback) base value the revenue factor normalized against.
 	RevenueNormMinor *int64 `json:"revenue_norm_minor,omitempty"`
 }
 
@@ -61062,12 +61062,12 @@ type MorningBriefItemLineage struct {
 // MorningDigest The CAP-DDL-6 payload: what capture did overnight and what awaits the human (CAP-WIRE-6).
 type MorningDigest struct {
 	Capture struct {
-		// ActivitiesCreated Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the organization. Equal to messages_synced by definition.
+		// ActivitiesCreated Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by your company. Equal to messages_synced by definition.
 		ActivitiesCreated *int `json:"activities_created,omitempty"`
 		CompaniesCreated  *int `json:"companies_created,omitempty"`
 		ContactsCreated   *int `json:"contacts_created,omitempty"`
 
-		// MessagesSynced Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by the organization. Equal to activities_created by definition.
+		// MessagesSynced Number of mail activities from the reader's own imports in the window that are live, unrestricted and readable by your company. Equal to activities_created by definition.
 		MessagesSynced *int `json:"messages_synced,omitempty"`
 	} `json:"capture"`
 	Connectors []struct {
@@ -61081,7 +61081,7 @@ type MorningDigest struct {
 
 	// Projects What moved on the bodies of work in the window, and which have gone quiet. Absent
 	// from a digest built without the section; each list is empty when nothing happened.
-	// Organization-level like the counts above: a project is read by every seat holding the
+	// Company-level like the counts above: a project is read by every seat holding the
 	// grant.
 	Projects *struct {
 		// GoneQuiet The projects being pursued or delivered that nothing has been filed against for
@@ -61657,7 +61657,7 @@ type NotificationItem struct {
 		// recipient's own account settings), `retained_email_signature` (the departed member's
 		// signature in the controller review), `activity` (open the retained note in its
 		// drawer), `legal_entity` (Company settings), `signature_template` (Company
-		// settings; `id` identifies the erasure whose review flagged the organization template),
+		// settings; `id` identifies the erasure whose review flagged your company template),
 		// or `approval_history` (the audit log narrowed to the approval `id`).
 		Type string `json:"type"`
 	} `json:"target,omitempty"`
@@ -61808,7 +61808,7 @@ type Offer struct {
 	// NetTcvMinor The total the buyer commits to: one-off lines in full, plus each recurring line's per-period net multiplied by the periods committed. A recurring line with no settled term contributes nothing, because there is no committed total until somebody says how long.
 	NetTcvMinor *int64 `json:"net_tcv_minor,omitempty"`
 
-	// OfferNumber Human-facing Angebot number, minted server-side, unique per organization (with revision).
+	// OfferNumber Human-facing Angebot number, minted server-side, unique per company (with revision).
 	OfferNumber *string `json:"offer_number,omitempty"`
 
 	// PdfAssetRef Rendered PDF ref, set by renderOffer. Null, as are buyer_company_id and buyer_snapshot, for a reader who cannot open the buyer company; cleared when a draft's buyer changes.
@@ -61827,7 +61827,7 @@ type Offer struct {
 	// TaxMinor Σ line taxes; derived, never client-set. Zero when money_withheld.
 	TaxMinor *int64 `json:"tax_minor,omitempty"`
 
-	// TemplateId The offer_template used for locale/layout at render time; unset falls back to the organization's default template for the offer's locale.
+	// TemplateId The offer_template used for locale/layout at render time; unset falls back to your company's default template for the offer's locale.
 	TemplateId *openapi_types.UUID `json:"template_id,omitempty"`
 	TermsText  *string             `json:"terms_text,omitempty"`
 	UpdatedAt  time.Time           `json:"updated_at"`
@@ -61965,7 +61965,7 @@ type OfferListResponse struct {
 	Page PageInfo `json:"page"`
 }
 
-// OfferTemplate A branded, organization-governed DE/EN PDF layout for offers. Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like CustomField, this is organization-authored config, not a captured record; provenance lives in the audit row, not this schema.
+// OfferTemplate A branded, company-governed DE/EN PDF layout for offers. Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like CustomField, this is company-authored config, not a captured record; provenance lives in the audit row, not this schema.
 type OfferTemplate struct {
 	ArchivedAt *time.Time         `json:"archived_at,omitempty"`
 	CreatedAt  time.Time          `json:"created_at"`
@@ -61980,7 +61980,7 @@ type OfferTemplate struct {
 	// Locale DE/EN at launch (de-DE, en-US); drives the rendered PDF label set.
 	Locale string `json:"locale"`
 
-	// Name Unique per organization among live (non-archived) templates.
+	// Name Unique per company among live (non-archived) templates.
 	Name      string    `json:"name"`
 	UpdatedAt time.Time `json:"updated_at"`
 
@@ -62682,7 +62682,7 @@ type Pipeline struct {
 	CreatedAt  *time.Time         `json:"created_at,omitempty"`
 	Id         openapi_types.UUID `json:"id"`
 
-	// IsDefault At most one default per organization.
+	// IsDefault At most one default per company.
 	IsDefault bool       `json:"is_default"`
 	Name      string     `json:"name"`
 	Position  int        `json:"position"`
@@ -63207,7 +63207,7 @@ type Product struct {
 	Id             openapi_types.UUID `json:"id"`
 	Name           string             `json:"name"`
 
-	// Sku Optional; unique per organization while live.
+	// Sku Optional; unique per company while live.
 	Sku    *string `json:"sku,omitempty"`
 	Source string  `json:"source"`
 
@@ -63347,7 +63347,7 @@ type Project struct {
 	// Key The short handle a human writes in a subject line. Letter-led and bounded so it can never be a bare number, which would match dates, amounts and order numbers. Unique among LIVE projects; archiving frees it.
 	Key *string `json:"key,omitempty"`
 
-	// LastActivityAt The newest organization-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
+	// LastActivityAt The newest company-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
 	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
@@ -64820,8 +64820,8 @@ type RecordCommunicationContextRequest struct {
 // source review answered "met face to face" does; for anyone else they stay open.
 type RecordCommunicationContextRequestKind string
 
-// RecordConfirmationPage One contact's own view of what the organization holds about them, for the no-login confirm page.
-// A purpose-built projection and never the Contact360 read model, which carries this organization's
+// RecordConfirmationPage One contact's own view of what your company holds about them, for the no-login confirm page.
+// A purpose-built projection and never the Contact360 read model, which carries your company's
 // working notes — owner, lifecycle, scores — rather than the subject's own data.
 type RecordConfirmationPage struct {
 	// AsksNews False when the recipient's country bars asking about news in a details check. The page
@@ -65953,11 +65953,11 @@ type ReportRunSummary struct {
 type ReportScope struct {
 	Id *openapi_types.UUID `json:"id,omitempty"`
 
-	// Kind Whose figures the report covers: one owner, one team, or the whole organization. id names the owner or team.
+	// Kind Whose figures the report covers: one owner, one team, or the whole company. id names the owner or team.
 	Kind ReportScopeKind `json:"kind"`
 }
 
-// ReportScopeKind Whose figures the report covers: one owner, one team, or the whole organization. id names the owner or team.
+// ReportScopeKind Whose figures the report covers: one owner, one team, or the whole company. id names the owner or team.
 type ReportScopeKind string
 
 // ReportSetupObjective defines model for ReportSetupObjective.
@@ -65974,7 +65974,7 @@ type ReportSetupProposal struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -67099,7 +67099,7 @@ type ResolveInputCheck struct {
 // ResolveInputCheckOutcome What kind of answer this is. `condition_cleared` is absent on purpose: it is the check's own, and a contact naming it would be saying the condition stopped being true without anything having looked. `separate` answers only a `duplicate_motion` finding, says its two deals are not one buying motion, and has no expiry: the pair is not flagged again.
 type ResolveInputCheckOutcome string
 
-// ResponseMetrics What the organization did with its work over one window. Three questions: how fast it
+// ResponseMetrics What your company did with its work over one window. Three questions: how fast it
 // answered what it answered, how much it put down instead, and how often a deal the
 // queue called material and at risk got a next step booked the same day.
 //
@@ -67110,7 +67110,7 @@ type ResolveInputCheckOutcome string
 type ResponseMetrics struct {
 	// Answered How many inbound sales messages got a reply in the window. It is the
 	// denominator `median_minutes` is worth reading against: a fast median over three
-	// answered messages says less about the organization than a slower one over three
+	// answered messages says less about your company than a slower one over three
 	// hundred.
 	Answered int `json:"answered" minimum:"0"`
 
@@ -67134,7 +67134,7 @@ type ResponseMetrics struct {
 	// The set is the one the day's FIRST pass judged: a pass runs hourly, the first one
 	// after local midnight records the day, and later passes that day add nothing — so a
 	// deal turning at risk in the afternoon waits for tomorrow. The bar is the
-	// organization's own, the median of the whole at-risk pipeline over every amount,
+	// company's own, the median of the whole at-risk pipeline over every amount,
 	// judged once for everybody; it cannot be recomputed for a past day, so nothing
 	// before `at_risk_recorded_since` exists to count.
 	//
@@ -67166,11 +67166,11 @@ type ResponseMetrics struct {
 	// less judgement the more of it happened.
 	//
 	// Over the conversations THIS caller may open, like every figure beside it. Two
-	// readers of the same organization can therefore see different totals here, and each
+	// readers of the same company can therefore see different totals here, and each
 	// is answering "how much of the work I can see is being put down".
 	Disposed int `json:"disposed" minimum:"0"`
 
-	// DisposedNotSales How many of those were the organization-wide judgement. Its own figure because it
+	// DisposedNotSales How many of those were your company-wide judgement. Its own figure because it
 	// is the one that costs everybody: the other two hide a row from one reader, this
 	// one hides the conversation from all of them and does not lift.
 	DisposedNotSales int `json:"disposed_not_sales" minimum:"0"`
@@ -67505,10 +67505,10 @@ type Role struct {
 	// ArchivedAt When the role was archived. Absent or null for a live role.
 	ArchivedAt *time.Time `json:"archived_at,omitempty"`
 
-	// IsSystem True for a role the organization bootstrap seeded and the RBAC migrations top up. It is NOT an immutability flag — a system role's grants are editable through `setRoleObjectGrant`, which is what makes granting an extension object possible at all on an installation that never defined a custom role. A client may surface it as "shipped with the product", never as "read-only".
+	// IsSystem True for a role your company bootstrap seeded and the RBAC migrations top up. It is NOT an immutability flag — a system role's grants are editable through `setRoleObjectGrant`, which is what makes granting an extension object possible at all on an installation that never defined a custom role. A client may surface it as "shipped with the product", never as "read-only".
 	IsSystem bool `json:"is_system"`
 
-	// Key The stable key a role assignment and every refusal names (`admin`, `rep`, …). Unique per organization, and the path segment `setRoleObjectGrant` addresses.
+	// Key The stable key a role assignment and every refusal names (`admin`, `rep`, …). Unique per company, and the path segment `setRoleObjectGrant` addresses.
 	Key string `json:"key"`
 
 	// Name The operator-facing label. Display only — nothing resolves a role by it.
@@ -67527,7 +67527,7 @@ type Role struct {
 // RoleRowScope Whose records the grants reach: the holder's own, those of everyone sharing a live team with them, or every record. A document storing none reads as `own`, the narrowest, which is how authentication reads it too.
 type RoleRowScope string
 
-// RoleDirectory Every role this organization defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer.
+// RoleDirectory Every role your company defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer.
 type RoleDirectory struct {
 	Roles []Role `json:"roles"`
 
@@ -67646,7 +67646,7 @@ type SalesAssessment struct {
 
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy  WrittenBy                `json:"generated_by"`
@@ -67819,7 +67819,7 @@ type SalesGoalPlanState string
 type SalesGoalProposal struct {
 	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
 	// lane. `deterministic` — the structured fallback, used when no lane is configured,
-	// the organization's AI budget is exhausted, the model call fails, or the checks the
+	// your company's AI budget is exhausted, the model call fails, or the checks the
 	// surface runs refuse the model's answer. Never silently interchangeable: a reader
 	// deciding how much to trust a sentence needs to know which wrote it.
 	GeneratedBy WrittenBy `json:"generated_by"`
@@ -68129,7 +68129,7 @@ type SalesProgressDeal struct {
 	// Deal A deal. Mirrors the `deal` table.
 	Deal Deal `json:"deal"`
 
-	// NextTask The earliest-due open task on the deal that every organization reader may see. Absent when there is none.
+	// NextTask The earliest-due open task on the deal that every company reader may see. Absent when there is none.
 	NextTask *SalesProgressNextTask `json:"next_task,omitempty"`
 
 	// SaleType What the deal's priced lines sell. `partly_classified` when lines of another kind or an unpriced remainder sit beside the classified ones, `unclassified` when no line is a product or a service, or the lines add up to more than the deal. Absent when the deal's amount is masked from the caller.
@@ -68324,10 +68324,10 @@ type SaveEmailSignatureRequest struct {
 	// expanding placeholders. Empty sanitized content uses the usual fallback.
 	Html *string `json:"html,omitempty"`
 
-	// Phone The member's phone number, for the organization template. Omitted leaves it as it is.
+	// Phone The member's phone number, for your company template. Omitted leaves it as it is.
 	Phone *string `json:"phone,omitempty"`
 
-	// Title The member's title, for the organization template. Omitted leaves it as it is.
+	// Title The member's title, for your company template. Omitted leaves it as it is.
 	Title *string `json:"title,omitempty"`
 }
 
@@ -68408,10 +68408,10 @@ type SaveRetainedEmailSignatureRequest struct {
 	// expanding placeholders. Empty sanitized content uses the usual fallback.
 	Html *string `json:"html,omitempty"`
 
-	// Phone The member's phone number, for the organization template. Omitted leaves it as it is.
+	// Phone The member's phone number, for your company template. Omitted leaves it as it is.
 	Phone *string `json:"phone,omitempty"`
 
-	// Title The member's title, for the organization template. Omitted leaves it as it is.
+	// Title The member's title, for your company template. Omitted leaves it as it is.
 	Title *string `json:"title,omitempty"`
 }
 
@@ -68489,7 +68489,7 @@ type ScheduledSend struct {
 	AttachmentsUnavailable *int `json:"attachments_unavailable,omitempty" minimum:"1"`
 
 	// Bcc Visible to the SENDER, who is the only contact this record is readable by. A scheduled
-	// message's blind-copy list is not organization-readable the way a sent activity is.
+	// message's blind-copy list is not company-readable the way a sent activity is.
 	Bcc  *[]openapi_types.Email `json:"bcc,omitempty"`
 	Body *string                `json:"body,omitempty"`
 	Cc   *[]openapi_types.Email `json:"cc,omitempty"`
@@ -68742,14 +68742,14 @@ type SchedulingTeamMember struct {
 
 	// State `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
 	// `left`: the member left the link; remove them to take bookings again. `unavailable`:
-	// the member left the organization or Margince cannot read their calendar.
+	// the member left your company or Margince cannot read their calendar.
 	State  *SchedulingTeamMemberState `json:"state,omitempty"`
 	UserId openapi_types.UUID         `json:"user_id"`
 }
 
 // SchedulingTeamMemberState `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
 // `left`: the member left the link; remove them to take bookings again. `unavailable`:
-// the member left the organization or Margince cannot read their calendar.
+// the member left your company or Margince cannot read their calendar.
 type SchedulingTeamMemberState string
 
 // SchedulingTeamRequest defines model for SchedulingTeamRequest.
@@ -70156,11 +70156,11 @@ type SetMailPostureRequest struct {
 	// marked.
 	DefaultSender *bool `json:"default_sender,omitempty"`
 
-	// Posture See CaptureConnection.mail_posture. `shared` needs the organization opt-in.
+	// Posture See CaptureConnection.mail_posture. `shared` needs your company opt-in.
 	Posture *SetMailPostureRequestPosture `json:"posture,omitempty"`
 }
 
-// SetMailPostureRequestPosture See CaptureConnection.mail_posture. `shared` needs the organization opt-in.
+// SetMailPostureRequestPosture See CaptureConnection.mail_posture. `shared` needs your company opt-in.
 type SetMailPostureRequestPosture string
 
 // SetMyAgentGrantRequest The rep's answer for one scheduled agent.
@@ -70336,7 +70336,7 @@ type SettleClaimRequestOutcome string
 // ShareCaptureHoldHistoryResponse defines model for ShareCaptureHoldHistoryResponse.
 type ShareCaptureHoldHistoryResponse struct {
 	// Released How many of the caller's own imports stopped being held for this reason. Not the same
-	// as how many messages the organization can now read: a message a colleague also holds
+	// as how many messages your company can now read: a message a colleague also holds
 	// stays limited, because the audience is the strictest answer across every seat that
 	// imported it. Zero means every message the caller's holds caught is held for some
 	// other reason too, or was captured before the product recorded more than one reason.
@@ -70397,7 +70397,7 @@ type SharedForecastView struct {
 // SharedForecastViewKind What this view guarantees. A reader shown a frozen number needs to know it is frozen, and as of when.
 type SharedForecastViewKind string
 
-// SharedGmailCredentials A Google Organization service account the admin delegated `gmail.readonly` to.
+// SharedGmailCredentials A Google Company service account the admin delegated `gmail.readonly` to.
 type SharedGmailCredentials struct {
 	// ServiceAccountKey The JSON key file of the service account, as text. Sealed to the vault; never returned.
 	ServiceAccountKey *string `json:"service_account_key,omitempty"`
@@ -70435,7 +70435,7 @@ type SharedMailbox struct {
 	// Id The connection id. It stays the same across a disconnect and a reconnect.
 	Id openapi_types.UUID `json:"id"`
 
-	// MailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the organization.
+	// MailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to your company.
 	MailVisibility SharedMailboxMailVisibility `json:"mail_visibility"`
 	Provider       SharedMailboxProvider       `json:"provider"`
 
@@ -70450,7 +70450,7 @@ type SharedMailbox struct {
 	UnreadPeriod *CaptureUnreadPeriod `json:"unread_period,omitempty"`
 }
 
-// SharedMailboxMailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to the organization.
+// SharedMailboxMailVisibility `held` keeps its mail to the reader team and the message's own participants; `shared` opens it to your company.
 type SharedMailboxMailVisibility string
 
 // SharedMailboxProvider defines model for SharedMailbox.Provider.
@@ -71316,7 +71316,7 @@ type Tag struct {
 // TagColor defines model for Tag.Color.
 type TagColor string
 
-// TagDetail One tag with how much of the organization carries it.
+// TagDetail One tag with how much of your company carries it.
 type TagDetail struct {
 	ArchivedAt  *time.Time         `json:"archived_at,omitempty"`
 	Color       *TagDetailColor    `json:"color,omitempty"`
@@ -72080,7 +72080,7 @@ type TechnicalEnrichStatus struct {
 	Lanes     []TechnicalEnrichLane `json:"lanes"`
 }
 
-// TelegramBusinessConnection One Telegram Business account the owner linked to the organization's bot. Nothing from the account is stored until an admin approves it.
+// TelegramBusinessConnection One Telegram Business account the owner linked to your company's bot. Nothing from the account is stored until an admin approves it.
 type TelegramBusinessConnection struct {
 	// AccountId The owner's Telegram user id, the key a repeated link keeps its row by.
 	AccountId string `json:"accountId"`
@@ -72137,7 +72137,7 @@ type ThreadAudienceOutcome struct {
 	// Messages How many of the thread's messages you imported, and the decision reached.
 	Messages int `json:"messages"`
 
-	// Shared Whether the messages are now readable by the organization. False after a share means
+	// Shared Whether the messages are now readable by your company. False after a share means
 	// somebody else still holds them.
 	Shared bool `json:"shared"`
 }
@@ -72243,7 +72243,7 @@ type TranscriptSummaryPoint struct {
 type TransferProjectOwnershipRequest struct {
 	FromOwnerId openapi_types.UUID `json:"from_owner_id"`
 
-	// ToOwnerId An active user of the organization (422 otherwise).
+	// ToOwnerId An active user of your company (422 otherwise).
 	ToOwnerId openapi_types.UUID `json:"to_owner_id"`
 }
 
@@ -72449,7 +72449,7 @@ type UpdateAcquisitionSourceRequest struct {
 	SortOrder *int    `json:"sort_order,omitempty"`
 }
 
-// UpdateActivityRequest A sparse patch. The organization's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same.
+// UpdateActivityRequest A sparse patch. The company's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same.
 type UpdateActivityRequest struct {
 	// AiAssisted True marks the activity's words as AI-assisted, when a model rewrote the subject or body this patch writes. The mark stays once set, so false and absent change nothing. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`.
 	AiAssisted *bool               `json:"ai_assisted,omitempty"`
@@ -72601,7 +72601,7 @@ type UpdateCaptureSettingsRequest struct {
 	// InternalMail Only a human administrator may change source authorization. This authorizes future capture only, never a historical import.
 	InternalMail *UpdateInternalMailRequest `json:"internal_mail,omitempty"`
 
-	// MailSharing Toggle the organization mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
+	// MailSharing Toggle your company mail-sharing posture; affects correspondence captured from now on — mail, and chat on a transport whose credential belongs to one member.
 	MailSharing *bool `json:"mail_sharing,omitempty"`
 
 	// MailSyncIntervalSeconds Set how long a mailbox waits between syncs, in seconds.
@@ -74634,7 +74634,7 @@ type WebForm struct {
 	HandlingCutoverAt *time.Time         `json:"handling_cutover_at,omitempty"`
 	Id                openapi_types.UUID `json:"id"`
 
-	// Intake Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the organization or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
+	// Intake Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of your company or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
 	Intake *struct {
 		Since *time.Time         `json:"since,omitempty"`
 		State WebFormIntakeState `json:"state"`
@@ -74733,7 +74733,7 @@ type WebFormCreated struct {
 	HandlingCutoverAt *time.Time         `json:"handling_cutover_at,omitempty"`
 	Id                openapi_types.UUID `json:"id"`
 
-	// Intake Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the organization or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
+	// Intake Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of your company or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
 	Intake *struct {
 		Since *time.Time                `json:"since,omitempty"`
 		State WebFormCreatedIntakeState `json:"state"`
@@ -75000,7 +75000,7 @@ type WebsiteInquiryAssignment struct {
 	// what the DB CHECK would reject, rather than 500-ing at write time).
 	// `channel_provider` is the same kind of constraint in both directions: non-null exactly
 	// when `kind=message` (ADR-0107).
-	// **Custom fields**: the values of the organization's activity custom fields arrive as extra
+	// **Custom fields**: the values of your company's activity custom fields arrive as extra
 	// top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 	// `withheld`.
 	Task Activity `json:"task"`
@@ -75881,7 +75881,7 @@ type WeeklyScorecardLeadBlock struct {
 	Promoted               int `json:"promoted" minimum:"0"`
 }
 
-// WhatsAppConnection One WhatsApp Business phone number connected to the organization. No secret is part of it.
+// WhatsAppConnection One WhatsApp Business phone number connected to your company. No secret is part of it.
 type WhatsAppConnection struct {
 	ConnectedAt time.Time `json:"connectedAt"`
 
@@ -75914,7 +75914,7 @@ type WhatsAppConnectionStatus string
 
 // WhatsAppConnectionCreated defines model for WhatsAppConnectionCreated.
 type WhatsAppConnectionCreated struct {
-	// Connection One WhatsApp Business phone number connected to the organization. No secret is part of it.
+	// Connection One WhatsApp Business phone number connected to your company. No secret is part of it.
 	Connection WhatsAppConnection `json:"connection"`
 
 	// VerifyToken The token Meta sends in the webhook subscription check. Made by the server and shown only in this response.
@@ -76937,7 +76937,7 @@ type WorklistItem struct {
 	// reader may not see is counted in `contact_count` and never named.
 	DomainContext *DomainQuestionContext `json:"domain_context,omitempty"`
 
-	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in the organization language.
+	// DomainNote The site triage's own sentence on a `vendor_verdict` domain question, in your company language.
 	DomainNote *string `json:"domain_note,omitempty"`
 
 	// DomainReasonCode The domain question's reason code, rendered in the reader's language.
@@ -77901,12 +77901,12 @@ type WorkspaceQueryResult struct {
 
 // WrittenBy Which writer produced a piece of generated prose. `model` — the configured model
 // lane. `deterministic` — the structured fallback, used when no lane is configured,
-// the organization's AI budget is exhausted, the model call fails, or the checks the
+// your company's AI budget is exhausted, the model call fails, or the checks the
 // surface runs refuse the model's answer. Never silently interchangeable: a reader
 // deciding how much to trust a sentence needs to know which wrote it.
 type WrittenBy string
 
-// ZaloOAConnection One Zalo Official Account connected to the organization. No secret is part of it.
+// ZaloOAConnection One Zalo Official Account connected to your company. No secret is part of it.
 type ZaloOAConnection struct {
 	// AppId The Zalo app that serves the Official Account.
 	AppId       string             `json:"appId"`
@@ -78200,7 +78200,7 @@ type ListActivitiesParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the organization's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus your company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -78372,7 +78372,7 @@ type RelinkThreadParams struct {
 
 // SetThreadAudienceJSONBody defines parameters for SetThreadAudience.
 type SetThreadAudienceJSONBody struct {
-	// Share True to share the thread with the organization, false to keep it private.
+	// Share True to share the thread with your company, false to keep it private.
 	Share bool `json:"share"`
 }
 
@@ -78435,7 +78435,7 @@ type SetActivityAudienceParams struct {
 // ClearActivityDispositionParams defines parameters for ClearActivityDisposition.
 type ClearActivityDispositionParams struct {
 	// Scope `mine` clears this reader's own snooze or not-mine. `thread` withdraws the
-	// organization-wide not-sales judgement, which anybody who can read the message may do:
+	// company-wide not-sales judgement, which anybody who can read the message may do:
 	// the judgement was never one contact's property.
 	Scope *ClearActivityDispositionParamsScope `form:"scope,omitempty" json:"scope,omitempty"`
 }
@@ -80074,7 +80074,7 @@ type ListCompaniesParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the organization's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus your company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -80089,7 +80089,7 @@ type ListCompaniesParams struct {
 	// IncludeAnchor Include this installation's own company. It is excluded by default because this list
 	// answers "which companies are we selling to", and the company running the CRM is not one
 	// of them (ADR-0082). Modeled on `include_archived` (API-LIST-4): a class of rows
-	// almost never wanted, never silently unreachable. Surfaces whose subject IS the organization
+	// almost never wanted, never silently unreachable. Surfaces whose subject IS your company
 	// — recording that a contact works here, own-company project work — set it.
 	IncludeAnchor *bool `form:"include_anchor,omitempty" json:"include_anchor,omitempty"`
 
@@ -81246,7 +81246,7 @@ type ListContactsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the organization's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus your company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -81990,7 +81990,7 @@ type ListCustomFieldsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the organization's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus your company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -82216,7 +82216,7 @@ type ListDealRoomsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the organization's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus your company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -82433,7 +82433,7 @@ type ListDealsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the organization's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus your company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -83020,7 +83020,7 @@ type ExtOauthCallbackParams struct {
 	// Code The vendor's authorization code
 	Code *string `form:"code,omitempty" json:"code,omitempty"`
 
-	// State Signed binding to the organization
+	// State Signed binding to your company
 	State string `form:"state" json:"state"`
 
 	// Error Set instead of `code` when the admin declined.
@@ -83584,7 +83584,7 @@ type ListLeadsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the organization's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus your company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -84376,7 +84376,7 @@ type ListOfferTemplatesParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the organization's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus your company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -84727,7 +84727,7 @@ type ListPartnersParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the organization's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus your company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -84944,7 +84944,7 @@ type ListProductsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the organization's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus your company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -85036,7 +85036,7 @@ type ListProjectsParams struct {
 	// cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
 	// accepted multi-field spelling; any other comma-separated multi-field spec returns
 	// `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-	// resource's list publishes, plus the organization's active `cf_` columns (custom columns carry no
+	// resource's list publishes, plus your company's active `cf_` columns (custom columns carry no
 	// index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
 	// they can order by: a header that cannot be clicked is a dead control. Some columns are not
 	// yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -86707,7 +86707,7 @@ type ListTagsParams struct {
 	// IncludeArchived Include soft-deleted (archived) rows. Default false.
 	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
 
-	// WithCarriedBy Also count, per tag, the records this caller may see carrying it, as `carried_by`. The count reads every tagging in the organization, so a caller that only needs the words leaves it off.
+	// WithCarriedBy Also count, per tag, the records this caller may see carrying it, as `carried_by`. The count reads every tagging in your company, so a caller that only needs the words leaves it off.
 	WithCarriedBy *bool `form:"with_carried_by,omitempty" json:"with_carried_by,omitempty"`
 }
 
@@ -87700,7 +87700,7 @@ type UndoMeetingReadyParams struct {
 // GetResponseMetricsParams defines parameters for GetResponseMetrics.
 type GetResponseMetricsParams struct {
 	// Days How many days back the window reaches. Capped at 90: past that the figure stops
-	// describing how the organization works now and starts averaging over a change in
+	// describing how your company works now and starts averaging over a change in
 	// how it works.
 	Days *int `form:"days,omitempty" json:"days,omitempty" maximum:"90" minimum:"1"`
 }
@@ -103313,7 +103313,7 @@ type ServerInterface interface {
 	// Turn the daily model price sync on or off (ai_model_rate update).
 	// (PUT /ai/price-sync)
 	ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request)
-	// Authenticated AI configuration posture for transparent human-facing organizations.
+	// Authenticated AI configuration posture for transparent human-facing company installations.
 	// (GET /ai/profile)
 	GetAiProfile(w http.ResponseWriter, r *http.Request)
 	// Which AI providers are not answering, and why.
@@ -103712,13 +103712,13 @@ type ServerInterface interface {
 	// Redeem a reset token and set a new password.
 	// (POST /auth/reset-password)
 	ResetPassword(w http.ResponseWriter, r *http.Request)
-	// List the organization's configured automation instances.
+	// List your company's configured automation instances.
 	// (GET /automations)
 	ListAutomations(w http.ResponseWriter, r *http.Request, params ListAutomationsParams)
 	// Configure an automation instance from a catalog type (created paused).
 	// (POST /automations)
 	CreateAutomation(w http.ResponseWriter, r *http.Request)
-	// The closed starter library of automation types the organization can instantiate.
+	// The closed starter library of automation types your company can instantiate.
 	// (GET /automations/catalog)
 	ListAutomationCatalog(w http.ResponseWriter, r *http.Request)
 	// Run one failed firing again, from the event that triggered it.
@@ -103793,7 +103793,7 @@ type ServerInterface interface {
 	// What the capture pipeline did with your messages in the last 24 hours.
 	// (GET /capture/activity)
 	ListMyCaptureActivity(w http.ResponseWriter, r *http.Request, params ListMyCaptureActivityParams)
-	// The same window for the organization's shared channel connections.
+	// The same window for your company's shared channel connections.
 	// (GET /capture/activity/workspace)
 	ListWorkspaceCaptureActivity(w http.ResponseWriter, r *http.Request, params ListWorkspaceCaptureActivityParams)
 	// Where each domain's company question stands.
@@ -103808,7 +103808,7 @@ type ServerInterface interface {
 	// Search the shipped consumer-mail baseline.
 	// (GET /capture/consumer-mail-baseline)
 	ListConsumerMailBaseline(w http.ResponseWriter, r *http.Request, params ListConsumerMailBaselineParams)
-	// The organization's own consumer-mail domain list.
+	// The company's own consumer-mail domain list.
 	// (GET /capture/consumer-mail-domains)
 	ListConsumerMailDomains(w http.ResponseWriter, r *http.Request)
 	// Add a consumer-mail domain, or carve one out.
@@ -103844,16 +103844,16 @@ type ServerInterface interface {
 	// Answer an open vendor question by keeping the vendor result.
 	// (POST /capture/domain-questions/{domain}/keep-vendor)
 	KeepDomainAsVendor(w http.ResponseWriter, r *http.Request, domain string)
-	// The organization's own email domains.
+	// The company's own email domains.
 	// (GET /capture/email-domains)
 	ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request)
-	// Register one of the organization's own email domains.
+	// Register one of your company's own email domains.
 	// (POST /capture/email-domains)
 	CreateWorkspaceEmailDomain(w http.ResponseWriter, r *http.Request)
-	// Stop treating a domain as the organization's own.
+	// Stop treating a domain as your company's own.
 	// (DELETE /capture/email-domains/{domain})
 	DeleteWorkspaceEmailDomain(w http.ResponseWriter, r *http.Request, domain string)
-	// The addresses and domains capture keeps out — the organization's rules and the caller's own.
+	// The addresses and domains capture keeps out — your company's rules and the caller's own.
 	// (GET /capture/exclusions)
 	ListCaptureExclusions(w http.ResponseWriter, r *http.Request)
 	// Keep an address or a domain out of capture.
@@ -103889,10 +103889,10 @@ type ServerInterface interface {
 	// Overrule what the classifier decided about a sender.
 	// (PUT /capture/senders/{address}/decision)
 	SetCaptureSenderDecision(w http.ResponseWriter, r *http.Request, address string)
-	// The organization's capture settings.
+	// The company's capture settings.
 	// (GET /capture/settings)
 	GetCaptureSettings(w http.ResponseWriter, r *http.Request)
-	// Update the organization's capture settings (admin/ops).
+	// Update your company's capture settings (admin/ops).
 	// (PATCH /capture/settings)
 	UpdateCaptureSettings(w http.ResponseWriter, r *http.Request)
 	// The same ladder, opened from a row of the capture-activity window.
@@ -103910,43 +103910,43 @@ type ServerInterface interface {
 	// What has been going on with one record, in one cited picture.
 	// (GET /catch-up)
 	CatchUpOnRecord(w http.ResponseWriter, r *http.Request, params CatchUpOnRecordParams)
-	// List the organization's messaging-channel connections.
+	// List your company's messaging-channel connections.
 	// (GET /channel-connections)
 	ListChannelConnections(w http.ResponseWriter, r *http.Request)
-	// Connect a messaging-channel bot for the whole organization.
+	// Connect a messaging-channel bot for the whole company.
 	// (POST /channel-connections)
 	ConnectChannel(w http.ResponseWriter, r *http.Request)
-	// List the Telegram Business accounts linked to the organization's bot.
+	// List the Telegram Business accounts linked to your company's bot.
 	// (GET /channel-connections/telegram-business)
 	ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request)
-	// Disconnect a Telegram Business account from the organization.
+	// Disconnect a Telegram Business account from your company.
 	// (DELETE /channel-connections/telegram-business/{id})
 	DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id)
-	// Approve a Telegram Business account for the organization.
+	// Approve a Telegram Business account for your company.
 	// (POST /channel-connections/telegram-business/{id}/approve)
 	ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id)
 	// Change who may read a business account's messages.
 	// (PATCH /channel-connections/telegram-business/{id}/visibility)
 	UpdateTelegramBusinessConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
-	// List the WhatsApp Business numbers connected to the organization.
+	// List the WhatsApp Business numbers connected to your company.
 	// (GET /channel-connections/whatsapp)
 	ListWhatsAppConnections(w http.ResponseWriter, r *http.Request)
-	// Connect a WhatsApp Business number to the organization.
+	// Connect a WhatsApp Business number to your company.
 	// (POST /channel-connections/whatsapp)
 	CreateWhatsAppConnection(w http.ResponseWriter, r *http.Request)
-	// Disconnect a WhatsApp Business number from the organization.
+	// Disconnect a WhatsApp Business number from your company.
 	// (DELETE /channel-connections/whatsapp/{id})
 	DisconnectWhatsAppConnection(w http.ResponseWriter, r *http.Request, id Id)
 	// Change who may read a WhatsApp number's messages.
 	// (PATCH /channel-connections/whatsapp/{id}/visibility)
 	UpdateWhatsAppConnectionVisibility(w http.ResponseWriter, r *http.Request, id Id)
-	// List the Zalo Official Accounts connected to the organization.
+	// List the Zalo Official Accounts connected to your company.
 	// (GET /channel-connections/zalo-oa)
 	ListZaloOAConnections(w http.ResponseWriter, r *http.Request)
-	// Connect a Zalo Official Account to the organization.
+	// Connect a Zalo Official Account to your company.
 	// (POST /channel-connections/zalo-oa)
 	CreateZaloOAConnection(w http.ResponseWriter, r *http.Request)
-	// Disconnect a Zalo Official Account from the organization.
+	// Disconnect a Zalo Official Account from your company.
 	// (DELETE /channel-connections/zalo-oa/{id})
 	DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request, id Id)
 	// Change who may read a Zalo Official Account's messages.
@@ -104309,7 +104309,7 @@ type ServerInterface interface {
 	// Dismiss the owner's current mailbox silence warning.
 	// (POST /connectors/{provider}/silence/dismiss)
 	DismissConnectorSilence(w http.ResponseWriter, r *http.Request, provider CaptureProvider, params DismissConnectorSilenceParams)
-	// List the organization's consent purposes (e.g. transactional, marketing_email, profiling).
+	// List your company's consent purposes (e.g. transactional, marketing_email, profiling).
 	// (GET /consent-purposes)
 	ListConsentPurposes(w http.ResponseWriter, r *http.Request)
 	// Define a consent purpose — a human-only admin write.
@@ -104645,7 +104645,7 @@ type ServerInterface interface {
 	// Open the suggested deal or link the evidence to an existing deal.
 	// (POST /deal-suggestions/{id}/accept)
 	AcceptDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params AcceptDealSuggestionParams)
-	// Record that the suggestion is not a deal, for the whole organization.
+	// Record that the suggestion is not a deal, for the whole company.
 	// (POST /deal-suggestions/{id}/dismiss)
 	DismissDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params DismissDealSuggestionParams)
 	// List deals (live by default; cursor-paginated). Supports Kanban-by-stage reads.
@@ -104816,10 +104816,10 @@ type ServerInterface interface {
 	// The calling user's morning digest — what capture did overnight.
 	// (GET /digest)
 	GetMorningDigest(w http.ResponseWriter, r *http.Request)
-	// The organization's signature template.
+	// The company's signature template.
 	// (GET /email-signature-template)
 	GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Request)
-	// Set the organization's signature template (admin/ops).
+	// Set your company's signature template (admin/ops).
 	// (PUT /email-signature-template)
 	SaveEmailSignatureTemplate(w http.ResponseWriter, r *http.Request)
 	// Start a new email conversation from a record — runs directly, consent-gated.
@@ -104861,7 +104861,7 @@ type ServerInterface interface {
 	// Export a filtered slice of one object (or a saved view / dynamic list) to an open format.
 	// (POST /exports)
 	CreateFilteredExport(w http.ResponseWriter, r *http.Request)
-	// Download the whole-organization export bundle.
+	// Download the whole-company export bundle.
 	// (GET /exports/bundle)
 	DownloadExportBundle(w http.ResponseWriter, r *http.Request)
 	// OAuth redirect callback — completes an admin's consent to an extension unit's app.
@@ -104999,19 +104999,19 @@ type ServerInterface interface {
 	// Remove a currency from the FX rate sheet.
 	// (DELETE /fx-rates/{from})
 	RemoveFxRate(w http.ResponseWriter, r *http.Request, from string)
-	// List this organization's recent CSV import runs, newest first.
+	// List your company's recent CSV import runs, newest first.
 	// (GET /imports)
 	ListImportRuns(w http.ResponseWriter, r *http.Request, params ListImportRunsParams)
 	// Create an import run from an uploaded source and a column mapping, and start its test run.
 	// (POST /imports)
 	CreateImportRun(w http.ResponseWriter, r *http.Request)
-	// Describe the files an import takes, column by column, for this organization.
+	// Describe the files an import takes, column by column, for your company.
 	// (GET /imports/format)
 	GetImportFormat(w http.ResponseWriter, r *http.Request, params GetImportFormatParams)
 	// Upload a file to import, and read back what its columns actually contain.
 	// (POST /imports/sources)
 	UploadImportSource(w http.ResponseWriter, r *http.Request)
-	// Download the import template for this organization.
+	// Download the import template for your company.
 	// (GET /imports/template)
 	DownloadImportTemplate(w http.ResponseWriter, r *http.Request)
 	// Read one import run's lifecycle state.
@@ -105128,7 +105128,7 @@ type ServerInterface interface {
 	// Withdraw your ask and make a fresh ask through another route.
 	// (POST /intro-requests/{id}/replace)
 	ReplaceIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
-	// The document corpora this organization has defined.
+	// The document corpora your company has defined.
 	// (GET /knowledge/corpora)
 	ListCorpora(w http.ResponseWriter, r *http.Request, params ListCorporaParams)
 	// Define a document corpus.
@@ -105821,7 +105821,7 @@ type ServerInterface interface {
 	// Show what a mailed return link will store, before it is confirmed (anonymous).
 	// (POST /public/booking/{host_slug}/return/preview)
 	PreviewBookingReturn(w http.ResponseWriter, r *http.Request, hostSlug string)
-	// What the organization holds about this contact (anonymous, token-authed).
+	// What your company holds about this contact (anonymous, token-authed).
 	// (GET /public/confirm/{token})
 	GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string)
 	// Submit corrections and a marketing answer (anonymous, token-authed).
@@ -105893,7 +105893,7 @@ type ServerInterface interface {
 	// Reply in a thread as the buyer.
 	// (POST /public/rooms/threads/{threadId}/comments)
 	ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Request, threadId openapi_types.UUID)
-	// Everything a organization query plan may say, for this caller.
+	// Everything a company query plan may say, for this caller.
 	// (GET /query-vocabulary)
 	DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request)
 	// The views the read_view agent tool reads, and the arguments each takes.
@@ -106055,7 +106055,7 @@ type ServerInterface interface {
 	// Rewrite the words a rep has on screen under one rewrite verb.
 	// (POST /rewrites)
 	RewriteText(w http.ResponseWriter, r *http.Request)
-	// List the organization's roles with their object grants and row scope.
+	// List your company's roles with their object grants and row scope.
 	// (GET /roles)
 	ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams)
 	// Create a role by copying an existing one. Human-only.
@@ -106253,7 +106253,7 @@ type ServerInterface interface {
 	// Apply the suggested tag, as the caller.
 	// (POST /tag-suggestions/{id}/accept)
 	AcceptTagSuggestion(w http.ResponseWriter, r *http.Request, id Id)
-	// Record that the evidence does not earn the tag, for the whole organization.
+	// Record that the evidence does not earn the tag, for the whole company.
 	// (POST /tag-suggestions/{id}/dismiss)
 	DismissTagSuggestion(w http.ResponseWriter, r *http.Request, id Id)
 	// List tags.
@@ -106265,7 +106265,7 @@ type ServerInterface interface {
 	// Archive a tag.
 	// (DELETE /tags/{id})
 	ArchiveTag(w http.ResponseWriter, r *http.Request, id Id)
-	// Read one tag, with how much of the organization carries it.
+	// Read one tag, with how much of your company carries it.
 	// (GET /tags/{id})
 	GetTag(w http.ResponseWriter, r *http.Request, id Id)
 	// Rename, recolour or describe a tag.
@@ -106295,7 +106295,7 @@ type ServerInterface interface {
 	// Record a standard or reduced tax rate for a country from a day on.
 	// (POST /tax-rates)
 	RecordTaxRate(w http.ResponseWriter, r *http.Request)
-	// List organization teams — cursor-paginated. Read-only.
+	// List company teams — cursor-paginated. Read-only.
 	// (GET /teams)
 	ListTeams(w http.ResponseWriter, r *http.Request, params ListTeamsParams)
 	// Create a team. Needs `team_admin.create`.
@@ -106310,7 +106310,7 @@ type ServerInterface interface {
 	// Put a member on a team. Admin only; idempotent.
 	// (PUT /teams/{id}/members/{userId})
 	AddTeamMember(w http.ResponseWriter, r *http.Request, id Id, userId openapi_types.UUID)
-	// List organization members (roster) — cursor-paginated. Read-only.
+	// List company members (roster) — cursor-paginated. Read-only.
 	// (GET /users)
 	ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams)
 	// Invite a new member. Admin-only.
@@ -106493,7 +106493,7 @@ type ServerInterface interface {
 	// Rotate a form's minted signing secret (returns the new secret once).
 	// (POST /web-forms/{id}/rotate-secret)
 	RotateWebFormSecret(w http.ResponseWriter, r *http.Request, id Id)
-	// List the organization's outbound webhook subscriptions.
+	// List your company's outbound webhook subscriptions.
 	// (GET /webhook-subscriptions)
 	ListWebhookSubscriptions(w http.ResponseWriter, r *http.Request, params ListWebhookSubscriptionsParams)
 	// Register an outbound webhook subscription (returns the signing secret once).
@@ -106592,7 +106592,7 @@ type ServerInterface interface {
 	// Take back your "I'm ready" for a meeting — the undo behind it.
 	// (POST /worklist/ready/undo)
 	UndoMeetingReady(w http.ResponseWriter, r *http.Request, params UndoMeetingReadyParams)
-	// How fast the organization answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
+	// How fast your company answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
 	// (GET /worklist/response)
 	GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams)
 	// One row per teammate — who is carrying what, so a lead can see where to help.
@@ -106601,7 +106601,7 @@ type ServerInterface interface {
 	// What Margince changed on your team's deals.
 	// (GET /worklist/team/changes)
 	GetTeamMarginceChanges(w http.ResponseWriter, r *http.Request, params GetTeamMarginceChangesParams)
-	// Answer a query plan over the organization's records.
+	// Answer a query plan over your company's records.
 	// (POST /workspace-queries)
 	QueryWorkspace(w http.ResponseWriter, r *http.Request)
 }
@@ -107078,7 +107078,7 @@ func (_ Unimplemented) ReplaceAiPriceSync(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Authenticated AI configuration posture for transparent human-facing organizations.
+// Authenticated AI configuration posture for transparent human-facing company installations.
 // (GET /ai/profile)
 func (_ Unimplemented) GetAiProfile(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -107876,7 +107876,7 @@ func (_ Unimplemented) ResetPassword(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the organization's configured automation instances.
+// List your company's configured automation instances.
 // (GET /automations)
 func (_ Unimplemented) ListAutomations(w http.ResponseWriter, r *http.Request, params ListAutomationsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -107888,7 +107888,7 @@ func (_ Unimplemented) CreateAutomation(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The closed starter library of automation types the organization can instantiate.
+// The closed starter library of automation types your company can instantiate.
 // (GET /automations/catalog)
 func (_ Unimplemented) ListAutomationCatalog(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108038,7 +108038,7 @@ func (_ Unimplemented) ListMyCaptureActivity(w http.ResponseWriter, r *http.Requ
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The same window for the organization's shared channel connections.
+// The same window for your company's shared channel connections.
 // (GET /capture/activity/workspace)
 func (_ Unimplemented) ListWorkspaceCaptureActivity(w http.ResponseWriter, r *http.Request, params ListWorkspaceCaptureActivityParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108068,7 +108068,7 @@ func (_ Unimplemented) ListConsumerMailBaseline(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The organization's own consumer-mail domain list.
+// The company's own consumer-mail domain list.
 // (GET /capture/consumer-mail-domains)
 func (_ Unimplemented) ListConsumerMailDomains(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108140,25 +108140,25 @@ func (_ Unimplemented) KeepDomainAsVendor(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The organization's own email domains.
+// The company's own email domains.
 // (GET /capture/email-domains)
 func (_ Unimplemented) ListWorkspaceEmailDomains(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Register one of the organization's own email domains.
+// Register one of your company's own email domains.
 // (POST /capture/email-domains)
 func (_ Unimplemented) CreateWorkspaceEmailDomain(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Stop treating a domain as the organization's own.
+// Stop treating a domain as your company's own.
 // (DELETE /capture/email-domains/{domain})
 func (_ Unimplemented) DeleteWorkspaceEmailDomain(w http.ResponseWriter, r *http.Request, domain string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The addresses and domains capture keeps out — the organization's rules and the caller's own.
+// The addresses and domains capture keeps out — your company's rules and the caller's own.
 // (GET /capture/exclusions)
 func (_ Unimplemented) ListCaptureExclusions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108230,13 +108230,13 @@ func (_ Unimplemented) SetCaptureSenderDecision(w http.ResponseWriter, r *http.R
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The organization's capture settings.
+// The company's capture settings.
 // (GET /capture/settings)
 func (_ Unimplemented) GetCaptureSettings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Update the organization's capture settings (admin/ops).
+// Update your company's capture settings (admin/ops).
 // (PATCH /capture/settings)
 func (_ Unimplemented) UpdateCaptureSettings(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108272,31 +108272,31 @@ func (_ Unimplemented) CatchUpOnRecord(w http.ResponseWriter, r *http.Request, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the organization's messaging-channel connections.
+// List your company's messaging-channel connections.
 // (GET /channel-connections)
 func (_ Unimplemented) ListChannelConnections(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Connect a messaging-channel bot for the whole organization.
+// Connect a messaging-channel bot for the whole company.
 // (POST /channel-connections)
 func (_ Unimplemented) ConnectChannel(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the Telegram Business accounts linked to the organization's bot.
+// List the Telegram Business accounts linked to your company's bot.
 // (GET /channel-connections/telegram-business)
 func (_ Unimplemented) ListTelegramBusinessConnections(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Disconnect a Telegram Business account from the organization.
+// Disconnect a Telegram Business account from your company.
 // (DELETE /channel-connections/telegram-business/{id})
 func (_ Unimplemented) DisconnectTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Approve a Telegram Business account for the organization.
+// Approve a Telegram Business account for your company.
 // (POST /channel-connections/telegram-business/{id}/approve)
 func (_ Unimplemented) ApproveTelegramBusinessConnection(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108308,19 +108308,19 @@ func (_ Unimplemented) UpdateTelegramBusinessConnectionVisibility(w http.Respons
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the WhatsApp Business numbers connected to the organization.
+// List the WhatsApp Business numbers connected to your company.
 // (GET /channel-connections/whatsapp)
 func (_ Unimplemented) ListWhatsAppConnections(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Connect a WhatsApp Business number to the organization.
+// Connect a WhatsApp Business number to your company.
 // (POST /channel-connections/whatsapp)
 func (_ Unimplemented) CreateWhatsAppConnection(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Disconnect a WhatsApp Business number from the organization.
+// Disconnect a WhatsApp Business number from your company.
 // (DELETE /channel-connections/whatsapp/{id})
 func (_ Unimplemented) DisconnectWhatsAppConnection(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108332,19 +108332,19 @@ func (_ Unimplemented) UpdateWhatsAppConnectionVisibility(w http.ResponseWriter,
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the Zalo Official Accounts connected to the organization.
+// List the Zalo Official Accounts connected to your company.
 // (GET /channel-connections/zalo-oa)
 func (_ Unimplemented) ListZaloOAConnections(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Connect a Zalo Official Account to the organization.
+// Connect a Zalo Official Account to your company.
 // (POST /channel-connections/zalo-oa)
 func (_ Unimplemented) CreateZaloOAConnection(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Disconnect a Zalo Official Account from the organization.
+// Disconnect a Zalo Official Account from your company.
 // (DELETE /channel-connections/zalo-oa/{id})
 func (_ Unimplemented) DisconnectZaloOAConnection(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109070,7 +109070,7 @@ func (_ Unimplemented) DismissConnectorSilence(w http.ResponseWriter, r *http.Re
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the organization's consent purposes (e.g. transactional, marketing_email, profiling).
+// List your company's consent purposes (e.g. transactional, marketing_email, profiling).
 // (GET /consent-purposes)
 func (_ Unimplemented) ListConsentPurposes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -109742,7 +109742,7 @@ func (_ Unimplemented) AcceptDealSuggestion(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Record that the suggestion is not a deal, for the whole organization.
+// Record that the suggestion is not a deal, for the whole company.
 // (POST /deal-suggestions/{id}/dismiss)
 func (_ Unimplemented) DismissDealSuggestion(w http.ResponseWriter, r *http.Request, id Id, params DismissDealSuggestionParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110084,13 +110084,13 @@ func (_ Unimplemented) GetMorningDigest(w http.ResponseWriter, r *http.Request) 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The organization's signature template.
+// The company's signature template.
 // (GET /email-signature-template)
 func (_ Unimplemented) GetEmailSignatureTemplate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Set the organization's signature template (admin/ops).
+// Set your company's signature template (admin/ops).
 // (PUT /email-signature-template)
 func (_ Unimplemented) SaveEmailSignatureTemplate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110174,7 +110174,7 @@ func (_ Unimplemented) CreateFilteredExport(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Download the whole-organization export bundle.
+// Download the whole-company export bundle.
 // (GET /exports/bundle)
 func (_ Unimplemented) DownloadExportBundle(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110450,7 +110450,7 @@ func (_ Unimplemented) RemoveFxRate(w http.ResponseWriter, r *http.Request, from
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List this organization's recent CSV import runs, newest first.
+// List your company's recent CSV import runs, newest first.
 // (GET /imports)
 func (_ Unimplemented) ListImportRuns(w http.ResponseWriter, r *http.Request, params ListImportRunsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110462,7 +110462,7 @@ func (_ Unimplemented) CreateImportRun(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Describe the files an import takes, column by column, for this organization.
+// Describe the files an import takes, column by column, for your company.
 // (GET /imports/format)
 func (_ Unimplemented) GetImportFormat(w http.ResponseWriter, r *http.Request, params GetImportFormatParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110474,7 +110474,7 @@ func (_ Unimplemented) UploadImportSource(w http.ResponseWriter, r *http.Request
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Download the import template for this organization.
+// Download the import template for your company.
 // (GET /imports/template)
 func (_ Unimplemented) DownloadImportTemplate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110708,7 +110708,7 @@ func (_ Unimplemented) ReplaceIntroRequest(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The document corpora this organization has defined.
+// The document corpora your company has defined.
 // (GET /knowledge/corpora)
 func (_ Unimplemented) ListCorpora(w http.ResponseWriter, r *http.Request, params ListCorporaParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -112094,7 +112094,7 @@ func (_ Unimplemented) PreviewBookingReturn(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// What the organization holds about this contact (anonymous, token-authed).
+// What your company holds about this contact (anonymous, token-authed).
 // (GET /public/confirm/{token})
 func (_ Unimplemented) GetConfirmDetails(w http.ResponseWriter, r *http.Request, token string) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -112238,7 +112238,7 @@ func (_ Unimplemented) ReplyBuyerRoomThread(w http.ResponseWriter, r *http.Reque
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Everything a organization query plan may say, for this caller.
+// Everything a company query plan may say, for this caller.
 // (GET /query-vocabulary)
 func (_ Unimplemented) DescribeQueryVocabulary(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -112562,7 +112562,7 @@ func (_ Unimplemented) RewriteText(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the organization's roles with their object grants and row scope.
+// List your company's roles with their object grants and row scope.
 // (GET /roles)
 func (_ Unimplemented) ListRoles(w http.ResponseWriter, r *http.Request, params ListRolesParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -112958,7 +112958,7 @@ func (_ Unimplemented) AcceptTagSuggestion(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Record that the evidence does not earn the tag, for the whole organization.
+// Record that the evidence does not earn the tag, for the whole company.
 // (POST /tag-suggestions/{id}/dismiss)
 func (_ Unimplemented) DismissTagSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -112982,7 +112982,7 @@ func (_ Unimplemented) ArchiveTag(w http.ResponseWriter, r *http.Request, id Id)
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Read one tag, with how much of the organization carries it.
+// Read one tag, with how much of your company carries it.
 // (GET /tags/{id})
 func (_ Unimplemented) GetTag(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -113042,7 +113042,7 @@ func (_ Unimplemented) RecordTaxRate(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List organization teams — cursor-paginated. Read-only.
+// List company teams — cursor-paginated. Read-only.
 // (GET /teams)
 func (_ Unimplemented) ListTeams(w http.ResponseWriter, r *http.Request, params ListTeamsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -113072,7 +113072,7 @@ func (_ Unimplemented) AddTeamMember(w http.ResponseWriter, r *http.Request, id 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List organization members (roster) — cursor-paginated. Read-only.
+// List company members (roster) — cursor-paginated. Read-only.
 // (GET /users)
 func (_ Unimplemented) ListUsers(w http.ResponseWriter, r *http.Request, params ListUsersParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -113438,7 +113438,7 @@ func (_ Unimplemented) RotateWebFormSecret(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// List the organization's outbound webhook subscriptions.
+// List your company's outbound webhook subscriptions.
 // (GET /webhook-subscriptions)
 func (_ Unimplemented) ListWebhookSubscriptions(w http.ResponseWriter, r *http.Request, params ListWebhookSubscriptionsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -113636,7 +113636,7 @@ func (_ Unimplemented) UndoMeetingReady(w http.ResponseWriter, r *http.Request, 
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// How fast the organization answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
+// How fast your company answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
 // (GET /worklist/response)
 func (_ Unimplemented) GetResponseMetrics(w http.ResponseWriter, r *http.Request, params GetResponseMetricsParams) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -113654,7 +113654,7 @@ func (_ Unimplemented) GetTeamMarginceChanges(w http.ResponseWriter, r *http.Req
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Answer a query plan over the organization's records.
+// Answer a query plan over your company's records.
 // (POST /workspace-queries)
 func (_ Unimplemented) QueryWorkspace(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)

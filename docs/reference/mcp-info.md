@@ -17,7 +17,7 @@ input and output schema in folds below it. What a tool may do and whether a huma
 | Resources | 14 |
 | Tool catalog | 244.9 KB |
 | Resource catalog | 5.5 KB |
-| Approx. wire tokens | 64103 |
+| Approx. wire tokens | 64100 |
 | Largest tool | `read_details` (15.3 KB) |
 | Scopes rendered | `read`, `draft`, `write`, `send`, `enrich` |
 
@@ -83,7 +83,7 @@ descriptions and input schemas are what each step pays for.
 | [`change_tags`](#change_tags) | Change tags |  |  | 647 |
 | [`check_availability`](#check_availability) | Check calendar availability | yes |  | 375 |
 | [`commit_import`](#commit_import) | Commit an import |  |  | 274 |
-| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 893 |
+| [`create_record`](#create_record) | Create a record |  | [`ui://margince/create-followups.html`](#create_followups_view) | 892 |
 | [`decide_approvals`](#decide_approvals) | Approve or reject staged actions |  |  | 464 |
 | [`draft_outbound`](#draft_outbound) | Draft an email or follow-ups |  |  | 523 |
 | [`enrich`](#enrich) | Enrich a company from its website |  |  | 445 |
@@ -102,7 +102,7 @@ descriptions and input schemas are what each step pays for.
 | [`read_project`](#read_project) | Read a project or its handover | yes |  | 315 |
 | [`read_record`](#read_record) | Read a record | yes |  | 283 |
 | [`read_relationships`](#read_relationships) | Read who your team knows, and how well | yes |  | 365 |
-| [`read_reports`](#read_reports) | Read sales reports | yes |  | 3353 |
+| [`read_reports`](#read_reports) | Read sales reports | yes |  | 3352 |
 | [`read_tags`](#read_tags) | Read tags | yes |  | 357 |
 | [`read_view`](#read_view) | Read a view | yes |  | 1920 |
 | [`read_workspace`](#read_workspace) | Read how this company is set up | yes |  | 3011 |
@@ -2647,9 +2647,9 @@ checks every row, duplicates included, and its counts are what the user weighs. 
 requires a pipeline_id and a stage_id, and the company's pipeline list is what yields them for a
 deal that does not exist yet. Only the fields the chosen record_type actually stores are accepted,
 and a field belonging to a neighboring type is refused rather than dropped. A CONTACT created here
-is visible to everyone in the organization, the same as one a human types in. No occurred_at means
-now; a past day with no time: its date, occurred_precision "day". Set meeting_status held only when
-the user says the meeting took place. Record a signed contract with change_offers action
+is visible to everyone in your company, the same as one a human types in. No occurred_at means now;
+a past day with no time: its date, occurred_precision "day". Set meeting_status held only when the
+user says the meeting took place. Record a signed contract with change_offers action
 record_contract, never as a deal. A vCard file goes through change_capture. Before creating one
 contact or company that might already exist, ask find_records engine identify: it runs the duplicate
 check a create runs, on name spellings, emails, phones and domains. A second copy is a problem that
@@ -8677,7 +8677,7 @@ evidence, and quote coverage with each number.
           "type": "string"
         },
         "kind": {
-          "description": "Whose figures the report covers: one owner, one team, or the whole organization. id names the owner or team.",
+          "description": "Whose figures the report covers: one owner, one team, or the whole company. id names the owner or team.",
           "enum": [
             "owner",
             "team",

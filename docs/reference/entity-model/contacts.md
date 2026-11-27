@@ -29,7 +29,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `geocoded_at` | `timestamp with time zone` |  |  |
 | `industry` | `text` |  | One of the fixed industry codes, or null. |
 | `is_anchor` | `boolean`, default `false` | yes | True only for this installation's own company. |
-| `last_activity_at` | `timestamp with time zone` |  | When something last happened with this account: the newest `occurred_at` at or before now of a organization-audience activity linked to it, so a booked meeting counts once it starts. |
+| `last_activity_at` | `timestamp with time zone` |  | When something last happened with this account: the newest `occurred_at` at or before now of a company-audience activity linked to it, so a booked meeting counts once it starts. |
 | `legal_name` | `text` |  |  |
 | `linkedin_url` | `text` |  | Canonical LinkedIn company URL. |
 | `logo_icon_object_key` | `text` |  |  |
@@ -609,7 +609,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `quarantine_cleared_by` | `text` |  |  |
 | `quarantine_reason` | `text` |  | One of `punycode_domain`, `display_name_other_domain`. |
 | `quarantined_at` | `timestamp with time zone` |  |  |
-| `relationship_mark` | `text` |  | Set when the organization's relationship to this contact is not an ordinary one. |
+| `relationship_mark` | `text` |  | Set when your company's relationship to this contact is not an ordinary one. |
 | `relationship_mark_set_by` | `text` |  |  |
 | `salutation` | `text` |  | One of `mr`, `ms`, `none`. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
@@ -1260,8 +1260,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `body` | `text` | yes | Plain-text fallback after personal HTML and the company template. |
 | `html` | `text`, default `''::text` | yes | Saved personal HTML, trimmed at both ends. |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
-| `phone` | `text`, default `''::text` | yes | The member's phone number, filled into the organization template's `{phone}`. |
-| `title` | `text`, default `''::text` | yes | The member's title, filled into the organization template's `{title}`. |
+| `phone` | `text`, default `''::text` | yes | The member's phone number, filled into your company template's `{phone}`. |
+| `title` | `text`, default `''::text` | yes | The member's title, filled into your company template's `{title}`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |

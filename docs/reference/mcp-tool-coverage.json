@@ -11592,7 +11592,7 @@
     },
     {
       "name": "read_reports",
-      "tokens": 3353,
+      "tokens": 3352,
       "agents": [],
       "required_by_cases": [
         "case49_who_can_introduce_us"
@@ -12463,7 +12463,7 @@
     },
     {
       "name": "create_record",
-      "tokens": 893,
+      "tokens": 892,
       "agents": [],
       "required_by_cases": [
         "case56_not_the_same"

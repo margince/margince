@@ -35,6 +35,13 @@ func TestHistoryRefusesAnUnconstrainedLedgerKey(t *testing.T) {
 		strings.Replace(historyLedgerFixture, `row.key,"owner"`, `"unrelated_insert_key","owner"`, 1),
 		strings.Replace(historyLedgerFixture, `SELECT id, key FROM ledger`, `SELECT id, key FROM another_ledger`, 1),
 		historyLedgerFixture + `func opaqueWrite(){ledgerDB{}.Exec(ctx,"UPDATE ledger SET owner=$1,key=$2","owner","unbounded")}`,
+		historyLedgerFixture + `func opaqueWrite(){ledgerDB{}.Exec(ctx,"UPDATE ledger SET (owner,key)=($1,$2)","owner","unbounded")}`,
+		historyLedgerFixture + `func opaqueWrite(){ledgerDB{}.Exec(ctx,"UPDATE ONLY ledger SET key=$1","unbounded")}`,
+		historyLedgerFixture + `func opaqueWrite(){ledgerDB{}.Exec(ctx,"INSERT INTO \"ledger\"(key) VALUES($1)","unbounded")}`,
+		historyLedgerFixture + `func opaqueWrite(){ledgerDB{}.Exec(ctx,"INSERT INTO public.ledger(key) VALUES($1)","unbounded")}`,
+		historyLedgerFixture + `func opaqueWrite(){ledgerDB{}.Exec(ctx,"MERGE INTO ledger USING other_table ON true WHEN NOT MATCHED THEN INSERT(key) VALUES('unbounded')")}`,
+		historyLedgerFixture + `func opaqueWrite(){ledgerDB{}.Exec(ctx,"COPY ledger(key) FROM STDIN")}`,
+
 		historyLedgerFixture + `func opaqueWrite(){ledgerDB{}.Exec(ctx,"INSERT INTO ledger(key,owner) SELECT key,owner FROM elsewhere")}`,
 		historyLedgerFixture + `type batch struct{};func(batch)Queue(_ string,_ ...any){};func opaqueWrite(){batch{}.Queue("INSERT INTO ledger(key,owner) VALUES($1,$2)","unbounded","owner")}`,
 		historyLedgerFixture + `func sqlf(s string,args ...any)string{return s};func opaqueWrite(){ledgerDB{}.Exec(ctx,sqlf("INSERT INTO ledger(key,owner) VALUES(%s,%s)","unbounded","owner"))}`,

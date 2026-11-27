@@ -74,7 +74,7 @@ var createRecordCopy = toolCopy{
 	Limits: "Creating a deal requires a pipeline_id and a stage_id, and " + pipelinesSource + " is " +
 		"what yields them for a deal that does not exist yet. Only the fields the chosen record_type " +
 		"actually stores are accepted, and a field belonging to a neighboring type is refused " +
-		"rather than dropped. A CONTACT created here is visible to everyone in the organization, " +
+		"rather than dropped. A CONTACT created here is visible to everyone in your company, " +
 		"the same as one a human types in." + pastDayNeedsATime + meetingStatusRule,
 	Instead: "Record a signed contract with change_offers action record_contract, never as a deal. " +
 		"A vCard file goes through change_capture. Before creating one contact or company that might " +

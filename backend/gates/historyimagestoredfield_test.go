@@ -26,8 +26,9 @@ type historyStoredCacheValue struct {
 var historyStoredReads sync.Map
 
 var (
-	historySelectColumns = regexp.MustCompile(`(?is)SELECT\s+(.+?)\s+FROM\s+([a-z_]+)\b`)
-	historyInsertColumns = regexp.MustCompile(`(?is)INSERT\s+INTO\s+([a-z_]+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)`)
+	historySelectColumns    = regexp.MustCompile(`(?is)SELECT\s+(.+?)\s+FROM\s+([a-z_]+)\b`)
+	historyUpdateAssignment = regexp.MustCompile(`(?is)^\s*(?:"([a-z_][a-z_0-9]*)"|([a-z_][a-z_0-9]*))\s*=`)
+	historyInsertColumns    = regexp.MustCompile(`(?is)INSERT\s+INTO\s+([a-z_]+)\s*\(([^)]+)\)\s*VALUES\s*\(([^)]+)\)`)
 )
 
 // A private field read back from a ledger has the vocabulary its insert stored.
@@ -55,7 +56,7 @@ func (r historyImageReader) storedFieldValues(in historyImageArg, selected *ast.
 	cacheKey := historyStoredCacheKey{r.index, field, flavor}
 	if cached, ok := historyStoredReads.Load(cacheKey); ok {
 		value := cached.(historyStoredCacheValue)
-		return value.values, value.known
+		return slices.Clone(value.values), value.known
 	}
 	outer := len(r.storedFieldBusy) == 0
 	if outer {
@@ -98,9 +99,9 @@ func (r historyImageReader) storedFieldValues(in historyImageArg, selected *ast.
 	}
 	inserted := false
 	known := true
-	writeTable := regexp.MustCompile(`(?is)\b(?:INSERT\s+INTO|UPDATE)\s+` + regexp.QuoteMeta(table) + `\b`)
-	updateTable := regexp.MustCompile(`(?is)\bUPDATE\s+` + regexp.QuoteMeta(table) + `(?:\s+(?:AS\s+)?[a-z_][a-z_0-9]*)?\s+SET\s+(.+?)(?:\bWHERE\b|\bRETURNING\b|$)`)
-	updatedColumn := regexp.MustCompile(`(?is)(?:^|,)\s*` + regexp.QuoteMeta(column) + `\s*=`)
+	relation := `(?:"?[a-z_][a-z_0-9]*"?\.)?"?` + regexp.QuoteMeta(table) + `"?`
+	writeTable := regexp.MustCompile(`(?is)\b(?:INSERT\s+INTO|UPDATE(?:\s+ONLY)?|MERGE\s+INTO|COPY)\s+` + relation + `(?:\s|\(|$)`)
+	updateTable := regexp.MustCompile(`(?is)\bUPDATE\s+(?:ONLY\s+)?` + relation + `(?:\s+(?:AS\s+)?[a-z_][a-z_0-9]*)?\s+SET\s+(.+?)(?:\bWHERE\b|\bRETURNING\b|$)`)
 	accounted := map[string]bool{}
 	var fragments []string
 	for at := range r.index.pkgs {
@@ -130,7 +131,7 @@ func (r historyImageReader) storedFieldValues(in historyImageArg, selected *ast.
 					accounted[sql] = true
 					if updateTable.MatchString(sql) {
 						match := updateTable.FindStringSubmatch(sql)
-						if updatedColumn.MatchString(match[1]) {
+						if !historyUpdateLeavesColumn(match[1], column) {
 							known = false
 						}
 						continue
@@ -172,7 +173,7 @@ func (r historyImageReader) storedFieldValues(in historyImageArg, selected *ast.
 		}
 	}
 	for _, fragment := range fragments {
-		if match := updateTable.FindStringSubmatch(fragment); match != nil && !updatedColumn.MatchString(match[1]) {
+		if match := updateTable.FindStringSubmatch(fragment); match != nil && historyUpdateLeavesColumn(match[1], column) {
 			continue
 		}
 		if !accounted[fragment] {
@@ -244,7 +245,7 @@ func (r historyImageReader) privateFieldStrings(in historyImageArg, selected *as
 	cacheKey := historyStoredCacheKey{r.index, field, 3}
 	if cached, ok := historyStoredReads.Load(cacheKey); ok {
 		value := cached.(historyStoredCacheValue)
-		return value.values, value.known
+		return slices.Clone(value.values), value.known
 	}
 	if len(r.stringFieldBusy) == 0 {
 		defer func() {
@@ -272,4 +273,15 @@ func (r historyImageReader) privateFieldStrings(in historyImageArg, selected *as
 		values = append(values, got...)
 	}
 	return values, len(writes) > 0
+}
+
+// A SET form this reader cannot separate stays unknown, including tuple writes.
+func historyUpdateLeavesColumn(set, column string) bool {
+	for _, assignment := range strings.Split(set, ",") {
+		match := historyUpdateAssignment.FindStringSubmatch(assignment)
+		if match == nil || strings.EqualFold(match[1]+match[2], column) {
+			return false
+		}
+	}
+	return true
 }
