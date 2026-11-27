@@ -3095,8 +3095,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{count} liên hệ vẫn được giữ, nhưng không còn hiện công ty này là nơi làm việc.",
   "co.archiveConfirm.contacts_other":
     "{count} liên hệ vẫn được giữ, nhưng không còn hiện công ty này là nơi làm việc.",
-  "co.archiveConfirm.deals_one":
-    "{count} deal đang mở vẫn mở trong pipeline.",
+  "co.archiveConfirm.deals_one": "{count} deal đang mở vẫn mở trong pipeline.",
   "co.archiveConfirm.deals_other":
     "{count} deal đang mở vẫn mở trong pipeline.",
   "co.archiveConfirm.unknown":
