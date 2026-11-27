@@ -233,9 +233,9 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 	if err != nil {
 		return CreateLeadInput{}, err
 	}
-	// A lead's name is optional. One that is sent is a name and not spaces.
+	// A lead's name is optional, but one that is sent is a name and not spaces.
 	if req.FullName != nil {
-		name, err := leadNameWritten(nil, *req.FullName)
+		name, err := httperr.RequireNonBlank(contactNameColumn, *req.FullName)
 		if err != nil {
 			return CreateLeadInput{}, err
 		}

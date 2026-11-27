@@ -83,6 +83,8 @@ var textLimits = []textLimit{
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusName", corpusBody("patch", "/knowledge/corpora/{id}", "name")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusTopic", corpusBody("patch", "/knowledge/corpora/{id}", "topic_statement")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusDescription", corpusBody("patch", "/knowledge/corpora/{id}", "description")},
+	{"internal/modules/contacts/contacttextbounds.go", "ContactNameLimit", schemaProperty("CreateLeadRequest", "full_name")},
+	{"internal/modules/contacts/contacttextbounds.go", "ContactNameLimit", schemaProperty("UpdateLeadRequest", "full_name")},
 	{
 		"internal/modules/deals/win_evidence.go", "maxWonReasonDetail",
 		schemaPath("components", "schemas", "AdvanceDealRequest", "properties", "won_without_contract_detail"),
@@ -95,15 +97,13 @@ var textLimits = []textLimit{
 	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "UpdateCompanyRequest", "properties", "description")},
 	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "CreateDealRequest", "properties", "description")},
 	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "UpdateDealRequest", "properties", "description")},
-	{"internal/modules/contacts/contacttextbounds.go", "ContactNameLimit", schemaProperty("CreateLeadRequest", "full_name")},
-	{"internal/modules/contacts/contacttextbounds.go", "ContactNameLimit", schemaProperty("UpdateLeadRequest", "full_name")},
 }
 
-// sourceBodies are the create bodies whose `source` goes through
+// sourceBodies are the create bodies whose free-text `source` goes through
 // provenance.RefuseSource, which refuses it past SourceIDMax.
 var sourceBodies = []string{
-	"AddDealRoomDocumentRequest", "CreateActivityRequest", "CreateCompanyRequest", "CreateContactRequest",
-	"CreateDealRoomRequest", "CreateLeadRequest", "CreateTaskRequest", "InviteDealRoomParticipantRequest",
+	"AddDealRoomDocumentRequest", "CreateActivityRequest",
+	"CreateDealRoomRequest", "CreateTaskRequest", "InviteDealRoomParticipantRequest",
 	"OpenDealRoomThreadRequest", "PostDealRoomCommentRequest",
 }
 
