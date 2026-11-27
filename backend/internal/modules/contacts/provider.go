@@ -136,18 +136,18 @@ func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource
 
 // SearchEntity lists one of this module's entity types under the shared
 // search contract (text query, structured filters, CAP-PAGE limit, per-entity
-// keyset cursor).
+// keyset cursor or offset).
 //
 // A filter this type has no binding for is an ERROR rather than a dropped
 // clause — see listfilters.go. It is unreachable while the composition root
 // publishes only what ListFilters names, which is what makes it a safe
 // assertion instead of a silent widening.
 func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, text *string, limit int, cursor *string,
-	filters map[string]string,
+	offset *int, filters map[string]string,
 ) ([]datasource.Record, string, bool, error) {
 	switch t {
 	case datasource.EntityContact:
-		in := ListContactsInput{Query: text, Limit: &limit, Cursor: cursor}
+		in := ListContactsInput{Query: text, Limit: &limit, Cursor: cursor, Offset: offset}
 		if err := contactListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
@@ -161,7 +161,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 			return v.Id, v.Version
 		})
 	case datasource.EntityCompany:
-		in := ListCompaniesInput{Query: text, Limit: &limit, Cursor: cursor}
+		in := ListCompaniesInput{Query: text, Limit: &limit, Cursor: cursor, Offset: offset}
 		if err := companyListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
@@ -174,7 +174,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		return pageOf(datasource.EntityCompany, rows, page, err,
 			func(v crmcontracts.Company) (openapi_types.UUID, *int64) { return v.Id, v.Version })
 	case datasource.EntityLead:
-		in := ListLeadsInput{Query: text, Limit: &limit, Cursor: cursor}
+		in := ListLeadsInput{Query: text, Limit: &limit, Cursor: cursor, Offset: offset}
 		if err := leadListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
@@ -193,6 +193,9 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		// which would answer an unfiltered page and read as "no matches".
 		if text != nil && *text != "" {
 			return nil, "", false, errors.New("contacts: partner has no text index; narrow by partner_role or cert_status, or search company instead")
+		}
+		if offset != nil {
+			return nil, "", false, &datasource.OffsetUnsupportedError{Type: t}
 		}
 		in := ListPartnersInput{Limit: &limit}
 		if cursor != nil {

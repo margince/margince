@@ -44,7 +44,7 @@ func TestTheSeamRefusesATypeItDoesNotServeOnEveryVerb(t *testing.T) {
 	contact := datasource.EntityRef{Type: datasource.EntityContact, ID: ids.NewV7()}
 	verbs := map[string]func() error{
 		"read":   func() error { _, err := p.Read(ctx, contact); return err },
-		"search": func() error { _, _, _, err := p.SearchEntity(ctx, contact.Type, nil, 10, nil, nil); return err },
+		"search": func() error { _, _, _, err := p.SearchEntity(ctx, contact.Type, nil, 10, nil, nil, nil); return err },
 		"create": func() error {
 			_, err := p.Create(ctx, datasource.CreateInput{EntityType: contact.Type, Fields: json.RawMessage(`{}`)})
 			return err
@@ -98,9 +98,21 @@ func TestAnOfferListNeedsItsDealAndNoText(t *testing.T) {
 		"offers with no deal":        {datasource.EntityOffer, nil, map[string]string{"status": "draft"}, "deal_id"},
 		"templates searched by text": {datasource.EntityOfferTemplate, &text, nil, "q"},
 	} {
-		_, _, _, err := p.SearchEntity(context.Background(), tc.typ, tc.text, 10, nil, tc.filters)
+		_, _, _, err := p.SearchEntity(context.Background(), tc.typ, tc.text, 10, nil, nil, tc.filters)
 		if field, _ := refusedOn(t, err); field != tc.field {
 			t.Errorf("%s was refused on %q, want %q", name, field, tc.field)
+		}
+	}
+}
+
+func TestACatalogOrOfferListRefusesAnOffset(t *testing.T) {
+	p, skip := seamProvider(), 1
+	for _, typ := range []datasource.EntityType{
+		datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer,
+	} {
+		_, _, _, err := p.SearchEntity(context.Background(), typ, nil, 10, nil, &skip, nil)
+		if field, code := refusedOn(t, err); field != "offset" || code != "offset_unsupported" {
+			t.Errorf("a %s list at an offset was refused on %s=%s (%v), want offset=offset_unsupported", typ, field, code, err)
 		}
 	}
 }
@@ -110,7 +122,7 @@ func TestACatalogOrOfferListRefusesAFilterItCannotApply(t *testing.T) {
 	for _, typ := range []datasource.EntityType{
 		datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer,
 	} {
-		_, _, _, err := p.SearchEntity(context.Background(), typ, nil, 10, nil,
+		_, _, _, err := p.SearchEntity(context.Background(), typ, nil, 10, nil, nil,
 			map[string]string{"colour": "red", "deal_id": ids.NewV7().String()})
 		if field, _ := refusedOn(t, err); field != "colour" {
 			t.Errorf("a %s list was refused on %q (%v), want the unbound filter colour", typ, field, err)
@@ -272,7 +284,7 @@ func TestTheSeamReadsAndListsOnlyUnderTheReadGrant(t *testing.T) {
 		if typ == datasource.EntityOffer {
 			filters["deal_id"] = ids.NewV7().String()
 		}
-		if _, _, _, err := p.SearchEntity(ctx, typ, nil, 10, nil, filters); !errors.Is(err, apperrors.ErrPermissionDenied) {
+		if _, _, _, err := p.SearchEntity(ctx, typ, nil, 10, nil, nil, filters); !errors.Is(err, apperrors.ErrPermissionDenied) {
 			t.Errorf("listing %s without its read grant answered %v, want permission denied", typ, err)
 		}
 	}
@@ -306,7 +318,7 @@ func TestADealListByListGoesThroughTheListResolver(t *testing.T) {
 		asked = id
 		return nil, refusal
 	})
-	if _, _, _, err := p.SearchEntity(context.Background(), datasource.EntityDeal, nil, 10, nil, filters); !errors.Is(err, refusal) {
+	if _, _, _, err := p.SearchEntity(context.Background(), datasource.EntityDeal, nil, 10, nil, nil, filters); !errors.Is(err, refusal) {
 		t.Errorf("the resolver's refusal came back as %v", err)
 	}
 	if asked != list {

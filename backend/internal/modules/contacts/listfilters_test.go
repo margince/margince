@@ -4,6 +4,7 @@
 package contacts
 
 import (
+	"errors"
 	"reflect"
 	"slices"
 	"testing"
@@ -92,6 +93,15 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 func TestAnEntityThisModuleDoesNotListOffersNoFilters(t *testing.T) {
 	if got := (&Provider{}).ListFilters(datasource.EntityDeal); len(got) != 0 {
 		t.Errorf("deal is not this module's to list, yet it offers %v", got)
+	}
+}
+
+// A partner list pages by cursor alone, so an offset is refused rather than dropped.
+func TestAPartnerListRefusesAnOffset(t *testing.T) {
+	skip := 1
+	_, _, _, err := (&Provider{}).SearchEntity(t.Context(), datasource.EntityPartner, nil, 10, nil, &skip, nil)
+	if _, ok := errors.AsType[*datasource.OffsetUnsupportedError](err); !ok {
+		t.Fatalf("a partner list at an offset answered %v, want the offset refusal", err)
 	}
 }
 

@@ -76,11 +76,14 @@ func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource
 // publishes only what ListFilters names, which is what makes it a safe
 // assertion instead of a silent widening.
 func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, text *string, limit int, cursor *string,
-	filters map[string]string,
+	offset *int, filters map[string]string,
 ) ([]datasource.Record, string, bool, error) {
+	if offset != nil && t != datasource.EntityDeal {
+		return nil, "", false, &datasource.OffsetUnsupportedError{Type: t}
+	}
 	switch t {
 	case datasource.EntityDeal:
-		in := ListDealsInput{Query: text, Limit: &limit, Cursor: cursor}
+		in := ListDealsInput{Query: text, Limit: &limit, Cursor: cursor, Offset: offset}
 		if err := dealListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}

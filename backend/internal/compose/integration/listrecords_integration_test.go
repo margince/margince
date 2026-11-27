@@ -16,10 +16,14 @@ package integration
 
 import (
 	"encoding/json"
+	"net/http"
+	"slices"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -81,5 +85,60 @@ func TestListRecordsNarrowsByOwner(t *testing.T) {
 	}
 	if strings.Contains(string(out), theirs.String()) {
 		t.Errorf("a contact owned by someone else came back from an owner-filtered list:\n%s", out)
+	}
+}
+
+// An offset page through the tool is the HTTP list's page at that offset: the same rows in the same order.
+func TestListRecordsAtAnOffsetAnswersTheRowsTheHTTPListAnswersThere(t *testing.T) {
+	e := apptest.SetupApp(t)
+	apptest.BootstrapWorkspaceSession(t, e, "Tool Offset", "admin@tooloffset.test", "Admin")
+	for _, name := range []string{"Offset Alpha", "Offset Beta", "Offset Gamma", "Offset Delta"} {
+		body := map[string]any{"display_name": name, "source": "manual"}
+		if status := e.Call(t, "POST", "/v1/companies", body, nil, nil); status != http.StatusCreated {
+			t.Fatalf("creating company %q = %d", name, status)
+		}
+	}
+	var web offsetPage
+	if status := e.Call(t, "GET", "/v1/companies?offset=1&limit=2", nil, nil, &web); status != http.StatusOK {
+		t.Fatalf("GET /v1/companies?offset=1 = %d", status)
+	}
+	registry := compose.NewRegistry(e.Pool, compose.SendPath{})
+	ctx := apptest.AdminContext(t, e, AdminPerms)
+
+	out, err := registry.Invoke(ctx, "list_records", json.RawMessage(`{"record_type":"company","offset":1,"limit":2}`))
+	if err != nil {
+		t.Fatalf("listing companies at an offset: %v", err)
+	}
+	var answer struct {
+		Data struct {
+			Records []struct {
+				ID string `json:"id"`
+			} `json:"records"`
+			NextCursor string `json:"next_cursor"`
+		} `json:"data"`
+	}
+	if err := json.Unmarshal(out, &answer); err != nil {
+		t.Fatalf("reading the list_records answer: %v", err)
+	}
+	tool := answer.Data
+	toolRows, webRows := make([]string, 0, len(tool.Records)), make([]string, 0, len(web.Data))
+	for _, record := range tool.Records {
+		toolRows = append(toolRows, record.ID)
+	}
+	for _, row := range web.Data {
+		webRows = append(webRows, row.ID)
+	}
+	if len(webRows) != 2 || !slices.Equal(toolRows, webRows) {
+		t.Errorf("list_records at offset 1 answered %v, and the HTTP list answered %v", toolRows, webRows)
+	}
+	if tool.NextCursor == "" || web.Page.NextCursor == nil {
+		t.Errorf("an offset page with rows after it carries next_cursor %q (tool) and %v (HTTP), want both", tool.NextCursor, web.Page.NextCursor)
+	}
+
+	_, err = registry.Invoke(ctx, "list_records", json.RawMessage(`{"record_type":"partner","offset":1}`))
+	fault, ok := httperr.Classify(err)
+	if !ok || fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 ||
+		fault.Fields[0].Field != "offset" || fault.Fields[0].Code != "offset_unsupported" {
+		t.Errorf("a partner list at an offset answered %v, want 422 field=offset code=offset_unsupported", err)
 	}
 }
