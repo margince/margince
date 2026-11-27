@@ -63,6 +63,8 @@ jobs:
   # backend-lint split it. On one runner the legs shared four cores, and
   # internal/compose and ./gates ran past their test timeouts.
   # TestMainHealthSplitsTheCheckLegsAsCIDoes holds the split to ci.yml's.
+  # `unit-cover` as in ci.yml: these legs write the unit coverage pods the sonar
+  # job below merges with the integration shards'.
   gates:
     name: backend gate (main, ${{ matrix.part }})
     timeout-minutes: 45
@@ -76,12 +78,14 @@ jobs:
           - part: unit
             legs: test-cached test-extensions
             tree-gates: "on"
+            unit-cover: "on"
           - part: gates
             legs: test-uncached
             tree-gates: "off"
           - part: solo
             legs: test-solo
             tree-gates: "off"
+            unit-cover: "on"
           - part: lint-baseline
             legs: lint-base vet arch-lint
             tree-gates: "off"
@@ -127,6 +131,8 @@ jobs:
           # scanner cannot load is not an absent measurement to it — it is a
           # measurement of zero.
           EXT_COVER_OUT: ${{ github.workspace }}/backend/coverage-extensions.out
+          # Always, since the integration lane and the sonar job always run here.
+          UNIT_COVERDIR: ${{ matrix.unit-cover == 'on' && format('{0}/unit-covdata', runner.temp) || '' }}
           GATES_GOMEMLIMIT: 6GiB
         run: make check-backend CHECK_LEGS="${{ matrix.legs }}" CHECK_TREE_GATES="${{ matrix.tree-gates }}"
       # `error`, not ci.yml's `ignore`. There the artifact is optional because a
@@ -143,6 +149,14 @@ jobs:
         with:
           name: go-coverage-extensions
           path: backend/coverage-extensions.out
+          if-no-files-found: error
+          retention-days: 1
+      - name: Upload the unit coverage pods
+        if: ${{ matrix.unit-cover == 'on' }}
+        uses: ./.github/actions/upload-artifact-retried
+        with:
+          name: unit-covdata-${{ matrix.part }}-attempt-${{ github.run_attempt }}
+          path: ${{ runner.temp }}/unit-covdata
           if-no-files-found: error
           retention-days: 1
 
@@ -283,12 +297,28 @@ jobs:
       # this job to run at all. So a missing artifact is not a shape to tolerate:
       # it means a green producer published nothing, and failing the download
       # freezes main's analysis rather than replacing it with a partial one.
-      - name: Download Go coverage
+      # The Go profile is merged here, as in ci.yml: the integration shards'
+      # pods and the unit legs' of the gates job above.
+      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
+        if: ${{ env.SONAR_TOKEN != '' }}
+        with:
+          go-version-file: backend/go.mod
+          cache: false
+      - name: Download the integration shards' coverage pods
         if: ${{ env.SONAR_TOKEN != '' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
-          name: go-coverage
-          path: backend
+          pattern: integration-shard-*
+          path: ${{ runner.temp }}/go-coverage
+      - name: Download the unit legs' coverage pods
+        if: ${{ env.SONAR_TOKEN != '' }}
+        uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
+        with:
+          pattern: unit-covdata-*
+          path: ${{ runner.temp }}/go-coverage
+      - name: Merge Go coverage
+        if: ${{ env.SONAR_TOKEN != '' }}
+        run: ./scripts/merge-go-coverage.sh "$RUNNER_TEMP/go-coverage" backend/coverage.out
       - name: Download extension coverage
         if: ${{ env.SONAR_TOKEN != '' }}
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2

@@ -162,8 +162,8 @@ jobs:
   # own Postgres/Redis/MinIO. Which parts: the groups it claims from the queue
   # the shards share, so a fast runner takes more (scripts/lib-shardqueue.sh),
   # or a fixed slice when the build chose that (INTEGRATION_SHARD). The
-  # `integration` fan-in below reconciles the slices back into one verdict and
-  # one coverage profile.
+  # `integration` fan-in below reconciles the slices back into one verdict, and
+  # the caller's Sonar job merges their pods into one coverage profile.
   #
   # The caller runs this lane in parallel with the Go gate, not behind it: gating
   # the longest lane on the build gate serialized the two slowest jobs and
@@ -302,8 +302,8 @@ jobs:
         with:
           pattern: integration-shard-*
           path: ${{ runner.temp }}/earlier
-      # INTEGRATION_SHARD_OUT collects the slice manifests + binary coverage
-      # pods the fan-in reconciles and merges — so the scan is NOT a second
+      # INTEGRATION_SHARD_OUT collects the slice manifests the fan-in reconciles
+      # and the binary coverage pods the Sonar job merges — so the scan is NOT a second
       # Postgres/Redis/MinIO stack running the whole lane a second time.
       - name: Integration shard (slice + coverage)
         id: shard
@@ -391,72 +391,20 @@ jobs:
           if-no-files-found: error
           retention-days: 1
 
-  # Unit coverage for SonarCloud. The shards run only the integration-tagged
-  # packages, but the unit-only packages need a `-cover` pass of their own —
-  # otherwise SonarCloud sees them at a false ~0% new-code coverage and the
-  # gate fails on well-unit-tested code. Untagged tests never open a real DB
-  # (the test-lanes gate enforces it), so this pass needs no services; it runs
-  # beside the shards and the fan-in merges its pods with theirs.
-  #
-  # It lives in this lane rather than beside it because the fan-in is what
-  # consumes its pods: when the fan-in does not run, nothing ever reads them.
-  # Split across two scopes — this job on `backend`, the shards on `backend_db` —
-  # a rulebook-only change ran this job and then discarded its output.
-  integration-unit-coverage:
-    name: integration unit coverage
-    timeout-minutes: 30
-    runs-on: ubuntu-latest
-    permissions:
-      contents: read
-    steps:
-      # Shallow: the unit tests that read history all live in backend/gates,
-      # which this pass skips, and deterministic-gates runs them with full history.
-      - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
-        with:
-          persist-credentials: false
-      - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
-        with:
-          go-version-file: backend/go.mod
-          cache-dependency-path: backend/go.sum
-      # The `plain` flavour, not `integration`: this pass is untagged. Coverage
-      # instrumentation means its own package builds miss, but the dependency
-      # builds underneath — the bulk of a cold compile — hit.
-      - name: Restore the Go build cache
-        uses: ./.github/actions/go-build-cache
-        with:
-          flavor: plain
-      # Test-only packages exercise production code and belong in this pass.
-      # The expensive gates package runs in deterministic-gates, with the full history its tests read.
-      - name: Unit tests with binary coverage
-        run: |
-          mkdir -p "$RUNNER_TEMP/covdata-unit"
-          gates=$(go list ./gates)
-          pkgs=$(go list ./... | grep -Fxv "$gates")
-          [ -n "$pkgs" ] || { echo "go list found no coverage package; refusing an empty coverage pass" >&2; exit 1; }
-          # shellcheck disable=SC2086 # one argument per package
-          echo "test order: -shuffle=$TEST_SHUFFLE_SEED; replay one package with: go test -shuffle=$TEST_SHUFFLE_SEED <package>"
-          go test $pkgs -shuffle="$TEST_SHUFFLE_SEED" -cover -coverpkg=./... -covermode=atomic -args -test.gocoverdir="$RUNNER_TEMP/covdata-unit"
-      - name: Upload the unit coverage pods
-        uses: ./.github/actions/upload-artifact-retried
-        with:
-          name: integration-covdata-unit-attempt-${{ github.run_attempt }}
-          path: ${{ runner.temp }}/covdata-unit
-          if-no-files-found: error
-          retention-days: 1
-
   # The fan-in: this is the result the caller's `integration` job reports, and
   # therefore what the `ci` aggregate reads. It must RUN and FAIL when a shard
   # fails — `needs` alone would leave it skipped, and a skipped required check
   # counts as passing — hence the always() guard plus the explicit result
   # assertions. Then it proves the slices add up
   # (scripts/test-integration-reconcile.sh: every shard present, same discovery,
-  # union complete + disjoint) and merges every binary coverage pod (shards +
-  # unit) into the one text profile the sonarcloud job consumes. The shards are
-  # checked after that, so a shard that died is named with the tests it took.
+  # union complete + disjoint). The shards are checked after that, so a shard
+  # that died is named with the tests it took. The shards' coverage pods stay in
+  # their artifacts: the caller's Sonar job merges them with the unit legs' pods
+  # (scripts/merge-go-coverage.sh), which no job of this lane can wait for.
   integration:
     name: integration (isolation + erasure + HTTP e2e)
     timeout-minutes: 20
-    needs: [integration-build, integration-shards, integration-unit-coverage]
+    needs: [integration-build, integration-shards]
     # always(), and not !cancelled(): the latter is false for every job once a
     # run is cancelled, so cancelling mid-lane would have skipped this check and
     # greened it. The assertion below sees `cancelled` and fails on it.
@@ -471,26 +419,24 @@ jobs:
       # The build first: when it fails the shards stop without tests, and
       # "shards: failure" would name the wrong job. The shards are checked after
       # the reconcile, which names the tests a red or lost shard took.
-      - name: The build and the unit pass are green
+      - name: The build is green
         working-directory: .
         env:
           BUILD_RESULT: ${{ needs.integration-build.result }}
-          UNIT_RESULT: ${{ needs.integration-unit-coverage.result }}
-        run: |
-          [ "$BUILD_RESULT" = "success" ] || { echo "integration build: $BUILD_RESULT"; exit 1; }
-          [ "$UNIT_RESULT" = "success" ] || { echo "unit coverage pass: $UNIT_RESULT"; exit 1; }
+        run: '[ "$BUILD_RESULT" = "success" ] || { echo "integration build: $BUILD_RESULT"; exit 1; }'
       - uses: actions/setup-go@b7ad1dad31e06c5925ef5d2fc7ad053ef454303e # v7.0.0
         with:
           go-version-file: backend/go.mod
           cache-dependency-path: backend/go.sum
-      - name: Download the shard + unit artifacts
+      - name: Download the shard artifacts
         uses: actions/download-artifact@9000827ccba6bdab643e8b6fd33ac0654aef8333 # v8.0.2
         with:
           pattern: integration-*
           path: ${{ runner.temp }}/shards
-      - name: Reconcile the slices and merge coverage
+      # Go stays for the repeated-gate census the reconcile runs (tools/sql-census).
+      - name: Reconcile the slices
         working-directory: .
-        run: ./scripts/test-integration-reconcile.sh "$RUNNER_TEMP/shards" backend/coverage.out
+        run: ./scripts/test-integration-reconcile.sh "$RUNNER_TEMP/shards"
       - name: Every shard is green
         working-directory: .
         env:
@@ -530,13 +476,6 @@ jobs:
           path: ${{ runner.temp }}/test-timing/test-timing.txt
           if-no-files-found: error
           retention-days: 3
-      - name: Upload Go coverage
-        uses: ./.github/actions/upload-artifact-retried
-        with:
-          name: go-coverage
-          path: backend/coverage.out
-          if-no-files-found: ignore
-          retention-days: 1
 
   integration-ext-migrations:
     name: integration (extension migration gate)

@@ -385,15 +385,19 @@ type filteredLane struct {
 func filteredLanes(t *testing.T, workflow workflowFile) []filteredLane {
 	t.Helper()
 	targets, vars := parseRecipes(t, rootMakefile)
+	scopes := filterScopes(t, workflow)
 	var lanes []filteredLane
 	for name, job := range workflow.Jobs {
-		guarded := scopeGuard.FindAllStringSubmatch(job.If, -1)
-		if guarded == nil {
-			continue
-		}
 		lane := filteredLane{name: name}
-		for _, match := range guarded {
-			lane.scopes = append(lane.scopes, match[1])
+		// An output the classifier derives from the event alone, such as
+		// full_lane, filters no path, so a job it alone guards skips no edit.
+		for _, match := range scopeGuard.FindAllStringSubmatch(job.If, -1) {
+			if _, ok := scopes[match[1]]; ok {
+				lane.scopes = append(lane.scopes, match[1])
+			}
+		}
+		if lane.scopes == nil {
+			continue
 		}
 		commands := jobCommands(t, workflow, job.Uses, name)
 		inputs := map[string]bool{}
