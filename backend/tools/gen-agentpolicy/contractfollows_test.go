@@ -30,7 +30,7 @@ func TestARouteBackedActionFollowsItsOperationInTheContract(t *testing.T) {
 	const (
 		mark        = "x-mcp-tool: { verb: create_team, router: change_access, action: create_team, tier: auto_execute, scope: write, served_by: route }"
 		createRow   = `"POST /v1/teams"`
-		requestName = "        name: { type: string, minLength: 1, maxLength: 120 }\n    UpdateTeamRequest:"
+		requestName = "        name: { x-single-line: true, type: string, minLength: 1, maxLength: 120 }\n    UpdateTeamRequest:"
 		answerName  = "      required: [id, name]\n      properties:\n        id: { type: string, format: uuid }\n        name: { type: string }\n        parent_team_id:"
 	)
 	if !strings.Contains(baseline, createRow) || !strings.Contains(baseline, `Action: "create_team"`) {

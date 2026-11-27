@@ -63,8 +63,14 @@ func holdsCanonicalForm(def, column string) bool {
 	return false
 }
 
+// holdsOneSpelling reports whether a CHECK definition holds column to the
+// spelling values writes: composed accents and nothing that draws nothing.
+func holdsOneSpelling(def, column string) bool {
+	return strings.Contains(def, "(is_identifier_text("+column+"))")
+}
+
 // addressColumnsInUniqueIndexes derives the corpus, mapping table.column to
-// whether a CHECK holds its canonical form.
+// whether CHECKs hold both its canonical form and its one spelling.
 func addressColumnsInUniqueIndexes(t *testing.T) map[string]bool {
 	t.Helper()
 	raw := headCatalog(t)
@@ -91,12 +97,12 @@ func addressColumnsInUniqueIndexes(t *testing.T) map[string]bool {
 				continue
 			}
 			key := table + "." + column
+			lowered, spelled := false, false
 			for _, def := range checks[table] {
-				held[key] = held[key] || holdsCanonicalForm(def, column)
+				lowered = lowered || holdsCanonicalForm(def, column)
+				spelled = spelled || holdsOneSpelling(def, column)
 			}
-			if _, seen := held[key]; !seen {
-				held[key] = false
-			}
+			held[key] = lowered && spelled
 		}
 	}
 	return held
@@ -119,9 +125,10 @@ func TestEveryUniqueAddressColumnHoldsItsCanonicalForm(t *testing.T) {
 		if held[key] || notAnAddress.Waived(t, key) {
 			continue
 		}
-		t.Errorf("%s takes part in a unique index and no CHECK holds it lowercased and trimmed, so two "+
-			"spellings of one address are two rows. Add CHECK (col = lower(btrim(col))) in a migration, "+
-			"NOT VALID first, or waive the column in notAnAddress with what it holds.", key)
+		t.Errorf("%s takes part in a unique index and no CHECK holds it lowercased and trimmed, or in "+
+			"one spelling, so two spellings of one address are two rows. Add CHECK (col = lower(btrim(col))) "+
+			"and CHECK (is_identifier_text(col)) in a migration, NOT VALID first, or waive the column in "+
+			"notAnAddress with what it holds.", key)
 	}
 }
 
@@ -150,5 +157,8 @@ func TestTheCanonicalFormReaderSeesEachShape(t *testing.T) {
 		if got := holdsCanonicalForm(def, "email") || holdsCanonicalForm(def, "domain"); got != want {
 			t.Errorf("holdsCanonicalForm(%q) = %v, want %v", def, got, want)
 		}
+	}
+	if !holdsOneSpelling("(is_identifier_text(email))", "email") || holdsOneSpelling("(is_identifier_text(other_email))", "email") {
+		t.Error("holdsOneSpelling misread which column the spelling check holds")
 	}
 }

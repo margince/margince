@@ -18,14 +18,17 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/extdelivery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/crm"
@@ -63,6 +66,10 @@ type extensionCore struct {
 	// is refused is about the INVOCATION, not about the context the handler
 	// passes in.
 	unattended bool
+	// actsAsSeat lifts the port's refusal of an unattended invocation. The
+	// principal is the unit's service member, so each verb is checked against
+	// its grants.
+	actsAsSeat bool
 	// notifies lets an unattended invocation send a notice, and nothing else.
 	notifies bool
 	deps     extensionRuntimeBinding
@@ -174,20 +181,12 @@ func (c extensionCore) invocationCtx(ctx context.Context) (context.Context, erro
 
 // refuseUnattended refuses the invocation that has no caller behind it.
 func (c extensionCore) refuseUnattended() error {
-	if c.unattended {
-		// A job tick and a bus delivery both run with nobody behind them. Core
-		// reads and writes are checked against the caller's live RBAC, and there
-		// is no caller to check. A system principal passes every check ever
-		// written. The workspace's agent seat is a governance surface of its own.
-		// Both are features, and this is a refusal.
-		//
-		// The refusal matters most for a delivery. That one runs as
-		// PrincipalSystem, which auth.Require bypasses, so without this refusal
-		// the governed door would be open to a caller nothing checks. Tx's SQL
-		// cannot reach a core table, so this door was the only way for an
-		// unattended run to file a core record. The unit's own tables stay
-		// writable, which is what an unattended run is for.
-		return fmt.Errorf("%w: a scheduled job and a bus delivery run with no caller, and a core read or write is checked against the caller's own permissions", extension.ErrForbidden)
+	if c.unattended && !c.actsAsSeat {
+		// A job tick, and a delivery to a unit with no service member, run with
+		// nobody behind them. A core read or write is checked against a caller's
+		// live RBAC, and there is none. A system principal passes every check
+		// ever written, so the door answers a refusal instead.
+		return fmt.Errorf("%w: a scheduled job, and a bus delivery to a unit with no service member, run with no caller, and a core read or write is checked against the caller's own permissions", extension.ErrForbidden)
 	}
 	return nil
 }
@@ -218,6 +217,11 @@ func portRefusal(err error) error {
 	if _, ok := errors.AsType[apperrors.FieldFault](err); ok {
 		return extension.ErrInvalid
 	}
+	// A write that refuses several keys at once, such as the custom fields of
+	// a record, carries the plural form of the same refusal.
+	if _, ok := errors.AsType[apperrors.FieldFaults](err); ok {
+		return extension.ErrInvalid
+	}
 	// A list's own refusals (an unknown custom field, a bad sort or cursor) are
 	// not FieldFaults, and each is the caller's mistake.
 	if _, ok := errors.AsType[*storekit.PredicateError](err); ok {
@@ -234,7 +238,8 @@ func portRefusal(err error) error {
 	}
 	// A fault with no class is the core's own — a broken connection, a
 	// constraint nobody mapped. The unit is told the write failed and nothing
-	// about how; the detail belongs in the core's logs, where it is already.
+	// about how; the detail goes to the core's log, so an operator can find it.
+	slog.Warn("extension core: a refusal with no published class", "error", err)
 	return errCoreRefused
 }
 
@@ -259,4 +264,51 @@ func transcode[T any](src any) (T, error) {
 		return out, err
 	}
 	return out, nil
+}
+
+// SetCustomFields writes the custom values a landed company record would get,
+// on the transaction the unit holds, and names those a user owns.
+func (c extensionCompanies) SetCustomFields(ctx context.Context, id string, values map[string]any) ([]string, error) {
+	if err := c.core.refuseUnattended(); err != nil {
+		return nil, err
+	}
+	ctx, err := c.core.authorised(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tx, unit := c.core.tx, c.core.unit
+	// The write is the unit's, not the member's: audited as the unit's
+	// connector, as Ingest does, so a later delivery may replace it.
+	if acting, ok := principal.Actor(ctx); ok {
+		acting.Type = principal.PrincipalConnector
+		acting.ID = ingressPrincipalPrefix + unit
+		acting.OnBehalfOf = acting.UserID
+		ctx = principal.WithActor(ctx, acting)
+	}
+	return extdelivery.CompanyDoor{
+		Tx: tx, Catalog: c.core.catalog(), Store: c.store(), Refuse: portRefusal,
+		Overwrites: func(ctx context.Context) (bool, error) { return overwritesEditedFieldsIn(ctx, tx, unit) },
+		Held: func(ctx context.Context, company ids.UUID, patch json.RawMessage) ([]string, error) {
+			return humanOwnedConflictsIn(ctx, tx, string(recordTypeCompany), company, patch)
+		},
+	}.SetCustomFields(ctx, id, values)
+}
+
+type extensionMembers struct{ core extensionCore }
+
+//nolint:ireturn // returning the published repo IS the seam: a unit holds extension.MemberRepo, never a core type.
+func (c extensionCore) Members() extension.MemberRepo { return extensionMembers{core: c} }
+
+// List answers the active members a role holds, to a unit that declared the
+// members need. A tick, or a delivery with no service member, is refused.
+func (m extensionMembers) List(ctx context.Context, q extension.MemberQuery) ([]extension.Member, error) {
+	if err := extdelivery.RequireNeed(ComposedExtensions(), m.core.unit, extension.CapabilityMembers); err != nil {
+		return nil, err
+	}
+	ctx, err := m.core.beginRead(ctx)
+	if err != nil {
+		return nil, err
+	}
+	found, err := extdelivery.Roster(ctx, m.core.tx, q)
+	return found, portRefusal(err)
 }

@@ -339,18 +339,18 @@
 1795772278_a_saved_view_name_is_unique_for_its_owner_and_resource.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795755969_the_group_six_text_limits_follow_their_columns.up.sql | * | re-creates the text_bound triggers of assurance_run, finance_invoice and contact_provider_claim without the dropped columns' keys; it changes no existing row
 1795755969_the_group_six_text_limits_follow_their_columns.down.sql | * | re-creates those six text_bound triggers as they were; it changes no existing row
-1795802755_only_real_text_fields_have_bounds.down.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
-1795802755_only_real_text_fields_have_bounds.up.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
-1795802757_only_unused_consent_purposes_can_change.down.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
-1795802757_only_unused_consent_purposes_can_change.up.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
-1795802758_source_changes_reach_the_write_history.up.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
-1795802760_a_rep_imports_their_own_leads_and_contacts.up.sql | role | one UPDATE of the three fixed system roles rep, manager and management
-1795802760_a_rep_imports_their_own_leads_and_contacts.down.sql | role | one UPDATE of the three fixed system roles rep, manager and management
-1795802761_missing_import_grants_follow_the_seed.up.sql | role | fills missing import_run entries on the six named system roles; existing grants and custom roles are untouched
-1795802761_missing_import_grants_follow_the_seed.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795807783_only_real_text_fields_have_bounds.down.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
+1795807783_only_real_text_fields_have_bounds.up.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
+1795807785_only_unused_consent_purposes_can_change.down.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
+1795807785_only_unused_consent_purposes_can_change.up.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
+1795807786_source_changes_reach_the_write_history.up.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
+1795807788_a_rep_imports_their_own_leads_and_contacts.up.sql | role | one UPDATE of the three fixed system roles rep, manager and management
+1795807788_a_rep_imports_their_own_leads_and_contacts.down.sql | role | one UPDATE of the three fixed system roles rep, manager and management
+1795807789_missing_import_grants_follow_the_seed.up.sql | role | fills missing import_run entries on the six named system roles; existing grants and custom roles are untouched
+1795807789_missing_import_grants_follow_the_seed.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795787423_a_merged_tag_names_the_tag_it_went_into.up.sql | tag | only tags a merge archived are written, one per merge an admin ran by hand; each is found through the indexed audit trail of the archived tags, so the set is a handful of rows
-1795807306_installation_keeps_its_own_identity.up.sql | *, installation_state | copies at most three facts from the one live workspace row into installation_state, which holds a handful of rows; the procedural marker is the check that refuses a second live workspace
-1795807306_installation_keeps_its_own_identity.down.sql | installation_state | one DELETE of the three keys the up migration wrote
+1795807791_installation_keeps_its_own_identity.up.sql | *, installation_state | copies at most three facts from the one live workspace row into installation_state, which holds a handful of rows; the procedural marker is the check that refuses a second live workspace
+1795807791_installation_keeps_its_own_identity.down.sql | installation_state | one DELETE of the three keys the up migration wrote
 1795810207_company_chat_links.down.sql | * | the procedural block only checks whether a company association exists and refuses the downgrade; it changes no row and prevents deleting association history during rollback
 1795810209_participant_messenger_grants_and_receipts.up.sql | * | creates empty personal messaging tables and their timestamp trigger; no existing record rows are rewritten
 1795810210_participant_consent_generation.up.sql | chat_member_grant | the table is created empty by this same release before any application writer starts; copying its initial version does not scan a shipped population
@@ -358,3 +358,5 @@
 1795810216_validate_channel_link_constraints.down.sql | * | the down migration is SELECT 1 and changes no row
 1795810217_messaging_text_guards.up.sql | * | replaces text-limit trigger declarations for the named messaging tables without scanning or rewriting their rows
 1795810217_messaging_text_guards.down.sql | * | restores or removes text-limit trigger declarations without scanning or rewriting their rows
+1795807780_the_identifier_spelling_checks_are_validated.up.sql | * | the procedural body only counts rows and validates or drops eleven named CHECKs; it changes no row
+1795807780_the_identifier_spelling_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
