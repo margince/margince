@@ -91,7 +91,9 @@ function stubDrafts(
       if (input.method === "GET") {
         const anchorId = new URL(input.url).searchParams.get("anchor_id") ?? "";
         const draft = typeof held === "function" ? held(anchorId) : held;
-        return draft ? jsonResponse(draft) : problem("not_found", 404);
+        return draft
+          ? jsonResponse(draft)
+          : new Response(null, { status: 204 });
       }
       const body = (await input.clone().json()) as Record<string, unknown>;
       written.push(body);
@@ -305,7 +307,7 @@ describe("a refused save", () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async (input: Request) => {
-        if (input.method === "GET") return problem("not_found", 404);
+        if (input.method === "GET") return new Response(null, { status: 204 });
         puts += 1;
         if (puts === 1) throw new TypeError("Failed to fetch");
         return savedAs({ body: "Half", html_body: "<p>Half</p>" });

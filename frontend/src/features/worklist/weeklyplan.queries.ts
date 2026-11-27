@@ -30,7 +30,7 @@ export const weeklyPlanKey = ["weekly-plan", "current"] as const;
 /**
  * This week's plan, or null when the rep has not started one.
  *
- * 404 is not a failure: it is a week nobody has planned yet, and the screen
+ * 204 is not a failure: it is a week nobody has planned yet, and the screen
  * offers to open one. Reading it as an error would put a refusal plate over the
  * empty state that is the whole point of the first visit.
  */
@@ -39,7 +39,7 @@ export function useWeeklyPlan(): UseQueryResult<WeeklyPlan | null> {
     queryKey: weeklyPlanKey,
     queryFn: async (): Promise<WeeklyPlan | null> => {
       const { data, error, response } = await api.GET("/weekly-plans/current");
-      if (response.status === 404) {
+      if (response.status === 204) {
         return null;
       }
       if (error) {
@@ -54,9 +54,8 @@ export function useWeeklyPlan(): UseQueryResult<WeeklyPlan | null> {
  * A teammate's week, for their lead.
  *
  * Enabled only when an owner is named, so the hook can sit unconditionally in a
- * component that does not always have one. A 404 here means either no plan or
- * no standing to ask — the server deliberately does not distinguish them, and
- * neither does this.
+ * component that does not always have one. A 204 is no plan yet; a 404 is a
+ * teammate the reader no longer leads, and the dialog names both alike.
  */
 export function useTeammateWeeklyPlan(
   ownerId: string | undefined,
@@ -69,7 +68,9 @@ export function useTeammateWeeklyPlan(
         "/weekly-plans/{owner_id}/current",
         { params: { path: { owner_id: ownerId ?? "" } } },
       );
-      if (response.status === 404) {
+      // absent-404: the dialog's one "plan unavailable" line also covers a
+      // teammate who left the reader's team since the list was drawn.
+      if (response.status === 204 || response.status === 404) {
         return null;
       }
       if (error) {

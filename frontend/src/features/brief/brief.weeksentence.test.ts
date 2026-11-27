@@ -73,7 +73,7 @@ describe("weekSentence — what the closed week says about itself", () => {
     expect(say(undefined)).toBeNull();
   });
 
-  // 404 from the weekly read: no week has been written yet. Same silence, same
+  // 204 from the weekly read: no week has been written yet. Same silence, same
   // reason — there is no week to describe.
   it("says nothing about a week nobody has written", () => {
     expect(say(null)).toBeNull();

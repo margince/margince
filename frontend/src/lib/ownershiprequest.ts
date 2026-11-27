@@ -50,7 +50,7 @@ export const ownershipOfferKey = (
 
 /**
  * The viewer's own open offer of this record to a colleague, or null when
- * they have none. The read answers 404 then, and that 404 is the answer.
+ * they have none. The read answers 204 then, and that 204 is the answer.
  */
 export function useOwnershipOffer(
   recordType: TransferableRecordType,
@@ -64,10 +64,10 @@ export function useOwnershipOffer(
       const { data, error, response } = await api.GET(OFFER_PATH, {
         params: { path: { record_type: recordType, id } },
       });
+      if (response.status === 204) {
+        return null;
+      }
       if (error) {
-        if (response.status === 404) {
-          return null;
-        }
         throwProblem(error);
       }
       return data ?? null;

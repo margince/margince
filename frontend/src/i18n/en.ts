@@ -3690,6 +3690,7 @@ export const en = {
   "views.none": "No saved views",
   "views.rename": "Rename",
   "views.renameNamed": "Rename {name}",
+  "views.opensInFilters": "{name}, opens in Filters and views",
   "views.delete": "Delete",
   "views.deleteNamed": "Delete {name}",
   "views.deleteAsk":
@@ -18570,6 +18571,12 @@ export const en = {
   "operations.technical.label": "Technical lookup sweep",
   "operations.technical.help":
     "How often domains without technical facts are looked up. 0 switches it off.",
+  "operations.captureCounterparty.label": "New sender checks",
+  "operations.captureCounterparty.help":
+    "How often new senders are judged by the model.",
+  "operations.captureConfidentiality.label": "Thread confidentiality checks",
+  "operations.captureConfidentiality.help":
+    "How often captured threads are judged for whether colleagues may read them.",
   "operations.gmailWatchScan.label": "Gmail push check",
   "operations.gmailWatchScan.help":
     "How often Gmail push subscriptions are checked for renewal.",
@@ -21070,6 +21077,11 @@ export const en = {
   "filters.library.shared": "Shared with me",
   "filters.library.views": "Saved views",
   "filters.library.kindView": "Saved view",
+  "filters.library.savedOn.contacts": "Saved on the Contacts list",
+  "filters.library.savedOn.companies": "Saved on the Companies list",
+  "filters.library.savedOn.deals": "Saved on the Deals list",
+  "filters.library.savedOn.leads": "Saved on the Leads list",
+  "filters.library.savedOn.projects": "Saved on the Projects list",
   "filters.library.rowMore": "More actions for {name}",
   "filters.library.records.contact_one": "{count} contact",
   "filters.library.records.contact_other": "{count} contacts",

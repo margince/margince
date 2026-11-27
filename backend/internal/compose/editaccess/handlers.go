@@ -36,7 +36,7 @@ func (h Handlers) RequestEditAccess(
 }
 
 // GetEditAccessRequest answers the caller's open request on the record.
-func (h Handlers) GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id) {
+func (h Handlers) GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id crmcontracts.Id, _ crmcontracts.GetEditAccessRequestParams) {
 	out, err := h.Requests.Own(r.Context(), recordType, ids.UUID(id))
 	if err != nil {
 		httperr.Write(w, r, err)

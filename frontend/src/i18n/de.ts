@@ -3758,6 +3758,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "views.none": "Keine gespeicherten Ansichten",
   "views.rename": "Umbenennen",
   "views.renameNamed": "{name} umbenennen",
+  "views.opensInFilters": "{name}, öffnet in Filter und Ansichten",
   "views.delete": "Löschen",
   "views.deleteNamed": "{name} löschen",
   "views.deleteAsk":
@@ -18765,6 +18766,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "operations.technical.label": "Technische Abfragen",
   "operations.technical.help":
     "Wie oft Unternehmensdomains ohne technische Angaben nachgeschlagen werden. 0 deaktiviert die Abfragen.",
+  "operations.captureCounterparty.label": "Prüfung neuer Absendeadressen",
+  "operations.captureCounterparty.help":
+    "Wie oft neue Absendeadressen vom Modell geprüft werden.",
+  "operations.captureConfidentiality.label": "Vertraulichkeits-Beurteilung",
+  "operations.captureConfidentiality.help":
+    "Wie oft erfasste Threads daraufhin geprüft werden, ob Mitglieder sie lesen dürfen.",
   "operations.gmailWatchScan.label": "Gmail-Push-Prüfung",
   "operations.gmailWatchScan.help":
     "Wie oft Gmail-Push-Abos auf Erneuerung geprüft werden.",
@@ -21322,6 +21329,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.library.shared": "Mit mir geteilt",
   "filters.library.views": "Gespeicherte Ansichten",
   "filters.library.kindView": "Gespeicherte Ansicht",
+  "filters.library.savedOn.contacts": "Auf der Liste Kontakte gespeichert",
+  "filters.library.savedOn.companies": "Auf der Liste Unternehmen gespeichert",
+  "filters.library.savedOn.deals": "Auf der Liste Deals gespeichert",
+  "filters.library.savedOn.leads": "Auf der Liste Leads gespeichert",
+  "filters.library.savedOn.projects": "Auf der Liste Projekte gespeichert",
   "filters.library.rowMore": "Weitere Aktionen für {name}",
   "filters.library.records.contact_one": "{count} Kontakt",
   "filters.library.records.contact_other": "{count} Kontakte",

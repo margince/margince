@@ -38,7 +38,7 @@
 
 /* The row is one press target: the name's link is stretched over it, and
    the cell holding ⋯ sits above that so its own press stays its own. */
-.library-table tbody tr {
+tbody tr:has(> td .library-name) {
   position: relative;
 }
 
@@ -69,17 +69,17 @@
   text-decoration: none;
 }
 
-.library-name::after {
+a.library-name::after {
   content: "";
   position: absolute;
   inset: 0;
 }
 
-.library-name:hover {
+a.library-name:hover {
   text-decoration: underline;
 }
 
-.library-name:focus-visible {
+a.library-name:focus-visible {
   outline: var(--focus-ring);
   outline-offset: var(--space-1);
   border-radius: var(--r-sm);

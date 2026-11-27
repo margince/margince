@@ -46,7 +46,7 @@ func (h Handlers) WithL2Ranker(brain briefBrain, log *slog.Logger) {
 // resolves snoozes against the current instant: expired ones re-surface,
 // running ones stay hidden (A77/AC-home-6). The brief is sent first and the
 // open recorded after it, so the open's write never fails or holds the read.
-func (h Handlers) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) GetMorningBrief(w http.ResponseWriter, r *http.Request, _ crmcontracts.GetMorningBriefParams) {
 	run, err := h.engine.LatestRun(r.Context(), time.Now().UTC())
 	if err != nil {
 		httperr.Write(w, r, err)

@@ -123,7 +123,7 @@ func (h companyHandlers) contextCapabilities() crmcontracts.CompanyContextCapabi
 	}
 }
 
-func (h companyHandlers) GetAnchorCompany(w http.ResponseWriter, r *http.Request) {
+func (h companyHandlers) GetAnchorCompany(w http.ResponseWriter, r *http.Request, _ crmcontracts.GetAnchorCompanyParams) {
 	if h.store == nil {
 		httperr.NotImplemented(w, r, "getAnchorCompany")
 		return
