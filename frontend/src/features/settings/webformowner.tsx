@@ -3,7 +3,7 @@
 
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
 import {
-  EntityRef,
+  OwnerName,
   RosterFailedLine,
   RosterPartialNote,
   useRosterPartial,
@@ -67,17 +67,21 @@ export function OwnerField({
   );
 }
 
-// The row's word on where the form's leads go, which stops naming an owner
-// who left as their destination.
-export function FormOwnerLine({ ownerId }: Readonly<{ ownerId: string }>) {
+// Where the form's new leads go. An inquiry-handling policy decides that for
+// itself, and an owner who left is named as gone rather than as a destination.
+export function FormOwnerCell({
+  ownerId,
+  handled,
+}: Readonly<{ ownerId: string | null | undefined; handled: boolean }>) {
   const t = useT();
-  const departed = useDepartedName(ownerId);
+  const departed = useDepartedName(handled ? null : (ownerId ?? null));
+  if (handled) {
+    return <span>{t("inquiry.handling")}</span>;
+  }
   if (departed) {
     return <span>{t("webForms.row.ownerLeft", { name: departed })}</span>;
   }
   return (
-    <span>
-      {t("webForms.row.owner")} <EntityRef kind="user" id={ownerId} asText />
-    </span>
+    <OwnerName ownerId={ownerId} unowned={t("webForms.field.ownerNone")} face />
   );
 }
