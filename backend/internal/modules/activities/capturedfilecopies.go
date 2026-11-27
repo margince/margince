@@ -45,7 +45,9 @@ func (s *Store) storedCopies(ctx context.Context, workspace ids.WorkspaceID, fil
 		sums = append(sums, hex.EncodeToString(sum[:]))
 	}
 	held := make(map[storedCopy]string, len(files))
-	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+	// Bound to the stored-key id, as the intent ledger is: the capture path
+	// reaches this from an installation-wide handle.
+	err := s.db.ForWorkspace(workspace).Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT DISTINCT ON (checksum, byte_size) checksum, byte_size, storage_key
 			  FROM attachment

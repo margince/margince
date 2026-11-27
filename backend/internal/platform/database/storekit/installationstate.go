@@ -226,13 +226,11 @@ func ReadStoredKeyWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, 
 }
 
 // StoredKeyWorkspaceOn reads the id stored keys are scoped by through a store's
-// handle, so it joins the transaction the caller already holds.
+// pool. It joins the caller's open snapshot. It asks no handle to resolve a
+// workspace first, because the row it reads is what names the company.
 func StoredKeyWorkspaceOn(ctx context.Context, db *database.DB) (ids.UUID, error) {
-	var company ids.UUID
-	err := db.Tx(ctx, func(tx pgx.Tx) error {
-		var err error
-		company, err = StoredKeyWorkspaceTx(ctx, tx)
-		return err
-	})
-	return company, err
+	if db.Pool() == nil {
+		return ids.UUID{}, database.ErrNoWorkspace
+	}
+	return ReadStoredKeyWorkspace(ctx, db.Pool())
 }

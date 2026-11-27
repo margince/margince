@@ -358,7 +358,11 @@ func (s *Store) DiscardCapturedFiles(ctx context.Context, staged []StagedFile) e
 	if len(deleted) == 0 {
 		return nil
 	}
-	return s.db.Tx(ctx, func(tx pgx.Tx) error {
+	workspace, err := s.storedKeyWorkspace(ctx)
+	if err != nil {
+		return err
+	}
+	return s.db.ForWorkspace(workspace).Tx(ctx, func(tx pgx.Tx) error {
 		for _, key := range deleted {
 			if err := storedobjects.Clear(ctx, tx, key); err != nil {
 				return err
