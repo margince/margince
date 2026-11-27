@@ -87,9 +87,9 @@ func LeadDataTask() datatask.Task {
 // list onto its channel. The writer an older word named moves to source_system.
 func ActivityDataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795771059_activity_source_channels", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795771059_activity_source_channels"),
-		Requires: []string{"core/1795771059"},
+		ID: "core/1795786877_activity_source_channels", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795786877_activity_source_channels"),
+		Requires: []string{"core/1795786877"},
 		Steps: []datatask.Step{
 			step("activity_sources", activities.CorrectActivitySourcesTx, activities.CountUnlistedActivitySources),
 		},
