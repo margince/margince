@@ -9,6 +9,8 @@ installation.base_language
 installation.call_telegram
 installation.call_whatsapp
 installation.call_zalo
+installation.capture_confidentiality_verdict_interval_seconds
+installation.capture_counterparty_verdict_interval_seconds
 installation.close_date_sweep_interval_seconds
 installation.date_format
 installation.dead_work_banner_hours

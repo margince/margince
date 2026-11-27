@@ -19,10 +19,10 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/capturelabel"
 	"github.com/margince/margince/backend/internal/compose/pipelinetrace"
+	"github.com/margince/margince/backend/internal/compose/verdictclock"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
 // WithCaptureTrace composes the trace read surface.
@@ -63,28 +63,15 @@ func WithCaptureTrace(tracePayloads bool) Option {
 	}
 }
 
-// verdictPass reads when one periodic verdict pass next runs.
-//
-// The seam exists because the two halves belong to different owners and neither
-// may reach the other: the schedule is the job queue's, and capture must not
-// learn to read river_job — platform/jobs says why every statement over that
-// table lives in one package. The kinds come from the ARGS TYPES the runner
-// registers rather than from string literals: a kind renamed in one place and
-// not the other would leave this reading a queue nobody writes and reporting
-// "no pass is coming" forever.
-//
-// One pass per surface, named where a contact meets the wait. The sender verdict
-// is what the capture-activity counters wait on; the thread verdict, an hour
-// faster, is what a held thread waits on. Handing both to both screens would put
-// a clock on each that nothing there is waiting for.
+// verdictPass reads when one periodic verdict pass next runs. One pass per
+// surface: the sender verdict is what the capture-activity counters wait on,
+// the thread verdict what a held thread waits on.
 func verdictPass(pool *pgxpool.Pool, kind string) capture.VerdictPass {
-	return func(ctx context.Context) (capture.VerdictClock, error) {
-		pass, err := jobs.PassFor(ctx, pool, kind)
+	return verdictclock.Pass(pool, kind, func(ctx context.Context, key string) (time.Duration, error) {
+		read, err := installationSettingReader(ctx, pool)
 		if err != nil {
-			return capture.VerdictClock{}, err
+			return 0, err
 		}
-		return capture.VerdictClock{
-			Every: pass.Every, Running: pass.Running, Queued: pass.Queued, NextAt: pass.NextAt,
-		}, nil
-	}
+		return scheduleValue(key, read)
+	})
 }

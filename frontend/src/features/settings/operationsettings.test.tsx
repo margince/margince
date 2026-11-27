@@ -116,6 +116,18 @@ describe("operation settings cards", () => {
     ],
     [
       BackgroundSchedulesCard,
+      "capture_counterparty_verdict_interval_seconds",
+      "1200",
+      "59",
+    ],
+    [
+      BackgroundSchedulesCard,
+      "capture_confidentiality_verdict_interval_seconds",
+      "1200",
+      "86401",
+    ],
+    [
+      BackgroundSchedulesCard,
       "gmail_watch_scan_interval_seconds",
       "3600",
       "599",
