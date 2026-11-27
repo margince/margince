@@ -5949,6 +5949,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tagAdmin.usedBy_one": "{count} Datensatz",
   "tagAdmin.usedBy_other": "{count} Datensätze",
   "tagAdmin.retired": "Stillgelegt",
+  "tagAdmin.mergedInto": "In {name} zusammengeführt",
   "tagAdmin.retiredToast": "{name} stillgelegt",
   "tagAdmin.restoredToast": "{name} wiederhergestellt",
   "tags.archived": "archiviert",
@@ -6020,6 +6021,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tagResult.resultsTitle": "Datensätze mit diesem Tag",
   "tagResult.nothingCarries":
     "Noch keine Datensätze mit diesem Tag. Vergib das Tag bei einem Kontakt, einem Unternehmen, einem Deal oder einem Lead.",
+  "tagResult.retiredNothing":
+    "Keine Datensätze haben dieses Tag. Es ist stillgelegt und kann keinem Datensatz mehr hinzugefügt werden.",
+  "tagResult.mergedBody":
+    "Dieses Tag wurde in {name} zusammengeführt. Die Datensätze mit diesem Tag haben bei der Zusammenführung {name} erhalten.",
+  "tagResult.openKept": "{name} öffnen",
   "tagResult.loadingRows": "{kind} werden geladen…",
   "tagResult.noneLeft": "Keine Datensätze mehr mit diesem Tag",
   "tagResult.unnamed": "Ohne Namen",
@@ -12253,6 +12259,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.delivery.in_app": "In der App",
   "notifications.delivery.email": "E-Mail",
   "notifications.delivery.digest": "Tägliche Zusammenfassung",
+  "notifications.noMailTitle": "E-Mail ist nicht eingerichtet",
+  "notifications.noMail":
+    "Diese Installation versendet keine Benachrichtigungen per E-Mail, daher erreichen E-Mail, tägliche Zusammenfassung und Zusammenfassungen per E-Mail kein Postfach. Jede Benachrichtigung erscheint weiter in der App.",
+  "notifications.noMailGuide": "E-Mail einrichten",
   "privacynotice.title": "Was wir über Sie gespeichert haben",
   "privacynotice.intro":
     "Wir teilen Ihnen dies mit, da wir dazu gesetzlich verpflichtet sind. Sie müssen nicht darauf antworten oder irgendetwas unternehmen.",

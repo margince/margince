@@ -174,7 +174,9 @@ const (
 	// certification case and its test. The job needs the unexported job
 	// context; the cases drive the contact page.
 	// Raised by develop's import, analytics and release fixes met with main's.
-	composeRootProductionLines = 232_859
+	// Raised by 1 production line for the notices handlers' mail delivery, set on
+	// the unexported server options.
+	composeRootProductionLines = 232_860
 	// Raised by 18 test lines for the link suggestion tool cases.
 	// Raised by 2 test lines for the actor census waivers of the two jobs that
 	// bind their colleague inside a method.

@@ -50,15 +50,19 @@ function everyClass(): Preference[] {
 // the way the server does — writing the one class named, marking it chosen, and
 // answering with the WHOLE set, which is the behaviour the cache update
 // depends on.
-function backendFor(rows: Preference[]) {
+function backendFor(
+  rows: Preference[],
+  { mailSends = true, roles = ["admin"] } = {},
+) {
   let state = rows;
+  let mailing = mailSends;
   const puts: unknown[] = [];
   const fetchMock = vi.fn(
     async (input: RequestInfo | URL, init?: RequestInit) => {
       const req =
         input instanceof Request ? input : new Request(String(input), init);
       if (req.url.endsWith("/v1/me")) {
-        return jsonResponse(meFixture({}));
+        return jsonResponse(meFixture({ roles }));
       }
       if (req.url.includes("/me/notification-preferences")) {
         if (req.method === "PUT") {
@@ -73,19 +77,28 @@ function backendFor(rows: Preference[]) {
               : row,
           );
         }
-        return jsonResponse({ items: state });
+        return jsonResponse({
+          items: state,
+          email_delivery_available: mailing,
+        });
       }
       throw new Error(`unexpected request: ${req.method} ${req.url}`);
     },
   );
-  return { fetchMock, puts: () => puts };
+  return {
+    fetchMock,
+    puts: () => puts,
+    withdrawMail: () => {
+      mailing = false;
+    },
+  };
 }
 
 const render = (ui: ReactNode, locale: Locale = "en") => {
   const client = new QueryClient({
     defaultOptions: { queries: { retry: false } },
   });
-  return rtlRender(
+  const view = rtlRender(
     <QueryClientProvider client={client}>
       <LocaleProvider initial={locale}>
         <SavePageProvider>
@@ -95,6 +108,7 @@ const render = (ui: ReactNode, locale: Locale = "en") => {
       </LocaleProvider>
     </QueryClientProvider>,
   );
+  return { ...view, client };
 };
 
 afterEach(() => {
@@ -223,6 +237,101 @@ describe("NotificationSettingsCard", () => {
         delivery: "email",
       }),
     );
+  });
+
+  // With no relay, a mailed choice reaches no mailbox. The page says so once
+  // and stops offering both, while a row already on one still shows it.
+  it("says the installation sends no notification email, and offers no mailed choice", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(everyClass(), { mailSends: false }).fetchMock,
+    );
+    const user = userEvent.setup();
+    render(<NotificationSettingsCard />);
+
+    expect(
+      await screen.findByText(en["notifications.noMailTitle"]),
+    ).toBeInTheDocument();
+    await user.click(
+      await screen.findByRole("combobox", { name: /Automations that ran/i }),
+    );
+    const automations = screen.getByRole("listbox");
+    expect(
+      within(automations).queryByRole("option", { name: "Daily digest" }),
+    ).toBeNull();
+    expect(
+      within(automations).getByRole("option", { name: "In the app" }),
+    ).not.toBeNull();
+    await user.keyboard("{Escape}");
+
+    const approvals = screen.getByRole("combobox", {
+      name: /Approvals waiting on you/i,
+    });
+    expect(approvals.textContent).toContain("Email");
+    await user.click(approvals);
+    expect(
+      within(screen.getByRole("listbox")).queryByRole("option", {
+        name: "Daily digest",
+      }),
+    ).toBeNull();
+  });
+
+  // Mail can go away while a pick is drafted. The control keeps showing the pick
+  // that Save would write, rather than a blank face over a hidden value.
+  it("keeps a drafted digest showing when the server withdraws mail", async () => {
+    const backend = backendFor(everyClass());
+    vi.stubGlobal("fetch", backend.fetchMock);
+    const user = userEvent.setup();
+    const { client } = render(<NotificationSettingsCard />);
+
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: /Automations that ran/i }),
+      "Daily digest",
+    );
+    backend.withdrawMail();
+    await client.invalidateQueries();
+
+    expect(
+      await screen.findByText(en["notifications.noMailTitle"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByRole("combobox", { name: /Automations that ran/i })
+        .textContent,
+    ).toContain("Daily digest");
+  });
+
+  it("points an administrator at the mail setup, and a rep at nothing", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(everyClass(), { mailSends: false }).fetchMock,
+    );
+    render(<NotificationSettingsCard />);
+    expect(
+      await screen.findByRole("link", {
+        name: en["notifications.noMailGuide"],
+      }),
+    ).toBeInTheDocument();
+    cleanup();
+
+    vi.stubGlobal(
+      "fetch",
+      backendFor(everyClass(), { mailSends: false, roles: ["rep"] }).fetchMock,
+    );
+    render(<NotificationSettingsCard />);
+    expect(
+      await screen.findByText(en["notifications.noMailTitle"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("link", { name: en["notifications.noMailGuide"] }),
+    ).toBeNull();
+  });
+
+  it("says nothing about mail where the installation sends it", async () => {
+    vi.stubGlobal("fetch", backendFor(everyClass()).fetchMock);
+    render(<NotificationSettingsCard />);
+    await screen.findAllByRole("combobox");
+    expect(screen.queryByText(en["notifications.noMailTitle"])).toBeNull();
   });
 
   // Every other class MAY be switched off, so the coach rule above is a

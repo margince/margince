@@ -35,14 +35,21 @@ type tagRow struct {
 	CreatedAt   time.Time
 	UpdatedAt   time.Time
 	ArchivedAt  *time.Time
+	// MergedIntoID is the tag a merge folded this one into. It is nil on a tag
+	// retired by hand, which is what tells the two apart.
+	MergedIntoID   *ids.TagID
+	MergedIntoName *string
 }
 
-const tagColumns = `id, name, color, description, suggestible, version, created_at, updated_at, archived_at`
+// The survivor's name is read where the row is, so a rename of the kept tag
+// shows on the merged one without a second write.
+const tagColumns = `id, name, color, description, suggestible, version, created_at, updated_at, archived_at,
+	merged_into_id, (SELECT kept.name FROM tag kept WHERE kept.id = tag.merged_into_id)`
 
 func scanTag(r pgx.Row) (tagRow, error) {
 	var t tagRow
 	err := r.Scan(&t.ID, &t.Name, &t.Color, &t.Description, &t.Suggestible, &t.Version,
-		&t.CreatedAt, &t.UpdatedAt, &t.ArchivedAt)
+		&t.CreatedAt, &t.UpdatedAt, &t.ArchivedAt, &t.MergedIntoID, &t.MergedIntoName)
 	return t, err
 }
 

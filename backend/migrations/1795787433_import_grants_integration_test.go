@@ -22,7 +22,7 @@ func TestMissingImportGrantsAreBackfilledWithoutReplacingAnOperatorsDenial(t *te
 	if err != nil {
 		t.Fatal(err)
 	}
-	prior := namespaceThroughVersion(t, core, "1795786885")
+	prior := namespaceThroughVersion(t, core, "1795787432")
 	if _, err := dbmigrate.Up(ctx, conn, prior); err != nil {
 		t.Fatal(err)
 	}
@@ -34,7 +34,7 @@ func TestMissingImportGrantsAreBackfilledWithoutReplacingAnOperatorsDenial(t *te
  '{"create":false,"read":false,"update":false,"delete":false}') WHERE key='manager'`); err != nil {
 		t.Fatal(err)
 	}
-	through := namespaceThroughVersion(t, core, "1795786886")
+	through := namespaceThroughVersion(t, core, "1795787433")
 	if _, err := dbmigrate.Up(ctx, conn, through); err != nil {
 		t.Fatal(err)
 	}
