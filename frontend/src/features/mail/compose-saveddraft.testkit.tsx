@@ -95,7 +95,8 @@ export function stubRoutes(overrides: Record<string, Route> = {}) {
       sent.push({ key, query: url.search, body, headers });
       const override = overrides[key];
       if (override) return override();
-      if (key === "GET /mail-drafts") return problem("not_found", 404);
+      if (key === "GET /mail-drafts")
+        return new Response(null, { status: 204 });
       if (key === "GET /consent-purposes") return jsonResponse(PURPOSES);
       if (key === "GET /voice-profiles") return jsonResponse({ data: [] });
       if (isPreviewDoor(url.pathname)) {

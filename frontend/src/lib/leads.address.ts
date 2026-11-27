@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// The lead record's own address dials.
+// The lead record's own address dials, and what the leads queue opens on.
 //
 // Its own file for the reason `contactpage.address.ts` is one: a caller that
 // builds a link to this screen must not import the screen to learn what the
@@ -25,3 +25,25 @@ export const CALL_ACTION = "call";
  * already a lead and offers to convert them.
  */
 export const QUALIFY_ACTION = "qualify";
+
+/** Who reads the queue, as far as its opening filter asks. */
+type QueueReader = Readonly<{
+  user: Readonly<{ id: string }>;
+  authorization?: Readonly<{ row_scope?: string }>;
+}>;
+
+/**
+ * Whether the queue opens on every lead the reader may see. This is the opening
+ * filter, not a permission: an absent row scope opens on "mine".
+ */
+export function leadsOpenOnAll(reader: QueueReader): boolean {
+  const scope = reader.authorization?.row_scope;
+  return scope === "team" || scope === "all";
+}
+
+/** The filters the queue opens on for this reader. */
+export function leadsOpeningFilters(
+  reader: QueueReader,
+): Record<string, string> {
+  return leadsOpenOnAll(reader) ? {} : { owner_id: reader.user.id };
+}

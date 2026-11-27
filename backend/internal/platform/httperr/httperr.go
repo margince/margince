@@ -41,6 +41,7 @@ var mapping = []struct {
 	status   int
 	code     string
 }{
+	{apperrors.ErrNothingYet, http.StatusNotFound, "not_found"},
 	{apperrors.ErrNotFound, http.StatusNotFound, "not_found"},
 	{apperrors.ErrInvalidArgument, http.StatusBadRequest, "invalid_argument"},
 	{apperrors.ErrVersionSkew, http.StatusConflict, "version_skew"},
@@ -247,11 +248,9 @@ func Classify(err error) (fault Fault, ok bool) {
 	if fault, ok := referencedFault(err); ok {
 		return fault, true
 	}
-
 	if fault, ok := unansweredFaultOf(err); ok {
 		return fault, true
 	}
-
 	if withDetails, ok := errors.AsType[*DetailedError](err); ok {
 		return Fault{
 			Status:  withDetails.Status,
@@ -263,11 +262,9 @@ func Classify(err error) (fault Fault, ok bool) {
 			RetryAfterSeconds: withDetails.RetryAfterSeconds,
 		}, true
 	}
-
 	if v, ok := clientInputValidation(err); ok {
 		return Classify(v)
 	}
-
 	for _, m := range mapping {
 		if errors.Is(err, m.sentinel) {
 			f := Fault{Status: m.status, Code: m.code, Detail: err.Error()}
@@ -345,6 +342,9 @@ func loggedPath(r *http.Request) string {
 // Write maps err onto the wire. Unknown errors become an opaque 500 — the
 // cause is logged server-side, never leaked to the client.
 func Write(w http.ResponseWriter, r *http.Request, err error) {
+	if answeredAbsent(w, r, err) {
+		return
+	}
 	fault, ok := Classify(err)
 	if timedOut, late := timedOutFault(r, err, ok); late {
 		fault, ok = timedOut, true

@@ -262,6 +262,9 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 		return err
 	}
 	sched = normalized
+	if unmoved, err := scheduleUnmoved(ctx, tx, id, sched, expectedVersion); err != nil || unmoved {
+		return err
+	}
 	var keptWall *time.Time
 	var keptAt time.Time
 	{
@@ -309,6 +312,31 @@ func (s *Store) RescheduleInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, sche
 		}
 		return timer.ScheduleTx(ctx, tx, id, keptAt)
 	}
+}
+
+// scheduleUnmoved reports a pending send, at the version the caller read, that
+// the move would leave due at the moment it already holds. The moment is worked
+// out by the same update_intent_time the move uses, so the two agree. A held
+// send is never unmoved: moving it releases the hold.
+func scheduleUnmoved(ctx context.Context, tx pgx.Tx, id ids.UUID, sched SendSchedule, expectedVersion int64) (bool, error) {
+	var unmoved bool
+	err := tx.QueryRow(ctx, `
+ SELECT s.status = 'scheduled' AND s.version = @version
+    AND (s.scheduled_wall, s.scheduled_tz, s.scheduled_at) IS NOT DISTINCT FROM
+        (planned.wall_time, COALESCE(planned.timezone, @zone), planned.instant)
+   FROM scheduled_send s,
+        public.update_intent_time(s.scheduled_wall, s.scheduled_tz, s.scheduled_at, @wall::text::timestamp, @zone, @at) AS planned
+  WHERE s.id = @id
+    FOR UPDATE OF s`, pgx.NamedArgs{
+		"at": sched.At.UTC(), argZone: sched.TZ, argWall: sched.wallClock(), "id": id, fieldVersion: expectedVersion,
+	}).Scan(&unmoved)
+	if errors.Is(err, pgx.ErrNoRows) {
+		return false, nil
+	}
+	if err != nil {
+		return false, fmt.Errorf("scheduled send: comparing the due moment: %w", err)
+	}
+	return unmoved, nil
 }
 
 // CancelScheduledSend withdraws a message before it fires, or gives up on one

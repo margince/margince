@@ -58,6 +58,27 @@ func TestAMailIsShownWithoutItsQuotedHistory(t *testing.T) {
 	}
 }
 
+func TestAForwardIncludesTheCustomersMessage(t *testing.T) {
+	for _, subject := range []string{"Fwd: Product X pricing", "FW: Product X pricing", "WG: Product X pricing"} {
+		t.Run(subject, func(t *testing.T) {
+			item := rulesetForward
+			item.Subject = subject
+			prompt := Prompt(promptfence.New(), []collections.SuggestibleTag{rulesetTag}, []Item{item})
+			for _, want := range []string{"For your review.", "Could you send Product X pricing?"} {
+				if !strings.Contains(prompt, want) {
+					t.Errorf("forward omitted %q: %s", want, prompt)
+				}
+			}
+		})
+	}
+}
+
+func TestTheRulesetSampleIncludesTheForwardedMessage(t *testing.T) {
+	if !strings.Contains(rulesetPrompt(promptfence.New()), "Could you send Product X pricing?") {
+		t.Fatal("the ruleset sample does not exercise the forward reading")
+	}
+}
+
 func TestTheVocabularyDigestMovesWithATagAndNotWithTheirOrder(t *testing.T) {
 	a := collections.SuggestibleTag{ID: ids.New[ids.TagKind](), Name: "Product X", Description: "wants a demo"}
 	b := collections.SuggestibleTag{ID: ids.New[ids.TagKind](), Name: "Support", Description: "wants faster help"}

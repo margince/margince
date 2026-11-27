@@ -95,6 +95,7 @@ type unitManifest struct {
 	// Settings are the values an admin can change, drawn on the unit's card.
 	Settings     []declaredSetting     `json:"settings,omitempty"`
 	CompanyTypes []declaredCompanyType `json:"company_types,omitempty"`
+	Languages    []declaredLanguage    `json:"languages,omitempty"`
 	RecordKinds  []declaredRecordKind  `json:"record_kinds,omitempty"`
 	LinkTypes    []declaredLinkType    `json:"link_types,omitempty"`
 	reportDecls

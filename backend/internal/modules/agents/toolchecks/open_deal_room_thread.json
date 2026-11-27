@@ -1,6 +1,7 @@
 {
   "verb": "open_deal_room_thread",
   "checks": [
+    "deal.read",
     "deal_room.update"
   ],
   "takes": [

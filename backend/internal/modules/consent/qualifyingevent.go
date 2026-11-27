@@ -133,7 +133,7 @@ func (s *Store) RecordInquiry(
 		if err != nil {
 			return err
 		}
-		return RecordSubjectInquiry(ctx, tx, holder.String(), QualifyingEvent{
+		if err := RecordSubjectInquiry(ctx, tx, holder.String(), QualifyingEvent{
 			Kind: KindInquiry,
 			// WHEN THEY ASKED, which is now — not when the meeting they booked
 			// is scheduled for. A booking is routinely made for a date weeks
@@ -149,7 +149,19 @@ func (s *Store) RecordInquiry(
 			OccurredAt:       s.now(),
 			SourceEntityType: entityActivity,
 			SourceEntityID:   activityID.String(),
-		}, by)
+		}, by); err != nil {
+			return err
+		}
+		rows, err := tx.Query(ctx, `SELECT id FROM contact_acquisition_evidence WHERE contact_id = $1 ORDER BY id FOR UPDATE`, holder)
+		if err != nil {
+			return err
+		}
+		acquisitions, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+		if err != nil {
+			return err
+		}
+		_, err = SettleWhenSubjectReachedOutTx(ctx, tx, acquisitions, activityID, s.now())
+		return err
 	})
 }
 

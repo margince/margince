@@ -63,6 +63,8 @@ To send an offer in Margince, open the draft offer and click **Send**, then conf
 
 **Send does not email anything.** Nothing leaves Margince when you click it; it records that this version is the one you are sending. To get the offer to the buyer, click **Render PDF** and open it with **View PDF**. Then send that file yourself: added to an email, or uploaded to the deal and added to its [Deal Room](deal-rooms.md). You cannot send an offer with no lines.
 
+You cannot send an offer, or make its PDF, if its buyer is a company you cannot open. Ask the company's owner to share it with you, or ask an administrator for company read access.
+
 Send removes a PDF made from the draft, so make it again after sending; the new file shows what was sent.
 Also called: email the proposal, issue the quote.
 

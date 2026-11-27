@@ -1,0 +1,7 @@
+{"object":"whatsapp_business_account","entry":[{"id":"WABA1","changes":[{"field":"messages","value":{"messaging_product":"whatsapp","metadata":{"display_phone_number":"15550001111","phone_number_id":"PNID1"},"contacts":[{"profile":{"name":"Ada Customer"},"wa_id":"491701234567"}],"messages":[
+{"from":"491701234567","id":"wamid.IMG","timestamp":"1764000010","type":"image","image":{"id":"MEDIA1","mime_type":"image/jpeg","sha256":"abc=","caption":"the contract"},"context":{"forwarded":true,"frequently_forwarded":true}},
+{"from":"491701234567","id":"wamid.DOC","timestamp":"1764000011","type":"document","document":{"id":"MEDIA2","mime_type":"application/pdf","sha256":"def=","filename":"offer.pdf"},"context":{"from":"15550001111","id":"wamid.OUT0"}},
+{"from":"491701234567","id":"wamid.VID","timestamp":"1764000012","type":"video","video":{"id":"MEDIA3","mime_type":"video/mp4","sha256":"v="}},
+{"from":"491701234567","id":"wamid.AUD","timestamp":"1764000013","type":"audio","audio":{"id":"MEDIA4","mime_type":"audio/ogg; codecs=opus","sha256":"a="}},
+{"from":"491701234567","id":"wamid.STK","timestamp":"1764000014","type":"sticker","sticker":{"id":"MEDIA5","mime_type":"image/webp","sha256":"s="}}
+]}}]}]}

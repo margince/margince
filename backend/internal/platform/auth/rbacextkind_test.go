@@ -6,9 +6,11 @@ package auth
 import (
 	"context"
 	"errors"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
@@ -69,5 +71,50 @@ func TestAnExtensionKindIsNotGatedByACoreObjectOfTheSameWords(t *testing.T) {
 	core := humanWith(map[string]principal.ObjectGrant{"contact": {Read: true}, "visit": {Read: true}})
 	if err := Require(core, "ext:alpha:visit", principal.ActionRead); !errors.Is(err, apperrors.ErrPermissionDenied) {
 		t.Errorf("a core grant admitted an extension kind: %v", err)
+	}
+}
+
+func scopedTo(scope principal.RowScope) context.Context {
+	return principal.WithActor(context.Background(), principal.Principal{
+		Type: principal.PrincipalHuman, ID: "human:test", UserID: ids.NewV7(),
+		Permissions: principal.Permissions{RowScope: scope},
+	})
+}
+
+func TestAnExtensionKindWithAnOwnerFollowsTheRoleRowScope(t *testing.T) {
+	recordkinds.Reset()
+	t.Cleanup(recordkinds.Reset)
+	recordkinds.Register("alpha", []extension.RecordKindDeclaration{
+		{
+			Kind: "visit", DisplayName: "Visit", Table: "ext_alpha_visit", NaturalKey: []string{"code"},
+			Fields: []extension.RecordKindField{{Name: "code", Label: "Code"}}, OwnerColumn: "visitor_id",
+		},
+		{
+			Kind: "room", DisplayName: "Room", Table: "ext_alpha_room", NaturalKey: []string{"code"},
+			Fields: []extension.RecordKindField{{Name: "code", Label: "Code"}},
+		},
+	})
+	arg := func(any) int { return 1 }
+	cases := []struct {
+		name, kind string
+		ctx        context.Context
+		want       string
+	}{
+		{"own", "ext:alpha:visit", scopedTo(principal.RowScopeOwn), `(t."visitor_id" IS NULL OR t."visitor_id" IN (`},
+		{"team", "ext:alpha:visit", scopedTo(principal.RowScopeTeam), `team_membership`},
+		{"all", "ext:alpha:visit", scopedTo(principal.RowScopeAll), ``},
+		{"no owner column", "ext:alpha:room", scopedTo(principal.RowScopeOwn), ``},
+	}
+	for _, c := range cases {
+		got, err := ExtensionScopeClause(c.ctx, c.kind, "t", arg)
+		if err != nil {
+			t.Fatalf("%s: %v", c.name, err)
+		}
+		if c.want == "" && got != "" || !strings.Contains(got, c.want) {
+			t.Errorf("%s: clause = %q, want it to hold %q", c.name, got, c.want)
+		}
+	}
+	if _, err := ExtensionScopeClause(scopedTo(principal.RowScopeAll), "ext:alpha:gone", "t", arg); !errors.Is(err, apperrors.ErrNotFound) {
+		t.Errorf("a kind no unit declares = %v, want ErrNotFound", err)
 	}
 }

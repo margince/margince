@@ -19,6 +19,10 @@
 // fence (Context.Block), and the deterministic anti-AI floor that decides
 // whether the voiced draft may be served (Floor).
 //
+// The workspace's team rules ride the same seam (Load, TeamRulesBlock,
+// Context.Preamble). Every surface that loads a voice already holds the handle
+// that reads them, and a rep with no profile is still bound by them.
+//
 // **It reads and never writes.** The learning signals a served draft feeds back
 // — RecordDraftedSignal, RejectDraft — are NOT here, because two of the three
 // callers are packages built with no pool at all, and that zero-write guarantee
@@ -29,4 +33,5 @@
 // (internal/compose/draftvoiceparity_test.go), which sweeps the tree for the
 // surfaces composing draftrules.Shared and fails when one of them reaches a
 // model without a voice seam.
+// Team rules: internal/compose/draftteamrulesparity_test.go.
 package draftvoice

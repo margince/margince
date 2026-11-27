@@ -97,7 +97,7 @@ describe("where a cited value came from", () => {
     // A claim the reader was told is checkable, with nothing to check it
     // against, is worth saying out loud.
     expect(
-      await screen.findByText(/Not recorded: source_url, excerpt/),
+      await screen.findByText(/Not recorded: Source, Excerpt/),
     ).toBeTruthy();
   });
 

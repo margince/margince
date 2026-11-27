@@ -11,6 +11,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/threadverdict"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
@@ -158,6 +159,9 @@ func ContactsOrphanedByPrivacyTx(
 	if threadKey == "" || user == ids.Nil {
 		return nil, nil
 	}
+	if burst, ok := burstOfKey(threadKey); ok {
+		return contactsOrphanedByBurstTx(ctx, tx, burst, user)
+	}
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT p.id, p.owner_id, pe.email
 		  FROM activity a
@@ -241,7 +245,14 @@ func (s *PendingStore) SettledPersonalThreads(ctx context.Context, limit int) ([
 			 WHERE tv.kind = $1
 			   AND tv.status IN ($2, $3)
 			   AND tv.thread_key <> ''
-			   AND EXISTS (
+			   AND (EXISTS (
+			         SELECT 1
+			           FROM capture_import b
+			           JOIN activity_participant ap ON ap.activity_id = b.activity_id AND ap.contact_id IS NOT NULL
+			           JOIN contact p ON p.id = ap.contact_id AND p.archived_at IS NULL
+			          WHERE b.user_id = tv.user_id AND p.owner_id = tv.user_id
+			            AND `+threadverdict.BurstKeySQL("b.burst_id")+` = tv.thread_key)
+			    OR EXISTS (
 			         SELECT 1
 			           FROM activity a
 			           JOIN contact_email pe ON pe.email = a.counterparty_email
@@ -249,7 +260,7 @@ func (s *PendingStore) SettledPersonalThreads(ctx context.Context, limit int) ([
 			           JOIN contact p ON p.id = pe.contact_id AND p.archived_at IS NULL
 			          WHERE a.thread_key = tv.thread_key
 			            AND a.counterparty_email <> ''
-			            AND p.owner_id = tv.user_id)
+			            AND p.owner_id = tv.user_id))
 			 ORDER BY random()
 			 LIMIT $4`, ThreadKindPersonal, VerdictHeld, VerdictHeldByOwner, limit)
 		if err != nil {
@@ -283,6 +294,9 @@ type PrivateLeadLink struct {
 func LeadLinksOrphanedByPrivacyTx(ctx context.Context, tx pgx.Tx, threadKey string, user ids.UUID) ([]PrivateLeadLink, error) {
 	if threadKey == "" {
 		return nil, nil
+	}
+	if burst, ok := burstOfKey(threadKey); ok {
+		return privateLeadLinksTx(ctx, tx, `a.id IN (SELECT b.activity_id FROM capture_import b WHERE b.burst_id = $1::uuid AND b.user_id = $2)`, burst.String(), user)
 	}
 	return privateLeadLinksTx(ctx, tx, `a.thread_key = $1`, threadKey, user)
 }

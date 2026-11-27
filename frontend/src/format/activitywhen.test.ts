@@ -6,6 +6,7 @@ import answersCases from "../../../backend/internal/shared/kernel/occurredday/te
 import happenedCases from "../../../backend/internal/shared/kernel/occurredday/testdata/happened.json";
 import withinCases from "../../../backend/internal/shared/kernel/occurredday/testdata/within.json";
 import {
+  activityAge,
   activityAgo,
   activityAnswers,
   activityDate,
@@ -271,5 +272,25 @@ describe("the last date a meeting can be filed as held on", () => {
 describe("the wire value of a date-only time", () => {
   it("is noon UTC on the picked date, whatever zone the record keeps", () => {
     expect(dayOccurredAt("2026-09-15")).toBe("2026-09-15T12:00:00Z");
+  });
+});
+
+describe("activityAge", () => {
+  it("counts a day entry from its own date far east of UTC", () => {
+    const now = Date.parse("2026-11-25T10:30:00Z");
+    const stored = "2026-11-20T12:00:00Z";
+    expect(activityAge({ at: stored, precision: "day" }, now, "en", EAST)).toBe(
+      activityAge(
+        { at: "2026-11-20T00:30:00+14:00", precision: "instant" },
+        now,
+        "en",
+        EAST,
+      ),
+    );
+    expect(
+      activityAge({ at: stored, precision: "day" }, now, "en", EAST),
+    ).not.toBe(
+      activityAge({ at: stored, precision: "instant" }, now, "en", EAST),
+    );
   });
 });

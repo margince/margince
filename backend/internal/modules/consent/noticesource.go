@@ -164,6 +164,9 @@ func assessNoticeSourceTx(ctx context.Context, tx pgx.Tx, id ids.UUID, in Source
 		if in.MetInPerson {
 			ground = faceToFaceSettled
 		}
+		if projection.reachedActivity != nil {
+			ground = subjectReachedOutNote(*projection.reachedActivity)
+		}
 		completed, resolution, resolver = &in.Now, &ground, &actor.UserID
 	}
 	out, err = scanNoticeCase(tx.QueryRow(ctx, `UPDATE privacy_notice_case

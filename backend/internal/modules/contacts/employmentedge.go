@@ -112,6 +112,7 @@ func plantEmploymentEdge(ctx context.Context, tx pgx.Tx, in EnsureCounterpartyIn
 		WHERE NOT EXISTS (
 			SELECT 1 FROM relationship
 			WHERE contact_id = $1 AND `+employment.CurrentPrimarySlotSQL("")+`)
+		  AND NOT `+employment.EndedAtCompanySQL("$1::uuid", "$2::uuid")+`
 		ON CONFLICT DO NOTHING
 		RETURNING id`,
 		contactID, companyID, in.Source, in.CapturedBy, owndomain.Fold(domain), in.ActivityID, mailClockSkewAllowance).Scan(&edgeID)

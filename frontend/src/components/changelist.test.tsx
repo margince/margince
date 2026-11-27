@@ -67,3 +67,17 @@ it("never prints an id, minor units or a code it cannot name", () => {
   expect(text).not.toMatch(/\b(100|200)\b/);
   expect(text).toContain("hidden");
 });
+
+it("reads a field a provider filled as a word, never the server's marker", () => {
+  render(
+    <ChangeList
+      changes={[
+        { field: "title", type: "text", before: null, after: "filled" },
+        { field: "phone", before: null, after: "filled" },
+      ]}
+    />,
+  );
+  const text = document.body.textContent ?? "";
+  expect(text).toContain("empty → filled in");
+  expect(text).not.toMatch(/→ filled(?! in)/);
+});

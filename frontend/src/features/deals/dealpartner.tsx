@@ -4,8 +4,11 @@
 import { useNoPartnersYet } from "../../components/dealpartnerfields";
 import { useEntityName } from "../../components/entityref";
 import { AppLink } from "../../design-system/applink";
+import { Button } from "../../design-system/button";
+import { Callout } from "../../design-system/callout";
 import { FieldGuard } from "../../design-system/rbac";
 import { useT } from "../../i18n";
+import { useDepartedName } from "../../lib/membernames";
 import { routeHash } from "../../lib/router";
 import type { Deal } from "./deals";
 
@@ -71,5 +74,34 @@ export function DealReferralLine({
       </AppLink>{" "}
       {t(influenced ? "deal.referral.influenced" : "deal.referral.sourced")}
     </div>
+  );
+}
+
+// A team view keeps a departed colleague's deals, so the deal says its owner
+// left. The action is the Ownership edit. The new owner is then saved, audited
+// and handed the pending proposals like any other owner change. A reader who
+// may not edit gets the sentence alone.
+export function DealOwnerLeft({
+  ownerId,
+  onChoose,
+}: Readonly<{ ownerId: string | null | undefined; onChoose?: () => void }>) {
+  const t = useT();
+  const name = useDepartedName(ownerId);
+  if (!name) {
+    return null;
+  }
+  return (
+    <Callout
+      kind="standing"
+      tone="warning"
+      title={t("worklist.owner.left", { name })}
+      actions={
+        onChoose && (
+          <Button variant="ghost" onClick={onChoose}>
+            {t("deal.owner.choose")}
+          </Button>
+        )
+      }
+    />
   );
 }

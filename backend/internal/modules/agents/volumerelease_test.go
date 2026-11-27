@@ -186,6 +186,13 @@ func TestAFailedStagingLeavesTheQuotaRefusalAsTheAnswer(t *testing.T) {
 	if strings.Contains(err.Error(), "unreachable") {
 		t.Errorf("the staging failure crossed the trust boundary to the agent: %q", err)
 	}
+	answer := NewDispatcher(nil, bindAuthenticated, "test", "1").explain("update_record", err)
+	if strings.Contains(answer, "declined") && !strings.Contains(answer, "Nobody has declined") {
+		t.Errorf("a staging failure told the agent its human declined: %q", answer)
+	}
+	if !strings.Contains(answer, "could not ask") {
+		t.Errorf("the answer does not say the question could not be asked: %q", answer)
+	}
 }
 
 // A caller with no passport asks NOBODY. A step-up names whose window it is,

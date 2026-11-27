@@ -134,6 +134,9 @@ func storedMessageIsPrivateTx(ctx context.Context, tx pgx.Tx, activity ids.Activ
 	if err != nil || private {
 		return private, err
 	}
+	if kind == ChatMessageKind {
+		return chatBurstIsPrivateTx(ctx, tx, activity, seat)
+	}
 	if kind != kindEmail || direction != connector.DirectionInbound || attested {
 		return false, nil
 	}

@@ -40,11 +40,13 @@ func Prefix(ws ids.WorkspaceID, unit string) string {
 }
 
 // Objects is extension.Objects over a store. Gate checks the unit's declaration
-// and returns the invocation's context, which carries its workspace.
+// and returns the invocation's context, which carries its workspace. Ledger
+// counts and logs each Put and Delete.
 type Objects struct {
-	Store blobstore.Store
-	Unit  string
-	Gate  func(context.Context) (context.Context, error)
+	Store  blobstore.Store
+	Ledger Ledger
+	Unit   string
+	Gate   func(context.Context) (context.Context, error)
 }
 
 // key is where the named object lives for this invocation's workspace.
@@ -56,7 +58,7 @@ func (o Objects) key(ctx context.Context, name string) (context.Context, string,
 	if err := extension.ValidateObjectName(name); err != nil {
 		return nil, "", err
 	}
-	if o.Store == nil {
+	if o.Store == nil || o.Ledger == nil {
 		return nil, "", ErrObjectsUnwired
 	}
 	raw, ok := principal.WorkspaceID(ctx)
@@ -79,6 +81,7 @@ func OpenStore(ctx context.Context, settings *config.Config) (blobstore.Store, e
 }
 
 // Put stores content under name. The content type is the one the bytes say.
+// A replace counts only the change in the object's size.
 func (o Objects) Put(ctx context.Context, name string, content []byte) error {
 	ctx, key, err := o.key(ctx, name)
 	if err != nil {
@@ -87,10 +90,49 @@ func (o Objects) Put(ctx context.Context, name string, content []byte) error {
 	if len(content) > extension.MaxObjectBytes {
 		return fmt.Errorf("%w: an object holds at most %d bytes", extension.ErrInvalid, extension.MaxObjectBytes)
 	}
-	if err := o.Store.Put(ctx, key, bytes.NewReader(content), int64(len(content)), extension.SniffContentType(content)); err != nil {
-		return o.fault(ctx, err)
+	size := int64(len(content))
+	plan := func(held Usage) (ObjectChange, error) {
+		old, existed, err := o.measure(ctx, key)
+		if err != nil {
+			return ObjectChange{}, err
+		}
+		moved := Usage{Bytes: size - old}
+		if !existed {
+			moved.Objects = 1
+		}
+		if held.Objects+moved.Objects > extension.MaxObjectsPerUnit || held.Bytes+moved.Bytes > extension.MaxObjectBytesPerUnit {
+			return ObjectChange{}, extension.ErrObjectQuotaReached
+		}
+		return ObjectChange{Action: ObjectPut, Name: name, Size: size, Usage: moved}, nil
 	}
-	return nil
+	err = o.Ledger(ctx, o.Unit, plan, func() error {
+		if err := o.Store.Put(ctx, key, bytes.NewReader(content), size, extension.SniffContentType(content)); err != nil {
+			return o.fault(ctx, err)
+		}
+		return nil
+	})
+	if !errors.Is(err, ErrWrittenNotRecorded) {
+		return err
+	}
+	if undo := o.Store.Delete(ctx, key); undo != nil {
+		slog.ErrorContext(ctx, "extcapability: an uncounted extension object could not be deleted", "err", undo, "unit", o.Unit)
+	}
+	return ErrObjectsFailed
+}
+
+// measure answers the size of the object at key, and whether there is one.
+func (o Objects) measure(ctx context.Context, key string) (int64, bool, error) {
+	body, meta, err := o.Store.Get(ctx, key)
+	if errors.Is(err, blobstore.ErrNotFound) {
+		return 0, false, nil
+	}
+	if err != nil {
+		return 0, false, o.fault(ctx, err)
+	}
+	if err := body.Close(); err != nil {
+		return 0, false, o.fault(ctx, err)
+	}
+	return meta.Size, true, nil
 }
 
 // Get reads the object, or answers ErrNotFound.
@@ -116,16 +158,31 @@ func (o Objects) Get(ctx context.Context, name string) (extension.Object, error)
 	return extension.Object{Content: content, ContentType: meta.ContentType}, nil
 }
 
-// Delete removes the object. A missing one is not an error.
+// Delete removes the object. A missing one is not an error, and is neither
+// counted nor audited.
 func (o Objects) Delete(ctx context.Context, name string) error {
 	ctx, key, err := o.key(ctx, name)
 	if err != nil {
 		return err
 	}
-	if err := o.Store.Delete(ctx, key); err != nil {
-		return o.fault(ctx, err)
+	plan := func(Usage) (ObjectChange, error) {
+		old, existed, err := o.measure(ctx, key)
+		if err != nil || !existed {
+			return ObjectChange{}, err
+		}
+		return ObjectChange{Action: ObjectDelete, Name: name, Size: old, Usage: Usage{Objects: -1, Bytes: -old}}, nil
 	}
-	return nil
+	err = o.Ledger(ctx, o.Unit, plan, func() error {
+		if err := o.Store.Delete(ctx, key); err != nil {
+			return o.fault(ctx, err)
+		}
+		return nil
+	})
+	// The object is gone and stays counted, which only overstates the usage.
+	if errors.Is(err, ErrWrittenNotRecorded) {
+		return ErrObjectsFailed
+	}
+	return err
 }
 
 func (o Objects) fault(ctx context.Context, err error) error {
@@ -164,7 +221,11 @@ func SweepGone(ctx context.Context, pool *pgxpool.Pool, store blobstore.Store, o
 	if err != nil {
 		return fmt.Errorf("extcapability: reading the units this installation has composed: %w", err)
 	}
-	return Sweep(ctx, store, Gone(ever, composed))
+	gone := Gone(ever, composed)
+	if err := Sweep(ctx, store, gone); err != nil || store == nil {
+		return err
+	}
+	return ForgetUnits(ctx, pool, gone)
 }
 
 // Sweep deletes every object of each named unit in the context's workspace. It

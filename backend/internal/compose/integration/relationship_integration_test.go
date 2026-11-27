@@ -135,8 +135,8 @@ func TestRelationshipLifecycle(t *testing.T) {
 // asking them to confirm an archive they could perform themselves in the web app
 // bought nothing (ADR-0055).
 //
-// Under a tier floor, automatic work with no passport is refused the archive
-// instead: TestAFlooredEdgeArchiveIsRefusedToAutomaticWork below.
+// Under a tier floor, automatic work with no passport stages the archive for
+// its colleague instead: TestAFlooredEdgeArchiveFromAutomaticWorkWaitsForTheColleague below.
 func TestAnAgentArchivesAnEdgeOnItsOwnPassport(t *testing.T) {
 	e := setupRelationships(t)
 
@@ -181,9 +181,10 @@ func TestAnAgentArchivesAnEdgeOnItsOwnPassport(t *testing.T) {
 	}
 }
 
-// Under a tier floor, automatic work with no passport may not stage the archive
-// the floor asks for. It is refused and the edge stays live.
-func TestAFlooredEdgeArchiveIsRefusedToAutomaticWork(t *testing.T) {
+// Under a tier floor, automatic work with no passport stages the archive the
+// floor asks for, for the colleague it acts for. The edge stays live until that
+// colleague answers.
+func TestAFlooredEdgeArchiveFromAutomaticWorkWaitsForTheColleague(t *testing.T) {
 	e := setupRelationships(t)
 
 	var edge struct {
@@ -207,16 +208,14 @@ func TestAFlooredEdgeArchiveIsRefusedToAutomaticWork(t *testing.T) {
 	_, err := flooredArchiveInvoker(t, e.AppEnv, minted.Token)(
 		`{"record_type":"relationship","id":"` + edge.ID + `"}`,
 	)
-	if !isPassportlessStagingRefusal(err) {
-		t.Fatalf("a floored edge archive from automatic work answered %v, want the refusal that it cannot stage", err)
-	}
+	stagedForTheColleague(t, e.Owner, err)
 	var archived bool
 	if err := e.Owner.QueryRow(t.Context(),
 		`SELECT archived_at IS NOT NULL FROM relationship WHERE id = $1`, edge.ID).Scan(&archived); err != nil {
 		t.Fatal(err)
 	}
 	if archived {
-		t.Error("the edge was archived by a refused call")
+		t.Error("the edge was archived before the colleague answered the staged archive")
 	}
 }
 

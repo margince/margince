@@ -106,7 +106,7 @@ const unheld = () =>
   row({ id: "task-1", actions: ["complete", "snooze", "take"] });
 
 describe("taking a task nobody holds", () => {
-  it("assigns the task to the reader, pinned to the row's version", async () => {
+  it("takes the task through its own endpoint, pinned to the row's version", async () => {
     const fetched = stubSession(jsonResponse({ id: "task-1", links: [] }));
     const user = userEvent.setup();
     renderRow(unheld());
@@ -117,10 +117,9 @@ describe("taking a task nobody holds", () => {
 
     expect(await screen.findByText(en["worklist.take.done"])).toBeTruthy();
     const [sent] = writesSent(fetched);
-    expect(sent?.method).toBe("PATCH");
-    expect(sent?.url).toContain("/activities/task-1");
+    expect(sent?.method).toBe("POST");
+    expect(sent?.url).toContain("/activities/task-1/take");
     expect(sent?.headers.get("If-Match")).toBe("3");
-    expect(await sent?.clone().json()).toEqual({ assignee_id: READER });
   });
 
   // The refetch after the write takes the row off the Unassigned list, so
@@ -170,6 +169,21 @@ describe("taking a task nobody holds", () => {
     );
 
     expect(await screen.findByText(en["worklist.take.failed"])).toBeTruthy();
+  });
+
+  it("is drawn on a row the reader may only read", async () => {
+    stubSession(jsonResponse({}));
+    renderRow(
+      row({
+        id: "task-1",
+        actions: ["take"],
+        because: [{ kind: "unassigned" }, { kind: "read_only" }],
+      }),
+    );
+
+    expect(
+      await screen.findByRole("button", { name: en["worklist.take.action"] }),
+    ).toBeTruthy();
   });
 
   it("is not drawn on a row that carries no version to pin the write to", async () => {

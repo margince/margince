@@ -249,3 +249,27 @@ func TestTheListStopsAtTheCap(t *testing.T) {
 		t.Errorf("the list offered %d routes; the cap is %d", got, routeCandidateCap)
 	}
 }
+
+// A route whose last exchange names only a date counts its days from that
+// date. Its noon-UTC anchor is already the next day at UTC+14.
+func TestARouteCountsDaysFromADateOnlyLastExchange(t *testing.T) {
+	kiritimati, err := time.LoadLocation("Pacific/Kiritimati")
+	if err != nil {
+		t.Fatal(err)
+	}
+	stored := time.Date(2026, 11, 20, 12, 0, 0, 0, time.UTC)
+	now := time.Date(2026, 11, 25, 10, 30, 0, 0, time.UTC)
+	for precision, want := range map[crmcontracts.OccurredPrecision]int{
+		crmcontracts.OccurredPrecisionOccurredPrecisionDay:     6,
+		crmcontracts.OccurredPrecisionOccurredPrecisionInstant: 5,
+	} {
+		edge := crmcontracts.ContactGraphEdge{LastAt: &stored, LastPrecision: &precision}
+		got := evidenceOf(&edge, now, kiritimati)
+		if got.DaysSinceLast == nil || *got.DaysSinceLast != want {
+			t.Errorf("a %s last exchange reads %v days ago, want %d", precision, got.DaysSinceLast, want)
+		}
+		if got.LastPrecision == nil || *got.LastPrecision != precision {
+			t.Errorf("the route evidence dropped the %s precision: %v", precision, got.LastPrecision)
+		}
+	}
+}

@@ -1,6 +1,7 @@
 {
   "verb": "resend_deal_room_invitation",
   "checks": [
+    "deal.read",
     "deal_room.update"
   ],
   "takes": [

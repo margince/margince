@@ -56,6 +56,8 @@ func kindForOverride(decision string) (kind string, decided bool) {
 		return capture.KindContact, true
 	case capture.OverrideKeepOut:
 		return capture.KindSpam, true
+	case capture.OverridePersonal:
+		return capture.KindPersonal, true
 	}
 	return "", false
 }

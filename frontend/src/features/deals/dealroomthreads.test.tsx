@@ -52,6 +52,7 @@ function thread(over: Partial<DealRoomThread> = {}): DealRoomThread {
     ],
     created_at: "2026-08-01T09:00:00Z",
     updated_at: "2026-08-01T09:00:00Z",
+    visible_to_buyer: true,
     ...over,
   } as DealRoomThread;
 }
@@ -428,4 +429,16 @@ describe("a document the buyer no longer gets", () => {
       expect(screen.queryByRole("textbox", { name: "Reply" })).toBeNull();
     },
   );
+});
+
+describe("a conversation the buyer can no longer see", () => {
+  it("is marked for the seller, and a visible one is not", () => {
+    draw({}, [
+      thread({ id: "th-gone", visible_to_buyer: false }),
+      thread({ id: "th-kept", visible_to_buyer: true }),
+    ]);
+    expect(
+      screen.getAllByText("The buyer can no longer see this conversation"),
+    ).toHaveLength(1);
+  });
 });

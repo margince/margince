@@ -172,6 +172,9 @@ type PendingCounterparty struct {
 	// inbound_sender_authenticated stamp, true only when Email is that
 	// message's From. IsGoogleMeetingMail needs it.
 	SenderAuthenticated bool
+	// MayStand says the triggering message supports a lasting decision about
+	// this address. See verdictMayStandSQL.
+	MayStand bool
 
 	// Claim is this lease's token, minted by the ClaimDue that handed the row
 	// out. Every write back to the ledger presents it, so a worker holding an

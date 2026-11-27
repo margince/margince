@@ -68,9 +68,7 @@ describe("a draft waiting on the contact", () => {
     let saved = false;
     mount("overview", view, [], {
       "GET /mail-drafts": () =>
-        saved
-          ? jsonResponse(AGENT_DRAFT)
-          : jsonResponse({ code: "not_found" }, 404),
+        saved ? jsonResponse(AGENT_DRAFT) : new Response(null, { status: 204 }),
     });
     await screen.findByRole("heading", { name: view.contact.full_name });
     expect(screen.queryByText(en["compose.waitingDraftTitle"])).toBeNull();
@@ -121,7 +119,7 @@ describe("a draft waiting on the contact", () => {
 
   it("is absent when the reader keeps no draft here", async () => {
     mount("overview", view, [], {
-      "GET /mail-drafts": () => jsonResponse({ code: "not_found" }, 404),
+      "GET /mail-drafts": () => new Response(null, { status: 204 }),
     });
     await screen.findByRole("heading", { name: view.contact.full_name });
     expect(screen.queryByText(en["compose.waitingDraftTitle"])).toBeNull();

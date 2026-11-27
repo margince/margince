@@ -20,6 +20,7 @@ import {
 } from "../../lib/scheduling-profile-query";
 import { useBookingCalendar } from "./booking-calendar-state";
 import { BookingBack } from "./booking-common";
+import { BookingPrivacyWarning } from "./booking-privacy";
 import "./booking-profile.css";
 
 type Profile = components["schemas"]["SchedulingProfile"];
@@ -66,6 +67,7 @@ function ProfileForm({ profile }: Readonly<{ profile: Profile }>) {
   });
   return (
     <div className="book-form">
+      <BookingPrivacyWarning address={profile.privacy_information} />
       {/* The heading above names this lead card. */}
       <Panel tone="accent">
         <PanelBody className="form-stack">

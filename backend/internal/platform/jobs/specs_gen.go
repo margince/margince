@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "36614b46a8bd580bb4b608a34255427a782a1cf6e1f33c19692222a68b66d675"
+const JobContractHash = "3168e4b5bdbcb7eadf1c09904bdcbc779157b6fa9e8302852b4ef4bd308740c1"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -252,6 +252,16 @@ var specs = map[string]Spec{
 		Registration: Registration{When: []string{"EnrichBrain"}},
 		Args:         []ArgField{{Name: "Pending", Scalar: true, Reason: "Selects the durable pending cohort; absent means the existing full repair pass."}},
 	},
+	"capture_history_narrowing": {
+		Kind:      "capture_history_narrowing",
+		GoType:    "CaptureHistoryNarrowingArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 10 * time.Second},
+	},
 	"capture_part_slim": {
 		Kind:         "capture_part_slim",
 		GoType:       "CapturePartSlimArgs",
@@ -305,6 +315,16 @@ var specs = map[string]Spec{
 		FanOutTo:   "captured_deal_refile",
 		OptsOwner:  OptsCaller,
 		Cadence:    Cadence{Fixed: 1 * time.Hour},
+	},
+	"chat_clarification_sweep": {
+		Kind:      "chat_clarification_sweep",
+		GoType:    "ChatClarificationSweepArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 1 * time.Minute},
 	},
 	"chat_link_flush": {
 		Kind:         "chat_link_flush",
@@ -1187,6 +1207,35 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
+	},
+	"whatsapp_ingest": {
+		Kind:      "whatsapp_ingest",
+		GoType:    "WhatsAppIngestArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Args:      []ArgField{{Name: "ConnectionID"}, {Name: "RawCaptureID"}, {Name: "Workspace"}},
+	},
+	"zalo_oa_ingest": {
+		Kind:      "zalo_oa_ingest",
+		GoType:    "ZaloOAIngestArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Args:      []ArgField{{Name: "ConnectionID"}, {Name: "RawCaptureID"}, {Name: "Workspace"}},
+	},
+	"zalo_token_renew": {
+		Kind:         "zalo_token_renew",
+		GoType:       "ZaloTokenRenewArgs",
+		Role:         Worker,
+		Fleet:        true,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 30 * time.Minute},
+		Registration: Registration{When: []string{"ChannelVault"}},
 	},
 }
 

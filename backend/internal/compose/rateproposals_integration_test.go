@@ -27,7 +27,12 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func rateSvc(e *integration.Env) *approvals.Service {
+// rateSvc is the approvals service with the rate effect. The effect writes
+// under the approver's live grants, so Rep1, who approves here, holds the
+// shipped admin role.
+func rateSvc(t *testing.T, e *integration.Env) *approvals.Service {
+	t.Helper()
+	e.GrantRole(t, e.Rep1, "admin")
 	svc := approvals.NewService(e.DB())
 	svc.WithEffect(fxRateProposalKind, fxRateAcceptEffect(svc, deals.NewStore(e.DB(), DealsInstallation())))
 	return svc
@@ -54,7 +59,7 @@ func stageProposal(ctx context.Context, t *testing.T, svc *approvals.Service, ki
 func TestFxRateProposalApprovalAppliesRow(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	svc := rateSvc(e)
+	svc := rateSvc(t, e)
 
 	id := stageProposal(ctx, t, svc, fxRateProposalKind, fxRateTargetType, e.WS,
 		map[string]string{"from_currency": "USD", "rate": "0.9"}, "USD → EUR 0.9")
@@ -69,7 +74,7 @@ func TestFxRateProposalApprovalAppliesRow(t *testing.T) {
 func TestRateProposalRejectWritesNothing(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	svc := rateSvc(e)
+	svc := rateSvc(t, e)
 
 	id := stageProposal(ctx, t, svc, fxRateProposalKind, fxRateTargetType, e.WS,
 		map[string]string{"from_currency": "GBP", "rate": "1.1"}, "GBP → EUR 1.1")
@@ -84,7 +89,7 @@ func TestRateProposalRejectWritesNothing(t *testing.T) {
 func TestFxRateProposalEditBeforeApprove(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	svc := rateSvc(e)
+	svc := rateSvc(t, e)
 
 	id := stageProposal(ctx, t, svc, fxRateProposalKind, fxRateTargetType, e.WS,
 		map[string]string{"from_currency": "CHF", "rate": "1.0"}, "CHF → EUR 1.0")
@@ -107,7 +112,7 @@ func TestFxRateProposalEditBeforeApprove(t *testing.T) {
 func TestFxRateProposalApplyRefusesWhenPriorMoved(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	svc := rateSvc(e)
+	svc := rateSvc(t, e)
 	store := deals.NewStore(e.DB(), DealsInstallation())
 
 	if _, err := store.SetFxRate(ctx, deals.SetFxRateInput{FromCurrency: "GBP", Rate: "1.0"}); err != nil {
@@ -139,7 +144,7 @@ func TestFxRateProposalApplyRefusesWhenPriorMoved(t *testing.T) {
 func TestFxRateProposalApplyRefusesWhenPriorAppeared(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	svc := rateSvc(e)
+	svc := rateSvc(t, e)
 
 	id := stageProposal(ctx, t, svc, fxRateProposalKind, fxRateTargetType, e.WS,
 		map[string]string{"from_currency": "NOK", "rate": "0.09"}, "NOK")
@@ -156,7 +161,7 @@ func TestFxRateProposalApplyRefusesWhenPriorAppeared(t *testing.T) {
 func TestFxRateProposalApplyMatchingPriorApplies(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, integration.AdminPerms)
-	svc := rateSvc(e)
+	svc := rateSvc(t, e)
 
 	if _, err := deals.NewStore(e.DB(), DealsInstallation()).SetFxRate(ctx, deals.SetFxRateInput{FromCurrency: "DKK", Rate: "0.134"}); err != nil {
 		t.Fatalf("seed: %v", err)

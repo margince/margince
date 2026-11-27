@@ -20,6 +20,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/riverqueue/river"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -149,7 +150,9 @@ func TestTheTranscriptOperationsAnswer501UntilAJobRunnerIsWired(t *testing.T) {
 	}{
 		{"start", func(w http.ResponseWriter, r *http.Request) { unwired.ReadTranscriptForNextSteps(w, r, id) }},
 		{"report", func(w http.ResponseWriter, r *http.Request) { unwired.GetTranscriptRead(w, r, id, id) }},
-		{"latest", func(w http.ResponseWriter, r *http.Request) { unwired.GetLatestTranscriptRead(w, r, id) }},
+		{"latest", func(w http.ResponseWriter, r *http.Request) {
+			unwired.GetLatestTranscriptRead(w, r, id, crmcontracts.GetLatestTranscriptReadParams{})
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()
@@ -198,7 +201,7 @@ func TestALiveReadingIsTheOneQuestionThePollAsks(t *testing.T) {
 	}
 }
 
-func TestAReadingIsAttributedToTheReaderNotToANeighbouringAgent(t *testing.T) {
+func TestAReadingsRunRowIsKeptByItsOwnSystemNameForTheRequester(t *testing.T) {
 	requester := ids.NewV7()
 	ctx := withTranscriptReader(context.Background(), "human:"+requester.String(), ids.NewV7())
 
@@ -206,8 +209,8 @@ func TestAReadingIsAttributedToTheReaderNotToANeighbouringAgent(t *testing.T) {
 	if !ok {
 		t.Fatal("the reading must run as a named principal, or its writes are unattributable")
 	}
-	if actor.ID != transcriptProposalActor {
-		t.Errorf("a transcript proposal must say the transcript reader read it, got %q — the inbox shows this to the contact deciding", actor.ID)
+	if actor.ID != transcriptReadSystemID {
+		t.Errorf("the reading's run row is kept by %q, got %q, never by a neighbouring reader", transcriptReadSystemID, actor.ID)
 	}
 	if actor.OnBehalfOf != requester {
 		t.Errorf("what the reading produces is owned by the human who asked; got %s, want %s", actor.OnBehalfOf, requester)

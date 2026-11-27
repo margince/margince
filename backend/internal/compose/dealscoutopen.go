@@ -134,7 +134,7 @@ func (o scoutDealOpener) actOn(ctx context.Context, s openableSuggestion) (bool,
 // openOne opens one suggestion as its company owner's agent. An owner who
 // left answers not found, and the suggestion stays.
 func (o scoutDealOpener) openOne(ctx context.Context, s openableSuggestion) (ids.UUID, error) {
-	ownerCtx, err := ownersAgent(ctx, o.users, s.owner, marginceActorID)
+	ownerCtx, err := agentFor(ctx, o.users, s.owner, marginceActorID)
 	if errors.Is(err, apperrors.ErrNotFound) {
 		return ids.Nil, nil
 	}
@@ -159,7 +159,7 @@ func (o scoutDealOpener) openOne(ctx context.Context, s openableSuggestion) (ids
 		Record: func(ctx context.Context, tx pgx.Tx, deal ids.UUID, fill deals.DealPrefill) (ids.UUID, error) {
 			return o.recordOnTimeline(ctx, tx, deal, suggestion.CompanyName, scoutBasis(suggestion, fill.Withheld))
 		},
-		AsOwner: ownersAgentTx(o.users, s.owner, marginceActorID),
+		AsOwner: agentForTx(o.users, s.owner, marginceActorID),
 	})
 }
 

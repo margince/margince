@@ -197,11 +197,8 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 	if err != nil {
 		return PreparedSend{}, err
 	}
-	// A template signs in markup, so a plain message gains an HTML part that
-	// carries its own text and the formatted sign-off under it.
-	if safeHTML == "" && sign.HTML != "" {
-		safeHTML = "<p>" + htmlLines(in.Body) + "</p>"
-	}
+	authoredHTML := safeHTML
+	safeHTML = withTemplateMarkup(safeHTML, in.Body, sign)
 
 	// The markup alternative gets the SAME sign-off and the same unsubscribe
 	// footer, in its own syntax. Two alternatives of one message that disagreed
@@ -209,6 +206,10 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 	// decision rather than ours — including whether they can unsubscribe.
 	htmlBody := signedHTML(safeHTML, sign, derived)
 
+	authored, err := newAuthorship(in, origin, sign.authored(in.Body), authoredHTML)
+	if err != nil {
+		return PreparedSend{}, err
+	}
 	return PreparedSend{
 		in:        in,
 		messageID: messageID,
@@ -228,8 +229,19 @@ func (s *Store) prepareRenderedSend(ctx context.Context, origin SendOrigin, in S
 			links:           links,
 			provider:        provider,
 			connection:      connection,
+			authored:        authored,
 		},
 	}, nil
+}
+
+// withTemplateMarkup gives a plain message the HTML part a template sign-off
+// needs. A template signs in markup, so the part carries the message's own text
+// and the formatted sign-off under it.
+func withTemplateMarkup(safeHTML, body string, sign SignOff) string {
+	if safeHTML == "" && sign.HTML != "" {
+		return "<p>" + htmlLines(body) + "</p>"
+	}
+	return safeHTML
 }
 
 // SendPreparedTx writes one prepared send: the outbound activity, its delivery,

@@ -126,7 +126,7 @@ func (f *chatOnRecord) readScreenshot(t *testing.T, text string) {
 	}
 	f.reading = reading.ID
 	reader := compose.NewDocumentExtractor(f.env.Pool, imageReader{ai.NewFakeClient().Script(screenshotReply(text))}, slog.New(slog.NewTextHandler(io.Discard, nil)))
-	if err := reader.Read(ctx, store, f.reading, f.attachment); err != nil {
+	if err := reader.Read(ctx, ctx, store, f.reading, f.attachment); err != nil {
 		t.Fatal(err)
 	}
 }

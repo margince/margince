@@ -407,10 +407,17 @@ func endCredentialAuthority(ctx context.Context, tx pgx.Tx, userID ids.UserID, r
 	// who notices a reset mail they did not request, signs in, and rotates
 	// their password would end every session and grant while the token that
 	// prompted their alarm stayed live until its TTL.
-	_, err := tx.Exec(ctx,
+	if _, err := tx.Exec(ctx,
 		`UPDATE auth_token SET used_at = now()
-		  WHERE user_id = $1 AND used_at IS NULL`,
-		userID)
+		  WHERE user_id = $1 AND purpose = 'password_reset' AND used_at IS NULL`,
+		userID); err != nil {
+		return err
+	}
+	// A merge confirmation speaks for the credentials the account had, so it ends with them.
+	_, err := tx.Exec(ctx,
+		`UPDATE auth_token SET `+expireNowSQL+`
+		  WHERE (user_id = $1 OR counterpart_user_id = $1) AND purpose = $2 AND expires_at > now()`,
+		userID, purposeMemberMergeConfirm)
 	return err
 }
 

@@ -45,14 +45,12 @@ import (
 var activityMintSite = regexp.MustCompile(`(?is)INSERT\s+INTO\s+activity[\s(]`)
 
 // identityConsulted matches a call that asks activity_identity what this record
-// already is — either door's spelling.
-//
-// The import door calls ResolveBindableIdentity directly. Capture cannot: it
-// may not import a sibling module, so it holds the resolver as an injected seam
-// and reaches it through activityHoldingIdentity. Both are named here because
-// the question is "does this door ask", not "which function does it call".
+// already is, in either door's spelling. The import door calls
+// ResolveBindableIdentity. Capture holds the resolver as an injected seam and
+// reaches it through activityHoldingIdentity, which activityFiledElsewhere asks
+// first. The question is whether a door asks, not which function it calls.
 var identityConsulted = regexp.MustCompile(
-	`ResolveBindableIdentity|activityHoldingIdentity|boundToKnownMessage|recognizedMessage`)
+	`ResolveBindableIdentity|activityHoldingIdentity|activityFiledElsewhere|boundToKnownMessage|recognizedMessage`)
 
 func TestEveryActivityMintSiteConsultsTheSharedIdentity(t *testing.T) {
 	t.Parallel()

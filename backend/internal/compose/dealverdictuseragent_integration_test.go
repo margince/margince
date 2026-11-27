@@ -62,7 +62,7 @@ func TestTheVerdictWriteRechecksAUsersAgentEdit(t *testing.T) {
 			t.Error("a protected edit was overwritten")
 			return ids.Nil, nil
 		},
-		AsOwner: ownersAgentTx(v.pass.users, v.Rep1, marginceActorID),
+		AsOwner: agentForTx(v.pass.users, v.Rep1, marginceActorID),
 	})
 	if err != nil {
 		t.Fatal(err)

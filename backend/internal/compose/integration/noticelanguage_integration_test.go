@@ -32,7 +32,7 @@ func TestTheBacklogNoticeIsWrittenInTheInstallationsBaseLanguage(t *testing.T) {
 	if !strings.Contains(subject, "für dein Team noch nicht verfügbar") {
 		t.Errorf("the installation is set to German and the notice reads %q", subject)
 	}
-	if !strings.Contains(body, "Absender mit ausstehender Prüfung: 4") {
+	if !strings.Contains(body, "Absendeadressen mit ausstehender Prüfung: 4") {
 		t.Errorf("the German body reads %q, and should count the waiting decisions", body)
 	}
 

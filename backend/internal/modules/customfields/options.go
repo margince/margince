@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -105,6 +106,12 @@ func (s *Service) setOptionsInTx(ctx context.Context, tx pgx.Tx, id ids.UUID, op
 	oldOptions, err := unmarshalOptions(f.OptionsRaw)
 	if err != nil {
 		return crmcontracts.CustomField{}, err
+	}
+	// The stored list sent again, in its order, needs no DDL and no history.
+	if slices.Equal(oldOptions, options) {
+		out, err := readField(ctx, tx, id)
+		out.RecordsChanged = new(0)
+		return out, err
 	}
 
 	// Same arming as Create (bounded lock waits + one ALTER per core

@@ -16,8 +16,6 @@ ALTER TABLE partner DROP COLUMN IF EXISTS source;
 
 ALTER TABLE report_edition DROP COLUMN IF EXISTS report_revision;
 
-ALTER TABLE auth_token DROP COLUMN IF EXISTS purpose;
-
 ALTER TABLE finance_connection DROP COLUMN IF EXISTS archived_at;
 
 ALTER TABLE voice_learning_signal DROP COLUMN IF EXISTS final_text,

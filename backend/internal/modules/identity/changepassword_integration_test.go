@@ -270,7 +270,7 @@ func TestChangePasswordRetiresAnOutstandingResetToken(t *testing.T) {
 	if err := database.WithInfraTx(context.Background(), e.svc.db.Pool(), func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM auth_token
-			  WHERE user_id = $1 AND used_at IS NULL`,
+			  WHERE user_id = $1 AND purpose = 'password_reset' AND used_at IS NULL`,
 			e.member.UserID).Scan(&live)
 	}); err != nil {
 		t.Fatal(err)

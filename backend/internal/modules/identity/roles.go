@@ -231,6 +231,11 @@ func applyRoleObjectGrant(ctx context.Context, tx pgx.Tx, actor Identity, roleKe
 	if before, err = decodeRoleObjects(rawBefore); err != nil {
 		return roleRow{}, err
 	}
+	// Only a grant the document spells out is a repeat. Writing one it lacks
+	// pins the object's verbs against the defaults a later upgrade fills in.
+	if stored, spelled := before[object]; spelled && stored == grant {
+		return readRole(ctx, tx, roleID)
+	}
 	// Turning a verb ON reaches every holder of the role at once, whatever
 	// teams and fields they hold, so only an admin does it. Turning one OFF
 	// gives nobody anything and is open to every holder of the grant.

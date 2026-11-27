@@ -90,18 +90,26 @@ func businessOwnerLabel(user businessUser) string {
 	return textcut.Runes(name, businessLabelLimit)
 }
 
-// BusinessConnectionIDOf reports the business connection a business_message
-// arrived through. An update of another kind answers false. A business_message
-// naming no connection answers true with an empty id, which the caller refuses.
+// BusinessConnectionIDOf reports the business connection a business_message,
+// an edited_business_message or a deleted_business_messages update arrived
+// through. An update of another kind answers false. One naming no connection
+// answers true with an empty id, which the caller refuses.
 func BusinessConnectionIDOf(update []byte) (string, bool, error) {
 	var env struct {
-		BusinessMessage *telegramMessage `json:"business_message"`
+		BusinessMessage       *telegramMessage         `json:"business_message"`
+		EditedBusinessMessage *telegramMessage         `json:"edited_business_message"`
+		DeletedBusiness       *deletedBusinessMessages `json:"deleted_business_messages"`
 	}
 	if err := json.Unmarshal(update, &env); err != nil {
 		return "", false, fmt.Errorf("telegram: decoding the update to find its business connection: %w", err)
 	}
-	if env.BusinessMessage == nil {
-		return "", false, nil
+	switch {
+	case env.BusinessMessage != nil:
+		return env.BusinessMessage.BusinessConnectionID, true, nil
+	case env.EditedBusinessMessage != nil:
+		return env.EditedBusinessMessage.BusinessConnectionID, true, nil
+	case env.DeletedBusiness != nil:
+		return env.DeletedBusiness.BusinessConnectionID, true, nil
 	}
-	return env.BusinessMessage.BusinessConnectionID, true, nil
+	return "", false, nil
 }
