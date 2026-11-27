@@ -57,7 +57,6 @@ var exportWaivers = gatekit.Waive(map[string]string{
 	"extension.CallerSystem":                         publishedInV1,
 	"extension.CallerType":                           publishedInV1,
 	"extension.CompanyRepo.SetExtensionTypes":        publishedInV1,
-	"extension.CompanyRepo.SetCustomFields":          companyReaction,
 	"extension.Core.Members":                         companyReaction,
 	"extension/exttest.Core.Members":                 companyReaction,
 	"extension.ConnectionLiveChecker":                publishedInV1,
