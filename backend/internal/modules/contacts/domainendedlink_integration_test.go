@@ -269,3 +269,57 @@ func TestAnEnrichmentDoesNotRelinkAContactWhoseJobWasEnded(t *testing.T) {
 		return err
 	})
 }
+
+func (e *dedupeEnv) applyEvidence(ctx context.Context, t *testing.T, contact ids.ContactID, company ids.CompanyID, evidence employmentEvidence, automatic bool) string {
+	t.Helper()
+	evidence.claimID, evidence.runID, evidence.provider = ids.NewV7(), ids.NewV7(), "databroker"
+	var state string
+	e.inTx(ctx, t, "applying the evidence", func(tx pgx.Tx) error {
+		_, got, err := e.store.linkEmploymentEpisode(ctx, tx, contact, company, evidence, connectorCapturedBy("databroker"), automatic)
+		state = got
+		return err
+	})
+	return state
+}
+
+func TestRetainedProviderEvidenceDoesNotRemakeARemovedLink(t *testing.T) {
+	ended := func(e *dedupeEnv, t *testing.T, edge ids.UUID) {
+		day := clocktest.Now(t).UTC().AddDate(0, 0, -1)
+		if _, err := e.store.UpdateRelationship(e.asRelationshipEditor(), edge, UpdateRelationshipInput{EndedAt: &day}); err != nil {
+			t.Fatal(err)
+		}
+	}
+	archived := func(e *dedupeEnv, t *testing.T, edge ids.UUID) {
+		if _, err := e.store.ArchiveRelationship(e.asRelationshipEditor(), edge, nil); err != nil {
+			t.Fatal(err)
+		}
+	}
+	differing := employmentEvidence{Role: "Head of Sales", Started: "2021-03-01", Status: employmentCurrent}
+	for name, tc := range map[string]struct {
+		remove   func(*dedupeEnv, *testing.T, ids.UUID)
+		evidence employmentEvidence
+	}{
+		"an ended job":                       {ended, employmentEvidence{Role: "Engineer", Status: employmentCurrent}},
+		"an archived job":                    {archived, employmentEvidence{Role: "Engineer", Status: employmentCurrent}},
+		"a later episode with another role":  {ended, differing},
+		"a later episode on an archived job": {archived, differing},
+	} {
+		t.Run(name, func(t *testing.T) {
+			e := setupDedupe(t)
+			ctx := e.as()
+			left := e.openTriageFirst(ctx, t, "left@evidence.test", "Left Leaver", "evidence.test")
+			company, edge := e.employedByTheSweep(ctx, t, left.ContactID, "Evidence GmbH", "evidence.test")
+			tc.remove(e, t, edge)
+
+			if state := e.applyEvidence(ctx, t, left.ContactID, company, tc.evidence, true); state != employmentNeedsReview {
+				t.Fatalf("the automatic apply answered %q, want %q", state, employmentNeedsReview)
+			}
+			if n := e.liveEmployments(ctx, t, left.ContactID); n != 0 {
+				t.Fatalf("the automatic apply left %d live employments, want none", n)
+			}
+			if state := e.applyEvidence(ctx, t, left.ContactID, company, tc.evidence, false); state != employmentLinked {
+				t.Fatalf("a person's resolve answered %q, want %q: a human keeps the override", state, employmentLinked)
+			}
+		})
+	}
+}
