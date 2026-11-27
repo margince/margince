@@ -1,0 +1,45 @@
+name: deal_status_a_current_request_is_the_blocker
+task: deal_health
+site: deal_status
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  deal:
+    name: "Falkner Werke — Wartungsvertrag"
+    status: open
+    amount: "3600000 EUR (minor units)"
+    expected_close: "2026-12-15"
+  move: "reply_to: The customer's last mail asks for times and is unanswered."
+  timeline:
+    # The same mail, classified "current_request": the lane holds it as an
+    # open reply obligation. Now it is exactly what holds the deal up.
+    - label: times_request
+      kind: email
+      direction: inbound
+      subject: "Terminvorschlag Wartungsgespräch"
+      at: "2026-11-24"
+      when: past
+      excerpt: "Could you send me two times for a call about the maintenance scope?"
+      request_state: current_request
+    - label: our_proposal
+      kind: email
+      direction: outbound
+      subject: "Wartungsvertrag — Angebot"
+      at: "2026-11-10"
+      when: past
+      excerpt: "Attached is the maintenance offer for the three plants."
+expect:
+  outcome: accepted
+  answer: [times_request]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the briefing treats a current request as the thing holding
+    the deal up. The mail asking for two times is classified current_request,
+    so "blocker" must name that unanswered request as something somebody can
+    act on, and "verdict" must be blocked with reasoning that names it. Say
+    "no reply is recorded", not that nobody replied. "move_reason" must
+    explain the given move rather than propose another. Any invented contact,
+    meeting, date or figure fails the scenario.
