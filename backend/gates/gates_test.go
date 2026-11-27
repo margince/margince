@@ -22,11 +22,12 @@ import (
 	"fmt"
 	"os"
 	"os/exec"
+	"regexp"
+	"regexp/syntax"
 	"slices"
 	"strings"
 	"sync"
 	"testing"
-	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -159,15 +160,77 @@ func trackedIndexAt(root string) ([]trackedFile, error) {
 	return files, nil
 }
 
-// mayHoldFolded is the cheap question in front of a case-insensitive scan: it
-// is false only when text is ASCII and holds none of words in any case, so a
-// scan it skips could not have matched. Other text always goes to the scan,
-// because (?i) folds ſ to s and the Kelvin sign to k where ToLower does not.
-func mayHoldFolded(text string, words ...string) bool {
-	for i := 0; i < len(text); i++ {
-		if text[i] >= utf8.RuneSelf {
-			return true
+// requiredWords returns lower-case literals of which every match of re holds at
+// least one, or nil when the pattern promises none.
+func requiredWords(re *regexp.Regexp) []string {
+	parsed, err := syntax.Parse(re.String(), syntax.Perl)
+	if err != nil {
+		return nil
+	}
+	return requiredWordsIn(parsed)
+}
+
+func requiredWordsIn(re *syntax.Regexp) []string {
+	switch re.Op {
+	case syntax.OpLiteral:
+		return []string{strings.ToLower(string(re.Rune))}
+	case syntax.OpCapture, syntax.OpPlus:
+		return requiredWordsIn(re.Sub[0])
+	case syntax.OpRepeat:
+		if re.Min > 0 {
+			return requiredWordsIn(re.Sub[0])
 		}
+	case syntax.OpConcat:
+		// Any one part's words will do. The part whose shortest word is longest
+		// rules out the most lines.
+		var best []string
+		for _, part := range re.Sub {
+			if words := requiredWordsIn(part); shortestWord(words) > shortestWord(best) {
+				best = words
+			}
+		}
+		return best
+	case syntax.OpAlternate:
+		var all []string
+		for _, branch := range re.Sub {
+			words := requiredWordsIn(branch)
+			if words == nil {
+				return nil
+			}
+			all = append(all, words...)
+		}
+		return all
+	}
+	return nil
+}
+
+func shortestWord(words []string) int {
+	if len(words) == 0 {
+		return 0
+	}
+	shortest := len(words[0])
+	for _, word := range words[1:] {
+		shortest = min(shortest, len(word))
+	}
+	return shortest
+}
+
+// mayHoldWordsOf is the byte check in front of a pattern, given what
+// requiredWords derived from it: nil words promise nothing, so the text is read.
+func mayHoldWordsOf(text string, words []string) bool {
+	return words == nil || mayHoldFolded(text, words...)
+}
+
+// foldsToASCIIUnlowered is the one rune (?i) matches to an ASCII letter that
+// strings.ToLower leaves alone: ſ, which folds to s.
+const foldsToASCIIUnlowered = 'ſ'
+
+// mayHoldFolded is the cheap question in front of a case-insensitive scan. It
+// is false only when text holds none of words in any case, so a scan it skips
+// could not have matched.
+func mayHoldFolded(text string, words ...string) bool {
+	if strings.ContainsRune(text, foldsToASCIIUnlowered) {
+		return true
 	}
 	folded := strings.ToLower(text)
 	for _, word := range words {

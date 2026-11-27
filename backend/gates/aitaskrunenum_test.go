@@ -19,7 +19,6 @@ package gates
 // wedged consumer group rather than as a validation error.
 
 import (
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -167,7 +166,7 @@ func aiTaskPayloadEnum(t *testing.T, property string) []string {
 // for the column.
 func aiTaskRunCheckValues(t *testing.T, column string) []string {
 	t.Helper()
-	matches, err := filepath.Glob("migrations/core/*_ai_task_run.up.sql")
+	matches, err := gatekit.Glob("migrations/core/*_ai_task_run.up.sql")
 	if err != nil || len(matches) != 1 {
 		t.Fatalf("expected exactly one ai_task_run migration, found %v (err %v)", matches, err)
 	}

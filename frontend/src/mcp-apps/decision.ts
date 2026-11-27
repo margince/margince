@@ -181,7 +181,7 @@ function handBack(proposals: Proposal[]): void {
     .map((p) => `${inWords(p.kind)} (approval_id ${p.id})`)
     .join(", ");
   askAssistant(
-    `I approved ${named}. Run the approved call again with its approval_id now.`,
+    `Approved by me: ${named}. Run the approved call again with its approval_id now.`,
   );
 }
 
@@ -334,7 +334,7 @@ function verbs(
   } else {
     row.appendChild(
       button("Ask the assistant to decide", "primary", () =>
-        askAssistant(`Show me approval ${p.id} so I can approve or reject it.`),
+        askAssistant(`Show me approval ${p.id}, for me to approve or reject.`),
       ),
     );
   }

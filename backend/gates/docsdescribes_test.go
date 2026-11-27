@@ -34,7 +34,7 @@ func TestEveryDescribingPageNamesTheCodeItDescribes(t *testing.T) {
 	t.Parallel()
 	pages := 0
 	for _, folder := range describingFolders {
-		matches, err := filepath.Glob(filepath.Join(docsTreeRoot, folder, "*.md"))
+		matches, err := gatekit.Glob(filepath.Join(docsTreeRoot, folder, "*.md"))
 		if err != nil {
 			t.Fatalf("glob %s: %v", folder, err)
 		}

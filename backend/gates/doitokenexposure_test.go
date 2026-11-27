@@ -729,7 +729,7 @@ func constructsIssuedConfirm(file *ast.File) bool {
 // parseConsentPackage parses the consent module's non-test sources.
 func parseConsentPackage(t *testing.T) map[string]*ast.File {
 	t.Helper()
-	paths, err := filepath.Glob(filepath.Join(consentDir, "*.go"))
+	paths, err := gatekit.Glob(filepath.Join(consentDir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing the consent package: %v", err)
 	}

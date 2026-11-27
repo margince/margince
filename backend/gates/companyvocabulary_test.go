@@ -130,6 +130,9 @@ var companyExempt = gatekit.Waive(map[string]string{
 	"backend/internal/modules/capture/graph/sharedmailbox_test.go": "Microsoft's multi-tenant authority aliases, which a shared mailbox's tenant must never be",
 	"docs/reference/connectors-and-sign-in.md":                     "the Microsoft authority aliases",
 
+	"backend/internal/platform/licensecheck/host.go":              "the license module's `org` wire key; Company is the application's name",
+	"backend/internal/platform/licensecheck/licensecheck_test.go": "the license module's `org` wire key",
+
 	"backend/internal/modules/contacts/companynamegate.go": "the .org TLD, in the stopword list that " +
 		"stops a brand written as its own domain from reducing to its suffix",
 

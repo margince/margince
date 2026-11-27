@@ -74,7 +74,7 @@ func moduleDir(t *testing.T, modulePath string) string {
 func riverRegistrationEntryPoints(t *testing.T) []string {
 	t.Helper()
 	dir := moduleDir(t, riverModulePath)
-	paths, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	paths, err := gatekit.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s: %v", dir, err)
 	}
@@ -136,7 +136,7 @@ func takesWorkersFirst(fn *ast.FuncDecl) bool {
 func riverPeriodicBundleMutators(t *testing.T) []string {
 	t.Helper()
 	dir := moduleDir(t, riverModulePath)
-	paths, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	paths, err := gatekit.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s: %v", dir, err)
 	}

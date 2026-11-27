@@ -825,7 +825,7 @@ func (c *emittedCensus) constDecls(dir string) map[string]constDecl {
 	}
 	decls := map[string]constDecl{}
 	c.decls[dir] = decls
-	sources, err := filepath.Glob(filepath.Join(filepath.FromSlash(dir), "*.go"))
+	sources, err := gatekit.Glob(filepath.Join(filepath.FromSlash(dir), "*.go"))
 	if err != nil {
 		c.t.Fatalf("listing %s for its constants: %v", dir, err)
 	}

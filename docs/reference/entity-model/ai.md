@@ -379,7 +379,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 ## voice_learning_signal
 
-18 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -387,14 +387,11 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `content_erased_at` | `timestamp with time zone` |  |  |
 | `draft_ref_hash` | `bytea` | yes |  |
 | `final_captured_by` | `text` |  |  |
-| `final_text` | `text` |  |  |
 | `generated_original` | `text` |  |  |
 | `outcome` | `text` | yes | One of `drafted`, `accepted`, `edited_sent`, `rejected`. |
 | `profile_version` | `integer` |  |  |
-| `qualifies_as_source` | `boolean`, default `false` | yes |  |
 | `retention_until` | `timestamp with time zone` | yes |  |
 | `similarity` | `numeric(5,4)` |  |  |
-| `transformations` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `voice_profile_id` | `uuid` | yes | Points at `voice_profile.id`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -415,7 +412,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_learning_signal_draft_ref_hash_check`: `CHECK ((octet_length(draft_ref_hash) = 32))`
 - `voice_learning_signal_outcome_check`: `CHECK ((outcome = ANY (ARRAY['drafted', 'accepted', 'edited_sent', 'rejected'])))`
 - `voice_learning_signal_profile_version_check`: `CHECK ((profile_version >= 1))`
-- `voice_learning_signal_qualifies_check`: `CHECK (((NOT qualifies_as_source) OR ((outcome = 'edited_sent') AND (final_text IS NOT NULL) AND (final_captured_by ~~ 'human:%'))))`
 - `voice_learning_signal_similarity_check`: `CHECK (((similarity >= (0)::numeric) AND (similarity <= (1)::numeric)))`
 - `voice_learning_signal_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 

@@ -113,6 +113,10 @@ func (s lowerCaseSite) String() string {
 // wrappedLowerCaseCompares reads one file's comparisons that wrap a lower-case
 // column in lower(). An alias the file never binds counts, as in the seat census.
 func wrappedLowerCaseCompares(path, source string, columns map[string]map[string]bool) []lowerCaseSite {
+	// Every operand this census reads is wrapped in lower().
+	if !mayHoldFolded(source, "lower") {
+		return nil
+	}
 	names := make([]string, 0, len(columns))
 	for name := range columns {
 		names = append(names, regexp.QuoteMeta(name))
