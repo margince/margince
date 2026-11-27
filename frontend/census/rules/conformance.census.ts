@@ -11,6 +11,8 @@ import type { CensusFile, CensusRule } from "../tree";
 
 const allowedFamilies = new Set([
   "Outfit",
+  // Outfit's face for Vietnamese, which Outfit has no letters for.
+  "Be Vietnam Pro",
   "Geist",
   "Geist Mono",
   // Stack fallbacks named in the token definitions.

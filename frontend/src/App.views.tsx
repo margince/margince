@@ -58,7 +58,7 @@ import {
 import { paintsFromEssentialCopy } from "./lib/essentialscreens";
 import { EXTENSION_APP_SCREEN } from "./lib/extensionapps";
 import { EXTENSION_SCREEN } from "./lib/extensions";
-import { traversalInFlight, traverseTo } from "./lib/historydepth";
+import { traversalInFlight, traverseOr } from "./lib/historydepth";
 import { routeIdentity } from "./lib/routeidentity";
 import {
   navigateReplacing,
@@ -186,10 +186,13 @@ const SCREEN_VIEWS: Readonly<Record<Screen, (args: ScreenArgs) => ReactNode>> =
 // Through history, so the entries around the held one are kept. Never a replace
 // while a traversal is under way: that would rename the entry it lands on.
 function returnTo(address: string, depth: number | undefined): void {
-  if (traversalInFlight() || (depth !== undefined && traverseTo(depth))) {
+  const replace = () =>
+    navigateReplacing(parseHash(address), parseParams(address));
+  if (depth === undefined) {
+    if (!traversalInFlight()) replace();
     return;
   }
-  navigateReplacing(parseHash(address), parseParams(address));
+  traverseOr(depth, replace);
 }
 
 // The view for a held address, parsed rather than threaded alongside the
