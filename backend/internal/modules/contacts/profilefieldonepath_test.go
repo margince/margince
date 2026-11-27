@@ -223,7 +223,7 @@ func closureTakesTx(closure *ast.FuncLit) bool {
 // writesTable reports whether fn contains a statement writing the named table.
 //
 // It folds `+` chains and resolves package constants, because a verb that
-// escapes this leaves the population, and a population short by one reports a
+// escapes this leaves the population. A population short by one reports a
 // clean module. `"UPDATE " + profileFieldTable + " SET …"` and a query held in
 // a constant are both ordinary here.
 func writesTable(fn *ast.FuncDecl, table string, known map[string]string) bool {
