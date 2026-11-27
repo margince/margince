@@ -895,7 +895,7 @@ fe-typecheck-composed: composition
 	cd frontend && pnpm exec tsc -p tsconfig.composed-tests.json
 	@bash scripts/phase-timer.sh stop
 
-## frontend-e2e — the screen-acceptance harness (AC-<screen>-N + axe WCAG AA
+## frontend-e2e — the screen acceptance (mocked API) harness (AC-<screen>-N + axe WCAG AA
 ## + PERF-1's held-read claim) against the built app over the seed mock.
 ## Set BASE_URL to point the same suite at a live backend.
 ##
@@ -1085,13 +1085,13 @@ e2e-brief:
 storybook:
 	cd frontend && pnpm install && pnpm storybook
 
-## fe-uat — change-scoped Storybook render+capture UAT for frontend-only diffs:
+## fe-uat — the story render gate: change-scoped Storybook render and capture for frontend-only diffs:
 ## renders THIS branch's changed component's stories in headless Chromium and
 ## screenshots them on parallel pages (FE_UAT_WORKERS, default half the cores,
 ## max 4) — no live stack, no DB. Fails on an unclean render, on a
 ## changed story the build didn't register, or on a changed component with no
 ## story. Artifact: .tmp/fe-uat/manifest.json. Deliberately NOT in `make check`
-## — it is the fe-only UAT lane a coordinator runs instead of the full stack.
+## — it is the render gate for frontend-only changes a coordinator runs instead of the full stack.
 ## FE_UAT_BASE_REF chooses the PR base (origin/main by default).
 ## Optional: ARGS="--allow-missing"; ARGS="--all-stories" renders every story
 ## the build registers instead of the diff's (scheduled.yml runs it daily).

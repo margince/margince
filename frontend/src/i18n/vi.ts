@@ -3057,7 +3057,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "amount.refused.grouping":
     "Nhập số tiền không có dấu phân cách hàng nghìn, ví dụ {example}.",
   "amount.refused.notNumber": "Nhập số tiền bằng chữ số, ví dụ {example}.",
-  "amount.refused.tooLarge": "Số tiền này quá lớn để lưu.",
+  "amount.refused.tooLarge": "Nhập số tiền không vượt quá {max}.",
   "amount.refused.noCurrency": "Số tiền này cần có loại tiền trước.",
   "amount.waitsForCurrency": "Mở khi đã có loại tiền.",
   "amount.currencyUnread":
@@ -3637,6 +3637,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "views.none": "Chưa có chế độ xem đã lưu",
   "views.rename": "Đổi tên",
   "views.renameNamed": "Đổi tên {name}",
+  "views.opensInFilters": "{name}, mở trong Danh sách và bộ lọc",
   "views.delete": "Xóa",
   "views.deleteNamed": "Xóa {name}",
   "views.deleteAsk":
@@ -18256,6 +18257,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "operations.technical.label": "Tra cứu kỹ thuật",
   "operations.technical.help":
     "Tần suất tra cứu các tên miền chưa có thông tin kỹ thuật. Nhập 0 để tắt.",
+  "operations.captureCounterparty.label": "Kiểm tra bên gửi thư mới",
+  "operations.captureCounterparty.help":
+    "Tần suất mô hình kiểm tra các bên gửi thư mới.",
+  "operations.captureConfidentiality.label":
+    "Đánh giá độ bảo mật của chuỗi thư",
+  "operations.captureConfidentiality.help":
+    "Tần suất đánh giá các chuỗi thư đã thu thập xem đồng nghiệp có được đọc hay không.",
   "operations.gmailWatchScan.label": "Kiểm tra thông báo đẩy Gmail",
   "operations.gmailWatchScan.help":
     "Tần suất kiểm tra các đăng ký thông báo đẩy Gmail cần gia hạn.",
@@ -20753,6 +20761,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.library.shared": "Được chia sẻ với tôi",
   "filters.library.views": "Chế độ xem đã lưu",
   "filters.library.kindView": "Chế độ xem đã lưu",
+  "filters.library.savedOn.contacts": "Đã lưu trên danh sách Liên hệ",
+  "filters.library.savedOn.companies": "Đã lưu trên danh sách Công ty",
+  "filters.library.savedOn.deals": "Đã lưu trên danh sách Deal",
+  "filters.library.savedOn.leads": "Đã lưu trên danh sách Lead",
+  "filters.library.savedOn.projects": "Đã lưu trên danh sách Dự án",
   "filters.library.rowMore": "Thao tác khác cho {name}",
   "filters.library.records.contact_one": "{count} liên hệ",
   "filters.library.records.contact_other": "{count} liên hệ",

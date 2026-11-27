@@ -68,6 +68,22 @@ A path, query or header parameter whose value does not parse, or that is missing
 answer this declares the `422`: `backend/internal/compose/paramrefusaldeclared_test.go` sends each
 operation a bad value for each parameter and checks.
 
+## Nothing there yet
+
+Some reads have a normal empty state: no brief run yet, no saved draft, no check recorded. By
+default such a read answers `404`. A client that sends `Prefer: absent=204` (RFC 7240) gets
+`204 No Content` instead, with `Preference-Applied: absent=204`.
+
+| What | Value |
+|---|---|
+| Which operations | Each GET that takes the `Prefer` header (`PreferAbsent` in `crm.yaml`) and declares the `204` `NothingYet` response. `backend/gates/contractabsentpreference_test.go` holds the two together. |
+| What `204` means | The record you asked about is one you may read, and the thing it holds does not exist yet. |
+| What stays `404` | An id that does not exist, or a row outside your row scope. The preference never changes that answer. |
+| The header | The token is matched without case, a quoted value is accepted, and other preferences in the header are ignored. Every other operation ignores the preference. |
+| Caches | Every answer of these operations carries `Vary: Prefer`. |
+
+The web client sends the preference on every read, so an empty page logs no failed request.
+
 ## Safe retries and concurrent edits
 
 | Header | Rule |

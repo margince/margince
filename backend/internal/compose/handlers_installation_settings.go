@@ -211,21 +211,23 @@ func (h installationSettingsHandlers) UpdateInstallationSettings(w http.Response
 	patch.MetadataDocumentClients = req.MetadataDocumentClients
 	// Each entry's validator holds its range and names the field it refuses.
 	patch.Operations = identity.OperationPatch{
-		AgentRunnerIntervalSeconds:       req.AgentRunnerIntervalSeconds,
-		CloseDateSweepIntervalSeconds:    req.CloseDateSweepIntervalSeconds,
-		FollowUpReconcileIntervalSeconds: req.FollowUpReconcileIntervalSeconds,
-		GeocodeBackfillIntervalSeconds:   req.GeocodeBackfillIntervalSeconds,
-		GmailWatchRenewWithinHours:       req.GmailWatchRenewWithinHours,
-		GmailWatchScanIntervalSeconds:    req.GmailWatchScanIntervalSeconds,
-		GraphWatchRenewWithinHours:       req.GraphWatchRenewWithinHours,
-		GraphWatchScanIntervalSeconds:    req.GraphWatchScanIntervalSeconds,
-		RetentionSweepIntervalSeconds:    req.RetentionSweepIntervalSeconds,
-		SendMaxAgeHours:                  req.SendMaxAgeHours,
-		SendRateLimit:                    req.SendRateLimit,
-		SendRateWindowSeconds:            req.SendRateWindowSeconds,
-		TechnicalBackfillIntervalSeconds: req.TechnicalBackfillIntervalSeconds,
-		TimeScanIntervalSeconds:          req.TimeScanIntervalSeconds,
-		WebhookRetryIntervalSeconds:      req.WebhookRetryIntervalSeconds,
+		AgentRunnerIntervalSeconds:                   req.AgentRunnerIntervalSeconds,
+		CaptureConfidentialityVerdictIntervalSeconds: req.CaptureConfidentialityVerdictIntervalSeconds,
+		CaptureCounterpartyVerdictIntervalSeconds:    req.CaptureCounterpartyVerdictIntervalSeconds,
+		CloseDateSweepIntervalSeconds:                req.CloseDateSweepIntervalSeconds,
+		FollowUpReconcileIntervalSeconds:             req.FollowUpReconcileIntervalSeconds,
+		GeocodeBackfillIntervalSeconds:               req.GeocodeBackfillIntervalSeconds,
+		GmailWatchRenewWithinHours:                   req.GmailWatchRenewWithinHours,
+		GmailWatchScanIntervalSeconds:                req.GmailWatchScanIntervalSeconds,
+		GraphWatchRenewWithinHours:                   req.GraphWatchRenewWithinHours,
+		GraphWatchScanIntervalSeconds:                req.GraphWatchScanIntervalSeconds,
+		RetentionSweepIntervalSeconds:                req.RetentionSweepIntervalSeconds,
+		SendMaxAgeHours:                              req.SendMaxAgeHours,
+		SendRateLimit:                                req.SendRateLimit,
+		SendRateWindowSeconds:                        req.SendRateWindowSeconds,
+		TechnicalBackfillIntervalSeconds:             req.TechnicalBackfillIntervalSeconds,
+		TimeScanIntervalSeconds:                      req.TimeScanIntervalSeconds,
+		WebhookRetryIntervalSeconds:                  req.WebhookRetryIntervalSeconds,
 	}
 	allowances, err := agentAllowancePatch(&req)
 	if err != nil {

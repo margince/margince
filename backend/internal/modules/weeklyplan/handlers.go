@@ -36,7 +36,7 @@ func NewHandlers(store *Store, now func() time.Time) Handlers {
 }
 
 // GetCurrentWeeklyPlan answers the caller's plan for this week.
-func (h Handlers) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request, _ crmcontracts.GetCurrentWeeklyPlanParams) {
 	plan, err := h.store.Current(r.Context(), h.now())
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -57,7 +57,7 @@ func (h Handlers) StartWeeklyPlan(w http.ResponseWriter, r *http.Request) {
 
 // GetTeammateWeeklyPlan answers a named rep's plan, for their lead.
 func (h Handlers) GetTeammateWeeklyPlan(
-	w http.ResponseWriter, r *http.Request, ownerID openapi_types.UUID,
+	w http.ResponseWriter, r *http.Request, ownerID openapi_types.UUID, _ crmcontracts.GetTeammateWeeklyPlanParams,
 ) {
 	plan, err := h.store.PlanFor(r.Context(), ids.UUID(ownerID), h.now())
 	if err != nil {

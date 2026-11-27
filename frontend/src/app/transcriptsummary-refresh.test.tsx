@@ -39,9 +39,7 @@ it("drops an erased transcript's summary from an open page after the next write"
   let erased = false;
   installFetchStub({
     "GET /activities/a-1/transcript-proposals/latest": () =>
-      erased
-        ? jsonResponse({ title: "Not Found" }, 404)
-        : jsonResponse(reading),
+      erased ? new Response(null, { status: 204 }) : jsonResponse(reading),
   });
   const client = createQueryClient();
   clients.push(client);

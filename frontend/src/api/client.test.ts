@@ -5,6 +5,7 @@
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { problemCode } from "../lib/problem";
 import {
+  ABSENT_PREFERENCE,
   api,
   CACHE_ANSWER_GRACE_MS,
   MODEL_ROUTE_TIMEOUT_MS,
@@ -115,6 +116,54 @@ describe("the api client's request deadline", () => {
       MODEL_ROUTE_TIMEOUT_MS - REQUEST_TIMEOUT_MS,
     );
     await expect(draft).rejects.toBeInstanceOf(RequestTimeoutError);
+  });
+});
+
+describe("the absent preference", () => {
+  // Every request the client sent, as the server would receive it.
+  function recordRequests(answer: () => Response) {
+    const sent: Request[] = [];
+    vi.stubGlobal(
+      "fetch",
+      vi.fn(async (request: Request) => {
+        sent.push(request);
+        return answer();
+      }),
+    );
+    return sent;
+  }
+
+  it("asks every read to answer nothing yet as 204, and reads that as no data", async () => {
+    const sent = recordRequests(() => new Response(null, { status: 204 }));
+
+    const { data, error, response } = await api.GET("/brief");
+
+    expect(sent[0]?.headers.get("Prefer")).toBe(ABSENT_PREFERENCE);
+    expect(response.status).toBe(204);
+    expect(data).toBeUndefined();
+    expect(error).toBeUndefined();
+  });
+
+  it("leaves a write without it", async () => {
+    const sent = recordRequests(
+      () =>
+        new Response("{}", {
+          status: 201,
+          headers: { "Content-Type": "application/json" },
+        }),
+    );
+
+    await api.POST("/brief");
+
+    expect(sent[0]?.headers.has("Prefer")).toBe(false);
+  });
+
+  it("keeps a preference the caller set itself", async () => {
+    const sent = recordRequests(() => new Response(null, { status: 204 }));
+
+    await api.GET("/brief", { headers: { Prefer: "return=minimal" } });
+
+    expect(sent[0]?.headers.get("Prefer")).toBe("return=minimal");
   });
 });
 

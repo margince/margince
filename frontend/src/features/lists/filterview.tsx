@@ -19,6 +19,7 @@ import {
   resourceOf,
   tabOfViewResource,
   useTabWords,
+  viewOf,
 } from "../../lib/filtersaddress";
 import { useListsAvailable } from "../../lib/lists.queries";
 import { problemCodeOf, problemMessageOf } from "../../lib/problem";
@@ -284,6 +285,7 @@ function OpenedView({
             >
               <RenameViewAction
                 view={pin.view}
+                resource={viewOf(tab)}
                 onRenamed={(view) =>
                   setPin((was) => ({
                     ...was,

@@ -6,7 +6,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_call
 
-14 columns · primary key `(id)` · referenced by 2 foreign keys
+12 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -22,8 +22,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `supersedes_id` | `uuid` |  | The call this one replaces. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
 
@@ -39,7 +37,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_call_period_ordered`: `CHECK ((period_end >= period_start))`
 - `forecast_call_scope_id_matches_kind`: `CHECK (((scope_kind = 'workspace') = (scope_id IS NULL)))`
 - `forecast_call_scope_kind_check`: `CHECK ((scope_kind = ANY (ARRAY['workspace', 'team', 'owner'])))`
-- `forecast_call_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -80,7 +77,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_contribution
 
-34 columns · primary key `(id)` · referenced by 0 foreign keys
+32 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -116,8 +113,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `weighted_minor` | `bigint` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
 
@@ -144,7 +139,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_contribution_risk_signal_facts_list`: `CHECK (((risk_signal_facts IS NULL) OR (jsonb_typeof(risk_signal_facts) = 'array')))`
 - `forecast_contribution_risk_signals_known`: `CHECK (((risk_signals IS NULL) OR (risk_signals <@ ARRAY['close_pushed', 'no_next_step', 'quiet', 'stuck'])))`
 - `forecast_contribution_typed_probability_is_a_percent`: `CHECK (((typed_probability IS NULL) OR ((typed_probability >= 0) AND (typed_probability <= 100))))`
-- `forecast_contribution_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `forecast_contribution_weighted_minor_js_safe`: `CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))`
 - `forecast_contribution_weighted_needs_a_base`: `CHECK (((weighted_minor IS NULL) = (base_minor IS NULL)))`
 - `uq_forecast_contribution_deal`: `UNIQUE (snapshot_id, deal_id)`
@@ -163,7 +157,7 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 
 ## forecast_snapshot
 
-40 columns · primary key `(id)` · referenced by 2 foreign keys
+38 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -205,8 +199,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 | `won_minor` | `bigint` | yes |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Points at**
 
@@ -240,7 +232,6 @@ The 4 tables owned by `forecasting`, as the migrations build them. [Back to the 
 - `forecast_snapshot_scope_id_matches_kind`: `CHECK (((scope_kind = 'workspace') = (scope_id IS NULL)))`
 - `forecast_snapshot_scope_kind_check`: `CHECK ((scope_kind = ANY (ARRAY['workspace', 'team', 'owner'])))`
 - `forecast_snapshot_trigger_check`: `CHECK ((trigger = ANY (ARRAY['daily', 'call', 'period_close', 'recheck'])))`
-- `forecast_snapshot_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 - `forecast_snapshot_weighted_minor_js_safe`: `CHECK (((weighted_minor >= '-9007199254740991'::bigint) AND (weighted_minor <= '9007199254740991'::bigint)))`
 - `forecast_snapshot_won_minor_js_safe`: `CHECK (((won_minor >= '-9007199254740991'::bigint) AND (won_minor <= '9007199254740991'::bigint)))`
 

@@ -20,7 +20,7 @@ export function useDataCoverage() {
     retry: false,
     queryFn: async () => {
       const { data, error, response } = await api.GET("/analytics/coverage");
-      if (response.status === 404) {
+      if (response.status === 204) {
         // A fresh installation: no run has completed yet. Null, so the view
         // says that in words rather than drawing headers over blank space —
         // "nothing has looked yet" and "everything looked fine" are opposite

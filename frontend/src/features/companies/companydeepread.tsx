@@ -327,13 +327,13 @@ function SiteReadPanel({
 /**
  * The account's most recent website read, or null when it has never been read.
  *
- * A read id lives only in the tab that started the crawl, so a read that ended
- * after the rep navigated away would be unfindable, and a FAILED crawl would
- * look like one nobody tried. 404 is the honest "never read".
+ * A read id lives only in the tab that started the crawl. A read that ended
+ * after the rep navigated away would be unfindable, and a failed crawl would
+ * look like one nobody tried. A 204 means "never read".
  *
- * Shared by the panel and by the page deciding where to PUT the panel, on one
- * query key so the two are one request and can never disagree about whether
- * this account has been read.
+ * Shared by the panel and by the page deciding where to put the panel, on one
+ * query key. The two are one request and never disagree about whether this
+ * account has been read.
  */
 export function useLatestSiteRead(companyId: string) {
   return useQuery({
@@ -343,7 +343,7 @@ export function useLatestSiteRead(companyId: string) {
         "/companies/{id}/site-reads/latest",
         { params: { path: { id: companyId } } },
       );
-      if (response.status === 404) {
+      if (response.status === 204) {
         return null;
       }
       if (error) {

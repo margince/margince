@@ -75,7 +75,7 @@ function serve(body: unknown, status = 200) {
           headers: { "content-type": "application/json" },
         });
       }
-      return new Response(status === 404 ? "" : JSON.stringify(body), {
+      return new Response(status === 204 ? null : JSON.stringify(body), {
         status,
         headers: { "content-type": "application/json" },
       });
@@ -99,7 +99,7 @@ function show(canAccept = true, locale?: "de") {
 
 describe("the three answers a reading can give", () => {
   it("offers to read a document nothing has read", async () => {
-    serve(null, 404);
+    serve(null, 204);
     show();
     expect(
       await screen.findByRole("button", { name: /read this file/i }),
