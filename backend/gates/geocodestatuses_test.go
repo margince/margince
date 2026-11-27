@@ -10,21 +10,16 @@ package gates
 // holds contacts.GeocodeStatuses() to the column's CHECK.
 
 import (
-	"path/filepath"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 func TestTheAddressTriggerStampsTheGeocodeStaleStatus(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(filepath.Join(repoRoot, headCatalogPath))
-	if err != nil {
-		t.Fatalf("reading %s: %v", headCatalogPath, err)
-	}
-	if stamp := "SET status = '" + contacts.GeocodeStale + "'"; !strings.Contains(string(raw), stamp) {
+	raw := headCatalog(t)
+	if stamp := "SET status = '" + contacts.GeocodeStale + "'"; !strings.Contains(raw, stamp) {
 		t.Errorf("the address trigger no longer stamps %q, so it and contacts.GeocodeStale have drifted", stamp)
 	}
 }

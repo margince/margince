@@ -218,23 +218,32 @@ func movesOutOfSight(t *testing.T, contacts map[string]*graphFunc, reached map[s
 	return fmt.Errorf("%s writes no %s statement", by, table)
 }
 
-// headCatalogLines reads the head catalog with each multi-line definition
-// folded onto the line that opens it (catalogEntryStart).
+// headCatalogLines is the catalog's records with every run of whitespace folded
+// to one space, so a definition Postgres wraps reads as one line.
 func headCatalogLines(t *testing.T) []string {
 	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
+	records := catalogRecords(t)
+	for i, record := range records {
+		records[i] = strings.Join(strings.Fields(record), " ")
 	}
-	var lines []string
-	for line := range strings.SplitSeq(string(raw), "\n") {
-		if catalogEntryStart.MatchString(line) || len(lines) == 0 {
-			lines = append(lines, line)
-			continue
+	return records
+}
+
+// The records are shared by every gate that reads them, and headCatalogLines
+// rewrites its slice in place. Its rewrite must stay its own.
+func TestFoldingTheCatalogLeavesTheSharedRecordsAsTheyWere(t *testing.T) {
+	t.Parallel()
+	folded := headCatalogLines(t)
+	records := catalogRecords(t)
+	if len(records) == 0 || len(folded) != len(records) {
+		t.Fatalf("read %d records and folded %d", len(records), len(folded))
+	}
+	for i, record := range records {
+		if strings.Contains(record, "  ") && folded[i] != record {
+			return
 		}
-		lines[len(lines)-1] += " " + strings.TrimSpace(line)
 	}
-	return lines
+	t.Fatal("no record differs from its folded copy, so this test proves nothing about a write reaching the shared slice")
 }
 
 // referencesTo returns every table.column that can name the record:

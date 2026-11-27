@@ -99,16 +99,13 @@ func TestOnlyTheBootSealsTheDeclaredTables(t *testing.T) {
 // merge has no uuid id: the merge audits each row it moves by that id.
 func TestEveryDeclaredTableHasARowID(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatal(err)
-	}
+	raw := headCatalog(t)
 	tables := corereach.Tables()
 	if len(tables) == 0 {
 		t.Fatal("no core module declares reach; the census is reading nothing")
 	}
 	for _, o := range tables {
-		if !strings.Contains(string(raw), "\npublic."+o.Table.Name+".id uuid NOT NULL ") {
+		if !strings.Contains(raw, "\npublic."+o.Table.Name+".id uuid NOT NULL ") {
 			t.Errorf("%s declares %s for the merge, which has no NOT NULL uuid id to audit a moved row by", o.Owner, o.Table.Name)
 		}
 	}

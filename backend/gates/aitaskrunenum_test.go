@@ -19,9 +19,7 @@ package gates
 // wedged consumer group rather than as a validation error.
 
 import (
-	"regexp"
 	"slices"
-	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
@@ -159,40 +157,13 @@ func aiTaskPayloadEnum(t *testing.T, property string) []string {
 	return out
 }
 
-// aiTaskRunCheckValues extracts one column's `IN (...)` membership set from the
-// ai_task_run migration, found by its constraint rather than by a filename an
-// author renumbers on the way to a merge. The search is confined to the CREATE
-// TABLE body so the rank function's own `state text` parameter cannot answer
-// for the column.
+// aiTaskRunCheckValues is one ai_task_run column's CHECK vocabulary, as the
+// head catalog states it after every migration that widened or narrowed it.
 func aiTaskRunCheckValues(t *testing.T, column string) []string {
 	t.Helper()
-	matches, err := gatekit.Glob("migrations/core/*_ai_task_run.up.sql")
-	if err != nil || len(matches) != 1 {
-		t.Fatalf("expected exactly one ai_task_run migration, found %v (err %v)", matches, err)
+	values, ok := checkVocabularies(t)["ai_task_run."+column]
+	if !ok {
+		t.Fatalf("no CHECK vocabulary for ai_task_run.%s in %s", column, headCatalogPath)
 	}
-	raw, err := gatekit.ReadFile(matches[0]) // #nosec G304 -- the path comes from this test's own glob
-	if err != nil {
-		t.Fatalf("reading %s: %v", matches[0], err)
-	}
-	body := withCurrentNames(string(raw))
-	start := strings.Index(body, "CREATE TABLE ai_task_run")
-	end := strings.Index(body, "CREATE INDEX")
-	if start < 0 || end <= start {
-		t.Fatalf("%s does not hold a CREATE TABLE ai_task_run body followed by its indexes", matches[0])
-	}
-	body = body[start:end]
-
-	// Anchored at the column, then the first IN list that follows it — which is
-	// its own CHECK, since a column definition ends at the next one.
-	re := regexp.MustCompile(`(?s)\b` + regexp.QuoteMeta(column) + `\s+text\b.*?IN \(([^)]*)\)`)
-	m := re.FindStringSubmatch(body)
-	if m == nil {
-		t.Fatalf("no CHECK naming ai_task_run.%s in %s", column, matches[0])
-	}
-	var out []string
-	for v := range strings.SplitSeq(m[1], ",") {
-		out = append(out, strings.Trim(strings.TrimSpace(v), "'"))
-	}
-	slices.Sort(out)
-	return out
+	return values
 }
