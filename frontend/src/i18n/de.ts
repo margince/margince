@@ -8958,8 +8958,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotConnected":
     "Es ist kein Postfach verbunden. Verbinde eines, um aus Margince zu senden.",
   "compose.mailboxNotConnectedGoto": "Postfach verbinden",
-  "compose.sharedUnsubscribeToken":
-    "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
   "compose.relinkTarget":
     "Kontakte, Unternehmen, Deals, Leads oder Projekte suchen",

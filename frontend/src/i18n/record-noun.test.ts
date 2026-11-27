@@ -628,7 +628,6 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "compose.colleagueMailbox_one",
     "compose.colleagueMailbox_other",
     "compose.emptyRecipients",
-    "compose.sharedUnsubscribeToken",
     "compose.threadGone",
     // "người gửi" is a sender, a human the mailbox heard from.
     "connectors.heldPointer.label",

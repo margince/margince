@@ -9,18 +9,21 @@ package gates
 import (
 	"path"
 	"slices"
+	"strconv"
 	"strings"
 )
 
 // problemMock is one code a frontend file answers as a Problem's. own marks a
 // literal in an object this file builds, which is all a marker can vouch for.
 type problemMock struct {
-	path     string
-	line     int
-	code     string
-	computed bool
-	status   int
-	own      bool
+	statusUnknown bool
+	field         bool
+	path          string
+	line          int
+	code          string
+	computed      bool
+	status        int
+	own           bool
 }
 
 // tsFunc is a function with named parameters, and the tokens of its body.
@@ -37,10 +40,12 @@ type tsFunc struct {
 // codeSource is how a helper's parameter reaches a Problem's code: by position
 // and member path, with the parameter carrying its status and its default's code.
 type codeSource struct {
-	index    int
-	path     []string
-	status   *codeSource
-	fallback []problemMock
+	fixedStatus int
+	field       bool
+	index       int
+	path        []string
+	status      *codeSource
+	fallback    []problemMock
 }
 
 // tsImport is one named import: the file it resolves to and its exported name.
@@ -60,7 +65,7 @@ type tsBinding struct {
 // parameter a Problem's code, and its calls of imported names.
 type problemFileScan struct {
 	mocks   []problemMock
-	helpers map[string]codeSource
+	helpers map[string][]codeSource
 	funcs   []tsFunc
 	imports map[string]tsImport
 	calls   []int
@@ -88,7 +93,7 @@ func scanProblemFile(filePath, source string, tree *tsTree, takers map[string]bo
 	reader := &problemFileReader{
 		path: filePath, source: source, tree: tree, takers: takers,
 		consts: map[string]int{}, objects: map[string]int{}, arrays: map[string]int{}, patterns: map[int]bool{},
-		scan: &problemFileScan{helpers: map[string]codeSource{}, imports: map[string]tsImport{}},
+		scan: &problemFileScan{helpers: map[string][]codeSource{}, imports: map[string]tsImport{}},
 	}
 	reader.scan.reader = reader
 	for i := range source {
@@ -97,7 +102,7 @@ func scanProblemFile(filePath, source string, tree *tsTree, takers map[string]bo
 		}
 	}
 	for _, comment := range tree.comments {
-		if strings.Contains(comment.text, clientCodeMarker) {
+		if strings.Contains(comment.text, clientCodeMarker) || strings.Contains(comment.text, unknownFieldCodeMarker) {
 			reader.scan.markers = append(reader.scan.markers, comment)
 		}
 	}
@@ -126,6 +131,8 @@ func (r *problemFileReader) indexDeclarations() {
 	for i := range tr.tokens {
 		word := tr.word(i)
 		switch {
+		case (word == "const" || word == "let") && tr.word(i+1) != "" && tr.is(i+2, ":"):
+			r.indexTypedConstant(i)
 		case (word == "const" || word == "let") && tr.word(i+1) != "" && tr.is(i+2, "="):
 			r.indexConstant(tr.word(i+1), i+3)
 		case word == "import" && tr.is(i+1, "{"):
@@ -403,34 +410,71 @@ func (r *problemFileReader) expressionEnd(from int) tsSpan {
 // readObject judges one brace that holds a `code` entry. A code it cannot
 // read is a finding, never a pass.
 func (r *problemFileReader) readObject(open int) {
-	entry, found := codeEntry(r.tree.entries(open))
+	entries := r.tree.entries(open)
+	entry, found := codeEntry(entries)
+	var codePath []string
+	if !found {
+		for _, spread := range entries {
+			if spread.spread {
+				entry = spread
+				codePath = []string{"code"}
+				found = true
+				break
+			}
+		}
+	}
 	if !found || r.patterns[open] {
 		return
 	}
 	context := r.problemContext(open, map[int]bool{})
+	field := false
+	if !context.refusal {
+		context, field = r.fieldProblemContext(open)
+	}
 	if !context.refusal {
 		return
 	}
+	if codePath != nil && !field {
+		return
+	}
 	status := context.code
-	read, ok := r.resolve(entry.value, nil, 0)
+	read, ok := r.resolve(entry.value, codePath, 0)
 	switch {
 	case !ok:
-		r.scan.mocks = append(r.scan.mocks, problemMock{path: r.path, line: r.line(entry.keyAt), computed: true, status: status})
+		r.scan.mocks = append(r.scan.mocks, problemMock{path: r.path, line: r.line(entry.keyAt), computed: true, status: status, field: field})
 	case read.helper != "":
 		if context.param != nil && context.param.helper == read.helper {
 			read.source.status = &context.param.source
 		}
-		r.scan.helpers[read.helper] = read.source
+		read.source.field = field
+		read.source.fixedStatus = status
+		for i := range read.source.fallback {
+			read.source.fallback[i].field = field
+			read.source.fallback[i].status = status
+		}
+		r.registerHelper(read.helper, read.source)
 	default:
-		r.addMocks(read.literals, status, entry.keyAt, true)
+		for _, literal := range read.literals {
+			actual, unknown := r.statusFromSpan(context.value, literal, status)
+			before := len(r.scan.mocks)
+			r.addFieldMocks([]int{literal}, actual, entry.keyAt, true, field)
+			for i := before; i < len(r.scan.mocks); i++ {
+				r.scan.mocks[i].statusUnknown = unknown
+			}
+		}
 	}
 }
 
 // addMocks records each literal a code resolved to, at its own line when it
 // is not the code entry's own value.
 func (r *problemFileReader) addMocks(literals []int, status, at int, own bool) {
+	r.addFieldMocks(literals, status, at, own, false)
+}
+
+func (r *problemFileReader) addFieldMocks(literals []int, status, at int, own, field bool) {
 	for _, mock := range r.mocksOf(literals, status) {
 		mock.own = own && mock.line == r.line(at)
+		mock.field = field
 		r.scan.mocks = append(r.scan.mocks, mock)
 	}
 }
@@ -603,6 +647,7 @@ func (r *problemFileReader) paramOf(at int, name string) (tsFunc, int, bool) {
 // statusRead is what a status says. It holds the refusal a literal names,
 // whether it can be one, and the helper parameter each call decides it by.
 type statusRead struct {
+	value   tsSpan
 	code    int
 	refusal bool
 	param   *codeRead
@@ -616,8 +661,26 @@ func (r *problemFileReader) problemContext(open int, seen map[int]bool) statusRe
 		return statusRead{}
 	}
 	seen[open] = true
-	if own := r.ownStatus(open, map[int]bool{}); own.refusal {
-		return own
+	own := r.ownStatus(open, map[int]bool{})
+	if !own.refusal {
+		shape := map[string]bool{}
+		for _, entry := range tr.entries(open) {
+			if !entry.spread {
+				shape[entry.key] = true
+			}
+		}
+		entry, hasCode := codeEntry(tr.entries(open))
+		literalCode := hasCode && entry.value.to == entry.value.from+1 && tr.tokens[entry.value.from].kind == tkString
+		own.refusal = literalCode && shape["title"] && shape["detail"] && tr.word(open-1) == "return"
+	}
+	prefer := func(transport statusRead) statusRead {
+		if transport.refusal && (transport.code != 0 || transport.param != nil || transport.value.to > transport.value.from) {
+			return transport
+		}
+		if own.refusal {
+			return own
+		}
+		return transport
 	}
 	slot := tsSpan{open, tr.match[open] + 1}
 	for p := tr.parent[open]; p >= 0; p = tr.parent[p] {
@@ -627,14 +690,14 @@ func (r *problemFileReader) problemContext(open int, seen map[int]bool) statusRe
 		case tr.is(p, "(") && problemCallee(tr, p) == "" && r.fills(tsSpan{p + 1, tr.match[p]}, slot):
 			slot = tsSpan{p, tr.match[p] + 1}
 		case tr.is(p, "("):
-			return r.sentAsArgument(p, slot)
+			return prefer(r.sentAsArgument(p, slot))
 		case tr.is(p, "{"):
-			return r.sentAsValue(p, slot, seen)
+			return prefer(r.sentAsValue(p, slot, seen))
 		default:
-			return statusRead{}
+			return own
 		}
 	}
-	return statusRead{}
+	return own
 }
 
 // sentAsArgument judges an argument of the call at paren. It is a Problem as
@@ -705,13 +768,13 @@ func (r *problemFileReader) boundStatus(span tsSpan) statusRead {
 	read, ok := r.resolve(span, nil, 0)
 	switch {
 	case ok && read.helper != "":
-		return statusRead{refusal: true, param: &read}
+		return statusRead{refusal: true, param: &read, value: span}
 	case ok && len(read.literals) > 0:
 		code, refusal := refusalOf(tr, read.literals)
-		return statusRead{code: code, refusal: refusal}
+		return statusRead{code: code, refusal: refusal, value: span}
 	}
 	chain, named := memberChain(tr, span)
-	return statusRead{refusal: named && chain[len(chain)-1] == "status"}
+	return statusRead{refusal: named && chain[len(chain)-1] == "status", value: span}
 }
 
 // fallbackSides splits `a ?? b` or `a || b` at its last depth-0 operator.
@@ -839,14 +902,16 @@ func (r *problemFileReader) readHelperCalls() {
 			}
 		}
 	}
-	read := map[int]bool{}
+	read := map[string]bool{}
 	for changed := true; changed; {
 		changed = false
 		for _, call := range calls {
-			source, isHelper := r.scan.helpers[tr.word(call)]
-			if isHelper && !read[call] {
-				read[call] = true
-				changed = r.readCall(call, source) || changed
+			for _, source := range r.scan.helpers[tr.word(call)] {
+				key := strconv.Itoa(call) + "/" + helperSourceKey(source)
+				if !read[key] {
+					read[key] = true
+					changed = r.readCall(call, source) || changed
+				}
 			}
 		}
 	}
@@ -857,6 +922,10 @@ func (r *problemFileReader) readHelperCalls() {
 func (r *problemFileReader) readCall(call int, source codeSource) bool {
 	args := r.tree.split(call + 1)
 	status, refusal, passed := r.callStatus(args, source.status)
+	if source.status == nil && source.fixedStatus > 0 {
+		status = source.fixedStatus
+		refusal = status >= 400
+	}
 	if !refusal {
 		return false
 	}
@@ -867,17 +936,23 @@ func (r *problemFileReader) readCall(call int, source codeSource) bool {
 	read, ok := r.resolve(args[source.index], source.path, 0)
 	switch {
 	case !ok:
-		r.scan.mocks = append(r.scan.mocks, problemMock{path: r.path, line: r.line(call), computed: true, status: status})
+		r.scan.mocks = append(r.scan.mocks, problemMock{path: r.path, line: r.line(call), computed: true, status: status, field: source.field})
 	case read.helper != "":
-		if _, known := r.scan.helpers[read.helper]; !known {
-			if passed != nil && passed.helper == read.helper {
-				read.source.status = &passed.source
-			}
-			r.scan.helpers[read.helper] = read.source
-			return true
+		if passed != nil && passed.helper == read.helper {
+			read.source.status = &passed.source
 		}
+		read.source.field = source.field
+		read.source.fixedStatus = source.fixedStatus
+		return r.registerHelper(read.helper, read.source)
 	default:
-		r.addMocks(read.literals, status, call, false)
+		for _, literal := range read.literals {
+			resolved, unknown := r.statusForCodeLiteral(args, source, literal, status)
+			before := len(r.scan.mocks)
+			r.addFieldMocks([]int{literal}, resolved, call, false, source.field)
+			for i := before; i < len(r.scan.mocks); i++ {
+				r.scan.mocks[i].statusUnknown = unknown
+			}
+		}
 	}
 	return false
 }
