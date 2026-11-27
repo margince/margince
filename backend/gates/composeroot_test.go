@@ -108,8 +108,6 @@ const (
 	// naming a tool it is not offered. It drives the unexported scheduled catalog.
 	// Raised by 64 test lines for the offer draft cases that read the tax from the
 	// sheet. They drive the unexported offer drafter and its staged line.
-	// Raised by 21 test lines for the case that reads a timeline entry's request
-	// state into the deal status input, which is unexported.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
 	// Raised by 21 test lines when main's root compose cases met develop's in the
@@ -190,8 +188,12 @@ const (
 	// Raised by 197 test lines for the re-ingest vector reuse cases, which drive
 	// the unexported knowledge ingest worker and its embedder fixture.
 	// Raised by 3 test lines for the generated Prefer parameter the unwired
-	// transcript read now takes.
-	composeRootTestLines = 364_338
+	// transcript read now takes. Raised by 1 test line for the second staged
+	// approval in the site-read finish case, which checks a repeated id keeps
+	// its first place.
+	// Raised by 21 test lines for the case that reads a timeline entry's request
+	// state into the deal status input, which is unexported.
+	composeRootTestLines = 364_339
 )
 
 // A read under these floors stopped early or read the wrong place, and would
