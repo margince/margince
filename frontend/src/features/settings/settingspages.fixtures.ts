@@ -38,6 +38,7 @@ const NOTIFICATION_PREFERENCES: Schemas["NotificationPreferenceList"] = {
     { class: "system", delivery: "in_app", chosen: false },
     { class: "coach", delivery: "in_app", chosen: false },
   ],
+  email_delivery_available: true,
 };
 
 const QUIET_CAPTURE: Schemas["CaptureActivityResponse"] = {

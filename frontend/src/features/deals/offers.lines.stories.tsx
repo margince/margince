@@ -92,3 +92,26 @@ export const DiscountOutOfRange: Story = {
     await screen.findByText("Discount % must be from 0% to 100%.");
   },
 };
+
+/** The second line moved up from its grip with the arrow key. */
+export const MoveALineUp: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /products": () => jsonResponse(emptyPage),
+      "PATCH /offers/o-1/line-items/li-2": () => jsonResponse(draftOffer),
+    });
+    return (
+      <StoryProviders>
+        <OfferLineEditor offer={draftOffer} />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    const grip = await screen.findByRole("button", {
+      name: "Move Old contract, typed rate, line 2 of 2",
+    });
+    grip.focus();
+    await userEvent.keyboard("{ArrowUp}");
+    await screen.findByText("Old contract, typed rate is now line 1 of 2");
+  },
+};

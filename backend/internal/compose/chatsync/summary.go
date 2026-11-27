@@ -263,9 +263,16 @@ func recordRef(record chatRecord) ids.Ref { return ids.Ref{Type: record.kind, ID
 // not write, which must never stand in for its summary.
 var errSummaryKeyTaken = fmt.Errorf("chat summary: another writer holds this talk's key: %w", apperrors.ErrConflict)
 
-// summarySource is the source of every chat summary note; a row under a
-// summary key with any other source was not written here.
+// summarySource is the source every chat summary note is written with. The
+// channel trigger moves it to automation, so a row under a summary key on any
+// other channel was not written here.
 const summarySource = "chat_links"
+
+// writtenHere reports whether a note under a summary key is one this engine
+// filed, also before the correction task reached it.
+func writtenHere(note crmcontracts.Activity) bool {
+	return note.Source == summarySource || note.Source == provenance.RecordSourceAutomation
+}
 
 // filing is what a note needs besides the summary: the transaction it is
 // written in, the stores, and the link it is filed under.
@@ -325,7 +332,7 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 			in.Links = links
 			note, created, err = f.acts.LogActivityTx(ctx, tx, in)
 		}
-		if err == nil && !created && note.Source != summarySource {
+		if err == nil && !created && !writtenHere(note) {
 			return errSummaryKeyTaken
 		}
 		return err

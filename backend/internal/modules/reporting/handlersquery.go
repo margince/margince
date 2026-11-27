@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/ports/populationscope"
 )
 
 func respond[T any](w http.ResponseWriter, r *http.Request, value T, err error) {
@@ -127,10 +128,15 @@ func SelectionFromQuery(q url.Values, opening OpeningSelection) (crmcontracts.Re
 		if value := q.Get(binding.name); value != "" {
 			id, err := ids.Parse(value)
 			if err != nil {
-				return selection, invalid("choose a valid reporting scope and pipeline")
+				return selection, refuse(binding.name, "invalid_uuid", binding.name+" must be a UUID")
 			}
 			wire := openapi_types.UUID(id)
 			*binding.destination = &wire
+		}
+	}
+	if selection.Scope.Kind != "" || selection.Scope.Id != nil {
+		if fault := populationscope.ShapeFault(string(selection.Scope.Kind), selection.Scope.Id != nil); fault != nil {
+			return selection, refuse("scope_"+fault.Part, "invalid", fault.Sentence)
 		}
 	}
 	if value := q.Get("period"); value != "" {
@@ -145,7 +151,7 @@ func SelectionFromQuery(q url.Values, opening OpeningSelection) (crmcontracts.Re
 	if value := q.Get("product_id"); value != "" {
 		id, err := ids.Parse(value)
 		if err != nil {
-			return selection, invalid("choose a valid product")
+			return selection, refuse("product_id", "invalid_uuid", "product_id must be a UUID")
 		}
 		wire := openapi_types.UUID(id)
 		selection.ProductId = &wire
@@ -153,7 +159,7 @@ func SelectionFromQuery(q url.Values, opening OpeningSelection) (crmcontracts.Re
 	if value := q.Get("initiative_id"); value != "" {
 		id, err := ids.Parse(value)
 		if err != nil {
-			return selection, invalid("choose a valid sales initiative")
+			return selection, refuse("initiative_id", "invalid_uuid", "initiative_id must be a UUID")
 		}
 		wire := openapi_types.UUID(id)
 		selection.InitiativeId = &wire
@@ -168,30 +174,41 @@ func SelectionFromQuery(q url.Values, opening OpeningSelection) (crmcontracts.Re
 		basis := crmcontracts.ReportingValueBasis(value)
 		selection.ValueBasis = &basis
 	}
-	if q.Has("start_at") || q.Has("end_at") {
-		start, err := time.Parse(time.RFC3339Nano, q.Get("start_at"))
+	for _, window := range []struct {
+		start, end  string
+		destination **crmcontracts.ReportingWindow
+	}{{"start_at", "end_at", &selection.Interval}, {"close_start_at", "close_end_at", &selection.CloseInterval}} {
+		bounds, sent, err := windowFromQuery(q, window.start, window.end)
 		if err != nil {
-			return selection, invalid("choose a valid reporting start")
+			return selection, err
 		}
-		end, err := time.Parse(time.RFC3339Nano, q.Get("end_at"))
-		if err != nil {
-			return selection, invalid("choose a valid reporting end")
+		if sent {
+			*window.destination = &bounds
 		}
-		selection.Interval = &crmcontracts.ReportingWindow{StartAt: start, EndAt: end}
-	}
-	if q.Has("close_start_at") || q.Has("close_end_at") {
-		start, err := time.Parse(time.RFC3339Nano, q.Get("close_start_at"))
-		if err != nil {
-			return selection, invalid("choose a valid expected-close start")
-		}
-		end, err := time.Parse(time.RFC3339Nano, q.Get("close_end_at"))
-		if err != nil {
-			return selection, invalid("choose a valid expected-close end")
-		}
-		selection.CloseInterval = &crmcontracts.ReportingWindow{StartAt: start, EndAt: end}
 	}
 	chooseMembers(q, &selection)
 	return selection, nil
+}
+
+// windowFromQuery reads a window from its two bounds, and reports whether
+// either was sent. A window needs both, so a missing or malformed bound is
+// refused by its own name.
+func windowFromQuery(q url.Values, startKey, endKey string) (crmcontracts.ReportingWindow, bool, error) {
+	if !q.Has(startKey) && !q.Has(endKey) {
+		return crmcontracts.ReportingWindow{}, false, nil
+	}
+	var bounds [2]time.Time
+	for i, key := range []string{startKey, endKey} {
+		if !q.Has(key) {
+			return crmcontracts.ReportingWindow{}, true, refuse(key, "required", key+" is required when "+startKey+" or "+endKey+" is sent")
+		}
+		bound, err := time.Parse(time.RFC3339Nano, q.Get(key))
+		if err != nil {
+			return crmcontracts.ReportingWindow{}, true, refuse(key, "datetime_malformed", key+" must be an RFC 3339 timestamp, such as 2026-01-31T00:00:00Z")
+		}
+		bounds[i] = bound
+	}
+	return crmcontracts.ReportingWindow{StartAt: bounds[0], EndAt: bounds[1]}, true, nil
 }
 
 func created[T any](w http.ResponseWriter, r *http.Request, value T, err error) {

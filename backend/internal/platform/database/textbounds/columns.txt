@@ -97,14 +97,12 @@ public.activity_review_response.captured_by document
 public.activity_review_response.outcome document
 public.activity_review_response.source document
 public.activity_review_response.template_key document
-public.activity_review_template.captured_by document
 public.activity_review_template.key document
 public.activity_review_template.label label
 public.activity_review_template.label_key exempt generated from independently checked source columns
 public.activity_review_template.outcome document
 public.activity_review_template.shipped_label label
 public.activity_review_template.shipped_label_key document
-public.activity_review_template.source document
 public.activity_sales_state.channel_provider document
 public.activity_sales_state.kind document
 public.activity_sales_state.thread_key document
@@ -226,7 +224,6 @@ public.assurance_resolution.evidence_ref document
 public.assurance_resolution.outcome document
 public.assurance_resolution.reason note
 public.assurance_run.captured_by document
-public.assurance_run.digest document
 public.assurance_run.readiness document
 public.assurance_run.status document
 public.assurance_source_coverage.captured_by document
@@ -643,7 +640,6 @@ public.contact_provider_claim.claim_key document
 public.contact_provider_claim.employment_processing_error document checked: one fixed sentence
 public.contact_provider_claim.provider document
 public.contact_provider_claim.source document
-public.contact_provider_claim.validation_status document
 public.contact_social.handle document
 public.contact_social.platform document
 public.contract.captured_by document
@@ -806,7 +802,6 @@ public.extension_object_usage.unit document
 public.extension_secret.extension_name label
 public.extension_secret.key document
 public.extension_secret.vault_ref document
-public.federated_identity.email_at_link document
 public.federated_identity.provider document
 public.federated_identity.subject exempt opaque provider subject keys retain the complete external identity
 public.field_mask.condition document
@@ -837,7 +832,6 @@ public.finance_external_customer.sync_hash document
 public.finance_invoice.captured_by document
 public.finance_invoice.external_id document
 public.finance_invoice.number document
-public.finance_invoice.raw_status document
 public.finance_invoice.source document
 public.finance_invoice.status document
 public.finance_invoice.sync_hash document
@@ -898,7 +892,6 @@ public.import_run.error document checked: fixed stop causes only
 public.import_run.job_status document
 public.import_run.phase document
 public.import_run.phase_object document
-public.import_run.source document
 public.import_run.source_name exempt generated from independently checked source columns
 public.import_run.source_ref document
 public.import_run.status document
@@ -978,9 +971,6 @@ public.lead_privacy_notice.locale document
 public.lead_privacy_notice.state document
 public.lead_privacy_notice.template_key document
 public.lead_score_history.override_reason note
-public.lead_source.intent document
-public.lead_source.key document
-public.lead_source.label label
 public.legal_entity.address_city document
 public.legal_entity.address_line1 line
 public.legal_entity.address_line2 line
@@ -1019,7 +1009,6 @@ public.linkedin_connection.normalized_company document
 public.linkedin_connection.normalized_name label
 public.linkedin_connection.position document
 public.linkedin_connection.profile_url document checked: a cell of an uploaded export; the upload is refused past it
-public.linkedin_connection.provider_member_ref document
 public.linkedin_connection.source document
 public.list.entity_type document
 public.list.list_type document
@@ -1125,7 +1114,6 @@ public.partner.next_step document
 public.partner.partner_kinds document
 public.partner.relationship_stage document
 public.partner.served_segments document
-public.partner.source document
 public.partner_stage.key document
 public.partner_stage.label label
 public.partner_stage.label_key exempt generated from independently checked source columns
@@ -1187,7 +1175,6 @@ public.project_health_assessment.source document
 public.project_health_assessment.source_author document
 public.project_health_assessment.state document
 public.project_phase_history.cause_kind label
-public.project_phase_history.changed_by document
 public.project_phase_history.from_phase document
 public.project_phase_history.reason note
 public.project_phase_history.to_phase document
@@ -1360,6 +1347,10 @@ public.stage_exit_criterion.hint line
 public.stage_exit_criterion.key document
 public.stage_exit_criterion.kind document
 public.stage_exit_criterion.label label
+public.standing_line.entity_type document
+public.standing_line.fingerprint document
+public.standing_line.language document
+public.standing_line.text note
 public.stored_object_intent.kind document
 public.stored_object_intent.storage_key document
 public.suggestion_dismissal.fingerprint document
@@ -1375,6 +1366,8 @@ public.tag_suggestion.captured_by document
 public.tag_suggestion.state document
 public.taggable.assigned_by_kind document
 public.taggable.entity_type document
+public.task_explanation.fingerprint document
+public.task_explanation.generated_by document
 public.tax_rate.captured_by document
 public.tax_rate.category document
 public.tax_rate.country document
@@ -1424,7 +1417,6 @@ public.voice_corpus_source.source_label line
 public.voice_corpus_source.source_ref document
 public.voice_learning_signal.captured_by document
 public.voice_learning_signal.final_captured_by document
-public.voice_learning_signal.final_text exempt a copy of the sent mail body, which has no length bound
 public.voice_learning_signal.generated_original exempt a copy of the model-drafted mail body, which mail_draft.body keeps whole
 public.voice_learning_signal.outcome document
 public.voice_profile.active_source_hash document

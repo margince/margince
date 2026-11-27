@@ -293,7 +293,7 @@ func auditKindLabels(t *testing.T, page, kinds, search string) (worded, owned ma
 	if err != nil {
 		t.Fatalf("reading %s: %v", page, err)
 	}
-	text := tsWithoutComments(string(source))
+	text := gatekit.TSWithoutComments(string(source))
 	at := indexAfter(text, "const KIND_LABELS")
 	open := -1
 	if at >= 0 {

@@ -8,9 +8,10 @@ package gates
 // A record's source channel is spelled three times: provenance.RecordSources(),
 // the table's CHECK and the contract's enum. A value in Go and not in the CHECK
 // fails the write at run time; one in the contract and not in Go is refused 422.
+// enumsync_test.go compares each held table's CHECK with the list. This file
+// holds the trigger, the mapping function and the contract to it.
 
 import (
-	"bufio"
 	"regexp"
 	"slices"
 	"strings"
@@ -21,25 +22,22 @@ import (
 )
 
 // recordSourceHeld maps a table whose source is held to the list onto the
-// create request that carries it. A partner has no source on the wire.
-//
-// gatekit:fixture the held tables and the request each one's source arrives on
-var recordSourceHeld = map[string]string{
-	"company": "CreateCompanyRequest",
-	"contact": "CreateContactRequest",
-	"deal":    "CreateDealRequest",
-	"offer":   "CreateOfferRequest",
-	"partner": "",
-	"project": "CreateProjectRequest",
-	"signal":  "CreateSignalRequest",
+// create requests that carry it. A task is an activity, so both its requests
+// write one table.
+var recordSourceHeld = map[string][]string{
+	"activity": {"CreateActivityRequest", "CreateTaskRequest"},
+	"company":  {"CreateCompanyRequest"},
+	"contact":  {"CreateContactRequest"},
+	"deal":     {"CreateDealRequest"},
+	"lead":     {"CreateLeadRequest"},
+	"offer":    {"CreateOfferRequest"},
+	"project":  {"CreateProjectRequest"},
+	"signal":   {"CreateSignalRequest"},
 }
 
 // recordSourceFree names each create request whose source is still free text,
 // with the reason. A request that gains the enum moves to recordSourceHeld.
 var recordSourceFree = gatekit.Waive(map[string]string{
-	"CreateActivityRequest":     "an activity's source also names the code that wrote the row, and readers select on those words",
-	"CreateTaskRequest":         "a task is an activity and shares its source",
-	"CreateLeadRequest":         "a lead's source is matched against the administered lead source list",
 	"CreateRelationshipRequest": "a relationship's source cites the record or mail the edge was read from",
 	"CreateCustomFieldRequest":  "a custom field is configuration, not a record that arrives by a channel",
 	"CreateProductRequest":      "a product is catalog data, not a record that arrives by a channel",
@@ -56,8 +54,6 @@ var (
 	recordSourceTriggerRE = regexp.MustCompile(
 		`^public\.([a-z_]+)\.([a-z_]+)_source_channel CREATE TRIGGER .*new\.source <> ALL \(ARRAY\[([^\]]*)\]`)
 	recordSourceFunctionRE = regexp.MustCompile(`(?m)^ +WHEN source IN \(([^)]*)\) THEN source$`)
-	contractSchemaRE       = regexp.MustCompile(`^    ([A-Za-z0-9]+):$`)
-	contractSourceRE       = regexp.MustCompile(`^        source:(?: \{ type: string, enum: \[([^\]]*)\])?`)
 )
 
 // recordSourceLists reads every spelling of the list the head catalog holds:
@@ -80,31 +76,33 @@ func recordSourceLists(catalog string) (checks, triggers map[string][]string, ma
 
 // contractSourceRequests reads each create request that has a source property,
 // with its enum; a free-text source has none.
-func contractSourceRequests(contract string) map[string][]string {
-	requests := map[string][]string{}
-	schema := ""
-	scanner := bufio.NewScanner(strings.NewReader(contract))
-	scanner.Buffer(make([]byte, 0, 1<<20), 1<<24)
-	for scanner.Scan() {
-		line := scanner.Text()
-		if match := contractSchemaRE.FindStringSubmatch(line); match != nil {
-			schema = match[1]
-			continue
-		}
-		match := contractSourceRE.FindStringSubmatch(line)
-		if match == nil || !strings.HasPrefix(schema, "Create") || !strings.HasSuffix(schema, "Request") {
-			continue
-		}
-		var values []string
-		for value := range strings.SplitSeq(match[1], ",") {
-			if value = strings.TrimSpace(value); value != "" {
-				values = append(values, value)
-			}
-		}
-		slices.Sort(values)
-		requests[schema] = values
+func contractSourceRequests(contract string) (map[string][]string, error) {
+	var doc struct {
+		Components struct {
+			Schemas map[string]struct {
+				Properties map[string]struct {
+					Enum []string `yaml:"enum"`
+				} `yaml:"properties"`
+			} `yaml:"schemas"`
+		} `yaml:"components"`
 	}
-	return requests
+	if err := unmarshalYAML([]byte(contract), &doc); err != nil {
+		return nil, err
+	}
+	requests := map[string][]string{}
+	for name, schema := range doc.Components.Schemas {
+		if !strings.HasPrefix(name, "Create") || !strings.HasSuffix(name, "Request") {
+			continue
+		}
+		source, ok := schema.Properties["source"]
+		if !ok {
+			continue
+		}
+		values := slices.Clone(source.Enum)
+		slices.Sort(values)
+		requests[name] = values
+	}
+	return requests, nil
 }
 
 // recordSourceFindings names each place the list is spelled differently. It
@@ -114,23 +112,19 @@ func recordSourceFindings(vocabulary []string, checks, triggers, requests map[st
 	free := recordSourceFree.Reasons()
 	var findings []string
 	held := map[string]bool{}
-	for table, request := range recordSourceHeld {
-		check, ok := checks[table]
-		switch {
-		case !ok:
+	for table, tableRequests := range recordSourceHeld {
+		// A held table with no check means recordSourceLists stopped reading one.
+		if _, ok := checks[table]; !ok {
 			findings = append(findings, table+": no "+table+"_source_check in the head catalog")
-		case !equalSets(vocabulary, check):
-			findings = append(findings, table+": the CHECK allows "+strings.Join(check, ", "))
 		}
 		if trigger, ok := triggers[table]; ok && !equalSets(vocabulary, trigger) {
 			findings = append(findings, table+": the update trigger lists "+strings.Join(trigger, ", "))
 		}
-		if request == "" {
-			continue
-		}
-		held[request] = true
-		if !equalSets(vocabulary, requests[request]) {
-			findings = append(findings, request+": the contract's source enum is ["+strings.Join(requests[request], ", ")+"]")
+		for _, request := range tableRequests {
+			held[request] = true
+			if !equalSets(vocabulary, requests[request]) {
+				findings = append(findings, request+": the contract's source enum is ["+strings.Join(requests[request], ", ")+"]")
+			}
 		}
 	}
 	// Other tables check a source against words of their own; one that
@@ -156,15 +150,15 @@ func recordSourceFindings(vocabulary []string, checks, triggers, requests map[st
 
 func TestTheRecordSourceVocabularyIsTheCatalogsCheck(t *testing.T) {
 	t.Parallel()
-	catalog, err := gatekit.ReadFile(replyVerdictCatalog)
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	catalog := headCatalog(t)
 	contract, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
-	requests := contractSourceRequests(string(contract))
+	requests, err := contractSourceRequests(string(contract))
+	if err != nil {
+		t.Fatalf("parsing the contract: %v", err)
+	}
 	if len(requests) < wantMinimumSourceRequests {
 		t.Fatalf("the contract scan found %d create requests with a source, under the floor of %d", len(requests), wantMinimumSourceRequests)
 	}
@@ -175,7 +169,7 @@ func TestTheRecordSourceVocabularyIsTheCatalogsCheck(t *testing.T) {
 		}
 	}
 	vocabulary := provenance.RecordSources()
-	checks, triggers, mapping := recordSourceLists(string(catalog))
+	checks, triggers, mapping := recordSourceLists(catalog)
 	if !equalSets(vocabulary, mapping) {
 		t.Errorf("record_source_channel passes %v through unchanged; provenance.RecordSources() spells %v", mapping, vocabulary)
 	}
@@ -189,9 +183,9 @@ func TestTheRecordSourceGateSeesEachWayTheListCanDrift(t *testing.T) {
 	vocabulary := []string{"api", "manual"}
 	agreeing := func() (checks, triggers, requests map[string][]string) {
 		checks, triggers, requests = map[string][]string{}, map[string][]string{}, map[string][]string{}
-		for table, request := range recordSourceHeld {
+		for table, tableRequests := range recordSourceHeld {
 			checks[table], triggers[table] = vocabulary, vocabulary
-			if request != "" {
+			for _, request := range tableRequests {
 				requests[request] = vocabulary
 			}
 		}
@@ -205,15 +199,15 @@ func TestTheRecordSourceGateSeesEachWayTheListCanDrift(t *testing.T) {
 		t.Fatalf("an agreeing tree was reported: %v", findings)
 	}
 	for name, drift := range map[string]func(checks, triggers, requests map[string][]string){
-		"a check with one more value":     func(checks, _, _ map[string][]string) { checks["deal"] = []string{"api", "manual", "seed"} },
-		"a held table with no check":      func(checks, _, _ map[string][]string) { delete(checks, "partner") },
-		"a trigger that is shorter":       func(_, triggers, _ map[string][]string) { triggers["offer"] = []string{"manual"} },
-		"a contract enum that is shorter": func(_, _, requests map[string][]string) { requests["CreateOfferRequest"] = []string{"manual"} },
-		"a held request with no enum":     func(_, _, requests map[string][]string) { requests["CreateProjectRequest"] = nil },
-		"a check on a table not held":     func(checks, _, _ map[string][]string) { checks["lead"] = vocabulary },
-		"a new request with a source":     func(_, _, requests map[string][]string) { requests["CreateTicketRequest"] = nil },
+		"a held table with no check":       func(checks, _, _ map[string][]string) { delete(checks, "company") },
+		"a trigger that is shorter":        func(_, triggers, _ map[string][]string) { triggers["offer"] = []string{"manual"} },
+		"a contract enum that is shorter":  func(_, _, requests map[string][]string) { requests["CreateOfferRequest"] = []string{"manual"} },
+		"a held request with no enum":      func(_, _, requests map[string][]string) { requests["CreateProjectRequest"] = nil },
+		"a check on a table not held":      func(checks, _, _ map[string][]string) { checks["relationship"] = vocabulary },
+		"a second request that is shorter": func(_, _, requests map[string][]string) { requests["CreateTaskRequest"] = []string{"manual"} },
+		"a new request with a source":      func(_, _, requests map[string][]string) { requests["CreateTicketRequest"] = nil },
 		"a free request that gained an enum": func(_, _, requests map[string][]string) {
-			requests["CreateLeadRequest"] = vocabulary
+			requests["CreateDealRoomRequest"] = vocabulary
 		},
 		"a free request that lost its source": func(_, _, requests map[string][]string) { delete(requests, "CreateProductRequest") },
 	} {
@@ -247,17 +241,60 @@ func TestTheRecordSourceReadersParseTheCommittedSpellings(t *testing.T) {
 	if !equalSets(mapping, []string{"api", "manual"}) {
 		t.Errorf("mapping = %v, want the pass-through list", mapping)
 	}
-	requests := contractSourceRequests(strings.Join([]string{
-		"    CreateDealRequest:",
-		"        source: { type: string, enum: [manual, api], x-go-type: string }",
-		"    CreateLeadRequest:",
-		"        source: { type: string }",
-		"    Deal:",
-		"        source: { type: string }",
-		"    CreateNoteRequest:",
-		"        source_system: { type: string }",
-	}, "\n"))
+	requests, err := contractSourceRequests(`components:
+  schemas:
+    CreateDealRequest:
+      properties:
+        source: { type: string, enum: [manual, api], x-go-type: string }
+    CreateLeadRequest:
+      properties:
+        source: { type: string }
+    Deal:
+      properties:
+        source: { type: string }
+    CreateNoteRequest:
+      properties:
+        source_system: { type: string }
+`)
+	if err != nil {
+		t.Fatal(err)
+	}
 	if len(requests) != 2 || !equalSets(requests["CreateDealRequest"], []string{"api", "manual"}) || len(requests["CreateLeadRequest"]) != 0 {
 		t.Errorf("requests = %v, want the deal enum and a free lead source", requests)
+	}
+}
+
+func TestTheRecordSourceReaderSeesEachYAMLShape(t *testing.T) {
+	t.Parallel()
+	for name, schema := range map[string]string{
+		"an intervening bound": `    CreateExampleRequest:
+      properties:
+        source: {type: string, maxLength: 128, enum: [manual, api]}`,
+		"a block mapping": `    CreateExampleRequest:
+      properties:
+        source:
+          maxLength: 128
+          enum:
+            - manual
+            - api
+          type: string`,
+		"a flow mapping": `    CreateExampleRequest: {properties: {source: {enum: [manual, api], type: string}}}`,
+	} {
+		t.Run(name, func(t *testing.T) {
+			requests, err := contractSourceRequests("components:\n  schemas:\n" + schema)
+			if err != nil {
+				t.Fatal(err)
+			}
+			if len(requests) != 1 || !equalSets(requests["CreateExampleRequest"], []string{"api", "manual"}) {
+				t.Errorf("requests = %v, want the declared source enum", requests)
+			}
+		})
+	}
+}
+
+func TestTheRecordSourceReaderRefusesMalformedYAML(t *testing.T) {
+	t.Parallel()
+	if _, err := contractSourceRequests("components: ["); err == nil {
+		t.Error("malformed YAML was read as an empty contract")
 	}
 }

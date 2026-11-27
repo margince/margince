@@ -14,6 +14,8 @@ export const defaultOperations: components["schemas"]["OperationSettings"] = {
   retention_sweep_interval_seconds: 86_400,
   geocode_backfill_interval_seconds: 3_600,
   technical_backfill_interval_seconds: 21_600,
+  capture_counterparty_verdict_interval_seconds: 600,
+  capture_confidentiality_verdict_interval_seconds: 600,
   gmail_watch_scan_interval_seconds: 21_600,
   graph_watch_scan_interval_seconds: 21_600,
   gmail_watch_renew_within_hours: 48,

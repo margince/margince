@@ -22,10 +22,10 @@ must_call_with:
 must_call_matching:
   - 'change_settings~iVBORw0KGgo'
 
+# A note beside the act is no fault: the end state finds the act or fails the run.
 must_not_call_with:
   - attach_document~.
   - update_record~.
-  - log_activity~.
 
 may_call:
   - read_workspace

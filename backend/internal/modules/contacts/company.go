@@ -144,6 +144,9 @@ func (s *Store) readyCompanyCreate(ctx context.Context, in *CreateCompanyInput) 
 	if err := checkCompanyDescription(in.Description); err != nil {
 		return "", err
 	}
+	if err := refuseLongerList(companyDomainsField, "domains", maxCompanyDomains, len(in.Domains), 0); err != nil {
+		return "", err
+	}
 	if err := parseCompanyDomains(in.Domains); err != nil {
 		return "", err
 	}

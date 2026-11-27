@@ -8,6 +8,7 @@ import {
   useRef,
 } from "react";
 import type { ListChip, ListView } from "../design-system/listtable";
+import type { JumpedRows } from "../design-system/listtable.paging";
 import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { useHealthScope } from "../lib/healthscope";
@@ -15,6 +16,7 @@ import { problemFieldErrorsOf } from "../lib/problem";
 import { useTagVocabulary } from "../lib/tags.queries";
 import { currentParams, useUrlParams } from "../lib/urlstate";
 import "./listquery.css";
+import { useJumpedList } from "./listquery.jump";
 import {
   type ListFetchPage,
   listInfiniteOptions,
@@ -23,8 +25,9 @@ import {
 
 // The shared list foundation (P-14): every list screen sends the rich
 // q/sort/cursor/include_archived/filter vocabulary instead of a flat
-// limit:50, and paginates by keyset (never offset — the workspace's rows
-// mutate under a live feed). useListQuery owns the react-query wiring;
+// limit:50. It reads on by keyset, since the workspace's rows mutate under a
+// live feed. A page past the cursor's rows is opened by offset, where the
+// endpoint takes one. useListQuery owns the react-query wiring;
 // ListTable binds that query to the list surface, which owns the controls.
 import {
   type ListQuery,
@@ -44,6 +47,7 @@ export {
   LIST_PAGE_SIZES,
   type ListOpening,
   type ListQuery,
+  type ListReach,
   listFetchLimit,
   listPageOf,
   listQueryFromParams,
@@ -120,6 +124,7 @@ export type SavedViewTab = Readonly<{
   includeArchived: boolean;
   perPage?: number;
   version: number;
+  link?: ListView["link"];
 }>;
 
 /**
@@ -152,9 +157,15 @@ export function useListQuery<Row>({
   screenDials = NO_SCREEN_DIALS,
   paramScope,
   enabled,
+  readsAtOffset,
 }: Readonly<{
   key: string;
   fetchPage: ListFetchPage<Row>;
+  /**
+   * The endpoint takes `offset`, so a page past the cursor's rows is read in
+   * one request; `rowKey` tells a record the two reads both hold.
+   */
+  readsAtOffset?: Readonly<{ rowKey: (row: Row) => string }>;
   initialSort?: string;
   /**
    * Filters the list opens on, for a reader who has not narrowed it themselves.
@@ -297,9 +308,35 @@ export function useListQuery<Row>({
 
   // Rows are read for one reader scope; until /me names it nothing is read.
   const readerScope = useHealthScope();
-  const infinite = useInfiniteQuery({
-    ...listInfiniteOptions(key, readerScope ?? "", query, fetchPage),
-    enabled: readerScope !== undefined && (enabled?.(query) ?? true),
+  const reads = readerScope !== undefined && (enabled?.(query) ?? true);
+  const cursorRead = listInfiniteOptions(
+    key,
+    readerScope ?? "",
+    query,
+    fetchPage,
+  );
+  const infinite = useInfiniteQuery({ ...cursorRead, enabled: reads });
+  const rows = (infinite.data?.pages ?? []).flatMap((page) => page.data);
+  const list = useJumpedList({
+    prefixKey: cursorRead.queryKey,
+    read: (cursor, reach, signal) => fetchPage(query, cursor, signal, reach),
+    enabled: reads && readsAtOffset !== undefined,
+    page: listPageOf(params, paramScope),
+    perPage: query.perPage,
+    rowKey: readsAtOffset?.rowKey,
+    cursor: {
+      rows,
+      hasMore: infinite.hasNextPage,
+      pending: infinite.isPending,
+      // The newest page that counted. A record list counts on a page read
+      // without a cursor; a refetch re-reads it, so a later write still reaches it.
+      total: infinite.data?.pages.findLast(
+        (page) => page.page.total !== undefined,
+      )?.page.total,
+      isError: infinite.isError,
+      error: infinite.error,
+      refetch: () => infinite.refetch(),
+    },
   });
   // A bookmark from an older build can name a sort the server no longer
   // offers. The list then opens in its own order. If that one is refused too,
@@ -318,7 +355,6 @@ export function useListQuery<Row>({
       sort: prev.sort === opening.sort ? "" : opening.sort,
     }));
   }, [sortRefused, query.sort, setQuery, opening.sort]);
-  const rows = (infinite.data?.pages ?? []).flatMap((page) => page.data);
   return {
     rows,
     query,
@@ -328,15 +364,13 @@ export function useListQuery<Row>({
     paramScope,
     hasMore: infinite.hasNextPage,
     loadMore: () => infinite.fetchNextPage(),
-    // The newest page that counted. A record list counts on its first page
-    // only; a refetch re-reads that page, so a later write still reaches it.
-    total: infinite.data?.pages.findLast(
-      (page) => page.page.total !== undefined,
-    )?.page.total,
+    jumped: list.jumped,
+    held: list.held,
+    total: list.total,
     isPending: infinite.isPending,
-    isError: infinite.isError,
-    error: infinite.error,
-    refetch: () => infinite.refetch(),
+    isError: list.isError,
+    error: list.error,
+    refetch: list.refetch,
   };
 }
 
@@ -360,6 +394,10 @@ export type ListState<Row> = Readonly<{
   refetch: () => void;
   hasMore: boolean;
   loadMore: () => void;
+  /** Rows read at an offset for a page past `rows`; see `JumpedRows`. */
+  jumped?: JumpedRows<Row>;
+  /** `rows` and the jumped page's, each record once: what a selection can hold. */
+  held?: readonly Row[];
   /**
    * How many rows match the current filters on the server, when it says. The
    * rendered count falls back to the rows in hand where it does not.

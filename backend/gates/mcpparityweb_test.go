@@ -129,7 +129,7 @@ func scanWebSources(sources map[string]string, routes contractRoutes) (webScan, 
 	var waiting []computedCall
 	namedInFile := map[string][]string{}
 	for _, name := range slices.Sorted(maps.Keys(sources)) {
-		code, literals := stripTSComments(sources[name])
+		code, literals := gatekit.TSCode(sources[name])
 		constants := webPathConstants(code)
 		unused := unusedAsWholePaths(code, constants)
 		literals = slices.DeleteFunc(literals, func(literal string) bool { return unused[literal] })
@@ -176,7 +176,7 @@ func webPathConstants(code string) map[string]string {
 		if bindings[name] != 1 || at[1] >= len(code) || !strings.ContainsRune(`"'`+"`", rune(code[at[1]])) {
 			continue
 		}
-		end := literalEnd(code, at[1])
+		end := gatekit.TSLiteralEnd(code, at[1])
 		if end+1 > len(code) || !webValueEnds.MatchString(code[end+1:]) {
 			continue
 		}
@@ -223,7 +223,7 @@ func builtPath(code string, offset int, constants map[string]string) (string, bo
 		return "", false
 	}
 	if code[offset] == '`' {
-		path := expandPathConstants(code[offset+1:literalEnd(code, offset)], constants)
+		path := expandPathConstants(code[offset+1:gatekit.TSLiteralEnd(code, offset)], constants)
 		return path, strings.HasPrefix(path, "/")
 	}
 	if name := webPlainName.FindStringSubmatch(code[offset:]); name != nil {
@@ -426,57 +426,4 @@ func stringLiteralAt(code string, offset int) (string, bool) {
 	}
 	text := code[offset+1 : offset+1+end]
 	return text, !strings.Contains(text, "${")
-}
-
-// stripTSComments blanks every comment and returns the string literals it passed.
-// A plain regexp cannot do this: `//` inside a URL string starts no comment, and a
-// call quoted in a comment is no call. A string ends at its line's end, so a quote
-// in a regular expression literal costs at most the rest of that line.
-func stripTSComments(source string) (string, []string) {
-	code := []byte(source)
-	var literals []string
-	for i := 0; i < len(code); {
-		switch {
-		case code[i] == '/' && i+1 < len(code) && code[i+1] == '/':
-			for i < len(code) && code[i] != '\n' {
-				code[i] = ' '
-				i++
-			}
-		case code[i] == '/' && i+1 < len(code) && code[i+1] == '*':
-			end := strings.Index(source[i+2:], "*/")
-			stop := len(code)
-			if end >= 0 {
-				stop = i + 2 + end + 2
-			}
-			for ; i < stop; i++ {
-				if code[i] != '\n' {
-					code[i] = ' '
-				}
-			}
-		case code[i] == '"' || code[i] == '\'' || code[i] == '`':
-			end := literalEnd(source, i)
-			literals = append(literals, source[i+1:max(i+1, end)])
-			i = end + 1
-		default:
-			i++
-		}
-	}
-	return string(code), literals
-}
-
-// literalEnd is the offset of the quote closing the literal opened at start, or of
-// the line's end for a quote that never closes.
-func literalEnd(source string, start int) int {
-	quote := source[start]
-	for i := start + 1; i < len(source); i++ {
-		switch {
-		case source[i] == '\\':
-			i++
-		case source[i] == quote:
-			return i
-		case source[i] == '\n' && quote != '`':
-			return i
-		}
-	}
-	return len(source) - 1
 }

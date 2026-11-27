@@ -195,7 +195,7 @@ func TestAnAgentsQualifyingEventNamesTheAgent(t *testing.T) {
 			t.Errorf("the agent's retraction left retracted=%v (%v)", retracted, err)
 		}
 		acquired := c.mcp.Call(t, "change_compliance", map[string]any{"action": "retract_acquisition_request", "id": c.contact})
-		if acquired.IsError && strings.Contains(acquired.Text, "permission denied") {
+		if acquired.IsError && strings.Contains(acquired.Text, "permission_denied") {
 			t.Errorf("retracting the acquisition request refused the user's agent: %s", acquired.Text)
 		}
 	}()
@@ -271,7 +271,7 @@ func TestAnAgentReadsAContactsConsentAsTheUserDoes(t *testing.T) {
 		t.Errorf("the read does not show the consent the agent recorded, or who recorded it: %s", after)
 	}
 	missing := c.mcp.Call(t, "read_details", map[string]any{"action": "contact_consent", "id": "00000000-0000-4000-8000-000000000001"})
-	if !missing.IsError || !strings.Contains(missing.Text, "not found") {
+	if !missing.IsError || !strings.Contains(missing.Text, "not_found") {
 		t.Errorf("a contact that does not exist answered %+v, want not found", missing)
 	}
 }
@@ -346,7 +346,7 @@ func TestAnAgentDoesNotCloseAnErasure(t *testing.T) {
 		"action": "update_data_subject_request", "id": opened.ID,
 		"request_body": AnyMap{"status": "fulfilled", "resolution": "Erased as asked."},
 	})
-	if !got.IsError || !strings.Contains(got.Text, "permission denied") {
+	if !got.IsError || !strings.Contains(got.Text, "permission_denied") {
 		t.Errorf("an agent fulfilling an erasure answered %+v, want a permission refusal", got)
 	}
 	var requests struct {

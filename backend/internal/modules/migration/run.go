@@ -87,12 +87,10 @@ func (s *RunStore) tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return s.db.Tx(ctx, fn)
 }
 
-// CreateRunInput starts a run record. Source is the provenance stamp
-// (DM-CONV-11) naming who/what initiated the run (e.g. "overlay:flip").
+// CreateRunInput starts a run record.
 type CreateRunInput struct {
 	Connector string
 	SourceRef string
-	Source    string
 }
 
 // Create inserts a run in the running state and audits it — the flip's
@@ -109,10 +107,10 @@ func (s *RunStore) Create(ctx context.Context, in CreateRunInput) (Run, error) {
 	var run Run
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, `
-			INSERT INTO import_run (connector, status, source_ref, source, captured_by, own_seat)
-			VALUES ($1, $2, $3, $4, $5, $6)
+			INSERT INTO import_run (connector, status, source_ref, captured_by, own_seat)
+			VALUES ($1, $2, $3, $4, $5)
 			RETURNING id, connector, status, source_ref, checkpoint, created_at, updated_at`,
-			in.Connector, StatusRunning, in.SourceRef, in.Source, capturedBy, ownSeatArg(ctx))
+			in.Connector, StatusRunning, in.SourceRef, capturedBy, ownSeatArg(ctx))
 		if err := scanRun(row, &run); err != nil {
 			return fmt.Errorf("creating import run: %w", err)
 		}

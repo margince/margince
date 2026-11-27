@@ -26,10 +26,7 @@ const presetDir = "../../../config/presets"
 // unmeasuredPresetModels are bound by a shipped preset and not yet measured;
 // startup warns for each. Entries leave this set when the registry gains the
 // row, and the test fails on an entry that has been measured.
-var unmeasuredPresetModels = map[string]bool{
-	"bge-m3":      true,
-	"BAAI/bge-m3": true,
-}
+var unmeasuredPresetModels = map[string]bool{}
 
 func TestEveryPresetEmbeddingModelHasAMeasuredFloor(t *testing.T) {
 	t.Parallel()

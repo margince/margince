@@ -981,7 +981,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact_provider_claim
 
-16 columns · primary key `(id)` · referenced by 1 foreign key
+15 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -996,7 +996,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `provider` | `text` | yes |  |
 | `retrieved_at` | `timestamp with time zone` | yes |  |
 | `run_id` | `uuid` | yes | Points at `provider_run.id`. |
-| `validation_status` | `text` |  |  |
 | `value_json` | `jsonb` | yes |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -1024,8 +1023,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "provider": 20000, "claim_key": 20000, "captured_by": 20000, "validation_status": 20000, "employment_processing_error": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"employment_processing_error":20000,"provider":20000,"source":20000,"validation_status":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "provider": 20000, "claim_key": 20000, "captured_by": 20000, "validation_status": 20000, "employment_processing_error": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"employment_processing_error":20000,"provider":20000,"source":20000,"validation_status":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "provider": 20000, "claim_key": 20000, "captured_by": 20000, "employment_processing_error": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"employment_processing_error":20000,"provider":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "provider": 20000, "claim_key": 20000, "captured_by": 20000, "employment_processing_error": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"claim_key":20000,"employment_processing_error":20000,"provider":20000,"source":20000}')`
 
 ## contact_signature_enrich_state
 
@@ -1462,7 +1461,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `legal_hold` | `boolean`, default `false` | yes | True while a litigation or investigation hold is preserving this record. |
 | `search_tsv` | `tsvector`, generated as `(((((setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(full_name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(full_name, ''::text))), 'A'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(company_name, ''::text))), 'B'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(company_name, ''::text))), 'B'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(title, ''::text))), 'B'::"char")) \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(title, ''::text))), 'B'::"char"))` |  | Computed by the database. It cannot be written directly. |
-| `source` | `text` | yes | How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). |
+| `source` | `text` | yes | The channel this lead arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. |
 | `source_system` | `text` |  | The outside system the record came from, when it came from one. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
@@ -1498,6 +1497,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `lead_score_range`: `CHECK (((score >= 0) AND (score <= 100)))`
 - `lead_sla_breach_follows_creation`: `CHECK (((sla_breached_at IS NULL) OR (sla_breached_at >= created_at)))`
 - `lead_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
+- `lead_source_check`: `CHECK ((source = ANY (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) NOT VALID`
 - `lead_status_check`: `CHECK ((status = ANY (ARRAY['new', 'contacted', 'engaged', 'promoted', 'disqualified'])))`
 - `lead_status_set_by_check`: `CHECK (((status_set_by IS NULL) OR (status_set_by = ANY (ARRAY['human', 'system']))))`
 - `lead_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
@@ -1532,6 +1532,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `home_read_fence_lead_owner`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `lead_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `lead_source_channel`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) EXECUTE FUNCTION move_lead_source_onto_its_channel()`
 - `source_change_is_remembered`: `AFTER UPDATE FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "phone": 20000, "title": 120, "origin": 20000, "source": 20000, "status": 20000, "industry": 20000, "full_name": 120, "source_id": 20000, "captured_by": 20000, "company_name": 120, "linkedin_url": 20000, "origin_detail": 500, "source_system": 20000, "status_set_by": 20000, "arrival_origin": 20000, "disqualify_note": 2000, "email_domain_folded": 20000, "partner_accepted_by": 20000, "candidate_company_key": 20000, "score_override_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"arrival_origin":20000,"candidate_company_key":20000,"captured_by":20000,"company_name":120,"disqualify_note":2000,"email":20000,"email_domain_folded":20000,"full_name":120,"industry":20000,"linkedin_url":20000,"origin":20000,"origin_detail":500,"partner_accepted_by":20000,"phone":20000,"score_override_reason":2000,"source":20000,"source_id":20000,"source_system":20000,"status":20000,"status_set_by":20000,"title":120}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "phone": 20000, "title": 120, "origin": 20000, "source": 20000, "status": 20000, "industry": 20000, "full_name": 120, "source_id": 20000, "captured_by": 20000, "company_name": 120, "linkedin_url": 20000, "origin_detail": 500, "source_system": 20000, "status_set_by": 20000, "arrival_origin": 20000, "disqualify_note": 2000, "email_domain_folded": 20000, "partner_accepted_by": 20000, "candidate_company_key": 20000, "score_override_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"arrival_origin":20000,"candidate_company_key":20000,"captured_by":20000,"company_name":120,"disqualify_note":2000,"email":20000,"email_domain_folded":20000,"full_name":120,"industry":20000,"linkedin_url":20000,"origin":20000,"origin_detail":500,"partner_accepted_by":20000,"phone":20000,"score_override_reason":2000,"source":20000,"source_id":20000,"source_system":20000,"status":20000,"status_set_by":20000,"title":120}')`
@@ -1697,41 +1698,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"override_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"override_reason":2000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"override_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"override_reason":2000}')`
 
-## lead_source
-
-10 columns · primary key `(id)` · referenced by 0 foreign keys
-
-| Column | Type | Required | What it is |
-|---|---|---|---|
-| `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `active` | `boolean`, default `true` | yes | Inactive sources leave the create form and the filter; leads carrying them keep the value. |
-| `intent` | `text`, default `'neutral'::text` | yes | One of `high`, `neutral`, `low`. |
-| `key` | `text` | yes | Lowercase stable key, the stored value. |
-| `label` | `text` | yes |  |
-| `sort_order` | `integer`, default `0` | yes |  |
-| `system` | `boolean`, default `false` | yes | Built-in. |
-| `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
-
-**Rules**
-
-- `lead_source_intent_check`: `CHECK ((intent = ANY (ARRAY['high', 'neutral', 'low'])))`
-- `lead_source_key_shape`: `CHECK (((key = lower(key)) AND (length(btrim(key)) > 0)))`
-- `lead_source_label_present`: `CHECK ((length(btrim(label)) > 0))`
-- `lead_source_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
-
-**Indexes**
-
-- `lead_source_pkey`: `unique, btree (id)`
-- `uq_lead_source_key`: `unique, btree (key)`
-
-**Triggers**
-
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "label": 120, "intent": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"intent":20000,"key":20000,"label":120}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "intent": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"intent":20000,"key":20000,"label":120}')`
-- `trg_lead_source_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
-
 ## legal_entity
 
 30 columns · primary key `(id)` · referenced by 9 foreign keys
@@ -1863,7 +1829,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## linkedin_connection
 
-19 columns · primary key `(id)` · referenced by 0 foreign keys
+18 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1880,7 +1846,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `owner_user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `position` | `text` |  |  |
 | `profile_url` | `text` |  |  |
-| `provider_member_ref` | `text` |  |  |
 | `synced_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `tombstoned_at` | `timestamp with time zone` |  |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -1909,17 +1874,16 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `idx_linkedin_connection_matched_contact`: `btree (matched_contact_id)`
 - `idx_linkedin_connection_owner_user`: `btree (owner_user_id)`
 - `linkedin_connection_pkey`: `unique, btree (id)`
-- `uq_linkedin_connection_natural`: `unique, btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT WHERE (provider_member_ref IS NULL)`
-- `uq_linkedin_connection_provider`: `unique, btree (owner_user_id, provider_member_ref) WHERE (provider_member_ref IS NOT NULL)`
+- `uq_linkedin_connection_natural_key`: `unique, btree (owner_user_id, normalized_name, normalized_company, connected_on) NULLS NOT DISTINCT`
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "source": 20000, "position": 20000, "profile_url": 20000, "company_name": 120, "match_status": 20000, "normalized_name": 120, "normalized_company": 20000, "provider_member_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"company_name":120,"email":20000,"match_status":20000,"normalized_company":20000,"normalized_name":120,"position":20000,"profile_url":20000,"provider_member_ref":20000,"source":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "source": 20000, "position": 20000, "profile_url": 20000, "company_name": 120, "match_status": 20000, "normalized_name": 120, "normalized_company": 20000, "provider_member_ref": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"company_name":120,"email":20000,"match_status":20000,"normalized_company":20000,"normalized_name":120,"position":20000,"profile_url":20000,"provider_member_ref":20000,"source":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "source": 20000, "position": 20000, "profile_url": 20000, "company_name": 120, "match_status": 20000, "normalized_name": 120, "normalized_company": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"company_name":120,"email":20000,"match_status":20000,"normalized_company":20000,"normalized_name":120,"position":20000,"profile_url":20000,"source":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "source": 20000, "position": 20000, "profile_url": 20000, "company_name": 120, "match_status": 20000, "normalized_name": 120, "normalized_company": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"company_name":120,"email":20000,"match_status":20000,"normalized_company":20000,"normalized_name":120,"position":20000,"profile_url":20000,"source":20000}')`
 
 ## partner
 
-22 columns · primary key `(id)` · referenced by 0 foreign keys
+21 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1942,7 +1906,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | One of `api`, `automation`, `capture`, `import`, `manual`, `webform`. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -1963,7 +1926,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `partner_margin_tier_check`: `CHECK (((margin_tier IS NULL) OR (margin_tier = ANY (ARRAY['tier1_15', 'tier2_20', 'tier3_25']))))`
 - `partner_partner_kinds_check`: `CHECK ((partner_kinds <@ ARRAY['hosting', 'consulting', 'strategic', 'referral']))`
 - `partner_retention_rate_check`: `CHECK (((retention_rate IS NULL) OR ((retention_rate >= 0) AND (retention_rate <= 100))))`
-- `partner_source_check`: `CHECK ((source = ANY (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform'])))`
 - `partner_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
@@ -1976,8 +1938,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000,"source":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"next_step": 20000, "captured_by": 20000, "cert_status": 20000, "margin_tier": 20000, "activated_by": 20000, "partner_kinds": 20000, "served_segments": 20000, "activation_basis": 20000, "relationship_stage": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"activated_by":20000,"activation_basis":20000,"captured_by":20000,"cert_status":20000,"margin_tier":20000,"next_step":20000,"partner_kinds":20000,"relationship_stage":20000,"served_segments":20000}')`
 - `trg_partner_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## partner_stage
@@ -2326,7 +2288,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## sdr_handoff_reason
 
-9 columns · primary key `(id)` · referenced by 2 foreign keys
+7 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -2337,15 +2299,12 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `sort_order` | `integer`, default `0` | yes |  |
 | `system` | `boolean`, default `false` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
-| `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
 **Rules**
 
 - `sdr_handoff_reason_applies_to`: `CHECK ((applies_to = ANY (ARRAY['rejected', 'recycled'])))`
 - `sdr_handoff_reason_id_kind`: `UNIQUE (id, applies_to)`
 - `sdr_handoff_reason_label_present`: `CHECK ((length(btrim(label)) > 0))`
-- `sdr_handoff_reason_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
 
@@ -2360,7 +2319,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## site_read
 
-35 columns · primary key `(id)` · referenced by 4 foreign keys
+35 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -2430,6 +2389,34 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"phase": 20000, "status": 20000, "seed_url": 20000, "logo_source": 20000, "status_code": 20000, "target_kind": 20000, "requested_by": 20000, "proposal_hash": 20000, "status_detail": 20000, "stopped_reason": 2000, "logo_object_key": 20000, "logo_icon_source": 20000, "logo_icon_object_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"logo_icon_object_key":20000,"logo_icon_source":20000,"logo_object_key":20000,"logo_source":20000,"phase":20000,"proposal_hash":20000,"requested_by":20000,"seed_url":20000,"status":20000,"status_code":20000,"status_detail":20000,"stopped_reason":2000,"target_kind":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"phase": 20000, "status": 20000, "seed_url": 20000, "logo_source": 20000, "status_code": 20000, "target_kind": 20000, "requested_by": 20000, "proposal_hash": 20000, "status_detail": 20000, "stopped_reason": 2000, "logo_object_key": 20000, "logo_icon_source": 20000, "logo_icon_object_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"logo_icon_object_key":20000,"logo_icon_source":20000,"logo_object_key":20000,"logo_source":20000,"phase":20000,"proposal_hash":20000,"requested_by":20000,"seed_url":20000,"status":20000,"status_code":20000,"status_detail":20000,"stopped_reason":2000,"target_kind":20000}')`
+
+## site_read_proposal
+
+3 columns · primary key `(site_read_id, approval_id)` · referenced by 0 foreign keys
+
+| Column | Type | Required | What it is |
+|---|---|---|---|
+| `approval_id` | `uuid` | yes | Points at `approval.id`. |
+| `position` | `integer` | yes |  |
+| `site_read_id` | `uuid` | yes | Points at `site_read.id`. |
+
+**Points at**
+
+| Columns | Table | When the parent goes |
+|---|---|---|
+| `approval_id` | `approval` | deleting the parent deletes this row |
+| `site_read_id` | `site_read` | deleting the parent deletes this row |
+
+**Rules**
+
+- `site_read_proposal_position_check`: `CHECK (("position" >= 1))`
+- `site_read_proposal_position_key`: `UNIQUE (site_read_id, "position")`
+
+**Indexes**
+
+- `site_read_proposal_approval_ix`: `btree (approval_id)`
+- `site_read_proposal_pkey`: `unique, btree (site_read_id, approval_id)`
+- `site_read_proposal_position_key`: `unique, btree (site_read_id, "position")`
 
 ## technical_lookup_cache
 

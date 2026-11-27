@@ -94,7 +94,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.participant_addresses_not_lowercase":
     "Teilnehmeradressen mit Großbuchstaben",
   "history.field.participant_seats": "Teilnehmende Mitglieder",
-  "history.field.participant_users": "Teilnehmende Personen",
+  "history.field.participant_users": "Teilnehmende Teammitglieder",
   "history.field.partner_accepted_at": "Partner angenommen am",
   "history.field.partner_accepted_by": "Partner angenommen von",
   "history.field.partner_archived_at": "Partner archiviert am",
@@ -2587,6 +2587,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.stage_evidence": "Phasenbelege",
   "systemJob.stage_evidence_read": "Auswertung der Phasenbelege",
   "systemJob.stage_evidence_reread": "Erneute Auswertung der Phasenbelege",
+  "systemJob.standing_line": "Prüfung von „Wie es steht“",
   "systemJob.suppression_journal_worker": "Export des Löschjournals",
   "systemJob.stored_object_reap_worker": "Bereinigung des Dateispeichers",
   "systemJob.technical_backfill": "Nachholen der technischen Abfrage",
@@ -3342,7 +3343,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "amount.refused.grouping":
     "Gib den Betrag ohne Tausendertrennzeichen ein, etwa {example}.",
   "amount.refused.notNumber": "Gib den Betrag in Ziffern ein, etwa {example}.",
-  "amount.refused.tooLarge": "Dieser Betrag ist zu groß zum Speichern.",
+  "amount.refused.tooLarge": "Gib einen Betrag von höchstens {max} ein.",
   "amount.refused.noCurrency": "Dieser Betrag braucht zuerst eine Währung.",
   "amount.waitsForCurrency": "Eingabe möglich, sobald eine Währung feststeht.",
   "amount.currencyUnread":
@@ -3878,7 +3879,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.viewAll": "Alle",
   "list.viewHot": "Heiß",
 
-  "table.range": "{unit} {first} bis {last} von {count}",
+  "table.range": "{first}-{last} von {count}",
   "table.pagination": "Seiten",
   "table.rowActions": "Aktionen für {name}",
   "table.page": "Seite {number}",
@@ -3905,15 +3906,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Mit diesen Filtern lässt sich die Liste nicht anzeigen.",
   "table.none": "Noch keine {unit}.",
   "table.actions": "Aktionen",
-  "table.rangeLoaded": "Geladene {unit} {first} bis {last} von {count}",
+  "table.rangeLoaded": "{first}-{last} von {count} geladen",
   "table.rangeIn": "{range} in {scope}",
   "unit.contacts": "Kontakte",
   "unit.companies": "Unternehmen",
   "unit.deals": "Deals",
   "unit.leads": "Leads",
-  "unit.contact": "Kontakt",
-  "unit.company": "Unternehmen",
-  "unit.lead": "Lead",
   "unit.worklistItems": "Aufgaben und Zusagen",
   "unit.partners": "Partner",
   "unit.products": "Produkte",
@@ -3960,6 +3958,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "views.none": "Keine gespeicherten Ansichten",
   "views.rename": "Umbenennen",
   "views.renameNamed": "{name} umbenennen",
+  "views.opensInFilters": "{name}, öffnet in Filter und Ansichten",
   "views.delete": "Löschen",
   "views.deleteNamed": "{name} löschen",
   "views.deleteAsk":
@@ -4205,7 +4204,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.strip.fin.neverInvoiced": "Nicht fakturiert",
   "co.strip.fin.noConnection": "Buchhaltung nicht verbunden",
   "co.strip.fin.unmapped": "Kunde nicht zugeordnet",
-  "co.strip.fin.syncing": "Wird synchronisiert",
+  "co.strip.fin.syncing": "Erste Synchronisierung ausstehend",
   "co.strip.fin.staleFigure": "Synchronisierung veraltet",
   "co.strip.fin.notCurrent": "Nicht aktuell",
   "co.strip.fin.errorFigure": "Letzte Synchronisierung fehlgeschlagen",
@@ -4427,6 +4426,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.title": "Wie es steht · {date}",
   "standing.noteMore": "Mehr anzeigen",
   "standing.noteLess": "Weniger anzeigen",
+  "standing.citations.source": "Die Aktivität",
+  "standing.citations.from": "Gelesen aus",
   "standing.latest.title": "Zuletzt",
   "standing.latest.open": "Im Verlauf öffnen",
   "standing.sources.records": "Aus den CRM-Daten",
@@ -4672,7 +4673,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "finance.none": "Nichts erfasst.",
   "finance.loading": "Rechnungen werden geladen…",
   "finance.syncing":
-    "Synchronisierung mit dem Buchhaltungssystem läuft. Die Zahlen erscheinen nach der ersten Synchronisierung.",
+    "Die erste Synchronisierung mit dem Buchhaltungssystem steht noch aus. Margince synchronisiert alle sechs Stunden, und ein Admin kann die Synchronisierung unter Einstellungen → Anbindungen früher starten.",
   "finance.noConnection":
     "Kein Buchhaltungssystem verbunden. Rechnungen und Zahlungsverhalten dieses Kunden erscheinen, sobald eines verbunden ist.",
   "finance.unmapped":
@@ -4729,13 +4730,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contracts.status.expired": "Ausgelaufen",
   "contracts.status.cancelled": "Gek\u00fcndigt",
   "contracts.status.superseded": "Ersetzt",
-  "contracts.endsOn": "Endet am {when}",
+  "contracts.cancelledTo": "Gekündigt zum {when}",
+  "contracts.cancelledToNotice": "Gekündigt zum {when}, Kündigung am {notice}",
+  "contracts.replacedBy": "Ersetzt durch {title}",
+  "contracts.replacedByUnnamed": "Durch einen späteren Vertrag ersetzt",
   "contracts.renewsOn": "Verl\u00e4ngert sich am {when}",
   "contracts.endedPendingStatus": "Laufzeit beendet, Status ausstehend",
   "contracts.form.title": "Vertrag erfassen",
   "contracts.form.name": "Titel",
   "contracts.form.number": "Vertragsnummer",
   "contracts.form.value": "Wert",
+  "contracts.form.currency": "Währung",
   "contracts.form.basis": "Dieser Wert ist",
   "contracts.form.arr": "Jährlich wiederkehrender Umsatz",
   "contracts.form.arrMonthly": "Monatlicher Gegenwert:",
@@ -4781,6 +4786,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contracts.statusChange.label": "Neuer Status",
   "contracts.statusChange.submit": "Status ändern",
   "contracts.statusChange.errSame": "Der Vertrag hat bereits diesen Status.",
+  "contracts.statusChange.finalTitle": "{status} ist endgültig",
+  "contracts.statusChange.finalBody":
+    "Nach dem Speichern lässt sich der Status nicht mehr ändern. Um die Vereinbarung fortzusetzen, verlängere sie.",
   "contracts.cancel.title": "Kündigung erfassen",
   "contracts.cancel.hint":
     "Der Kunde bleibt unter Vertrag, bis die Kündigung wirksam wird. Damit wird die Kündigung erfasst. Der Status ändert sich nicht.",
@@ -5956,6 +5964,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.tech.laneFailed":
     "{lane} hat nicht geantwortet. Das vorherige Ergebnis ist unverändert.",
   "co.tech.laneRefused": "Die Website hat die Analyse blockiert.",
+  "co.tech.laneFailedFirst":
+    "{lane} hat nicht geantwortet, daher liegt noch kein Ergebnis vor.",
   "co.tech.lane.dns": "DNS",
   "co.tech.lane.certlog": "Zertifikate",
   "co.tech.lane.homepage": "Startseite",
@@ -6071,6 +6081,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tagAdmin.usedBy_one": "{count} Datensatz",
   "tagAdmin.usedBy_other": "{count} Datensätze",
   "tagAdmin.retired": "Stillgelegt",
+  "tagAdmin.mergedInto": "In {name} zusammengeführt",
   "tagAdmin.retiredToast": "{name} stillgelegt",
   "tagAdmin.restoredToast": "{name} wiederhergestellt",
   "tags.archived": "archiviert",
@@ -6142,6 +6153,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tagResult.resultsTitle": "Datensätze mit diesem Tag",
   "tagResult.nothingCarries":
     "Noch keine Datensätze mit diesem Tag. Vergib das Tag bei einem Kontakt, einem Unternehmen, einem Deal oder einem Lead.",
+  "tagResult.retiredNothing":
+    "Keine Datensätze haben dieses Tag. Es ist stillgelegt und kann keinem Datensatz mehr hinzugefügt werden.",
+  "tagResult.mergedBody":
+    "Dieses Tag wurde in {name} zusammengeführt. Die Datensätze mit diesem Tag haben bei der Zusammenführung {name} erhalten.",
+  "tagResult.openKept": "{name} öffnen",
   "tagResult.loadingRows": "{kind} werden geladen…",
   "tagResult.noneLeft": "Keine Datensätze mehr mit diesem Tag",
   "tagResult.unnamed": "Ohne Namen",
@@ -6198,16 +6214,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.project": "Projekt",
 
   "lead.source.manual": "Manuell erstellt",
-  "lead.source.inbound": "Eingehend",
+  "lead.source.siteread": "Von der Unternehmenswebsite",
   "lead.source.webform": "Webformular",
   "lead.source.webformNamed": "Webformular „{name}“",
-  "lead.source.referral": "Empfehlung",
   "lead.source.import": "Import",
-  "lead.source.crawl": "Webrecherche",
   "lead.source.api": "Integration",
   "lead.source.automation": "Automatisierung",
   "lead.source.capture": "Aus einer Unterhaltung erfasst",
-  "lead.source.siteread": "Von der Unternehmenswebsite",
   "lead.source.unknown": "Unbekannte Quelle",
   "leadSources.removeOnlyTitle":
     "Deine Rolle darf Einträge entfernen, aber nicht hinzufügen oder ändern",
@@ -6352,8 +6365,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht nach Branche, Land oder Unternehmensgröße eingrenzen lassen.",
   "lead.boardCountsNoOtherFilter":
     "Es wird keine Anzahl angezeigt, da die Anzahlen nicht jeden Filter dieser Liste berücksichtigen können.",
-  "lead.boardCountsNoConnectorSource":
-    "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht auf alle Leads eines Connectors eingrenzen lassen.",
   "lead.boardCountsOwnerNotMeasurable":
     "Keine Anzahl für die Leads dieser verantwortlichen Person. Nur Admins können dir erlauben, diese Anzahl auszuwerten.",
   "lead.boardTerminalRowsUnavailable":
@@ -7320,7 +7331,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.termsText": "Bedingungstext",
   "offer.lines": "Positionen",
   "offer.addLine": "Position hinzufügen",
-  "offer.positionTaken": "Eine andere Zeile hat schon diese Position.",
+  "offer.lineOrderHint":
+    "Ziehe eine Position am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
+  "offer.lineHandle": "{name} verschieben, Position {position} von {total}",
+  "offer.lineMoved": "{name} ist jetzt Position {position} von {total}",
+  "offer.lineHandleUnnamed": "Position {position} von {total} verschieben",
+  "offer.lineMovedUnnamed":
+    "Die Position ist jetzt Position {position} von {total}",
   "offer.lapsed":
     "Das Datum „Gültig bis“ dieses Angebots ist überschritten. Ändere es bei einem Entwurf unter „Kopfdaten bearbeiten“ oder erzeuge für ein gesendetes Angebot eine neue Revision.",
   "offer.position": "Position",
@@ -7874,6 +7891,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deepread.statusFailed": "Fehlgeschlagen",
   "deepread.statusCancelled": "Abgebrochen",
   "deepread.resumesAt": "Wird am {when} automatisch fortgesetzt.",
+  "deepread.failure.bot_blocked":
+    "Der Bot-Schutz der Website hat das Lesen abgelehnt.",
+  "deepread.failure.http_server_error":
+    "Die Website hat mit einem Serverfehler geantwortet.",
+  "deepread.failure.timeout": "Die Website hat nicht rechtzeitig geantwortet.",
+  "deepread.failure.http_client_error":
+    "Die Startseite der Website wurde nicht gefunden.",
+  "deepread.failure.dns": "Die Domain verweist auf keinen Server.",
+  "deepread.failure.tls":
+    "Das HTTPS-Zertifikat der Website ließ sich nicht prüfen.",
+  "deepread.failure.robots_disallowed":
+    "Die Website bittet Crawler, sie nicht zu lesen.",
+  "deepread.failure.unreadable":
+    "Die Website hat geantwortet, aber nichts Lesbares geliefert.",
+  "deepread.failure.internal":
+    "Margince konnte das Lesen nicht abschließen. Die Ursache liegt bei dieser Installation, nicht bei der Website. Ein Admin findet sie im Serverprotokoll.",
+  "deepread.failure.stale_reclaim":
+    "Das Lesen hat sich nicht mehr gemeldet und wurde beendet.",
   "deepread.pagesSoFar_one": "Bisher {count} Seite analysiert",
   "deepread.pagesSoFar_other": "Bisher {count} Seiten analysiert",
   "deepread.stoppedEarly": "Vorzeitig beendet: {reason}",
@@ -9814,6 +9849,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Zahlen zum Zeitpunkt des Snapshots. Die Zahlen ändern sich nicht, und der Link nennt den Zeitpunkt der Aufnahme.",
   "analytics.share.snapshotUnavailable":
     "Für diesen Zeitraum gibt es noch keinen Snapshot.",
+  "analytics.share.quarterOnly":
+    "Geteilt wird immer das Quartal. Wähle Quartal, um diese Ansicht zu teilen.",
   "analytics.share.expiryNote":
     "Der Link funktioniert nach 30 Tagen nicht mehr.",
   "analytics.share.create": "Link erstellen",
@@ -10019,6 +10056,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.period.quarter": "Quartal",
   "forecast.period.month": "Monat",
   "forecast.period.week": "Woche",
+  "forecast.quarterCards":
+    "Die beiden Pipeline-Karten unten gelten für das Quartal.",
   "forecast.receipt": "Daten und Belege geprüft",
   "forecast.eligible": "Berücksichtigte Deals",
   "forecast.priced": "Bepreist",
@@ -11320,7 +11359,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.test.nothing.done": "Fertig",
   "import.test.nothing.empty": "Die Datei hat eine Kopfzeile und keine Zeilen.",
   "import.test.reupload": "Korrigieren und neu hochladen",
-  "import.test.issuesUnit": "Probleme",
   "import.test.import_one": "1 Zeile importieren",
   "import.test.import_other": "{count} Zeilen importieren",
   "import.test.importAnyway_one": "1 Zeile trotzdem importieren",
@@ -11777,6 +11815,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.risk_verdict_sweep": "Prüfung des Deal-Risikos",
   "jobs.kind.signal_scan": "Suche nach Signalen",
   "jobs.kind.site_deep_read": "Analyse der Unternehmenswebsite",
+  "jobs.kind.standing_line_check": "Prüfung von „Wie es steht“",
   "jobs.kind.stored_object_reap": "Bereinigung des Dateispeichers",
   "jobs.kind.suppression_journal_export": "Export des Löschjournals",
   "jobs.kind.tag_scout": "Tag-Vorschläge",
@@ -12351,6 +12390,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.delivery.in_app": "In der App",
   "notifications.delivery.email": "E-Mail",
   "notifications.delivery.digest": "Tägliche Zusammenfassung",
+  "notifications.noMailTitle": "E-Mail ist nicht eingerichtet",
+  "notifications.noMail":
+    "Diese Installation versendet keine Benachrichtigungen per E-Mail, daher erreichen E-Mail, tägliche Zusammenfassung und Zusammenfassungen per E-Mail kein Postfach. Jede Benachrichtigung erscheint weiter in der App.",
+  "notifications.noMailGuide": "E-Mail einrichten",
   "privacynotice.title": "Was wir über Sie gespeichert haben",
   "privacynotice.intro":
     "Wir teilen Ihnen dies mit, da wir dazu gesetzlich verpflichtet sind. Sie müssen nicht darauf antworten oder irgendetwas unternehmen.",
@@ -13821,7 +13864,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur Admins und Operations können Domain-Entscheidungen ändern. Für dich ist die Liste schreibgeschützt.",
   "blockedDomains.none":
     "Noch keine abgelehnten Domains. Ergebnisse zu Massenversand und manuelle Ablehnungen erscheinen hier.",
-  "blockedDomains.unit": "Domain-Entscheidungen",
   "blockedDomains.col.domain": "Domain",
   "blockedDomains.col.admission": "Entscheidung",
   "blockedDomains.col.source": "Entschieden von",
@@ -14590,6 +14632,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Code wurde nicht akzeptiert. Prüfe ihn und versuche es erneut.",
   "mfa.tooManyCodes":
     "Zu viele falsche Codes. Warte ein paar Minuten und versuche es dann erneut.",
+  "mfa.tooManyPasswords":
+    "Zu viele falsche Passwörter. Warte eine Minute und versuche es dann erneut.",
+  "mfa.passwordHint":
+    "Dein Margince-Passwort, nicht das von Google oder Microsoft.",
   "mfa.confirmFailedTitle": "Zweistufige Anmeldung nicht eingeschaltet",
   "mfa.onTitle": "Zweistufige Anmeldung an",
   "mfa.onBody": "Alle anderen Geräte wurden abgemeldet.",
@@ -15570,7 +15616,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.lead_disqualify_reason": "Disqualifizierungsgrund",
   "audit.kind.lead_origin": "Lead-Herkunft",
   "audit.kind.lead_privacy_notice": "Datenschutzhinweis zum Lead",
-  "audit.kind.lead_source": "Lead-Quelle",
   "audit.kind.legal_entity": "Rechtsträger",
   "audit.kind.legal_review": "Rechtliche Prüfung",
   "audit.kind.license": "Lizenzeinstellungen",
@@ -17585,7 +17630,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aicalls.open": "Aufruf {feature} von {when} öffnen",
   "aicalls.col.when": "Zeitpunkt",
   "aicalls.filtersLabel": "Filter",
-  "aicalls.unit": "Aufrufe",
   "aicalls.col.feature": "Funktion",
   "aicalls.col.model": "Modell",
   "aicalls.col.tokens": "Tokens ein / aus",
@@ -19122,6 +19166,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "operations.technical.label": "Technische Abfragen",
   "operations.technical.help":
     "Wie oft Unternehmensdomains ohne technische Angaben nachgeschlagen werden. 0 deaktiviert die Abfragen.",
+  "operations.captureCounterparty.label": "Prüfung neuer Absendeadressen",
+  "operations.captureCounterparty.help":
+    "Wie oft neue Absendeadressen vom Modell geprüft werden.",
+  "operations.captureConfidentiality.label": "Vertraulichkeits-Beurteilung",
+  "operations.captureConfidentiality.help":
+    "Wie oft erfasste Threads daraufhin geprüft werden, ob Mitglieder sie lesen dürfen.",
   "operations.gmailWatchScan.label": "Gmail-Push-Prüfung",
   "operations.gmailWatchScan.help":
     "Wie oft Gmail-Push-Abos auf Erneuerung geprüft werden.",
@@ -19938,9 +19988,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.lead.sla_breached.label": "Erste Antwort überfällig",
   "webhooks.event.lead.sla_breached.when":
     "Eine Prüfung stellt fest, dass die Frist für die erste Antwort auf einen Lead ohne Antwort verstrichen ist.",
-  "webhooks.event.lead_source.changed.label": "Lead-Quellen geändert",
-  "webhooks.event.lead_source.changed.when":
-    "Eine Lead-Quelle wird in den Einstellungen hinzugefügt, bearbeitet oder entfernt.",
   "webhooks.event.lead_disqualify_reason.changed.label":
     "Disqualifizierungsgründe geändert",
   "webhooks.event.lead_disqualify_reason.changed.when":
@@ -21322,7 +21369,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.phase": "Projektphase",
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Beziehungstyp",
-  "filters.field.stage_id": "Phase",
   "filters.field.tag": "Tags",
   "filters.field.technology": "Technologie",
   "filters.choosePlaceholder": "Feld ausw\u00e4hlen",
@@ -21694,6 +21740,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.library.shared": "Mit mir geteilt",
   "filters.library.views": "Gespeicherte Ansichten",
   "filters.library.kindView": "Gespeicherte Ansicht",
+  "filters.library.savedOn.contacts": "Auf der Liste Kontakte gespeichert",
+  "filters.library.savedOn.companies": "Auf der Liste Unternehmen gespeichert",
+  "filters.library.savedOn.deals": "Auf der Liste Deals gespeichert",
+  "filters.library.savedOn.leads": "Auf der Liste Leads gespeichert",
+  "filters.library.savedOn.projects": "Auf der Liste Projekte gespeichert",
   "filters.library.rowMore": "Weitere Aktionen für {name}",
   "filters.library.records.contact_one": "{count} Kontakt",
   "filters.library.records.contact_other": "{count} Kontakte",
@@ -22236,6 +22287,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.why.now": "Warum jetzt",
   "worklist.why.consequence": "Wenn nichts passiert",
   "worklist.why.todo": "Was zu tun ist",
+  "worklist.why.writing": "Aufgabe und Nachrichten werden gelesen…",
   "worklist.title.deal_at_risk": "Bei {name} tut sich nichts mehr",
   "worklist.title.deal_at_risk.close_overdue":
     "{name} ist über das Abschlussdatum",
@@ -22250,8 +22302,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.title.bounce": "Unzustellbar: {name}",
   "worklist.title.lead_response": "Neuen Lead {name} kontaktieren",
   "worklist.title.customer_waiting": "{name} wartet auf deine Antwort",
-  "worklist.todo.task.named":
-    "Erledige die Aufgabe mit {name} und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
   "worklist.todo.deal_at_risk.named":
     "Öffne {name} und plane den nächsten Schritt.",
   "worklist.todo.customer_waiting.named": "Antworte {name}.",
@@ -22281,8 +22331,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Prüfe die Verbindung des Kalenders, damit seine Termine wieder erfasst werden.",
   "worklist.todo.capture_health.calendar.named":
     "Prüfe die Verbindung von {name}, damit seine Termine wieder erfasst werden.",
-  "worklist.consequence.task_slips.named":
-    "Die Aufgabe mit {name} bleibt unerledigt.",
   "worklist.happened.customer_waiting":
     "{name} hat am {when} geschrieben, und noch niemand hat geantwortet.",
   "worklist.happened.customer_waiting.bare":
@@ -22368,7 +22416,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.task": "Die Aufgabe ist am {due} fällig.",
   "worklist.happened.task.overdue":
     "Die Aufgabe war am {due} fällig und ist noch offen.",
-  "worklist.happened.task.undated": "Die Aufgabe hat kein Fälligkeitsdatum.",
   "worklist.happened.deal": "{deal}: {figures}.",
   "worklist.happened.lastFrom": "Letzter Kontakt von {name}: {when}",
   "worklist.happened.lastTo": "Letzter Kontakt an {name}: {when}",
@@ -22393,7 +22440,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{name} rutscht über das erwartete Abschlussdatum.",
   "worklist.consequence.meeting_unprepared":
     "Du gehst unvorbereitet in den Termin.",
-  "worklist.consequence.task_slips": "Die Aufgabe bleibt unerledigt.",
   "worklist.consequence.work_blocked":
     "Arbeit, die an dieser Entscheidung hängt, bleibt blockiert.",
   "worklist.consequence.customer_never_received": "Die Nachricht kommt nie an.",
@@ -22409,8 +22455,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Datensätze laufen weiter auseinander.",
   "worklist.todo.deal_at_risk":
     "Öffne den Deal und plane den nächsten Schritt.",
-  "worklist.todo.task":
-    "Erledige sie und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
   "worklist.todo.customer_waiting": "Beantworte die Nachricht.",
   "worklist.todo.awaiting_reply": "Sende eine Nachfrage.",
   "worklist.todo.lead_response":

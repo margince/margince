@@ -15,6 +15,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/mailcoverage"
+	"github.com/margince/margince/backend/internal/compose/standingline"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
@@ -209,9 +210,12 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 
 		// Each section's statement carries tens of kilobytes of row scope and
 		// plans longer than it runs, so the sections keep their generic plans.
-		return database.ReuseGenericPlansTx(ctx, tx, func() error {
+		if err := database.ReuseGenericPlansTx(ctx, tx, func() error {
 			return s.readSections(ctx, tx, contactID, now, opts, &out)
-		})
+		}); err != nil {
+			return err
+		}
+		return standingline.AttachTx(ctx, tx, standingline.KindContact, contactID.UUID, &out.StandingLine)
 	})
 	if err != nil {
 		return crmcontracts.Contact360{}, err

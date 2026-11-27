@@ -13,7 +13,11 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
-import { SavedViewsFailure, SaveViewAction } from "./savedviews";
+import {
+  SavedViewsFailure,
+  SaveViewAction,
+  useSavedViewTabs,
+} from "./savedviews";
 
 // A saved view is per-user list state, by name: saved beside a list's own
 // tools through the catalog's one naming dialog, and managed from the same
@@ -218,5 +222,31 @@ export const TheRailFailedToLoad: Story = {
       within(failed).getByRole("button", { name: "Retry" }),
     ).toBeVisible();
     await expect(canvas.queryByRole("dialog")).toBeNull();
+  },
+};
+
+/** The contacts rail as the reader's views draw it, beside the All preset. */
+function ContactsRail() {
+  const tabs = useSavedViewTabs("contacts");
+  return (
+    <ListSurface title="Contacts" views={[{ label: "All" }, ...tabs]}>
+      <p>Rows</p>
+    </ListSurface>
+  );
+}
+
+// A view built in Filters and views cannot be applied to the list, so its tab
+// opens it there and trails an arrow. A view this build cannot read has none.
+export const BuiltViewOnTheRail: Story = {
+  render: () => {
+    routes();
+    return <ContactsRail />;
+  },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await canvas.findByRole("link", {
+      name: "Gold tier in Berlin, opens in Filters and views",
+    });
+    await expect(canvas.queryByText("Saved by an older build")).toBeNull();
   },
 };

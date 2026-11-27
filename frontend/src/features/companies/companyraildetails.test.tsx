@@ -110,13 +110,7 @@ function stub(
       // it a list shape would render no mark and a test asserting its absence
       // would pass for the wrong reason.
       if (pathname.endsWith("/vat-check")) {
-        return (
-          answers.vatCheck?.() ??
-          new Response(JSON.stringify({ title: "not found" }), {
-            status: 404,
-            headers: { "content-type": "application/json" },
-          })
-        );
+        return answers.vatCheck?.() ?? new Response(null, { status: 204 });
       }
       if (request.method === "PATCH") {
         return answers.patch?.() ?? json({});
@@ -298,7 +292,7 @@ describe("the legal identity a contact can state", () => {
           return json(meFixture({ allow: { company: ["read", "update"] } }));
         }
         if (url.pathname.endsWith("/vat-check")) {
-          return new Response(null, { status: 404 });
+          return new Response(null, { status: 204 });
         }
         return json({});
       }),

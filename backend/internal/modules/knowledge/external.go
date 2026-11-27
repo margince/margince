@@ -6,8 +6,8 @@ package knowledge
 // A document kept in step with its source: an extension files the source's
 // text under the id the source gave it. A second filing replaces the first,
 // and the same bytes again do nothing. The ingest is not touched. A replacement
-// swaps the bytes and requeues the row in one transaction, and the retry
-// protocol (BeginIngest deletes the earlier passages) swaps the passages.
+// swaps the bytes, retires the passages and requeues the row in one transaction.
+// The retry protocol (BeginIngest deletes the earlier passages) then swaps them.
 
 import (
 	"context"
@@ -283,7 +283,7 @@ func fileExternal(ctx context.Context, tx pgx.Tx, f externalFiling, queue QueueI
 	if oldStatus == "running" {
 		return "", "", &IngestBusyError{Filename: oldName}
 	}
-	if err := deleteChunksOf(ctx, tx, docID); err != nil {
+	if err := retireChunksOf(ctx, tx, docID); err != nil {
 		return "", "", err
 	}
 	if _, err := tx.Exec(ctx,

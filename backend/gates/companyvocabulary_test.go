@@ -28,13 +28,15 @@ package gates
 // covers most of a rule reads as covering all of it.
 //
 // The corpus comes from the index, so a new file is in scope automatically and
-// an untracked scratch file is not.
+// an untracked scratch file is not. One walk serves this record and the
+// contact, whose word and exemptions live in contactvocabulary_test.go.
 
 import (
 	"bytes"
 	"fmt"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 	"unicode/utf8"
@@ -130,6 +132,9 @@ var companyExempt = gatekit.Waive(map[string]string{
 	"backend/internal/modules/capture/graph/sharedmailbox_test.go": "Microsoft's multi-tenant authority aliases, which a shared mailbox's tenant must never be",
 	"docs/reference/connectors-and-sign-in.md":                     "the Microsoft authority aliases",
 
+	"backend/internal/platform/licensecheck/host.go":              "the license module's `org` wire key; Company is the application's name",
+	"backend/internal/platform/licensecheck/licensecheck_test.go": "the license module's `org` wire key",
+
 	"backend/internal/modules/contacts/companynamegate.go": "the .org TLD, in the stopword list that " +
 		"stops a brand written as its own domain from reducing to its suffix",
 
@@ -148,7 +153,7 @@ var companyExempt = gatekit.Waive(map[string]string{
 
 	"e2e/llm/testdata": "recorded model output — what a model actually said on a run, which " +
 		"editing would falsify",
-	"backend/gates/rlsclaimsprose_test.go": "its waiver keys quote shipped migrations verbatim, " +
+	"backend/gates/rlsclaims_test.go": "its waiver keys quote shipped migrations verbatim, " +
 		"and a shipped migration is never edited — the quote has to keep the word the SQL says",
 
 	"backend/internal/compose/auditlegacytype.go": "the word audit rows written before the\n		rename still carry. `trg_audit_no_mutate` refuses an UPDATE on audit_log, so those rows\n		keep it forever and the two reads that filter the trail by record type have to match it —\n		the file exists to say so once instead of twice",
@@ -170,45 +175,58 @@ var companyExempt = gatekit.Waive(map[string]string{
 	"backend/gates/companyvocabulary_test.go": "this file names the word in order to refuse it",
 })
 
-func TestTheRecordTypeIsCalledCompany(t *testing.T) {
+// recordNoun is one row: a record and the retired name the tree must not call
+// it by. Both rows read one walk of the index, each file once.
+type recordNoun struct {
+	record    string
+	pathNames func(path string) bool
+	lineNames func(line string) bool
+	// covers asks the row's exemptions, and only about a file that offends,
+	// so an entry whose path stopped offending is reported stale.
+	covers func(t *testing.T, path string) bool
+	// advice says what the line might be instead, and where to ratify it.
+	advice string
+}
+
+var recordNouns = []recordNoun{
+	{
+		record: "company", pathNames: pathNamesTheOtherWord, lineNames: namesTheOtherWord,
+		covers: exemptionCovers,
+		advice: "If this one is something else (a .org host, a meeting organizer, Microsoft's authority " +
+			"alias), add the path to companyExempt, with the reason.",
+	},
+	{
+		record: "contact", pathNames: pathNamesTheRetiredWord,
+		lineNames: func(line string) bool { return namesTheRetiredWord(beyondTheExemptions(line)) },
+		covers:    retirementCovers,
+		advice: "If this one is something else (a personal mail verdict, an in-person exchange, the seats " +
+			"settings group), add the path to retired, with the reason.",
+	},
+}
+
+func TestEachRecordIsCalledByItsName(t *testing.T) {
 	t.Parallel()
-	// Asked only about a file that offends, so an entry whose path stopped
-	// offending is reported stale instead of standing as a silent permission.
 	defer companyExempt.AssertAllMatched(t)
+	defer retired.AssertAllMatched(t)
 
 	read := 0
 	for _, f := range trackedFiles(t) {
 		if f.symlink || !readableAsText(f.path) {
 			continue
 		}
-		var offences []string
-		// The PATH says the word as loudly as the contents do, and a census
-		// that read only the contents let graphorgreach.go, csvorgwriter.go
-		// and linkedinorgplace.go through — three files whose bodies had been
-		// renamed and whose names had not.
-		if pathNamesTheOtherWord(f.path) {
-			offences = append(offences, f.path+" is NAMED for the record type's old name. It is called company.")
-		}
 		body, err := gatekit.ReadFile(filepath.Join(repoRoot, f.path))
 		if err != nil {
 			t.Fatalf("reading %s: %v", f.path, err)
 		}
+		var lines []string
 		if !binary(body) {
 			read++
-			for i, line := range strings.Split(string(body), "\n") {
-				if namesTheOtherWord(line) {
-					offences = append(offences, fmt.Sprintf("%s:%d calls the record type by its old name:\n\t%s\n"+
-						"It is called company. If this one is something else — a .org host, a meeting "+
-						"organizer, Microsoft's authority alias — add the path to companyExempt, with the reason.",
-						f.path, i+1, strings.TrimSpace(line)))
-				}
+			lines = strings.Split(string(body), "\n")
+		}
+		for _, noun := range recordNouns {
+			for _, offence := range noun.uncovered(t, f.path, lines) {
+				t.Error(offence)
 			}
-		}
-		if len(offences) == 0 || exemptionCovers(t, f.path) {
-			continue
-		}
-		for _, offence := range offences {
-			t.Error(offence)
 		}
 	}
 
@@ -218,6 +236,61 @@ func TestTheRecordTypeIsCalledCompany(t *testing.T) {
 		t.Fatalf("the census read %d files, too few to be this tree — a scan that comes up "+
 			"short reports the clean result it never looked for", read)
 	}
+	if len(humanSense()) < 50 {
+		t.Fatalf("the census derived %d human-sense sentences from the catalogs, too few to be "+
+			"the list record-noun.test.ts holds — a derivation that comes up short makes this "+
+			"gate louder, not quieter, and the next author turns it off", len(humanSense()))
+	}
+}
+
+// uncovered is the file's offences unless an exemption covers it. The
+// exemptions are asked only about an offending file.
+func (n recordNoun) uncovered(t *testing.T, path string, lines []string) []string {
+	offences := n.offences(path, lines)
+	if len(offences) == 0 || n.covers(t, path) {
+		return nil
+	}
+	return offences
+}
+
+// TestARecordNounAsksItsExemptionsOnlyAboutAnOffence plants a clean file and
+// an offending one. An exemption asked about a clean file would read as matched
+// and never go stale.
+func TestARecordNounAsksItsExemptionsOnlyAboutAnOffence(t *testing.T) {
+	t.Parallel()
+	for _, row := range recordNouns {
+		asked := []string{}
+		noun := row
+		noun.covers = func(_ *testing.T, path string) bool {
+			asked = append(asked, path)
+			return true
+		}
+		noun.uncovered(t, "clean.go", []string{"the record is called " + row.record})
+		// Spelled in parts, so this file holds neither retired name.
+		retiredName := map[string]string{"company": "or" + "gID := 1", "contact": "Per" + "sonID := 1"}[row.record]
+		noun.uncovered(t, "offends.go", []string{retiredName})
+		if !slices.Equal(asked, []string{"offends.go"}) {
+			t.Errorf("the %s row asked its exemptions about %v, want only offends.go", row.record, asked)
+		}
+	}
+}
+
+// offences names the file and each line that call the record by its retired
+// name. The PATH says it as loudly as the contents do: three files each had a
+// renamed body and an old name.
+func (n recordNoun) offences(path string, lines []string) []string {
+	var offences []string
+	if n.pathNames(path) {
+		offences = append(offences, fmt.Sprintf("%s is NAMED for the record's retired name. It is called %s.",
+			path, n.record))
+	}
+	for i, line := range lines {
+		if n.lineNames(line) {
+			offences = append(offences, fmt.Sprintf("%s:%d calls the record by its retired name:\n\t%s\n"+
+				"It is called %s. %s", path, i+1, strings.TrimSpace(line), n.record, n.advice))
+		}
+	}
+	return offences
 }
 
 // TestTheWordIsSeenAfterADot plants the dotted forms, because the exclusion

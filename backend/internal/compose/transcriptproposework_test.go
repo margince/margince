@@ -20,6 +20,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 	"github.com/riverqueue/river"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -149,7 +150,9 @@ func TestTheTranscriptOperationsAnswer501UntilAJobRunnerIsWired(t *testing.T) {
 	}{
 		{"start", func(w http.ResponseWriter, r *http.Request) { unwired.ReadTranscriptForNextSteps(w, r, id) }},
 		{"report", func(w http.ResponseWriter, r *http.Request) { unwired.GetTranscriptRead(w, r, id, id) }},
-		{"latest", func(w http.ResponseWriter, r *http.Request) { unwired.GetLatestTranscriptRead(w, r, id) }},
+		{"latest", func(w http.ResponseWriter, r *http.Request) {
+			unwired.GetLatestTranscriptRead(w, r, id, crmcontracts.GetLatestTranscriptReadParams{})
+		}},
 	} {
 		t.Run(tc.name, func(t *testing.T) {
 			rec := httptest.NewRecorder()

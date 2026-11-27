@@ -123,8 +123,8 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 		}
 	}
 	website := trimOptional(req.Profile.Website)
-	if website != nil && !parseableWebsite(*website) {
-		httperr.Write(w, r, httperr.Validation("profile.website", "invalid", "website must be a domain or an absolute http(s) URL"))
+	if website != nil && !values.PublicWebsite(*website) {
+		httperr.Write(w, r, httperr.Validation("profile.website", "invalid", "website must be a public domain or an absolute http(s) URL on one"))
 		return
 	}
 	company, unadoptedLogos, err := e.contacts.ConfirmCompanySiteRead(r.Context(), contacts.ConfirmCompanySiteReadInput{

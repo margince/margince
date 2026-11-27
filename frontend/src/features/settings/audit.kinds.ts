@@ -86,7 +86,6 @@ export const AUDIT_KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   lead_disqualify_reason: "audit.kind.lead_disqualify_reason",
   lead_origin: "audit.kind.lead_origin",
   lead_privacy_notice: "audit.kind.lead_privacy_notice",
-  lead_source: "audit.kind.lead_source",
   legal_entity: "audit.kind.legal_entity",
   legal_review: "audit.kind.legal_review",
   license: "audit.kind.license",

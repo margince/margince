@@ -401,6 +401,8 @@ export const SETTINGS_SECTIONS = {
       "operations.retention.label",
       "operations.geocode.label",
       "operations.technical.label",
+      "operations.captureCounterparty.label",
+      "operations.captureConfidentiality.label",
       "operations.gmailWatchScan.label",
       "operations.gmailWatchRenew.label",
       "operations.graphWatchScan.label",

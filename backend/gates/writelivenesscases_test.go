@@ -240,3 +240,19 @@ func TestTheLivenessCensusJudgesAWriteAndCreditsOnlyAnAnswer(t *testing.T) {
 		})
 	}
 }
+
+// A table is retirable when the catalog states an archived_at column on it. A
+// mention of the column in a CHECK makes no table retirable.
+func TestTheRetirableCensusReadsTheArchivedColumnFromTheCatalog(t *testing.T) {
+	t.Parallel()
+	model := buildCatalogModel([]string{
+		"public.ledger.id uuid NOT NULL gen=- def=gen_random_uuid()",
+		"public.ledger.ledger_open CHECK ((archived_at IS NULL))",
+		"public.journal.id uuid NOT NULL gen=- def=gen_random_uuid()",
+		"public.journal.archived_at timestamp with time zone gen=- def=-",
+	})
+	tables := model.schema.tablesWithColumn("archived_at", "")
+	if tables["ledger"] || !tables["journal"] || len(tables) != 1 {
+		t.Fatalf("retirable = %v, want journal only", tables)
+	}
+}

@@ -65,15 +65,6 @@ var byIDWriteOf = regexp.MustCompile(`(?is)\b(?:UPDATE|DELETE\s+FROM)\s+(?:ONLY\
 // livePredicate is the refusal written into the statement itself.
 var livePredicate = regexp.MustCompile(`(?i)archived_at\s+IS\s+NULL`)
 
-var (
-	// archivedColumnLine marks a CREATE TABLE block's table as retirable;
-	// addedArchivedColumn catches the tables that grew the column later. Both,
-	// because a census that read only one of them would judge a smaller tree and
-	// still report PASS.
-	archivedColumnLine  = regexp.MustCompile(`(?i)^\s*archived_at\s`)
-	addedArchivedColumn = regexp.MustCompile(`(?is)ALTER TABLE\s+(?:IF EXISTS\s+)?([a-z_]+).{0,400}?ADD COLUMN\s+(?:IF NOT EXISTS\s+)?archived_at`)
-)
-
 // livenessMarkers are the spellings that discharge the obligation in Go, by the
 // name at the call site. Both halves are here on purpose — a refusal and a
 // declaration are equally answers, and the gate's subject is a write that gives
@@ -111,9 +102,9 @@ var livenessMarkers = map[string]bool{
 // matches nothing.
 const byIDWriteFloor = 90
 
-// retirableTableFloor guards the other input. The table set is derived from the
-// migrations, and a derivation that silently read none of them would exempt
-// every write in the tree while reporting a clean run.
+// retirableTableFloor guards the other input, the table set read from the head
+// catalog. A reader that saw none of it would exempt every write in the tree
+// and report a clean run.
 const retirableTableFloor = 20
 
 // livenessUnstated ratifies a by-id write that neither refuses an archived row
@@ -222,47 +213,14 @@ var livenessUnstated = gatekit.Waive(map[string]string{
 })
 
 // retirableTables derives the set of tables that can hold an archived row from
-// the migration sources — every CREATE TABLE carrying archived_at, plus the
-// tables that grew the column in a later ALTER. Derived rather than listed, so
-// a table that becomes retirable widens this census on its own.
+// the head catalog: every table carrying archived_at. Derived rather than
+// listed, so a table that becomes retirable widens this census on its own.
 func retirableTables(t *testing.T) map[string]bool {
 	t.Helper()
-	tables := map[string]bool{}
-	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
-				return err
-			}
-			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
-			if err != nil {
-				return err
-			}
-			current := ""
-			for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
-				if m := createTableLine.FindStringSubmatch(line); m != nil {
-					current = m[1]
-					continue
-				}
-				if strings.HasPrefix(line, ");") {
-					current = ""
-					continue
-				}
-				if current != "" && archivedColumnLine.MatchString(line) {
-					tables[current] = true
-				}
-			}
-			for _, m := range addedArchivedColumn.FindAllStringSubmatch(string(raw), -1) {
-				tables[m[1]] = true
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
+	tables := parseHeadCatalog(t).tablesWithColumn("archived_at", "")
 	if len(tables) < retirableTableFloor {
-		t.Fatalf("derived only %d retirable tables from the migrations and expect at least %d — "+
-			"the derivation is broken, not the schema", len(tables), retirableTableFloor)
+		t.Fatalf("derived only %d retirable tables from %s and expect at least %d — "+
+			"the derivation is broken, not the schema", len(tables), headCatalogPath, retirableTableFloor)
 	}
 	return tables
 }

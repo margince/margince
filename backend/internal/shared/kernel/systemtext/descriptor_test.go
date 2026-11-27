@@ -14,9 +14,13 @@ import (
 )
 
 func TestCatalogRendersEveryDefinition(t *testing.T) {
-	phrases := make(map[string]langcopy.Phrase, len(catalog))
+	members, public := map[string]langcopy.Phrase{}, map[string]langcopy.Phrase{}
 	for code, definition := range catalog {
-		phrases[code] = definition.Words
+		if _, outside := publicDefinitions[code]; outside {
+			public[code] = definition.Words
+		} else {
+			members[code] = definition.Words
+		}
 		placeholders := 0
 		for _, verb := range langcopytest.Placeholders(definition.Words.En) {
 			if verb != "%%" {
@@ -46,7 +50,9 @@ func TestCatalogRendersEveryDefinition(t *testing.T) {
 			}
 		}
 	}
-	langcopytest.Census(t, phrases)
+	langcopytest.Census(t, members)
+	langcopytest.Census(t, public, langcopytest.Outsider(
+		"a booking guest, a web-form visitor or whoever opens a shared link reads it, signed in to no workspace"))
 }
 
 func TestBindingRetiresEditedComponents(t *testing.T) {

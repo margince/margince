@@ -45,6 +45,7 @@ func (h Handlers) MergeCompany(w http.ResponseWriter, r *http.Request, id crmcon
 func (h Handlers) ListCompanies(w http.ResponseWriter, r *http.Request, params crmcontracts.ListCompaniesParams) {
 	in := ListCompaniesInput{
 		Cursor:           params.Cursor,
+		Offset:           params.Offset,
 		Limit:            params.Limit,
 		Query:            params.Q,
 		IncludeArchived:  params.IncludeArchived != nil && *params.IncludeArchived,
@@ -183,10 +184,10 @@ func (h Handlers) ListCompanyProfileFields(w http.ResponseWriter, r *http.Reques
 // EU register answered, and the receipt for having asked. A company whose
 // number was never consulted is a 404 rather than an empty body: "never asked"
 // and "asked and told no" are different facts, and only one of them is evidence.
-func (h Handlers) GetCompanyVatCheck(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+func (h Handlers) GetCompanyVatCheck(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.GetCompanyVatCheckParams) {
 	check, err := h.store.VatCheckFor(r.Context(), pathID[ids.CompanyKind](id))
 	if errors.Is(err, ErrVatCheckNotRecorded) {
-		writeStoreErr(w, r, apperrors.ErrNotFound)
+		writeStoreErr(w, r, apperrors.ErrNothingYet)
 		return
 	}
 	if err != nil {

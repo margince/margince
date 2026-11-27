@@ -7,13 +7,14 @@ import { encode } from "uqr";
 import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { useArrivalFocus } from "../../design-system/arrivalfocus";
-import { Button, Modal } from "../../design-system/atoms";
+import { Button, Field, Modal, TextInput } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
 import {
   CopyableText,
   useClipboardCopy,
 } from "../../design-system/clipboardcopy";
 import { Heading } from "../../design-system/heading";
+import { usePasswordReveal } from "../../design-system/passwordreveal";
 import { useFieldFaults } from "../../design-system/savepage";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -23,6 +24,7 @@ import {
   problemMessageOf,
   unwrap,
 } from "../../lib/problem";
+import { problemCode } from "../../lib/problembody";
 import { enteredCode, MfaCodeField } from "./mfacode";
 import "./mfasetup.css";
 
@@ -45,6 +47,34 @@ const REFUSAL_COPY: Readonly<Record<CodeRefusal, MessageKey>> = {
 export function refusalCopy(refusal: CodeRefusal | null | undefined) {
   return refusal ? REFUSAL_COPY[refusal] : null;
 }
+
+/** Turning a factor on is authorized by the current password as well as the code. */
+type ConfirmRefusal =
+  | "wrong-code"
+  | "wrong-password"
+  | "locked"
+  | "too-many-passwords";
+
+// A 401 names the password or the code by its problem code; 429 is the password budget.
+function confirmRefusalOf(
+  status: number,
+  problem: unknown,
+): ConfirmRefusal | null {
+  if (status === 429) return "too-many-passwords";
+  if (status !== 401) return null;
+  const code = problemCode(problem);
+  if (code === "current_password_invalid") return "wrong-password";
+  if (code === "account_locked") return "locked";
+  return "wrong-code";
+}
+
+const PASSWORD_REFUSAL_COPY: Readonly<
+  Record<Exclude<ConfirmRefusal, "wrong-code">, MessageKey>
+> = {
+  "wrong-password": "password.currentWrong",
+  locked: "password.locked",
+  "too-many-passwords": "mfa.tooManyPasswords",
+};
 
 export function mfaFailureMessage(
   error: unknown,
@@ -189,18 +219,20 @@ export function useTotpStart() {
 export function useTotpConfirm() {
   const t = useT();
   const [code, setCode] = useState("");
+  const [password, setPassword] = useState("");
   const confirm = useMutation({
     gcTime: 0,
-    mutationFn: async (typed: string) => {
+    mutationFn: async (attempt: { password: string; code: string }) => {
       const result = await api.POST("/me/mfa/totp/confirm", {
-        body: { code: typed },
+        body: { current_password: attempt.password, code: attempt.code },
       });
-      const refusal = codeRefusalOf(result.response.status);
+      const refusal = confirmRefusalOf(result.response.status, result.error);
       if (refusal) return { refusal, codes: [] };
       return { refusal: null, codes: unwrap(result, t).recovery_codes };
     },
     onSuccess: (answer) => {
       if (answer.refusal === "wrong-code") setCode("");
+      if (answer.refusal === "wrong-password") setPassword("");
     },
   });
   const entered = enteredCode(code);
@@ -208,14 +240,19 @@ export function useTotpConfirm() {
     confirm,
     code,
     setCode,
+    password,
+    setPassword,
     entered,
     codes: confirm.data?.refusal === null ? confirm.data.codes : null,
     submit: () => {
-      if (entered !== "" && !confirm.isPending) confirm.mutate(entered);
+      if (entered !== "" && password !== "" && !confirm.isPending) {
+        confirm.mutate({ password, code: entered });
+      }
     },
     reset: () => {
       confirm.reset();
       setCode("");
+      setPassword("");
     },
   };
 }
@@ -241,7 +278,17 @@ export function MfaSetupSteps({
   const t = useT();
   const { locale } = useLocale();
   const [faults, faultsRoot] = useFieldFaults();
-  const refused = refusalCopy(flow.confirm.data?.refusal);
+  const reveal = usePasswordReveal({
+    show: t("auth.showPassword"),
+    hide: t("auth.hidePassword"),
+  });
+  const refusal = flow.confirm.data?.refusal;
+  const codeRefused =
+    refusal === "wrong-code" ? t("mfa.codeRefused") : undefined;
+  const passwordRefused =
+    refusal && refusal !== "wrong-code"
+      ? t(PASSWORD_REFUSAL_COPY[refusal])
+      : undefined;
   if (flow.codes) return <RecoveryCodes codes={flow.codes} />;
   if (!enrolment) {
     return (
@@ -262,6 +309,7 @@ export function MfaSetupSteps({
         event.preventDefault();
         const blank = blankRequired(locale, {
           code: [t("mfa.code"), flow.entered],
+          password: [t("password.current"), flow.password],
         });
         if (!faults.show(blank)) flow.submit();
       }}
@@ -281,13 +329,34 @@ export function MfaSetupSteps({
       <p>{t("mfa.signsOut")}</p>
       <MfaCodeField
         label={t("mfa.code")}
-        error={faults.of("code") ?? (refused ? t(refused) : undefined)}
+        error={faults.of("code") ?? codeRefused}
         value={flow.code}
         onChange={(next) => {
           flow.setCode(next);
           faults.edited("code");
         }}
       />
+      <Field
+        label={t("password.current")}
+        required
+        hint={t("mfa.passwordHint")}
+        error={faults.of("password") ?? passwordRefused}
+        trailing={reveal.trailing}
+      >
+        {(control) => (
+          <TextInput
+            {...control}
+            type={reveal.type}
+            name="current-password"
+            autoComplete="current-password"
+            value={flow.password}
+            onChange={(event) => {
+              flow.setPassword(event.target.value);
+              faults.edited("password");
+            }}
+          />
+        )}
+      </Field>
     </form>
   );
 }

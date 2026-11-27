@@ -507,27 +507,6 @@ func (e PublicEventLeadDisqualifyReasonChangedChange) Valid() bool {
 	}
 }
 
-// Defines values for PublicEventLeadSourceChangedChange.
-const (
-	PublicEventLeadSourceChangedChangeCreated PublicEventLeadSourceChangedChange = "created"
-	PublicEventLeadSourceChangedChangeDeleted PublicEventLeadSourceChangedChange = "deleted"
-	PublicEventLeadSourceChangedChangeUpdated PublicEventLeadSourceChangedChange = "updated"
-)
-
-// Valid indicates whether the value is a known member of the PublicEventLeadSourceChangedChange enum.
-func (e PublicEventLeadSourceChangedChange) Valid() bool {
-	switch e {
-	case PublicEventLeadSourceChangedChangeCreated:
-		return true
-	case PublicEventLeadSourceChangedChangeDeleted:
-		return true
-	case PublicEventLeadSourceChangedChangeUpdated:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for PublicEventRelationshipNudgeDecidedAction.
 const (
 	PublicEventRelationshipNudgeDecidedActionDismissed PublicEventRelationshipNudgeDecidedAction = "dismissed"
@@ -727,7 +706,6 @@ const (
 	LeadMerged                            SubscribableEventType = "lead.merged"
 	LeadPromoted                          SubscribableEventType = "lead.promoted"
 	LeadSlaBreached                       SubscribableEventType = "lead.sla_breached"
-	LeadSourceChanged                     SubscribableEventType = "lead_source.changed"
 	LeadUpdated                           SubscribableEventType = "lead.updated"
 	LegalReviewDecided                    SubscribableEventType = "legal_review.decided"
 	LegalReviewRequested                  SubscribableEventType = "legal_review.requested"
@@ -971,8 +949,6 @@ func (e SubscribableEventType) Valid() bool {
 	case LeadPromoted:
 		return true
 	case LeadSlaBreached:
-		return true
-	case LeadSourceChanged:
 		return true
 	case LeadUpdated:
 		return true
@@ -2267,7 +2243,7 @@ type PublicEventLeadDemoted struct {
 // PublicEventLeadDisqualified Payload for lead.disqualified — a lead was disqualified. Carries no data.
 type PublicEventLeadDisqualified struct{}
 
-// PublicEventLeadDisqualifyReasonChanged Payload for lead_disqualify_reason.changed. A disqualification reason was added, edited or removed (contacts/leaddisqualifyreason.go). It rides the lead stream for the same reason lead_source.changed does. A subscriber reporting on why leads were disqualified re-reads the catalog on this event. It carries `label` where the source event carries `key`, because a reason has no key. The label is its identity, and after `deleted` it is the only thing naming what went away.
+// PublicEventLeadDisqualifyReasonChanged Payload for lead_disqualify_reason.changed. A disqualification reason was added, edited or removed (contacts/leaddisqualifyreason.go). It rides the lead stream because every disqualified lead names its reason. A subscriber reporting on why leads were disqualified re-reads the catalog on this event. It carries `label` because a reason has no key. The label is its identity, and after `deleted` it is the only thing naming what went away.
 type PublicEventLeadDisqualifyReasonChanged struct {
 	Change PublicEventLeadDisqualifyReasonChangedChange `json:"change"`
 
@@ -2320,18 +2296,6 @@ type PublicEventLeadSlaBreached struct {
 	// OwnerId The lead's owner at breach time (absent when unrouted).
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 }
-
-// PublicEventLeadSourceChanged Deprecated: the lead source list no longer feeds the score, and a separate breaking change retires it. Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
-type PublicEventLeadSourceChanged struct {
-	Change PublicEventLeadSourceChangedChange `json:"change"`
-
-	// Key The stable key leads carry, which never changes for a given source.
-	Key      string             `json:"key"`
-	SourceId openapi_types.UUID `json:"source_id"`
-}
-
-// PublicEventLeadSourceChangedChange defines model for PublicEventLeadSourceChanged.Change.
-type PublicEventLeadSourceChangedChange string
 
 // PublicEventLeadUpdated Payload for lead.updated, an open envelope. Its emit sites carry different shapes. One is a flat column patch that includes runtime cf_* custom-field columns; others are behavioral-recompute and routing deltas. So the payload is a change-set map rather than a fixed field list.
 type PublicEventLeadUpdated struct {
@@ -3518,10 +3482,6 @@ func (PublicEventLeadSlaBreached) EventType() string { return "lead.sla_breached
 
 func (PublicEventLeadSlaBreached) EntityType() string { return "lead" }
 
-func (PublicEventLeadSourceChanged) EventType() string { return "lead_source.changed" }
-
-func (PublicEventLeadSourceChanged) EntityType() string { return "lead_source" }
-
 func (PublicEventLeadUpdated) EventType() string { return "lead.updated" }
 
 func (PublicEventLeadUpdated) EntityType() string { return "lead" }
@@ -3885,7 +3845,6 @@ var PublicEventVersions = map[string]int{
 	"lead.sla_breached":                         1,
 	"lead.updated":                              1,
 	"lead_disqualify_reason.changed":            1,
-	"lead_source.changed":                       1,
 	"legal_review.decided":                      1,
 	"legal_review.requested":                    1,
 	"legal_review.withdrawn":                    1,
@@ -4044,7 +4003,6 @@ var PublicEventSamples = map[string]string{
 	"lead.sla_breached":                         "{\"deadline\":\"2026-10-14T09:12:00Z\",\"escalation_target\":\"0190a7f2-0000-7000-8000-000000000010\",\"lead_name\":\"Sample lead name\",\"owner_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"lead.updated":                              "{\"changed_fields\":{}}",
 	"lead_disqualify_reason.changed":            "{\"change\":\"created\",\"label\":\"Sample label\",\"reason_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
-	"lead_source.changed":                       "{\"change\":\"created\",\"key\":\"Sample key\",\"source_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"legal_review.decided":                      "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"outcome\":\"Sample outcome\",\"review_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"legal_review.requested":                    "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"review_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",
 	"legal_review.withdrawn":                    "{\"deal_id\":\"0190a7f2-0000-7000-8000-000000000010\",\"review_id\":\"0190a7f2-0000-7000-8000-000000000010\"}",

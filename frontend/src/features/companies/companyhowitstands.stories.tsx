@@ -94,6 +94,18 @@ function render(read: Company360, finance: Record<string, unknown> = paying) {
 
 export const Standing: Story = { render: render(view([wrote])) };
 
+// The status line the newest mail wrote, in place of the account's own reading.
+export const WithStatusLine: Story = {
+  render: render({
+    ...view([wrote]),
+    standing_line: {
+      text: "Jonas Keller wrote on 24 November that the shift leads signed off the rota export, so the acceptance follows this week.",
+      activity_ids: ["a-1"],
+      written_at: "2026-11-24T10:00:00Z",
+    },
+  }),
+};
+
 // A visit logged by its day alone, on the day the page was read. It has
 // begun by the morning read, and its stop names the day without a clock.
 export const DayOnlyVisit: Story = {

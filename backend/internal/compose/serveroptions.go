@@ -54,6 +54,7 @@ func WithOperatorMail(m mailer.Mailer) Option {
 		s.controllerRelay = newMailerRelay(m)
 		s.rewireConfirmationLane(pool)
 		s.erasureReturnHandlers = s.WithMail(m)
+		s.noticesHandlers = s.WithEmailDelivery()
 	}
 }
 

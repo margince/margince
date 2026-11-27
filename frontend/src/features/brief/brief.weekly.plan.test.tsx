@@ -16,7 +16,7 @@ afterEach(() => {
 
 function stubWeeks() {
   stubApi({
-    "GET /weekly-reviews/latest": () => jsonResponse(null, 404),
+    "GET /weekly-reviews/latest": () => new Response(null, { status: 204 }),
     "GET /weekly-reviews": () =>
       jsonResponse({ weeks: ["2026-06-29", "2026-06-22"] }),
   });

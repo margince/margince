@@ -73,7 +73,7 @@ env:
 jobs:
   # Classify the diff so a change runs only the checks it can affect — a
   # frontend-only PR skips the Go build/gate + the integration shard fleet, a
-  # backend-only PR skips the frontend + UAT lanes, and a docs-only PR skips
+  # backend-only PR skips the frontend + `uat` lanes, and a docs-only PR skips
   # everything. Draft PRs run nothing until marked ready (the swarm pushes many
   # WIP commits). A required job skipped this way counts as passing.
   #   backend  = Go/DB + the gate inputs (backend, the dev compose stack,
@@ -83,7 +83,7 @@ jobs:
   #              DOES, which is why the compose stack is in the narrower
   #              backend_db below and the prose about it is not.
   #   frontend = frontend/ + backend/api (the contract drives FE types) —
-  #              gates the frontend lane + UAT
+  #              gates the frontend lane + `uat`
   #   e2e      = backend/ + frontend/ + the dev compose stack — gates the
   #              full-stack live-boot
   changes:
@@ -515,8 +515,9 @@ jobs:
         with:
           persist-credentials: false
           # Every commit and ref, for the gates that diff against the merge base
-          # with origin/main (contract-breaking, migration-versions, pkg-freeze,
-          # citations) and the RBAC gate that reads a fixture at an old commit.
+          # with origin/main (contract-breaking, migration-versions,
+          # style-baseline-shrinks, pkg-freeze, citations) and the RBAC gate
+          # that reads a fixture at an old commit.
           # Blobless: only HEAD's files come down, and git fetches an old file
           # the first time a gate asks for it.
           fetch-depth: 0
@@ -561,6 +562,7 @@ jobs:
           # In CI a missing base ref is a broken checkout, never a skip.
           CONTRACT_BREAKING_REQUIRE_BASE: "1"
           MIGRATION_VERSIONS_REQUIRE_BASE: "1"
+          STYLE_BASELINE_REQUIRE_BASE: "1"
           CITATION_SCOPE_REQUIRE_BASE: "1"
           # A migration baseline consolidation reuses a namespace's lowest
           # versions under new names, which check-migration-versions.sh cannot
@@ -1527,6 +1529,7 @@ jobs:
       contents: read
     defaults:
       run:
+        shell: bash
         working-directory: .
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

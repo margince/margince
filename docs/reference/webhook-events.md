@@ -129,7 +129,6 @@ Every delivery with the standard body is this envelope, with the event's own fie
 | [`lead.sla_breached`](#leadsla_breached) | lead | 1 |
 | [`lead.updated`](#leadupdated) | lead | 1 |
 | [`lead_disqualify_reason.changed`](#lead_disqualify_reasonchanged) | lead_disqualify_reason | 1 |
-| [`lead_source.changed`](#lead_sourcechanged) | lead_source | 1 |
 | [`legal_review.decided`](#legal_reviewdecided) | legal_review | 1 |
 | [`legal_review.requested`](#legal_reviewrequested) | legal_review | 1 |
 | [`legal_review.withdrawn`](#legal_reviewwithdrawn) | legal_review | 1 |
@@ -1229,25 +1228,13 @@ Payload for lead.updated, an open envelope. Its emit sites carry different shape
 
 Record: `lead_disqualify_reason` · version 1
 
-Payload for lead_disqualify_reason.changed. A disqualification reason was added, edited or removed (contacts/leaddisqualifyreason.go). It rides the lead stream for the same reason lead_source.changed does. A subscriber reporting on why leads were disqualified re-reads the catalog on this event. It carries `label` where the source event carries `key`, because a reason has no key. The label is its identity, and after `deleted` it is the only thing naming what went away.
+Payload for lead_disqualify_reason.changed. A disqualification reason was added, edited or removed (contacts/leaddisqualifyreason.go). It rides the lead stream because every disqualified lead names its reason. A subscriber reporting on why leads were disqualified re-reads the catalog on this event. It carries `label` because a reason has no key. The label is its identity, and after `deleted` it is the only thing naming what went away.
 
 | Field | Type | Always present | What it is |
 |---|---|---|---|
 | `data.change` | string: `created`, `updated`, `deleted` | yes |  |
 | `data.label` | string | yes | The reason's label, which is its only identifier. |
 | `data.reason_id` | string (uuid) | yes |  |
-
-### `lead_source.changed`
-
-Record: `lead_source` · version 1
-
-Deprecated: the lead source list no longer feeds the score, and a separate breaking change retires it. Payload for lead_source.changed. A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because every lead carries a source value. A subscriber that renders or groups by source re-reads the catalog on this event. The payload carries `key` and not `label`. The key is what leads carry and what a subscriber keys its own cache by. It is also the only thing left to identify the entry once `deleted` has removed it. The label is mutable and still readable while the entry exists. Publishing it here would invite a subscriber to trust a copy that can go stale.
-
-| Field | Type | Always present | What it is |
-|---|---|---|---|
-| `data.change` | string: `created`, `updated`, `deleted` | yes |  |
-| `data.key` | string | yes | The stable key leads carry, which never changes for a given source. |
-| `data.source_id` | string (uuid) | yes |  |
 
 ### `legal_review.decided`
 

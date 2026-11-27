@@ -132,8 +132,8 @@ func (l *leadMailEnv) importedLead(t *testing.T, address string) ids.LeadID {
 	var run ids.UUID
 	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
-			INSERT INTO import_run (connector, status, mapping, source_ref, source, captured_by)
-			VALUES ('csv', 'running', '{}'::jsonb, 'leads.csv', 'upload', 'human:test') RETURNING id`).Scan(&run)
+			INSERT INTO import_run (connector, status, mapping, source_ref, captured_by)
+			VALUES ('csv', 'running', '{}'::jsonb, 'leads.csv', 'human:test') RETURNING id`).Scan(&run)
 	}); err != nil {
 		t.Fatalf("opening the import run: %v", err)
 	}

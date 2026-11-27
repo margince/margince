@@ -12,6 +12,7 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/config/configtest"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -62,7 +63,7 @@ func TestAHiddenContactCaseAnswersLikeNoCase(t *testing.T) {
 		t.Helper()
 		w := httptest.NewRecorder()
 		r := httptest.NewRequestWithContext(rep, http.MethodGet, "/v1/dedupe/contact-cases/"+contact.String(), nil)
-		handlers.GetContactCase(w, r, openapi_types.UUID(contact))
+		handlers.GetContactCase(w, r, openapi_types.UUID(contact), crmcontracts.GetContactCaseParams{})
 		return w
 	}
 	if w := get(visible); w.Code != http.StatusOK {

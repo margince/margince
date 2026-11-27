@@ -33,6 +33,25 @@ export const Default: Story = {
   },
 };
 
+// On a week the cards still read the quarter and say so; Share view says it
+// waits for the quarter, and Shared links stays.
+export const OnAWeek: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes(forecastEvaluation),
+      "GET /me": meRoute({
+        report_definition: ["read"],
+        forecast: ["read", "create"],
+      }),
+    });
+    return (
+      <StoryProviders>
+        <ReportingForecastGraphs scope={reportingStoryScope} period="week" />
+      </StoryProviders>
+    );
+  },
+};
+
 export const CollectingHistory: Story = {
   render: () => {
     const evaluation = {

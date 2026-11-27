@@ -148,7 +148,7 @@ function stubApi(
         });
       }
       if (path.endsWith("/onboarding/state") && request.method === "GET") {
-        return jsonResponse({ detail: "not started" }, 404);
+        return new Response(null, { status: 204 });
       }
       if (path.endsWith("/onboarding/state") && request.method === "PUT") {
         if (!wizardStateWritable) {
@@ -209,7 +209,7 @@ function stubApi(
         return jsonResponse(meFixture());
       }
       if (path.endsWith("/company") && request.method === "GET") {
-        return jsonResponse({ detail: "no company yet" }, 404);
+        return new Response(null, { status: 204 });
       }
       throw new Error(`unstubbed request: ${request.method} ${request.url}`);
     }),

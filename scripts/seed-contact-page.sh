@@ -196,7 +196,7 @@ log_activity() { # log_activity <contact-id> <kind> <direction|""> <subject> <bo
   status="$(api POST /activities "$(jq -n --arg k "$kind" --arg d "$direction" --arg s "$subject" \
     --arg b "$body" --arg o "$when" --arg p "$contact" \
     '{kind:$k,subject:$s,body:$b,occurred_at:$o,
-      links:[{entity_type:"contact",entity_id:$p}],source:"seed"}
+      links:[{entity_type:"contact",entity_id:$p}],source:"api"}
      + (if $d == "" then {} else {direction:$d} end)')")"
   [[ "$status" = "201" ]] || { cat "$workdir/body" >&2; fail "capture \"$label\" returned HTTP $status"; }
   echo "  OK: captured \"$label\""

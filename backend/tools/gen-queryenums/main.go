@@ -66,7 +66,7 @@ func main() {
 	if err != nil {
 		log.Fatalf("gen-queryenums: %v", err)
 	}
-	formatted, err := format.Source([]byte(render(table) + notices))
+	formatted, err := format.Source([]byte(render(table) + notices + renderAbsentPreference(doc)))
 	if err != nil {
 		log.Fatalf("gen-queryenums: formatting the generated table: %v", err)
 	}
@@ -348,4 +348,31 @@ func renderDeprecations(doc *openapi3.T) (string, error) {
 	}
 	out.WriteString("}\n")
 	return out.String(), nil
+}
+
+// absentPreferenceHeader is the request header an operation declares to take
+// the absent preference.
+const absentPreferenceHeader = "Prefer"
+
+// renderAbsentPreference lists the operations that declare the Prefer header,
+// the ones whose nothing-yet 404 a client may ask to hear as 204.
+func renderAbsentPreference(doc *openapi3.T) string {
+	var routes []string
+	for path, item := range doc.Paths.Map() {
+		for method, op := range item.Operations() {
+			for _, param := range append(item.Parameters, op.Parameters...) {
+				if param.Value != nil && param.Value.In == openapi3.ParameterInHeader && param.Value.Name == absentPreferenceHeader {
+					routes = append(routes, method+" "+httpserver.BaseURL+path)
+				}
+			}
+		}
+	}
+	sort.Strings(routes)
+	var out strings.Builder
+	out.WriteString("\nvar absentPreferenceRoutes = map[string]bool{\n")
+	for _, route := range routes {
+		fmt.Fprintf(&out, "%q: true,\n", route)
+	}
+	out.WriteString("}\n")
+	return out.String()
 }

@@ -157,7 +157,7 @@ func TestAnInvoiceFromAReplacedConnectionIsNotFound(t *testing.T) {
 		successor, fixtureProviderName)
 	// The package shares one database, and every later test reads the newest connection.
 	t.Cleanup(func() {
-		a.ownerExec(t, `UPDATE finance_connection SET archived_at = now() WHERE id = $1`, successor)
+		a.ownerExec(t, `UPDATE finance_connection SET status = 'disconnected' WHERE id = $1`, successor)
 	})
 
 	expect(t, download(a.documentReader(principal.RowScopeAll), a.handlers, ids.UUID(invoice.Id)),

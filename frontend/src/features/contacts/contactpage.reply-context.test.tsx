@@ -50,7 +50,7 @@ it("drafts a recommended follow-up against the cited message instead of the cont
           id: "a-1",
           subject: "Lieferumfang",
         }),
-      "GET /mail-drafts": () => jsonResponse({ code: "not_found" }, 404),
+      "GET /mail-drafts": () => new Response(null, { status: 204 }),
       "POST /activities/a-1/draft-email": replied,
       "POST /contacts/p-1/draft-email": newMail,
     },
@@ -110,7 +110,7 @@ it.each([true, false])(
               },
             ],
           }),
-        "GET /mail-drafts": () => jsonResponse({ code: "not_found" }, 404),
+        "GET /mail-drafts": () => new Response(null, { status: 204 }),
         "POST /activities/older/draft-email": replied,
         "POST /contacts/p-1/draft-email": newMail,
       },
@@ -139,7 +139,7 @@ it("plain Email does not generate even while a recommendation is visible", async
   mount("overview", { ...view, moment: quietMoment }, [], {
     "POST /contacts/p-1/draft-email": generated,
     "POST /activities/a-1/draft-email": generated,
-    "GET /mail-drafts": () => jsonResponse({ code: "not_found" }, 404),
+    "GET /mail-drafts": () => new Response(null, { status: 204 }),
   });
   await user.click(await screen.findByRole("button", { name: "Email" }));
   await screen.findByLabelText(englishCopy["compose.newIntent"]);

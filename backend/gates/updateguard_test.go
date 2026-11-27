@@ -66,51 +66,13 @@ var whereClause = regexp.MustCompile(`(?is)\bWHERE\b(.*)$`)
 // then matches nothing.
 const byIDUpdateFloor = 250
 
-var (
-	// createTableLine opens a CREATE TABLE block; versionColumnLine marks
-	// the block's table as optimistic-locking. Line-based on purpose:
-	// column definitions nest parentheses (generated tsvector columns)
-	// beyond what a block regex can pair.
-	createTableLine   = regexp.MustCompile(`(?i)^\s*CREATE TABLE (?:IF NOT EXISTS )?([a-z_]+)\s*\(`)
-	versionColumnLine = regexp.MustCompile(`(?i)^\s*version\s+bigint`)
-)
-
-// versionedTables derives the set of optimistic-locking tables from the
-// migration sources: any CREATE TABLE whose columns include "version".
+// versionedTables derives the set of optimistic-locking tables from the head
+// catalog: every table carrying a bigint version column.
 func versionedTables(t *testing.T) map[string]bool {
 	t.Helper()
-	tables := map[string]bool{}
-	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
-				return err
-			}
-			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
-			if err != nil {
-				return err
-			}
-			current := ""
-			for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
-				if m := createTableLine.FindStringSubmatch(line); m != nil {
-					current = m[1]
-					continue
-				}
-				if strings.HasPrefix(line, ");") {
-					current = ""
-					continue
-				}
-				if current != "" && versionColumnLine.MatchString(line) {
-					tables[current] = true
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
+	tables := parseHeadCatalog(t).tablesWithColumn("version", "bigint")
 	if len(tables) < 10 {
-		t.Fatalf("derived only %d versioned tables from migrations — the derivation is broken, not the schema", len(tables))
+		t.Fatalf("derived only %d versioned tables from %s — the derivation is broken, not the schema", len(tables), headCatalogPath)
 	}
 	return tables
 }
@@ -135,58 +97,60 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:clearActivityContent":         "terminal erasure empties the activity regardless of concurrent content changes; preserving a competing value would retain the erased content",
 	"internal/modules/assurance:recordReadThrough": "the pass sets one column on the run row it inserted in the same transaction, " +
 		"under the assurance pass lock, so no other writer can hold that row",
-	"internal/modules/contacts:DisqualifyLead":             "readDisqualifiableLead locks this live lead with storekit.LockRow and checks its optional version pin before the update, in the same leadWrite transaction; the preview shares that reader",
-	"internal/modules/privacy:EraseUntoldLeadTx":           "terminal absolute write: empties the accepted proposal of a website lead whose notice failed, regardless of concurrent state, as the Art. 17 eraser empties a decided approval",
-	"internal/modules/collections:archiveSavedViewTx":      "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
-	"internal/modules/collections:ArchiveTag":              "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
-	"internal/modules/contacts:absorbCompanyReferences":    "runs under the merge pair lock (storekit.LockPair on both company rows) taken by MergeCompany",
-	"internal/modules/contacts:bindSiteReadLogo":           "the bind is conditioned on logo_object_key IS NULL AND archived_at IS NULL, and ErrNoRows means the record already wears a mark or was archived, which releases the parked object instead",
-	"internal/modules/deals:markLadderChanged":             "runs only under its callers' lock on the same pipeline row — lockLadder (FOR NO KEY UPDATE), one hop past what this witness's AST walk follows — and the write is the version bump itself, which no version could guard",
-	"internal/modules/deals:movePipeline":                  "runs only inside ReorderPipelines, under lockCatalog's FOR UPDATE on every live pipeline, taken in id order before any move",
-	"internal/modules/deals:recomputeOfferTotals":          "every caller holds the offer row lock via visibleOfferLocked, except createOfferTx where the offer row was inserted in the same transaction",
-	"internal/modules/privacy:archiveLead":                 "terminal absolute write: the retention sweep archives an over-age unconverted lead regardless of concurrent state, by design; archived_at IS NULL keeps a second pass from restamping it",
-	"internal/modules/webforms:retireForm":                 "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived (intake stops at archive)",
-	"internal/modules/webhooks:ArchiveSubscription":        "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived (delivery stops at archive)",
-	"internal/compose/briefs:writeRunNarrative":            "the run's narrative, written under the FOR UPDATE briefannotate.go takes on that day's run before it composes one, so two passes reaching one rep's morning are ordered by it",
-	"internal/compose/briefs:applyBriefMark":               "lockItemForMark reads the queue item FOR UPDATE and this fills it in, so the state the mark validated is the state it writes over",
-	"internal/compose/briefs:MarkUnsnoozed":                "the unsnooze clears what the snooze set, to constants: state, state_at, snoozed_until and the reopen stamp are assigned outright, so two passes waking one item write the same row",
-	"internal/modules/agents/runner:FinishJob":             "the job was claimed by this worker under ClaimDueJobs' FOR UPDATE SKIP LOCKED, so no second worker holds it to finish",
-	"internal/modules/agents/runner:MarkFailed":            "the run belongs to the job this worker claimed under FOR UPDATE SKIP LOCKED, and a run nobody else holds cannot be settled twice",
-	"internal/modules/agents/runner:SaveOutcome":           "the same claimed run as MarkFailed, and the statement's own comment states that a correction of a settled run is a new attempt rather than an edit of this one",
-	"internal/modules/consent:setNoticeCaseOwner":          "lockNoticeCase reads the case FOR UPDATE first, which the file names as what orders two owners arriving together",
-	"internal/modules/consent:ExcuseNoticeCase":            "the excuse path takes the same lockNoticeCase FOR UPDATE before deciding, so the state it validated is the state it writes",
-	"internal/modules/consent:markResolvedTx":              "the submission is held FOR UPDATE by the review that decides it, so the resolution it writes is the one it read",
-	"internal/modules/consent:applyDSRUpdateTx":            "every column coalesces onto the row's own value, so a field this caller did not set keeps what the row holds rather than what this caller last read",
-	"internal/modules/contacts:recordSiteReadConfirmation": "the confirmation rides the company lock the scan took before reading what to confirm",
-	"internal/modules/contacts:collapseGroup":              "the re-normalizer locks its grouping FOR UPDATE before deciding which rows collapse (holdsItsGrouping), which is the lock an interleaved import waits on; that lock is why a sweep can no longer delete a row that stopped being a duplicate",
-	"internal/modules/dealrooms:revokeTx":                  "revoked_at = now() on a seat the caller holds, and a seat revoked twice is revoked; the stamp carries no state read beforehand",
-	"internal/modules/identity:OperatorResetPassword":      "the operator reset writes a hash it just computed and clears the lockout counters to constants, under the app_user row the reset path holds",
-	"internal/modules/integrations:cancelWithdrawn":        "leaseForSubmit holds the run FOR UPDATE from the top of the transaction, and this is the branch it takes when the grant was withdrawn before anything was sent",
-	"internal/modules/integrations:parkUnknown":            "the same lease's FOR UPDATE; parking a run whose submission is unknown is the settle branch of the transaction that took it",
-	"internal/modules/integrations:recordRefusal":          "settled under the lease's FOR UPDATE on provider_run, which the settle re-reads (SELECT state ... FOR UPDATE) before the refusal is written",
-	"internal/modules/integrations:recordSubmission":       "the same settle lock: the run is re-read FOR UPDATE before the provider's job id is recorded against it",
-	"internal/modules/integrations:writeClaimsInline":      "the inline write runs under the claim lock the handoff took, and assigns next_attempt_at and applied_at outright",
-	"internal/modules/integrations:terminalize":            "the poll settles a run it holds FOR UPDATE, to terminal constants",
-	"internal/modules/integrations:markSkipped":            "a run skipped before it ran, under the lock the selector took to decide that",
-	"internal/modules/privacy:Update":                      "the retention policy is read FOR UPDATE by the caller that edits it",
-	"internal/modules/integrations:bumpClaimAttempt":       "attempt_count = attempt_count + 1 is the read and the write in one statement, so the database orders two bumps and no count is read into Go to be written back; the backoff that follows is computed from the returned value",
-	"internal/modules/capture:MarkWithheldFromWorkspaceTx": "withheld_from_workspace = true is a one-way constant, and withholding twice withholds",
-	"internal/modules/comms:ClearPayloadRef":               "payload_ref = NULL after the vault entry is already destroyed, and one clearing is one clearing; the order is what the file explains",
-	"internal/modules/identity:resetLockoutStreak":         "failed_login_count = 0 and locked_until = NULL on a successful sign-in are constants, and two sign-ins clearing one lockout clear it once",
-	"internal/modules/identity:countFailure":               "every caller reads the streak it folds under its own app_user FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), one hop past what this witness's AST walk follows",
-	"internal/modules/integrations:applyOneStored":         "applied_at = now() marks one stored row as applied, and the selector that chose it will not choose it again",
-	"internal/modules/integrations:discardClaims":          "claims_unwritten = true and next_attempt_at = NULL are constants naming what the run could not do, not a state this caller read",
-	"internal/modules/knowledge:replacePage":               "the handbook seeder replaces a page with the file it just read, which is the source of truth rather than a value read from this row",
-	"internal/modules/migration:failRun":                   "error = $2 is the failure that just happened, and nothing was read from the row to compute it",
-	"internal/modules/migration:storeReport":               "report = $2 is the report the run just produced, written once at the end of it",
-	"internal/modules/capture:MarkEchoed":                  "echoed_at = now() on the sent row, with user_id beside the id as a second key; a probe echoed twice is echoed",
-	"internal/modules/contacts:foldGhostInto":              "the fold coalesces every column onto the survivor's own value in SQL, so the new value is computed from the two rows as the statement sees them rather than from a value read into Go; the grouping is held FOR UPDATE by holdsItsGrouping first",
-	"internal/modules/dealrooms:touchSession":              "last_seen_at = now() on a session the visitor already holds, with room_id beside the id as a second key",
-	"internal/modules/identity:SaveMyLocale":               "the member writes their own locale under the live-member predicate that keeps a retired seat from writing at all, and the value is what they chose rather than a state read from the row",
-	"internal/modules/knowledge:ArchiveCorpus":             "archived_at = now() on the corpus and, set-based, on its chunks and documents; a corpus archived twice is archived",
-	"internal/modules/knowledge:setReindexing":             "the reindex flag is the value the caller chose rather than one it read, and the liveness predicate beside the id only keeps an archived corpus from being marked",
-	"internal/modules/contacts:touchChildSetParent":        "the aggregate bump after a child row of the record was written or taken away. The callers hold the row, FOR UPDATE or through the write authority probe of the path that called, and a revert may reach an ARCHIVED contact, so the guard is the caller's lock rather than a second one here",
-	"internal/modules/privacy:redactSignals":               "terminal absolute write: an erasure empties the personal members of a signal whatever a concurrent edit did, as the eraser empties an approval it is destroying",
+	"internal/modules/contacts:DisqualifyLead":                 "readDisqualifiableLead locks this live lead with storekit.LockRow and checks its optional version pin before the update, in the same leadWrite transaction; the preview shares that reader",
+	"internal/modules/privacy:EraseUntoldLeadTx":               "terminal absolute write: empties the accepted proposal of a website lead whose notice failed, regardless of concurrent state, as the Art. 17 eraser empties a decided approval",
+	"internal/modules/collections:archiveSavedViewTx":          "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
+	"internal/modules/collections:ArchiveTag":                  "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived",
+	"internal/modules/contacts:absorbCompanyReferences":        "runs under the merge pair lock (storekit.LockPair on both company rows) taken by MergeCompany",
+	"internal/modules/contacts:bindSiteReadLogo":               "the bind is conditioned on logo_object_key IS NULL AND archived_at IS NULL, and ErrNoRows means the record already wears a mark or was archived, which releases the parked object instead",
+	"internal/modules/deals:markLadderChanged":                 "runs only under its callers' lock on the same pipeline row — lockLadder (FOR NO KEY UPDATE), one hop past what this witness's AST walk follows — and the write is the version bump itself, which no version could guard",
+	"internal/modules/deals:movePipeline":                      "runs only inside ReorderPipelines, under lockCatalog's FOR UPDATE on every live pipeline, taken in id order before any move",
+	"internal/modules/deals:recomputeOfferTotals":              "every caller holds the offer row lock via visibleOfferLocked, except createOfferTx where the offer row was inserted in the same transaction",
+	"internal/modules/privacy:archiveLead":                     "terminal absolute write: the retention sweep archives an over-age unconverted lead regardless of concurrent state, by design; archived_at IS NULL keeps a second pass from restamping it",
+	"internal/modules/webforms:retireForm":                     "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived (intake stops at archive)",
+	"internal/modules/webhooks:ArchiveSubscription":            "absolute idempotent archive transition; the RETURNING + archived_at IS NULL predicate makes a lost race read as already archived (delivery stops at archive)",
+	"internal/compose/briefs:writeRunNarrative":                "the run's narrative, written under the FOR UPDATE briefannotate.go takes on that day's run before it composes one, so two passes reaching one rep's morning are ordered by it",
+	"internal/compose/briefs:applyBriefMark":                   "lockItemForMark reads the queue item FOR UPDATE and this fills it in, so the state the mark validated is the state it writes over",
+	"internal/compose/briefs:MarkUnsnoozed":                    "the unsnooze clears what the snooze set, to constants: state, state_at, snoozed_until and the reopen stamp are assigned outright, so two passes waking one item write the same row",
+	"internal/modules/agents/runner:FinishJob":                 "the job was claimed by this worker under ClaimDueJobs' FOR UPDATE SKIP LOCKED, so no second worker holds it to finish",
+	"internal/modules/agents/runner:MarkFailed":                "the run belongs to the job this worker claimed under FOR UPDATE SKIP LOCKED, and a run nobody else holds cannot be settled twice",
+	"internal/modules/agents/runner:SaveOutcome":               "the same claimed run as MarkFailed, and the statement's own comment states that a correction of a settled run is a new attempt rather than an edit of this one",
+	"internal/modules/consent:setNoticeCaseOwner":              "lockNoticeCase reads the case FOR UPDATE first, which the file names as what orders two owners arriving together",
+	"internal/modules/consent:ExcuseNoticeCase":                "the excuse path takes the same lockNoticeCase FOR UPDATE before deciding, so the state it validated is the state it writes",
+	"internal/modules/consent:markResolvedTx":                  "the submission is held FOR UPDATE by the review that decides it, so the resolution it writes is the one it read",
+	"internal/modules/consent:applyDSRUpdateTx":                "every column coalesces onto the row's own value, so a field this caller did not set keeps what the row holds rather than what this caller last read",
+	"internal/modules/contacts:recordSiteReadConfirmation":     "the confirmation rides the company lock the scan took before reading what to confirm",
+	"internal/modules/contacts:collapseGroup":                  "the re-normalizer locks its grouping FOR UPDATE before deciding which rows collapse (holdsItsGrouping), which is the lock an interleaved import waits on; that lock is why a sweep can no longer delete a row that stopped being a duplicate",
+	"internal/modules/dealrooms:revokeTx":                      "revoked_at = now() on a seat the caller holds, and a seat revoked twice is revoked; the stamp carries no state read beforehand",
+	"internal/modules/identity:OperatorResetPassword":          "the operator reset writes a hash it just computed and clears the lockout counters to constants, under the app_user row the reset path holds",
+	"internal/modules/integrations:cancelWithdrawn":            "leaseForSubmit holds the run FOR UPDATE from the top of the transaction, and this is the branch it takes when the grant was withdrawn before anything was sent",
+	"internal/modules/integrations:parkUnknown":                "the same lease's FOR UPDATE; parking a run whose submission is unknown is the settle branch of the transaction that took it",
+	"internal/modules/integrations:recordRefusal":              "settled under the lease's FOR UPDATE on provider_run, which the settle re-reads (SELECT state ... FOR UPDATE) before the refusal is written",
+	"internal/modules/integrations:recordSubmission":           "the same settle lock: the run is re-read FOR UPDATE before the provider's job id is recorded against it",
+	"internal/modules/integrations:writeClaimsInline":          "the inline write runs under the claim lock the handoff took, and assigns next_attempt_at and applied_at outright",
+	"internal/modules/integrations:terminalize":                "the poll settles a run it holds FOR UPDATE, to terminal constants",
+	"internal/modules/integrations:markSkipped":                "a run skipped before it ran, under the lock the selector took to decide that",
+	"internal/modules/privacy:Update":                          "the retention policy is read FOR UPDATE by the caller that edits it",
+	"internal/modules/integrations:bumpClaimAttempt":           "attempt_count = attempt_count + 1 is the read and the write in one statement, so the database orders two bumps and no count is read into Go to be written back; the backoff that follows is computed from the returned value",
+	"internal/modules/capture:MarkWithheldFromWorkspaceTx":     "withheld_from_workspace = true is a one-way constant, and withholding twice withholds",
+	"internal/modules/comms:ClearPayloadRef":                   "payload_ref = NULL after the vault entry is already destroyed, and one clearing is one clearing; the order is what the file explains",
+	"internal/modules/identity:resetLockoutStreak":             "failed_login_count = 0 and locked_until = NULL on a successful sign-in are constants, and two sign-ins clearing one lockout clear it once",
+	"internal/modules/identity:countFailure":                   "every caller reads the streak it folds under its own app_user FOR UPDATE in the same transaction (recordFailedLogin, recordFailedChange, lockSecondFactorStreak), one hop past what this witness's AST walk follows",
+	"internal/modules/integrations:applyOneStored":             "applied_at = now() marks one stored row as applied, and the selector that chose it will not choose it again",
+	"internal/modules/integrations:discardClaims":              "claims_unwritten = true and next_attempt_at = NULL are constants naming what the run could not do, not a state this caller read",
+	"internal/modules/knowledge:replacePage":                   "the handbook seeder replaces a page with the file it just read, which is the source of truth rather than a value read from this row",
+	"internal/modules/migration:failRun":                       "error = $2 is the failure that just happened, and nothing was read from the row to compute it",
+	"internal/modules/migration:storeReport":                   "report = $2 is the report the run just produced, written once at the end of it",
+	"internal/modules/capture:MarkEchoed":                      "echoed_at = now() on the sent row, with user_id beside the id as a second key; a probe echoed twice is echoed",
+	"internal/modules/contacts:foldGhostInto":                  "the fold coalesces every column onto the survivor's own value in SQL, so the new value is computed from the two rows as the statement sees them rather than from a value read into Go; the grouping is held FOR UPDATE by holdsItsGrouping first",
+	"internal/modules/dealrooms:touchSession":                  "last_seen_at = now() on a session the visitor already holds, with room_id beside the id as a second key",
+	"internal/modules/identity:SaveMyLocale":                   "the member writes their own locale under the live-member predicate that keeps a retired seat from writing at all, and the value is what they chose rather than a state read from the row",
+	"internal/modules/knowledge:ArchiveCorpus":                 "archived_at = now() on the corpus and, set-based, on its chunks and documents; a corpus archived twice is archived",
+	"internal/modules/knowledge:setReindexing":                 "the reindex flag is the value the caller chose rather than one it read, and the liveness predicate beside the id only keeps an archived corpus from being marked",
+	"internal/modules/contacts:touchChildSetParent":            "the aggregate bump after a child row of the record was written or taken away. The callers hold the row, FOR UPDATE or through the write authority probe of the path that called, and a revert may reach an ARCHIVED contact, so the guard is the caller's lock rather than a second one here",
+	"internal/modules/privacy:redactSignals":                   "terminal absolute write: an erasure empties the personal members of a signal whatever a concurrent edit did, as the eraser empties an approval it is destroying",
+	"internal/modules/contacts:storeSiteReadProposals":         "FinishSiteRead's running-state compare-and-set and lockOnboardingSiteRead's FOR UPDATE take the read's row lock in the same transaction before it writes the list",
+	"internal/modules/activities:storeTranscriptReadProposals": "finishTranscriptReadTx's running-state compare-and-set takes the reading's row lock in the same transaction before it writes the list",
 	// Both hold the row FOR UPDATE before this UPDATE runs, through
 	// lockActivityForWrite (retentionhold.go) rather than a direct
 	// storekit.LockRow call this witness's AST walk can see: a row a plain
@@ -256,7 +220,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/customfields:Update":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read), with the If-Match version checked under that lock",
 	"internal/modules/customfields:Retire":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read); the flip is an absolute idempotent transition besides",
 	"internal/modules/customfields:setOptionsInTx":  "runs under the catalog row lock minted by lockPicklistField (FOR UPDATE before every decision read), plus the per-table advisory lock serializeSchemaChange mints",
-	"internal/modules/deals:UpdateOfferLineItem":    "runs under the parent offer's row lock taken by visibleOfferLocked, which serializes every line edit",
+	"internal/modules/deals:applyOfferLinePatch":    "runs only inside UpdateOfferLineItem, under the parent offer's row lock taken by visibleOfferLocked, which serializes every line edit",
 	"internal/modules/signals:dropUnattributable":   "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
 	"internal/modules/signals:resolveToCompany":     "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
 	"internal/modules/signals:flagAmbiguous":        "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
@@ -385,7 +349,7 @@ func lockTableConsts(t *testing.T, fset *token.FileSet, cache map[string]map[str
 	if consts, ok := cache[dir]; ok {
 		return consts
 	}
-	consts := stringConsts(t, fset, parsePackageDir(t, fset, dir))
+	consts := gatekit.StringConstantsOf(t, parsePackageDir(t, fset, dir))
 	cache[dir] = consts
 	return consts
 }

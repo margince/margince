@@ -784,7 +784,7 @@ func referencedTables(sql string, vocab referenceVocabulary) []tableReference {
 	// ROLE. The schema says which table each one points at, so a reference is
 	// found by what it REFERS TO rather than by what it is called.
 	for column, table := range vocab.columns {
-		if column == table+"_id" || !vocab.tables[table] || boundToCallerArgument(sql, column) {
+		if column == table+"_id" || !vocab.tables[table] || !strings.Contains(sql, column) || boundToCallerArgument(sql, column) {
 			continue
 		}
 		at := namedColumn(column).FindStringIndex(sql)

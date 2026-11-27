@@ -44,7 +44,7 @@ export const SellerMonth: Story = {
         <ProgressResult
           progress={sellerMarch}
           onEvidence={open}
-          onGoals={open}
+          goalsHref="#/goals"
         />
         <ProgressReadings progress={sellerMarch} onEvidence={open} />
         <ProgressMonths progress={sellerMarch} />
@@ -58,7 +58,11 @@ export const TeamIncomplete: Story = {
   render: () => (
     <StoryProviders>
       <div className="progress-body">
-        <ProgressResult progress={teamMarch} onEvidence={open} onGoals={open} />
+        <ProgressResult
+          progress={teamMarch}
+          onEvidence={open}
+          goalsHref="#/goals"
+        />
         <ProgressMembers progress={teamMarch} />
       </div>
     </StoryProviders>
@@ -78,7 +82,7 @@ export const SellerNoGoal: Story = {
             delta_minor: undefined,
           }}
           onEvidence={open}
-          onGoals={open}
+          goalsHref="#/goals"
         />
       </div>
     </StoryProviders>

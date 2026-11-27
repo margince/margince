@@ -196,7 +196,7 @@ func (h Handlers) UploadCorpusDocument(w http.ResponseWriter, r *http.Request, i
 
 	doc, err := h.store.UploadDocument(r.Context(), NewDocument{
 		CorpusID:    ids.UUID(id),
-		Filename:    header.Filename,
+		Filename:    httperr.MultipartFilename(header),
 		ContentType: header.Header.Get("Content-Type"),
 		Content:     file,
 	}, h.queue)

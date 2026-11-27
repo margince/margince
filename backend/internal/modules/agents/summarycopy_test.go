@@ -132,6 +132,9 @@ func TestEveryTranslatedLanguageNamesTheSameRecordTypes(t *testing.T) {
 			}
 		}
 	}
+	for recordType, noun := range recordNounsByLang[textlang.Vietnamese] {
+		langcopytest.VietnameseText(t, recordType, noun)
+	}
 }
 
 // English reads the wire type aloud, and a type a language has no word for

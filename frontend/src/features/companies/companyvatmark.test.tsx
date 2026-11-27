@@ -42,6 +42,7 @@ const CHECKED = {
 };
 
 function jsonResponse(body: unknown, status = 200) {
+  if (status === 204) return new Response(null, { status });
   return new Response(JSON.stringify(body), {
     status,
     headers: { "Content-Type": "application/json" },
@@ -143,7 +144,7 @@ describe("the VAT mark beside the number", () => {
   });
 
   it("says a company nobody has consulted is unchecked", async () => {
-    answerWith({}, 404);
+    answerWith(null, 204);
 
     render(mark());
 

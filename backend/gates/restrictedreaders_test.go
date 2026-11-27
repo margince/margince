@@ -572,25 +572,14 @@ func activityBindingsInSpec(spec *ast.ValueSpec, values []ast.Expr) []fragmentBi
 }
 
 // activitySQLIn is the first statement in this value that reads the activity
-// table, and whether there is one.
+// table, and whether there is one. A statement split with `+` is read whole.
 func activitySQLIn(value ast.Expr) (string, bool) {
-	found := ""
-	ast.Inspect(value, func(node ast.Node) bool {
-		if found != "" {
-			return false
+	for _, statement := range gatekit.SQLStatementsOf(value) {
+		if activityReadLiteral.MatchString(statement) {
+			return statement, true
 		}
-		expr, isExpr := node.(ast.Expr)
-		if !isExpr {
-			return true
-		}
-		text, isText := gatekit.LiteralText(expr)
-		if isText && activityReadLiteral.MatchString(text) {
-			found = text
-			return false
-		}
-		return true
-	})
-	return found, found != ""
+	}
+	return "", false
 }
 
 // packageBindingNames maps each package-level var or const to the identifiers
@@ -878,6 +867,7 @@ func TestTheAuditDoorAdmitsOnlyReadsAnActivityCanBeBehind(t *testing.T) {
 // fragment directly only in a guarded function, and runs it unguarded through
 // other constants. Following direct names alone reads that as clean. A local
 // that shadows an alias, and a sibling bound beside the alias, are not namers.
+// A fragment split with `+` is still a fragment.
 func TestARestrictedReaderCensusFollowsAFragmentThroughAConstant(t *testing.T) {
 	t.Parallel()
 	dir := t.TempDir()
@@ -887,11 +877,13 @@ func TestARestrictedReaderCensusFollowsAFragmentThroughAConstant(t *testing.T) {
 		"const columns = `id, ` + sourceProbe\n\n" +
 		"const (\n\taliasProbe = sourceProbe\n\trepeated\n)\n\n" +
 		"const used, unrelated = sourceProbe, `SELECT 1`\n\n" +
+		"const splitProbe = `EXISTS (SELECT 1 FROM ` + `activity a WHERE a.id = ev.source_id)`\n\n" +
 		"func guarded(q func(string)) { q(`SELECT ` + sourceProbe + ` AND a.restricted_at IS NULL`) }\n\n" +
 		"func unguarded(q func(string)) { q(`SELECT ` + columns + ` FROM deal_stage_evidence ev`) }\n\n" +
 		"func viaRepeated(q func(string)) { q(repeated) }\n\n" +
 		"func viaUsed(q func(string)) { q(used) }\n\n" +
 		"func viaUnrelated(q func(string)) { q(unrelated) }\n\n" +
+		"func viaSplit(q func(string)) { q(splitProbe) }\n\n" +
 		"func shadowing(q func(string)) { columns := `SELECT 1`; q(columns) }\n"
 	if err := os.WriteFile(planted, []byte(source), 0o600); err != nil {
 		t.Fatalf("planting the package: %v", err)
@@ -903,7 +895,7 @@ func TestARestrictedReaderCensusFollowsAFragmentThroughAConstant(t *testing.T) {
 	offenders := unguardedActivityReaders(packageCallGraph(t, dir),
 		packageBindingNames(parsePackageFiles(t, dir)), file, heldDimension)
 	for namer, want := range map[string]bool{
-		"unguarded": true, "viaRepeated": true, "viaUsed": true,
+		"unguarded": true, "viaRepeated": true, "viaUsed": true, "viaSplit": true,
 		"guarded": false, "viaUnrelated": false, "shadowing": false,
 	} {
 		got := slices.ContainsFunc(offenders, func(o string) bool { return strings.HasPrefix(o, namer+":") })

@@ -5,11 +5,8 @@ package compose
 
 // The job runner's assembly: NewJobRunner, the queue set, the uniqueness
 // window every periodic pass shares, and the wiring of each module's workers
-// and ticks. The per-concern job files beside it (jobs_deals.go,
-// jobs_capture.go, jobs_automation.go, jobs_retention.go)
-// own the args types and worker adapters themselves; those adapters are the
-// only code in the tree that knows about River, which is what keeps every
-// module's own pass River-agnostic.
+// and ticks. The job files beside it (jobs_deals.go, and so on) own their args
+// and worker adapters. Only those adapters know River, so no module does.
 
 import (
 	"context"
@@ -252,6 +249,7 @@ type JobRunnerConfig struct {
 	// registers nothing: no human is waiting on the row, so an installation
 	// without a model keeps the deterministic evidence and reads no prose.
 	StageEvidenceBrain completer
+	StandingLineLane
 	// TranscriptProposeBrain is the lane a queued transcript reading runs on.
 	// Nil = no AI configured, and the kind registers anyway so the reading
 	// FAILS with a message the rep can see rather than sitting queued behind a

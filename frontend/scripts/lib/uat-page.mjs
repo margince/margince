@@ -22,15 +22,19 @@ const PHONE_TAG = "uat-phone";
 const PHONE_ON_ITS_SIDE_TAG = "uat-phone-on-its-side";
 // A wide desktop, for a layout that only exists above the top bar's 1100px.
 const WIDE_TAG = "uat-wide";
+// A tablet, for a layout between the phone and the desktop's 1024px.
+const TABLET_TAG = "uat-tablet";
 const DESKTOP = { width: 1024, height: 720 };
 const PHONE = { width: 390, height: 844 };
 const PHONE_ON_ITS_SIDE = { width: 844, height: 390 };
 const WIDE = { width: 1440, height: 900 };
+const TABLET = { width: 768, height: 1024 };
 
 export function viewportFor(tags) {
   if (tags.includes(PHONE_TAG)) return PHONE;
   if (tags.includes(PHONE_ON_ITS_SIDE_TAG)) return PHONE_ON_ITS_SIDE;
   if (tags.includes(WIDE_TAG)) return WIDE;
+  if (tags.includes(TABLET_TAG)) return TABLET;
   return DESKTOP;
 }
 

@@ -6,7 +6,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 ## finance_connection
 
-11 columns · primary key `(id)` · referenced by 4 foreign keys
+10 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -16,7 +16,6 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `last_success_at` | `timestamp with time zone` |  |  |
 | `provider` | `text` | yes | The source's key. |
 | `status` | `text`, default `'connecting'::text` | yes | `connecting` until the first sync finishes; `error` when the last one failed. |
-| `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
@@ -39,7 +38,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 ## finance_customer_link
 
-10 columns · primary key `(id)` · referenced by 2 foreign keys
+9 columns · primary key `(id)` · referenced by 2 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -47,7 +46,6 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `company_id` | `uuid` | yes | Points at `company.id`. |
 | `connection_id` | `uuid` | yes | Points at `finance_connection.id`. |
 | `external_customer_id` | `text` | yes |  |
-| `source_updated_at` | `timestamp with time zone` |  |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
@@ -123,7 +121,7 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 ## finance_invoice
 
-30 columns · primary key `(id)` · referenced by 4 foreign keys
+29 columns · primary key `(id)` · referenced by 4 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -146,7 +144,6 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 | `net_minor` | `bigint` | yes |  |
 | `number` | `text` |  | The source's own invoice number, absent when it does not issue one. |
 | `open_minor` | `bigint`, default `0` | yes | What is still unpaid on it. |
-| `raw_status` | `text` |  |  |
 | `status` | `text` | yes | One of `draft`, `open`, `partially_paid`, `paid`, `overdue`, `disputed` and 2 more. |
 | `sync_hash` | `text` | yes |  |
 | `tax_minor` | `bigint`, default `0` | yes |  |
@@ -198,8 +195,8 @@ The 5 tables owned by `finance`, as the migrations build them. [Back to the enti
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"number": 20000, "source": 20000, "status": 20000, "sync_hash": 20000, "raw_status": 20000, "captured_by": 20000, "external_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_id":20000,"number":20000,"raw_status":20000,"source":20000,"status":20000,"sync_hash":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"number": 20000, "source": 20000, "status": 20000, "sync_hash": 20000, "raw_status": 20000, "captured_by": 20000, "external_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_id":20000,"number":20000,"raw_status":20000,"source":20000,"status":20000,"sync_hash":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"number": 20000, "source": 20000, "status": 20000, "sync_hash": 20000, "captured_by": 20000, "external_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_id":20000,"number":20000,"source":20000,"status":20000,"sync_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"number": 20000, "source": 20000, "status": 20000, "sync_hash": 20000, "captured_by": 20000, "external_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_id":20000,"number":20000,"source":20000,"status":20000,"sync_hash":20000}')`
 - `trg_finance_invoice_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`
 
 ## finance_payment

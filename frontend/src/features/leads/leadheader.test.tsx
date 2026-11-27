@@ -48,7 +48,6 @@ const lead: Lead = {
   score_reason: "decision_maker_title",
   captured_by: "human:u-1",
   source: "manual",
-  source_label: "Webinar signup",
   owner_id: "u-9",
   writable: true,
   version: 1,
@@ -157,7 +156,6 @@ describe("the lead page's head", () => {
   it("names an imported lead's upload as where it came from, never the stamp", async () => {
     stubLead({
       source: "mirror:csv:pipedrive-export:lead:l-7",
-      source_label: null,
     });
     render(<LeadScreen id="l-1" />);
 

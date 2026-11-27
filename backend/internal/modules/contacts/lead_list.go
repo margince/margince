@@ -64,13 +64,14 @@ var leadListFields = map[string]storekit.SortField{
 	// renamed so a cursor from the alphabetical order is refused.
 	leadStatusColumn: {Kind: fieldcatalog.TypeNumber, CursorField: "status_rung", Expr: orderByLeadStatusRung},
 	leadScoreColumn:  storekit.Column(fieldcatalog.TypeNumber),
+	// Renamed so a cursor from the retired label order is refused.
+	leadSourceColumn: {Kind: fieldcatalog.TypeText, CursorField: "source_channel"},
 	ownerIDColumn:    storekit.OwnerNameSort(leadEntity),
 	// The three the list draws and does not store. Each reads the same
 	// expression the row is PRINTED from (lead_read.go), so a reader sees the
 	// value the page was arranged by.
 	lastActivityColumn: {Kind: storekit.KindTimestamp, Expr: orderByLeadLastActivity},
 	leadNextTaskField:  {Kind: storekit.KindTimestamp, Expr: orderByLeadNextTaskDue},
-	leadSourceColumn:   {Kind: fieldcatalog.TypeText, Expr: orderByLeadSourceLabel},
 	leadOriginColumn:   {Kind: fieldcatalog.TypeText, Expr: orderByLeadOriginLabel},
 }
 
@@ -116,15 +117,8 @@ func orderByLeadCompanyShown(ctx context.Context, arg func(any) int) (string, er
 	return "coalesce(" + linked + ", lead.company_name)", nil
 }
 
-// orderByLeadSourceLabel orders by the words the Source column prints rather
-// than the key behind them: a catalog whose labels and keys disagree would
-// otherwise arrange the list by an identifier no reader can see.
-func orderByLeadSourceLabel(context.Context, func(any) int) (string, error) {
-	return leadSourceLabelSQL, nil
-}
-
-// orderByLeadOriginLabel orders by the words the Origin column prints, for the
-// reason orderByLeadSourceLabel gives.
+// orderByLeadOriginLabel orders by the words the Origin column prints, not the
+// key behind them. A reader cannot see the key, so it is no order for them.
 func orderByLeadOriginLabel(context.Context, func(any) int) (string, error) {
 	return leadOriginLabelSQL, nil
 }
@@ -156,13 +150,14 @@ func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontract
 	// page and once for the total, and they must judge the same leads overdue.
 	ctx = pinSLANow(ctx)
 	return listPage(ctx, s, in.Sort, in.Limit, listPageSpec[crmcontracts.Lead]{
-		entity:    leadEntity,
-		firstPage: in.Cursor == nil || *in.Cursor == "",
-		prepare:   withLeadTaskIdentities,
-		columns:   leadColumns,
-		fields:    leadListFields,
-		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
-			return leadListWhere(ctx, in, active, sorted, policy, arg)
+		entity:  leadEntity,
+		cursor:  in.Cursor,
+		offset:  in.Offset,
+		prepare: withLeadTaskIdentities,
+		columns: leadColumns,
+		fields:  leadListFields,
+		filters: func(ctx context.Context, active []fieldcatalog.Column, arg func(any) int) ([]string, error) {
+			return leadListWhere(ctx, in, active, policy, arg)
 		},
 		scan: func(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort) ([]crmcontracts.Lead, []*string, error) {
 			return scanLeadPage(rows, active, sorted, policy, slaNow(ctx), systemtext.Locale(ctx))
@@ -179,6 +174,7 @@ type ListLeadsInput struct {
 	CustomFilters map[string]string
 	Salutation    *string
 	Cursor        *string
+	Offset        *int
 	Limit         *int
 	Status        *string
 	// OwnerID, OwnerTeamID and Unassigned are the owner dials every
@@ -200,8 +196,7 @@ type ListLeadsInput struct {
 	// so a caller cutting answered rows off it would lose the unanswered leads
 	// behind them.
 	OwedAReply *bool
-	// Source narrows to how the row was written (import, crawl, manual,
-	// `connector:<name>`).
+	// Source narrows to the channel the lead arrived by.
 	Source *string
 	// Origin narrows to one origin key, or `unset` for the unclassified.
 	Origin *string
@@ -230,7 +225,7 @@ type ListLeadsInput struct {
 
 // leadListWhere builds a lead list read's `WHERE`: the shared chain, then the lead's own
 // filters. The sorted page, the work queue and the filter-reach probe all call it.
-func leadListWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog.Column, sorted *storekit.ListSort,
+func leadListWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog.Column,
 	policy leadSLAPolicy, arg func(any) int,
 ) ([]string, error) {
 	where, err := listFilters{
@@ -243,8 +238,7 @@ func leadListWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog
 		OwnerTeamID:     in.OwnerTeamID,
 		Unassigned:      in.Unassigned,
 		Query:           nil,
-		Cursor:          in.Cursor,
-	}.clauses(ctx, active, sorted, arg)
+	}.clauses(active, arg)
 	if err != nil {
 		return nil, err
 	}
@@ -285,7 +279,7 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 		where = append(where, storekit.SQLf(leadScoreColumn+" >= $%d", arg(*in.MinScore)))
 	}
 	if in.Source != nil {
-		where = append(where, leadSourceClause(*in.Source, arg))
+		where = append(where, storekit.SQLf(leadSourceColumn+" = $%d", arg(*in.Source)))
 	}
 	if clause := salutationListClause(leadEntity, in.Salutation, arg); clause != "" {
 		where = append(where, clause)

@@ -115,7 +115,7 @@ function routes(
   return {
     "GET /me": meRoute({}),
     "GET /forecast/assurance": () =>
-      run === null ? jsonResponse({}, 404) : jsonResponse(run),
+      run === null ? new Response(null, { status: 204 }) : jsonResponse(run),
     "GET /forecast/assurance/preview": () => jsonResponse(PREVIEW),
     "GET /forecast/assurance/exceptions": () =>
       jsonResponse({

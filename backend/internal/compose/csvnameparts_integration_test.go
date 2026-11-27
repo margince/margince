@@ -86,7 +86,7 @@ func importedContact(t *testing.T, e *integration.Env, in contacts.CreateContact
 	t.Helper()
 	ctx := importAdmin(e)
 	run, err := migration.NewRunStore(e.DB()).CreateDraftRun(ctx, migration.CreateDraftRunInput{
-		SourceRef: "ws/import/" + ids.NewV7().String(), Source: "import_api", FileName: "names.csv",
+		SourceRef: "ws/import/" + ids.NewV7().String(), FileName: "names.csv",
 		Profile: json.RawMessage(`{"files":[{"name":"names.csv","row_count":1}]}`),
 		Mapping: migration.RunMapping{Object: migration.ObjectContact, Fields: map[string]string{"First": "first_name"}, SourceKey: "First"},
 	})

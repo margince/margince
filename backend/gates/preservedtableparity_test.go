@@ -28,21 +28,16 @@ package gates
 // it can only stop the two halves of it drifting apart.
 
 import (
-	"go/ast"
-	"go/parser"
-	"go/token"
 	"sort"
-	"strconv"
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-const (
-	harnessList = "internal/platform/testdb/reset.go"
-	sweepList   = "internal/compose/datasweep.go"
-)
+// harnessList holds the harness's list. The product's list comes from
+// goPreservedTables, which the seed-reset parity reads it through too.
+const harnessList = "internal/platform/testdb/reset.go"
 
 // harnessOnly names tables the TEST harness spares that the product sweep does
 // not, with the reason each is not a product concern. Every entry is a
@@ -59,7 +54,10 @@ func TestTheTwoPreservedTableListsAgree(t *testing.T) {
 	t.Parallel()
 
 	harness := preservedInHarness(t)
-	sweep := preservedInSweep(t)
+	sweep := map[string]bool{}
+	for _, table := range goPreservedTables(t) {
+		sweep[table] = true
+	}
 
 	// A census that read nothing agrees with everything. Both lists hold a
 	// dozen-odd entries, so a handful means the parse broke rather than the
@@ -69,7 +67,7 @@ func TestTheTwoPreservedTableListsAgree(t *testing.T) {
 			"result over a list it could not read means nothing", len(harness), harnessList)
 	}
 	if len(sweep) < 8 {
-		t.Fatalf("read %d tables out of %s — same problem, other side", len(sweep), sweepList)
+		t.Fatalf("read %d tables out of %s — same problem, other side", len(sweep), datasweepFile)
 	}
 
 	var missingFromSweep []string
@@ -93,7 +91,7 @@ func TestTheTwoPreservedTableListsAgree(t *testing.T) {
 			"Add it to the sweep exemption map in %s, or record it in harnessOnly with the reason "+
 			"it is not a product concern. Left as it is, the rows survive every test run alone and "+
 			"vanish mid-shard the moment the reset test runs first — and every later failure points "+
-			"somewhere else.", table, sweepList)
+			"somewhere else.", table, datasweepFile)
 	}
 }
 
@@ -142,58 +140,6 @@ func preservedInHarness(t *testing.T) map[string]bool {
 			out[name] = true
 		}
 	}
-	return out
-}
-
-// preservedInSweep reads the keys of the sweep's exemption map out of the AST.
-func preservedInSweep(t *testing.T) map[string]bool {
-	t.Helper()
-	file, err := parser.ParseFile(gatekit.SourceFileSet(), sweepList, readGate(t, sweepList),
-		parser.SkipObjectResolution)
-	if err != nil {
-		t.Fatalf("parsing %s: %v", sweepList, err)
-	}
-	out := map[string]bool{}
-	ast.Inspect(file, func(n ast.Node) bool {
-		literal, ok := n.(*ast.CompositeLit)
-		if !ok {
-			return true
-		}
-		mapType, ok := literal.Type.(*ast.MapType)
-		if !ok {
-			return true
-		}
-		// The one map[string]bool in this file is the exemption set.
-		if key, ok := mapType.Key.(*ast.Ident); !ok || key.Name != "string" {
-			return true
-		}
-		if value, ok := mapType.Value.(*ast.Ident); !ok || value.Name != "bool" {
-			return true
-		}
-		for _, element := range literal.Elts {
-			pair, ok := element.(*ast.KeyValueExpr)
-			if !ok {
-				continue
-			}
-			name, ok := pair.Key.(*ast.BasicLit)
-			if !ok || name.Kind != token.STRING {
-				continue
-			}
-			unquoted, err := strconv.Unquote(name.Value)
-			if err != nil {
-				continue
-			}
-			// The VALUE decides, not the key's presence. `"t": false` is an
-			// entry saying the table is NOT spared, and reading it as spared
-			// would report agreement over a table the sweep actually empties.
-			spared, ok := pair.Value.(*ast.Ident)
-			if !ok || spared.Name != "true" {
-				continue
-			}
-			out[unquoted] = true
-		}
-		return true
-	})
 	return out
 }
 

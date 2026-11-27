@@ -167,7 +167,6 @@
     "createLead": "business",
     "createLeadDisqualifyReason": "admin_settings",
     "createLeadOrigin": "admin_settings",
-    "createLeadSource": "admin_settings",
     "createLegalEntity": "admin_settings",
     "createList": "business",
     "createLossReason": "admin_settings",
@@ -217,7 +216,6 @@
     "deleteCompanyFact": "business",
     "deleteLeadDisqualifyReason": "admin_settings",
     "deleteLeadOrigin": "admin_settings",
-    "deleteLeadSource": "admin_settings",
     "deleteLegalEntityLogo": "admin_settings",
     "deleteVoiceProfile": "business",
     "deleteWorkspaceEmailDomain": "admin_settings",
@@ -574,7 +572,6 @@
     "listLeadDisqualifyReasons": "workspace_settings",
     "listLeadManualSignals": "business",
     "listLeadOrigins": "workspace_settings",
-    "listLeadSources": "workspace_settings",
     "listLeadStops": "compliance",
     "listLeads": "business",
     "listLegacyLossReasons": "admin_settings",
@@ -898,7 +895,6 @@
     "updateLeadDisqualifyReason": "admin_settings",
     "updateLeadOrigin": "admin_settings",
     "updateLeadSettings": "admin_settings",
-    "updateLeadSource": "admin_settings",
     "updateLegalEntity": "admin_settings",
     "updateLegalReviewSettings": "admin_settings",
     "updateList": "business",
@@ -1095,7 +1091,6 @@
     "createLead": "leads",
     "createLeadDisqualifyReason": "sales_lists",
     "createLeadOrigin": "sales_lists",
-    "createLeadSource": "sales_lists",
     "createLegalEntity": "company_profile",
     "createList": "lists",
     "createLossReason": "sales_lists",
@@ -1160,7 +1155,6 @@
     "deleteGoogleDirectory": "installation",
     "deleteLeadDisqualifyReason": "sales_lists",
     "deleteLeadOrigin": "sales_lists",
-    "deleteLeadSource": "sales_lists",
     "deleteLegalEntityLogo": "company_profile",
     "deleteMyAvatar": "own_profile",
     "deleteOauthApp": "installation",
@@ -1475,6 +1469,7 @@
     "getSystemHealth": "system_health",
     "getTag": "tags",
     "getTagSuggestion": "tags",
+    "getTaskExplanation": "activities",
     "getTeamBoard": "worklist",
     "getTeamExceptions": "worklist",
     "getTeamMarginceChanges": "worklist",
@@ -1610,7 +1605,6 @@
     "listLeadDisqualifyReasons": "sales_lists",
     "listLeadManualSignals": "leads",
     "listLeadOrigins": "sales_lists",
-    "listLeadSources": "sales_lists",
     "listLeadStops": "consent",
     "listLeads": "leads",
     "listLegacyLossReasons": "sales_lists",
@@ -2058,7 +2052,6 @@
     "updateLeadDisqualifyReason": "sales_lists",
     "updateLeadOrigin": "sales_lists",
     "updateLeadSettings": "sales_rules",
-    "updateLeadSource": "sales_lists",
     "updateLegalEntity": "company_profile",
     "updateLegalReviewSettings": "sales_rules",
     "updateList": "lists",
@@ -2436,9 +2429,6 @@
     "create_lead_origin": [
       "sales_lists"
     ],
-    "create_lead_source": [
-      "sales_lists"
-    ],
     "create_legal_entity": [
       "company_profile"
     ],
@@ -2552,9 +2542,6 @@
       "sales_lists"
     ],
     "delete_lead_origin": [
-      "sales_lists"
-    ],
-    "delete_lead_source": [
       "sales_lists"
     ],
     "delete_legal_entity_logo": [
@@ -4173,9 +4160,6 @@
     "update_lead_settings": [
       "sales_rules"
     ],
-    "update_lead_source": [
-      "sales_lists"
-    ],
     "update_legal_entity": [
       "company_profile"
     ],
@@ -4609,9 +4593,6 @@
     "create_lead_origin": [
       "admin_settings"
     ],
-    "create_lead_source": [
-      "admin_settings"
-    ],
     "create_legal_entity": [
       "admin_settings"
     ],
@@ -4719,9 +4700,6 @@
       "admin_settings"
     ],
     "delete_lead_origin": [
-      "admin_settings"
-    ],
-    "delete_lead_source": [
       "admin_settings"
     ],
     "delete_legal_entity_logo": [
@@ -6298,9 +6276,6 @@
       "admin_settings"
     ],
     "update_lead_settings": [
-      "admin_settings"
-    ],
-    "update_lead_source": [
       "admin_settings"
     ],
     "update_legal_entity": [

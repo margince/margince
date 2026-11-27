@@ -56,6 +56,7 @@ var modelRouteSuffixes = []string{
 	"/analytics/setup-proposal",
 	"/analytics/progress/summary",
 	"/proposed-months",
+	"/task-explanation",
 }
 
 // The routes whose last segment is a word other routes also end in. A suffix

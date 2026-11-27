@@ -776,7 +776,7 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## language
 
-3 columns · primary key `(code)` · referenced by 8 foreign keys
+3 columns · primary key `(code)` · referenced by 9 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1046,13 +1046,12 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## team_weekly_review_outlook
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `base_currency` | `currency_code` | yes |  |
-| `best_case_minor` | `bigint` |  |  |
 | `closing_landing_minor` | `bigint` |  |  |
 | `closing_snapshot_id` | `uuid` |  |  |
 | `commit_minor` | `bigint` |  |  |
@@ -1074,7 +1073,6 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Rules**
 
-- `team_weekly_review_outlook_best_case_minor_js_safe`: `CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))`
 - `team_weekly_review_outlook_closing_landing_minor_js_safe`: `CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))`
 - `team_weekly_review_outlook_commit_minor_js_safe`: `CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))`
 - `team_weekly_review_outlook_currency_present`: `CHECK ((btrim((base_currency)) <> ''))`
@@ -1493,13 +1491,12 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 ## weekly_review_outlook
 
-15 columns · primary key `(id)` · referenced by 0 foreign keys
+14 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `base_currency` | `currency_code` | yes |  |
-| `best_case_minor` | `bigint` |  |  |
 | `closing_landing_minor` | `bigint` |  | What the window was landing on when the week closed. |
 | `closing_snapshot_id` | `uuid` |  |  |
 | `commit_minor` | `bigint` |  |  |
@@ -1521,7 +1518,6 @@ The 44 tables owned by `compose`, as the migrations build them. [Back to the ent
 
 **Rules**
 
-- `weekly_review_outlook_best_case_minor_js_safe`: `CHECK (((best_case_minor >= '-9007199254740991'::bigint) AND (best_case_minor <= '9007199254740991'::bigint)))`
 - `weekly_review_outlook_closing_landing_minor_js_safe`: `CHECK (((closing_landing_minor >= '-9007199254740991'::bigint) AND (closing_landing_minor <= '9007199254740991'::bigint)))`
 - `weekly_review_outlook_commit_minor_js_safe`: `CHECK (((commit_minor >= '-9007199254740991'::bigint) AND (commit_minor <= '9007199254740991'::bigint)))`
 - `weekly_review_outlook_currency_present`: `CHECK ((btrim((base_currency)) <> ''))`

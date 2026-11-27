@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -220,11 +221,11 @@ func TestTheCensusSubjectIsDerivedAndRefusesACatalogItCannotRead(t *testing.T) {
 // that reaches a grounding package has already passed through a statement this
 // census subjected — and the masks it carries are the ones that were applied.
 //
-// The second half is a premise, so it is asserted rather than assumed:
-// TestNoDealAmountStatementLivesWhereTheCensusCannotSeeIt refuses a deal-amount
-// statement anywhere outside `internal`. Without it, a reader placed in cmd/,
-// pkg/ or an extension unit would not fail this census — it would be one this
-// census never reads, and it would go on answering PASS.
+// The second half is a premise, so it is asserted rather than assumed. The
+// scope's sweep and assertNoDealAmountReadBesideTheModule refuse a deal-amount
+// statement anywhere outside `internal`. Without them, a reader placed in cmd/,
+// pkg/ or an extension unit would not fail this census. This census would never
+// read it, and would go on answering PASS.
 //
 // And it reads a mask's PRESENCE rather than its placement: a declaration
 // rendering one somewhere in its body reads as gated even where the aggregate
@@ -351,7 +352,28 @@ var maskVerdicts = []namedVerdict{
 	{"deferred", deferredMaskedAmountReads},
 }
 
-const wantMinimumMaskedAmountSites = 10
+// sweepMaskVerdicts fails a verdict no read matched any more. The
+// gate census asks for each sweep by name, so the list is written out.
+func sweepMaskVerdicts(t *testing.T) {
+	t.Helper()
+	predicateMaskedAmountReads.AssertAllMatched(t)
+	lifecycleMaskedAmountReads.AssertAllMatched(t)
+	calleeGatedMaskedAmountReads.AssertAllMatched(t)
+	writePreimageMaskedAmountReads.AssertAllMatched(t)
+	notTheDealAmount.AssertAllMatched(t)
+	ruledMaskedAmountReads.AssertAllMatched(t)
+	deferredMaskedAmountReads.AssertAllMatched(t)
+}
+
+// maskCensus judges each deal-amount read the way the object-table censuses
+// judge theirs, with the field mask as its gate.
+var maskCensus = objectTableCensus{
+	gate: maskGate, verdicts: maskVerdicts, floor: 10, register: "maskedamountreaders_test.go", sweep: sweepMaskVerdicts,
+	reads: "a deal's amount", gateNoun: "the field mask",
+	discloses: "a figure the deal list withholds under a mask; a second surface that prints it, or a total " +
+		"that sums it, hands back what the list withheld",
+	admission: "auth.MaskedColumnSQL to render the column, or auth.MaskExcludedClause to filter the rows",
+}
 
 // maskedAmountScope is built around the derived builder set, so the sweep and
 // the site extraction ask one question rather than two that can drift.
@@ -361,8 +383,67 @@ func maskedAmountScope(columns *regexp.Regexp, builders map[string]bool) gatekit
 		Subject: func(filePath string, file *ast.File) bool {
 			return readsADealAmount(filePath, file, columns, builders)
 		},
-		Exempt: gatekit.Waive(map[string]string{}),
+		Exempt: outsideInternal,
 	}
+}
+
+// outsideInternal is the register of files outside internal/ that read a deal
+// amount, each with why the census need not see it. Empty, and the emptiness is
+// the finding. The scope consults it for the module's other trees, and the
+// sibling walk below for the trees beside the module.
+var outsideInternal = gatekit.Waive(map[string]string{})
+
+// besideTheModule are the Go trees outside the backend module that ship the
+// same way. An extension unit reaches core data through the published seam, so
+// a deal-amount statement in one is the read this census most needs to see.
+var besideTheModule = []string{"../extensions", "../fixtures"}
+
+// assertNoDealAmountReadBesideTheModule walks the trees the scope's sweep
+// cannot reach, since gatekit.Scope proves its roots inside the module alone.
+// Every tree must hold a source, or a renamed tree would read as a clean one.
+func assertNoDealAmountReadBesideTheModule(t *testing.T, columns *regexp.Regexp, builders map[string]bool) {
+	t.Helper()
+	var offenders []string
+	for _, root := range besideTheModule {
+		read := 0
+		err := gatekit.WalkDir(root, func(path string, info fs.DirEntry, err error) error {
+			if err != nil || info.IsDir() || !sweptLikeTheCensus(filepath.ToSlash(path)) {
+				return err
+			}
+			read++
+			file, parseErr := gatekit.ParseFile(path, 0)
+			if parseErr != nil {
+				return parseErr
+			}
+			if readsADealAmount(path, file, columns, builders) && !outsideInternal.Waived(t, filepath.ToSlash(path)) {
+				offenders = append(offenders, filepath.ToSlash(path))
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("walking %s: %v", root, err)
+		}
+		if read == 0 {
+			t.Errorf("%s holds no Go source this census reads, so it would report a clean result over any "+
+				"statement placed there: correct besideTheModule to where those trees now live", root)
+		}
+	}
+	if len(offenders) > 0 {
+		t.Errorf("%d file(s) outside the backend module read a deal amount, where the masked-amount "+
+			"scope cannot see them:\n\t%s\n\nMove the statement into a module, or ratify it in "+
+			"outsideInternal with the reason the census need not see it.",
+			len(offenders), strings.Join(offenders, "\n\t"))
+	}
+}
+
+// sweptLikeTheCensus is gatekit's own membership rule, asked of one path. The
+// scope applies it only inside its own walk, and the two must agree on what a
+// source is.
+func sweptLikeTheCensus(path string) bool {
+	if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
+		return false
+	}
+	return !slices.Contains(strings.Split(path, "/"), "testdata")
 }
 
 // readsADealAmount is the compound subject, and the compound is the point.
@@ -425,7 +506,7 @@ func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]boo
 	t.Helper()
 	names := map[string]bool{}
 	var functions []*ast.FuncDecl
-	err := gatekit.WalkDir("internal", func(filePath string, info fs.DirEntry, err error) error {
+	collect := func(filePath string, info fs.DirEntry, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(filePath, ".go") ||
 			strings.HasSuffix(filePath, "_test.go") || strings.HasSuffix(filePath, "_gen.go") {
 			return err
@@ -443,9 +524,12 @@ func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]boo
 			}
 		}
 		return nil
-	})
-	if err != nil {
-		t.Fatalf("deriving the deal-amount builders: %v", err)
+	}
+	// A builder in a sibling tree hides a caller there as well as one in internal.
+	for _, root := range append([]string{"internal"}, besideTheModule...) {
+		if err := gatekit.WalkDir(root, collect); err != nil {
+			t.Fatalf("deriving the deal-amount builders under %s: %v", root, err)
+		}
 	}
 	for changed := true; changed; {
 		changed = false
@@ -596,6 +680,9 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 	columns := dealMaskedColumns(t)
 	builders := dealAmountBuilderNames(t, columns)
 	files := maskedAmountScope(columns, builders).Files(t)
+	t.Run("NoDealAmountStatementLivesWhereTheCensusCannotSeeIt", func(t *testing.T) {
+		assertNoDealAmountReadBesideTheModule(t, columns, builders)
+	})
 	gated := maskGate.walkPackages(t, files).gated
 	consts := constantTable{}
 
@@ -637,50 +724,65 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 				// otherwise read as ungated.
 				carriesGate = carriesGate || maskGate.fileHoldsAGatedFunction(t, parsed, gated[pkg], consts.of(t, pkg))
 			}
-			verdict := verdictIn(t, subject, maskVerdicts)
-			switch {
-			case carriesGate && verdict != "":
-				t.Errorf("%s carries the field mask AND a %s verdict — remove the verdict, it now "+
-					"describes code that is masked", subject, verdict)
-			case carriesGate:
+			finding, masked := maskCensus.judgeSite(t, subject, carriesGate, gatekit.FirstLineOf(reads[0].SQL))
+			if masked {
 				satisfied++
-			case verdict == "":
-				t.Errorf("%s reads a deal's amount without the field mask and without a verdict.\n"+
-					"  A mask withholds the figure on the deal list; a second surface that prints "+
-					"it — or a total that sums it — hands back what the list withheld.\n"+
-					"  Either render the column through auth.MaskedColumnSQL, filter the rows with "+
-					"auth.MaskExcludedClause, or declare it in predicateMaskedAmountReads / "+
-					"lifecycleMaskedAmountReads / calleeGatedMaskedAmountReads / "+
-					"writePreimageMaskedAmountReads / ruledMaskedAmountReads with the reason "+
-					"it needs neither.\n"+
-					"  The read: %s", subject, gatekit.FirstLineOf(reads[0].SQL))
+			}
+			if finding != "" {
+				t.Error(finding)
 			}
 		}
 	}
-	if satisfied < wantMinimumMaskedAmountSites {
-		t.Errorf("only %d deal-amount reads carry the mask, want at least %d — an extractor that "+
-			"stopped recognising this tree's SQL would report exactly this, and it reads the same "+
-			"as a tree where every figure is guarded", satisfied, wantMinimumMaskedAmountSites)
-	}
+	maskCensus.assertFloor(t, satisfied)
 	if inMaskOwner == 0 {
 		t.Errorf("no file under %s is in this census, though the module owns the deal, the column "+
 			"and the mask. That module was exempt wholesale once and an unguarded project-header "+
 			"total lived inside it the whole time: a subject that stops reaching the owner sweeps "+
 			"a smaller tree and reports PASS with nothing left to notice", maskOwner)
 	}
-	t.Logf("deal-amount reads: %d masked (%d files in the mask owner), %d predicate, %d lifecycle, "+
-		"%d callee-gated, %d write-preimage, %d ruled, %d DEFERRED",
-		satisfied, inMaskOwner, len(predicateMaskedAmountReads.Subjects()), len(lifecycleMaskedAmountReads.Subjects()),
-		len(calleeGatedMaskedAmountReads.Subjects()), len(writePreimageMaskedAmountReads.Subjects()),
-		len(ruledMaskedAmountReads.Subjects()), len(deferredMaskedAmountReads.Subjects()))
+	t.Logf("%d of the files read are in the mask owner", inMaskOwner)
+	maskCensus.sweep(t)
+	outsideInternal.AssertAllMatched(t)
+}
 
-	predicateMaskedAmountReads.AssertAllMatched(t)
-	lifecycleMaskedAmountReads.AssertAllMatched(t)
-	calleeGatedMaskedAmountReads.AssertAllMatched(t)
-	writePreimageMaskedAmountReads.AssertAllMatched(t)
-	notTheDealAmount.AssertAllMatched(t)
-	ruledMaskedAmountReads.AssertAllMatched(t)
-	deferredMaskedAmountReads.AssertAllMatched(t)
+// TestTheRootsGateJudgesReadsAndNotFieldNames holds the subject's boundary. A
+// unit naming the money field to the seam reads nothing. A statement reading
+// the deal's money is what the census exists for.
+func TestTheRootsGateJudgesReadsAndNotFieldNames(t *testing.T) {
+	t.Parallel()
+	columns := dealMaskedColumns(t)
+	builders := dealAmountBuilderNames(t, columns)
+	for _, c := range []struct {
+		name   string
+		source string
+		reads  bool
+	}{
+		{
+			name:   "a unit's field list for the authority seam",
+			source: "var cardFields = []string{\"name\", \"stage_id\", \"amount_minor\", \"currency\"}",
+		},
+		{
+			name:   "a statement reading the deal's money",
+			source: "func total() string { return `SELECT sum(d.amount_minor) FROM deal d WHERE d.archived_at IS NULL` }",
+			reads:  true,
+		},
+		{
+			name:   "the converted column read the same way",
+			source: "func base() string { return \"SELECT d.amount_minor_base \" + \"FROM deal d\" }",
+			reads:  true,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), "unit.go", "package unit\n"+c.source, 0)
+			if err != nil {
+				t.Fatalf("parsing the fixture: %v", err)
+			}
+			if got := readsADealAmount("unit.go", file, columns, builders); got != c.reads {
+				t.Fatalf("readsADealAmount = %v, want %v", got, c.reads)
+			}
+		})
+	}
 }
 
 // TestTheObjectGateDoesNotVouchForAMask plants the shape this census could not

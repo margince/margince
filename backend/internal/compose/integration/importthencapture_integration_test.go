@@ -58,7 +58,7 @@ func importedFromAnotherCRM(messageID, subject, body string) crmcontracts.Create
 		Direction:    &direction,
 		SourceSystem: &system,
 		SourceId:     &sourceID,
-		Source:       "hubspot_import:145347700",
+		Source:       "import",
 		RfcMessageId: &messageID,
 		Participants: &struct {
 			Cc   *[]string `json:"cc,omitempty"`
@@ -583,8 +583,8 @@ func TestAnImportKeepsItsOwnBookkeepingUnderTheSharedIdentity(t *testing.T) {
 		t.Fatalf("source_id is %q, want the exporting system's own record id", sourceID)
 	}
 	source := columnOfMessage[string](t, e, "source", messageID)
-	if source != "hubspot_import:145347700" {
-		t.Fatalf("source is %q, want the importer's own bookkeeping", source)
+	if source != "import" {
+		t.Fatalf("source is %q, want the import channel", source)
 	}
 }
 

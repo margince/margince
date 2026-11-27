@@ -82,7 +82,7 @@ New contacts use the same company check from every source. A company name can fi
 To link a contact to a company in Margince, open the contact's **Companies** tab and choose **Add company** under **Work history**. The same list shows the companies they worked at before, with role and dates. When the first page holds the whole list, the number on the tab counts them.
 1. Under **Employer**, search for the company and pick it. It must already be in Margince; create it first under **Companies** if it is not.
 2. If you like, enter the **Role** and a **Start date** (`YYYY-MM` or `YYYY-MM-DD`).
-3. For a past job, set **Employment status** to **Former** and enter the **End date**.
+3. For a past job, set **Employment status** to **Former** and enter the **End date**, today or earlier.
 4. Tick **This is their primary employer** if it is their main job now, and choose **Create**.
 To change or end the link later, use the row's **More actions** menu: **Edit employment**, **Mark as ended** or **Remove**. To move a contact, press **Edit** in **About**, then **Change Employer**, and pick the company or tick **No current employer**. Then say if they left the old one or it was never their employer. In **Edit employment**, choose **Current** or **Former**. An imported link marked **Status unknown** needs a choice before you save.
 
@@ -379,7 +379,7 @@ Also called: label, add a label, categorise a record.
 Renaming a tag renames it everywhere, because every record shares the one tag.
 
 - **Retire** takes a tag out of use without changing the records that have it, and **Restore** brings it back.
-- **Merge** puts one tag into another and **cannot be undone**. The warning reads: "Records carrying {name} will carry the other tag instead, and the name is released for anyone to use again". After that it reports what moved: "{moved} records moved to the surviving tag. {collapsed} already carried both, so their duplicate was dropped". An agent may not merge tags on its own; it can only suggest a merge for a human to approve.
+- **Merge** puts one tag into another and **cannot be undone**. The warning reads: "Records carrying {name} will carry the other tag instead, and the name is released for anyone to use again". After that it reports what moved: "{moved} records moved to the surviving tag. {collapsed} already carried both, so their duplicate was dropped". An agent may not merge tags on its own; it can only suggest a merge for a human to approve. The merged tag stays in the list as "Merged into {name}", with no **Restore**, and its page links the tag that was kept.
 
 ### Can Margince suggest a tag from mail and meeting notes?
 Yes, for tags an admin marks as suggested. Margince never adds such a tag by itself: you accept or dismiss each suggestion.

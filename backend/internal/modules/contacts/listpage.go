@@ -12,7 +12,6 @@ package contacts
 
 import (
 	"context"
-	"fmt"
 	"strings"
 	"time"
 
@@ -35,17 +34,18 @@ const whereAlways = "1=1"
 // the auth object and the table name — the module's record tables are
 // named after their objects.
 type listPageSpec[T any] struct {
-	entity    string
-	firstPage bool
-	prepare   func(context.Context, pgx.Tx) (context.Context, error)
-	columns   func(context.Context, func(any) int) (string, error)
+	entity  string
+	cursor  *string
+	offset  *int
+	prepare func(context.Context, pgx.Tx) (context.Context, error)
+	columns func(context.Context, func(any) int) (string, error)
 	// fields is the core sortable vocabulary (data-model §13.5); active
 	// cf_ columns join it per request.
 	fields map[string]storekit.SortField
 	// filters appends the request's optional WHERE clauses (their
 	// arguments through arg) — typically listFilters.clauses plus any
 	// type-specific extras.
-	filters func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error)
+	filters func(ctx context.Context, active []fieldcatalog.Column, arg func(any) int) ([]string, error)
 	// scan drains one page's rows into records plus, under a non-default
 	// sort, each row's trailing __cursor_key.
 	scan func(rows pgx.Rows, active []fieldcatalog.Column, sorted *storekit.ListSort) ([]T, []*string, error)
@@ -87,87 +87,32 @@ func listPage[T any](ctx context.Context, s *Store, sortSpec *string, limitIn *i
 }
 
 func listPageTx[T any](ctx context.Context, tx pgx.Tx, sortSpec *string, limit int, active []fieldcatalog.Column, spec listPageSpec[T]) ([]T, storekit.Page, error) {
-	where := []string{whereAlways}
-	args := []any{}
-	arg := func(v any) int { args = append(args, v); return len(args) }
-
-	// The sort first, because a reference sort binds parameters of its own and
-	// every clause below binds through the same counter.
-	sorted, err := storekit.ParseListSort(ctx, sortSpec, storekit.SortVocabulary(spec.fields, active), arg)
+	// The custom-field filters are left to spec.filters, which listFilters.clauses renders.
+	pre, err := storekit.BuildListPrelude(ctx, spec.entity, spec.entity, spec.fields, active, sortSpec, &limit, spec.cursor, nil)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-
-	scope, err := auth.ScopeClauseFor(ctx, spec.entity, "", arg)
+	if err := pre.Skip(spec.offset); err != nil {
+		return nil, storekit.Page{}, err
+	}
+	filters, err := spec.filters(ctx, active, pre.Arg)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	if scope != "" {
-		where = append(where, scope)
-	}
-
-	filters, err := spec.filters(ctx, active, sorted, arg)
+	pre.Count(func(arg func(any) int) ([]string, error) { return spec.filters(ctx, active, arg) })
+	columns, err := spec.columns(ctx, pre.Arg)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	where = append(where, filters...)
-
-	columns, err := spec.columns(ctx, arg)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	var recs []T
-	var page storekit.Page
-
-	rows, err := tx.Query(ctx,
-		`SELECT `+columns+storekit.SelectSuffix(active)+sorted.CursorKeySuffix()+
-			` FROM `+spec.entity+` WHERE `+strings.Join(where, " AND ")+
-			sorted.OrderBy()+storekit.SQLf(` LIMIT %d`, limit+1),
-		args...)
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
-	defer rows.Close()
-
-	var cursorKeys []*string
-	if recs, cursorKeys, err = spec.scan(rows, active, sorted); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	var counted *int
-	if spec.firstPage {
-		// What the whole filtered, scoped set holds, from the same scope clause
-		// and spec.filters as the page, re-run so a filter cannot reach one only.
-		total, err := countWhere(ctx, spec, active, sorted)
-		if err != nil {
-			return nil, storekit.Page{}, err
-		}
-		n, err := firstPageTotal(ctx, tx, total, len(recs), limit)
-		if err != nil {
-			return nil, storekit.Page{}, fmt.Errorf("count %s: %w", spec.entity, err)
-		}
-		counted = &n
-	}
-	if len(recs) > limit {
-		recs = recs[:limit]
-		createdAt, id := spec.cursorKey(recs[len(recs)-1])
-		next, err := sorted.EncodePageCursor(spec.entity, cursorKeys[limit-1], createdAt, id)
-		if err != nil {
-			return nil, storekit.Page{}, err
-		}
-		page = storekit.Page{HasMore: true, NextCursor: next}
-	}
-	page.Total = counted
-	// On the page's own snapshot, so what it reports about the boundary
-	// describes the same instant the rows do. It costs nothing unless the
-	// caller asked to be told, and nothing at all on a table without
-	// capture privacy.
-	if err := auth.NoteCaptureWithheld(ctx, tx, spec.entity); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	if err := spec.attach(ctx, tx, recs); err != nil {
-		return nil, storekit.Page{}, err
-	}
-	return recs, page, nil
+	return storekit.RunListPageTx(ctx, tx, pre, spec.entity, columns, active, append(pre.Where(), filters...),
+		spec.scan, spec.cursorKey, func(tx pgx.Tx, recs []T) error {
+			// On the page's own snapshot, so what it reports about the boundary
+			// describes the same instant the rows do.
+			if err := auth.NoteCaptureWithheld(ctx, tx, spec.entity); err != nil {
+				return err
+			}
+			return spec.attach(ctx, tx, recs)
+		})
 }
 
 // listFilters is the optional-filter set the record lists share; each
@@ -185,7 +130,6 @@ type listFilters struct {
 	// row scope, so this names a subset of what the caller already sees.
 	Unassigned    *bool
 	Query         *string
-	Cursor        *string
 	CustomFilters map[string]string
 	// CapturedByKind filters on WHO created the row, matched against the
 	// captured_by prefix. `agent` is the review list for the records an AI
@@ -346,8 +290,8 @@ func aiWrittenClause(want *bool, entity string, arg func(any) int) string {
 
 // clauses translates the filters into WHERE clauses, appending their
 // arguments through arg — archived visibility, owner, provenance,
-// quick-find, custom-field equality, and the keyset cursor.
-func (f listFilters) clauses(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
+// quick-find and custom-field equality.
+func (f listFilters) clauses(active []fieldcatalog.Column, arg func(any) int) ([]string, error) {
 	var where []string
 	if !f.IncludeArchived {
 		where = append(where, "archived_at IS NULL")
@@ -383,15 +327,7 @@ func (f listFilters) clauses(ctx context.Context, active []fieldcatalog.Column, 
 	if err != nil {
 		return nil, err
 	}
-	where = append(where, cfClauses...)
-	if f.Cursor != nil && *f.Cursor != "" {
-		clause, err := sorted.KeysetClause(f.entity, *f.Cursor, arg)
-		if err != nil {
-			return nil, err
-		}
-		where = append(where, clause)
-	}
-	return where, nil
+	return append(where, cfClauses...), nil
 }
 
 // capturedByKindArg maps the optional provenance parameter onto the store

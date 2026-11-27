@@ -3,7 +3,6 @@
 // leadpresentation.tsx.
 
 import { useState } from "react";
-import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { usePageName } from "../../app/pagemeta";
 import { useRecordOwnerOptions } from "../../components/assigneepicker";
@@ -11,13 +10,7 @@ import { BULK_MAX_ITEMS } from "../../components/bulkchangeapi";
 import { CreateAction } from "../../components/create";
 import { useObjectCustomFields } from "../../components/customfields.form";
 import { useRosterHint, useRosterPartial } from "../../components/entityref";
-import {
-  type ListPage,
-  type ListQuery,
-  ListTable,
-  listFetchLimit,
-  useListQuery,
-} from "../../components/listquery";
+import { ListTable, useListQuery } from "../../components/listquery";
 import {
   mineEmptyLine,
   standardViews,
@@ -38,7 +31,8 @@ import {
   originPickOptions,
   useLeadOrigins,
 } from "../../lib/leadorigins";
-import { unwrap } from "../../lib/problem";
+import { leadsOpeningFilters, leadsOpenOnAll } from "../../lib/leads.address";
+import { LEADS_INITIAL_SORT } from "../../lib/listopenings";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
@@ -64,7 +58,7 @@ import { useViewerZone } from "../../lib/viewerzone";
 import { leadPartnerCreateFields, useLeadPartnerOptions } from "./leadpartner";
 import {
   createLead,
-  leadsQueryParams,
+  fetchLeadsPage,
   UNASSIGNED_OWNER,
 } from "./leads.list.queries";
 
@@ -89,33 +83,6 @@ const LEAD_SLA_STATES = [
   { value: "within_target", label: "lead.sla.withinTarget" },
 ] as const;
 
-export async function fetchLeadsPage(
-  query: ListQuery,
-  cursor: string | null,
-  signal?: AbortSignal,
-): Promise<ListPage<Lead>> {
-  const data = unwrap(
-    await api.GET("/leads", {
-      signal,
-      params: {
-        query: {
-          ...leadsQueryParams(query),
-          cursor: cursor || undefined,
-          limit: listFetchLimit(query.perPage),
-        },
-      },
-    }),
-  );
-  return {
-    data: data.data,
-    page: {
-      next_cursor: data.page.next_cursor ?? null,
-      has_more: data.page.has_more,
-      total: data.page.total,
-    },
-  };
-}
-
 export function LeadsScreen({
   startCreating = false,
 }: Readonly<{ startCreating?: boolean }>) {
@@ -132,12 +99,8 @@ export function LeadsScreen({
         {(session) => (
           <LeadsWorkbench
             viewerId={session.user.id}
-            // The opening filter, not a permission. An absent row scope opens
-            // on "mine", never on every lead.
-            opensOnAll={
-              session.authorization?.row_scope === "team" ||
-              session.authorization?.row_scope === "all"
-            }
+            opensOnAll={leadsOpenOnAll(session)}
+            openingFilters={leadsOpeningFilters(session)}
             startCreating={startCreating}
           />
         )}
@@ -155,10 +118,12 @@ const LEAD_SCREEN_DIALS: readonly string[] = [LEAD_VIEW_PARAM];
 function LeadsWorkbench({
   viewerId,
   opensOnAll,
+  openingFilters,
   startCreating,
 }: Readonly<{
   viewerId: string;
   opensOnAll: boolean;
+  openingFilters: Readonly<Record<string, string>>;
   startCreating: boolean;
 }>) {
   const ownerChips = useOwnerTagChips();
@@ -178,9 +143,10 @@ function LeadsWorkbench({
   const withheld = useWithheldLeadDials();
   const listQuery = useListQuery<Lead>({
     key: "leads",
-    initialSort: "",
-    initialFilters: opensOnAll ? {} : { owner_id: viewerId },
+    initialSort: LEADS_INITIAL_SORT,
+    initialFilters: openingFilters,
     fetchPage: fetchLeadsPage,
+    readsAtOffset: { rowKey: (lead) => lead.id },
     // A refused dial the list can name is not asked for; it is named instead.
     enabled: (query) => namedRefusedDials(query, withheld).length === 0,
     // Board or table is this screen's own, so the codec must not read it as a
@@ -202,7 +168,7 @@ function LeadsWorkbench({
   const bulkDone = useBulkDoneMessage();
   const showingMine = state.query.filters.owner_id === viewerId;
   const chosen = useRowSelection({
-    rows: state.rows,
+    rows: state.held ?? state.rows,
     keyOf: (lead) => lead.id,
     limit: BULK_MAX_ITEMS,
   });
@@ -277,7 +243,6 @@ function LeadsWorkbench({
         bodyOwnsPaging={view === "board" && refused.length === 0}
         state={state}
         unit="unit.leads"
-        unitOne="unit.lead"
         action={
           <CreateAction
             label={t("create.lead")}

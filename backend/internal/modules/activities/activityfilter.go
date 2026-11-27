@@ -315,7 +315,7 @@ func activityRowClauses(in ListActivitiesInput, arg func(any) int) []string {
 	}
 	if in.DirectionClockAsOf != nil && in.ClockDirection != "" {
 		where = append(where, relstrength.DirectionClockSQL("a", fmt.Sprintf("$%d", arg(*in.DirectionClockAsOf))),
-			sprintf("a.direction = $%d", arg(in.ClockDirection)))
+			directionPredicate(in.ClockDirection, arg))
 	}
 	if in.ThreadKey != nil && *in.ThreadKey != "" {
 		where = append(where, sprintf("a.thread_key = $%d", arg(*in.ThreadKey)))
@@ -376,6 +376,15 @@ func filtersOnContent(in ListActivitiesInput) bool {
 	return (in.ThreadKey != nil && *in.ThreadKey != "") || (in.Query != nil && *in.Query != "") ||
 		in.WaitingReplyAsOf != nil || in.RequestReviewAsOf != nil || in.RequestCurrentAsOf != nil || in.ReadableOnly || in.ConversationAsOf != nil || in.SourceActivityID != nil || in.WebsiteFormID != nil ||
 		in.SentBy != nil || in.ConversationOf != nil || in.RemindersDue || len(in.SourceIDs) > 0 || len(in.CustomFilters) > 0
+}
+
+// directionPredicate spells a known direction as a literal, as kindPredicate
+// does a kind, so a generic plan keeps the partial indexes on it.
+func directionPredicate(direction string, arg func(any) int) string {
+	if known := crmcontracts.ActivityDirection(direction); known.Valid() {
+		return "a.direction = '" + string(known) + "'"
+	}
+	return sprintf("a.direction = $%d", arg(direction))
 }
 
 // kindPredicate spells known kinds as literals, so a generic plan keeps the

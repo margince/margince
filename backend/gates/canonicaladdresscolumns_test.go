@@ -67,14 +67,11 @@ func holdsCanonicalForm(def, column string) bool {
 // whether a CHECK holds its canonical form.
 func addressColumnsInUniqueIndexes(t *testing.T) map[string]bool {
 	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	raw := headCatalog(t)
 	columns := map[string][]string{}
 	checks := map[string][]string{}
 	var indexes [][2]string
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		line = strings.TrimSpace(line)
 		if m := textColumnLine.FindStringSubmatch(line); m != nil {
 			columns[m[1]] = append(columns[m[1]], m[2])

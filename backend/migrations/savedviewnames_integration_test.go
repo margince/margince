@@ -13,7 +13,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/dbmigrate"
 )
 
-const savedViewNameMigration = "core/1795740697_a_saved_view_name_has_one_live_owner"
+const savedViewNameMigration = "core/1795772279_a_saved_view_name_has_one_live_owner"
 
 func TestSavedViewTwinsKeepTheOldestNameAndSkipExistingSuffixes(t *testing.T) {
 	ownerDSN, _ := dsns(t)
@@ -57,7 +57,7 @@ func TestSavedViewTwinsKeepTheOldestNameAndSkipExistingSuffixes(t *testing.T) {
 	if _, err := conn.Exec(ctx, `UPDATE app_user SET status = 'deactivated', removed_at = now() WHERE id = $1`, retiredOwner); err != nil {
 		t.Fatal(err)
 	}
-	applyMigrationFile(t, conn, "core/1795740696_a_saved_view_name_is_unique_for_its_owner_and_resource.up.sql")
+	applyMigrationFile(t, conn, "core/1795772278_a_saved_view_name_is_unique_for_its_owner_and_resource.up.sql")
 	ns.Name = "saved_view_names_restore"
 	ns.Migrations[0].UpSQL = string(up)
 	if _, err := dbmigrate.Up(ctx, conn, ns); err != nil {

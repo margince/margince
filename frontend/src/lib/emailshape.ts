@@ -4,9 +4,10 @@
 import type { Locale } from "../i18n";
 import { type FieldLabel, fieldCheckSentence } from "./faultsentence";
 
-// One @ between a non-empty local part and domain, with no whitespace. Looser
-// than the server's net/mail parse, so a form never refuses what it accepts.
-const EMAIL_SHAPE = /^[^\s@]+@[^\s@]+$/;
+// One @ between a local part and a domain of two or more labels, no whitespace.
+// That is the server's rule, looser than its full parse, so a form never
+// refuses what the server accepts.
+const EMAIL_SHAPE = /^[^\s@]+@[^\s@.]+(\.[^\s@.]+)+$/;
 
 /** Whether typed text can be an email address; the server has the last word. */
 export function looksLikeEmail(text: string): boolean {

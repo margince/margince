@@ -22,6 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // InviteUserInput carries the admin-supplied details for a new member. No
@@ -69,6 +70,11 @@ func (s *Service) InviteMember(ctx context.Context, actor Identity, in InviteUse
 	if err := s.refuseUntilDescribed(ctx); err != nil {
 		return userRow{}, "", err
 	}
+	email, err := values.ParseEmail(in.Email)
+	if err != nil {
+		return userRow{}, "", err
+	}
+	in.Email = email.String()
 	teams, err := validTeamIDs(in.TeamIDs)
 	if err != nil {
 		return userRow{}, "", err

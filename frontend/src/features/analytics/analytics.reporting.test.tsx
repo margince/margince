@@ -108,7 +108,7 @@ it.each([
         timezone: reportingStoryEvaluation.context.timezone,
         base_currency: "EUR",
       }),
-    "GET /forecast/assurance": () => jsonResponse({}, 404),
+    "GET /forecast/assurance": () => new Response(null, { status: 204 }),
     "GET /forecast/assurance/preview": () =>
       jsonResponse({
         started: false,

@@ -22,7 +22,7 @@ import {
 } from "./customfields.logic";
 import { customFieldsQuery } from "./customfields.query";
 import { previousOfScope, useHealthScope } from "./healthscope";
-import { historyFieldLabelKey } from "./historyfieldlabels";
+import { hasFieldWord, historyFieldLabel } from "./historyfieldlabels";
 import { unwrap } from "./problem";
 import {
   type EncodedPredicate,
@@ -205,8 +205,8 @@ export function groupFields(fields: readonly VocabularyField[]) {
 // What each core filter field is CALLED. The vocabulary carries wire names
 // (`owner_id`), and a builder that printed them spoke a column's language to a
 // reader who never sees one. A column the History tab already names takes that
-// word from `historyFieldLabelKey`, so a field reads the same on both surfaces;
-// this map holds only the fields History never names.
+// word from `historyFieldLabel`, so a field reads the same on both surfaces.
+// This map holds only the fields History never names.
 //
 // Held to the engine by backend/gates/frontendfilterfieldlabels_test.go: an
 // engine field neither map names fails, and so does an entry here for a field
@@ -251,9 +251,10 @@ export function fieldLabel(
   if (field.custom) {
     return field.label ?? customColumnLabel(field.name);
   }
-  const key =
-    historyFieldLabelKey(field.name) ??
-    FILTER_ONLY_FIELD_LABELS.get(field.name);
+  if (hasFieldWord(field.name)) {
+    return historyFieldLabel(field.name, t);
+  }
+  const key = FILTER_ONLY_FIELD_LABELS.get(field.name);
   return key ? t(key) : field.name.replaceAll("_", " ");
 }
 

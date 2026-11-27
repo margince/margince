@@ -232,6 +232,7 @@ var queryEnumTable = map[string][]queryEnum{
 		{Name: "salutation", Values: []string{"mr", "ms", "none", "unset"}, Array: false, Explode: true},
 		{Name: "size_band", Values: []string{"1-10", "11-50", "51-200", "201-500", "501-1000", "1001-5000", "5000+"}, Array: false, Explode: true},
 		{Name: "sla_state", Values: []string{"within_target", "at_risk", "breached"}, Array: false, Explode: true},
+		{Name: "source", Values: []string{"api", "automation", "capture", "import", "manual", "webform"}, Array: false, Explode: true},
 		{Name: "status", Values: []string{"new", "contacted", "engaged", "promoted", "disqualified"}, Array: false, Explode: true},
 		{Name: "tag_mode", Values: []string{"any", "all", "none"}, Array: false, Explode: true},
 	},
@@ -425,6 +426,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/companies": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 	},
 	"GET /v1/companies/{id}/access": {
 		{Name: "limit", Minimum: 1},
@@ -446,6 +448,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/contacts": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 	},
 	"GET /v1/contacts/{id}/access": {
 		{Name: "limit", Minimum: 1},
@@ -470,6 +473,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/deals": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 		{Name: "value_max", Minimum: 0},
 		{Name: "value_min", Minimum: 0},
 		{Name: "win_probability_max", Minimum: 0},
@@ -508,6 +512,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/leads": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 	},
 	"GET /v1/leads/{id}/score": {
 		{Name: "limit", Minimum: 1},
@@ -556,6 +561,7 @@ var queryMinimumTable = map[string][]queryMinimum{
 	},
 	"GET /v1/projects": {
 		{Name: "limit", Minimum: 1},
+		{Name: "offset", Minimum: 0},
 	},
 	"GET /v1/projects/{id}/health-assessments": {
 		{Name: "limit", Minimum: 1},
@@ -620,24 +626,44 @@ var queryMinimumTable = map[string][]queryMinimum{
 }
 
 var deprecationTable = map[string]map[string]string{
-	"DELETE /v1/lead-sources/{id}":                               {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/companies/{id}/brief":                               {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/deals/{id}/viability":                               {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/digest":                                             {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/forecast/assurance/enforcement":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
-	"GET /v1/lead-sources":                                       {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/stage-automation/policies/{id}":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"GET /v1/stage-automation/report":                            {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
-	"PATCH /v1/lead-sources/{id}":                                {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"POST /v1/ai-model-rates/propose-refresh":                    {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"POST /v1/companies/{id}/brief":                              {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"POST /v1/deals/{id}/applied-changes/{changeId}/accept":      {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"POST /v1/deals/{id}/stage-progressions/{approvalId}/revert": {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"POST /v1/forecast/assurance/exceptions/{id}/close-lost":     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"POST /v1/forecast/assurance/exceptions/{id}/wait":           {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
-	"POST /v1/lead-sources":                                      {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"POST /v1/stage-automation/policies/{id}/resume":             {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"PUT /v1/forecast/assurance/enforcement":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"PUT /v1/scheduling/team-requests/{host_user_id}":            {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
 	"PUT /v1/stage-automation/policies/{id}":                     {"Link": "</v1/openapi.json>; rel=\"deprecation\"; type=\"application/json\", <https://github.com/margince/margince/blob/develop/docs/reference/api-compatibility.md>; rel=\"deprecation\"; type=\"text/markdown\""},
+}
+
+var absentPreferenceRoutes = map[string]bool{
+	"GET /v1/activities/{id}/transcript-proposals/latest":    true,
+	"GET /v1/analytics/coverage":                             true,
+	"GET /v1/attachments/{id}/extraction":                    true,
+	"GET /v1/brief":                                          true,
+	"GET /v1/companies/{id}/partner":                         true,
+	"GET /v1/companies/{id}/site-reads/latest":               true,
+	"GET /v1/companies/{id}/technical-enrich/latest":         true,
+	"GET /v1/companies/{id}/vat-check":                       true,
+	"GET /v1/company":                                        true,
+	"GET /v1/dedupe/contact-cases/{contact_id}":              true,
+	"GET /v1/forecast/assurance":                             true,
+	"GET /v1/mail-drafts":                                    true,
+	"GET /v1/onboarding/company/proposal":                    true,
+	"GET /v1/onboarding/state":                               true,
+	"GET /v1/records/{record_type}/{id}/edit-access-request": true,
+	"GET /v1/records/{record_type}/{id}/ownership-offer":     true,
+	"GET /v1/records/{record_type}/{id}/ownership-request":   true,
+	"GET /v1/weekly-plans/current":                           true,
+	"GET /v1/weekly-plans/{owner_id}/current":                true,
+	"GET /v1/weekly-reviews/latest":                          true,
+	"GET /v1/weekly-reviews/team":                            true,
 }

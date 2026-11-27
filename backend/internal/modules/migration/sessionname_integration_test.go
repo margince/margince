@@ -28,8 +28,8 @@ func seedFairRun(ctx context.Context, t *testing.T, db *database.DB, status stri
 	var id RunID
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			INSERT INTO import_run (connector, status, source_ref, source, captured_by, approved_at, mapping)
-			VALUES ($1, $2, $3, 'test', 'human:fixture', now(), jsonb_build_object('source_name', $4::text))
+			INSERT INTO import_run (connector, status, source_ref, captured_by, approved_at, mapping)
+			VALUES ($1, $2, $3, 'human:fixture', now(), jsonb_build_object('source_name', $4::text))
 			RETURNING id`,
 			ConnectorCSV, status, "ws/import/"+ids.NewV7().String(), fairName).Scan(&id)
 	}); err != nil {

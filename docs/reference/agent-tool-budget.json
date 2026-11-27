@@ -31,9 +31,9 @@
   "catalog": {
     "tools": 48,
     "system_frame_tokens": 730,
-    "tokens": 54175,
+    "tokens": 54129,
     "median_tool_tokens": 807,
-    "mean_tool_tokens": 1128
+    "mean_tool_tokens": 1127
   },
   "agents": [
     {
@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 48,
-      "tokens": 4434,
-      "listing_tokens": 2051,
-      "step_schema_tokens": 1653,
+      "tokens": 4544,
+      "listing_tokens": 2114,
+      "step_schema_tokens": 1699,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 11950,
+      "headroom_tokens": 11840,
       "dangling_cross_references": [],
       "temptation_weight": 4
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6734,
-      "listing_tokens": 3367,
-      "step_schema_tokens": 2636,
+      "tokens": 6844,
+      "listing_tokens": 3431,
+      "step_schema_tokens": 2682,
       "percent_of_ceiling": 20,
-      "headroom_tokens": 9650,
+      "headroom_tokens": 9540,
       "dangling_cross_references": [
         "at_risk_relationships → read_relationships",
         "log_activity → draft_outbound",
@@ -85,7 +85,7 @@
   "tool_cost": [
     {
       "name": "read_details",
-      "tokens": 4608
+      "tokens": 4605
     },
     {
       "name": "read_reports",
@@ -93,7 +93,7 @@
     },
     {
       "name": "change_settings",
-      "tokens": 3347
+      "tokens": 3259
     },
     {
       "name": "change_activities",
@@ -109,7 +109,7 @@
     },
     {
       "name": "find_records",
-      "tokens": 2059
+      "tokens": 2108
     },
     {
       "name": "change_reports",
@@ -117,7 +117,7 @@
     },
     {
       "name": "change_capture",
-      "tokens": 1989
+      "tokens": 1987
     },
     {
       "name": "read_view",
@@ -125,7 +125,7 @@
     },
     {
       "name": "change_attention",
-      "tokens": 1834
+      "tokens": 1832
     },
     {
       "name": "send_outbound",

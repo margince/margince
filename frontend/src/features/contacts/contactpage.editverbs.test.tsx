@@ -164,6 +164,48 @@ describe("the header's core record verbs — edit, merge, archive", () => {
     await waitFor(() => expect(archived).toBe(true));
   });
 
+  // The server refuses both reads for an archived row, and the page still
+  // holds the live row in the beat after the archive answers.
+  it("asks for no 360 or lists of the contact it just archived", async () => {
+    let archived = false;
+    let rowReadsAfter = 0;
+    const refusedReads: string[] = [];
+    const archivedRow = {
+      ...view.contact,
+      archived_at: "2026-08-14T00:00:00Z",
+    };
+    mount("overview", view, [], {
+      "GET /contacts/p-1": () => {
+        if (!archived) return jsonResponse(view.contact);
+        rowReadsAfter += 1;
+        return jsonResponse(archivedRow);
+      },
+      "GET /contacts/p-1/360": () => {
+        if (archived) refusedReads.push("360");
+        return jsonResponse(view);
+      },
+      "GET /records/contact/p-1/lists": () => {
+        if (archived) refusedReads.push("lists");
+        return jsonResponse({ data: [], page: { has_more: false } });
+      },
+      "DELETE /contacts/p-1": () => {
+        archived = true;
+        return jsonResponse(archivedRow);
+      },
+    });
+
+    await pressRecordVerb("archive-record");
+    await userEvent.click(
+      within(await screen.findByRole("dialog")).getByRole("button", {
+        name: /^Archive/,
+      }),
+    );
+
+    await waitFor(() => expect(rowReadsAfter).toBeGreaterThan(0));
+    expect(await screen.findByText(en["record.archived"])).toBeTruthy();
+    expect(refusedReads).toEqual([]);
+  });
+
   it("says so when the Undo of an archive finds no archive to put back", async () => {
     mount(
       "overview",

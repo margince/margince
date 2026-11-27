@@ -162,7 +162,7 @@ func requesterAddress(stated, mailedTo *string, subjectRef string) (string, erro
 		if candidate == nil {
 			continue
 		}
-		if parsed, err := values.ParseEmail(*candidate); err == nil {
+		if parsed, err := values.ParseEmailReference(*candidate); err == nil {
 			return parsed.String(), nil
 		}
 	}

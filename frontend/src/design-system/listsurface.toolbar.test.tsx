@@ -387,12 +387,10 @@ it("keeps the count line, blank, while a count is pending", () => {
 });
 
 it("says nothing for a settled list with no rows and no order", () => {
-  render(<CountLine unit="leads" first={1} last={0} total={0} />);
+  render(<CountLine first={1} last={0} total={0} />);
   expect(document.body).toHaveTextContent(/^$/);
   cleanup();
-  render(
-    <CountLine unit="leads" first={1} last={0} total={0} sortedBy="Name" />,
-  );
+  render(<CountLine first={1} last={0} total={0} sortedBy="Name" />);
   expect(document.body).toHaveTextContent("Sorted by Name");
 });
 
@@ -401,7 +399,6 @@ it("names what the counted rows belong to, before the order", () => {
     <ListSurface
       count={
         <CountLine
-          unit="deals"
           first={1}
           last={2}
           total={2}
@@ -414,7 +411,7 @@ it("names what the counted rows belong to, before the order", () => {
     </ListSurface>,
   );
   expect(
-    screen.getByText("1 to 2 of 2 deals in Sales, sorted by Value"),
+    screen.getByText("1-2 of 2 in Sales, sorted by Value"),
   ).toBeInTheDocument();
 });
 

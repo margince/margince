@@ -251,6 +251,14 @@ describe("PipelinesCard: a new stage's refusals", () => {
     return { user, form };
   }
 
+  it("asks for the win probability of an open stage before sending", async () => {
+    const posted: unknown[] = [];
+    const { user, form } = await openNewStage(posted);
+    await user.click(form.getByRole("button", { name: "Create" }));
+    expect(await form.findByText("Win probability is required.")).toBeTruthy();
+    expect(posted).toEqual([]);
+  });
+
   it("says on the name field that the pipeline already has the stage", async () => {
     const posted: unknown[] = [];
     const { user, form } = await openNewStage(posted, () =>
@@ -265,6 +273,7 @@ describe("PipelinesCard: a new stage's refusals", () => {
     );
     const name = form.getByLabelText("Name *");
     expect(name).toHaveAttribute("data-character-limit", "120");
+    await user.type(form.getByLabelText(/Win probability/), "40");
     await user.click(form.getByRole("button", { name: "Create" }));
     await waitFor(() =>
       expect(name).toHaveAccessibleDescription(en["stage.nameTaken"]),

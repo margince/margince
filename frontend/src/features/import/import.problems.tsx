@@ -5,7 +5,6 @@ import { Download } from "lucide-react";
 import { useState } from "react";
 import { Badge } from "../../design-system/atoms";
 import { DataTable } from "../../design-system/datatable";
-import { CountLine } from "../../design-system/listsurface";
 import { fitsOnePage, PAGE_SIZES } from "../../design-system/listtable.paging";
 import { Pager } from "../../design-system/pager";
 import { formatNumber } from "../../format/format";
@@ -64,7 +63,6 @@ function issueWhere(
 export function ProblemTable({
   issues,
 }: Readonly<{ issues: readonly ImportRowIssue[] }>) {
-  const t = useT();
   const [page, setPage] = useState(1);
   const [perPage, setPerPage] = useState<number>(PAGE_SIZES[0]);
   // A new report is another list: its page one, not the page the last one was on.
@@ -83,27 +81,22 @@ export function ProblemTable({
     <div className="import__problems">
       <ProblemRows issues={shown} total={issues.length} />
       {paged ? (
-        <>
-          <p className="t-caption">
-            <CountLine
-              unit={t("import.test.issuesUnit")}
-              first={from + 1}
-              last={from + shown.length}
-              total={issues.length}
-            />
-          </p>
-          <Pager
-            current={current}
-            lastPage={lastPage}
-            hasMore={false}
-            perPage={perPage}
-            onGoto={setPage}
-            onPerPage={(next) => {
-              setPerPage(next);
-              setPage(1);
-            }}
-          />
-        </>
+        <Pager
+          current={current}
+          lastPage={lastPage}
+          hasMore={false}
+          perPage={perPage}
+          range={{
+            first: from + 1,
+            last: from + shown.length,
+            total: issues.length,
+          }}
+          onGoto={setPage}
+          onPerPage={(next) => {
+            setPerPage(next);
+            setPage(1);
+          }}
+        />
       ) : null}
     </div>
   );

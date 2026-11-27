@@ -627,7 +627,7 @@ describe("a case already settled", () => {
           reads += 1;
           return reads === 1
             ? jsonResponse(contactCase())
-            : jsonResponse({ title: "Not found", status: 404 }, 404);
+            : new Response(null, { status: 204 });
         },
         [`POST ${CASE_PATH}/preview`]: () =>
           jsonResponse(
@@ -659,7 +659,7 @@ describe("a case already settled", () => {
           reads += 1;
           return reads === 1
             ? jsonResponse(contactCase(TOO_LARGE))
-            : jsonResponse({ title: "Not found", status: 404 }, 404);
+            : new Response(null, { status: 204 });
         },
         "POST /dedupe/candidates/p1/disposition": noContent,
       },
@@ -680,8 +680,7 @@ describe("a case already settled", () => {
   it("says the contact has no duplicates when it never had a case", async () => {
     stubWithSession(
       {
-        [`GET ${CASE_PATH}`]: () =>
-          jsonResponse({ title: "Not found", status: 404 }, 404),
+        [`GET ${CASE_PATH}`]: () => new Response(null, { status: 204 }),
       },
       {},
     );

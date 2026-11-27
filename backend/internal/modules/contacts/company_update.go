@@ -379,6 +379,13 @@ func (s *Store) stageCompanyDomains(ctx context.Context, tx pgx.Tx, id ids.Compa
 	if in.Domains == nil {
 		return nil
 	}
+	held, _, _, err := readLiveDomains(ctx, tx, id)
+	if err != nil {
+		return err
+	}
+	if err := refuseLongerList(companyDomainsField, "domains", maxCompanyDomains, len(*in.Domains), len(held)); err != nil {
+		return err
+	}
 	if err := parseCompanyDomains(*in.Domains); err != nil {
 		return err
 	}

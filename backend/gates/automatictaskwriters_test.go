@@ -25,6 +25,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -173,6 +174,27 @@ type taskCensus struct {
 	builders map[string]activityShape
 	// readers maps each open-task reader to whether it reaches the clause.
 	readers map[string]bool
+}
+
+// internalTaskCensuses holds the census of internal/ once per test binary: two
+// tests read it. built stays false when a walk fails, so the next caller fails
+// the same way.
+var internalTaskCensuses struct {
+	sync.Mutex
+	built  bool
+	census taskCensus
+}
+
+// internalTaskCensus answers the shared census of internal/, read-only.
+func internalTaskCensus(t *testing.T) taskCensus {
+	t.Helper()
+	internalTaskCensuses.Lock()
+	defer internalTaskCensuses.Unlock()
+	if !internalTaskCensuses.built {
+		internalTaskCensuses.census = scanTaskCensus(t, "internal", nil)
+		internalTaskCensuses.built = true
+	}
+	return internalTaskCensuses.census
 }
 
 // scanTaskCensus reads every hand-written Go file under root, plus any
@@ -425,7 +447,7 @@ func builderFaults(found taskCensus, declarations map[string][]string) []string 
 
 func TestEveryAutomaticTaskWriterAndOpenTaskReaderIsDeclared(t *testing.T) {
 	t.Parallel()
-	if faults := taskCensusFaults(scanTaskCensus(t, "internal", nil), taskSourceWriters); len(faults) > 0 {
+	if faults := taskCensusFaults(internalTaskCensus(t), taskSourceWriters); len(faults) > 0 {
 		t.Fatalf("the task census found:\n%s", strings.Join(faults, "\n"))
 	}
 }
@@ -641,7 +663,7 @@ func mint(ctx context.Context, store *activities.Store, line string) error {
 // No UPDATE may turn a row into a task behind both counts.
 func TestTheTaskCensusHoldsEveryActivityInsertTheTableCensusFinds(t *testing.T) {
 	t.Parallel()
-	builders := scanTaskCensus(t, "internal", nil).builders
+	builders := internalTaskCensus(t).builders
 	inserts := 0
 	for owner, writes := range collectTableWrites(t) {
 		for _, write := range writes {

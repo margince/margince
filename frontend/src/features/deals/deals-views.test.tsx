@@ -99,6 +99,7 @@ function stubBackend(opts: {
   savedViews?: Record<string, unknown>[];
   stageTotalsRows?: Record<string, unknown>[];
   dealUrls?: string[];
+  pipelines?: Record<string, unknown>[];
 }) {
   return vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
     const request = input instanceof Request ? input : null;
@@ -106,11 +107,26 @@ function stubBackend(opts: {
     const method = request ? request.method : (init?.method ?? "GET");
     if (url.includes("/pipelines")) {
       return jsonResponse({
-        data: [
+        data: opts.pipelines ?? [
           { id: "pl", name: "Sales", is_default: true, position: 0, stages },
         ],
         page: { next_cursor: null },
       });
+    }
+    // A created view joins the reader's views, so the next read draws its tab.
+    if (method === "POST" && url.includes("/views")) {
+      const body = request
+        ? await request.json()
+        : JSON.parse(String(init?.body));
+      const created = {
+        id: `v${(opts.savedViews?.length ?? 0) + 1}`,
+        version: 1,
+        created_at: "2026-06-01T00:00:00Z",
+        updated_at: "2026-06-01T00:00:00Z",
+        ...body,
+      };
+      opts.savedViews?.push(created);
+      return jsonResponse(created, 201);
     }
     if (method === "GET" && url.includes("/views")) {
       return jsonResponse({
@@ -320,6 +336,90 @@ describe("a saved view over the deals board", () => {
     expect(
       await within(panel).findByRole("button", { name: "Compact" }),
     ).toBeInTheDocument();
+  });
+});
+
+describe("a view saved on a pipeline", () => {
+  // The view stores the pipeline among its filters, and the screen holds the
+  // pipeline as a dial of its own. The tab has to read the two as one list.
+  it("lights its tab once the reader presses it", async () => {
+    const savedViews: Record<string, unknown>[] = [];
+    const user = userEvent.setup();
+    vi.stubGlobal("fetch", stubBackend({ deals: [deal({})], savedViews }));
+    render(<DealsScreen />);
+    await showLayout(user, "Table");
+    await user.click(screen.getByRole("button", { name: "Sort by Value" }));
+    await user.click(
+      within(await openView(user)).getByRole("button", { name: "Save view" }),
+    );
+    await user.type(
+      await screen.findByRole("textbox", { name: "Name" }),
+      "Biggest first",
+    );
+    await user.click(screen.getByRole("button", { name: "Save" }));
+    await waitFor(() => expect(savedViews).toHaveLength(1));
+    expect(savedViews[0]).toMatchObject({
+      query: { list: { filters: { pipeline_id: "pl" } } },
+    });
+
+    await user.click(viewTab("All"));
+    await user.click(
+      await screen.findByRole("button", { name: "Biggest first" }),
+    );
+
+    await waitFor(() =>
+      expect(viewTab("Biggest first").getAttribute("aria-pressed")).toBe(
+        "true",
+      ),
+    );
+    expect(viewTab("All").getAttribute("aria-pressed")).toBe("false");
+  });
+
+  // On another pipeline the view names a different list, so it stays unlit
+  // until pressing it brings its own pipeline back.
+  it("lights only on its own pipeline, and pressing it switches there", async () => {
+    window.location.hash = "#/deals?view=table&pipeline_id=pl2";
+    const dealUrls: string[] = [];
+    const user = userEvent.setup();
+    vi.stubGlobal(
+      "fetch",
+      stubBackend({
+        deals: [deal({ stalled: true })],
+        dealUrls,
+        pipelines: [
+          { id: "pl", name: "Sales", is_default: true, position: 0, stages },
+          {
+            id: "pl2",
+            name: "Renewals",
+            is_default: false,
+            position: 1,
+            stages: [{ ...stages[0], id: "s2", pipeline_id: "pl2" }],
+          },
+        ],
+        savedViews: [
+          {
+            ...stalledView,
+            query: {
+              list: {
+                sort: "",
+                filters: { stalled: "true", pipeline_id: "pl" },
+              },
+            },
+          },
+        ],
+      }),
+    );
+    render(<DealsScreen />);
+    const tab = await screen.findByRole("button", { name: VIEW_NAME });
+    expect(tab.getAttribute("aria-pressed")).toBe("false");
+
+    await user.click(tab);
+
+    await waitFor(() =>
+      expect(viewTab(VIEW_NAME).getAttribute("aria-pressed")).toBe("true"),
+    );
+    const asked = new URL(dealUrls.at(-1) ?? "", "https://test.local");
+    expect(asked.searchParams.get("pipeline_id")).toBe("pl");
   });
 });
 

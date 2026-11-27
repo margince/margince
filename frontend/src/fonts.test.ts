@@ -116,7 +116,13 @@ it("serves every face to the dev server", async () => {
     root: frontendRoot,
     logLevel: "silent",
     optimizeDeps: { noDiscovery: true },
-    server: { ...spaConfig.server, port: 0, proxy: undefined },
+    // One address for the bind and the fetch: "localhost" can name two.
+    server: {
+      ...spaConfig.server,
+      host: "127.0.0.1",
+      port: 0,
+      proxy: undefined,
+    },
   });
   try {
     await server.listen();

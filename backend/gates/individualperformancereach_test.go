@@ -167,6 +167,9 @@ type switchGraph struct {
 // loadSwitchGraph type-checks the packages under dirs, each after the ones it
 // imports, so a call across them resolves to its real declaration. A file
 // the default build leaves out is not read.
+//
+// It is not typedModule: the walk tells an outside call by its stand-in
+// import. On real types it reports false findings until it is rewritten.
 func loadSwitchGraph(t *testing.T, config walkConfig, dirs ...string) *switchGraph {
 	t.Helper()
 	fset := gatekit.SourceFileSet()

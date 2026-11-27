@@ -14,7 +14,6 @@ import (
 	"context"
 	"errors"
 	"fmt"
-	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -270,18 +269,22 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		if err := validPatchedIntervalCount(ctx, tx, lineID, in); err != nil {
 			return err
 		}
-		// A line sent back as it stands moves no figure and no total.
-		if moved, _ := storekit.ChangedColumns(lineBefore, lineAfter); len(sets) == 0 || len(moved) == 0 {
+		// A line sent back as it stands writes no figure; a move still renumbers.
+		if moved, _ := storekit.ChangedColumns(lineBefore, lineAfter); len(moved) == 0 {
+			sets = nil
+		}
+		moves, err := applyOfferLinePatch(ctx, tx, offerID, lineID, in.Position, sets, args)
+		if err != nil {
+			return err
+		}
+		if len(sets) == 0 && len(moves) == 0 {
 			out, err = readOfferWithLines(ctx, tx, offerID, storekit.LiveOnly)
 			return err
 		}
-		if _, err := tx.Exec(ctx,
-			fmt.Sprintf(`UPDATE offer_line_item SET %s WHERE id = $1`, strings.Join(sets, ", ")),
-			args...); err != nil {
-			if storekit.IsUniqueViolation(err) {
-				return fmt.Errorf("position is already taken on this offer: %w", apperrors.ErrConflict)
-			}
-			return fmt.Errorf("apply line patch: %w", err)
+		evidence := lineFieldEvidence(lineID, lineBefore, lineAfter)
+		if len(moves) > 0 {
+			// The other lines a move renumbered are part of what it did.
+			evidence["positions_before"], evidence["positions_after"] = positionImages(moves)
 		}
 		totals, err := recomputeOfferTotals(ctx, tx, offerID)
 		if err != nil {
@@ -293,8 +296,7 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 		// recorded pair can make. The line's own field patch is context about
 		// the write and lands in evidence.
 		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", "offer", offerID.UUID,
-			offerTotalsImage(totals.Before), offerTotalsImage(totals.After),
-			lineFieldEvidence(lineID, lineBefore, lineAfter))
+			offerTotalsImage(totals.Before), offerTotalsImage(totals.After), evidence)
 		if err != nil {
 			return fmt.Errorf("audit line update: %w", err)
 		}
@@ -312,7 +314,6 @@ func (s *Store) UpdateOfferLineItem(ctx context.Context, offerID ids.OfferID, li
 // currentOfferLine is what a line patch reads before it writes: the fields
 // the audit's before-image records, and the figures it validates against.
 type currentOfferLine struct {
-	Position          int
 	Description, Unit string
 	TaxCategory       *string
 	Figures           OfferLineInput
@@ -323,9 +324,9 @@ type currentOfferLine struct {
 func readOfferLineForUpdate(ctx context.Context, tx pgx.Tx, offerID ids.OfferID, lineID ids.UUID) (currentOfferLine, error) {
 	var cur currentOfferLine
 	err := tx.QueryRow(ctx,
-		`SELECT position, description, unit, quantity::text, unit_price_minor, discount_pct::text, tax_rate::text, tax_category
+		`SELECT description, unit, quantity::text, unit_price_minor, discount_pct::text, tax_rate::text, tax_category
 		 FROM offer_line_item WHERE id = $1 AND offer_id = $2`, lineID, offerID).
-		Scan(&cur.Position, &cur.Description, &cur.Unit, &cur.Figures.Quantity, &cur.Figures.UnitPriceMinor,
+		Scan(&cur.Description, &cur.Unit, &cur.Figures.Quantity, &cur.Figures.UnitPriceMinor,
 			&cur.Figures.DiscountPct, &cur.Figures.TaxRate, &cur.TaxCategory)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return currentOfferLine{}, apperrors.ErrNotFound
@@ -350,9 +351,6 @@ func buildOfferLinePatch(lineID ids.UUID, in UpdateOfferLineInput, cur currentOf
 		args = append(args, newVal)
 		sets = append(sets, fmt.Sprintf("%s = $%d", column, len(args)))
 		before[column], after[column] = oldVal, newVal
-	}
-	if in.Position != nil {
-		set("position", cur.Position, *in.Position)
 	}
 	if in.Description != nil {
 		set("description", cur.Description, *in.Description)

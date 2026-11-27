@@ -19,7 +19,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
@@ -64,10 +63,6 @@ func (s *Store) CreateReviewTemplate(ctx context.Context, req crmcontracts.Creat
 	if err != nil {
 		return crmcontracts.ActivityReviewTemplate{}, fmt.Errorf("encode template: %w", err)
 	}
-	by, err := storekit.CapturedBy(ctx)
-	if err != nil {
-		return crmcontracts.ActivityReviewTemplate{}, err
-	}
 	var result crmcontracts.ActivityReviewTemplate
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		key := ""
@@ -80,9 +75,9 @@ func (s *Store) CreateReviewTemplate(ctx context.Context, req crmcontracts.Creat
 			return err
 		}
 		result, err = scanReviewTemplate(tx.QueryRow(ctx,
-			`INSERT INTO activity_review_template (key, label, outcome, questions, source, captured_by)
-			 VALUES ($1, $2, $3, $4, $5, $6) RETURNING `+reviewTemplateColumns,
-			key, label, outcome, raw, provenance.RecordSourceManual, by))
+			`INSERT INTO activity_review_template (key, label, outcome, questions)
+			 VALUES ($1, $2, $3, $4) RETURNING `+reviewTemplateColumns,
+			key, label, outcome, raw))
 		if storekit.IsUniqueViolation(err) {
 			return apperrors.ErrConflict
 		}
@@ -102,7 +97,7 @@ func (s *Store) CreateReviewTemplate(ctx context.Context, req crmcontracts.Creat
 func retireAskedTemplate(ctx context.Context, tx pgx.Tx, outcome string) error {
 	rows, err := tx.Query(ctx,
 		`UPDATE activity_review_template SET active = false
-		  WHERE outcome = $1 AND active AND archived_at IS NULL RETURNING id`, outcome)
+		  WHERE outcome = $1 AND active RETURNING id`, outcome)
 	if err != nil {
 		return fmt.Errorf("retire the asked template: %w", err)
 	}
@@ -159,11 +154,11 @@ func cutReviewTemplateKey(key string) string {
 }
 
 // freeReviewTemplateKey answers base, or base with the first free number when
-// a live template already holds it. A key is never shown to the admin, so a
+// a template already holds it. A key is never shown to the admin, so a
 // second "Win review" gets win_review_2 rather than a refusal.
 func freeReviewTemplateKey(ctx context.Context, tx pgx.Tx, base string) (string, error) {
 	rows, err := tx.Query(ctx,
-		`SELECT key FROM activity_review_template WHERE archived_at IS NULL AND starts_with(key, $1)`, base)
+		`SELECT key FROM activity_review_template WHERE starts_with(key, $1)`, base)
 	if err != nil {
 		return "", fmt.Errorf("read template keys: %w", err)
 	}

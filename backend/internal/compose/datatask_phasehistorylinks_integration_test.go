@@ -44,7 +44,7 @@ func phaseRowsOf(t *testing.T, e *integration.Env, project ids.ProjectID, column
 		FROM project_phase_history WHERE project_id = $1`, project)
 }
 
-const phaseWriterColumns = `concat_ws(',', changed_by, COALESCE(reason, '-'), occurred_at::text)`
+const phaseWriterColumns = `concat_ws(',', COALESCE(reason, '-'), occurred_at::text)`
 
 func TestThePhaseHistoryLinkTaskLinksOnlyWhatOneAuditRowProves(t *testing.T) {
 	e := integration.Setup(t)

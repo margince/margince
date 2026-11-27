@@ -283,7 +283,7 @@ func (r historyImageReader) privateFieldStrings(in historyImageArg, selected *as
 
 // A SET form this reader cannot separate stays unknown, including tuple writes.
 func historyUpdateLeavesColumn(set, column string) bool {
-	for _, assignment := range strings.Split(set, ",") {
+	for assignment := range strings.SplitSeq(set, ",") {
 		match := historyUpdateAssignment.FindStringSubmatch(assignment)
 		if match == nil || strings.EqualFold(match[1]+match[2], column) {
 			return false

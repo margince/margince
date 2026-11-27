@@ -2495,6 +2495,7 @@ export const en = {
   "systemJob.stage_evidence": "Deal stage evidence",
   "systemJob.stage_evidence_read": "Deal stage evidence read",
   "systemJob.stage_evidence_reread": "Deal stage evidence reread",
+  "systemJob.standing_line": "How it stands check",
   "systemJob.suppression_journal_worker": "Erasure journal export",
   "systemJob.stored_object_reap_worker": "File storage cleanup",
   "systemJob.technical_backfill": "Technical lookup backlog",
@@ -3247,7 +3248,7 @@ export const en = {
   "amount.refused.grouping":
     "Enter the amount without thousands separators, such as {example}.",
   "amount.refused.notNumber": "Enter the amount in digits, such as {example}.",
-  "amount.refused.tooLarge": "This amount is too large to store.",
+  "amount.refused.tooLarge": "Enter an amount of at most {max}.",
   "amount.refused.noCurrency": "This amount needs a currency first.",
   "amount.waitsForCurrency": "Opens once a currency is set.",
   "amount.currencyUnread":
@@ -3798,10 +3799,9 @@ export const en = {
   "list.viewAll": "All",
   "list.viewHot": "Hot",
 
-  // The list surface (design-system/listtable.tsx). The count says "loaded"
-  // rather than a total on purpose: paging is a keyset cursor, so the number
-  // of rows in hand is the only figure the client can state honestly.
-  "table.range": "{first} to {last} of {count} {unit}",
+  // The list surface (design-system/listtable.tsx). Without a server total the
+  // range says "loaded": the rows in hand are the only figure the client knows.
+  "table.range": "{first}-{last} of {count}",
   "table.pagination": "Pages",
   "table.rowActions": "Actions for {name}",
   "table.page": "Page {number}",
@@ -3827,15 +3827,12 @@ export const en = {
   "table.dialsRefused": "This list cannot be shown with these filters.",
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
-  "table.rangeLoaded": "{first} to {last} of {count} {unit} loaded",
+  "table.rangeLoaded": "{first}-{last} of {count} loaded",
   "table.rangeIn": "{range} in {scope}",
   "unit.contacts": "contacts",
   "unit.companies": "companies",
   "unit.deals": "deals",
   "unit.leads": "leads",
-  "unit.contact": "contact",
-  "unit.company": "company",
-  "unit.lead": "lead",
   "unit.worklistItems": "tasks and commitments",
   "unit.partners": "partners",
   "unit.products": "products",
@@ -3884,6 +3881,7 @@ export const en = {
   "views.none": "No saved views",
   "views.rename": "Rename",
   "views.renameNamed": "Rename {name}",
+  "views.opensInFilters": "{name}, opens in Filters and views",
   "views.delete": "Delete",
   "views.deleteNamed": "Delete {name}",
   "views.deleteAsk":
@@ -4124,7 +4122,7 @@ export const en = {
   "co.strip.fin.neverInvoiced": "Not invoiced",
   "co.strip.fin.noConnection": "Accounting not connected",
   "co.strip.fin.unmapped": "Customer not matched",
-  "co.strip.fin.syncing": "Syncing",
+  "co.strip.fin.syncing": "First sync pending",
   "co.strip.fin.staleFigure": "Sync outdated",
   "co.strip.fin.notCurrent": "Not current",
   "co.strip.fin.errorFigure": "Last sync failed",
@@ -4359,6 +4357,8 @@ export const en = {
   "standing.title": "How it stands · {date}",
   "standing.noteMore": "Show more",
   "standing.noteLess": "Show less",
+  "standing.citations.source": "The activity",
+  "standing.citations.from": "Read from",
   "standing.latest.title": "Latest",
   "standing.latest.open": "Open in History",
   "standing.sources.records": "From CRM records",
@@ -4608,7 +4608,7 @@ export const en = {
   "finance.none": "Nothing recorded.",
   "finance.loading": "Loading invoices…",
   "finance.syncing":
-    "Syncing with the accounting system. Figures appear after the first sync.",
+    "Waiting for the first sync with the accounting system. It runs every six hours, and an admin can start it sooner in Settings → Integrations.",
   "finance.noConnection":
     "No accounting system connected. Invoices and payment behavior for this customer appear once one is.",
   "finance.unmapped":
@@ -4663,13 +4663,17 @@ export const en = {
   "contracts.status.expired": "Expired",
   "contracts.status.cancelled": "Canceled",
   "contracts.status.superseded": "Superseded",
-  "contracts.endsOn": "Ends {when}",
+  "contracts.cancelledTo": "Canceled, ends {when}",
+  "contracts.cancelledToNotice": "Canceled, ends {when}, notice given {notice}",
+  "contracts.replacedBy": "Replaced by {title}",
+  "contracts.replacedByUnnamed": "Replaced by a later contract",
   "contracts.renewsOn": "Renews {when}",
   "contracts.endedPendingStatus": "Term ended, status pending",
   "contracts.form.title": "Record contract",
   "contracts.form.name": "Title",
   "contracts.form.number": "Contract number",
   "contracts.form.value": "Value",
+  "contracts.form.currency": "Currency",
   "contracts.form.basis": "This value is",
   "contracts.form.arr": "Annual recurring revenue",
   "contracts.form.arrMonthly": "Monthly equivalent:",
@@ -4717,6 +4721,9 @@ export const en = {
   "contracts.statusChange.label": "New status",
   "contracts.statusChange.submit": "Change status",
   "contracts.statusChange.errSame": "The contract already has this status.",
+  "contracts.statusChange.finalTitle": "{status} is final",
+  "contracts.statusChange.finalBody":
+    "Once saved, the status cannot be changed again. To carry on with the agreement, renew it.",
   "contracts.cancel.title": "Record cancellation",
   "contracts.cancel.hint":
     "The customer stays under contract until the effective date. This records notice and does not change the status.",
@@ -5881,6 +5888,8 @@ export const en = {
   "co.tech.laneFailed":
     "{lane} did not respond. The previous result is unchanged.",
   "co.tech.laneRefused": "The site blocked the read.",
+  "co.tech.laneFailedFirst":
+    "{lane} did not respond, so nothing has been read from it yet.",
   "co.tech.lane.dns": "DNS",
   "co.tech.lane.certlog": "Certificates",
   "co.tech.lane.homepage": "Homepage",
@@ -5993,6 +6002,7 @@ export const en = {
   "tagAdmin.usedBy_one": "{count} record",
   "tagAdmin.usedBy_other": "{count} records",
   "tagAdmin.retired": "Retired",
+  "tagAdmin.mergedInto": "Merged into {name}",
   "tagAdmin.retiredToast": "{name} retired",
   "tagAdmin.restoredToast": "{name} restored",
   "tags.archived": "archived",
@@ -6061,6 +6071,11 @@ export const en = {
   "tagResult.resultsTitle": "Records with this tag",
   "tagResult.nothingCarries":
     "No records have this tag yet. Apply it from any contact, company, deal or lead.",
+  "tagResult.retiredNothing":
+    "No records have this tag. It is retired, so it cannot be added to a record.",
+  "tagResult.mergedBody":
+    "This tag was merged into {name}. The records that had it received {name} in the merge.",
+  "tagResult.openKept": "Open {name}",
   "tagResult.loadingRows": "Loading {kind}…",
   "tagResult.noneLeft": "No records have this tag anymore",
   "tagResult.unnamed": "Unnamed",
@@ -6117,16 +6132,13 @@ export const en = {
   "lead.project": "Project",
 
   "lead.source.manual": "Created manually",
-  "lead.source.inbound": "Inbound",
+  "lead.source.siteread": "From company website",
   "lead.source.webform": "Web form",
   "lead.source.webformNamed": "Web form “{name}”",
-  "lead.source.referral": "Referral",
   "lead.source.import": "Import",
-  "lead.source.crawl": "Web research",
   "lead.source.api": "Integration",
   "lead.source.automation": "Automation",
   "lead.source.capture": "Captured from a conversation",
-  "lead.source.siteread": "From company website",
   "lead.source.unknown": "Unknown source",
   "leadSources.removeOnlyTitle":
     "Your role can remove entries but not add or change them",
@@ -6263,8 +6275,6 @@ export const en = {
     "The counts cannot narrow by industry, country or company size, so none is shown.",
   "lead.boardCountsNoOtherFilter":
     "The counts cannot apply every filter on this list, so none is shown.",
-  "lead.boardCountsNoConnectorSource":
-    "The counts cannot narrow to every lead from one connector, so none is shown.",
   "lead.boardCountsOwnerNotMeasurable":
     "No count for this owner’s leads. Only an administrator can let you measure them.",
   "lead.boardTerminalRowsUnavailable":
@@ -7268,7 +7278,12 @@ export const en = {
   "offer.termsText": "Terms text",
   "offer.lines": "Line items",
   "offer.addLine": "Add line",
-  "offer.positionTaken": "Another line already has this position.",
+  "offer.lineOrderHint":
+    "Drag a line by its handle, or focus the handle and press the up or down arrow.",
+  "offer.lineHandle": "Move {name}, line {position} of {total}",
+  "offer.lineMoved": "{name} is now line {position} of {total}",
+  "offer.lineHandleUnnamed": "Move line {position} of {total}",
+  "offer.lineMovedUnnamed": "The line is now line {position} of {total}",
   "offer.lapsed":
     "The Valid until date of this offer has passed. Change it under Edit header on a draft, or regenerate a sent offer.",
   "offer.position": "Position",
@@ -7877,6 +7892,22 @@ export const en = {
   "deepread.statusFailed": "Failed",
   "deepread.statusCancelled": "Canceled",
   "deepread.resumesAt": "Resumes automatically {when}.",
+  "deepread.failure.bot_blocked": "The site’s bot protection refused the read.",
+  "deepread.failure.http_server_error":
+    "The site answered with a server error.",
+  "deepread.failure.timeout": "The site did not answer in time.",
+  "deepread.failure.http_client_error":
+    "The site’s front page could not be found.",
+  "deepread.failure.dns": "The domain does not point to a server.",
+  "deepread.failure.tls": "The site’s HTTPS certificate could not be verified.",
+  "deepread.failure.robots_disallowed":
+    "The site asks crawlers not to read it.",
+  "deepread.failure.unreadable":
+    "The site answered, but with nothing readable.",
+  "deepread.failure.internal":
+    "Margince could not finish the read. The cause is on this installation, not on the site, and an admin finds it in the server log.",
+  "deepread.failure.stale_reclaim":
+    "The read stopped reporting, so it was ended.",
   "deepread.pagesSoFar_one": "{count} page read so far",
   "deepread.pagesSoFar_other": "{count} pages read so far",
   "deepread.stoppedEarly": "Stopped early: {reason}",
@@ -9755,6 +9786,8 @@ export const en = {
     "Figures as they stood when the snapshot was taken. They do not change, and the link names the time it was taken.",
   "analytics.share.snapshotUnavailable":
     "No snapshot exists for this period yet.",
+  "analytics.share.quarterOnly":
+    "Sharing covers the quarter. Choose Quarter to share this view.",
   "analytics.share.expiryNote": "The link stops working after 30 days.",
   "analytics.share.create": "Create link",
   "analytics.share.linkTitle": "Your link",
@@ -9954,6 +9987,7 @@ export const en = {
   "forecast.period.quarter": "Quarter",
   "forecast.period.month": "Month",
   "forecast.period.week": "Week",
+  "forecast.quarterCards": "The two pipeline cards below cover the quarter.",
   "forecast.receipt": "Data and evidence checked",
   "forecast.eligible": "Eligible deals",
   "forecast.priced": "Priced",
@@ -11276,7 +11310,6 @@ export const en = {
   "import.test.nothing.done": "Done",
   "import.test.nothing.empty": "The file has a header and no rows.",
   "import.test.reupload": "Fix and re-upload",
-  "import.test.issuesUnit": "issues",
   "import.test.import_one": "Import 1 row",
   "import.test.import_other": "Import {count} rows",
   "import.test.importAnyway_one": "Import 1 row anyway",
@@ -11722,6 +11755,7 @@ export const en = {
   "jobs.kind.risk_verdict_sweep": "Deal risk check",
   "jobs.kind.signal_scan": "Signal scan",
   "jobs.kind.site_deep_read": "Company website read",
+  "jobs.kind.standing_line_check": "How it stands check",
   "jobs.kind.stored_object_reap": "File storage cleanup",
   "jobs.kind.suppression_journal_export": "Erasure journal export",
   "jobs.kind.tag_scout": "Tag suggestions",
@@ -12290,6 +12324,10 @@ export const en = {
   "notifications.delivery.in_app": "In the app",
   "notifications.delivery.email": "Email",
   "notifications.delivery.digest": "Daily digest",
+  "notifications.noMailTitle": "Email is not set up",
+  "notifications.noMail":
+    "This installation sends no notification email, so Email, Daily digest and the email summaries reach no mailbox. Every notice still shows in the app.",
+  "notifications.noMailGuide": "How to set up email",
   "privacynotice.title": "What we hold about you",
   "privacynotice.intro":
     "We are telling you this because the law requires it. You do not need to reply or do anything.",
@@ -13735,7 +13773,6 @@ export const en = {
     "Only an administrator or operations user can change domain decisions. The list is read-only for you.",
   "blockedDomains.none":
     "No domains refused yet. Bulk-sender results and manual refusals appear here.",
-  "blockedDomains.unit": "domain decisions",
   "blockedDomains.col.domain": "Domain",
   "blockedDomains.col.admission": "Decision",
   "blockedDomains.col.source": "Decided by",
@@ -14536,6 +14573,9 @@ export const en = {
   "mfa.turningOn": "Turning on…",
   "mfa.codeRefused": "The code was not accepted. Check it and retry.",
   "mfa.tooManyCodes": "Too many wrong codes. Wait a few minutes, then retry.",
+  "mfa.tooManyPasswords":
+    "Too many wrong passwords. Wait a minute, then retry.",
+  "mfa.passwordHint": "Your Margince password, not a Google or Microsoft one.",
   "mfa.confirmFailedTitle": "Two-step sign-in not turned on",
   "mfa.onTitle": "Two-step sign-in on",
   "mfa.onBody": "All other devices were signed out.",
@@ -15474,7 +15514,6 @@ export const en = {
   "audit.kind.lead_disqualify_reason": "Disqualification reason",
   "audit.kind.lead_origin": "Lead origin",
   "audit.kind.lead_privacy_notice": "Lead privacy notice",
-  "audit.kind.lead_source": "Lead source",
   "audit.kind.legal_entity": "Legal entity",
   "audit.kind.legal_review": "Legal review",
   "audit.kind.license": "License settings",
@@ -17425,7 +17464,6 @@ export const en = {
   "aicalls.open": "Open the {feature} call from {when}",
   "aicalls.col.when": "When",
   "aicalls.filtersLabel": "Filters",
-  "aicalls.unit": "calls",
   "aicalls.col.feature": "Feature",
   "aicalls.col.model": "Model",
   "aicalls.col.tokens": "Tokens in / out",
@@ -18915,6 +18953,12 @@ export const en = {
   "operations.technical.label": "Technical lookup sweep",
   "operations.technical.help":
     "How often domains without technical facts are looked up. 0 switches it off.",
+  "operations.captureCounterparty.label": "New sender checks",
+  "operations.captureCounterparty.help":
+    "How often new senders are judged by the model.",
+  "operations.captureConfidentiality.label": "Thread confidentiality checks",
+  "operations.captureConfidentiality.help":
+    "How often captured threads are judged for whether colleagues may read them.",
   "operations.gmailWatchScan.label": "Gmail push check",
   "operations.gmailWatchScan.help":
     "How often Gmail push subscriptions are checked for renewal.",
@@ -19699,9 +19743,6 @@ export const en = {
   "webhooks.event.lead.sla_breached.label": "First response overdue",
   "webhooks.event.lead.sla_breached.when":
     "A check finds a lead’s first-response deadline passed with no answer.",
-  "webhooks.event.lead_source.changed.label": "Lead source list changed",
-  "webhooks.event.lead_source.changed.when":
-    "A lead source is added, edited or removed in Settings.",
   "webhooks.event.lead_disqualify_reason.changed.label":
     "Disqualify reasons changed",
   "webhooks.event.lead_disqualify_reason.changed.when":
@@ -21065,7 +21106,6 @@ export const en = {
   "filters.field.phase": "Phase",
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Relationship type",
-  "filters.field.stage_id": "Stage",
   "filters.field.tag": "Tags",
   "filters.field.technology": "Technology",
   "filters.choosePlaceholder": "Select field",
@@ -21429,6 +21469,11 @@ export const en = {
   "filters.library.shared": "Shared with me",
   "filters.library.views": "Saved views",
   "filters.library.kindView": "Saved view",
+  "filters.library.savedOn.contacts": "Saved on the Contacts list",
+  "filters.library.savedOn.companies": "Saved on the Companies list",
+  "filters.library.savedOn.deals": "Saved on the Deals list",
+  "filters.library.savedOn.leads": "Saved on the Leads list",
+  "filters.library.savedOn.projects": "Saved on the Projects list",
   "filters.library.rowMore": "More actions for {name}",
   "filters.library.records.contact_one": "{count} contact",
   "filters.library.records.contact_other": "{count} contacts",
@@ -21908,6 +21953,7 @@ export const en = {
   "worklist.why.now": "Why now",
   "worklist.why.consequence": "If nothing is done",
   "worklist.why.todo": "What to do",
+  "worklist.why.writing": "Reading the task and its messages…",
   "worklist.title.deal_at_risk": "{name} has gone quiet",
   "worklist.title.deal_at_risk.close_overdue": "{name} is past its close date",
   "worklist.title.relationship_decay": "No recent contact with {name}",
@@ -21921,8 +21967,6 @@ export const en = {
   "worklist.title.bounce": "Bounced: {name}",
   "worklist.title.lead_response": "Get back to new lead {name}",
   "worklist.title.customer_waiting": "{name} is waiting for your reply",
-  "worklist.todo.task.named":
-    "Finish the task with {name} and mark it done, or move it to another day.",
   "worklist.todo.deal_at_risk.named": "Open {name} and plan the next step.",
   "worklist.todo.customer_waiting.named": "Reply to {name}.",
   "worklist.todo.awaiting_reply.named": "Send {name} a follow-up.",
@@ -21950,7 +21994,6 @@ export const en = {
     "Check the calendar connection so its meetings are captured again.",
   "worklist.todo.capture_health.calendar.named":
     "Check the connection of {name} so its meetings are captured again.",
-  "worklist.consequence.task_slips.named": "The task with {name} stays undone.",
   "worklist.happened.customer_waiting":
     "{name} wrote on {when}, and nobody has answered yet.",
   "worklist.happened.customer_waiting.bare":
@@ -22030,7 +22073,6 @@ export const en = {
   "worklist.happened.meeting.bare": "This meeting is on {when}.",
   "worklist.happened.task": "It is due on {due}.",
   "worklist.happened.task.overdue": "It was due on {due} and is still open.",
-  "worklist.happened.task.undated": "It has no due date.",
   "worklist.happened.deal": "{deal}: {figures}.",
   "worklist.happened.lastFrom": "Last contact from {name}: {when}.",
   "worklist.happened.lastTo": "Last contact to {name}: {when}.",
@@ -22052,7 +22094,6 @@ export const en = {
     "{name} slips past its expected close date.",
   "worklist.consequence.meeting_unprepared":
     "You go into the meeting unprepared.",
-  "worklist.consequence.task_slips": "The task stays undone.",
   "worklist.consequence.work_blocked":
     "Work that depends on this decision stays blocked.",
   "worklist.consequence.customer_never_received":
@@ -22067,8 +22108,6 @@ export const en = {
     "Mail on this mailbox stays out of Margince.",
   "worklist.consequence.data_drifts": "The records drift further apart.",
   "worklist.todo.deal_at_risk": "Open the deal and plan the next step.",
-  "worklist.todo.task":
-    "Do the work and mark it done, or move it to another day.",
   "worklist.todo.customer_waiting": "Reply to the message.",
   "worklist.todo.awaiting_reply": "Send a follow-up.",
   "worklist.todo.lead_response": "Get in touch now; a new lead cools fast.",

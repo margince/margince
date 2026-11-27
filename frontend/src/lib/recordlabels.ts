@@ -100,7 +100,7 @@ const DEAL_ROLE_LABELS: Record<DealRole, MessageKey> = {
 };
 
 // A role older records still carry. It is named when read and never offered.
-// backend/gates/frontenddealroles_test.go holds both maps to the server's.
+// backend/gates/frontendvocabularymirrors_test.go holds both maps to the server's.
 const LEGACY_DEAL_ROLE_LABELS: Readonly<Record<string, MessageKey>> = {
   decision_maker: "co.roleLabel.decision_maker",
 };

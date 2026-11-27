@@ -122,12 +122,9 @@ func TestEveryLedgerOfExecutionsStatesItsWindow(t *testing.T) {
 // ledgerTables derives the corpus from the catalog.
 func ledgerTables(t *testing.T) []string {
 	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	raw := headCatalog(t)
 	seen := map[string]bool{}
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		m := regexp.MustCompile(`^public\.([a-z_0-9]+)\.`).FindStringSubmatch(strings.TrimSpace(line))
 		if m != nil && ledgerName.MatchString(m[1]) {
 			seen[m[1]] = true
@@ -155,6 +152,10 @@ func windowedLedgers(t *testing.T) map[string]bool {
 			raw, readErr := gatekit.ReadFile(path)
 			if readErr != nil {
 				return readErr
+			}
+			// Every windowed delete spells DELETE FROM.
+			if text := string(raw); !mayHoldFolded(text, "delete") || !mayHoldFolded(text, "from") {
+				return nil
 			}
 			for _, m := range windowedDelete.FindAllStringSubmatch(string(raw), -1) {
 				if timeBound.MatchString(m[2]) {

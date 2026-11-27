@@ -457,10 +457,11 @@ kinds:
     queue: default
     timeout: 20m
     opts_owner: caller
-    cadence: 10m
+    cadence: {setting: installation.capture_counterparty_verdict_interval_seconds}
     reason: >-
-      Every ten minutes, like capture_confidentiality_verdict and for the same
-      reason: the ledger's due-index makes an empty pass one cheap probe, so the
+      Every ten minutes by default, an installation setting, like
+      capture_confidentiality_verdict and for the same reason: the ledger's
+      due-index makes an empty pass one cheap probe, so the
       cadence is paid for by the mail that arrives rather than by the tick. An
       hour was the wrong price on the other side — a sender who writes just
       after a tick waited most of an hour to become a record, and the contact
@@ -477,9 +478,10 @@ kinds:
     queue: default
     timeout: 20m
     opts_owner: caller
-    cadence: 10m
+    cadence: {setting: installation.capture_confidentiality_verdict_interval_seconds}
     reason: >-
-      Ten minutes, faster than the sender verdict's hour, because this decides
+      Ten minutes by default, an installation setting, faster than the sender
+      verdict's hour, because this decides
       whether mail a colleague is waiting on is readable at all. Under the
       classified posture every captured message is born held, so the interval
       is how long an ordinary thread stays invisible to the team; an hour of
@@ -2116,6 +2118,23 @@ kinds:
       indistinguishable from one still being worked. Unregistered it would sit
       forever; registered it fails with a message that says the installation has
       no model configured.
+
+  standing_line_check:
+    role: worker
+    go_type: StandingLineCheckArgs
+    queue: ai_capture
+    timeout: 4m
+    opts_owner: caller
+    registration: {when: [StandingLineBrain], absent: registers_nothing}
+    args:
+      Workspace: id
+      ActivityID: id
+    reason: >-
+      One model call per record the activity is filed on, at most three, each
+      with the structured lane's retry headroom. Skipped without a model lane:
+      an activity landing queues it and nobody waits on the row, so How it
+      stands keeps the reading the page derives. Unique on the activity while
+      one waits or runs, so a redelivered event is one check.
 
   stage_evidence_read:
     role: worker

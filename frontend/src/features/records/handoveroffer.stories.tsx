@@ -34,7 +34,7 @@ function Offer({ colleague }: Readonly<{ colleague: string }>) {
   installFetchStub({
     "GET /me": meRoute({ company: ["read", "update"] }),
     [`GET /records/company/${COMPANY.id}/ownership-offer`]: () =>
-      jsonResponse({ status: 404, title: "No open offer." }, 404),
+      new Response(null, { status: 204 }),
     [`GET /records/company/${COMPANY.id}/ownership-offer/candidates`]: () =>
       jsonResponse({
         data: [

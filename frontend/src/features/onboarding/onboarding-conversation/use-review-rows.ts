@@ -28,7 +28,7 @@ function blocksConfirm(row: ReviewRow): boolean {
 }
 
 type ReviewRowsArgs = Readonly<{
-  proposal: Proposal | undefined;
+  proposal: Proposal | null | undefined;
   read: CompanySiteRead | null;
   draft: CompanyDraft;
   pendingId: string | null;

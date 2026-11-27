@@ -18,6 +18,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/httperr/faulttest"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -162,9 +163,7 @@ func TestDoneRefusesAnUnknownLaneAndAnAgent(t *testing.T) {
 	e := setupLoad(t)
 	s := handledStore(e)
 	junk := []WorklistRowRef{{Source: "made_up", RowID: "x"}}
-	if err := s.MarkWorklistRowsDone(e.followUpReader(), junk); !errors.Is(err, apperrors.ErrInvalidArgument) {
-		t.Errorf("Done on an unknown lane answered %v, want an invalid argument", err)
-	}
+	faulttest.AssertNamesField(t, s.MarkWorklistRowsDone(e.followUpReader(), junk), "rows[0].source")
 	agent := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), principal.Principal{
 		Type: principal.PrincipalAgent, ID: "agent:x", UserID: e.rep,
 		Permissions: principal.Permissions{
@@ -187,9 +186,9 @@ func TestDoneRefusesARowIdNoRowCouldCarry(t *testing.T) {
 		"an empty id":           {Source: "deal_at_risk", RowID: ""},
 		"a follow-up not by id": {Source: string(crmcontracts.WorklistItemSourceAwaitingReply), RowID: "not-an-id"},
 	} {
-		if err := s.MarkWorklistRowsDone(e.followUpReader(), []WorklistRowRef{row}); !errors.Is(err, apperrors.ErrInvalidArgument) {
-			t.Errorf("Done on %s answered %v, want an invalid argument", name, err)
-		}
+		t.Run(name, func(t *testing.T) {
+			faulttest.AssertNamesField(t, s.MarkWorklistRowsDone(e.followUpReader(), []WorklistRowRef{row}), "rows[0].row_id")
+		})
 	}
 }
 

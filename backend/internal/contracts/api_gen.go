@@ -34499,7 +34499,7 @@ type Activity struct {
 	// ReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a commitment made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
 
-	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
+	// Source The channel the row arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. `source_system` names the connector or the product's own writer when there is one. An older row can show another value until the background correction reaches it.
 	Source string `json:"source"`
 
 	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a transcript created with `records_meeting_id`, the meeting it records.
@@ -39435,7 +39435,10 @@ type AuditHistoryEntry struct {
 	// never had one. With `on_behalf_of` set and no `on_behalf_of_name`,
 	// the authority was recorded and the member no longer resolves.
 	PassportId *openapi_types.UUID `json:"passport_id,omitempty"`
-	Summary    string              `json:"summary"`
+
+	// Reason Why a project's phase was moved, in the words given with the move, so a walk through the history says why each move was made. Null on every other row, on a move made without a reason, and for a reader whose role does not read the phase.
+	Reason  *string `json:"reason,omitempty"`
+	Summary string  `json:"summary"`
 
 	// UndidAuditLogId The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
 	UndidAuditLogId *openapi_types.UUID `json:"undid_audit_log_id,omitempty"`
@@ -42843,6 +42846,11 @@ type Company360 struct {
 	// SinceLastVisit What changed on this account since the caller last acknowledged seeing it. Read-only:
 	// the 360 never advances the baseline — `POST /companies/{id}/view-ack` does.
 	SinceLastVisit *Company360SinceLastVisit `json:"since_last_visit,omitempty"`
+
+	// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
+	// the background when that activity landed. Shared by the record's readers, and served
+	// only to a reader who may open every activity it cites.
+	StandingLine *StandingLine `json:"standing_line,omitempty"`
 
 	// StateStrip The three readings a company page leads with (AC-company-13, PO-F-4). Each half is
 	// independently gated: a caller who may read the account but not its mail gets the account
@@ -46342,6 +46350,11 @@ type Contact360 struct {
 	// Read-only: the 360 never advances the baseline — `POST /contacts/{id}/view-ack` does.
 	SinceLastVisit *Contact360SinceLastVisit `json:"since_last_visit,omitempty"`
 
+	// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
+	// the background when that activity landed. Shared by the record's readers, and served
+	// only to a reader who may open every activity it cites.
+	StandingLine *StandingLine `json:"standing_line,omitempty"`
+
 	// Strength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
 	// interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
 	// interaction set + fixed clock yields a stable value (P6/P12). The `factors` decompose the score and
@@ -46867,8 +46880,7 @@ type ContactEmail struct {
 // ContactEmailEmailType defines model for ContactEmail.EmailType.
 type ContactEmailEmailType string
 
-// ContactEmailInput One address on a contact, as a writer supplies it. One schema for create and update,
-// so the two cannot describe an address differently.
+// ContactEmailInput One address supplied when creating a contact.
 type ContactEmailInput struct {
 	// Email An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
 	Email     openapi_types.Email         `json:"email"`
@@ -46881,6 +46893,10 @@ type ContactEmailInput struct {
 
 // ContactEmailInputEmailType defines model for ContactEmailInput.EmailType.
 type ContactEmailInputEmailType string
+
+// ContactEmailReplacementInput Mirrors ContactEmailInput except for the state-dependent address ceiling.
+// A held legacy address may remain unchanged; a new address must fit the write limit.
+type ContactEmailReplacementInput = ContactEmailInput
 
 // ContactEmployer The account a contact works at today, by their current primary employment edge — the one `uq_rel_current_primary_employer` keeps unique per contact, so a contact has at most one.
 type ContactEmployer struct {
@@ -48307,7 +48323,9 @@ type CreateActivityRequest struct {
 
 	// SenderContactId Inbound message, call, meeting or email only: the linked contact who wrote or said it. Set it whenever one contact sent the message, for example the one member of a group chat who asked for a follow-up. Only that contact counts as its author, so only they asked to hear from us. Without it, an inbound activity linked to one contact names that contact as the sender. One linked to two or more contacts names no sender, and each contact is kept as copied. The stated `participants` of an email win over this field. A contact that is not in `links` returns `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`, returns `422 code: field_not_valid_for_kind`.
 	SenderContactId *openapi_types.UUID `json:"sender_contact_id,omitempty"`
-	Source          string              `json:"source"`
+
+	// Source The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded; a meeting transcript naming one needs `meeting_status`. This reference alone does not complete that task or accept a request.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
@@ -48887,7 +48905,7 @@ type CreateLeadDisqualifyReasonRequest struct {
 
 // CreateLeadOriginRequest defines model for CreateLeadOriginRequest.
 type CreateLeadOriginRequest struct {
-	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
+	// Intent What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 	Intent *LeadSourceIntent `json:"intent,omitempty"`
 
 	// Key Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.
@@ -48936,7 +48954,7 @@ type CreateLeadRequest struct {
 	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
 	Salutation *Salutation `json:"salutation,omitempty"`
 
-	// Source How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from.
+	// Source The channel this lead arrived by. Optional: the server writes `manual` when none is sent, and an integration sends `api`. The other system and the lead's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`. Never scored; send `origin` for where the lead came from.
 	Source *string `json:"source,omitempty"`
 
 	// SourceAuthorId Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat's current name wins on read. captured_by still names the caller.
@@ -48955,17 +48973,6 @@ type CreateLeadRequest struct {
 
 // CreateLeadRequestStatus The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.
 type CreateLeadRequestStatus string
-
-// CreateLeadSourceRequest defines model for CreateLeadSourceRequest.
-type CreateLeadSourceRequest struct {
-	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
-	Intent *LeadSourceIntent `json:"intent,omitempty"`
-
-	// Key Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.
-	Key       *string `json:"key,omitempty"`
-	Label     string  `json:"label" singleline:"true"`
-	SortOrder *int    `json:"sort_order,omitempty"`
-}
 
 // CreateLegalEntityRequest defines model for CreateLegalEntityRequest.
 type CreateLegalEntityRequest struct {
@@ -49349,7 +49356,9 @@ type CreateRoleRequest struct {
 
 // CreateSavedViewRequest defines model for CreateSavedViewRequest.
 type CreateSavedViewRequest struct {
-	Name  string                 `json:"name" singleline:"true"`
+	Name string `json:"name" singleline:"true"`
+
+	// Query At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.
 	Query map[string]interface{} `json:"query"`
 
 	// Resource The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
@@ -49460,7 +49469,9 @@ type CreateTaskRequest struct {
 
 	// RequestActivityId Accept this inbound request for the authenticated human, with activity read and create authority. Task only; agents cannot accept and assignee_id must name the caller when provided. The server verifies source access and copies its links instead of caller-supplied links. Subject and body are honored on creation. Retries return the same personal reminder without changing it. Explicit acceptance can restore an archived unfinished reminder with update authority. Completion settles the source request; automatic reconciliation never restores a reminder.
 	RequestActivityId *openapi_types.UUID `json:"request_activity_id,omitempty"`
-	Source            string              `json:"source"`
+
+	// Source The channel this task arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceActivityId The non-task activity this task follows from, including email and messages. The caller and assignee need access to the source content. The task preserves its audience and inherits its visible links when no links are supplied. This reference does not accept or settle a request.
 	SourceActivityId *openapi_types.UUID `json:"source_activity_id,omitempty"`
@@ -51114,6 +51125,7 @@ type DealRoomInvitationIssued struct {
 
 // DealRoomLinkRequest defines model for DealRoomLinkRequest.
 type DealRoomLinkRequest struct {
+	// Email Looks up an existing participant; stored addresses past the current write limit are accepted.
 	Email openapi_types.Email `json:"email"`
 }
 
@@ -51845,13 +51857,6 @@ type DirectCommunicationSendRequest struct {
 // of overrides needs to be countable — free text alone cannot answer "how often do we send
 // on a contract clause".
 type DirectCommunicationSendRequestReasonCode string
-
-// DiscoveredLeadSource A source value present on leads but absent from the administered list — a connector family, a seed, an import.
-type DiscoveredLeadSource struct {
-	// Key The stored value, or for `connector:<name>:<id>` values the `connector:<name>` family.
-	Key       string `json:"key"`
-	LeadCount int    `json:"lead_count"`
-}
 
 // DismissCaptureSilenceRequest defines model for DismissCaptureSilenceRequest.
 type DismissCaptureSilenceRequest struct {
@@ -54405,7 +54410,7 @@ type ForecastSufficiencyBasis string
 type FormerMemberRequest struct {
 	DisplayName string `json:"display_name"`
 
-	// Email Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused.
+	// Email Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused. A new address holds at most 254 characters. A longer stored address may still resolve a merged member to its survivor.
 	Email openapi_types.Email `json:"email"`
 
 	// LeftAt When they left, when the source system knows it. Recorded on the audit row.
@@ -57912,12 +57917,9 @@ type Lead struct {
 	// SlaState Derived from sla_deadline_at and first_response_at (formulas §18.1); null once responded or on a terminal lead. Orders the work queue above score (ADR-0119).
 	SlaState *LeadSlaState `json:"sla_state,omitempty"`
 
-	// Source How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from. The `lead_source` list that administered it is deprecated.
-	Source   string  `json:"source"`
-	SourceId *string `json:"source_id,omitempty"`
-
-	// SourceLabel The label the deprecated lead_source list gives `source`; null for connector, seed and other free values.
-	SourceLabel  *string `json:"source_label,omitempty"`
+	// Source The channel this lead arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older lead can show another value until the background correction reaches it. It never scores; use `origin` for where the lead came from.
+	Source       string  `json:"source"`
+	SourceId     *string `json:"source_id,omitempty"`
 	SourceSystem *string `json:"source_system,omitempty"`
 
 	// Status The activity-driven ladder: new → contacted (we reached out) → engaged (they answered or a meeting is booked/held) → promoted (qualified: a contact exists) | disqualified. contacted and engaged are set by the system from captured activity and may be set by hand.
@@ -58068,7 +58070,7 @@ type LeadOrigin struct {
 	CreatedAt time.Time          `json:"created_at"`
 	Id        openapi_types.UUID `json:"id"`
 
-	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
+	// Intent What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 	Intent LeadSourceIntent `json:"intent"`
 
 	// Key Lowercase stable key, the stored value. Never changes after creation.
@@ -58280,43 +58282,8 @@ type LeadSignalCatalogFactor struct {
 	Factor LeadManualSignalFactor `json:"factor"`
 }
 
-// LeadSource Deprecated: how a row reached Margince is no longer scored. One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.
-type LeadSource struct {
-	// Active Inactive sources leave the create form and the filter; leads carrying them keep the value.
-	Active    bool               `json:"active"`
-	CreatedAt time.Time          `json:"created_at"`
-	Id        openapi_types.UUID `json:"id"`
-
-	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
-	Intent LeadSourceIntent `json:"intent"`
-
-	// Key Lowercase stable key, the stored value. Never changes after creation.
-	Key   string `json:"key"`
-	Label string `json:"label"`
-
-	// LeadCount Live leads carrying this key.
-	LeadCount *int `json:"lead_count,omitempty"`
-	SortOrder int  `json:"sort_order"`
-
-	// System Built-in. Can be renamed, re-weighted and deactivated, never deleted.
-	System    *bool     `json:"system,omitempty"`
-	UpdatedAt time.Time `json:"updated_at"`
-
-	// Version Monotonic row version, incremented by the server on every mutation (data-model §1.3a).
-	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
-	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
-	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty" minimum:"1"`
-}
-
-// LeadSourceIntent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
+// LeadSourceIntent What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 type LeadSourceIntent string
-
-// LeadSourceListResponse defines model for LeadSourceListResponse.
-type LeadSourceListResponse struct {
-	Data       []LeadSource           `json:"data"`
-	Discovered []DiscoveredLeadSource `json:"discovered"`
-}
 
 // LegacyLossReason One note of lost deals a mapping speaks for.
 type LegacyLossReason struct {
@@ -61722,7 +61689,12 @@ type NotificationPreference struct {
 // NotificationPreferenceList The calling seat's whole set — one entry per class the product sends, always all of them,
 // so a screen rendering one row per class never has to take the others from its own memory.
 type NotificationPreferenceList struct {
-	Items []NotificationPreference `json:"items"`
+	// EmailDeliveryAvailable Whether this installation sends its own mail. False means `email` and `digest` reach
+	// no mailbox: the notice still lands in the app, and no message leaves. A screen says
+	// so beside the choices rather than offering mail that will not arrive. It answers the
+	// caller's own delivery, so every seat that reads its settings is told.
+	EmailDeliveryAvailable bool                     `json:"email_delivery_available"`
+	Items                  []NotificationPreference `json:"items"`
 }
 
 // OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
@@ -62223,6 +62195,12 @@ type OperationSettings struct {
 	// AgentRunnerIntervalSeconds How often scheduled agents are checked for a run that is due, in seconds. Default 30.
 	AgentRunnerIntervalSeconds int `json:"agent_runner_interval_seconds" maximum:"3600" minimum:"10"`
 
+	// CaptureConfidentialityVerdictIntervalSeconds How often captured threads are judged for whether colleagues may read them, in seconds. Default 600.
+	CaptureConfidentialityVerdictIntervalSeconds int `json:"capture_confidentiality_verdict_interval_seconds" maximum:"86400" minimum:"60"`
+
+	// CaptureCounterpartyVerdictIntervalSeconds How often new senders are judged by the model, in seconds. Default 600.
+	CaptureCounterpartyVerdictIntervalSeconds int `json:"capture_counterparty_verdict_interval_seconds" maximum:"86400" minimum:"60"`
+
 	// CloseDateSweepIntervalSeconds How often deals whose close date has passed are flagged, in seconds. Default 86400.
 	CloseDateSweepIntervalSeconds int `json:"close_date_sweep_interval_seconds" maximum:"604800" minimum:"3600"`
 
@@ -62350,7 +62328,9 @@ type OutcomeReview struct {
 	Questions       []ReviewQuestion `json:"questions"`
 	TemplateKey     string           `json:"template_key"`
 	TemplateVersion int              `json:"template_version"`
-	UpdatedAt       time.Time        `json:"updated_at"`
+
+	// UpdatedAt Always equal to `created_at`: a review is not edited after it is submitted.
+	UpdatedAt time.Time `json:"updated_at"`
 }
 
 // OutcomeReviewOutcome What the deal did, as the closing recorded it — not as the stage reads today. A stage can be renamed or reconfigured; what happened cannot.
@@ -62444,7 +62424,7 @@ type PageInfo struct {
 	// NextCursor Opaque cursor for the next page, or null if none.
 	NextCursor *string `json:"next_cursor,omitempty"`
 
-	// Total How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company and lead lists count on the first page only and send no total with a cursor, so a client keeps the first page's total while it loads further pages.
+	// Total How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company, lead, deal and project lists count on a page read without a cursor, which is the first page or a page opened by `offset`, and send no total with a cursor, so a client keeps that total while it loads further pages.
 	Total *int `json:"total,omitempty" minimum:"0"`
 }
 
@@ -62659,7 +62639,10 @@ type PassportSummary struct {
 	Connection *PassportConnection `json:"connection,omitempty"`
 	CreatedAt  time.Time           `json:"created_at"`
 	ExpiresAt  *time.Time          `json:"expires_at,omitempty"`
-	Id         openapi_types.UUID  `json:"id"`
+
+	// GrantedBy The member who granted the passport its authority. A server built before this field omits it.
+	GrantedBy *openapi_types.UUID `json:"granted_by,omitempty"`
+	Id        openapi_types.UUID  `json:"id"`
 
 	// Label Human-given name for the passport (e.g. "Marcus's Claude").
 	Label      string     `json:"label"`
@@ -63451,6 +63434,11 @@ type Project360 struct {
 		Data []Project360Stakeholder `json:"data"`
 		Page PageInfo                `json:"page"`
 	} `json:"stakeholders,omitempty"`
+
+	// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
+	// the background when that activity landed. Shared by the record's readers, and served
+	// only to a reader who may open every activity it cites.
+	StandingLine *StandingLine `json:"standing_line,omitempty"`
 }
 
 // Project360Commitment defines model for Project360Commitment.
@@ -70388,7 +70376,10 @@ type SharedForecastView struct {
 
 	// Readings Four money readings over one period, the counts that say what they leave out, and the frame they were computed in.
 	Readings ForecastReadings `json:"readings"`
-	Target   string           `json:"target"`
+
+	// ScopeLabel The name of the population the readings cover, as this reader's own lens names it: the team, the team member, or the whole company. Absent when that lens does not reach the team member or team, so a link never names a subject its reader could not choose; `readings.scope_kind` still says which kind it is.
+	ScopeLabel *string `json:"scope_label,omitempty"`
+	Target     string  `json:"target"`
 
 	// Withheld Whether anything was kept back from this reader. A boolean and never a count: a count of what somebody may not see states how much of it there is.
 	Withheld bool `json:"withheld"`
@@ -71160,6 +71151,17 @@ type StageTransitionRecord struct {
 	UnsafeRate float64 `json:"unsafe_rate" maximum:"1" minimum:"0"`
 }
 
+// StandingLine Where a record stands after its latest activity, in one sentence the model wrote in
+// the background when that activity landed. Shared by the record's readers, and served
+// only to a reader who may open every activity it cites.
+type StandingLine struct {
+	// ActivityIds The activities the sentence rests on, as the model cited them. The page opens
+	// each one, so a reader can check the line against what was said.
+	ActivityIds []openapi_types.UUID `json:"activity_ids"`
+	Text        string               `json:"text"`
+	WrittenAt   time.Time            `json:"written_at"`
+}
+
 // StandingOverride A recorded exception for one contact, message category and sending company.
 type StandingOverride struct {
 	Authority string `json:"authority"`
@@ -71303,7 +71305,13 @@ type Tag struct {
 	CreatedAt   *time.Time         `json:"created_at,omitempty"`
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
-	Name        string             `json:"name"`
+
+	// MergedInto The tag a merge folded this one into, named as it reads now. Present only on a tag
+	// archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+	// destination and may itself have been merged since; follow each `merged_into` until a tag
+	// has none to find the tag that carries the records now.
+	MergedInto *RowTag `json:"merged_into,omitempty"`
+	Name       string  `json:"name"`
 
 	// Suggestible Whether captured mail and meeting notes may suggest this tag. A suggestible tag
 	// carries a description of what interest looks like, and that description is what
@@ -71323,7 +71331,13 @@ type TagDetail struct {
 	CreatedAt   *time.Time         `json:"created_at,omitempty"`
 	Description *string            `json:"description,omitempty"`
 	Id          openapi_types.UUID `json:"id"`
-	Name        string             `json:"name"`
+
+	// MergedInto The tag a merge folded this one into, named as it reads now. Present only on a tag
+	// archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+	// destination and may itself have been merged since; follow each `merged_into` until a tag
+	// has none to find the tag that carries the records now.
+	MergedInto *RowTag `json:"merged_into,omitempty"`
+	Name       string  `json:"name"`
 
 	// Suggestible Whether captured mail and meeting notes may suggest this tag. A suggestible tag
 	// carries a description of what interest looks like, and that description is what
@@ -71408,6 +71422,24 @@ type Taggable struct {
 
 // TaggableEntityType defines model for Taggable.EntityType.
 type TaggableEntityType string
+
+// TaskExplanation Why one task is on the reader's list, from that task's own records. Per reader, cached
+// on its inputs, every sentence cited. `generated_by` says whether the model or the
+// facts-only floor wrote it.
+type TaskExplanation struct {
+	GeneratedAt time.Time `json:"generated_at"`
+
+	// GeneratedBy Which writer produced a piece of generated prose. `model` — the configured model
+	// lane. `deterministic` — the structured fallback, used when no lane is configured,
+	// your company's AI budget is exhausted, the model call fails, or the checks the
+	// surface runs refuse the model's answer. Never silently interchangeable: a reader
+	// deciding how much to trust a sentence needs to know which wrote it.
+	GeneratedBy WrittenBy `json:"generated_by"`
+
+	// Sentences Facts say what happened, an assessment what is at stake if nothing is done, a recommendation the one next step. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited.
+	Sentences []CompanyBriefSentence `json:"sentences"`
+	TaskId    openapi_types.UUID     `json:"task_id"`
+}
 
 // TaskReminderClaim defines model for TaskReminderClaim.
 type TaskReminderClaim struct {
@@ -72146,6 +72178,9 @@ type ThreadAudienceOutcome struct {
 type TotpConfirmRequest struct {
 	// Code The current code from the authenticator being enrolled.
 	Code string `json:"code"`
+
+	// CurrentPassword The caller's current password, which authorizes the confirmation.
+	CurrentPassword string `json:"current_password"`
 }
 
 // TotpEnrolment A pending TOTP enrolment, returned once. Never retrievable again.
@@ -72654,7 +72689,7 @@ type UpdateCompanyRequest struct {
 	Description *string `json:"description,omitempty"`
 	DisplayName *string `json:"display_name,omitempty" singleline:"true"`
 
-	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
+	// Domains Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. A list past 100 domains is 422 `too_many`, unless the company already holds at least as many.
 	Domains *[]CompanyDomainInput `json:"domains,omitempty"`
 
 	// Email The company's general address, for example info@example.com. It never creates or matches a contact.
@@ -72755,9 +72790,14 @@ type UpdateContactRequest struct {
 	// Omitting the field leaves the addresses untouched, like every other field
 	// here. Sending an empty array removes them all, which is a real answer — a
 	// contact who no longer has a working address is a fact worth recording.
-	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
-	FirstName *string              `json:"first_name,omitempty" singleline:"true"`
-	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
+	//
+	// A list past 25 addresses is 422 `too_many`, unless the contact already
+	// holds at least as many: a longer stored list may be sent back, and not grown.
+	// Held legacy addresses may remain unchanged. New addresses must fit the
+	// normalized 254-byte ceiling and name a dotted domain.
+	Emails    *[]ContactEmailReplacementInput `json:"emails,omitempty"`
+	FirstName *string                         `json:"first_name,omitempty" singleline:"true"`
+	FullName  *string                         `json:"full_name,omitempty" singleline:"true"`
 
 	// GreetingRegister Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
 	GreetingRegister *UpdateContactRequestGreetingRegister `json:"greeting_register,omitempty"`
@@ -72773,7 +72813,8 @@ type UpdateContactRequest struct {
 	// that now reaches somebody else.
 	//
 	// Omitting the field leaves the numbers untouched. Sending an empty array
-	// removes them all.
+	// removes them all. A list past 25 numbers is 422 `too_many`, unless the
+	// contact already holds at least as many.
 	//
 	// `Contact360.dead_addresses` already names which address bounced; until now the
 	// contract's own remedy for that was to visit the contact page, because the write
@@ -73219,6 +73260,12 @@ type UpdateInstallationSettingsRequest struct {
 	// CallZalo Show the Zalo link next to a contact's phone number. Omit to leave it unchanged.
 	CallZalo *bool `json:"call_zalo,omitempty"`
 
+	// CaptureConfidentialityVerdictIntervalSeconds Set the value `OperationSettings.capture_confidentiality_verdict_interval_seconds` describes.
+	CaptureConfidentialityVerdictIntervalSeconds *int `json:"capture_confidentiality_verdict_interval_seconds,omitempty" maximum:"86400" minimum:"60"`
+
+	// CaptureCounterpartyVerdictIntervalSeconds Set the value `OperationSettings.capture_counterparty_verdict_interval_seconds` describes.
+	CaptureCounterpartyVerdictIntervalSeconds *int `json:"capture_counterparty_verdict_interval_seconds,omitempty" maximum:"86400" minimum:"60"`
+
 	// CloseDateSweepIntervalSeconds Set the value `OperationSettings.close_date_sweep_interval_seconds` describes.
 	CloseDateSweepIntervalSeconds *int `json:"close_date_sweep_interval_seconds,omitempty" maximum:"604800" minimum:"3600"`
 
@@ -73415,7 +73462,7 @@ type UpdateLeadDisqualifyReasonRequest struct {
 type UpdateLeadOriginRequest struct {
 	Active *bool `json:"active,omitempty"`
 
-	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
+	// Intent What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
 	Intent    *LeadSourceIntent `json:"intent,omitempty"`
 	Label     *string           `json:"label,omitempty" singleline:"true"`
 	SortOrder *int              `json:"sort_order,omitempty"`
@@ -73506,16 +73553,6 @@ type UpdateLeadSettingsRequest struct {
 	UnassignedEscalationUserId *openapi_types.UUID `json:"unassigned_escalation_user_id,omitempty"`
 }
 
-// UpdateLeadSourceRequest defines model for UpdateLeadSourceRequest.
-type UpdateLeadSourceRequest struct {
-	Active *bool `json:"active,omitempty"`
-
-	// Intent What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
-	Intent    *LeadSourceIntent `json:"intent,omitempty"`
-	Label     *string           `json:"label,omitempty" singleline:"true"`
-	SortOrder *int              `json:"sort_order,omitempty"`
-}
-
 // UpdateLegalEntityRequest A field left out keeps its value; a field sent as an empty string is cleared.
 type UpdateLegalEntityRequest struct {
 	// Address The registered address. The country is the entity's `country`.
@@ -73575,7 +73612,7 @@ type UpdateLossReasonRequest struct {
 type UpdateMemberRequest struct {
 	DisplayName string `json:"display_name"`
 
-	// Email May change only before the account has been used to sign in.
+	// Email May change only before the account has been used to sign in. A new address holds at most 254 characters; an unchanged stored address may be longer.
 	Email             openapi_types.Email `json:"email"`
 	ExpectedUpdatedAt time.Time           `json:"expected_updated_at"`
 
@@ -73598,9 +73635,11 @@ type UpdateOfferLineItemRequest struct {
 	DiscountPct  *float64                                `json:"discount_pct,omitempty" maximum:"100" minimum:"0"`
 
 	// IntervalCount How many billing periods the buyer commits to. Recurring lines only. Null while the term is still being settled; sending the offer refuses a recurring line that still has none.
-	IntervalCount *int     `json:"interval_count,omitempty" minimum:"1"`
-	Position      *int     `json:"position,omitempty" minimum:"1"`
-	Quantity      *float64 `json:"quantity,omitempty"`
+	IntervalCount *int `json:"interval_count,omitempty" minimum:"1"`
+
+	// Position Moves the line to this place in the offer. The lines between shift to make room, and the offer's lines are numbered from 1 again. A place past the last line puts it last.
+	Position *int     `json:"position,omitempty" minimum:"1"`
+	Quantity *float64 `json:"quantity,omitempty"`
 
 	// TaxCategory Take the rate from the tax rate sheet for the draft today. Refused together with `tax_rate` (422 `tax_rate_and_category`), and when the sheet has no rate (422 `tax_rate_missing`).
 	TaxCategory *UpdateOfferLineItemRequestTaxCategory `json:"tax_category,omitempty"`
@@ -73800,7 +73839,9 @@ type UpdateRoleRequestRowScope string
 
 // UpdateSavedViewRequest A partial update; omitted fields keep their stored value.
 type UpdateSavedViewRequest struct {
-	Name  *string                 `json:"name,omitempty" singleline:"true"`
+	Name *string `json:"name,omitempty" singleline:"true"`
+
+	// Query Replaces the stored query whole. At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.
 	Query *map[string]interface{} `json:"query,omitempty"`
 }
 
@@ -78030,6 +78071,12 @@ type Limit = int
 // ListMembershipFilter defines model for ListMembershipFilter.
 type ListMembershipFilter = openapi_types.UUID
 
+// Offset defines model for Offset.
+type Offset = int
+
+// PreferAbsent defines model for PreferAbsent.
+type PreferAbsent = string
+
 // ProfileFieldKey defines model for ProfileFieldKey.
 type ProfileFieldKey string
 
@@ -78077,6 +78124,9 @@ type PermissionDenied = Problem
 
 // RetentionHeld RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RetentionHeld = Problem
+
+// Retired RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type Retired = Problem
 
 // RoleCannotCapture RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RoleCannotCapture = Problem
@@ -78185,7 +78235,8 @@ type ListActivitiesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -78597,6 +78648,15 @@ type TakeTaskParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// GetLatestTranscriptReadParams defines parameters for GetLatestTranscriptRead.
+type GetLatestTranscriptReadParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // CreateActivityReviewTemplateParams defines parameters for CreateActivityReviewTemplate.
 type CreateActivityReviewTemplateParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -78738,7 +78798,8 @@ type ListAiCallsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -78809,6 +78870,15 @@ type GetAccountCoverageParamsScopeKind string
 
 // GetAccountCoverageParamsView defines parameters for GetAccountCoverage.
 type GetAccountCoverageParamsView string
+
+// GetDataCoverageParams defines parameters for GetDataCoverage.
+type GetDataCoverageParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
 
 // ListSalesDecisionsParams defines parameters for ListSalesDecisions.
 type ListSalesDecisionsParams struct {
@@ -79064,7 +79134,8 @@ type ListSalesProgressDealsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79188,7 +79259,8 @@ type ListReportRunsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79399,7 +79471,8 @@ type ListApprovalsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79522,7 +79595,8 @@ type ListAttachmentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79545,6 +79619,9 @@ type UploadAttachmentMultipartBody struct {
 	EntityId   openapi_types.UUID                      `json:"entity_id"`
 	EntityType UploadAttachmentMultipartBodyEntityType `json:"entity_type"`
 	File       openapi_types.File                      `json:"file"`
+
+	// ReuseIdentical When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy.
+	ReuseIdentical *bool `json:"reuse_identical,omitempty"`
 }
 
 // UploadAttachmentMultipartBodyEntityType defines parameters for UploadAttachment.
@@ -79558,6 +79635,12 @@ type PreviewAttachmentLinkJSONBody struct {
 // GetAttachmentExtractionParams defines parameters for GetAttachmentExtraction.
 type GetAttachmentExtractionParams struct {
 	Question *GetAttachmentExtractionParamsQuestion `form:"question,omitempty" json:"question,omitempty"`
+
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // GetAttachmentExtractionParamsQuestion defines parameters for GetAttachmentExtraction.
@@ -79568,7 +79651,8 @@ type ListAuditLogParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79643,7 +79727,8 @@ type ListAutomationsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79669,7 +79754,8 @@ type ListAutomationRunsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79757,6 +79843,15 @@ type BookMeetingParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// GetMorningBriefParams defines parameters for GetMorningBrief.
+type GetMorningBriefParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // ExecuteBulkChangeParams defines parameters for ExecuteBulkChange.
 type ExecuteBulkChangeParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -79820,7 +79915,8 @@ type ListMyCaptureActivityParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79836,7 +79932,8 @@ type ListWorkspaceCaptureActivityParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79858,7 +79955,8 @@ type ListDomainQuestionsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79900,7 +79998,8 @@ type ListHeldThreadsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -79977,7 +80076,8 @@ type ListCommissionEntriesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80051,12 +80151,16 @@ type ListCompaniesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -80331,7 +80435,8 @@ type GetCompanyAccessParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80398,7 +80503,8 @@ type ListCompanyContactsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80417,7 +80523,8 @@ type ListCompanyContractsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80440,7 +80547,8 @@ type ListCompanyDocumentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -80783,6 +80891,15 @@ type EndPartnerProgramParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// GetPartnerParams defines parameters for GetPartner.
+type GetPartnerParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // UpsertPartnerParams defines parameters for UpsertPartner.
 type UpsertPartnerParams struct {
 	// IfMatch Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
@@ -80962,6 +81079,15 @@ type ShareCompanyContactsParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// GetLatestSiteReadParams defines parameters for GetLatestSiteRead.
+type GetLatestSiteReadParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // RestoreCompanySuggestionParams defines parameters for RestoreCompanySuggestion.
 type RestoreCompanySuggestionParams struct {
 	// Fingerprint The `fingerprint` that was dismissed, unchanged.
@@ -80993,6 +81119,33 @@ type DismissCompanySuggestionJSONBody struct {
 	// from a scoped page matches nothing and silently stores nothing, which
 	// a reader sees as the card refusing to go away.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+}
+
+// GetLatestTechnicalEnrichParams defines parameters for GetLatestTechnicalEnrich.
+type GetLatestTechnicalEnrichParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
+// GetCompanyVatCheckParams defines parameters for GetCompanyVatCheck.
+type GetCompanyVatCheckParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
+// GetAnchorCompanyParams defines parameters for GetAnchorCompany.
+type GetAnchorCompanyParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // GetAnchorCompanyContextParams defines parameters for GetAnchorCompanyContext.
@@ -81223,12 +81376,16 @@ type ListContactsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -81515,7 +81672,8 @@ type GetContactAccessParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -81563,7 +81721,8 @@ type ListContactOverridesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -81975,7 +82134,8 @@ type ListCustomFieldsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82142,7 +82302,8 @@ type ListDataSubjectRequestsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82201,7 +82362,8 @@ type ListDealRoomsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82410,12 +82572,16 @@ type ListDealsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -82742,7 +82908,8 @@ type ListDealDocumentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82859,7 +83026,8 @@ type ListDealOffersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -82966,6 +83134,15 @@ type ListContactCasesParams struct {
 // ListContactCasesParamsScope defines parameters for ListContactCases.
 type ListContactCasesParamsScope string
 
+// GetContactCaseParams defines parameters for GetContactCase.
+type GetContactCaseParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // SendCompanyEmailParams defines parameters for SendCompanyEmail.
 type SendCompanyEmailParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -83041,7 +83218,8 @@ type GetFieldHistoryParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83086,7 +83264,8 @@ type ListFinanceSourceCustomersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83118,6 +83297,15 @@ type GetForecastParamsPeriod string
 
 // GetForecastParamsScopeKind defines parameters for GetForecast.
 type GetForecastParamsScopeKind string
+
+// GetForecastAssuranceParams defines parameters for GetForecastAssurance.
+type GetForecastAssuranceParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
 
 // SetForecastAssuranceEnforcementJSONBody defines parameters for SetForecastAssuranceEnforcement.
 type SetForecastAssuranceEnforcementJSONBody struct {
@@ -83244,7 +83432,8 @@ type ListImportRunsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83329,7 +83518,8 @@ type ListAgentClientsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83495,64 +83685,6 @@ type UpdateLeadOriginParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
-// CreateLeadSourceParams defines parameters for CreateLeadSource.
-type CreateLeadSourceParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. A connected agent's principal is its connection, so a
-	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
-	// key as its `idempotency_key`. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running and carries `Retry-After`;
-	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-	// request under the key failed after it had started, so check whether it took effect before
-	// retrying under a new key.
-	// A request the server stopped for time answers `503 code: request_timed_out` with
-	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
-	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
-// UpdateLeadSourceParams defines parameters for UpdateLeadSource.
-type UpdateLeadSourceParams struct {
-	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
-	// create (API-CC-6). **Scope:** the key is unique within
-	// `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-	// returns the original status + body. A connected agent's principal is its connection, so a
-	// retry on a refreshed token replays too. An agent tool that runs this route takes the same
-	// key as its `idempotency_key`. Reusing the same key with a *different* request body
-	// returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-	// do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-	// means the first request under the key is still running and carries `Retry-After`;
-	// resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-	// request under the key failed after it had started, so check whether it took effect before
-	// retrying under a new key.
-	// A request the server stopped for time answers `503 code: request_timed_out` with
-	// `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
-	// If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
-	// **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-	// answer lost": without it the blind retry answers `409 version_skew`, because the first
-	// attempt already bumped the version.
-	// **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-	// retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-	// (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-	// what makes an operation replay-safe** — an operation that omits it ignores the header rather
-	// than half-honouring it, so read this contract, not the client, to know which calls are safe
-	// to retry blind.
-	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
-}
-
 // ListLeadsParams defines parameters for ListLeads.
 type ListLeadsParams struct {
 	// Salutation Filter by an explicit salutation; unset finds records whose choice is null.
@@ -83561,12 +83693,16 @@ type ListLeadsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -83664,7 +83800,7 @@ type ListLeadsParams struct {
 	// Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
 	Unassigned *bool `form:"unassigned,omitempty" json:"unassigned,omitempty"`
 
-	// Source Filter by how the row was written (import, crawl, manual, `connector:<name>`, ...). Not the origin; use `origin` to filter by where the lead came from.
+	// Source Filter by the channel the lead arrived by. Not the origin; use `origin` to filter by where the lead came from.
 	Source *string `form:"source,omitempty" json:"source,omitempty"`
 
 	// Origin Filter by origin, an exact key from `/lead-origins`. Matched literally; `unset` names the leads with no origin.
@@ -83971,7 +84107,8 @@ type ExplainLeadScoreParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84074,7 +84211,8 @@ type ListListHistoryParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84090,7 +84228,8 @@ type ListListMembersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84224,6 +84363,12 @@ type GetMagicLineRecordsParams struct {
 type GetMailDraftParams struct {
 	AnchorType MailDraftAnchorType `form:"anchor_type" json:"anchor_type"`
 	AnchorId   openapi_types.UUID  `form:"anchor_id" json:"anchor_id"`
+
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // SaveMailDraftParams defines parameters for SaveMailDraft.
@@ -84361,7 +84506,8 @@ type ListOfferTemplatesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84615,10 +84761,25 @@ type SendOfferParams struct {
 type GetOnboardingCompanyProposalParams struct {
 	// Locale Language for the open questions' copy; option values are locale-invariant.
 	Locale *GetOnboardingCompanyProposalParamsLocale `form:"locale,omitempty" json:"locale,omitempty"`
+
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // GetOnboardingCompanyProposalParamsLocale defines parameters for GetOnboardingCompanyProposal.
 type GetOnboardingCompanyProposalParamsLocale string
+
+// GetOnboardingStateParams defines parameters for GetOnboardingState.
+type GetOnboardingStateParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
 
 // PutOnboardingStateParams defines parameters for PutOnboardingState.
 type PutOnboardingStateParams struct {
@@ -84712,7 +84873,8 @@ type ListPartnersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84929,7 +85091,8 @@ type ListProductsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85021,12 +85184,16 @@ type ListProjectsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
 	// remaining pages see, so re-issue the query without the cursor when changing filters.
 	Cursor *Cursor `form:"cursor,omitempty" json:"cursor,omitempty"`
+
+	// Offset Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor.
+	Offset *Offset `form:"offset,omitempty" json:"offset,omitempty" maximum:"10000" minimum:"0"`
 
 	// Limit Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200.
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
@@ -85281,7 +85448,8 @@ type ListProjectHealthAssessmentsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85678,7 +85846,8 @@ type ListRecordGrantsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85821,7 +85990,8 @@ type GetRecordHistoryParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85859,6 +86029,15 @@ type ClaimRecordParams struct {
 	IfMatch *IfMatch `json:"If-Match,omitempty"`
 }
 
+// GetEditAccessRequestParams defines parameters for GetEditAccessRequest.
+type GetEditAccessRequestParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // RequestEditAccessParams defines parameters for RequestEditAccess.
 type RequestEditAccessParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -85888,6 +86067,15 @@ type RequestEditAccessParams struct {
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
 }
 
+// GetOwnershipOfferParams defines parameters for GetOwnershipOffer.
+type GetOwnershipOfferParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // OfferOwnershipTransferParams defines parameters for OfferOwnershipTransfer.
 type OfferOwnershipTransferParams struct {
 	// IdempotencyKey Client-supplied key making a mutation safe to retry — an update exactly as much as a
@@ -85915,6 +86103,15 @@ type OfferOwnershipTransferParams struct {
 	// than half-honouring it, so read this contract, not the client, to know which calls are safe
 	// to retry blind.
 	IdempotencyKey *IdempotencyKey `json:"Idempotency-Key,omitempty"`
+}
+
+// GetOwnershipRequestParams defines parameters for GetOwnershipRequest.
+type GetOwnershipRequestParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // RequestOwnershipTransferParams defines parameters for RequestOwnershipTransfer.
@@ -85980,7 +86177,8 @@ type ListRelationshipsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86059,7 +86257,8 @@ type ListArchivedActivitiesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86104,7 +86303,8 @@ type ListLegalHoldsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86178,7 +86378,8 @@ type ListRestrictedActivitiesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86415,7 +86616,8 @@ type SearchParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86436,7 +86638,8 @@ type ListSignalsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86761,7 +86964,8 @@ type ListTeamsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -86783,7 +86987,8 @@ type ListUsersParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -87095,7 +87300,8 @@ type ListVoiceProfileDeltasParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -87218,7 +87424,8 @@ type ListVoiceProfileVersionsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -87380,7 +87587,8 @@ type ListWebhookDeliveriesParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-	// under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+	// under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+	// to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
 	// together with a `sort` that differs from the one the cursor was minted under returns
 	// `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
 	// **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -87406,16 +87614,40 @@ type SetWeeklyPlanCommitmentStateJSONBody struct {
 // SetWeeklyPlanCommitmentStateJSONBodyState defines parameters for SetWeeklyPlanCommitmentState.
 type SetWeeklyPlanCommitmentStateJSONBodyState string
 
+// GetCurrentWeeklyPlanParams defines parameters for GetCurrentWeeklyPlan.
+type GetCurrentWeeklyPlanParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // SetWeeklyPlanContractJSONBody defines parameters for SetWeeklyPlanContract.
 type SetWeeklyPlanContractJSONBody struct {
 	CapacityNote *string `json:"capacity_note,omitempty"`
 	Risks        *string `json:"risks,omitempty"`
 }
 
+// GetTeammateWeeklyPlanParams defines parameters for GetTeammateWeeklyPlan.
+type GetTeammateWeeklyPlanParams struct {
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
+}
+
 // GetLatestWeeklyReviewParams defines parameters for GetLatestWeeklyReview.
 type GetLatestWeeklyReviewParams struct {
 	// Week The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent.
 	Week *openapi_types.Date `form:"week,omitempty" json:"week,omitempty"`
+
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // GetTeamWeeklyReviewParams defines parameters for GetTeamWeeklyReview.
@@ -87426,6 +87658,12 @@ type GetTeamWeeklyReviewParams struct {
 	// Week The Monday of the week wanted. Omitted means the most recent snapshot this team
 	// has.
 	Week *openapi_types.Date `form:"week,omitempty" json:"week,omitempty"`
+
+	// Prefer An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+	// read finds nothing yet. The token is matched without case, and every other preference is
+	// ignored. A row the caller may not see still answers `404`. Every answer of an operation
+	// that takes this header carries `Vary: Prefer`.
+	Prefer *PreferAbsent `json:"Prefer,omitempty"`
 }
 
 // GetWorklistParams defines parameters for GetWorklist.
@@ -88562,12 +88800,6 @@ type CreateLeadOriginJSONRequestBody = CreateLeadOriginRequest
 
 // UpdateLeadOriginJSONRequestBody defines body for UpdateLeadOrigin for application/json ContentType.
 type UpdateLeadOriginJSONRequestBody = UpdateLeadOriginRequest
-
-// CreateLeadSourceJSONRequestBody defines body for CreateLeadSource for application/json ContentType.
-type CreateLeadSourceJSONRequestBody = CreateLeadSourceRequest
-
-// UpdateLeadSourceJSONRequestBody defines body for UpdateLeadSource for application/json ContentType.
-type UpdateLeadSourceJSONRequestBody = UpdateLeadSourceRequest
 
 // CreateLeadJSONRequestBody defines body for CreateLead for application/json ContentType.
 type CreateLeadJSONRequestBody = CreateLeadRequest
@@ -98205,14 +98437,6 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "source_id")
 	}
 
-	if raw, found := object["source_label"]; found {
-		err = json.Unmarshal(raw, &a.SourceLabel)
-		if err != nil {
-			return fmt.Errorf("error reading 'source_label': %w", err)
-		}
-		delete(object, "source_label")
-	}
-
 	if raw, found := object["source_system"]; found {
 		err = json.Unmarshal(raw, &a.SourceSystem)
 		if err != nil {
@@ -98676,13 +98900,6 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["source_id"], err = json.Marshal(a.SourceId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'source_id': %w", err)
-		}
-	}
-
-	if a.SourceLabel != nil {
-		object["source_label"], err = json.Marshal(a.SourceLabel)
-		if err != nil {
-			return nil, fmt.Errorf("error marshaling 'source_label': %w", err)
 		}
 	}
 
@@ -103190,12 +103407,15 @@ type ServerInterface interface {
 	// Take an open task nobody holds.
 	// (POST /activities/{id}/take)
 	TakeTask(w http.ResponseWriter, r *http.Request, id Id, params TakeTaskParams)
+	// Why one task is on the reader's list, written from that task's own records.
+	// (GET /activities/{id}/task-explanation)
+	GetTaskExplanation(w http.ResponseWriter, r *http.Request, id Id)
 	// Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals.
 	// (POST /activities/{id}/transcript-proposals)
 	ReadTranscriptForNextSteps(w http.ResponseWriter, r *http.Request, id Id)
 	// The newest reading of this transcript, so one that ended after the rep navigated away is still visible.
 	// (GET /activities/{id}/transcript-proposals/latest)
-	GetLatestTranscriptRead(w http.ResponseWriter, r *http.Request, id Id)
+	GetLatestTranscriptRead(w http.ResponseWriter, r *http.Request, id Id, params GetLatestTranscriptReadParams)
 	// One reading's progress and outcome — how many lines it addressed, what it staged, and why it produced nothing.
 	// (GET /activities/{id}/transcript-proposals/{readId})
 	GetTranscriptRead(w http.ResponseWriter, r *http.Request, id Id, readId openapi_types.UUID)
@@ -103384,7 +103604,7 @@ type ServerInterface interface {
 	GetAnalyticsContext(w http.ResponseWriter, r *http.Request)
 	// How current the sources behind the numbers are.
 	// (GET /analytics/coverage)
-	GetDataCoverage(w http.ResponseWriter, r *http.Request)
+	GetDataCoverage(w http.ResponseWriter, r *http.Request, params GetDataCoverageParams)
 	// The decisions recorded from a sales review, newest first, as tasks the reader may see.
 	// (GET /analytics/decisions)
 	ListSalesDecisions(w http.ResponseWriter, r *http.Request, params ListSalesDecisionsParams)
@@ -103756,7 +103976,7 @@ type ServerInterface interface {
 	BookMeeting(w http.ResponseWriter, r *http.Request, params BookMeetingParams)
 	// Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one.
 	// (GET /brief)
-	GetMorningBrief(w http.ResponseWriter, r *http.Request)
+	GetMorningBrief(w http.ResponseWriter, r *http.Request, params GetMorningBriefParams)
 	// Assemble the acting rep's brief for today if the overnight pass has not already.
 	// (POST /brief)
 	GenerateMorningBrief(w http.ResponseWriter, r *http.Request)
@@ -104161,7 +104381,7 @@ type ServerInterface interface {
 	EndPartnerProgram(w http.ResponseWriter, r *http.Request, id Id, params EndPartnerProgramParams)
 	// Read the partner extension on a company (404 if the company is not a partner).
 	// (GET /companies/{id}/partner)
-	GetPartner(w http.ResponseWriter, r *http.Request, id Id)
+	GetPartner(w http.ResponseWriter, r *http.Request, id Id, params GetPartnerParams)
 	// Create/update the partner extension on a company (adds `partner` to its relationship types).
 	// (PUT /companies/{id}/partner)
 	UpsertPartner(w http.ResponseWriter, r *http.Request, id Id, params UpsertPartnerParams)
@@ -104191,7 +104411,7 @@ type ServerInterface interface {
 	ShareCompanyContacts(w http.ResponseWriter, r *http.Request, id Id, params ShareCompanyContactsParams)
 	// The newest deep read on this account, so a crawl that failed after the rep navigated away is still visible.
 	// (GET /companies/{id}/site-reads/latest)
-	GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id Id)
+	GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id Id, params GetLatestSiteReadParams)
 	// One deep read's progress and outcome — pages read, pages skipped and WHY, what got staged.
 	// (GET /companies/{id}/site-reads/{readId})
 	GetSiteRead(w http.ResponseWriter, r *http.Request, id Id, readId openapi_types.UUID)
@@ -104209,10 +104429,10 @@ type ServerInterface interface {
 	TechnicalEnrichCompany(w http.ResponseWriter, r *http.Request, id Id)
 	// What the last technical lookup did, per source, so a run that ended after the rep left is still visible.
 	// (GET /companies/{id}/technical-enrich/latest)
-	GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request, id Id)
+	GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request, id Id, params GetLatestTechnicalEnrichParams)
 	// What the EU VAT register answered about this company's VAT ID, and the receipt for having asked.
 	// (GET /companies/{id}/vat-check)
-	GetCompanyVatCheck(w http.ResponseWriter, r *http.Request, id Id)
+	GetCompanyVatCheck(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyVatCheckParams)
 	// Ask the register again about the number this company states.
 	// (POST /companies/{id}/vat-check)
 	RequestCompanyVatCheck(w http.ResponseWriter, r *http.Request, id Id)
@@ -104221,7 +104441,7 @@ type ServerInterface interface {
 	AcknowledgeCompanyView(w http.ResponseWriter, r *http.Request, id Id)
 	// The installation's own company (the anchor company).
 	// (GET /company)
-	GetAnchorCompany(w http.ResponseWriter, r *http.Request)
+	GetAnchorCompany(w http.ResponseWriter, r *http.Request, params GetAnchorCompanyParams)
 	// Save the installation's own company.
 	// (PUT /company)
 	PutAnchorCompany(w http.ResponseWriter, r *http.Request)
@@ -104800,7 +105020,7 @@ type ServerInterface interface {
 	ListContactCases(w http.ResponseWriter, r *http.Request, params ListContactCasesParams)
 	// The duplicate case this contact belongs to.
 	// (GET /dedupe/contact-cases/{contact_id})
-	GetContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID)
+	GetContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID, params GetContactCaseParams)
 	// Merge the selected members of a case into one contact. Not reversible.
 	// (POST /dedupe/contact-cases/{contact_id}/merge)
 	MergeContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID)
@@ -104929,7 +105149,7 @@ type ServerInterface interface {
 	GetForecast(w http.ResponseWriter, r *http.Request, params GetForecastParams)
 	// What last night's input check found, and how much of the pipeline it reached.
 	// (GET /forecast/assurance)
-	GetForecastAssurance(w http.ResponseWriter, r *http.Request)
+	GetForecastAssurance(w http.ResponseWriter, r *http.Request, params GetForecastAssuranceParams)
 	// Whether the qualified forecast applies the viability reviews.
 	// (GET /forecast/assurance/enforcement)
 	GetForecastAssuranceEnforcement(w http.ResponseWriter, r *http.Request)
@@ -105194,18 +105414,6 @@ type ServerInterface interface {
 	// The factors and bands a rep may use as lead scoring input.
 	// (GET /lead-signal-catalog)
 	GetLeadSignalCatalog(w http.ResponseWriter, r *http.Request)
-	// List lead sources, active and inactive, in display order.
-	// (GET /lead-sources)
-	ListLeadSources(w http.ResponseWriter, r *http.Request)
-	// Add a lead source.
-	// (POST /lead-sources)
-	CreateLeadSource(w http.ResponseWriter, r *http.Request, params CreateLeadSourceParams)
-	// Remove a lead source nothing uses.
-	// (DELETE /lead-sources/{id})
-	DeleteLeadSource(w http.ResponseWriter, r *http.Request, id Id)
-	// Rename, reorder, re-weight or (de)activate a lead source.
-	// (PATCH /lead-sources/{id})
-	UpdateLeadSource(w http.ResponseWriter, r *http.Request, id Id, params UpdateLeadSourceParams)
 	// List leads (their OWN list, distinct from contacts; cursor-paginated).
 	// (GET /leads)
 	ListLeads(w http.ResponseWriter, r *http.Request, params ListLeadsParams)
@@ -105598,7 +105806,7 @@ type ServerInterface interface {
 	GetOnboardingCompanyProposal(w http.ResponseWriter, r *http.Request, params GetOnboardingCompanyProposalParams)
 	// Get the acting user's resumable onboarding state.
 	// (GET /onboarding/state)
-	GetOnboardingState(w http.ResponseWriter, r *http.Request)
+	GetOnboardingState(w http.ResponseWriter, r *http.Request, params GetOnboardingStateParams)
 	// Create or replace the acting user's resumable onboarding state.
 	// (PUT /onboarding/state)
 	PutOnboardingState(w http.ResponseWriter, r *http.Request, params PutOnboardingStateParams)
@@ -105961,7 +106169,7 @@ type ServerInterface interface {
 	WithdrawEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
 	// The caller's open request for edit access to this record.
 	// (GET /records/{record_type}/{id}/edit-access-request)
-	GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id, params GetEditAccessRequestParams)
 	// Ask a record's owner for edit access.
 	// (POST /records/{record_type}/{id}/edit-access-request)
 	RequestEditAccess(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestEditAccessParams)
@@ -105970,7 +106178,7 @@ type ServerInterface interface {
 	WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id)
 	// The caller's open offer of this record.
 	// (GET /records/{record_type}/{id}/ownership-offer)
-	GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params GetOwnershipOfferParams)
 	// Offer the caller's own record to a colleague.
 	// (POST /records/{record_type}/{id}/ownership-offer)
 	OfferOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params OfferOwnershipTransferParams)
@@ -105982,7 +106190,7 @@ type ServerInterface interface {
 	WithdrawOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
 	// The caller's open request to be handed this record.
 	// (GET /records/{record_type}/{id}/ownership-request)
-	GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id)
+	GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id, params GetOwnershipRequestParams)
 	// Ask a record's owner to hand it over to the caller.
 	// (POST /records/{record_type}/{id}/ownership-request)
 	RequestOwnershipTransfer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params RequestOwnershipTransferParams)
@@ -106537,7 +106745,7 @@ type ServerInterface interface {
 	SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *http.Request, id openapi_types.UUID)
 	// The caller's plan for this week — what they said they would do.
 	// (GET /weekly-plans/current)
-	GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request)
+	GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request, params GetCurrentWeeklyPlanParams)
 	// Open a plan for this week.
 	// (POST /weekly-plans/current)
 	StartWeeklyPlan(w http.ResponseWriter, r *http.Request)
@@ -106546,7 +106754,7 @@ type ServerInterface interface {
 	SetWeeklyPlanContract(w http.ResponseWriter, r *http.Request)
 	// A teammate's plan for this week, for their lead.
 	// (GET /weekly-plans/{owner_id}/current)
-	GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID)
+	GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, params GetTeammateWeeklyPlanParams)
 	// The weeks the acting rep has a review for, newest first.
 	// (GET /weekly-reviews)
 	ListWeeklyReviews(w http.ResponseWriter, r *http.Request)
@@ -106832,6 +107040,12 @@ func (_ Unimplemented) TakeTask(w http.ResponseWriter, r *http.Request, id Id, p
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Why one task is on the reader's list, written from that task's own records.
+// (GET /activities/{id}/task-explanation)
+func (_ Unimplemented) GetTaskExplanation(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals.
 // (POST /activities/{id}/transcript-proposals)
 func (_ Unimplemented) ReadTranscriptForNextSteps(w http.ResponseWriter, r *http.Request, id Id) {
@@ -106840,7 +107054,7 @@ func (_ Unimplemented) ReadTranscriptForNextSteps(w http.ResponseWriter, r *http
 
 // The newest reading of this transcript, so one that ended after the rep navigated away is still visible.
 // (GET /activities/{id}/transcript-proposals/latest)
-func (_ Unimplemented) GetLatestTranscriptRead(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetLatestTranscriptRead(w http.ResponseWriter, r *http.Request, id Id, params GetLatestTranscriptReadParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -107218,7 +107432,7 @@ func (_ Unimplemented) GetAnalyticsContext(w http.ResponseWriter, r *http.Reques
 
 // How current the sources behind the numbers are.
 // (GET /analytics/coverage)
-func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetDataCoverage(w http.ResponseWriter, r *http.Request, params GetDataCoverageParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -107962,7 +108176,7 @@ func (_ Unimplemented) BookMeeting(w http.ResponseWriter, r *http.Request, param
 
 // Your morning brief for today, its ranked items. 404 means none has been made yet; generateMorningBrief makes one.
 // (GET /brief)
-func (_ Unimplemented) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetMorningBrief(w http.ResponseWriter, r *http.Request, params GetMorningBriefParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -108772,7 +108986,7 @@ func (_ Unimplemented) EndPartnerProgram(w http.ResponseWriter, r *http.Request,
 
 // Read the partner extension on a company (404 if the company is not a partner).
 // (GET /companies/{id}/partner)
-func (_ Unimplemented) GetPartner(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetPartner(w http.ResponseWriter, r *http.Request, id Id, params GetPartnerParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -108832,7 +109046,7 @@ func (_ Unimplemented) ShareCompanyContacts(w http.ResponseWriter, r *http.Reque
 
 // The newest deep read on this account, so a crawl that failed after the rep navigated away is still visible.
 // (GET /companies/{id}/site-reads/latest)
-func (_ Unimplemented) GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetLatestSiteRead(w http.ResponseWriter, r *http.Request, id Id, params GetLatestSiteReadParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -108868,13 +109082,13 @@ func (_ Unimplemented) TechnicalEnrichCompany(w http.ResponseWriter, r *http.Req
 
 // What the last technical lookup did, per source, so a run that ended after the rep left is still visible.
 // (GET /companies/{id}/technical-enrich/latest)
-func (_ Unimplemented) GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request, id Id, params GetLatestTechnicalEnrichParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
 // What the EU VAT register answered about this company's VAT ID, and the receipt for having asked.
 // (GET /companies/{id}/vat-check)
-func (_ Unimplemented) GetCompanyVatCheck(w http.ResponseWriter, r *http.Request, id Id) {
+func (_ Unimplemented) GetCompanyVatCheck(w http.ResponseWriter, r *http.Request, id Id, params GetCompanyVatCheckParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -108892,7 +109106,7 @@ func (_ Unimplemented) AcknowledgeCompanyView(w http.ResponseWriter, r *http.Req
 
 // The installation's own company (the anchor company).
 // (GET /company)
-func (_ Unimplemented) GetAnchorCompany(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetAnchorCompany(w http.ResponseWriter, r *http.Request, params GetAnchorCompanyParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -110050,7 +110264,7 @@ func (_ Unimplemented) ListContactCases(w http.ResponseWriter, r *http.Request, 
 
 // The duplicate case this contact belongs to.
 // (GET /dedupe/contact-cases/{contact_id})
-func (_ Unimplemented) GetContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID) {
+func (_ Unimplemented) GetContactCase(w http.ResponseWriter, r *http.Request, contactId openapi_types.UUID, params GetContactCaseParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -110308,7 +110522,7 @@ func (_ Unimplemented) GetForecast(w http.ResponseWriter, r *http.Request, param
 
 // What last night's input check found, and how much of the pipeline it reached.
 // (GET /forecast/assurance)
-func (_ Unimplemented) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetForecastAssurance(w http.ResponseWriter, r *http.Request, params GetForecastAssuranceParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -110837,30 +111051,6 @@ func (_ Unimplemented) UpdateLeadOrigin(w http.ResponseWriter, r *http.Request, 
 // The factors and bands a rep may use as lead scoring input.
 // (GET /lead-signal-catalog)
 func (_ Unimplemented) GetLeadSignalCatalog(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// List lead sources, active and inactive, in display order.
-// (GET /lead-sources)
-func (_ Unimplemented) ListLeadSources(w http.ResponseWriter, r *http.Request) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Add a lead source.
-// (POST /lead-sources)
-func (_ Unimplemented) CreateLeadSource(w http.ResponseWriter, r *http.Request, params CreateLeadSourceParams) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Remove a lead source nothing uses.
-// (DELETE /lead-sources/{id})
-func (_ Unimplemented) DeleteLeadSource(w http.ResponseWriter, r *http.Request, id Id) {
-	w.WriteHeader(http.StatusNotImplemented)
-}
-
-// Rename, reorder, re-weight or (de)activate a lead source.
-// (PATCH /lead-sources/{id})
-func (_ Unimplemented) UpdateLeadSource(w http.ResponseWriter, r *http.Request, id Id, params UpdateLeadSourceParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -111646,7 +111836,7 @@ func (_ Unimplemented) GetOnboardingCompanyProposal(w http.ResponseWriter, r *ht
 
 // Get the acting user's resumable onboarding state.
 // (GET /onboarding/state)
-func (_ Unimplemented) GetOnboardingState(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetOnboardingState(w http.ResponseWriter, r *http.Request, params GetOnboardingStateParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -112372,7 +112562,7 @@ func (_ Unimplemented) WithdrawEditAccessRequest(w http.ResponseWriter, r *http.
 
 // The caller's open request for edit access to this record.
 // (GET /records/{record_type}/{id}/edit-access-request)
-func (_ Unimplemented) GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+func (_ Unimplemented) GetEditAccessRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id, params GetEditAccessRequestParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -112390,7 +112580,7 @@ func (_ Unimplemented) WithdrawOwnershipOffer(w http.ResponseWriter, r *http.Req
 
 // The caller's open offer of this record.
 // (GET /records/{record_type}/{id}/ownership-offer)
-func (_ Unimplemented) GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+func (_ Unimplemented) GetOwnershipOffer(w http.ResponseWriter, r *http.Request, recordType string, id Id, params GetOwnershipOfferParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -112414,7 +112604,7 @@ func (_ Unimplemented) WithdrawOwnershipRequest(w http.ResponseWriter, r *http.R
 
 // The caller's open request to be handed this record.
 // (GET /records/{record_type}/{id}/ownership-request)
-func (_ Unimplemented) GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id) {
+func (_ Unimplemented) GetOwnershipRequest(w http.ResponseWriter, r *http.Request, recordType string, id Id, params GetOwnershipRequestParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -113524,7 +113714,7 @@ func (_ Unimplemented) SetWeeklyPlanCommitmentState(w http.ResponseWriter, r *ht
 
 // The caller's plan for this week — what they said they would do.
 // (GET /weekly-plans/current)
-func (_ Unimplemented) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request, params GetCurrentWeeklyPlanParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -113542,7 +113732,7 @@ func (_ Unimplemented) SetWeeklyPlanContract(w http.ResponseWriter, r *http.Requ
 
 // A teammate's plan for this week, for their lead.
 // (GET /weekly-plans/{owner_id}/current)
-func (_ Unimplemented) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID) {
+func (_ Unimplemented) GetTeammateWeeklyPlan(w http.ResponseWriter, r *http.Request, ownerId openapi_types.UUID, params GetTeammateWeeklyPlanParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -115596,6 +115786,38 @@ func (siw *ServerInterfaceWrapper) TakeTask(w http.ResponseWriter, r *http.Reque
 	handler.ServeHTTP(w, r)
 }
 
+// GetTaskExplanation operation middleware
+func (siw *ServerInterfaceWrapper) GetTaskExplanation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTaskExplanation(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ReadTranscriptForNextSteps operation middleware
 func (siw *ServerInterfaceWrapper) ReadTranscriptForNextSteps(w http.ResponseWriter, r *http.Request) {
 
@@ -115653,8 +115875,32 @@ func (siw *ServerInterfaceWrapper) GetLatestTranscriptRead(w http.ResponseWriter
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetLatestTranscriptReadParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetLatestTranscriptRead(w, r, id)
+		siw.Handler.GetLatestTranscriptRead(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -117735,6 +117981,9 @@ func (siw *ServerInterfaceWrapper) GetAnalyticsContext(w http.ResponseWriter, r 
 // GetDataCoverage operation middleware
 func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -117743,8 +117992,32 @@ func (siw *ServerInterfaceWrapper) GetDataCoverage(w http.ResponseWriter, r *htt
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetDataCoverageParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetDataCoverage(w, r)
+		siw.Handler.GetDataCoverage(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -122952,6 +123225,27 @@ func (siw *ServerInterfaceWrapper) GetAttachmentExtraction(w http.ResponseWriter
 		return
 	}
 
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAttachmentExtraction(w, r, id, params)
 	}))
@@ -124174,6 +124468,9 @@ func (siw *ServerInterfaceWrapper) BookMeeting(w http.ResponseWriter, r *http.Re
 // GetMorningBrief operation middleware
 func (siw *ServerInterfaceWrapper) GetMorningBrief(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -124182,8 +124479,32 @@ func (siw *ServerInterfaceWrapper) GetMorningBrief(w http.ResponseWriter, r *htt
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMorningBriefParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetMorningBrief(w, r)
+		siw.Handler.GetMorningBrief(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -127476,6 +127797,19 @@ func (siw *ServerInterfaceWrapper) ListCompanies(w http.ResponseWriter, r *http.
 		return
 	}
 
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "limit" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
@@ -130047,8 +130381,32 @@ func (siw *ServerInterfaceWrapper) GetPartner(w http.ResponseWriter, r *http.Req
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetPartnerParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetPartner(w, r, id)
+		siw.Handler.GetPartner(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -130661,8 +131019,32 @@ func (siw *ServerInterfaceWrapper) GetLatestSiteRead(w http.ResponseWriter, r *h
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetLatestSiteReadParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetLatestSiteRead(w, r, id)
+		siw.Handler.GetLatestSiteRead(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -130890,8 +131272,32 @@ func (siw *ServerInterfaceWrapper) GetLatestTechnicalEnrich(w http.ResponseWrite
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetLatestTechnicalEnrichParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetLatestTechnicalEnrich(w, r, id)
+		siw.Handler.GetLatestTechnicalEnrich(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -130924,8 +131330,32 @@ func (siw *ServerInterfaceWrapper) GetCompanyVatCheck(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCompanyVatCheckParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCompanyVatCheck(w, r, id)
+		siw.Handler.GetCompanyVatCheck(w, r, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -131006,6 +131436,9 @@ func (siw *ServerInterfaceWrapper) AcknowledgeCompanyView(w http.ResponseWriter,
 // GetAnchorCompany operation middleware
 func (siw *ServerInterfaceWrapper) GetAnchorCompany(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -131014,8 +131447,32 @@ func (siw *ServerInterfaceWrapper) GetAnchorCompany(w http.ResponseWriter, r *ht
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetAnchorCompanyParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetAnchorCompany(w, r)
+		siw.Handler.GetAnchorCompany(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -132397,6 +132854,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
 		}
 		return
 	}
@@ -137553,6 +138023,19 @@ func (siw *ServerInterfaceWrapper) ListDeals(w http.ResponseWriter, r *http.Requ
 		return
 	}
 
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "limit" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "limit", r.URL.Query(), &params.Limit, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
@@ -140506,8 +140989,32 @@ func (siw *ServerInterfaceWrapper) GetContactCase(w http.ResponseWriter, r *http
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetContactCaseParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetContactCase(w, r, contactId)
+		siw.Handler.GetContactCase(w, r, contactId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -141892,6 +142399,9 @@ func (siw *ServerInterfaceWrapper) GetForecast(w http.ResponseWriter, r *http.Re
 // GetForecastAssurance operation middleware
 func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -141900,8 +142410,32 @@ func (siw *ServerInterfaceWrapper) GetForecastAssurance(w http.ResponseWriter, r
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetForecastAssuranceParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetForecastAssurance(w, r)
+		siw.Handler.GetForecastAssurance(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -144721,169 +145255,6 @@ func (siw *ServerInterfaceWrapper) GetLeadSignalCatalog(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
-// ListLeadSources operation middleware
-func (siw *ServerInterfaceWrapper) ListLeadSources(w http.ResponseWriter, r *http.Request) {
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListLeadSources(w, r)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// CreateLeadSource operation middleware
-func (siw *ServerInterfaceWrapper) CreateLeadSource(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params CreateLeadSourceParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.CreateLeadSource(w, r, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// DeleteLeadSource operation middleware
-func (siw *ServerInterfaceWrapper) DeleteLeadSource(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.DeleteLeadSource(w, r, id)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
-// UpdateLeadSource operation middleware
-func (siw *ServerInterfaceWrapper) UpdateLeadSource(w http.ResponseWriter, r *http.Request) {
-
-	var err error
-	_ = err
-
-	// ------------- Path parameter "id" -------------
-	var id Id
-
-	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
-	if err != nil {
-		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
-		return
-	}
-
-	ctx := r.Context()
-
-	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
-
-	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
-
-	r = r.WithContext(ctx)
-
-	// Parameter object where we will unmarshal all parameters from the context
-	var params UpdateLeadSourceParams
-
-	headers := r.Header
-
-	// ------------- Optional header parameter "Idempotency-Key" -------------
-	if valueList, found := headers[http.CanonicalHeaderKey("Idempotency-Key")]; found {
-		var IdempotencyKey IdempotencyKey
-		n := len(valueList)
-		if n != 1 {
-			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Idempotency-Key", Count: n})
-			return
-		}
-
-		err = runtime.BindStyledParameterWithOptions("simple", "Idempotency-Key", valueList[0], &IdempotencyKey, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
-		if err != nil {
-			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Idempotency-Key", Err: err})
-			return
-		}
-
-		params.IdempotencyKey = &IdempotencyKey
-
-	}
-
-	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.UpdateLeadSource(w, r, id, params)
-	}))
-
-	for _, middleware := range siw.HandlerMiddlewares {
-		handler = middleware(handler)
-	}
-
-	handler.ServeHTTP(w, r)
-}
-
 // ListLeads operation middleware
 func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Request) {
 
@@ -144923,6 +145294,19 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
 		}
 		return
 	}
@@ -148127,6 +148511,27 @@ func (siw *ServerInterfaceWrapper) GetMailDraft(w http.ResponseWriter, r *http.R
 		return
 	}
 
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetMailDraft(w, r, params)
 	}))
@@ -150358,6 +150763,27 @@ func (siw *ServerInterfaceWrapper) GetOnboardingCompanyProposal(w http.ResponseW
 		return
 	}
 
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetOnboardingCompanyProposal(w, r, params)
 	}))
@@ -150372,6 +150798,9 @@ func (siw *ServerInterfaceWrapper) GetOnboardingCompanyProposal(w http.ResponseW
 // GetOnboardingState operation middleware
 func (siw *ServerInterfaceWrapper) GetOnboardingState(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -150380,8 +150809,32 @@ func (siw *ServerInterfaceWrapper) GetOnboardingState(w http.ResponseWriter, r *
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetOnboardingStateParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOnboardingState(w, r)
+		siw.Handler.GetOnboardingState(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -152279,6 +152732,19 @@ func (siw *ServerInterfaceWrapper) ListProjects(w http.ResponseWriter, r *http.R
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "offset" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "offset", r.URL.Query(), &params.Offset, runtime.BindQueryParameterOptions{Type: "integer", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "offset"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "offset", Err: err})
 		}
 		return
 	}
@@ -155772,8 +156238,32 @@ func (siw *ServerInterfaceWrapper) GetEditAccessRequest(w http.ResponseWriter, r
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetEditAccessRequestParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetEditAccessRequest(w, r, recordType, id)
+		siw.Handler.GetEditAccessRequest(w, r, recordType, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -155925,8 +156415,32 @@ func (siw *ServerInterfaceWrapper) GetOwnershipOffer(w http.ResponseWriter, r *h
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetOwnershipOfferParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOwnershipOffer(w, r, recordType, id)
+		siw.Handler.GetOwnershipOffer(w, r, recordType, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -156121,8 +156635,32 @@ func (siw *ServerInterfaceWrapper) GetOwnershipRequest(w http.ResponseWriter, r 
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetOwnershipRequestParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetOwnershipRequest(w, r, recordType, id)
+		siw.Handler.GetOwnershipRequest(w, r, recordType, id, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -164083,6 +164621,9 @@ func (siw *ServerInterfaceWrapper) SetWeeklyPlanCommitmentState(w http.ResponseW
 // GetCurrentWeeklyPlan operation middleware
 func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -164091,8 +164632,32 @@ func (siw *ServerInterfaceWrapper) GetCurrentWeeklyPlan(w http.ResponseWriter, r
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetCurrentWeeklyPlanParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetCurrentWeeklyPlan(w, r)
+		siw.Handler.GetCurrentWeeklyPlan(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -164169,8 +164734,32 @@ func (siw *ServerInterfaceWrapper) GetTeammateWeeklyPlan(w http.ResponseWriter, 
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetTeammateWeeklyPlanParams
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.GetTeammateWeeklyPlan(w, r, ownerId)
+		siw.Handler.GetTeammateWeeklyPlan(w, r, ownerId, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -164232,6 +164821,27 @@ func (siw *ServerInterfaceWrapper) GetLatestWeeklyReview(w http.ResponseWriter, 
 		return
 	}
 
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetLatestWeeklyReview(w, r, params)
 	}))
@@ -164284,6 +164894,27 @@ func (siw *ServerInterfaceWrapper) GetTeamWeeklyReview(w http.ResponseWriter, r 
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "week", Err: err})
 		}
 		return
+	}
+
+	headers := r.Header
+
+	// ------------- Optional header parameter "Prefer" -------------
+	if valueList, found := headers[http.CanonicalHeaderKey("Prefer")]; found {
+		var Prefer PreferAbsent
+		n := len(valueList)
+		if n != 1 {
+			siw.ErrorHandlerFunc(w, r, &TooManyValuesForParamError{ParamName: "Prefer", Count: n})
+			return
+		}
+
+		err = runtime.BindStyledParameterWithOptions("simple", "Prefer", valueList[0], &Prefer, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationHeader, Explode: false, Required: false, Type: "string", Format: ""})
+		if err != nil {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "Prefer", Err: err})
+			return
+		}
+
+		params.Prefer = &Prefer
+
 	}
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
@@ -165194,6 +165825,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/take", wrapper.TakeTask)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activities/{id}/task-explanation", wrapper.GetTaskExplanation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/transcript-proposals", wrapper.ReadTranscriptForNextSteps)
@@ -167198,18 +167832,6 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/lead-signal-catalog", wrapper.GetLeadSignalCatalog)
-	})
-	r.Group(func(r chi.Router) {
-		r.Get(options.BaseURL+"/lead-sources", wrapper.ListLeadSources)
-	})
-	r.Group(func(r chi.Router) {
-		r.Post(options.BaseURL+"/lead-sources", wrapper.CreateLeadSource)
-	})
-	r.Group(func(r chi.Router) {
-		r.Delete(options.BaseURL+"/lead-sources/{id}", wrapper.DeleteLeadSource)
-	})
-	r.Group(func(r chi.Router) {
-		r.Patch(options.BaseURL+"/lead-sources/{id}", wrapper.UpdateLeadSource)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/leads", wrapper.ListLeads)

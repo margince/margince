@@ -7,6 +7,7 @@ import { expect, screen, waitFor, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { Button } from "../design-system/atoms";
 import { en as englishCopy } from "../i18n/en";
+import { latestInboundKey } from "../lib/latestinbound.queries";
 import { OpenSourceProvider } from "../lib/opensource";
 import {
   installFetchStub,
@@ -18,7 +19,6 @@ import {
   type JustIn,
   JustInScope,
   LatestInboundLine,
-  latestInboundKey,
   RecordNextBar,
 } from "./latestinbound";
 

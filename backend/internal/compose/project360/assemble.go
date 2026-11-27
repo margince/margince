@@ -13,6 +13,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/standingline"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -183,7 +184,10 @@ func (s *Service) Read(ctx context.Context, projectID ids.ProjectID, reading Rea
 		}
 		err = a.sections()
 		tasks = a.tasks
-		return err
+		if err != nil {
+			return err
+		}
+		return standingline.AttachTx(ctx, tx, standingline.KindProject, projectID.UUID, &out.StandingLine)
 	})
 	if err != nil {
 		return Result{}, err

@@ -91,6 +91,8 @@ const ENROL: Answer = () =>
   });
 
 const codeField = () => screen.getByRole("textbox", { name: /code/i });
+const PASSWORD = "the member's own password";
+const passwordField = () => screen.getByLabelText(/current password/i);
 
 afterEach(() => {
   cleanup();
@@ -122,6 +124,7 @@ describe("the two-step sign-in row", () => {
       within(dialog).getByRole("textbox", { name: "Secret key" }),
     ).toHaveTextContent(SECRET);
 
+    await user.type(passwordField(), PASSWORD);
     await user.type(codeField(), "000 000");
     await user.click(within(dialog).getByRole("button", { name: "Turn on" }));
     expect(
@@ -139,7 +142,7 @@ describe("the two-step sign-in row", () => {
     expect(within(dialog).getByText(/not shown again/i)).toBeInTheDocument();
     expect(server.sent).toContainEqual({
       route: "POST /v1/me/mfa/totp/confirm",
-      body: { code: "123456" },
+      body: { current_password: PASSWORD, code: "123456" },
     });
 
     const readsBefore = server.statusReads;
@@ -157,6 +160,66 @@ describe("the two-step sign-in row", () => {
           .map((q) => q.state.data),
       ),
     ).not.toContain(SECRET);
+  });
+
+  it("refuses a wrong password on its own field and keeps the code", async () => {
+    const user = userEvent.setup();
+    const server = serve(OFF, {
+      "POST /v1/me/mfa/totp": [ENROL],
+      "POST /v1/me/mfa/totp/confirm": [
+        () => problem(401, "current_password_invalid"),
+        () => json({ recovery_codes: CODES }),
+      ],
+    });
+    mount();
+
+    await user.click(await screen.findByRole("button", { name: "Set up" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(
+      await within(dialog).findByLabelText(/current password/i),
+      "wrong",
+    );
+    await user.type(codeField(), "123456");
+    await user.click(within(dialog).getByRole("button", { name: "Turn on" }));
+    expect(
+      await within(dialog).findByText(/current password did not match/i),
+    ).toBeInTheDocument();
+    expect(passwordField()).toHaveValue("");
+    expect(codeField()).toHaveValue("123456");
+    expect(within(dialog).queryByText(/code was not accepted/i)).toBeNull();
+
+    await user.type(passwordField(), PASSWORD);
+    await user.click(within(dialog).getByRole("button", { name: "Turn on" }));
+    await within(dialog).findByRole("textbox", {
+      name: englishCopy["mfa.codesLabel"],
+    });
+    expect(server.sent).toContainEqual({
+      route: "POST /v1/me/mfa/totp/confirm",
+      body: { current_password: PASSWORD, code: "123456" },
+    });
+  });
+
+  it("says the password is required when Turn on is pressed without it, and sends nothing", async () => {
+    const user = userEvent.setup();
+    const server = serve(OFF, { "POST /v1/me/mfa/totp": [ENROL] });
+    mount();
+
+    await user.click(await screen.findByRole("button", { name: "Set up" }));
+    const dialog = await screen.findByRole("dialog");
+    await user.type(
+      await within(dialog).findByRole("textbox", {
+        name: /code from the app/i,
+      }),
+      "123456",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Turn on" }));
+    expect(
+      within(dialog).getByText("Current password is required."),
+    ).toBeInTheDocument();
+    expect(passwordField()).toHaveFocus();
+    expect(server.sent).not.toContainEqual(
+      expect.objectContaining({ route: "POST /v1/me/mfa/totp/confirm" }),
+    );
   });
 
   it("says why setup cannot start when a factor is already on", async () => {
@@ -304,11 +367,14 @@ describe("the two-step sign-in row", () => {
     await user.click(await screen.findByRole("button", { name: "Set up" }));
     const dialog = await screen.findByRole("dialog");
     await user.type(
-      await within(dialog).findByRole("textbox", {
-        name: /code from the app/i,
-      }),
-      "123456{Enter}",
+      await within(dialog).findByLabelText(/current password/i),
+      PASSWORD,
     );
+    await user.type(
+      within(dialog).getByRole("textbox", { name: /code from the app/i }),
+      "123456",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Turn on" }));
     await within(dialog).findByRole("textbox", {
       name: englishCopy["mfa.codesLabel"],
     });
@@ -343,11 +409,14 @@ describe("the two-step sign-in row", () => {
     await user.click(await screen.findByRole("button", { name: "Set up" }));
     const dialog = await screen.findByRole("dialog");
     await user.type(
-      await within(dialog).findByRole("textbox", {
-        name: /code from the app/i,
-      }),
-      "123456{Enter}",
+      await within(dialog).findByLabelText(/current password/i),
+      PASSWORD,
     );
+    await user.type(
+      within(dialog).getByRole("textbox", { name: /code from the app/i }),
+      "123456",
+    );
+    await user.click(within(dialog).getByRole("button", { name: "Turn on" }));
     await user.keyboard("{Escape}");
     const overlay = dialog.parentElement;
     if (overlay) await user.click(overlay);

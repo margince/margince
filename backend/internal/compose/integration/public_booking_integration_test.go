@@ -284,10 +284,10 @@ func assertBookingProofAndProvenance(t *testing.T, e *apptest.AppEnv) {
 	// The meeting's provenance is the public surface, never "manual".
 	var activitySource string
 	if err := e.Owner.QueryRow(context.Background(),
-		`SELECT source FROM activity WHERE kind = 'meeting' LIMIT 1`).Scan(&activitySource); err != nil {
+		`SELECT source || '/' || coalesce(source_system, '') FROM activity WHERE kind = 'meeting' LIMIT 1`).Scan(&activitySource); err != nil {
 		t.Fatal(err)
 	}
-	if activitySource != "public_booking" {
+	if activitySource != "webform/public_booking" {
 		t.Fatalf("public booking captured as source=%q — a stranger's submission must not read as hand-entered", activitySource)
 	}
 }

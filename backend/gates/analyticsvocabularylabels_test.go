@@ -30,6 +30,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -240,7 +241,7 @@ func literalSpan(t *testing.T, source, name string, opens, closes byte) [2]int {
 // literalMatches reads a literal with its comments stripped, so an entry named
 // in prose beside it cannot stand in for the entry.
 func literalMatches(pattern *regexp.Regexp, literal string) []string {
-	return submatches(pattern, tsComment.ReplaceAllString(literal, " "))
+	return submatches(pattern, gatekit.TSWithoutComments(literal))
 }
 
 // submatches is the catalog's reading, unstripped: a value such as "image/*"

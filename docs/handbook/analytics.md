@@ -54,12 +54,12 @@ A deal's own amount is in that deal's currency, and amounts in two currencies ca
 The **My outcomes** section shows your own targets, open deals and meetings, for a rep only. The **Data coverage** section shows which sources the nightly check could read, for a seat allowed to see it. The **Delivery** section holds the project reports. Also called: reports, dashboards.
 
 ### How do I share a report view?
-To share a forecast view in Margince, open **Analytics** → **Forecast** and press **Share view**. Choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**. The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows.
+To share a forecast view in Margince, open **Analytics** → **Forecast** and press **Share view**. Choose **Live view** or **Snapshot**, press **Create link**, then **Copy link**. A link always shows the quarter, so on **Month** or **Week** the button asks you to choose **Quarter** first. The link is shown only once and stops working after 30 days. Whoever opens it must sign in, and sees only what their own access allows.
 
-Only the Forecast section has **Share view**; Performance and saved sales reports offer CSV export. Opening a link shows the shared forecast under the current permissions of whoever opens it. Also called: send a report, share dashboard, report link.
+Only the Forecast section has **Share view**; Performance and saved sales reports offer CSV export. Opening a link shows the shared forecast under the current permissions of whoever opens it. The page names whose records it covers, the period and when it was read. A team member or team your access does not reach reads only as **Colleague** or **Team**. Also called: send a report, share dashboard, report link.
 
 ### How do I close a shared forecast link?
-To close a forecast link in Margince before its 30 days run out, open **Analytics** → **Forecast** and press **Shared links** beside **Share view**.
+To close a forecast link in Margince before its 30 days run out, open **Analytics** → **Forecast** and press **Shared links** beside **Share view**, on any period.
 1. **Your shared links** lists every link you issued that still opens: **Live view** or **Snapshot**, and the records it shows.
    It also shows when the link was created and when it expires.
 2. Press **Close link** on the link's row, then **Close link** again in **Close this link?**.
@@ -291,7 +291,7 @@ The forecast **Period** is **Quarter**, **Month** or **Week**. Quarter and
 month follow your financial year. So in a year that opens in April, the first
 quarter runs April to June. **Week** is the working week, Monday to Sunday, and is not a
 part of the financial year. Asking for a week gets a week or a refusal, never a
-quarter in its place.
+quarter in its place. The two pipeline cards under the deals always show the quarter, and say so on a month or a week.
 
 ### Recording a call
 
@@ -374,11 +374,11 @@ open when a number looks wrong.
 
 ## Sharing a view
 
-To share an Analytics view, press **Share view** beside the tabs on the
+To share an Analytics view, press **Share view** under the deals on the
 **Forecast** section. **Share this view** asks **What the link shows** (**Live
 view** or **Snapshot**). Then **Create link** creates it and **Copy link**
 copies it. **Snapshot** is offered when the chosen scope has a stored
-capture.
+capture. A link covers the quarter, so **Share view** waits for **Quarter**.
 
 A share lets more colleagues know a link exists; it never changes what anybody
 is allowed to read. Whoever opens it must sign in with their own account, and the
