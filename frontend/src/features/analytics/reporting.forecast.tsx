@@ -11,6 +11,7 @@ import { unwrap } from "../../lib/problem";
 import type { AnalyticsScope } from "./analytics.context";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { ForecastShareActions } from "./analytics.share";
+import type { ForecastPeriod } from "./forecast.queries";
 import { ReportingCharts } from "./reporting.charts";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
 import {
@@ -22,9 +23,13 @@ import { MetricLabels } from "./reporting.queries";
 
 export function ReportingForecastGraphs({
   scope,
+  period = "quarter",
   inSheet = false,
 }: Readonly<{
   scope: AnalyticsScope;
+  // The period the page around them reads. The cards and a share always read
+  // the current quarter, so any other period is said, not hidden.
+  period?: ForecastPeriod;
   // Drawn as sections of the page's sheet rather than as cards of their own.
   inSheet?: boolean;
 }>) {
@@ -56,12 +61,13 @@ export function ReportingForecastGraphs({
   const evaluated = showCharts ? query.data : undefined;
   const openClosing = t("analytics.overview.openClosing");
   const labels = useMemo(() => ({ open_pipeline: openClosing }), [openClosing]);
+  const quarter = period === "quarter";
   return (
     <div className={inSheet ? "reporting-results-part" : "reporting-results"}>
       {/* The snapshot and the verbs that share it, as one row: the choice only
           means something to the share beside it. */}
       <div className="reporting-toolbar reporting-share-bar">
-        {evaluated?.charts.some((chart) => chart.snapshot_id) && (
+        {quarter && evaluated?.charts.some((chart) => chart.snapshot_id) && (
           <SnapshotPicker
             evaluation={evaluated}
             value={snapshot}
@@ -76,8 +82,12 @@ export function ReportingForecastGraphs({
               (chart) => chart.kind === "pipeline_movement",
             )?.[snapshot === "opening" ? "opening_snapshot_id" : "snapshot_id"]
           }
+          shareRefusal={quarter ? undefined : t("analytics.share.quarterOnly")}
         />
       </div>
+      {showCharts && !quarter && (
+        <p className="t-caption">{t("forecast.quarterCards")}</p>
+      )}
       {showCharts && (
         <MetricLabels.Provider value={labels}>
           <QueryGate
