@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 353 |
-| Columns | 4333 |
+| Columns | 4330 |
 | Foreign keys | 619 |
 | Owning areas | 40 |
 
@@ -161,7 +161,7 @@ erDiagram
 | [`activity_request_settlement`](activities.md#activity_request_settlement) | activities | 11 | 0 |
 | [`activity_retention_evidence`](activities.md#activity_retention_evidence) | activities | 12 | 0 |
 | [`activity_review_response`](activities.md#activity_review_response) | activities | 16 | 0 |
-| [`activity_review_template`](activities.md#activity_review_template) | activities | 15 | 0 |
+| [`activity_review_template`](activities.md#activity_review_template) | activities | 13 | 0 |
 | [`activity_sales_state`](activities.md#activity_sales_state) | activities | 3 | 0 |
 | [`agent_run`](agents.md#agent_run) | agents | 15 | 0 |
 | [`agent_standing_grant`](agents.md#agent_standing_grant) | agents | 6 | 0 |
@@ -313,7 +313,7 @@ erDiagram
 | [`field_mask`](identity.md#field_mask) | identity | 6 | 0 |
 | [`field_provenance`](contacts.md#field_provenance) | contacts | 24 | 0 |
 | [`finance_connection`](finance.md#finance_connection) | finance | 10 | 4 |
-| [`finance_customer_link`](finance.md#finance_customer_link) | finance | 10 | 2 |
+| [`finance_customer_link`](finance.md#finance_customer_link) | finance | 9 | 2 |
 | [`finance_external_customer`](finance.md#finance_external_customer) | finance | 11 | 1 |
 | [`finance_invoice`](finance.md#finance_invoice) | finance | 30 | 4 |
 | [`finance_payment`](finance.md#finance_payment) | finance | 17 | 0 |

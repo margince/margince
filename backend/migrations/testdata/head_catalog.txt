@@ -913,7 +913,6 @@ public.activity_review_template.activity_review_template_label_shape CHECK ((btr
 public.activity_review_template.activity_review_template_outcome_check CHECK ((outcome = ANY (ARRAY['won'::text, 'lost'::text])))
 public.activity_review_template.activity_review_template_pkey PRIMARY KEY (id)
 public.activity_review_template.activity_review_template_questions_shape CHECK (((jsonb_typeof(questions) = 'array'::text) AND (jsonb_array_length(questions) > 0)))
-public.activity_review_template.captured_by text NOT NULL gen=- def=-
 public.activity_review_template.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.activity_review_template.id uuid NOT NULL gen=- def=uuidv7()
 public.activity_review_template.key text NOT NULL gen=- def=-
@@ -923,10 +922,9 @@ public.activity_review_template.outcome text NOT NULL gen=- def=-
 public.activity_review_template.questions jsonb NOT NULL gen=- def=-
 public.activity_review_template.shipped_label text gen=- def=-
 public.activity_review_template.shipped_label_key text gen=- def=-
-public.activity_review_template.source text NOT NULL gen=- def=-
 public.activity_review_template.system boolean NOT NULL gen=- def=false
-public.activity_review_template.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_review_template FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "label": 120, "source": 20000, "outcome": 20000, "captured_by": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000,"source":20000}')
-public.activity_review_template.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_review_template FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "source": 20000, "outcome": 20000, "captured_by": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000,"source":20000}')
+public.activity_review_template.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.activity_review_template FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "label": 120, "outcome": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000}')
+public.activity_review_template.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.activity_review_template FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "outcome": 20000, "shipped_label": 120, "shipped_label_key": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"label":120,"outcome":20000,"shipped_label":120,"shipped_label_key":20000}')
 public.activity_review_template.trg_activity_review_template_question_keys CREATE TRIGGER trg_activity_review_template_question_keys BEFORE INSERT OR UPDATE OF questions ON public.activity_review_template FOR EACH ROW EXECUTE FUNCTION key_shipped_review_questions()
 public.activity_review_template.trg_activity_review_template_updated CREATE TRIGGER trg_activity_review_template_updated BEFORE UPDATE ON public.activity_review_template FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.activity_review_template.updated_at timestamp with time zone NOT NULL gen=- def=now()
@@ -6189,7 +6187,6 @@ public.finance_customer_link.finance_customer_link_mapping_key UNIQUE (id, conne
 public.finance_customer_link.finance_customer_link_pkey PRIMARY KEY (id)
 public.finance_customer_link.finance_customer_link_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
 public.finance_customer_link.id uuid NOT NULL gen=- def=uuidv7()
-public.finance_customer_link.source_updated_at timestamp with time zone gen=- def=-
 public.finance_customer_link.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.finance_customer_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"captured_by": 20000, "external_customer_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000}')
 public.finance_customer_link.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.finance_customer_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"captured_by": 20000, "external_customer_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"external_customer_id":20000}')
 public.finance_customer_link.trg_finance_customer_link_updated CREATE TRIGGER trg_finance_customer_link_updated BEFORE UPDATE ON public.finance_customer_link FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()

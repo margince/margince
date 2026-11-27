@@ -97,14 +97,12 @@ public.activity_review_response.captured_by document
 public.activity_review_response.outcome document
 public.activity_review_response.source document
 public.activity_review_response.template_key document
-public.activity_review_template.captured_by document
 public.activity_review_template.key document
 public.activity_review_template.label label
 public.activity_review_template.label_key exempt generated from independently checked source columns
 public.activity_review_template.outcome document
 public.activity_review_template.shipped_label label
 public.activity_review_template.shipped_label_key document
-public.activity_review_template.source document
 public.activity_sales_state.channel_provider document
 public.activity_sales_state.kind document
 public.activity_sales_state.thread_key document
