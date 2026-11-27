@@ -11,7 +11,6 @@ its **proof**, and records a **decision** per recipient:
 
 - **The server checks the category.** A caller can claim a category from
   `internal/shared/ports/commsauthz`. The engine needs proof from the thread, linked records or template.
-
   The send paths refuse a claim to any **subject-serving** category: a security or privacy
   notice, an opt-out, a note that confirms consent or a record. So only the installation
   itself writes to someone in its own name.
@@ -24,11 +23,9 @@ its **proof**, and records a **decision** per recipient:
   It is made again right before the provider gets anything, into `communication_decision`, one row per
   recipient. The row holds the category, the verdict, the reason, the basis and a fingerprint of the
   words. So "why could this message go" is one query, not a search through old mail.
-
   The proof itself goes into `communication_basis`, not on the decision row. A message that reaches a provider
   always has both rows. The second sees a withdrawal, a bounce or an edit to the words that comes
   in between the two.
-
   The dispatcher asks once more at the wire (`RecheckTransmit`), after pacing and the file read. A
   stop, or a request taken back, recorded in that time parks the message. The same answer records nothing new.
 - A request stays with the record it was made on. A merge binds each request on either record to
@@ -597,9 +594,7 @@ missing one uses the capture date as a bound. The clock never starts again at re
 A data task moves live cases with an unknown source to review. It keeps their audit history,
 finished decisions and mail already on its way. If a send fails, the source is checked again.
 
-When a contact writes to us or books a meeting, every still-owed notice duty closes. The same holds when they send or accept a meeting request. This holds for every original source. The confirmed source stays recorded. The closure and audit name the mail or meeting.
-
-Queued disclosures and finished outcomes stay as they were. The opener, source preview, event consumer, failed-delivery handler and repair task use one evidence rule.
+When a contact writes to us or books a meeting, every still-owed notice duty closes. The same holds when they send or accept a meeting request. This holds for every original source. The confirmed source stays recorded. The closure and audit name the mail or meeting. Queued disclosures and finished outcomes stay as they were. The opener, source preview, event consumer, failed-delivery handler and repair task use one evidence rule.
 
 ## Where the code lives
 

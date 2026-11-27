@@ -10,13 +10,17 @@ package integration
 // the section the count reads, so the two describe one population.
 
 import (
+	"context"
 	"encoding/json"
 	"slices"
 	"strings"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
+
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -130,3 +134,54 @@ func TestHolderNamesAreAbsentWhereTheCountIs(t *testing.T) {
 		t.Errorf("without relationship read: contact_count %v, holders %v; want both absent", got.ContactCount, got.HiddenContactHolders)
 	}
 }
+
+// An agent is never shown a restricted contact, so it is not told one exists.
+// The holder is not named and the hidden count leaves it out. A human reader
+// of the same account is told. Rep2's ordinary capture-private contact is
+// reported to both, so the agent's silence comes from the restriction.
+func TestAnAgentIsNotToldAboutARestrictedContactOrItsHolder(t *testing.T) {
+	e := Setup(t)
+	company := e.SeedCompany(t, "Shared Account", &e.Rep1)
+	seedEmployee(t, e, company, "Visible Buyer", e.Rep1, false)
+	restricted := seedEmployee(t, e, company, "Restricted Sponsor", e.Rep3, true)
+	seedEmployee(t, e, company, "Hidden Engineer", e.Rep2, true)
+	e.WsExec(t, `INSERT INTO communication_suppression (contact_id, kind, source, captured_by, decided_by_level)
+		VALUES ($1, 'processing_restriction', 'test', 'human:test', 'subject')`, restricted)
+
+	base := principal.WithWorkspaceID(context.Background(), e.WS)
+	base = principal.WithCorrelationID(base, ids.NewV7())
+	agent := principal.WithActor(base, principal.Principal{
+		Type: principal.PrincipalAgent, ID: "agent:test", SeatType: principal.SeatFull,
+		UserID: e.Rep1, OnBehalfOf: e.Rep1, Permissions: hiddenReaderPerms,
+		TeamIDs: []ids.UUID{e.Team1},
+	})
+	human := e.As(e.Rep1, []ids.UUID{e.Team1}, hiddenReaderPerms)
+
+	want := func(label string, ctx context.Context, holders []ids.UUID, count int) {
+		t.Helper()
+		got, err := e.Contacts.GetCompany(ctx, companyIDOf(company), storekit.LiveOnly)
+		if err != nil {
+			t.Fatalf("%s: %v", label, err)
+		}
+		h := holderIDs(got)
+		slices.SortFunc(h, byString)
+		slices.SortFunc(holders, byString)
+		if !slices.Equal(h, holders) {
+			t.Errorf("%s: hidden_contact_holders = %v, want %v", label, h, holders)
+		}
+		var hidden storekit.HiddenRows
+		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
+			hidden, err = contacts.HiddenCompanyContactsTx(ctx, tx, companyIDOf(company))
+			return err
+		}); err != nil {
+			t.Fatalf("%s: %v", label, err)
+		}
+		if hidden.Count != count {
+			t.Errorf("%s: hidden count = %d, want %d", label, hidden.Count, count)
+		}
+	}
+	want("agent", agent, []ids.UUID{e.Rep2}, 1)
+	want("human", human, []ids.UUID{e.Rep2, e.Rep3}, 2)
+}
+
+func byString(a, b ids.UUID) int { return strings.Compare(a.String(), b.String()) }

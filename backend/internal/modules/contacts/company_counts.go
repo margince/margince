@@ -159,13 +159,17 @@ func employmentSection(ctx context.Context, companyBinding string, arg func(any)
 	if err != nil {
 		return storekit.HiddenSection{}, err
 	}
-	scope, err := auth.ScopeClauseFor(ctx, "contact", "p", arg)
+	scope, err := auth.RowScopeClauseFor(ctx, "contact", "p", arg)
+	if err != nil {
+		return storekit.HiddenSection{}, err
+	}
+	exclusion, err := auth.ExclusionClauseFor(ctx, "contact", "p")
 	if err != nil {
 		return storekit.HiddenSection{}, err
 	}
 	return storekit.HiddenSection{
 		From:    "relationship rel JOIN contact p ON p.id = rel.contact_id AND p.archived_at IS NULL",
-		Where:   companyBinding + " AND " + employment.CurrentMembershipSQL("rel"),
+		Where:   storekit.BoundedBy(companyBinding, employment.CurrentMembershipSQL("rel"), exclusion),
 		Entry:   "p.id",
 		Owner:   "p.owner_id",
 		Visible: storekit.BoundedBy(edgeBound, scope),

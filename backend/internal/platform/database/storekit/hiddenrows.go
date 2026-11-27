@@ -35,7 +35,7 @@ type HiddenHolder struct {
 // would then name rows the list never had.
 type HiddenSection struct {
 	From    string // tables and aliases, as after `FROM`
-	Where   string // every condition but visibility
+	Where   string // every condition but visibility, and any exclusion no reader may learn of (auth.ExclusionClauseFor)
 	Entry   string // the column naming one listed entry, counted once however many rows join it
 	Owner   string // the column holding each entry's owner
 	Visible string // the caller's visibility predicate; "" when nothing is bounded

@@ -5,7 +5,7 @@
 
 package contacts
 
-// A link a person removed stays removed. No automatic writer links a contact
+// A link a user removed stays removed. No automatic writer links a contact
 // to a company where somebody ended or archived their employment.
 
 import (
@@ -182,13 +182,13 @@ func TestTheSweepStillAttachesAContactNobodyUnlinked(t *testing.T) {
 func TestAJobEndedElsewhereDoesNotStopTheSweep(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	person := e.openTriageFirst(ctx, t, "jo@elsewhere.test", "Jo Elsewhere", "elsewhere.test")
+	triaged := e.openTriageFirst(ctx, t, "jo@elsewhere.test", "Jo Elsewhere", "elsewhere.test")
 	other := e.createNamedCompany(ctx, t, "Other Employer")
-	e.employCurrently(ctx, t, person.ContactID, other)
+	e.employCurrently(ctx, t, triaged.ContactID, other)
 	var edge ids.UUID
 	e.inTx(ctx, t, "reading the employment", func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT id FROM relationship WHERE contact_id = $1 AND company_id = $2 AND kind = 'employment'`,
-			person.ContactID, other).Scan(&edge)
+			triaged.ContactID, other).Scan(&edge)
 	})
 	day := clocktest.Now(t).UTC().AddDate(0, 0, -1)
 	if _, err := e.store.UpdateRelationship(e.asRelationshipEditor(), edge, UpdateRelationshipInput{EndedAt: &day}); err != nil {
@@ -200,7 +200,7 @@ func TestAJobEndedElsewhereDoesNotStopTheSweep(t *testing.T) {
 	}
 }
 
-func TestAPersonCanLinkAContactAgainAfterTheJobWasEnded(t *testing.T) {
+func TestAUserCanLinkAContactAgainAfterTheJobWasEnded(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
 	left := e.openTriageFirst(ctx, t, "left@relink.test", "Left Leaver", "relink.test")
@@ -213,7 +213,7 @@ func TestAPersonCanLinkAContactAgainAfterTheJobWasEnded(t *testing.T) {
 		t.Fatalf("linking from the offer: %v", err)
 	}
 	if got := e.employerOf(ctx, t, left.ContactID); got == nil || *got != company.UUID {
-		t.Fatalf("the contact works at %v after a person linked them, want %s", got, company)
+		t.Fatalf("the contact works at %v after a user linked them, want %s", got, company)
 	}
 }
 
@@ -318,7 +318,7 @@ func TestRetainedProviderEvidenceDoesNotRemakeARemovedLink(t *testing.T) {
 				t.Fatalf("the automatic apply left %d live employments, want none", n)
 			}
 			if state := e.applyEvidence(ctx, t, left.ContactID, company, tc.evidence, false); state != employmentLinked {
-				t.Fatalf("a person's resolve answered %q, want %q: a human keeps the override", state, employmentLinked)
+				t.Fatalf("a user's resolve answered %q, want %q: a human keeps the override", state, employmentLinked)
 			}
 		})
 	}

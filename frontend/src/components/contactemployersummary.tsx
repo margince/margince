@@ -41,6 +41,28 @@ export function useEmployerSummary(companyId: string) {
   });
 }
 
+// Who holds contacts at a company that this reader may not see, as one
+// sentence naming them, or null when nobody does. The employer facts line and
+// the company list's Contacts cell both say it. A count of 0 then never reads
+// as "no contacts" while a colleague holds some.
+export function hiddenHoldersNotice(
+  holders: Company["hidden_contact_holders"],
+  locale: Locale,
+): string | null {
+  if (!holders || holders.length === 0) {
+    return null;
+  }
+  const names = listFormat(locale, { type: "conjunction" }).format(
+    holders.map((holder) => holder.display_name),
+  );
+  return translatePlural(
+    locale,
+    "contact.employer.hiddenHolders",
+    holders.length,
+    { names },
+  );
+}
+
 // The counts line under the company name: contacts, then open deals, joined
 // the way the rest of this rail joins two short facts on one line. Callers
 // gate on `contact_count`/`open_deal_count` being present at all: a company
@@ -76,21 +98,9 @@ export function employerFacts(
           ),
     );
   }
-  const holders = company.hidden_contact_holders ?? [];
-  if (holders.length > 0) {
-    const names = listFormat(locale, { type: "conjunction" }).format(
-      holders.map((holder) => holder.display_name),
-    );
-    parts.push(
-      translatePlural(
-        locale,
-        "contact.employer.hiddenHolders",
-        holders.length,
-        {
-          names,
-        },
-      ),
-    );
+  const notice = hiddenHoldersNotice(company.hidden_contact_holders, locale);
+  if (notice) {
+    parts.push(notice);
   }
   return parts.join(" · ");
 }
