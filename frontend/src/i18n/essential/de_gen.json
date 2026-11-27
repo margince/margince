@@ -3842,6 +3842,7 @@
   "notice.excuseConfirm": "Grund erfassen",
   "pipeline.defaultTaken": "Eine andere Pipeline ist schon der Standard. Erstelle diese mit „Kein Standard“ und nutze danach „Zum Standard machen“.",
   "pipeline.nameTaken": "Eine Pipeline mit diesem Namen gibt es schon.",
+  "translation.suggestNeedsName": "Gib zuerst den Namen ein, dann kann eine Übersetzung vorgeschlagen werden.",
   "translation.suggesting": "Wird vorgeschlagen…",
   "translation.suggestFailed": "Es kam kein Vorschlag zurück. Gib den Namen ein oder versuche es noch einmal.",
   "stage.nameTaken": "Eine Phase mit diesem Namen gibt es in dieser Pipeline schon. Wähle einen anderen Namen.",

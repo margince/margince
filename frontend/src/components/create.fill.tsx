@@ -51,6 +51,7 @@ export function FillButton({
         type="button"
         variant="aiQuiet"
         disabled={busy || text === ""}
+        reason={text === "" ? t("translation.suggestNeedsName") : undefined}
         onClick={() => void press()}
       >
         {t(busy ? "translation.suggesting" : fill.label)}

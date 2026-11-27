@@ -3842,6 +3842,7 @@
   "notice.excuseConfirm": "Record reason",
   "pipeline.defaultTaken": "Another pipeline is the default. Create this one as Not default, then use Make default on it.",
   "pipeline.nameTaken": "A pipeline with this name already exists.",
+  "translation.suggestNeedsName": "Type the name first, then a translation can be suggested.",
   "translation.suggesting": "Suggesting…",
   "translation.suggestFailed": "No suggestion came back. Type the name, or try again.",
   "stage.nameTaken": "A stage with this name already exists in this pipeline. Choose another name.",

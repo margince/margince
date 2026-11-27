@@ -12328,6 +12328,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "translation.missing.de": "Chưa có tên tiếng Đức",
   "translation.missing.vi": "Chưa có tên tiếng Việt",
   "translation.suggest": "Gợi ý bản dịch",
+  "translation.suggestNeedsName":
+    "Hãy nhập tên trước, sau đó mới gợi ý được bản dịch.",
   "translation.suggesting": "Đang gợi ý…",
   "translation.suggestFailed":
     "Chưa nhận được gợi ý. Hãy nhập tên, hoặc thử lại.",

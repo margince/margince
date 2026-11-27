@@ -12669,6 +12669,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "translation.missing.de": "Kein Name auf Deutsch",
   "translation.missing.vi": "Kein Name auf Vietnamesisch",
   "translation.suggest": "Übersetzung vorschlagen",
+  "translation.suggestNeedsName":
+    "Gib zuerst den Namen ein, dann kann eine Übersetzung vorgeschlagen werden.",
   "translation.suggesting": "Wird vorgeschlagen…",
   "translation.suggestFailed":
     "Es kam kein Vorschlag zurück. Gib den Namen ein oder versuche es noch einmal.",

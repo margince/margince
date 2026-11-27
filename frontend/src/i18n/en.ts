@@ -12593,6 +12593,8 @@ export const en = {
   "translation.missing.de": "No name in German",
   "translation.missing.vi": "No name in Vietnamese",
   "translation.suggest": "Suggest translation",
+  "translation.suggestNeedsName":
+    "Type the name first, then a translation can be suggested.",
   "translation.suggesting": "Suggesting…",
   "translation.suggestFailed":
     "No suggestion came back. Type the name, or try again.",
