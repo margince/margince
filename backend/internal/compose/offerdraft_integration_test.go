@@ -61,8 +61,12 @@ func newOfferDrafterFixture(t *testing.T, e *integration.Env, brain *ai.FakeClie
 // drafted line takes its tax from that sheet, and a sheet without it refuses.
 func seedStandardTaxRate(t *testing.T, e *integration.Env, rate, from string) {
 	t.Helper()
-	e.WsExec(t, `INSERT INTO setting (key, value, updated_at) VALUES ('installation.country', '"de"'::jsonb, now())
-	             ON CONFLICT (key) DO NOTHING`)
+	// The country is installation-wide and the package's tests share it, so a
+	// country this fixture sets is gone again when its test ends.
+	if e.WsCount(t, `SELECT count(*) FROM setting WHERE key = 'installation.country'`) == 0 {
+		e.WsExec(t, `INSERT INTO setting (key, value, updated_at) VALUES ('installation.country', '"de"'::jsonb, now())`)
+		t.Cleanup(func() { e.WsExec(t, `DELETE FROM setting WHERE key = 'installation.country'`) })
+	}
 	e.WsExec(t, `INSERT INTO tax_rate (country, category, rate, valid_from, captured_by)
 	             VALUES ('de', 'standard', $1::numeric, $2::date, 'test')`, rate, from)
 }
