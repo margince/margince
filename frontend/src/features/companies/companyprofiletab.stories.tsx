@@ -77,7 +77,7 @@ function frame(
             proposal_ids: [],
             created_at: "2026-06-01T08:00:00Z",
           })
-        : jsonResponse({}, 404),
+        : new Response(null, { status: 204 }),
   };
   installFetchStub(routes);
   return (
@@ -156,7 +156,7 @@ export const CompleteProfileContext: Story = {
         jsonResponse({ data: [] }),
       [`GET /companies/${COMPANY}/facts`]: () => jsonResponse({ data: [] }),
       [`GET /companies/${COMPANY}/site-reads/latest`]: () =>
-        jsonResponse({}, 404),
+        new Response(null, { status: 204 }),
       [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
         jsonResponse({ lanes: [] }),
       "GET /relationships": () =>

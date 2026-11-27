@@ -93,7 +93,7 @@ describe("the technical profile card", () => {
       "GET /me": A_READER,
       [`GET /companies/${COMPANY}/facts`]: () => jsonResponse({ data: [] }),
       [`GET /companies/${COMPANY}/technical-enrich/latest`]: () =>
-        jsonResponse({ title: "not found" }, 404),
+        new Response(null, { status: 204 }),
     });
     renderCard();
     expect(

@@ -209,7 +209,7 @@ func (s *OnboardingStore) Get(ctx context.Context) (OnboardingState, error) {
 		return json.Unmarshal(draft, &state.CompanyDraft)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return OnboardingState{}, apperrors.ErrNotFound
+		return OnboardingState{}, apperrors.ErrNothingYet
 	}
 	return state, err
 }

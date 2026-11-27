@@ -124,9 +124,9 @@ function stateRow(overrides: Partial<OnboardingState> = {}): OnboardingState {
 }
 
 type StubOptions = {
-  /** GET /onboarding/state; null answers 404 (nothing persisted). */
+  /** GET /onboarding/state; null answers 204 (nothing persisted). */
   state?: OnboardingState | null;
-  /** GET /company; null answers 404 (no company confirmed yet). */
+  /** GET /company; null answers 204 (no company confirmed yet). */
   company?: typeof savedProfile | null;
   /** GET /voice-profiles items (the restore probe's first hop). */
   voiceProfiles?: { id: string }[];
@@ -195,7 +195,7 @@ function stubApi(options: StubOptions = {}) {
       if (path.endsWith("/onboarding/state") && request.method === "GET") {
         const row = options.state ?? null;
         return row === null
-          ? jsonResponse({ detail: "not started" }, 404)
+          ? new Response(null, { status: 204 })
           : jsonResponse({ ...row, version });
       }
       if (path.endsWith("/onboarding/state") && request.method === "PUT") {
@@ -260,7 +260,7 @@ function stubApi(options: StubOptions = {}) {
       if (path.endsWith("/company") && request.method === "GET") {
         return options.company
           ? jsonResponse(options.company)
-          : jsonResponse({ detail: "no company yet" }, 404);
+          : new Response(null, { status: 204 });
       }
       if (path.endsWith("/voice-profiles") && request.method === "GET") {
         if (options.voiceListStatus !== undefined) {

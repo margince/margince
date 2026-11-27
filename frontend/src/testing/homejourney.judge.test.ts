@@ -49,7 +49,7 @@ function healthy(...over: Answer[]): Answer[] {
   const base: Answer[] = [
     answer({ read: "worklist", body: busyDay }),
     answer({ read: "handled", body: { receipts: [] } }),
-    answer({ read: "brief", status: 404, body: { code: "not_found" } }),
+    answer({ read: "brief", status: 204, body: undefined }),
     answer({ read: "magic", body: BUSY_NIGHT }),
     answer({ read: "me", body: { user: { id: READER } } }),
   ];
@@ -182,7 +182,7 @@ describe("degradedReasons", () => {
   it("requires a brief once the reader is expected to have one", () => {
     expect(
       degradedReasons(healthy(), expectationFrom("work,brief"), READER),
-    ).toEqual(["brief: answered 404"]);
+    ).toEqual(["brief: answered 204"]);
   });
 
   it("lists a withheld source without counting it against the page", () => {

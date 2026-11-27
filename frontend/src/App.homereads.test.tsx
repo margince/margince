@@ -130,7 +130,7 @@ it("stops Home's reads once the gate sends the reader to describe the company", 
   const { seen } = server(
     {
       "/me": () => json(meFixture({ roles: ["admin"] })),
-      "/company": () => json({ detail: "no company yet" }, 404),
+      "/company": () => new Response(null, { status: 204 }),
     },
     ["/worklist"],
   );

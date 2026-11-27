@@ -7,9 +7,9 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { Select } from "../../design-system/select";
 import { useT } from "../../i18n";
 import { useLeadDisqualifyReasons } from "../../lib/leaddisqualifyreasons";
-import { invalidateClosedLead } from "../../lib/leadkeys";
 import { leadIdentityName } from "../../lib/leadname";
 import { problemMessageOf, unwrap } from "../../lib/problem";
+import { invalidateRetiredRecord } from "../../lib/recordwritekeys";
 
 type Lead = components["schemas"]["Lead"];
 
@@ -57,7 +57,7 @@ export function DisqualifyDialog({
       );
     },
     onSuccess: (closed, closure) => {
-      invalidateClosedLead(queryClient, closure.leadId);
+      void invalidateRetiredRecord(queryClient, "lead", closure.leadId);
       onDisqualified(closed);
     },
   });

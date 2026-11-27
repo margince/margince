@@ -28764,6 +28764,10 @@ export interface components {
             geocode_backfill_interval_seconds?: number;
             /** @description Set the value `OperationSettings.technical_backfill_interval_seconds` describes. */
             technical_backfill_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.capture_counterparty_verdict_interval_seconds` describes. */
+            capture_counterparty_verdict_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.capture_confidentiality_verdict_interval_seconds` describes. */
+            capture_confidentiality_verdict_interval_seconds?: number;
             /** @description Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes. */
             gmail_watch_scan_interval_seconds?: number;
             /** @description Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes. */
@@ -29957,6 +29961,10 @@ export interface components {
             geocode_backfill_interval_seconds: number;
             /** @description How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600. */
             technical_backfill_interval_seconds: number;
+            /** @description How often new senders are judged by the model, in seconds. Default 600. */
+            capture_counterparty_verdict_interval_seconds: number;
+            /** @description How often captured threads are judged for whether colleagues may read them, in seconds. Default 600. */
+            capture_confidentiality_verdict_interval_seconds: number;
             /** @description How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600. */
             gmail_watch_scan_interval_seconds: number;
             /** @description How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600. */
@@ -65390,6 +65398,20 @@ export interface components {
         };
     };
     responses: {
+        /**
+         * @description Nothing exists yet. Only when the request carries `Prefer: absent=204`; without it the same
+         *     case answers `404`.
+         */
+        NothingYet: {
+            headers: {
+                /** @description `absent=204`, the preference this answer honours. */
+                "Preference-Applied"?: string;
+                /** @description `Prefer`: the answer depends on that request header. */
+                Vary?: string;
+                [name: string]: unknown;
+            };
+            content?: never;
+        };
         /** @description No valid credential — a missing/invalid/expired `crm_session` cookie (human path) or a missing/invalid/expired bearer token (agent path). */
         Unauthorized: {
             headers: {
@@ -65870,6 +65892,13 @@ export interface components {
          *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
          */
         IfMatch: string;
+        /**
+         * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+         *     read finds nothing yet. The token is matched without case, and every other preference is
+         *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+         *     that takes this header carries `Vary: Prefer`.
+         */
+        PreferAbsent: string;
     };
     requestBodies: never;
     headers: never;
@@ -70758,7 +70787,15 @@ export interface operations {
     getPartner: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -70776,6 +70813,7 @@ export interface operations {
                     "application/json": components["schemas"]["Partner"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
@@ -71008,7 +71046,15 @@ export interface operations {
     getLatestTechnicalEnrich: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -71026,6 +71072,7 @@ export interface operations {
                     "application/json": components["schemas"]["TechnicalEnrichStatus"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -71035,7 +71082,15 @@ export interface operations {
     getCompanyVatCheck: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -71053,6 +71108,7 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyVatCheck"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -71096,7 +71152,15 @@ export interface operations {
     getLatestSiteRead: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -71114,6 +71178,7 @@ export interface operations {
                     "application/json": components["schemas"]["SiteReadReport"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
@@ -77395,7 +77460,15 @@ export interface operations {
     getLatestTranscriptRead: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -77413,6 +77486,7 @@ export interface operations {
                     "application/json": components["schemas"]["TranscriptReadReport"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
@@ -77983,7 +78057,15 @@ export interface operations {
                 anchor_type: components["schemas"]["MailDraftAnchorType"];
                 anchor_id: string;
             };
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -77998,6 +78080,7 @@ export interface operations {
                     "application/json": components["schemas"]["MailDraft"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             /**
              * @description No draft of the caller's for this anchor, or an anchor the caller can no longer
              *     see. The two are one answer, so a draft is never read back past its author's
@@ -87647,7 +87730,15 @@ export interface operations {
     getOnboardingState: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -87662,6 +87753,7 @@ export interface operations {
                     "application/json": components["schemas"]["OnboardingState"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
         };
@@ -87765,7 +87857,15 @@ export interface operations {
                 /** @description Language for the open questions' copy; option values are locale-invariant. */
                 locale?: "en" | "de" | "vi";
             };
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -87780,6 +87880,7 @@ export interface operations {
                     "application/json": components["schemas"]["OnboardingCompanyProposal"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description No onboarding state exists yet, or it references no website read. */
@@ -87797,7 +87898,15 @@ export interface operations {
     getAnchorCompany: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -87812,6 +87921,7 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyProfile"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description No company saved yet — onboarding has not been completed. */
@@ -93119,7 +93229,15 @@ export interface operations {
     getContactCase: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Any member of the case. */
                 contact_id: string;
@@ -93137,6 +93255,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContactCase"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -96816,7 +96935,15 @@ export interface operations {
     getOwnershipRequest: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 record_type: "contact" | "company";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -96835,6 +96962,7 @@ export interface operations {
                     "application/json": components["schemas"]["OwnershipRequest"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
@@ -96945,7 +97073,15 @@ export interface operations {
     getEditAccessRequest: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 record_type: "contact" | "company" | "deal" | "lead" | "project";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -96964,6 +97100,7 @@ export interface operations {
                     "application/json": components["schemas"]["EditAccessRequest"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
@@ -97070,7 +97207,15 @@ export interface operations {
     getOwnershipOffer: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 record_type: "contact" | "company";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -97089,6 +97234,7 @@ export interface operations {
                     "application/json": components["schemas"]["OwnershipOffer"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
@@ -102428,7 +102574,15 @@ export interface operations {
     getMorningBrief: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -102443,6 +102597,7 @@ export interface operations {
                     "application/json": components["schemas"]["MorningBrief"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description The rep has no brief run yet (none has been generated). */
@@ -102520,7 +102675,15 @@ export interface operations {
                  */
                 week?: string;
             };
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -102535,6 +102698,7 @@ export interface operations {
                     "application/json": components["schemas"]["TeamWeeklyReview"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -102547,7 +102711,15 @@ export interface operations {
                 /** @description The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent. */
                 week?: string;
             };
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -102562,6 +102734,7 @@ export interface operations {
                     "application/json": components["schemas"]["WeeklyReview"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description The rep has no review for that week. */
@@ -102710,7 +102883,15 @@ export interface operations {
     getForecastAssurance: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -102725,6 +102906,7 @@ export interface operations {
                     "application/json": components["schemas"]["ForecastAssurance"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description No run has completed yet. A fresh installation has not been checked. */
@@ -102792,7 +102974,15 @@ export interface operations {
     getDataCoverage: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -102807,6 +102997,7 @@ export interface operations {
                     "application/json": components["schemas"]["DataCoverage"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description No run has completed yet. A fresh installation has not been checked. */
@@ -103691,7 +103882,15 @@ export interface operations {
     getCurrentWeeklyPlan: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -103706,6 +103905,7 @@ export interface operations {
                     "application/json": components["schemas"]["WeeklyPlan"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -103736,7 +103936,15 @@ export interface operations {
     getTeammateWeeklyPlan: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Whose week to read. */
                 owner_id: string;
@@ -103754,6 +103962,7 @@ export interface operations {
                     "application/json": components["schemas"]["WeeklyPlan"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -105996,7 +106205,15 @@ export interface operations {
             query?: {
                 question?: "deal_facts" | "chat_capture";
             };
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -106014,6 +106231,7 @@ export interface operations {
                     "application/json": components["schemas"]["AttachmentExtraction"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
