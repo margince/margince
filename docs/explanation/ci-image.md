@@ -7,7 +7,7 @@ in one container image, `ghcr.io/margince/ci`. It holds Go, the gate binaries, N
 Playwright starts, and the Ubuntu packages Chromium needs. So when the image can be pulled, these jobs
 install no toolchain and `uat` does not reach a package mirror. Without it they set up on the runner
 as before (below). A mirror that stopped answering during a font fetch has
-stopped a UAT shard before a test ran.
+stopped a `uat` shard (the screen tests) before a test ran.
 
 The rest of the merge gate is in [ci-pipeline.md](ci-pipeline.md).
 
