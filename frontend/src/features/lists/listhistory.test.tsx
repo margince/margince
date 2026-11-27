@@ -8,7 +8,6 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
 import { formatDateTimeAbbrev } from "../../format/format";
-import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import type { ListHistoryEntry } from "../../lib/lists.queries";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
@@ -19,13 +18,14 @@ import {
   liveVocabulary,
   revisionHistory,
 } from "../../testing/lists.fixtures";
-import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import {
   installFetchStub,
   jsonResponse,
   StoryProviders,
 } from "../../testing/story-utils";
 import { ListHistoryPanel } from "./listhistory";
+
+const historyZone = "UTC";
 
 afterEach(() => {
   cleanup();
@@ -34,7 +34,6 @@ afterEach(() => {
 });
 
 function panel(rows: readonly ListHistoryEntry[]) {
-  pretendReaderZone("UTC");
   installFetchStub({
     "GET /me": listsMe(true),
     "GET /filters/vocabulary": () => jsonResponse(liveVocabulary),
@@ -43,7 +42,7 @@ function panel(rows: readonly ListHistoryEntry[]) {
   });
   render(
     <StoryProviders>
-      <ViewerZoneProvider zone="UTC">
+      <ViewerZoneProvider zone={historyZone}>
         <ListHistoryPanel list={liveList} />
       </ViewerZoneProvider>
     </StoryProviders>,
@@ -63,7 +62,7 @@ describe("ListHistoryPanel", () => {
     panel(liveHistory);
     expect(
       await screen.findByText(
-        formatDateTimeAbbrev(liveHistory[0].occurred_at, "en", browserZone()),
+        formatDateTimeAbbrev(liveHistory[0].occurred_at, "en", historyZone),
       ),
     ).toBeInTheDocument();
   });
