@@ -49299,8 +49299,9 @@ export interface components {
             archived_at?: string | null;
             /**
              * @description The tag a merge folded this one into, named as it reads now. Present only on a tag
-             *     archived by a merge, and such a tag cannot be restored. The named tag took its records
-             *     and may since have been merged on itself; its own `merged_into` then names where they are.
+             *     archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+             *     destination and may itself have been merged since; follow each `merged_into` until a tag
+             *     has none to find the tag that carries the records now.
              */
             merged_into?: components["schemas"]["RowTag"];
             /** @description How many live contacts, companies, deals and leads carry this tag, as THIS caller may see them: a type the caller may not read counts nothing, and within a readable type only the rows the caller's scope admits are counted. The sum of the tag page's `usage`. Set on the list read that asks `with_carried_by`; absent otherwise. */
@@ -49378,8 +49379,9 @@ export interface components {
             archived_at?: string | null;
             /**
              * @description The tag a merge folded this one into, named as it reads now. Present only on a tag
-             *     archived by a merge, and such a tag cannot be restored. The named tag took its records
-             *     and may since have been merged on itself; its own `merged_into` then names where they are.
+             *     archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+             *     destination and may itself have been merged since; follow each `merged_into` until a tag
+             *     has none to find the tag that carries the records now.
              */
             merged_into?: components["schemas"]["RowTag"];
             usage: components["schemas"]["TagUsage"];
