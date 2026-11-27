@@ -13,6 +13,7 @@ package storekit
 import (
 	"context"
 	"errors"
+	"reflect"
 	"strings"
 	"testing"
 	"time"
@@ -474,5 +475,26 @@ func TestSortVocabularyOmitsAnArrayColumn(t *testing.T) {
 	var refused *SortError
 	if !errors.As(err, &refused) || refused.Code != CodeSortFieldNotAllowed {
 		t.Errorf("sorting by a multiselect answered %v, want the %s refusal", err, CodeSortFieldNotAllowed)
+	}
+}
+
+func TestAMultiselectListFilterComparesSetsWithOneTypedParameter(t *testing.T) {
+	var args []any
+	arg := func(value any) int { args = append(args, value); return len(args) }
+	columns := []fieldcatalog.Column{{Name: "cf_tags", Type: fieldcatalog.TypeMultiselect}}
+	clauses, err := CustomFilterClauses(columns, map[string]string{"cf_tags": `["North","West"]`}, arg)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(clauses) != 1 || clauses[0] != `("cf_tags" @> $1::text[] AND "cf_tags" <@ $1::text[])` {
+		t.Fatalf("clauses=%v", clauses)
+	}
+	if !reflect.DeepEqual(args, []any{[]string{"North", "West"}}) {
+		t.Fatalf("args=%#v", args)
+	}
+	for _, bad := range []string{`North`, `null`, `[]`, `[1]`, `{"North":true}`} {
+		if _, err := CustomFilterClauses(columns, map[string]string{"cf_tags": bad}, arg); err == nil {
+			t.Errorf("accepted %s", bad)
+		}
 	}
 }

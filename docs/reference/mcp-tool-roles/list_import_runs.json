@@ -4,12 +4,12 @@
   "verb": "list_import_runs",
   "allowed_for": [
     "admin",
-    "ops"
-  ],
-  "refused_for": [
     "management",
     "manager",
-    "read_only",
+    "ops",
     "rep"
+  ],
+  "refused_for": [
+    "read_only"
   ]
 }

@@ -169,7 +169,8 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// own table. The contacts and billing contacts lists each count what row scope hid,
 	// from the statement the list reads, so each adds one read. The company read
 	// also names the colleagues who hold hidden contacts in one batch.
-	const budget = 66
+	// The linked-leads section adds one scoped page and one completeness count.
+	const budget = 68
 	if tracer.languageReads != 2 {
 		t.Errorf("two assemblies read base language %d times, want once each", tracer.languageReads)
 	}

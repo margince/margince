@@ -19063,7 +19063,18 @@
           },
           "gate_metrics": {
             "type": "object",
-            "additionalProperties": true
+            "properties": {
+              "certified_staff": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 32767
+              },
+              "retention_rate": {
+                "type": "integer",
+                "minimum": 0,
+                "maximum": 100
+              }
+            }
           },
           "last_contact_at": {
             "type": "string",

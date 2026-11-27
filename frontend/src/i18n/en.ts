@@ -3,6 +3,7 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "systemJob.website_lead_owner": "Telling the website lead owner",
   "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
   "systemJob.google_directory": "Reading a member’s Google groups",
   "systemJob.legal_review_desk": "Legal review desk",
@@ -5532,6 +5533,10 @@ export const en = {
   "co.narrative.add": "Add",
   "co.narrative.notOnSite": "Not on their website",
   "co.narrative.notReadYet": "Not read from their website yet",
+  "co.leads.title": "Linked leads",
+  "co.leads.empty": "No leads are linked to this company.",
+  "co.leads.more": "Show all linked leads",
+  "co.leads.list": "Open lead list",
   "co.contacts.engagement": "Engagement",
   "co.contacts.lastInteraction": "Last exchange",
   "co.contacts.strength": "Relationship",
@@ -15207,6 +15212,9 @@ export const en = {
   "cf.choices.saved_one": "Choices of “{label}” saved. {count} record changed.",
   "cf.choices.saved_other":
     "Choices of “{label}” saved. {count} records changed.",
+  "cf.filterAny": "Any value",
+  "cf.filterApply": "Apply filter",
+  "cf.filterValueRequired": "Enter a value to filter by.",
   "cf.gate.title": "Add this field?",
   "cf.gate.body":
     "On confirm, it is added to every {object}: on the 360 page, in search and filters, lists, export and the API. The addition is recorded in the audit log.",
@@ -19102,7 +19110,7 @@ export const en = {
     "The secret the Webflow API answers once when it makes the webhook. A webhook an OAuth app makes is signed with that app’s client secret instead. Leave it empty until you have it: the form takes no posts until then.",
   "webForms.field.senderSecretKeep": "Leave empty to keep the stored secret.",
   "webForms.field.notifyOwnerHint":
-    "Tells the owner when the post lands, or after its handling plan assigns one. Later company routing raises no delayed notice.",
+    "Tells the owner when the post lands, after its handling plan assigns one, or after lead routing assigns a previously unowned lead.",
   "webForms.field.notifyOwner": "Tell the owner about each new post",
   "notifications.class.website_lead.label": "New website leads",
   "notifications.class.website_lead.help":

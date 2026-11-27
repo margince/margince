@@ -52,7 +52,7 @@ var toolRoleFixtures = map[string]func(p *recordPool) map[string]any{
 		return map[string]any{"record_type": "company", "source_id": p.take("company"), "target_id": p.take("company")}
 	},
 	"preview_import": func(*recordPool) map[string]any {
-		return map[string]any{"object": "company", "csv": "display_name\nRole Sweep Import\n"}
+		return map[string]any{"object": "contact", "csv": "email,full_name\npreview@role-sweep.test,Role Sweep Import\n"}
 	},
 	"draft_email": func(p *recordPool) map[string]any {
 		return map[string]any{"links": []any{map[string]any{"entity_type": "contact", "entity_id": p.take("contact")}}}

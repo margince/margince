@@ -14,6 +14,7 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
+  "systemJob.website_lead_owner": "Thông báo phụ trách lead từ trang web",
   "systemJob.proposal_stage": "Hỏi có chuyển deal sau khi gửi đề xuất không",
   "systemJob.google_directory": "Đọc nhóm Google của thành viên",
   "systemJob.legal_review_desk": "Rà soát pháp lý",
@@ -5449,6 +5450,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.narrative.add": "Thêm",
   "co.narrative.notOnSite": "Trang web công ty không nêu",
   "co.narrative.notReadYet": "Chưa đọc trang web của họ",
+  "co.leads.title": "Lead liên kết",
+  "co.leads.empty": "Không có lead nào liên kết với công ty này.",
+  "co.leads.more": "Xem mọi lead được liên kết",
+  "co.leads.list": "Mở danh sách lead",
   "co.contacts.engagement": "Mức tương tác",
   "co.contacts.lastInteraction": "Trao đổi gần nhất",
   "co.contacts.strength": "Mạng lưới",
@@ -10966,7 +10971,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.id_not_a_record_id":
     "“{value}” không phải mã bản ghi. Hãy xuất danh sách để lấy mã, hoặc để trống cột để nhập hàng này làm bản ghi mới.",
   "import.reason.id_record_not_visible":
-    "Không có bản ghi nào bạn nhìn thấy có mã “{value}”. Có thể nó đã được đưa vào kho lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
+    "Không có bản ghi nào bạn nhìn thấy có mã “{value}”. Có thể nó đã được chuyển vào kho lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
   "import.reason.not_your_record":
     "Hàng này khớp với một bản ghi do thành viên khác phụ trách. Lần nhập của bạn chỉ thay đổi bản ghi bạn phụ trách nên hàng này không được áp dụng.",
   "import.reason.ref_taken_by_another_record":
@@ -14875,6 +14880,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã lưu lựa chọn của “{label}”. {count} bản ghi đã thay đổi.",
   "cf.choices.saved_other":
     "Đã lưu lựa chọn của “{label}”. {count} bản ghi đã thay đổi.",
+  "cf.filterAny": "Mọi giá trị",
+  "cf.filterApply": "Áp dụng bộ lọc",
+  "cf.filterValueRequired": "Nhập giá trị để lọc.",
   "cf.gate.title": "Thêm trường này?",
   "cf.gate.body":
     "Khi xác nhận, trường này được thêm vào mọi {object}: trên trang 360, trong tìm kiếm và bộ lọc, danh sách, bản xuất và API. Thao tác thêm này sẽ được ghi vào nhật ký hoạt động.",
@@ -18795,7 +18803,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Khóa ký API Webflow trả về một lần khi tạo webhook. Webhook do một ứng dụng OAuth tạo thì được ký bằng client secret của ứng dụng đó. Để trống cho đến khi có: trước đó biểu mẫu không nhận bài gửi nào.",
   "webForms.field.senderSecretKeep": "Để trống để giữ khóa đã lưu.",
   "webForms.field.notifyOwnerHint":
-    "Thông báo khi nhận biểu mẫu hoặc sau bước phân công của kế hoạch xử lý. Phân công sau đó trong công ty không gửi thêm thông báo.",
+    "Thông báo cho người phụ trách khi bài gửi đến, hoặc sau khi kế hoạch xử lý hay quy tắc phân công lead giao lead chưa có người phụ trách.",
   "webForms.field.notifyOwner":
     "Thông báo cho người phụ trách mỗi lượt gửi mới",
   "notifications.class.website_lead.label": "Lead mới từ trang web",

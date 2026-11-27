@@ -139,6 +139,7 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
   return (
     <div className="wrap">
       <ListTable
+        customFieldsKind="contact"
         title={pageName}
         state={state}
         unit="unit.contacts"

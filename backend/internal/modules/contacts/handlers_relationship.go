@@ -4,8 +4,6 @@
 package contacts
 
 import (
-	"fmt"
-	"math"
 	"net/http"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -130,7 +128,7 @@ func (h Handlers) UpsertPartner(w http.ResponseWriter, r *http.Request, id crmco
 		return
 	}
 	var req crmcontracts.UpsertPartnerRequest
-	if !httperr.Decode(w, r, &req) {
+	if !httperr.DecodeClosed(w, r, &req, nil) {
 		return
 	}
 	in := UpsertPartnerInput{CompanyID: pathID[ids.CompanyKind](id), IfVersion: ifVersion}
@@ -160,21 +158,11 @@ func (h Handlers) UpsertPartner(w http.ResponseWriter, r *http.Request, id crmco
 	in.ServedSegments = req.ServedSegments
 	in.Cleared = httperr.ClearedFields(r)
 	if req.GateMetrics != nil {
-		if staff, ok := (*req.GateMetrics)["certified_staff"].(float64); ok {
-			v, err := gateMetricInt16(staff, metricCertifiedStaff, 0, certifiedStaffCeiling)
-			if err != nil {
-				httperr.Write(w, r, err)
-				return
-			}
-			in.CertifiedStaff = &v
+		if req.GateMetrics.CertifiedStaff != nil {
+			in.CertifiedStaff = new(int16(*req.GateMetrics.CertifiedStaff)) // #nosec G115 -- DecodeClosed enforces the generated 0..32767 bound.
 		}
-		if rate, ok := (*req.GateMetrics)["retention_rate"].(float64); ok {
-			v, err := gateMetricInt16(rate, metricRetentionRate, 0, 100)
-			if err != nil {
-				httperr.Write(w, r, err)
-				return
-			}
-			in.RetentionRate = &v
+		if req.GateMetrics.RetentionRate != nil {
+			in.RetentionRate = new(int16(*req.GateMetrics.RetentionRate)) // #nosec G115 -- DecodeClosed enforces the generated 0..100 bound.
 		}
 	}
 	partner, err := h.store.UpsertPartner(r.Context(), in)
@@ -218,37 +206,6 @@ func (h Handlers) ListPartners(w http.ResponseWriter, r *http.Request, params cr
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, map[string]any{"data": partners, "page": pageInfo(page)})
-}
-
-// Gate metrics arrive as JSON numbers, which decode to float64 and reach
-// smallint columns.
-const (
-	metricCertifiedStaff = "gate_metrics.certified_staff"
-	metricRetentionRate  = "gate_metrics.retention_rate"
-	// certifiedStaffCeiling is what the column can hold. A seat count past it
-	// is a typo rather than a programme, and the cast below would wrap it.
-	certifiedStaffCeiling = 32767
-)
-
-// gateMetricInt16 narrows one metric to the column that stores it.
-//
-// A plain int16(f) wraps: 1e30 lands as -1, which then reads as a partner
-// failing a gate it was never measured against. A negative seat count and a
-// retention rate above a hundred are the same kind of nonsense arriving by a
-// different route.
-//
-// Refused with the field named, so the caller is told which number the
-// programme cannot use.
-func gateMetricInt16(f float64, field string, low, high int16) (int16, error) {
-	if math.IsNaN(f) || math.IsInf(f, 0) || f != math.Trunc(f) {
-		return 0, httperr.Validation(field, "invalid_value",
-			field+" must be a whole number")
-	}
-	if f < float64(low) || f > float64(high) {
-		return 0, httperr.Validation(field, "out_of_range",
-			fmt.Sprintf("%s must be between %d and %d", field, low, high))
-	}
-	return int16(f), nil
 }
 
 // EndPartnerProgram retires a company's partner extension and keeps the company.

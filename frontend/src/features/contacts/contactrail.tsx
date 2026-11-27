@@ -3,6 +3,7 @@ import type { components } from "../../api/schema";
 import { RecordListsActions } from "../../components/addtoshortlist";
 import { ConversationSuggestionsCard } from "../../components/conversationsuggestions";
 import { CounterpartyHoldRow } from "../../components/counterparty-hold";
+import { RecordCustomFields } from "../../components/recordcustomfields";
 import { useViewOnlyAccess } from "../../components/viewonly";
 import { Badge } from "../../design-system/atoms";
 import { Panel, PanelBody } from "../../design-system/panel";
@@ -151,6 +152,7 @@ export function ContactRail({
           access={access}
         />
       )}
+      <RecordCustomFields kind="contact" record={view.contact} />
       {about.element}
       {manageConsent.element}
       {!view.contact.archived_at && (

@@ -30,7 +30,7 @@ import (
 const tagSuggestItemCap = 200
 
 func tagSuggestBodySQL(a string) string {
-	return `left(coalesce(` + a + `.body, ''), ` + strconv.Itoa(tagSuggestBodyLimit) + `)`
+	return `left(coalesce(` + a + `.body, ''), ` + strconv.Itoa(tagsuggest.BodyReadLimit) + `)`
 }
 
 // tagSuggestContentDigestSQL hashes the subject and body the prompt reads, so

@@ -81,7 +81,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 	switch t {
 	case datasource.EntityDeal:
 		in := ListDealsInput{Query: text, Limit: &limit, Cursor: cursor}
-		if err := dealListFilters.Apply(&in, filters); err != nil {
+		if err := dealListFilters.ApplyCustom(&in, filters, func(in *ListDealsInput, custom map[string]string) { in.CustomFilters = custom }); err != nil {
 			return nil, "", false, err
 		}
 		if err := narrowToList(ctx, &in, p.listMembers); err != nil {

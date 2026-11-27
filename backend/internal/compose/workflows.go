@@ -10,6 +10,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/quietreminders"
+	"github.com/margince/margince/backend/internal/compose/webformlead"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
@@ -60,7 +61,7 @@ func workflowEngineWithDrafter(db *database.DB, drafter activities.EmailDrafter)
 	for _, handler := range automation.StarterWorkflows(ex) {
 		engine.RegisterWorkflow(handler)
 	}
-	engine.RegisterWorkflow(contacts.LeadRoutingWorkflow(contactsStore))
+	engine.RegisterWorkflow(webformlead.RoutingWithArrival(db, contacts.LeadRoutingWorkflow(contactsStore), tellWebsiteLeadOwner))
 	for _, handler := range contacts.LeadScoreWorkflows(contactsStore) {
 		engine.RegisterSystemWorkflow(handler)
 	}
