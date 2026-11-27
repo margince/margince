@@ -497,9 +497,9 @@ jobs:
     permissions:
       contents: read
     # The uncached root fitness packages were most of the test leg, so they get
-    # a runner, and so does SOLO_TEST_PKGS. Every leg runs the build; only the
-    # unit leg runs the gates that read the tree the same way on each
-    # (CHECK_TREE_GATES).
+    # a runner, and so does SOLO_TEST_PKGS. Only the unit leg runs the build and
+    # the gates that read the tree the same way on each (CHECK_TREE_GATES); the
+    # other legs compile what their tests import.
     # TestTheTwoBackendJobsRunEveryCheckLeg reads the legs from these entries.
     # `unit-cover` marks the legs that run test-cached and test-solo, whose
     # coverage pods scripts/merge-go-coverage.sh requires by part name.

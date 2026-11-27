@@ -174,6 +174,11 @@ TEST_SHUFFLE_NOTE = $(if $(TEST_SHUFFLE_SEED),@echo "$@: test order -shuffle=$(T
 help: ## List targets with their descriptions (the default goal)
 	@grep -hE '^[a-zA-Z][a-zA-Z0-9_-]*:.*## ' $(MAKEFILE_LIST) | awk -F':.*## ' '{printf "  %-18s %s\n", $$1, $$2}'
 
+# `go build ./...` compiles the same tree on every leg, so it is a tree gate:
+# CHECK_TREE_GATES=off leaves it out, and TestOneBackendLegRunsTheTreeGates
+# fails if no CI leg keeps it. A leg without it compiles only what its own
+# tests import.
+#
 # build runs ALONE first: it compiles the dependency graph into the build
 # cache exactly once. Fanning it out with the others makes every pass
 # compile that graph concurrently — the cache does not block a second
@@ -213,9 +218,13 @@ CHECK_LEGS  := $(TEST_LEGS) $(STATIC_LEGS)
 
 check: ## The merge gate: everything a PR must pass
 	@[ -n "$$PHASE_TIMER_OWNED" ] || bash ../scripts/phase-timer.sh reset
+ifneq ($(CHECK_TREE_GATES),off)
 	@bash ../scripts/phase-timer.sh start "backend: build"
 	$(MAKE) build
 	@bash ../scripts/phase-timer.sh stop
+else
+	@echo "backend: build skipped (CHECK_TREE_GATES=off): the leg that runs the tree gates builds ./..."
+endif
 	@bash ../scripts/phase-timer.sh start "backend: $(CHECK_LEGS) (-j4)"
 	# -k: one red leg does not stop the others, so a run names every finding.
 	$(MAKE) -k -j4 $(CHECK_LEGS)

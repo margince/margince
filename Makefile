@@ -159,9 +159,9 @@ install: fe-install tools hooks
 ## is what it does when somebody runs it directly (`make check-go`).
 ##
 ## CHECK_TREE_GATES=off leaves out every gate that reads the tree the same way
-## whatever CHECK_LEGS holds: the contract types, the root script gates, drift
-## and composition reproducibility. CI splits CHECK_LEGS over two runners, and
-## one of them running these is enough.
+## whatever CHECK_LEGS holds: the contract types, the root script gates, the
+## `go build ./...`, drift and composition reproducibility. CI splits CHECK_LEGS
+## over several runners, and one of them running these is enough.
 CHECK_TREE_GATES ?= on
 check-backend:
 	@bash scripts/gate-slot.sh acquire $@
