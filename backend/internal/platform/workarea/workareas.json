@@ -167,7 +167,6 @@
     "createLead": "business",
     "createLeadDisqualifyReason": "admin_settings",
     "createLeadOrigin": "admin_settings",
-    "createLeadSource": "admin_settings",
     "createLegalEntity": "admin_settings",
     "createList": "business",
     "createLossReason": "admin_settings",
@@ -217,7 +216,6 @@
     "deleteCompanyFact": "business",
     "deleteLeadDisqualifyReason": "admin_settings",
     "deleteLeadOrigin": "admin_settings",
-    "deleteLeadSource": "admin_settings",
     "deleteLegalEntityLogo": "admin_settings",
     "deleteVoiceProfile": "business",
     "deleteWorkspaceEmailDomain": "admin_settings",
@@ -574,7 +572,6 @@
     "listLeadDisqualifyReasons": "workspace_settings",
     "listLeadManualSignals": "business",
     "listLeadOrigins": "workspace_settings",
-    "listLeadSources": "workspace_settings",
     "listLeadStops": "compliance",
     "listLeads": "business",
     "listLegacyLossReasons": "admin_settings",
@@ -898,7 +895,6 @@
     "updateLeadDisqualifyReason": "admin_settings",
     "updateLeadOrigin": "admin_settings",
     "updateLeadSettings": "admin_settings",
-    "updateLeadSource": "admin_settings",
     "updateLegalEntity": "admin_settings",
     "updateLegalReviewSettings": "admin_settings",
     "updateList": "business",
@@ -1059,10 +1055,14 @@
     "confirmSendWithoutLawfulBasis": "consent",
     "connectChannel": "connectors",
     "connectConnector": "connectors",
+    "connectDispactParticipant": "connectors",
     "connectExtOauth": "extensions",
     "connectFinanceSource": "finance_source",
+    "connectMessenger": "connectors",
     "connectProvider": "connectors",
     "connectSharedMailbox": "connectors",
+    "connectSlackChannels": "connectors",
+    "connectTeamsChannels": "connectors",
     "connectorOAuthCallback": "oauth_callbacks",
     "controlDataTask": "system_health",
     "correctCommunicationWording": "consent",
@@ -1095,7 +1095,6 @@
     "createLead": "leads",
     "createLeadDisqualifyReason": "sales_lists",
     "createLeadOrigin": "sales_lists",
-    "createLeadSource": "sales_lists",
     "createLegalEntity": "company_profile",
     "createList": "lists",
     "createLossReason": "sales_lists",
@@ -1160,7 +1159,6 @@
     "deleteGoogleDirectory": "installation",
     "deleteLeadDisqualifyReason": "sales_lists",
     "deleteLeadOrigin": "sales_lists",
-    "deleteLeadSource": "sales_lists",
     "deleteLegalEntityLogo": "company_profile",
     "deleteMyAvatar": "own_profile",
     "deleteOauthApp": "installation",
@@ -1191,6 +1189,7 @@
     "disconnectChannel": "connectors",
     "disconnectConnector": "connectors",
     "disconnectFinanceSource": "finance_source",
+    "disconnectMessengerIdentity": "connectors",
     "disconnectProvider": "connectors",
     "disconnectSharedMailbox": "connectors",
     "disconnectTelegramBusinessConnection": "connectors",
@@ -1217,6 +1216,7 @@
     "downloadImportTemplate": "imports",
     "downloadJurisdictionDocument": "installation",
     "downloadOfferPdf": "offers",
+    "downloadTeamsChannelPackage": "connectors",
     "draftCompanyEmail": "companies",
     "draftContactEmail": "contacts",
     "draftDealFollowUps": "deals",
@@ -1290,7 +1290,9 @@
     "getBuyerRoom": "buyer_rooms",
     "getCaptureHealth": "system_health",
     "getCaptureSettings": "capture_rules",
+    "getChannelDeliveryReview": "connectors",
     "getChannelLink": "connectors",
+    "getChatSummarySource": "activities",
     "getClaimEvidence": "companies",
     "getCommissionEntry": "commissions",
     "getCommissionSummary": "commissions",
@@ -1399,6 +1401,12 @@
     "getMeetingBrief": "activities",
     "getMeetingInvitation": "scheduling",
     "getMember": "members",
+    "getMessengerAttempt": "connectors",
+    "getMessengerConversation": "connectors",
+    "getMessengerIdentity": "connectors",
+    "getMessengerMessages": "connectors",
+    "getMessengerSetup": "connectors",
+    "getMessengerTeam": "connectors",
     "getMorningBrief": "worklist",
     "getMorningDigest": "capture_triage",
     "getMyAiActivity": "own_profile",
@@ -1469,17 +1477,20 @@
     "getSignalIntroPath": "signals",
     "getSignalWarmth": "signals",
     "getSiteRead": "companies",
+    "getSlackChannelSetup": "connectors",
     "getStage": "pipelines",
     "getStageAutomationReport": "pipelines",
     "getStatus": "sign_in",
     "getSystemHealth": "system_health",
     "getTag": "tags",
     "getTagSuggestion": "tags",
+    "getTaskExplanation": "activities",
     "getTeamBoard": "worklist",
     "getTeamExceptions": "worklist",
     "getTeamMarginceChanges": "worklist",
     "getTeamWeeklyReview": "worklist",
     "getTeammateWeeklyPlan": "worklist",
+    "getTeamsChannelSetup": "connectors",
     "getTranscriptRead": "activities",
     "getUserAccess": "members",
     "getUserAvatar": "members",
@@ -1610,7 +1621,6 @@
     "listLeadDisqualifyReasons": "sales_lists",
     "listLeadManualSignals": "leads",
     "listLeadOrigins": "sales_lists",
-    "listLeadSources": "sales_lists",
     "listLeadStops": "consent",
     "listLeads": "leads",
     "listLegacyLossReasons": "sales_lists",
@@ -1626,6 +1636,8 @@
     "listLists": "lists",
     "listLossReasons": "sales_lists",
     "listMeetingProposals": "scheduling",
+    "listMessengerChannels": "connectors",
+    "listMessengerMembers": "connectors",
     "listMyAgentGrants": "agent_limits",
     "listMyCaptureActivity": "capture_triage",
     "listMyChatIdentities": "own_profile",
@@ -1721,6 +1733,7 @@
     "mergeTags": "tags",
     "messageAnchorCompanySiteRead": "company_profile",
     "messageOnboardingCompany": "company_profile",
+    "messengerOAuthCallback": "oauth_callbacks",
     "moveDealPipeline": "deals",
     "nameSeats": "members",
     "offerOwnershipTransfer": "sharing",
@@ -1729,6 +1742,7 @@
     "openBuyerRoomThread": "buyer_rooms",
     "openDealRoomThread": "deal_rooms",
     "openForecastShare": "forecast",
+    "openMessengerConversation": "connectors",
     "pauseDealRoom": "deal_rooms",
     "pauseReportingSchedules": "system_health",
     "peekDealRoomCredential": "buyer_rooms",
@@ -1747,6 +1761,7 @@
     "previewBookingReturn": "booking_pages",
     "previewBulkChange": "bulk",
     "previewBulkUndo": "bulk",
+    "previewChannelDelivery": "connectors",
     "previewConnectorBackfill": "connectors",
     "previewContactCaseMerge": "duplicates",
     "previewContactEmploymentImport": "contacts",
@@ -1798,6 +1813,9 @@
     "readTranscriptForNextSteps": "activities",
     "reassignHandoff": "leads",
     "receiveDispactChannelEvent": "provider_notices",
+    "receiveSlackChannelEvent": "provider_notices",
+    "receiveTeamsBotActivity": "provider_notices",
+    "receiveTeamsGraphNotification": "provider_notices",
     "receiveWhatsAppWebhook": "provider_notices",
     "receiveZaloOAWebhook": "provider_notices",
     "recordAIFeedback": "ai_help",
@@ -1917,6 +1935,7 @@
     "retryAutomationRun": "automations",
     "retryReportingExecution": "reports",
     "revertStageProgression": "deals",
+    "reviewChannelDeliveries": "connectors",
     "revokeDealRoomParticipant": "deal_rooms",
     "revokeForecastShare": "forecast",
     "revokeMySession": "own_security",
@@ -1956,6 +1975,7 @@
     "sendCompanyEmail": "activities",
     "sendEmail": "activities",
     "sendMessage": "activities",
+    "sendMessengerMessage": "connectors",
     "sendOffer": "offers",
     "sendPrivacyNotice": "consent",
     "setActivityAudience": "activities",
@@ -1992,6 +2012,7 @@
     "shareCaptureCounterpartyHoldHistory": "capture_triage",
     "shareCompanyContacts": "companies",
     "signOutBuyerRoom": "buyer_rooms",
+    "slackChannelsOAuthCallback": "oauth_callbacks",
     "snoozeBriefItem": "worklist",
     "startAnchorCompanySiteRead": "company_profile",
     "startConnectorBackfill": "connectors",
@@ -2058,7 +2079,6 @@
     "updateLeadDisqualifyReason": "sales_lists",
     "updateLeadOrigin": "sales_lists",
     "updateLeadSettings": "sales_rules",
-    "updateLeadSource": "sales_lists",
     "updateLegalEntity": "company_profile",
     "updateLegalReviewSettings": "sales_rules",
     "updateList": "lists",
@@ -2436,9 +2456,6 @@
     "create_lead_origin": [
       "sales_lists"
     ],
-    "create_lead_source": [
-      "sales_lists"
-    ],
     "create_legal_entity": [
       "company_profile"
     ],
@@ -2552,9 +2569,6 @@
       "sales_lists"
     ],
     "delete_lead_origin": [
-      "sales_lists"
-    ],
-    "delete_lead_source": [
       "sales_lists"
     ],
     "delete_legal_entity_logo": [
@@ -4173,9 +4187,6 @@
     "update_lead_settings": [
       "sales_rules"
     ],
-    "update_lead_source": [
-      "sales_lists"
-    ],
     "update_legal_entity": [
       "company_profile"
     ],
@@ -4609,9 +4620,6 @@
     "create_lead_origin": [
       "admin_settings"
     ],
-    "create_lead_source": [
-      "admin_settings"
-    ],
     "create_legal_entity": [
       "admin_settings"
     ],
@@ -4719,9 +4727,6 @@
       "admin_settings"
     ],
     "delete_lead_origin": [
-      "admin_settings"
-    ],
-    "delete_lead_source": [
       "admin_settings"
     ],
     "delete_legal_entity_logo": [
@@ -6298,9 +6303,6 @@
       "admin_settings"
     ],
     "update_lead_settings": [
-      "admin_settings"
-    ],
-    "update_lead_source": [
       "admin_settings"
     ],
     "update_legal_entity": [

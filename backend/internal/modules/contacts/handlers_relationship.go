@@ -173,7 +173,8 @@ func (h Handlers) UpsertPartner(w http.ResponseWriter, r *http.Request, id crmco
 	httperr.WriteJSON(w, http.StatusOK, partner)
 }
 
-func (h Handlers) GetPartner(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
+// GetPartner answers the partner row a company plays, if it plays one.
+func (h Handlers) GetPartner(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.GetPartnerParams) {
 	partner, err := h.store.GetPartner(r.Context(), pathID[ids.CompanyKind](id))
 	if err != nil {
 		writeStoreErr(w, r, err)

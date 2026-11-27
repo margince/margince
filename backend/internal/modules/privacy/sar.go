@@ -59,9 +59,12 @@ type SARPackage struct {
 	Deals               []map[string]any `json:"deals"`
 	Leads               []map[string]any `json:"leads"`
 	Activities          []map[string]any `json:"activities"`
-	Attachments         []map[string]any `json:"attachments"`
-	Consent             []map[string]any `json:"consent"`
-	ConsentEvents       []map[string]any `json:"consent_events"`
+	// MessageIdentities are the Message-IDs and meeting keys of the subject's
+	// disclosed messages, each with the door that attested it.
+	MessageIdentities []map[string]any `json:"message_identities"`
+	Attachments       []map[string]any `json:"attachments"`
+	Consent           []map[string]any `json:"consent"`
+	ConsentEvents     []map[string]any `json:"consent_events"`
 	// The declared personal columns of extension rows that name the contact, a
 	// lead twin or one of their activities.
 	ExtensionData []map[string]any `json:"extension_data"`
@@ -71,6 +74,8 @@ type SARPackage struct {
 	// Why this contact exists: the answer to Art. 15(1)(g).
 	AcquisitionEvidence []map[string]any `json:"acquisition_evidence"`
 	NoticeCases         []map[string]any `json:"notice_cases"`
+	// LeadPrivacyNotices are the notices a lead twin of the subject was sent.
+	LeadPrivacyNotices []map[string]any `json:"lead_privacy_notices"`
 	// Every confirm link the workspace mailed this subject, and what became of
 	// it: issued, opened, answered, or left to expire. The mail carrying the
 	// link is already in Activities; this says what the link itself did, which
@@ -266,7 +271,7 @@ func AssembleSARWithExtensions(
 		if err != nil {
 			return err
 		}
-		authored, err := reach.activities(ctx, tx, contactID, []string{"from"})
+		authored, err := reach.activities(ctx, tx, contactID, []string{senderRole})
 		if err != nil {
 			return err
 		}

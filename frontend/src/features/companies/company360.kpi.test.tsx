@@ -644,7 +644,7 @@ describe("the money slot says WHY it has no figure", () => {
     expect(region.textContent).not.toMatch(/Accounting not connected/);
   });
 
-  it("says a first sync is running rather than that nothing is connected", async () => {
+  it("says a first sync is pending rather than that nothing is connected", async () => {
     stub(view({ state_strip: customer }), 200, company, {
       company_id: "o-1",
       state: "syncing",
@@ -652,7 +652,9 @@ describe("the money slot says WHY it has no figure", () => {
     });
     renderCompany();
     const region = await strip();
-    expect((await screen.findAllByText("Syncing")).length).toBeGreaterThan(0);
+    expect(
+      (await screen.findAllByText(englishCopy["co.strip.fin.syncing"])).length,
+    ).toBeGreaterThan(0);
     expect(region.textContent).not.toMatch(/Accounting not connected/);
   });
 

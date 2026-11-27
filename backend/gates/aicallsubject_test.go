@@ -57,6 +57,7 @@ type subjectClaim struct {
 // namesItsSubject: the site cites a record, and the witness is where it is
 // named.
 var namesItsSubject = map[string]subjectClaim{
+	"internal/compose/chatsync/outboundsummary.go:outboundSummary": {"internal/compose/chatsync/outboundsummary.go", "the activity whose complete body is summarized for an eligible channel audience"},
 	"internal/compose/capturedealtopic.go:Check": {
 		"internal/compose/capturedealtopic.go",
 		"the captured mail whose subject and body are the request",
@@ -108,6 +109,8 @@ var namesItsSubject = map[string]subjectClaim{
 	"internal/compose/companybrief/write.go:writeWithModel":             {"internal/compose/companybrief/service.go", "the company the brief describes"},
 	"internal/compose/companybrief/ask.go:answerWithModel":              {"internal/compose/companybrief/service.go", "the company the question is about"},
 	"internal/compose/contactbrief/write.go:writeWithModel":             {"internal/compose/contactbrief/service.go", "the contact the brief is written for"},
+	"internal/compose/taskexplain/write.go:writeWithModel":              {"internal/compose/taskexplain/service.go", "the task the panel explains"},
+	"internal/compose/standingline/write.go:Write":                      {"internal/compose/standingline/refresh.go", "the contact, company or project the line stands on"},
 	"internal/compose/roombrief/write.go:writeWithModel":                {"internal/compose/roombrief/service.go", "the Deal Room the brief is written for"},
 	"internal/compose/companydossier/write.go:writeWithModel":           {"internal/compose/companydossier/service.go", "the company the dossier describes"},
 	"internal/compose/companydossier/growthfitwrite.go:assessWithModel": {"internal/compose/companydossier/service.go", "the same company, assessed"},

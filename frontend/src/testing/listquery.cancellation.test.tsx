@@ -8,7 +8,7 @@ import {
   type ListQuery,
   useListQuery,
 } from "../components/listquery";
-import { fetchLeadsPage } from "../features/leads/leads.list";
+import { fetchLeadsPage } from "../features/leads/leads.list.queries";
 import { cancellationClient, holdReads } from "./cancellation";
 import { meFixture } from "./mefixture";
 

@@ -10,46 +10,46 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 | Area | Tables | Columns | Inbound keys | Outbound keys | Outbound cascades |
 |---|--:|--:|--:|--:|--:|
-| [activities](activities.md) | 32 | 425 | 30 | 40 | 19 |
+| [activities](activities.md) | 33 | 424 | 32 | 41 | 20 |
 | [agents](agents.md) | 3 | 28 | 0 | 5 | 1 |
-| [ai](ai.md) | 12 | 194 | 0 | 3 | 0 |
+| [ai](ai.md) | 12 | 191 | 0 | 3 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 24 | 0 | 2 | 0 |
-| [approvals](approvals.md) | 3 | 53 | 4 | 8 | 2 |
+| [approvals](approvals.md) | 3 | 51 | 6 | 8 | 2 |
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
-| [assurance](assurance.md) | 9 | 86 | 0 | 7 | 5 |
+| [assurance](assurance.md) | 9 | 83 | 0 | 7 | 5 |
 | [automation](automation.md) | 3 | 32 | 1 | 2 | 0 |
-| [capture](capture.md) | 25 | 275 | 6 | 27 | 14 |
-| [chatlinks](chatlinks.md) | 2 | 29 | 0 | 4 | 2 |
-| [collections](collections.md) | 13 | 100 | 1 | 9 | 6 |
+| [capture](capture.md) | 25 | 275 | 7 | 27 | 14 |
+| [chatlinks](chatlinks.md) | 10 | 146 | 0 | 9 | 6 |
+| [collections](collections.md) | 13 | 101 | 1 | 9 | 6 |
 | [commissions](commissions.md) | 1 | 18 | 0 | 2 | 2 |
 | [comms](comms.md) | 1 | 51 | 5 | 6 | 1 |
-| [compose](compose.md) | 44 | 398 | 10 | 30 | 26 |
+| [compose](compose.md) | 44 | 396 | 11 | 30 | 26 |
 | [consent](consent.md) | 23 | 318 | 2 | 44 | 23 |
-| [contacts](contacts.md) | 50 | 732 | 75 | 37 | 13 |
+| [contacts](contacts.md) | 50 | 720 | 76 | 38 | 14 |
 | [continuity](continuity.md) | 1 | 7 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 20 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 93 | 0 | 8 | 1 |
 | [deals](deals.md) | 26 | 379 | 26 | 18 | 2 |
-| [finance](finance.md) | 5 | 79 | 0 | 3 | 0 |
-| [forecasting](forecasting.md) | 4 | 94 | 1 | 2 | 0 |
-| [identity](identity.md) | 22 | 221 | 154 | 7 | 5 |
+| [finance](finance.md) | 5 | 76 | 0 | 3 | 0 |
+| [forecasting](forecasting.md) | 4 | 87 | 1 | 2 | 0 |
+| [identity](identity.md) | 22 | 217 | 157 | 7 | 5 |
 | [initiatives](initiatives.md) | 5 | 40 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 59 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
 | [knowledge](knowledge.md) | 3 | 38 | 0 | 0 | 0 |
-| [migration](migration.md) | 2 | 43 | 0 | 0 | 0 |
+| [migration](migration.md) | 2 | 42 | 0 | 0 | 0 |
 | [notices](notices.md) | 3 | 26 | 0 | 3 | 3 |
-| [platform](platform.md) | 13 | 94 | 1 | 7 | 5 |
+| [platform](platform.md) | 15 | 106 | 1 | 10 | 7 |
 | [privacy](privacy.md) | 2 | 14 | 0 | 0 | 0 |
-| [projects](projects.md) | 3 | 44 | 11 | 3 | 0 |
+| [projects](projects.md) | 3 | 43 | 11 | 3 | 0 |
 | [recordlinks](recordlinks.md) | 1 | 8 | 0 | 0 | 0 |
-| [reporting](reporting.md) | 14 | 121 | 0 | 12 | 0 |
+| [reporting](reporting.md) | 14 | 120 | 0 | 12 | 0 |
 | [search](search.md) | 4 | 42 | 0 | 4 | 2 |
 | [signals](signals.md) | 2 | 43 | 2 | 9 | 4 |
 | [webforms](webforms.md) | 2 | 28 | 0 | 4 | 0 |
 | [webhooks](webhooks.md) | 2 | 32 | 0 | 1 | 1 |
-| [weeklyplan](weeklyplan.md) | 2 | 33 | 0 | 7 | 1 |
+| [weeklyplan](weeklyplan.md) | 2 | 32 | 0 | 7 | 1 |
 
 ## Keys from areas with no inbound dependency
 
@@ -92,10 +92,15 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 ### chatlinks
 
+- `chat_channel_watch.chat_channel_watch_connection_id_fkey`: `FOREIGN KEY (connection_id) REFERENCES channel_connection(id) ON DELETE CASCADE`
+- `chat_link.chat_link_company_id_fkey`: `FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE`
 - `chat_link.chat_link_connection_id_fkey`: `FOREIGN KEY (connection_id) REFERENCES channel_connection(id) ON DELETE RESTRICT`
 - `chat_link.chat_link_deal_id_fkey`: `FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE`
 - `chat_link.chat_link_linked_by_fkey`: `FOREIGN KEY (linked_by) REFERENCES app_user(id) ON DELETE RESTRICT`
 - `chat_link.chat_link_project_id_fkey`: `FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE`
+- `chat_member_grant.chat_member_grant_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE`
+- `chat_root.chat_root_activity_id_fkey`: `FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE SET NULL`
+- `chat_send_attempt.chat_send_attempt_user_id_fkey`: `FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE`
 
 ### commissions
 

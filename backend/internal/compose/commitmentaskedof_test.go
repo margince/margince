@@ -29,6 +29,8 @@ func TestACommitmentProposalNamesTheColleagueItIsFor(t *testing.T) {
 		{"staged for somebody who did not promise", CommitmentTaskProposal{SeatID: &other, PromiserSeatID: &promiser}, nil},
 		{"no promiser at all", CommitmentTaskProposal{SeatID: &other, PromiserUnresolved: true}, nil},
 		{"a follow-up for the member who chases it", CommitmentTaskProposal{FollowUpOf: &task, SeatID: &holder}, &holder},
+		{"a source reconfirmation for the record owner", CommitmentTaskProposal{ReconfirmSource: true, SeatID: &holder}, &holder},
+		{"a source reconfirmation for nobody", CommitmentTaskProposal{ReconfirmSource: true}, nil},
 		{"a follow-up for nobody", CommitmentTaskProposal{FollowUpOf: &task}, nil},
 	}
 	for _, c := range cases {

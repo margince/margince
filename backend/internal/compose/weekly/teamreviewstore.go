@@ -255,7 +255,8 @@ func scanTeamReview(ctx context.Context, tx pgx.Tx, row pgx.Row) (TeamReview, er
 		&review.Quality.ProposalsAccepted, &review.Quality.ProposalsRejected,
 		&review.Quality.AutoChangeReversals, &review.Summary, &review.Language, &review.LeadsWithheld); {
 	case errors.Is(err, pgx.ErrNoRows):
-		return TeamReview{}, apperrors.ErrNotFound
+		// Both readers check the team before they scan, so no row is no week frozen yet.
+		return TeamReview{}, apperrors.ErrNothingYet
 	case err != nil:
 		return TeamReview{}, err
 	}

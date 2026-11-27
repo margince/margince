@@ -21,10 +21,12 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/labeltranslation"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
@@ -45,6 +47,8 @@ type chatRecord struct {
 // when the link carries no deal.
 func linkRecord(link chatlinks.Link) ids.Ref {
 	switch {
+	case link.CompanyID != nil:
+		return ids.Ref{Type: chatlinks.RecordCompany, ID: *link.CompanyID}
 	case link.DealID != nil:
 		return ids.Ref{Type: chatlinks.RecordDeal, ID: *link.DealID}
 	case link.ProjectID != nil:
@@ -63,6 +67,9 @@ func readRecord(ctx context.Context, pool *pgxpool.Pool, link chatlinks.Link) (c
 	query := `SELECT p.name, p.phase, '', p.target_end_date::timestamptz,
 		coalesce(u.display_name, ''), coalesce(u.email, '')
 		FROM project p LEFT JOIN app_user u ON u.id = p.owner_id WHERE p.id = $1`
+	if record.kind == chatlinks.RecordCompany {
+		query = `SELECT c.display_name, '', '', NULL::timestamptz, coalesce(u.display_name, ''), coalesce(u.email, '') FROM company c LEFT JOIN app_user u ON u.id=c.owner_id WHERE c.id=$1`
+	}
 	if record.kind == chatlinks.RecordDeal {
 		// The channel is written in English, so the stage reads in English.
 		stage := labeltranslation.SQLIn(channelLanguage, "s.name", "s.name_translations", arg)
@@ -72,6 +79,21 @@ func readRecord(ctx context.Context, pool *pgxpool.Pool, link chatlinks.Link) (c
 			WHERE d.id = $1`
 	}
 	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
+		var err error
+		switch record.kind {
+		case chatlinks.RecordCompany:
+			err = auth.Require(ctx, "company", principal.ActionRead)
+		case chatlinks.RecordDeal:
+			err = auth.Require(ctx, "deal", principal.ActionRead)
+		case chatlinks.RecordProject:
+			err = auth.Require(ctx, "project", principal.ActionRead)
+		}
+		if err != nil {
+			return err
+		}
+		if err := auth.EnsureVisibleLive(ctx, tx, record.kind, record.id); err != nil {
+			return err
+		}
 		return tx.QueryRow(ctx, query, args...).Scan(&record.name, &record.stage, &record.status, &record.due,
 			&record.ownerName, &record.ownerEmail)
 	})

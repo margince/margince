@@ -99,7 +99,7 @@ func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
 		t.Fatalf("reading back the captured activity: %v", err)
 	}
 	for column, want := range map[string]string{
-		"source_id": "42:1001:7", "source": "telegram:42:1001:7", "thread_key": "telegram:42:1001",
+		"source_id": "42:1001:7", "source": "capture", "thread_key": "telegram:42:1001",
 		"kind": "message", "channel_provider": "telegram", "direction": "inbound",
 		"audience": "workspace", "captured_by": "connector:telegram",
 	} {

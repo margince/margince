@@ -7,18 +7,16 @@
 
 package gates
 
-// A company text field the contract bounds and the column the database guard
-// bounds must name one limit. Wider in the contract, a request the schema calls
-// valid fails in the database. Narrower, a client cuts text the record could
-// hold. The fields come from the company write bodies and the limits from
-// columns.txt. A new field or a changed limit is then checked with no edit here.
+// Company text fields publish the limit their writer applies. Email parsing
+// can be stricter than storage; other fields follow their column guard.
+// Fields come from company write bodies and limits from column policies.
 
 import (
 	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
-	"github.com/margince/margince/backend/internal/shared/gatekit"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // companyWriteBodies are the request bodies whose fields land on company
@@ -42,11 +40,8 @@ var serverWrittenCompanyColumns = map[string]string{
 
 func TestEveryCompanyTextFieldPublishesItsColumnsLimit(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
-	if err != nil {
-		t.Fatal(err)
-	}
-	columns, err := textbounds.Columns(strings.NewReader(string(raw)))
+	raw := headCatalog(t)
+	columns, err := textbounds.Columns(strings.NewReader(raw))
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -80,11 +75,14 @@ func TestEveryCompanyTextFieldPublishesItsColumnsLimit(t *testing.T) {
 			if field["enum"] != nil || limit == 0 {
 				continue
 			}
+			if field["format"] == "email" {
+				limit = min(limit, values.MaxEmailLength)
+			}
 			switch {
 			case !bounded:
-				t.Errorf("%s.%s publishes no maxLength, and the database refuses past %d: add maxLength: %d to api/crm.yaml", body, name, limit, limit)
+				t.Errorf("%s.%s publishes no maxLength, and the writer refuses past %d: add maxLength: %d to api/crm.yaml", body, name, limit, limit)
 			case published != limit:
-				t.Errorf("%s.%s publishes maxLength %d, and columns.txt bounds %s at %d: change one so both say the same", body, name, published, column.Key, limit)
+				t.Errorf("%s.%s publishes maxLength %d, and the writer bounds %s at %d: change one so both say the same", body, name, published, column.Key, limit)
 			}
 		}
 	}

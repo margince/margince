@@ -388,8 +388,15 @@ func awaitJobFailure(t *testing.T, failed <-chan *river.Event, kind string) {
 // alone, which is the actor of a filing. The audit log leaves out the
 // connection's own rows, which the Zalo token renewal writes on start-up.
 // activity_participant_replay is the periodic participant backfill's own mark,
-// which lands after a filing or not, as that pass's schedule falls.
-var runnerBookkeeping = []string{"activity_participant_replay", "brief_run", "capture_sweep_run", "data_task_run", "installation_state", "system_log"}
+// which lands after a filing or not, as that pass's schedule falls. close_date_run
+// is the close-date sweep's cursor row, written on that sweep's own schedule.
+// The weekly review, forecast, risk-day and duplicate-scan tables are written by
+// periodic jobs on their own schedule, and a setting row records their cursors.
+var runnerBookkeeping = []string{
+	"activity_participant_replay", "brief_run", "capture_sweep_run", "close_date_run", "data_task_run",
+	"dedupe_scan_state", "deal_risk_day", "forecast_capture_status", "forecast_snapshot", "installation_state",
+	"setting", "system_log", "weekly_review", "weekly_review_outlook", "weekly_review_scorecard",
+}
 
 // tableCounts counts the rows a filing could write, in every table apart from
 // the job queue's own and the runner's bookkeeping.

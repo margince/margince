@@ -202,3 +202,25 @@ func TestAPassportAndAGrantSharingAnIDAreStillTwoRows(t *testing.T) {
 			mintedSeen, connectionSeen)
 	}
 }
+
+// The list names who granted each passport, as the mint recorded it.
+func TestTheListNamesWhoGrantedEachPassport(t *testing.T) {
+	e := setupRevocationEnv(t, "passport-list-granter")
+	minted := e.mintOwnPassport(t, e.admin, []string{"read"})
+
+	rows, err := e.svc.ListPassports(e.wsCtx(e.admin), e.admin)
+	if err != nil {
+		t.Fatalf("listing passports: %v", err)
+	}
+	for _, row := range rows {
+		if row.ID != minted {
+			continue
+		}
+		wire := passportSummary(row)
+		if wire.GrantedBy == nil || ids.UUID(*wire.GrantedBy) != e.admin.UserID.UUID {
+			t.Fatalf("granted_by = %v, want the member who minted it, %s", wire.GrantedBy, e.admin.UserID)
+		}
+		return
+	}
+	t.Fatalf("the minted passport %s is not listed", minted)
+}

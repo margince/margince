@@ -198,16 +198,16 @@ Each run covers these lanes:
 - the backend gate;
 - the real-Postgres lane and the SPA lane, called through `uses:` `_lane-integration.yml` and
   `_lane-frontend.yml`;
-- the screen UAT;
+- the `uat` lane, screen acceptance against a mocked API;
 - the SonarCloud analysis of `main`, published from the coverage reports of the backend gate, the
-  real-Postgres lane and the SPA lane. The UAT makes no coverage report.
+  real-Postgres lane and the SPA lane. The `uat` lane makes no coverage report.
 
-The UAT lane always runs here; on a pull request, the change classifier decides whether it runs.
-On `main`, a UAT that always runs is needed because the SPA lane can be green over pages that
-fail at runtime. Biome, tsc and Vitest all pass on code that builds and never shows on screen. A UAT that
+The `uat` lane always runs here; on a pull request, the change classifier decides whether it runs.
+On `main`, the `uat` lane must always run, because the SPA lane can be green over pages that
+fail at runtime. Biome, tsc and Vitest all pass on code that builds and never shows on screen. A `uat` lane that
 the classifier can skip would leave a broken screen for the next author who touches `frontend/`.
-The UAT does not block `sonar`, which needs the coverage reports and gets none from Playwright. So a
-red UAT does not stop the analysis of `main`.
+The `uat` lane does not block `sonar`, which needs the coverage reports and gets none from Playwright. So a
+red `uat` lane does not stop the analysis of `main`.
 
 A merge can land over a red `ci`, because a repository role may go past it here. So breaks on `main`
 will keep happening. This workflow makes the delay shorter and names the cause. Without it, someone

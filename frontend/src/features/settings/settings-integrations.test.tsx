@@ -1,17 +1,33 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
-import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  afterEach,
+  beforeAll,
+  beforeEach,
+  describe,
+  expect,
+  it,
+  vi,
+} from "vitest";
 import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { jsonResponse, renderSettings } from "../../testing/settings.testkit";
+import { SETTINGS_PAGE_VIEWS } from "./settings";
 
 // The two entries one Connections tab became: the CONTACT's mailbox and network
 // on Connections, the INSTALLATION's outside wiring on Integrations. Each page
 // has to carry its own half and none of the other's — a relabelling would pass
 // any claim that only ever looked at one of them.
 
-// No shared fetch stub: the backend a claim needs is installed beside the claim,
-// so what answered it is readable where it is asserted.
+// These cases check page contents; await their real code loaders before
+// starting the DOM wait budget. Loading and retry have their own suite.
+beforeAll(async () => {
+  await Promise.all([
+    SETTINGS_PAGE_VIEWS.connections.drawn({ tab: "" }),
+    SETTINGS_PAGE_VIEWS.integrations.drawn({ tab: "" }),
+  ]);
+});
+
 beforeEach(() => {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
 });
@@ -36,6 +52,24 @@ function wiringSettingsBackend(opts: { roles: string[]; allow?: GrantSpec }) {
         user: { ...me.user, email: "ada@acme.test" },
       });
     }
+    const provider = new URL(url).pathname.split("/")[3];
+    if (url.includes("/v1/messenger/") && url.endsWith("/identity"))
+      return jsonResponse({ provider, state: "needs_consent" });
+    if (url.includes("/v1/messenger/") && url.endsWith("/setup"))
+      return jsonResponse({
+        provider,
+        configured: false,
+        callback_url: "",
+        participant_scopes: [],
+      });
+    if (url.includes("/v1/installation/oauth-apps/"))
+      return jsonResponse({
+        provider,
+        configured: false,
+        client_id: "",
+        source: "none",
+        redirect_uris: [],
+      });
     return jsonResponse({
       data: [],
       page: { next_cursor: null, has_more: false },

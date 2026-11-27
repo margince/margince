@@ -797,9 +797,14 @@ describe("the forced two-step setup, held at the boundary", () => {
 
     await user.click(await screen.findByRole("button", { name: "Set up" }));
     await user.type(
-      await screen.findByRole("textbox", { name: /code from the app/i }),
-      "123 456{Enter}",
+      await screen.findByLabelText(/current password/i),
+      "own password",
     );
+    await user.type(
+      screen.getByRole("textbox", { name: /code from the app/i }),
+      "123 456",
+    );
+    await user.click(screen.getByRole("button", { name: "Turn on" }));
     await screen.findByRole("textbox", { name: englishCopy["mfa.codesLabel"] });
 
     const readsBefore = server.meReads();
@@ -852,9 +857,14 @@ describe("the forced two-step setup, held at the boundary", () => {
       );
       await user.click(await screen.findByRole("button", { name: "Set up" }));
       await user.type(
-        await screen.findByRole("textbox", { name: /code from the app/i }),
-        "123 456{Enter}",
+        await screen.findByLabelText(/current password/i),
+        "own password",
       );
+      await user.type(
+        screen.getByRole("textbox", { name: /code from the app/i }),
+        "123 456",
+      );
+      await user.click(screen.getByRole("button", { name: "Turn on" }));
       expect(
         await screen.findByRole("heading", {
           name: englishCopy["auth.loginTitle"],

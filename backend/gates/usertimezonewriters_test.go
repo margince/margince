@@ -10,19 +10,13 @@ package gates
 // from being replaced by a browser guess, and that sets timezone_chosen with
 // the zone. A second writer would store a zone without saying who picked it.
 //
-// The gate reads every Go string literal under internal/. It counts each
-// UPDATE or INSERT of app_user that assigns timezone or timezone_chosen,
-// anywhere in its SET or column list, in any letter case.
+// TestEachFactHasOneWriter (onewriters_test.go) holds it with the matcher
+// below. It matches an UPDATE or INSERT of app_user that assigns timezone or
+// timezone_chosen, in its SET or column list, in any letter case.
 
 import (
-	"io/fs"
-	"path/filepath"
 	"regexp"
-	"slices"
-	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 var (
@@ -30,12 +24,9 @@ var (
 	appUserInsert    = regexp.MustCompile(`(?is)\binsert\s+into\s+app_user\s*\(([^)]*)\)`)
 	timezoneAssigned = regexp.MustCompile(`(?i)(?:^|[\s,(])timezone(?:_chosen)?\s*=`)
 	timezoneColumn   = regexp.MustCompile(`(?i)(?:^|[\s,])timezone(?:_chosen)?\s*(?:,|$)`)
-	// timezoneWords lets the census skip a file no writer can be in, because
-	// assignsTimezone is true only when one of these two patterns matches.
-	timezoneWords = slices.Concat(requiredWords(timezoneAssigned), requiredWords(timezoneColumn))
 )
 
-// assignsTimezone reports whether one SQL literal writes a user's zone.
+// assignsTimezone reports whether one SQL statement writes a user's zone.
 func assignsTimezone(sql string) bool {
 	for _, m := range appUserUpdateSet.FindAllStringSubmatch(sql, -1) {
 		if timezoneAssigned.MatchString(m[1]) {
@@ -48,43 +39,6 @@ func assignsTimezone(sql string) bool {
 		}
 	}
 	return false
-}
-
-// timezoneRowCreators insert a user's row with a zone. A row being created
-// has no stored zone a browser guess could replace.
-var timezoneRowCreators = gatekit.Waive(map[string]string{
-	"internal/modules/identity/installation.go": "creates the first admin's row with the zone the installation was set up in",
-})
-
-// TestOneWriterSetsAUsersTimezone is what writeTimezoneTx's doc comment
-// names.
-func TestOneWriterSetsAUsersTimezone(t *testing.T) {
-	t.Parallel()
-	var where []string
-	err := gatekit.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
-			return err
-		}
-		src, err := gatekit.ReadFile(path)
-		if err != nil || !mayHoldFolded(string(src), timezoneWords...) {
-			return err
-		}
-		rel := filepath.ToSlash(path)
-		for _, sql := range sqlLiterals(t, path) {
-			if assignsTimezone(sql) && !timezoneRowCreators.Waived(t, rel) {
-				where = append(where, rel)
-			}
-		}
-		return nil
-	})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(where) != 1 || where[0] != "internal/modules/identity/usertimezone.go" {
-		t.Errorf("a user's time zone is written from %d place(s), want exactly 1 (writeTimezoneTx): %s",
-			len(where), strings.Join(where, ", "))
-	}
-	timezoneRowCreators.AssertAllMatched(t)
 }
 
 // The matcher sees an assignment anywhere in the SET list, in any case. It
@@ -103,9 +57,6 @@ func TestTheTimezoneWriterMatcherSeesEveryShape(t *testing.T) {
 	} {
 		if got := assignsTimezone(sql); got != want {
 			t.Errorf("assignsTimezone(%q) = %v, want %v", sql, got, want)
-		}
-		if want && !mayHoldFolded(sql, timezoneWords...) {
-			t.Errorf("the census skips a file whose only writer is %q", sql)
 		}
 	}
 }

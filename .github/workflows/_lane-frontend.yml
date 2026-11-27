@@ -75,6 +75,7 @@ jobs:
       contents: read
     defaults:
       run:
+        shell: bash
         working-directory: .
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -138,8 +139,9 @@ jobs:
   # FOUR shards, and the number comes from a measurement rather than from the
   # runner budget.
   #
-  # The suite is ~750 files and 652s of test work on a two-core runner (vitest's
-  # own figure, summed across the four blobs). The fixed cost of a leg —
+  # The suite is every file fe-unit collects, on the worker count vitest picks
+  # from the runner's cores. Only the 1- and 4-shard timings below were measured,
+  # the rest are estimates, and all go stale as the suite grows. The fixed cost of a leg —
   # checkout, pnpm install, the node setup — is around 65s. The slices are cut
   # by each file's expected cost (frontend/scripts/vitest-shards.ts), because
   # vitest's own split by a hash of the path evens out the file count and leaves
@@ -171,6 +173,7 @@ jobs:
         shard: [1, 2, 3, 4]
     defaults:
       run:
+        shell: bash
         working-directory: .
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -217,6 +220,7 @@ jobs:
       contents: read
     defaults:
       run:
+        shell: bash
         working-directory: .
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
@@ -278,6 +282,7 @@ jobs:
       contents: read
     defaults:
       run:
+        shell: bash
         working-directory: .
     steps:
       # Each result carries its own job name rather than being matched to a

@@ -5,24 +5,18 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
 import { en as englishCopy } from "../../i18n/en";
 import { ContractForm } from "./contractform";
 
-// This form has no currency control, so whatever currency it holds is written to
-// the agreement unseen — and a written currency is not a display default that a
-// reader can discount later: every roll-up, every conversion and every figure on
-// the record page is built on it afterwards.
+// The unit an agreement is written in is one somebody stated: the reader's pick,
+// the agreement's own, or the installation's declared base currency. Never a
+// literal, which would label one deployment's agreements in another country's
+// money and be indistinguishable from a currency an operator chose.
 //
-// So the unit can only ever be one somebody stated: the agreement's own, or the
-// installation's declared base currency. Never a literal, which would label one
-// deployment's agreements in another country's money and be indistinguishable
-// from a currency an operator chose.
-//
-// The currency also decides the SCALE, so these cases pin both. They used to
-// assert 500_000 minor units for 5000 dong: the form multiplied by a hundred
-// whatever the currency, and this file — whose installation is deliberately a
-// dong one — wrote the hundredfold figure down as expected.
+// The currency also decides the SCALE, so these cases pin both, on an
+// installation whose currency is the dong, which has no minor unit.
 
 const SETTINGS = {
   company_name: "Brandt Automotive GmbH",
@@ -142,6 +136,33 @@ describe("recording an agreement's value", () => {
         // it used to assert the hundredfold figure the form produced.
         value_minor: 5_000,
         currency: "VND",
+      }),
+    );
+  });
+
+  it("writes the currency the reader picks, keeping the amount as typed", async () => {
+    const user = userEvent.setup();
+    const seen = stubApi({ body: SETTINGS });
+    show(<ContractForm companyId="o-1" open onClose={() => {}} />);
+    const value = await openedValueBox();
+    await user.type(value, "5000");
+    await user.tab();
+
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Currency" }),
+      /^USD/,
+    );
+    await user.type(screen.getByLabelText(/^Title/), "MSA 2026");
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["contracts.form.title"] }),
+    );
+
+    await waitFor(async () =>
+      expect(await writtenBody(seen, "POST")).toMatchObject({
+        // 5000 dollars, at the dollar's two decimals.
+        value_minor: 500_000,
+        currency: "USD",
       }),
     );
   });

@@ -47,7 +47,7 @@ func (h importHandlers) openDraft(
 		return crmcontracts.ImportSourceProfile{}, fmt.Errorf("encoding the upload's profile: %w", err)
 	}
 	run, err := migration.NewRunStore(h.db).CreateDraftRun(ctx, migration.CreateDraftRunInput{
-		SourceRef: profile.SourceRef, Source: importSourceProvenance, Profile: stored, Mapping: mapping,
+		SourceRef: profile.SourceRef, Profile: stored, Mapping: mapping,
 	})
 	if err != nil {
 		return crmcontracts.ImportSourceProfile{}, err
@@ -67,7 +67,7 @@ func (h importHandlers) draftOfSource(ctx context.Context, req crmcontracts.Crea
 			fileName = *req.FileName
 		}
 		run, err = runs.CreateDraftRun(ctx, migration.CreateDraftRunInput{
-			SourceRef: req.SourceRef, Source: importSourceProvenance, FileName: fileName,
+			SourceRef: req.SourceRef, FileName: fileName,
 		})
 		if errors.Is(err, apperrors.ErrConflict) {
 			// A concurrent request opened the draft first; test that one.

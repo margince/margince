@@ -82,10 +82,10 @@ export default meta;
 
 type Story = StoryObj<typeof PlanSection>;
 
-/** A rep's Monday. 404 is not a failure here — it is a week nobody has opened,
- *  so the panel offers rather than reporting one. */
+/** A rep's Monday. 204 is a week nobody has opened, so the panel offers one
+ *  rather than reporting one. */
 export const NotStarted: Story = {
-  render: () => frame(() => jsonResponse({ title: "Not Found" }, 404)),
+  render: () => frame(() => new Response(null, { status: 204 })),
 };
 
 /** Opened and still bare. The sentence is the same one the section's own empty

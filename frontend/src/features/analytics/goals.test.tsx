@@ -76,6 +76,22 @@ describe("SalesGoalsScreen", () => {
     expect(screen.getByRole("button", { name: "Save draft" })).toBeTruthy();
   });
 
+  it("puts the plan in hand before the list of team members, so a phone shows it first", async () => {
+    window.location.hash = "#/goals?year=2026";
+    installFetchStub({
+      "GET /analytics/sales-goals": () => jsonResponse(goalRoster),
+      [`GET ${PLAN}`]: () => jsonResponse(draftPlan),
+    });
+    render(<SalesGoalsScreen />);
+    const plan = await screen.findByText("Sales goals of Alex Brandt for 2026");
+    const roster = screen.getByRole("complementary", {
+      name: englishCopy["users.teamMembersLabel"],
+    });
+    expect(
+      plan.compareDocumentPosition(roster) & Node.DOCUMENT_POSITION_FOLLOWING,
+    ).toBeTruthy();
+  });
+
   it("dates the history on the company's clock and names that zone once, for every season", async () => {
     const [first] = draftPlan.history;
     if (!first) throw new Error("the draft plan has a history");
@@ -218,6 +234,46 @@ describe("GoalEditor", () => {
     expect(
       await screen.findByText("The months add up to €120,000."),
     ).toBeTruthy();
+  });
+
+  it("shows each month at rest as the exact amount it saves, cents included", async () => {
+    stubWrites(draftPlan);
+    const user = userEvent.setup();
+    render(<GoalEditor plan={{ ...draftPlan, draft: undefined }} />);
+    const yearly = screen.getByLabelText("Yearly goal in EUR");
+    await user.clear(yearly);
+    await user.type(yearly, "100000");
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["goals.spread"] }),
+    );
+    await waitFor(() =>
+      expect(screen.getByLabelText<HTMLInputElement>("January").value).toBe(
+        "€8,333.34",
+      ),
+    );
+    expect(screen.getByLabelText<HTMLInputElement>("December").value).toBe(
+      "€8,333.33",
+    );
+    expect(yearly).toHaveProperty("value", "€100,000");
+  });
+
+  it("says why a yearly goal of zero or less cannot be spread", async () => {
+    stubWrites(draftPlan);
+    const user = userEvent.setup();
+    render(<GoalEditor plan={draftPlan} />);
+    const yearly = screen.getByLabelText("Yearly goal in EUR");
+    await user.clear(yearly);
+    await user.type(yearly, "-1200");
+    expect(
+      (await screen.findAllByText(englishCopy["goals.positiveFirst"])).length,
+    ).toBeGreaterThan(0);
+    expect(yearly.getAttribute("aria-invalid")).toBe("true");
+    expect(
+      screen
+        .getByRole("button", { name: englishCopy["goals.spread"] })
+        .hasAttribute("disabled"),
+    ).toBe(true);
+    expect(screen.queryByText(/not the yearly goal of/)).toBeNull();
   });
 
   it("warns while the months do not add up to the yearly goal", async () => {

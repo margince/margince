@@ -10,6 +10,7 @@ import { EntityRef } from "../../components/entityref";
 import {
   type ListPage,
   type ListQuery,
+  type ListReach,
   ListTable,
   listFetchLimit,
   useListQuery,
@@ -23,6 +24,7 @@ import { ABSENT } from "../../format/absent";
 import { useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor, valueFor } from "../../lib/labelfor";
+import { PROJECTS_INITIAL_SORT } from "../../lib/listopenings";
 import { unwrap } from "../../lib/problem";
 import { useSavedViews } from "../../lib/savedviews.queries";
 import { useViewerZone } from "../../lib/viewerzone";
@@ -49,6 +51,7 @@ async function fetchProjectsPage(
   query: ListQuery,
   cursor: string | null,
   signal?: AbortSignal,
+  reach?: ListReach,
 ): Promise<ListPage<Project>> {
   const data = unwrap(
     await api.GET("/projects", {
@@ -59,7 +62,8 @@ async function fetchProjectsPage(
           sort: query.sort || undefined,
           include_archived: query.includeArchived || undefined,
           cursor: cursor || undefined,
-          limit: listFetchLimit(query.perPage),
+          limit: listFetchLimit(query.perPage, reach),
+          offset: reach?.offset,
           // Passed through whole, not narrowed to a typed subset. The endpoint
           // answers a field outside its allow-list with a 422 the table renders.
           // A refused saved view is better shown refused than as an unfiltered tab.
@@ -73,6 +77,7 @@ async function fetchProjectsPage(
     page: {
       next_cursor: data.page.next_cursor ?? null,
       has_more: data.page.has_more,
+      total: data.page.total,
     },
   };
 }
@@ -182,8 +187,9 @@ export function ProjectsScreen({
   const ownerChips = useOwnerChips();
   const state = useListQuery<Project>({
     key: "projects",
-    initialSort: "-last_activity_at",
+    initialSort: PROJECTS_INITIAL_SORT,
     fetchPage: fetchProjectsPage,
+    readsAtOffset: { rowKey: (project) => project.id },
   });
   // Held back until the first page has answered: the first-run plate below
   // mounts its own copy of this verb, and a button pressed in the table's

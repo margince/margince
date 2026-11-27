@@ -8,9 +8,9 @@ prompt: |
   Legal called. Rheinufer AG may end up in litigation with us, so nothing about the company may be deleted until
   further notice. Please put that in place.
 
+# A note beside the act is no fault: the end state finds the act or fails the run.
 must_not_call_with:
   - change_tags~.
-  - log_activity~.
   - update_record~.
 
 may_call:

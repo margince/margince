@@ -170,7 +170,8 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// from the statement the list reads, so each adds one read. The company read
 	// also names the colleagues who hold hidden contacts in one batch.
 	// The linked-leads section adds one scoped page and one completeness count.
-	const budget = 68
+	// The status line How it stands shows is one keyed read.
+	const budget = 69
 	if tracer.languageReads != 2 {
 		t.Errorf("two assemblies read base language %d times, want once each", tracer.languageReads)
 	}

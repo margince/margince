@@ -46,7 +46,7 @@ func TestTheManifestIsBuiltFromThePublicBaseURL(t *testing.T) {
 		got.Events.Url != "https://crm.example.test/v1/channel-events/dispact" {
 		t.Fatalf("the manifest is %+v", got)
 	}
-	want := []string{"chat:write:channel", "channel:create", "channel:members:write", "users:read:email", "channel:history:read", "channel:files:read"}
+	want := []string{"chat:write:channel", "channel:create", "channel:members:write", "users:read:email", "channel:members:read", "channel:history:read", "channel:files:read"}
 	if !slices.Equal(got.Scopes, want) {
 		t.Fatalf("the manifest asks for scopes %q", got.Scopes)
 	}
@@ -54,7 +54,7 @@ func TestTheManifestIsBuiltFromThePublicBaseURL(t *testing.T) {
 		got.Description == "" || got.IconUrl != "https://crm.example.test/icon.svg" || got.Version == "" || got.Security.TokenTtlSeconds <= 0 {
 		t.Fatalf("the manifest lacks a field Dispact requires: %+v", got)
 	}
-	if !slices.Equal(got.Events.Types, []string{"message.created", "thread.replied", "message.updated", "channel.archived"}) {
+	if !slices.Equal(got.Events.Types, []string{"message.created", "thread.replied", "message.updated", "message.deleted", "channel.archived"}) {
 		t.Fatalf("the manifest subscribes to %v", got.Events.Types)
 	}
 }

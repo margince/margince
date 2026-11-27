@@ -24,6 +24,7 @@ import (
 // Store owns this module's tables (data-seam ownership, ADR-0014 Am.1);
 // every write rides the storekit audit+outbox shape in one transaction.
 type Store struct {
+	sourceAuthority    SourceAuthority
 	meetingNotesAccess MeetingNotesAccessReader
 	inquiryAssignment  InquiryAssignment
 	taskTaken          TaskTakenHook
@@ -210,7 +211,7 @@ func (s *Store) HasBlobstore() bool { return s.blob != nil }
 // which both classify through httperr, give one answer.
 var ErrBlobstoreUnconfigured error = &httperr.DetailedError{
 	Status: http.StatusNotImplemented, Code: "not_implemented",
-	Detail: "this server has no object store configured, so files cannot be stored or read here",
+	Detail: "This server has no object store configured, so files cannot be stored or read here.",
 }
 
 // WithBlobstore returns a store that backs the attachment endpoints with the

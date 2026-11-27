@@ -18,6 +18,7 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
@@ -76,11 +77,11 @@ func (s *Service) MarkRowsDone(ctx context.Context, rows []RowRef) error {
 	if s.marked.store == nil {
 		return apperrors.ErrNotFound
 	}
+	if err := validateDoneRows(rows); err != nil {
+		return err
+	}
 	missing := make(map[RowRef]bool, len(rows))
 	for _, row := range rows {
-		if !offersDone(crmcontracts.WorklistItemSource(row.Source)) {
-			return httperr.Validation("rows", "not_doneable", fmt.Sprintf("a %q row offers no Done", row.Source))
-		}
 		missing[row] = true
 	}
 	if s.domainQuestions != nil {
@@ -109,6 +110,19 @@ func (s *Service) MarkRowsDone(ctx context.Context, rows []RowRef) error {
 		}
 	}
 	return s.markUnlessDone(ctx, rows, missing)
+}
+
+func validateDoneRows(rows []RowRef) error {
+	for i, row := range rows {
+		at := fmt.Sprintf("rows[%d].", i)
+		if err := activities.WorklistRowRef(row).Validate(at); err != nil {
+			return err
+		}
+		if !offersDone(crmcontracts.WorklistItemSource(row.Source)) {
+			return httperr.Validation(at+"source", "not_doneable", fmt.Sprintf("a %q row offers no Done", row.Source))
+		}
+	}
+	return nil
 }
 
 // markUnlessDone answers a second Done on a row its lane now hides. The row is

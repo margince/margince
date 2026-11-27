@@ -58,7 +58,7 @@ func TestAMissingAttachmentOpenedInATabReadsAPageAndAClientReadsTheProblem(t *te
 	if tab.status != http.StatusNotFound || !strings.HasPrefix(tab.header.Get("Content-Type"), "text/html") {
 		t.Fatalf("the tab got %d %q, want a 404 page", tab.status, tab.header.Get("Content-Type"))
 	}
-	if !strings.Contains(tab.body, "Diese Datei wurde gelöscht oder du hast keinen Zugriff mehr darauf.") {
+	if !strings.Contains(tab.body, "Diese Datei wurde gelöscht oder ist nicht mehr zugänglich.") {
 		t.Errorf("the page does not say the file is gone in the reader's language:\n%s", tab.body)
 	}
 

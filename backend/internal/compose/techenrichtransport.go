@@ -118,7 +118,7 @@ func (h technicalHandlers) startTechnicalEnrich(
 }
 
 // GetLatestTechnicalEnrich answers what each lane last did for this account.
-func (h technicalHandlers) GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request, id openapi_types.UUID) {
+func (h technicalHandlers) GetLatestTechnicalEnrich(w http.ResponseWriter, r *http.Request, id openapi_types.UUID, _ crmcontracts.GetLatestTechnicalEnrichParams) {
 	if h.pool == nil {
 		httperr.NotImplemented(w, r, "getLatestTechnicalEnrich (no job runner configured)")
 		return
@@ -131,7 +131,7 @@ func (h technicalHandlers) GetLatestTechnicalEnrich(w http.ResponseWriter, r *ht
 	if len(lanes) == 0 {
 		// Never looked up. The honest difference between "never tried" and
 		// "tried and got nothing", which the lane outcomes themselves express.
-		httperr.Write(w, r, apperrors.ErrNotFound)
+		httperr.Write(w, r, apperrors.ErrNothingYet)
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.TechnicalEnrichStatus{

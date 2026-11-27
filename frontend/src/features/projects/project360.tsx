@@ -10,6 +10,7 @@ import {
   writableTarget,
 } from "../../components/activitygate";
 import { ArchiveAction } from "../../components/archive";
+import { RecordMessenger } from "../../components/messenger/recordmessenger";
 import { useRailRename } from "../../components/railfield";
 import { useFieldsDialog } from "../../components/sectionedit";
 import {
@@ -177,6 +178,13 @@ function ProjectPage({ view }: Readonly<{ view: Project360 }>) {
       }
       actions={
         <>
+          <RecordMessenger
+            recordType="project"
+            recordId={project.id}
+            name={project.name}
+            disabled={Boolean(project.archived_at)}
+            reasonId={logRefusedId}
+          />
           <ProjectLogVerbs
             projectId={project.id}
             refusedReasonId={logRefusedId}

@@ -306,13 +306,29 @@ func (f FreshnessInfo) TrustTier() string {
 }
 
 // SearchQuery is the governed search shape: full-text plus structured
-// filters, cursor-paginated per the contract's keyset convention.
+// filters, cursor-paginated per the contract's keyset convention or opened at
+// an offset.
 type SearchQuery struct {
 	Text        string
 	EntityTypes []EntityType
 	Filters     map[string]string
 	Cursor      string
-	Limit       int
+	// Offset opens the page that many rows into the list's order; nil opens its top.
+	Offset *int
+	Limit  int
+}
+
+// OffsetUnsupportedError refuses an offset on a record type whose list pages by
+// cursor alone.
+type OffsetUnsupportedError struct{ Type EntityType }
+
+func (e *OffsetUnsupportedError) Error() string {
+	return "datasource: the " + string(e.Type) + " list takes no offset"
+}
+
+// FieldFault names the offset as the input to drop.
+func (e *OffsetUnsupportedError) FieldFault() (field, code, message string) {
+	return "offset", "offset_unsupported", "the " + string(e.Type) + " list takes no offset; page it with cursor"
 }
 
 type SearchResult struct {

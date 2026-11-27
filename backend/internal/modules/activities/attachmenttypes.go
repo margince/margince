@@ -151,7 +151,7 @@ func kindForMediaType(mediaType string) (attachmentType, bool) {
 type UnsupportedFileTypeError struct{ Filename string }
 
 func (e *UnsupportedFileTypeError) Error() string {
-	return fmt.Sprintf("%q is not a kind of file that can be attached; choose one of: %s",
+	return fmt.Sprintf("The file %q is not a kind that can be attached. Choose one of: %s.",
 		e.Filename, acceptedAttachmentKinds)
 }
 

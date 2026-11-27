@@ -39,6 +39,7 @@ import (
 // The links are frozen at staging time: a rep confirms the proposal they were
 // shown, and a relink between the two moments must not move the task.
 type CommitmentTaskProposal struct {
+	ReconfirmSource  bool                `json:"reconfirm_source,omitempty"`
 	SystemText       *systemtext.Message `json:"-"`
 	ExistingTaskID   *ids.UUID           `json:"existing_task_id,omitempty"`
 	SourceActivityID ids.UUID            `json:"source_activity_id"`
@@ -475,6 +476,9 @@ const promiseClosedReason = "This promise was settled or dismissed since the car
 // commitmentStillOpenTx is stillowed.PromiseTx for one staged proposal and
 // the claim a follow-up chases.
 func commitmentStillOpenTx(ctx context.Context, tx pgx.Tx, claims *contacts.Store, proposal CommitmentTaskProposal) (bool, error) {
+	if proposal.ReconfirmSource {
+		return activities.ChatReconfirmationCurrentTx(ctx, tx, proposal.SourceActivityID, proposal.Quote)
+	}
 	return stillowed.PromiseTx(ctx, tx, claims, commitmentClaimIDs(proposal.FollowUpOf, commitmentClaimIDs(proposal.ClaimID, proposal.ClaimIDs)),
 		proposal.SourceActivityID, proposal.Locator)
 }

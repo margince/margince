@@ -12,8 +12,12 @@ import (
 
 // historyWire is a history page as Dispact sends it, in Slack's shape.
 type historyWire struct {
+	HasMore  *bool `json:"has_more"`
 	Messages []struct {
 		TS         string `json:"ts"`
+		NativeID   string `json:"message_id"`
+		RootID     string `json:"root_message_id"`
+		ChannelID  string `json:"channel_id"`
 		ThreadTS   string `json:"thread_ts"`
 		ReplyCount int    `json:"reply_count"`
 		UserName   string `json:"user_name"`
@@ -34,7 +38,7 @@ type historyWire struct {
 }
 
 func (w historyWire) page() (HistoryPage, error) {
-	out := HistoryPage{Messages: make([]Message, 0, len(w.Messages))}
+	out := HistoryPage{Messages: make([]Message, 0, len(w.Messages)), HasMore: w.HasMore}
 	for _, m := range w.Messages {
 		seq, err := seqOf(m.TS)
 		if err != nil {
@@ -53,7 +57,7 @@ func (w historyWire) page() (HistoryPage, error) {
 			files = append(files, File(f))
 		}
 		out.Messages = append(out.Messages, Message{
-			TS: m.TS, Seq: seq, ThreadTS: m.ThreadTS, ReplyCount: m.ReplyCount,
+			TS: m.TS, Seq: seq, NativeID: m.NativeID, RootID: m.RootID, ChannelID: m.ChannelID, Deleted: m.Subtype == "message_deleted", ThreadTS: m.ThreadTS, ReplyCount: m.ReplyCount,
 			UserName: m.UserName, UserEmail: m.UserEmail, Text: m.Text,
 			PostedAt: posted, EditedAt: edited, Subtype: m.Subtype, IsBot: m.BotID != "", Files: files,
 		})

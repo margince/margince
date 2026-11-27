@@ -37,6 +37,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -191,6 +192,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	if _, err := contactPage.Assemble(reader, ids.From[ids.ContactKind](contact)); err != nil {
 		t.Fatalf("opening the contact page: %v", err)
 	}
+	readContactPageLanes(reader, t, sent, pool, contact)
 	sent.sql = append(sent.sql, capturedPartyPlanStatements(t, e, pool)...)
 	boundIndexedColumn := boundIndexedColumns(t, e.Pool)
 	for _, bad := range []string{"WHERE a.kind = $3", "AND p.role IN ($2", "AND m.status = ANY($7)", "AND a.is_done = $4"} {
@@ -314,6 +316,49 @@ func readPlannedOnceLanes(ctx context.Context, lanes plannedOnceLanes, deal, tas
 	briefing := attentionBriefing{engine: lanes.engine, figures: attentionDealFacts{store: deals.NewStore(lanes.db, DealsInstallation())}}
 	_, _, _, err := briefing.Queue(ctx, at)
 	return err
+}
+
+// readContactPageLanes runs the reads a contact page sends beside its 360, and
+// fails a read that sent no statement under generic plans.
+func readContactPageLanes(ctx context.Context, t *testing.T, sent *sentStatements, pool *pgxpool.Pool, contact ids.UUID) {
+	t.Helper()
+	db := InstallationDB(pool)
+	id := ids.From[ids.ContactKind](contact)
+	acts, contactStore := activities.NewStore(db), contacts.NewStore(db)
+	for _, read := range []struct {
+		name string
+		run  func() error
+	}{
+		{"attachments", func() error { _, _, err := acts.ListAttachments(ctx, "contact", contact, nil, nil); return err }},
+		{"consent guard", func() error { _, err := consent.NewStore(db).ContactConsentGuard(ctx, id); return err }},
+		{"contact row", func() error { _, err := contactStore.GetContact(ctx, id, storekit.IncludeArchived); return err }},
+		{"latest inbound", func() error { _, err := acts.LatestInbound(ctx, "contact", contact); return err }},
+	} {
+		before := len(sent.sql)
+		if err := read.run(); err != nil {
+			t.Fatalf("reading the contact page's %s: %v", read.name, err)
+		}
+		if !ranUnderGenericPlans(sent.sql[before:]) {
+			t.Fatalf("the contact page's %s sent no statement under generic plans", read.name)
+		}
+	}
+}
+
+// ranUnderGenericPlans reports whether a statement ran between the switch to
+// generic plans and the bound set_config that restores the mode.
+func ranUnderGenericPlans(window []string) bool {
+	generic := false
+	for _, sql := range window {
+		switch {
+		case strings.Contains(sql, "set_config('plan_cache_mode', 'force_generic_plan'"):
+			generic = true
+		case strings.HasPrefix(sql, "SELECT set_config('plan_cache_mode', $1"):
+			generic = false
+		case generic:
+			return true
+		}
+	}
+	return false
 }
 
 func readSuggestionLanes(ctx context.Context, db *database.DB, positionID ids.UUID) error {

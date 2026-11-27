@@ -176,26 +176,11 @@ func captureSeeders(s sweepSeed) map[string]func() string {
 			}
 			return s.ownerScalar(`SELECT id::text FROM channel_connection WHERE provider = 'telegram' AND archived_at IS NULL`)
 		},
-		"draft_import_run": s.alone(func() string {
-			defer s.asRoles("rep")()
-			profile, status := importjobtest.UploadCSV(s.t, s.e, "contact", "email,full_name\n"+ids.NewV7().String()+"@role-sweep.test,Sweep\n")
-			if status != http.StatusOK || profile.RunID == "" {
-				s.t.Fatalf("uploading an import's file → %d %+v", status, profile)
-			}
-			return profile.RunID
-		}),
+		"draft_import_run": s.alone(func() string { return s.contactImportProfile().RunID }),
 		// The run is tested, approved, and its commit job worked, as the
 		// worker leaves it complete.
 		"complete_import_run": s.alone(func() string {
-			defer s.asRoles("rep")()
-			profile, status := importjobtest.UploadCSV(s.t, s.e, "contact", "email,full_name\n"+ids.NewV7().String()+"@role-sweep.test,Sweep\n")
-			if status != http.StatusOK {
-				s.t.Fatalf("uploading an import's file → %d", status)
-			}
-			run, status := importjobtest.CreateRunWithMapping(s.t, s.e, "contact", profile.SourceRef, map[string]string{"email": "email", "full_name": "full_name"})
-			if status != http.StatusAccepted && status != http.StatusCreated {
-				s.t.Fatalf("starting the import → %d", status)
-			}
+			run := s.testedContactImport()
 			importjobtest.Drain(s.t, s.e)
 			s.call("POST", "/v1/imports/"+run.ID+"/approve", nil, nil, nil)
 			importjobtest.Drain(s.t, s.e)

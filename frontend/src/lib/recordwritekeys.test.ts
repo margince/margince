@@ -8,6 +8,7 @@ import { ENTITY_KINDS } from "./entity";
 import {
   invalidateCompany,
   invalidateRecord,
+  invalidateRetiredRecord,
   recordWriteKeys,
 } from "./recordwritekeys";
 
@@ -88,4 +89,40 @@ describe("invalidateRecord", () => {
       expect(staled("d-2")).toBe(false);
     },
   );
+});
+
+describe("invalidateRetiredRecord", () => {
+  it("stales an archived contact's row but not the reads the server refuses it", async () => {
+    const client = new QueryClient();
+    for (const queryKey of recordWriteKeys("contact", "p-1")) {
+      client.setQueryData(queryKey, {});
+    }
+
+    await invalidateRetiredRecord(client, "contact", "p-1");
+
+    const staled = (queryKey: string[]) =>
+      client.getQueryState(queryKey)?.isInvalidated;
+    expect(staled(["contact", "p-1"])).toBe(true);
+    expect(staled(["contactBrief", "p-1"])).toBe(true);
+    expect(staled(["contact360", "p-1"])).toBe(false);
+    expect(staled(["lists", "record", "contact", "p-1"])).toBe(false);
+  });
+
+  it("stales a closed lead's page but not its score or lists", async () => {
+    const client = new QueryClient();
+    const keys = [
+      ["lead", "l-1"],
+      ["lead", "l-1", "score"],
+      ["lists", "record", "lead", "l-1"],
+    ];
+    for (const queryKey of keys) client.setQueryData(queryKey, {});
+
+    await invalidateRetiredRecord(client, "lead", "l-1");
+
+    const staled = (queryKey: string[]) =>
+      client.getQueryState(queryKey)?.isInvalidated;
+    expect(staled(["lead", "l-1"])).toBe(true);
+    expect(staled(["lead", "l-1", "score"])).toBe(false);
+    expect(staled(["lists", "record", "lead", "l-1"])).toBe(false);
+  });
 });

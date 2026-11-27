@@ -133,9 +133,9 @@ func recordPhaseTransition(ctx context.Context, tx pgx.Tx, id ids.ProjectID,
 	}
 	if _, err := tx.Exec(ctx,
 		`INSERT INTO project_phase_history
-		   (project_id, from_phase, to_phase, reason, cause_kind, cause_deal_id, changed_by, audit_log_id)
-		 VALUES ($1, $2, $3, $4, $5, $6, $7, $8)`,
-		id, fromPhase, in.ToPhase, in.Reason, causeKind, causeDeal, by, auditID); err != nil {
+		   (project_id, from_phase, to_phase, reason, cause_kind, cause_deal_id, audit_log_id)
+		 VALUES ($1, $2, $3, $4, $5, $6, $7)`,
+		id, fromPhase, in.ToPhase, in.Reason, causeKind, causeDeal, auditID); err != nil {
 		return fmt.Errorf("record project phase history: %w", err)
 	}
 	if err := storekit.EmitEvent(ctx, tx, auditID, id.UUID, projectPhaseChangedPayload(fromPhase, in)); err != nil {

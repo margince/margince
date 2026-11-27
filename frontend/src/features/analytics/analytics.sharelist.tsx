@@ -18,12 +18,12 @@ import {
 } from "../../design-system/panel";
 import { QueryStates } from "../../design-system/querystates";
 import { formatDate, formatDateTime } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
+import { type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { labelFor } from "../../lib/labelfor";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useViewerZone } from "../../lib/viewerzone";
-import { useAnalyticsContext } from "./analytics.context";
+import { scopeName, useAnalyticsContext } from "./analytics.context";
 
 // The forecast links a reader has issued and that still open, listed so any of
 // them can be closed after the dialog that showed it is gone. The server
@@ -48,6 +48,17 @@ const POPULATION_FALLBACK: Record<OpenShare["scope_kind"], MessageKey> = {
   team: "analytics.share.populationTeam",
   owner: "analytics.share.populationOwner",
 };
+
+/** A share's population in the picker's words, or its kind where it has no name. */
+export function sharePopulation(
+  kind: string,
+  label: string | undefined,
+  t: Translator,
+): string {
+  return (
+    scopeName({ kind, label }, t) ?? t(labelFor(POPULATION_FALLBACK, kind))
+  );
+}
 
 export async function closeShare(id: string): Promise<void> {
   unwrap(
@@ -157,13 +168,15 @@ function OpenShareList({
             <OpenShareRow
               key={share.id}
               share={share}
-              population={
+              population={sharePopulation(
+                share.scope_kind,
                 scopes.find(
                   (scope) =>
                     scope.kind === share.scope_kind &&
                     scope.id === share.scope_id,
-                )?.label ?? t(labelFor(POPULATION_FALLBACK, share.scope_kind))
-              }
+                )?.label,
+                t,
+              )}
               onClose={
                 canClose
                   ? (button) => {

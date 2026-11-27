@@ -106,7 +106,10 @@ describe("a link to one decision", () => {
 const commitmentLabels: ReadonlyArray<{ locale: Locale; label: string }> = [
   { locale: "en", label: "Create task" },
   { locale: "de", label: "Aufgabe erstellen" },
-  { locale: "vi", label: "Tạo 1 công việc" },
+  {
+    locale: "vi",
+    label: translate("vi", "approval.commitment.createTask_one"),
+  },
 ];
 it.each(commitmentLabels)(
   "names the commitment effect in $locale",

@@ -39,6 +39,19 @@ func checkLanguage(ctx context.Context, tx pgx.Tx, language string) error {
 	return storekit.CheckLanguage(ctx, tx, languageField, language)
 }
 
+// checkLanguageShape takes any code of the stored shape, so a translation
+// stored before the registry check can still be named and deleted.
+func checkLanguageShape(language string) error {
+	if !languageShape.MatchString(language) {
+		return languageRefusal()
+	}
+	return nil
+}
+
+func languageRefusal() error {
+	return &values.ParseError{Field: languageField, Code: "invalid_language", Message: "language is an ISO 639-1 code, for example de"}
+}
+
 // ListProductTranslations answers a product's text in every further language.
 func (s *Store) ListProductTranslations(ctx context.Context, id ids.ProductID) ([]crmcontracts.ProductTranslation, error) {
 	if err := auth.Require(ctx, "product", principal.ActionRead); err != nil {
@@ -129,6 +142,9 @@ func (s *Store) PutProductTranslation(ctx context.Context, id ids.ProductID, lan
 // DeleteProductTranslation removes a product's text in one language.
 func (s *Store) DeleteProductTranslation(ctx context.Context, id ids.ProductID, language string) error {
 	if err := auth.Require(ctx, "product", principal.ActionUpdate); err != nil {
+		return err
+	}
+	if err := checkLanguageShape(language); err != nil {
 		return err
 	}
 	return s.Tx(ctx, func(tx pgx.Tx) error {

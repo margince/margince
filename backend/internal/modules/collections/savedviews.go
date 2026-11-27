@@ -5,6 +5,7 @@ package collections
 
 import (
 	"context"
+	"encoding/json"
 	"errors"
 	"fmt"
 	"strings"
@@ -34,6 +35,22 @@ const (
 	viewFilterKey  = "filter"
 	viewQueryField = "query"
 )
+
+// maxViewQueryBytes bounds a saved view's query as JSON. Every list of the
+// owner's views carries each query whole.
+const maxViewQueryBytes = 64 << 10
+
+func checkViewQuerySize(query map[string]any) error {
+	encoded, err := json.Marshal(query)
+	if err != nil {
+		return fmt.Errorf("encode saved view query: %w", err)
+	}
+	if len(encoded) > maxViewQueryBytes {
+		return &BadInputError{Field: viewQueryField, Code: "too_large", Reason: fmt.Sprintf(
+			"a saved view's query holds at most %d bytes as JSON; this one has %d", maxViewQueryBytes, len(encoded))}
+	}
+	return nil
+}
 
 // selectSavedView is the shared projection prefix for every saved_view read —
 // one spelling so the columns can't drift between the list, get, and delete paths.
@@ -165,8 +182,14 @@ func (s *Store) CreateSavedView(ctx context.Context, in CreateSavedViewInput) (s
 		return savedViewRow{}, &BadInputError{Field: "resource", Reason: fmt.Sprintf(
 			"%q is not a record kind you can read; read GET /v1/record-kinds for the kinds there are", in.Resource)}
 	}
+	if in.Resource == "" {
+		return savedViewRow{}, &BadInputError{Field: "resource", Code: codeRequired, Reason: "a view needs the kind of record it lists"}
+	}
 	if in.Query == nil {
-		return savedViewRow{}, &BadInputError{Field: viewQueryField, Reason: "must not be null"}
+		return savedViewRow{}, &BadInputError{Field: viewQueryField, Code: codeRequired, Reason: "a view needs a query"}
+	}
+	if err := checkViewQuerySize(in.Query); err != nil {
+		return savedViewRow{}, err
 	}
 	if err := s.validateViewFilter(ctx, in.Resource, in.Query); err != nil {
 		return savedViewRow{}, err
@@ -289,6 +312,9 @@ func (s *Store) UpdateSavedView(ctx context.Context, id ids.SavedViewID, in Upda
 	// returning a record without the gate every other read carries, which is a
 	// worse thing to own than a grant combination no seeded role has.
 	if in.Query != nil {
+		if err := checkViewQuerySize(*in.Query); err != nil {
+			return savedViewRow{}, err
+		}
 		current, err := s.GetSavedView(ctx, id)
 		if err != nil {
 			return savedViewRow{}, err

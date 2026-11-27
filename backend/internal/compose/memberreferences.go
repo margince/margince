@@ -82,6 +82,8 @@ var memberReferences = map[string]memberReference{
 	"capture_thread_verdict.user_id":           {disposition: referenceRetain},
 	"channel_connection.connected_by":          {disposition: referenceRetain},
 	"channel_connection.owner_user_id":         {disposition: referenceRetain},
+	"chat_member_grant.user_id":                {disposition: referenceRetain},
+	"chat_send_attempt.user_id":                {disposition: referenceRetain},
 	"chat_link.linked_by":                      {disposition: referenceRetain},
 	"comms_outbound.user_id":                   {disposition: referenceRetain},
 	"communication_instruction.directed_by":    {disposition: referenceRetain},
@@ -188,6 +190,7 @@ var memberReferences = map[string]memberReference{
 	"worklist_snapshot.reader_id":              {disposition: referenceRetain},
 	"home_read_cache.reader_id":                {disposition: referenceRetain},
 	"home_read_forgotten.reader_id":            {disposition: referenceRetain},
+	"task_explanation.user_id":                 {disposition: referenceRetain},
 }
 
 // memberRetirementBlockers reads every resolve reference to the member. A record

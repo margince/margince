@@ -25,7 +25,7 @@ import { en as englishCopy } from "./i18n/en";
 // Two places decide, on their own, where a session belongs when the
 // installation has not described itself, and each rewrites the hash to say so.
 // AuthedApp's onboarding gate sends every route back to onboarding while
-// GET /company answers 404. The conversational shell's restore
+// GET /company answers 204. The conversational shell's restore
 // (features/onboarding/onboarding-conversation/restore.ts) decides whether the
 // journey is finished and leaves. Those are the only two automatic navigators
 // in the app; every other navigate() answers a click.
@@ -46,11 +46,11 @@ import { en as englishCopy } from "./i18n/en";
 // half alone passes while the pair loops.
 
 type InstallShape = Readonly<{
-  /** GET /company; null answers 404 — the profile the gate looks for is absent. */
+  /** GET /company; null answers 204: the profile the gate looks for is absent. */
   companySaved: boolean;
   /**
-   * GET /onboarding/state; false answers 404 — no wizard row has been written
-   * at all, which is what a first deployment has before anyone touches it.
+   * GET /onboarding/state; false answers 204: no wizard row has been written
+   * yet. A first deployment is in that state until someone touches it.
    */
   wizardStarted?: boolean;
 }>;
@@ -94,11 +94,11 @@ function completedWizardFetch(shape: InstallShape) {
             offer_summary: "Revenue software for manufacturers",
             icp: "Mid-market manufacturers",
           })
-        : json({ detail: "no company yet" }, 404);
+        : new Response(null, { status: 204 });
     }
     if (path === "/onboarding/state" && method === "GET") {
       if (shape.wizardStarted === false) {
-        return json({ detail: "no onboarding state yet" }, 404);
+        return new Response(null, { status: 204 });
       }
       return json({
         path: "creator",
@@ -303,12 +303,12 @@ describe("the onboarding gate and the wizard's restore", () => {
   });
 });
 
-// The onboarding gate: an installation that has not saved its own company has
-// nothing for any other screen to show, so an admin is sent to the company form
-// (GET /company 404s until then). Any other seat implies a described
-// installation, and every full seat is walked through its own journey until
-// that is recorded as finished. The gate lives in the shell, not on the login
-// path, because a live session never passes through login.
+// The onboarding gate: an installation without a saved company has nothing to
+// show on any other screen. An admin goes to the company form (GET /company
+// answers 204 until then). Any other seat implies a described installation.
+// Every full seat walks its own journey until that is recorded as finished.
+// The gate lives in the shell, not on the login path, because a live session
+// never passes through login.
 describe("onboarding gate", () => {
   const mount = () => {
     const client = new QueryClient({
@@ -372,6 +372,8 @@ describe("onboarding gate", () => {
           );
         }
         if (url.endsWith("/v1/onboarding/state")) {
+          if (journey.status === 204)
+            return new Response(null, { status: 204 });
           return new Response(JSON.stringify(journey.row), {
             status: journey.status,
             headers: {
@@ -394,15 +396,17 @@ describe("onboarding gate", () => {
                   headers: { "Content-Type": "application/json" },
                 },
               )
-            : new Response(
-                JSON.stringify({
-                  code: status === 403 ? "permission_denied" : "not_found",
-                }),
-                {
-                  status,
-                  headers: { "Content-Type": "application/problem+json" },
-                },
-              );
+            : status === 204
+              ? new Response(null, { status })
+              : status === 403
+                ? new Response(JSON.stringify({ code: "permission_denied" }), {
+                    status: 403,
+                    headers: { "Content-Type": "application/problem+json" },
+                  })
+                : new Response(JSON.stringify({ code: "not_found" }), {
+                    status: 404,
+                    headers: { "Content-Type": "application/problem+json" },
+                  });
         }
         return new Response(JSON.stringify({ data: [], page: {} }), {
           status: 200,
@@ -412,7 +416,7 @@ describe("onboarding gate", () => {
     );
 
   it("sends an installation that has not described itself to the company form", async () => {
-    stubCompany(404);
+    stubCompany(204);
     mount();
     await waitFor(() =>
       expect(window.location.hash).toBe("#/onboarding/company"),
@@ -420,7 +424,7 @@ describe("onboarding gate", () => {
   });
 
   it("holds on every navigation — steering away mid-onboarding lands back on the form", async () => {
-    stubCompany(404);
+    stubCompany(204);
     mount();
     await waitFor(() =>
       expect(window.location.hash).toBe("#/onboarding/company"),
@@ -440,7 +444,7 @@ describe("onboarding gate", () => {
   // later trains their voice and connects their mailbox as the creator did.
   it("sends a human with no journey of their own to onboarding, company or not", async () => {
     window.location.hash = "#/contacts";
-    stubCompany(200, { row: { code: "not_found" }, status: 404 });
+    stubCompany(200, { row: null, status: 204 });
     mount();
     await waitFor(() =>
       expect(window.location.hash).toBe("#/onboarding/company"),
@@ -460,11 +464,7 @@ describe("onboarding gate", () => {
   // that held it would hold it forever.
   it("leaves a read seat alone, whatever its journey says", async () => {
     window.location.hash = "#/contacts";
-    stubCompany(
-      200,
-      { row: { code: "not_found" }, status: 404 },
-      { seat: "read" },
-    );
+    stubCompany(200, { row: null, status: 204 }, { seat: "read" });
     mount();
     await screen.findByRole("navigation", {
       name: englishCopy["shell.railAria"],
@@ -517,7 +517,7 @@ describe("onboarding gate", () => {
   });
 
   it.each([
-    ["no journey row", { row: { code: "not_found" }, status: 404 }],
+    ["no journey row", { row: null, status: 204 }],
     ["an unfinished journey", { row: wizardRow("voice"), status: 200 }],
   ])(
     "walks a non-admin with %s through the member journey, unasked",
@@ -580,7 +580,7 @@ describe("onboarding gate", () => {
     window.location.hash = "#/contacts";
     stubCompany(
       403,
-      { row: { code: "not_found" }, status: 404 },
+      { row: null, status: 204 },
       {
         roles: ["ops"],
         allow: { automation: ["update"], voice_profile: ["read", "create"] },
@@ -601,7 +601,7 @@ describe("onboarding gate", () => {
     window.location.hash = "#/contacts";
     stubCompany(
       403,
-      { row: { code: "not_found" }, status: 404 },
+      { row: null, status: 204 },
       {
         roles: ["read_only"],
         allow: { voice_profile: ["read"], activity: ["read"] },
@@ -619,7 +619,7 @@ describe("onboarding gate", () => {
     window.location.hash = "#/contacts";
     stubCompany(
       403,
-      { row: { code: "not_found" }, status: 404 },
+      { row: null, status: 204 },
       { roles: ["rep"], allow: { activity: ["create"] } },
     );
     mount();
@@ -632,7 +632,7 @@ describe("onboarding gate", () => {
     window.location.hash = "#/contacts";
     stubCompany(
       403,
-      { row: { code: "not_found" }, status: 404 },
+      { row: null, status: 204 },
       { roles: ["rep"], seat: "read" },
     );
     mount();
@@ -654,7 +654,7 @@ describe("onboarding gate", () => {
       window.location.hash = "#/contacts";
       stubCompany(
         status,
-        { row: { code: "not_found" }, status: 404 },
+        { row: null, status: 204 },
         {
           roles,
           onboarding: false,
@@ -672,7 +672,7 @@ describe("onboarding gate", () => {
   // what an installation below the `onboarding` stage describes itself with.
   it("sends an undescribed installation to the company form below the onboarding stage", async () => {
     window.location.hash = "#/contacts";
-    stubCompany(404, undefined, { onboarding: false });
+    stubCompany(204, undefined, { onboarding: false });
     mount();
     await waitFor(() =>
       expect(window.location.hash).toBe("#/onboarding/company"),
@@ -685,7 +685,7 @@ describe("onboarding gate", () => {
     window.location.hash = "#/contacts";
     stubCompany(
       403,
-      { row: { code: "not_found" }, status: 404 },
+      { row: null, status: 204 },
       {
         roles: ["rep"],
       },
@@ -829,7 +829,7 @@ describe("onboarding gate", () => {
   // every admin's splash, so it goes out while the company is still unanswered.
   it("asks an admin's rollout beside the company read, not behind it", async () => {
     window.location.hash = "#/contacts";
-    stubCompany(200, { row: { code: "not_found" }, status: 404 });
+    stubCompany(200, { row: null, status: 204 });
     const release = holdAnswersTo("/v1/company");
     mount();
     await waitFor(() => expect(requestsEndingIn(ROLLOUT)).not.toHaveLength(0));
@@ -878,10 +878,7 @@ describe("onboarding gate", () => {
           );
         }
         if (url.endsWith("/v1/company")) {
-          return new Response(JSON.stringify({ code: "not_found" }), {
-            status: 404,
-            headers: { "Content-Type": "application/problem+json" },
-          });
+          return new Response(null, { status: 204 });
         }
         if (url.includes("/oauth/consent-request")) {
           return new Response(
@@ -917,7 +914,7 @@ describe("onboarding gate", () => {
   // cases above cover an empty hash, and a hashchange after mount).
   it("still redirects an ordinary screen away when the company is undescribed", async () => {
     window.location.hash = "#/contacts";
-    stubCompany(404);
+    stubCompany(204);
     mount();
     await waitFor(() =>
       expect(window.location.hash).toBe("#/onboarding/company"),

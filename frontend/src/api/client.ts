@@ -255,7 +255,10 @@ function reportAnswer(response: Response, request: Request): void {
 type ModelWait = "always" | "on-miss";
 
 const MODEL_ROUTES: Readonly<Record<string, ModelWait>> = {
+  "GET /channel-links/{record_type}/{id}/delivery-preview": "always",
+  "POST /channel-links/{record_type}/{id}/notes": "always",
   "GET /activities/{id}/meeting-brief": "always",
+  "GET /activities/{id}/task-explanation": "on-miss",
   "GET /deals/{id}/status": "on-miss",
   "GET /deal-rooms/{id}/brief": "always",
   "GET /companies/{id}/brief": "on-miss",
@@ -405,6 +408,11 @@ function fetchCountedAfterGrace(request: Request): Promise<Response> {
   });
 }
 
+// The RFC 7240 preference with which a read that finds nothing yet answers 204
+// instead of 404, so an empty page logs no failed request. Sent on every read:
+// an operation that does not declare it ignores it, as the RFC asks.
+export const ABSENT_PREFERENCE = "absent=204";
+
 export const api = createClient<paths>({
   // same-origin absolute base + the /v1 mount: contract paths are
   // unprefixed, the server serves them under /v1 (same as curl :8080/v1/me)
@@ -418,6 +426,9 @@ export const api = createClient<paths>({
     const language = effectiveDisplayLocale();
     if (language && !request.headers.has("X-Margince-Display-Locale")) {
       request.headers.set("X-Margince-Display-Locale", language);
+    }
+    if (request.method === "GET" && !request.headers.has("Prefer")) {
+      request.headers.set("Prefer", ABSENT_PREFERENCE);
     }
     // The chrome learns the agent is working HERE, where it is already known,
     // rather than on the next poll of the activity feed seconds later.

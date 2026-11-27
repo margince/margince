@@ -97,6 +97,10 @@ const (
 // the probe is actually deciding, because that is always the answer: the probe
 // is not this mutation's own row gate.
 var readAuthorityOnAWritePath = gatekit.Waive(map[string]string{
+	"internal/modules/chatlinks:MessengerOpenMembers":         "the CRM record supplies context only; the writer binds the caller's private provider conversation and changes no company, deal or project",
+	"internal/modules/chatlinks:deliverMessenger":             "the CRM record supplies context only; the writer records the caller's private send receipt and changes no company, deal or project",
+	"internal/modules/chatlinks:MessengerTeam":                "the record's readable assignments supply recipients; personal identity bindings change no company, deal or project",
+	"internal/modules/chatlinks:prepareAttempt":               "the CRM record supplies context only; the writer reserves a private send receipt and changes no company, deal or project",
 	"internal/modules/deals:readReadableBuyer":                "Reads the offer's buyer company names under the caller's company scope before a send freezes them or a render prints them. It decides whether the offer's own operation may proceed, and no company changes.",
 	"internal/modules/contacts:memberMayReadTx":               "Asks whether some member of a shared mailbox's reader team may see the contact or lead before the mail is filed under it. Filing shared mail where its readers can find it is a read decision about the mail, and the record itself does not change.",
 	"internal/modules/contacts:visibleCompanyDomainsTx":       "Asks whether the caller may see an employer before the import test run reads its domains for the duplicate check. It decides what the batch is told, and no company changes.",
@@ -343,8 +347,7 @@ func TestEveryMutationOfAShareableRecordProbesForWriteAuthority(t *testing.T) {
 	t.Parallel()
 	defer readAuthorityOnAWritePath.AssertAllMatched(t)
 
-	tables := shareableTables(t)
-	pkgs := writeAuthorityIndex(t, tables)
+	pkgs := cloneWriteAuthorityIndex(readOnlyWriteAuthorityIndex(t))
 	classifyReadOnlyPreviewAdmissions(t, pkgs)
 
 	// DISTINCT sites, deduplicated by where they are. The walk reaches one probe
@@ -458,13 +461,14 @@ func writeAuthorityIndex(t *testing.T, tables map[string]bool) map[string]map[st
 	// package-scoped: deals/project_update.go patches a table named by a const
 	// declared in project.go, and a file-scoped lookup drops that writer out of
 	// the census entirely while the gate reports a clean tree.
-	dirConsts := map[string]map[string]string{}
+	dirSources := map[string][]*ast.File{}
 	for _, src := range files {
 		dir := filepath.ToSlash(filepath.Dir(src.Path))
-		if dirConsts[dir] == nil {
-			dirConsts[dir] = map[string]string{}
-		}
-		maps.Copy(dirConsts[dir], packageStringConsts(src))
+		dirSources[dir] = append(dirSources[dir], src.File)
+	}
+	dirConsts := make(map[string]map[string]string, len(dirSources))
+	for dir, sources := range dirSources {
+		dirConsts[dir] = gatekit.StringConstantsOf(t, sources)
 	}
 	// The statements each package holds in its package-level vars and consts,
 	// read once per package. A statement hoisted out of a function body is
@@ -476,7 +480,7 @@ func writeAuthorityIndex(t *testing.T, tables map[string]bool) map[string]map[st
 	heldCache := map[string]map[string][]string{}
 	for _, src := range files {
 		dir := filepath.ToSlash(filepath.Dir(src.Path))
-		consts := packageStringConsts(src)
+		consts := gatekit.StringConstantsOf(t, []*ast.File{src.File})
 		held := heldStatements(t, heldCache, dir)
 		var imported []map[string][]string
 		for _, importDir := range inModuleImportDirs(src.File) {
@@ -513,31 +517,6 @@ func writeAuthorityIndex(t *testing.T, tables map[string]bool) map[string]map[st
 		t.Fatalf("%s holds no packages — teach this gate where the module tier moved", modulesDir)
 	}
 	return pkgs
-}
-
-// packageStringConsts collects one FILE's single-name string consts, so a probe
-// written as auth.EnsureVisible(ctx, tx, entityContact, id) resolves to the table
-// it names. File-scoped rather than package-scoped on purpose: a const and the
-// probes that use it sit together, and widening the resolution would let an
-// unrelated same-named const in another file answer for it.
-func packageStringConsts(src tierFile) map[string]string {
-	consts := map[string]string{}
-	for _, decl := range src.File.Decls {
-		gen, ok := decl.(*ast.GenDecl)
-		if !ok || gen.Tok != token.CONST {
-			continue
-		}
-		for _, spec := range gen.Specs {
-			value, ok := spec.(*ast.ValueSpec)
-			if !ok || len(value.Names) != 1 || len(value.Values) != 1 {
-				continue
-			}
-			if text, ok := stringConst(value.Values[0]); ok {
-				consts[value.Names[0].Name] = text
-			}
-		}
-	}
-	return consts
 }
 
 // indexWriteAuthorityBody records one function's probes, admissions, write

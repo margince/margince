@@ -62,6 +62,11 @@ const theHumanSessionScheme = "cookieAuth"
 // Joining this set is a decision about who may reach an endpoint holding no
 // seat, and it should cost somebody an edit here.
 var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
+	"receiveSlackChannelEvent":      "the bounded body is authenticated by timestamped Slack HMAC and installation identity before effects",
+	"receiveTeamsBotActivity":       "Bot Framework OIDC bearer verification pins the app, tenant and endorsed service URL before effects",
+	"receiveTeamsGraphNotification": "a bounded challenge discloses no data; notifications require sealed client state and exact subscription, app, tenant and channel identity",
+	"messengerOAuthCallback":        "signed short-lived state, its browser CSRF cookie and current member admission authorize one personal consent exchange",
+	"slackChannelsOAuthCallback":    "signed short-lived state, its browser CSRF cookie and current member write authority authorize the workspace consent exchange",
 	"confirmMemberMerge":            "the single-use, expiring, hashed confirmation mailed to the account's own address authenticates its holder; it signs nobody in and changes nothing but the confirmation",
 	"changePublicMeetingInvitation": "the expiring, hashed management capability authenticates a guest without a seat",
 	"acceptPublicMeetingProposal":   "an expiring recipient-bound capability authorizes one atomic acceptance without a seat",
@@ -152,7 +157,7 @@ func TestEveryHumanOnlyOperationNarrowsItsTransport(t *testing.T) {
 	t.Parallel()
 	defer humanOnlyWithoutASession.AssertAllMatched(t)
 
-	doc := loadContract(t)
+	doc := loadContractDocument(t)
 	paths, ok := doc["paths"].(map[string]any)
 	if !ok {
 		t.Fatal("api/crm.yaml carries no paths, so this census would clear every operation by reading none")

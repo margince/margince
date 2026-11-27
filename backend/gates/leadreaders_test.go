@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind census H2
-
 package gates
 
 // `lead` is an RBAC object, and until this gate nothing held the object half of
@@ -26,8 +24,6 @@ package gates
 // objectGate, and the walk is shared rather than copied.
 
 import (
-	"go/ast"
-	"path"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -175,11 +171,13 @@ var calleeGatedLeadReads = gatekit.Waive(map[string]string{
 
 // ruledLeadReads: a DISCLOSING read the product has ruled needs no lead grant.
 var ruledLeadReads = gatekit.Waive(map[string]string{
-	"internal/modules/privacy/noticedisclosurelead.go:readLeadNotice":    "the Art. 14 page behind a website lead's notice link names which KINDS of data the lead holds and whether the lead is still open. It reads presence flags only and returns no value, so the page discloses what is held, never who. The link is the authority, and AssembleNoticeDisclosure admits only the public edge's system principal",
-	"internal/modules/consent/privacyinfo.go:assembleLeadDisclosure":     "the Art. 14 page behind a website lead's notice link reads one column, the lead's created_at, to date the acquisition the page discloses. The link is the authority, as for a contact's notice; the lead's name, address and title are never read, so the page discloses when and how, not who",
-	"internal/modules/privacy/erasure_untoldlead.go:deleteLeadRecordsTx": "deleting a website lead whose notice failed joins its own lead row only to find the raw original captured under the same source key, and deletes that original. Nothing is selected or returned; the deletion runs on the bounce or accept transaction that decided the lead may not be kept, where a caller's grants would under-delete",
-	"internal/modules/activities/projectfiling.go":                       "the undo of a project filing locks the linked record FOR SHARE so a legal hold placed on it cannot land between the undo reading the holds and clearing the class. It takes a shared row lock (shareLockQualifyingRecords) on the records the activity is linked to, so the undo of a project filing serializes with a hold or a stamp being written; it selects only a row count, no field, and returns nothing to the caller.",
-	"internal/modules/privacy/legalholdlist.go":                          "the litigation-hold census: one UNION over the five holdable tables, selecting an id and a display name for rows where legal_hold is set. Gated on the retention-policy authority and refused to a non-human principal at its own entry, which is the posture the sibling restricted-records list already takes — a controller asked what a hold is preserving has to be told which records those are, and the grant that governs the retention ladder is the one that governs seeing what overrides it. No field of the record is read beyond its name",
+	"internal/modules/contacts/recordsourcecorrect.go:leadSourceSQL":            "the id and source of leads whose source is off the fixed list, read under the row lock by the source data task. storekit.CorrectRecordSources asks auth.RequireSystem before the statement runs, and only ids leave it",
+	"internal/modules/contacts/recordsourcecorrect.go:CountUnlistedLeadSources": "how many leads still hold a source off the fixed list, for the source data task's estimate. Its one caller asks auth.Require for data_task read, and only a capped count leaves",
+	"internal/modules/privacy/noticedisclosurelead.go:readLeadNotice":           "the Art. 14 page behind a website lead's notice link names which KINDS of data the lead holds and whether the lead is still open. It reads presence flags only and returns no value, so the page discloses what is held, never who. The link is the authority, and AssembleNoticeDisclosure admits only the public edge's system principal",
+	"internal/modules/consent/privacyinfo.go:assembleLeadDisclosure":            "the Art. 14 page behind a website lead's notice link reads one column, the lead's created_at, to date the acquisition the page discloses. The link is the authority, as for a contact's notice; the lead's name, address and title are never read, so the page discloses when and how, not who",
+	"internal/modules/privacy/erasure_untoldlead.go:deleteLeadRecordsTx":        "deleting a website lead whose notice failed joins its own lead row only to find the raw original captured under the same source key, and deletes that original. Nothing is selected or returned; the deletion runs on the bounce or accept transaction that decided the lead may not be kept, where a caller's grants would under-delete",
+	"internal/modules/activities/projectfiling.go":                              "the undo of a project filing locks the linked record FOR SHARE so a legal hold placed on it cannot land between the undo reading the holds and clearing the class. It takes a shared row lock (shareLockQualifyingRecords) on the records the activity is linked to, so the undo of a project filing serializes with a hold or a stamp being written; it selects only a row count, no field, and returns nothing to the caller.",
+	"internal/modules/privacy/legalholdlist.go":                                 "the litigation-hold census: one UNION over the five holdable tables, selecting an id and a display name for rows where legal_hold is set. Gated on the retention-policy authority and refused to a non-human principal at its own entry, which is the posture the sibling restricted-records list already takes — a controller asked what a hold is preserving has to be told which records those are, and the grant that governs the retention ladder is the one that governs seeing what overrides it. No field of the record is read beyond its name",
 })
 
 // notTheLeadTable: the read pattern matched SQL's OWN `lead()` window function
@@ -208,68 +206,18 @@ var leadVerdicts = []namedVerdict{
 	{"ruled", ruledLeadReads},
 }
 
-// wantMinimumGatedLeadSites is the floor below the count of sites that satisfy
-// the gate today. It exists for the reason every floor in this directory does:
-// an extractor that stops recognising SQL finds no sites and reports nothing,
-// which is indistinguishable from a clean tree.
-const wantMinimumGatedLeadSites = 1
-
-var leadReaderScope = gatekit.Scope{
-	Roots:   []string{"internal"},
-	Subject: readsLeadTable,
-	Exempt:  gatekit.Waive(map[string]string{}),
-}
-
-func readsLeadTable(filePath string, file *ast.File) bool {
-	return gatekit.FileReadsTable(filePath, file, leadGate.literal)
-}
-
-func TestEveryReaderOfTheLeadTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
-	t.Parallel()
-	files := leadReaderScope.Files(t)
-	walk := leadGate.walkPackages(t, files)
-	consts := constantTable{}
-
-	var satisfied int
-	for _, parsed := range files {
-		pkg := path.Dir(parsed.Path)
-		for _, site := range leadGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := site.subject(parsed.Path)
-			carriesGate := walk.carries(t, leadGate, parsed, site, consts.of(t, pkg))
-			verdict := verdictIn(t, subject, leadVerdicts)
-
-			switch {
-			case carriesGate && verdict != "":
-				t.Errorf("%s carries the lead object gate AND a %s verdict — remove the verdict, it "+
-					"now describes code that is gated", subject, verdict)
-			case carriesGate:
-				satisfied++
-			case verdict == "":
-				t.Errorf("%s reads the lead table without the object gate and without a verdict.\n"+
-					"  Reading a lead discloses somebody who has not agreed to be a customer, "+
-					"which is what the lead grant governs.\n"+
-					"  Either ask auth.Require(ctx, \"lead\", …), or declare the read in "+
-					"predicateLeadReads / lifecycleLeadReads / calleeGatedLeadReads / ruledLeadReads "+
-					"with the reason it "+
-					"needs no gate.\n"+
-					"  Left alone it is indistinguishable from a read nobody considered.\n"+
-					"  The read: %s", subject, site.sql)
-			}
-		}
-	}
-
-	if satisfied < wantMinimumGatedLeadSites {
-		t.Errorf("only %d lead reads satisfy the object gate, want at least %d — a literal extractor "+
-			"that stopped recognising this tree's SQL would report exactly this, and it reads the "+
-			"same as a clean tree", satisfied, wantMinimumGatedLeadSites)
-	}
-	t.Logf("lead reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled",
-		satisfied, len(predicateLeadReads.Subjects()), len(lifecycleLeadReads.Subjects()),
-		len(calleeGatedLeadReads.Subjects()), len(ruledLeadReads.Subjects()))
-
+// sweepLeadVerdicts fails a verdict no read matched any more. The
+// gate census asks for each sweep by name, so the list is written out.
+func sweepLeadVerdicts(t *testing.T) {
+	t.Helper()
 	predicateLeadReads.AssertAllMatched(t)
 	lifecycleLeadReads.AssertAllMatched(t)
 	calleeGatedLeadReads.AssertAllMatched(t)
 	notTheLeadTable.AssertAllMatched(t)
 	ruledLeadReads.AssertAllMatched(t)
 }
+
+// wantMinimumGatedLeadSites is the floor below the count of sites that satisfy
+// the gate today. An extractor that stops recognising SQL finds no sites and
+// reports nothing, which reads the same as a clean tree.
+const wantMinimumGatedLeadSites = 1

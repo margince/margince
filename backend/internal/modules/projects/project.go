@@ -131,9 +131,9 @@ func createProjectTx(
 	// names the audit row of the same transaction, so the reader can say who
 	// created the project.
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO project_phase_history (project_id, from_phase, to_phase, changed_by, audit_log_id)
-		 VALUES ($1, NULL, $2, $3, $4)`,
-		id, in.StartPhase(), by, auditID); err != nil {
+		`INSERT INTO project_phase_history (project_id, from_phase, to_phase, audit_log_id)
+		 VALUES ($1, NULL, $2, $3)`,
+		id, in.StartPhase(), auditID); err != nil {
 		return crmcontracts.Project{}, fmt.Errorf("record project phase history: %w", err)
 	}
 	created := crmcontracts.PublicEventProjectCreated{

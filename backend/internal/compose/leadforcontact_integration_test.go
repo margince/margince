@@ -158,7 +158,7 @@ func TestACSVLeadRowForAContactIsSkippedInThePreviewAndTheCommit(t *testing.T) {
 	l := setupLeadForContact(t)
 	ctx := importingAdmin(l.e)
 	run, err := migration.NewRunStore(l.e.DB()).CreateDraftRun(ctx, migration.CreateDraftRunInput{
-		SourceRef: "ws/import/" + ids.NewV7().String(), Source: "import_api", FileName: "leads.csv",
+		SourceRef: "ws/import/" + ids.NewV7().String(), FileName: "leads.csv",
 		Profile: []byte(`{"files":[{"name":"leads.csv","row_count":1}]}`),
 		Mapping: migration.RunMapping{Object: migration.ObjectLead, Fields: map[string]string{"Email": "email"}, SourceKey: "Email"},
 	})

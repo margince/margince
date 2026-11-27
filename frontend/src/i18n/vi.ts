@@ -14,6 +14,8 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
+  "history.field.chat_source_changed": "Nguồn cuộc trò chuyện đã thay đổi",
+  "history.field.chat_source_deleted": "Nguồn cuộc trò chuyện đã bị xóa",
   "history.field.kind": "Loại",
   "history.field.email_security": "Bảo mật email",
   "history.field.employee_range": "Khoảng số nhân viên",
@@ -78,7 +80,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "history.field.invitation_sender": "Bên gửi lời mời",
   "history.field.judged_evidence": "Bằng chứng đã xét",
   "history.field.judged_through_activity_id": "Bằng chứng đã xét đến",
-  "history.field.lead_id": "Khách hàng tiềm năng",
+  "history.field.lead_id": "Lead",
   "history.field.lift_basis": "Lý do gỡ hạn chế",
   "history.field.logo_icon": "Biểu tượng công ty",
   "history.field.lost_reason_basis": "Bằng chứng cho lý do mất",
@@ -148,6 +150,109 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "payments.ageHelp":
     "Trang chủ gom hóa đơn quá số ngày này ở cuối. Mặc định là 365 ngày. Tổng của công ty giữ nguyên.",
   "payments.ageRefusal": "Nhập số nguyên từ 1 đến 3.650 ngày.",
+  "messenger.deliveryPending":
+    "Tin nhắn này vẫn đang được gửi. Kiểm tra biên nhận trước khi thử gửi lại.",
+  "messenger.accessWorkspace":
+    "Đây là kênh công khai. Đồng nghiệp chưa tham gia cũng có thể đọc.",
+  "messenger.accessTeam": "Kênh của nhóm: cả nhóm đều có thể đọc.",
+  "messenger.accessPrivate":
+    "Kênh riêng tư: chỉ thành viên của kênh mới có thể đọc.",
+  "messenger.accessParticipants":
+    "Cuộc trò chuyện riêng tư: chỉ các thành viên tham gia mới có thể đọc.",
+  "messenger.accessUnknown": "Chưa xác minh được quyền đọc kênh.",
+  "messenger.joinedOnly":
+    "Danh sách này hiển thị thành viên đã tham gia. Đồng nghiệp khác cũng có thể đọc kênh công khai.",
+  "messenger.appMember": "Ứng dụng hoặc bot",
+  "messenger.teamComparison": "So sánh với nhóm được phân công cho hồ sơ",
+  "messenger.teamOutside": "Thành viên nhận tin ngoài nhóm được phân công",
+  "messenger.teamMissing":
+    "Thành viên được phân công chưa có trong cuộc trò chuyện này",
+  "messenger.teamNotJoined": "Thành viên được phân công chưa tham gia kênh này",
+  "messenger.teamUnverified":
+    "Thành viên được phân công chưa xác minh danh tính nhắn tin",
+  "messenger.teamMatches":
+    "Tất cả thành viên được phân công đã xác minh đều có trong cuộc trò chuyện này.",
+  "messenger.messageRequired": "Viết tin nhắn trước khi gửi.",
+  "messenger.recipientsRequired": "Chọn ít nhất một người nhận.",
+  "channelDelivery.review": "Kiểm tra trạng thái gửi",
+  "channelDelivery.cardPaused": "Đã tạm dừng cập nhật thẻ tổng quan",
+  "channelDelivery.cardPausedHelp":
+    "Chưa có xác nhận gửi thẻ tổng quan. Các cập nhật CRM đủ điều kiện khác vẫn có thể tiếp tục. Thẻ trước đó có thể vẫn còn trong kênh.",
+  "channelDelivery.restart": "Tạo thẻ tổng quan mới",
+  "channelDelivery.restartTitle": "Tạo một thẻ tổng quan mới",
+  "channelDelivery.title": "Kiểm tra lần gửi chưa được xác nhận",
+  "channelDelivery.skip": "Bỏ qua các lần thử lại này",
+  "channelDelivery.restartWarning":
+    "Thẻ tổng quan trước đó có thể vẫn còn. Thao tác này tạo một thẻ mới và tiếp tục tự động cập nhật thẻ đó. Bản chưa được xác nhận sẽ không bị sửa hoặc xóa.",
+  "channelDelivery.help":
+    "Trước tiên hãy kiểm tra kênh trong Messenger hoặc ứng dụng nhắn tin. Bỏ qua sẽ dừng thử lại các cập nhật được liệt kê mà không đánh dấu là đã gửi. Bản sao hoặc phản hồi muộn từ nhà cung cấp vẫn có thể đến. Thao tác này không hủy yêu cầu hoặc xóa bản sao tại nhà cung cấp. Thẻ tổng quan chưa được xác nhận sẽ tạm dừng tự động cập nhật.",
+  "channelDelivery.linkChanged":
+    "Kênh được liên kết đã thay đổi. Đóng phần kiểm tra này rồi mở lại.",
+  "channelDelivery.reviewFirst":
+    "Kiểm tra các lần gửi chưa được xác nhận trước khi tạo thẻ tổng quan khác.",
+  "channelDelivery.none":
+    "Chưa có lần gửi nào cần kiểm tra. Một lần gửi có thể vẫn đang xử lý; hãy kiểm tra lại sau khi hoàn tất.",
+  "channelDelivery.list": "Các lần gửi chưa được xác nhận",
+  "channelDelivery.card": "Thẻ tổng quan bản ghi",
+  "channelDelivery.updates_one": "Cập nhật CRM: {count}",
+  "channelDelivery.updates_other": "Cập nhật CRM: {count}",
+  "timeline.chatSummary.sourceHelp":
+    "Kết nối tài khoản nhắn tin của bạn qua Messenger trên bản ghi này, kiểm tra xem bạn có mở được kênh ở đó không, rồi kiểm tra lại quyền truy cập nguồn.",
+  "channelInstall.slackReader":
+    "Bản cài đặt kênh dùng chung cũng yêu cầu tài khoản cài đặt cấp quyền chỉ đọc lịch sử kênh. Tài khoản đó phải là thành viên của các kênh riêng đã liên kết. Quyền này không bao gồm tin nhắn trực tiếp hoặc gửi tin cá nhân.",
+  "channelProfile.distribution": "Cách phân phối ứng dụng Slack",
+  "channelProfile.declaration":
+    "Chọn cách phân phối ứng dụng này. Margince lưu thông tin bạn khai báo và giới hạn lịch sử được công bố khi cài đặt hoặc kết nối lại.",
+  "channelProfile.internal": "Ứng dụng Slack nội bộ",
+  "channelProfile.marketplace": "Ứng dụng trên Slack Marketplace",
+  "channelProfile.nonMarketplace":
+    "Ứng dụng thương mại ngoài Slack Marketplace",
+  "channelProfile.details": "Quyền truy cập và giới hạn lịch sử Slack",
+  "channelProfile.missing":
+    "Chưa xác nhận giới hạn lịch sử cho bản cài đặt này.",
+  "channelProfile.reconnect":
+    "Liên hệ quản trị viên để kết nối lại Slack trong Kết nối kênh dùng chung, xác nhận cách phân phối ứng dụng và cấp quyền chỉ đọc lịch sử kênh. Tài khoản cài đặt phải là thành viên của các kênh riêng đã liên kết. Bản tóm tắt đầy đủ vẫn tạm dừng cho đến khi xác nhận quyền truy cập và giới hạn.",
+  "channelProfile.unsupported":
+    "Cách phân phối này chỉ cho phép một yêu cầu lịch sử và một yêu cầu chuỗi mỗi phút, với 15 tin nhắn mỗi trang. Không có bản tóm tắt kênh đầy đủ. Messenger cá nhân và cập nhật CRM gửi đến Slack vẫn hoạt động riêng.",
+  "channelProfile.limits":
+    "Lịch sử: {history} yêu cầu/phút, {historyPage} tin nhắn/trang. Chuỗi: {replies} yêu cầu/phút, {repliesPage} tin nhắn/trang.",
+  "channelProfile.provenance":
+    "Quản trị viên khai báo vào {at}; dựa trên giới hạn Slack công bố. Slack vẫn có thể yêu cầu chờ lâu hơn.",
+  "messenger.authorUnavailable": "Chưa có tên",
+  "channelInstall.title": "Kết nối kênh chung",
+  "channelInstall.separate":
+    "Kết nối bot dùng chung tại đây để liên kết kênh với bản ghi CRM. Mỗi người kết nối tài khoản riêng để dùng Messenger.",
+  "channelInstall.slackReady":
+    "Ứng dụng đã sẵn sàng để cấp quyền trong nhóm Slack.",
+  "channelInstall.slackMissing":
+    "Trước tiên hãy thiết lập ứng dụng Slack và khóa ký bên dưới.",
+  "channelInstall.slackConnect": "Cài đặt hoặc kết nối lại bot Slack",
+  "channelInstall.failed": "Không thể cập nhật kết nối kênh",
+  "channelInstall.callback": "Địa chỉ chuyển hướng OAuth",
+  "channelInstall.events": "Địa chỉ sự kiện bot",
+  "channelInstall.adminRequired":
+    "Quản trị viên có quyền kết nối kênh phải phê duyệt kết nối này.",
+  "channelInstall.teamsSteps":
+    "Đăng ký bot Microsoft bằng địa chỉ sự kiện bên dưới. Tải gói ứng dụng lên Teams, thêm vào nhóm cần dùng và phê duyệt quyền của nhóm, sau đó làm mới và phê duyệt nhóm tại đây.",
+  "channelInstall.teamsApp":
+    "Ứng dụng Microsoft {app}, đối tượng thuê {tenant}",
+  "channelInstall.refresh": "Làm mới nhóm đã cài đặt",
+  "channelInstall.noTeams":
+    "Chưa có cài đặt nhóm đã xác minh. Kiểm tra đăng ký bot, thêm ứng dụng vào nhóm rồi làm mới.",
+  "channelInstall.team": "Nhóm đã cài đặt và xác minh",
+  "channelInstall.approval":
+    "Chỉ nhóm này sẽ được kết nối. Liên kết hiện có giữ nguyên đích; muốn kết nối nhóm khác, trước tiên hãy ngắt kết nối hiện tại.",
+  "channelInstall.approve": "Phê duyệt kết nối nhóm",
+  "channelInstall.connected":
+    "Đã kết nối nhóm. Bạn có thể liên kết các kênh của nhóm từ công ty, giao dịch hoặc dự án.",
+  "channelInstall.teamsMissing":
+    "Trước tiên hãy thiết lập ứng dụng Microsoft và đối tượng thuê bên dưới.",
+  "channelInstall.package": "Tạo gói ứng dụng Teams",
+  "channelInstall.legal":
+    "Dùng trang HTTPS về quyền riêng tư và điều khoản do tổ chức cung cấp cho ứng dụng này. Các địa chỉ được đưa vào gói tải xuống.",
+  "channelInstall.privacy": "URL chính sách quyền riêng tư",
+  "channelInstall.terms": "URL điều khoản sử dụng",
+  "channelInstall.download": "Tải gói ứng dụng Teams",
   "systemJob.proposal_stage": "Hỏi có chuyển deal sau khi gửi đề xuất không",
   "systemJob.google_directory": "Đọc nhóm Google của thành viên",
   "systemJob.legal_review_desk": "Rà soát pháp lý",
@@ -1602,7 +1707,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "reporting.basis.implementation": "Chỉ triển khai",
   "reporting.productReports": "Doanh số sản phẩm",
   "reporting.productReportsPurpose":
-    "Mở Đánh giá doanh số cho một sản phẩm. Không cần thiết lập và không ghi gì cả.",
+    "Mở Tổng kết bán hàng cho một sản phẩm. Không cần thiết lập và không ghi gì cả.",
   "reporting.noProducts":
     "Chưa có sản phẩm đang hoạt động. Thêm sản phẩm trong Cài đặt để báo cáo về chúng.",
   "reporting.actualsThrough": "Số liệu thực tế đến {at} · {zone}",
@@ -2519,6 +2624,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "systemJob.stage_evidence": "Bằng chứng giai đoạn deal",
   "systemJob.stage_evidence_read": "Đọc bằng chứng giai đoạn deal",
   "systemJob.stage_evidence_reread": "Đọc lại bằng chứng giai đoạn deal",
+  "systemJob.standing_line": "Kiểm tra tình hình",
   "systemJob.suppression_journal_worker": "Xuất sổ ghi xóa dữ liệu",
   "systemJob.stored_object_reap_worker": "Dọn dẹp kho tệp",
   "systemJob.technical_backfill": "Tra cứu kỹ thuật còn tồn đọng",
@@ -3243,7 +3349,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "amount.refused.grouping":
     "Nhập số tiền không có dấu phân cách hàng nghìn, ví dụ {example}.",
   "amount.refused.notNumber": "Nhập số tiền bằng chữ số, ví dụ {example}.",
-  "amount.refused.tooLarge": "Số tiền này quá lớn để lưu.",
+  "amount.refused.tooLarge": "Nhập số tiền không vượt quá {max}.",
   "amount.refused.noCurrency": "Số tiền này cần có loại tiền trước.",
   "amount.waitsForCurrency": "Mở khi đã có loại tiền.",
   "amount.currencyUnread":
@@ -3757,7 +3863,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scrollSentinel.more": "Còn thêm mục.",
   "list.viewAll": "Tất cả",
   "list.viewHot": "Lead nóng",
-  "table.range": "{first} đến {last} trong số {count} {unit}",
+  "table.range": "{first}-{last} trong {count}",
   "table.pagination": "Phân trang",
   "table.rowActions": "Thao tác cho {name}",
   "table.page": "Trang {number}",
@@ -3783,15 +3889,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "table.dialsRefused": "Không thể hiển thị danh sách với bộ lọc này.",
   "table.none": "Chưa có {unit} nào.",
   "table.actions": "Thao tác",
-  "table.rangeLoaded": "Đã tải {first} đến {last} trong {count} {unit}",
+  "table.rangeLoaded": "{first}-{last} trong {count} đã tải",
   "table.rangeIn": "{range} thuộc {scope}",
   "unit.contacts": "liên hệ",
   "unit.companies": "công ty",
   "unit.deals": "deal",
   "unit.leads": "lead",
-  "unit.contact": "liên hệ",
-  "unit.company": "công ty",
-  "unit.lead": "lead",
   "unit.worklistItems": "việc và cam kết",
   "unit.partners": "đối tác",
   "unit.products": "sản phẩm",
@@ -3836,6 +3939,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "views.none": "Chưa có chế độ xem đã lưu",
   "views.rename": "Đổi tên",
   "views.renameNamed": "Đổi tên {name}",
+  "views.opensInFilters": "{name}, mở trong Danh sách và bộ lọc",
   "views.delete": "Xóa",
   "views.deleteNamed": "Xóa {name}",
   "views.deleteAsk":
@@ -4074,7 +4178,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.strip.fin.neverInvoiced": "Chưa xuất hóa đơn",
   "co.strip.fin.noConnection": "Chưa kết nối kế toán",
   "co.strip.fin.unmapped": "Chưa khớp khách hàng",
-  "co.strip.fin.syncing": "Đang đồng bộ",
+  "co.strip.fin.syncing": "Chờ đồng bộ lần đầu",
   "co.strip.fin.staleFigure": "Dữ liệu đồng bộ đã cũ",
   "co.strip.fin.notCurrent": "Chưa cập nhật",
   "co.strip.fin.errorFigure": "Lần đồng bộ gần nhất bị lỗi",
@@ -4296,6 +4400,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "standing.title": "Tình hình · {date}",
   "standing.noteMore": "Xem thêm",
   "standing.noteLess": "Thu gọn",
+  "standing.citations.source": "Hoạt động",
+  "standing.citations.from": "Đọc từ",
   "standing.latest.title": "Mới nhất",
   "standing.latest.open": "Mở trong Lịch sử",
   "standing.sources.records": "Từ dữ liệu CRM",
@@ -4537,7 +4643,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "finance.none": "Chưa ghi nhận gì.",
   "finance.loading": "Đang tải hóa đơn…",
   "finance.syncing":
-    "Đang đồng bộ với hệ thống kế toán. Số liệu sẽ hiện sau lần đồng bộ đầu tiên.",
+    "Đang chờ lần đồng bộ đầu tiên với hệ thống kế toán. Việc đồng bộ chạy sáu giờ một lần, và quản trị viên có thể bắt đầu sớm hơn trong Cài đặt → Tích hợp.",
   "finance.noConnection":
     "Chưa kết nối hệ thống kế toán. Hóa đơn và hành vi thanh toán của khách hàng này sẽ hiện khi đã kết nối.",
   "finance.unmapped":
@@ -4593,13 +4699,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contracts.status.expired": "Đã hết hạn",
   "contracts.status.cancelled": "\u0110\u00e3 h\u1ee7y",
   "contracts.status.superseded": "Đã bị thay thế",
-  "contracts.endsOn": "K\u1ebft th\u00fac ng\u00e0y {when}",
+  "contracts.cancelledTo": "Đã hủy, kết thúc ngày {when}",
+  "contracts.cancelledToNotice":
+    "Đã hủy, kết thúc ngày {when}, báo hủy ngày {notice}",
+  "contracts.replacedBy": "Được thay bằng {title}",
+  "contracts.replacedByUnnamed": "Được thay bằng một hợp đồng sau",
   "contracts.renewsOn": "Gia h\u1ea1n ng\u00e0y {when}",
   "contracts.endedPendingStatus": "Đã hết kỳ hạn, chờ cập nhật trạng thái",
   "contracts.form.title": "Ghi nh\u1eadn h\u1ee3p \u0111\u1ed3ng",
   "contracts.form.name": "Ti\u00eau \u0111\u1ec1",
   "contracts.form.number": "S\u1ed1 h\u1ee3p \u0111\u1ed3ng",
   "contracts.form.value": "Gi\u00e1 tr\u1ecb",
+  "contracts.form.currency": "Loại tiền",
   "contracts.form.basis": "Gi\u00e1 tr\u1ecb n\u00e0y l\u00e0",
   "contracts.form.arr": "Doanh thu định kỳ hằng năm",
   "contracts.form.arrMonthly": "Tương đương mỗi tháng:",
@@ -4648,6 +4759,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contracts.statusChange.label": "Tr\u1ea1ng th\u00e1i m\u1edbi",
   "contracts.statusChange.submit": "\u0110\u1ed5i tr\u1ea1ng th\u00e1i",
   "contracts.statusChange.errSame": "Hợp đồng đã ở trạng thái này.",
+  "contracts.statusChange.finalTitle": "{status} là trạng thái cuối cùng",
+  "contracts.statusChange.finalBody":
+    "Sau khi lưu, không thể đổi trạng thái nữa. Để tiếp tục thỏa thuận, hãy gia hạn hợp đồng.",
   "contracts.cancel.title": "Ghi nhận hủy hợp đồng",
   "contracts.cancel.hint":
     "Khách hàng vẫn chịu ràng buộc hợp đồng đến ngày có hiệu lực. Thao tác này ghi nhận thông báo hủy và không đổi trạng thái.",
@@ -5065,7 +5179,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.unnamedColleague": "Tên đồng nghiệp không khả dụng",
   "approval.commitment.unverifiedNamed": "Chưa xác minh: {name}",
   "approval.commitment.unresolved": "Chưa xác định người cam kết",
-  "approval.commitment.assignNamed": "Tạo công việc giao cho {name}.",
+  "approval.commitment.assignNamed": "Tạo việc giao cho {name}.",
   "approval.field.owner": "Người chịu trách nhiệm",
   "approval.field.sourceText": "Văn bản gốc",
   "approval.field.to": "Đến",
@@ -5232,6 +5346,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.extension": "Tiện ích mở rộng",
   "timeline.kind.signal": "Tín hiệu",
   "timeline.withheld": "Nội dung chỉ dành cho người tham gia",
+  "timeline.chatSummary.sourceChanged": "Nguồn đã thay đổi · kiểm tra tóm tắt",
+  "timeline.chatSummary.updated": "Cập nhật {at}",
   "timeline.chatSummary.badge": "Tóm tắt AI",
   "timeline.chatSummary.from": "Từ {provider}",
   "timeline.chatSummary.meta_one": "{count} tin nhắn, đến {ended}",
@@ -5799,6 +5915,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.tech.laneFailed":
     "Không kiểm tra được {lane}. Vẫn giữ kết quả lần trước.",
   "co.tech.laneRefused": "Trang web đã chặn truy cập.",
+  "co.tech.laneFailedFirst": "{lane} không phản hồi nên chưa có kết quả nào.",
   "co.tech.lane.dns": "DNS",
   "co.tech.lane.certlog": "Chứng chỉ",
   "co.tech.lane.homepage": "Trang chủ",
@@ -5911,6 +6028,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tagAdmin.usedBy_one": "{count} hồ sơ",
   "tagAdmin.usedBy_other": "{count} hồ sơ",
   "tagAdmin.retired": "Đã ngừng dùng",
+  "tagAdmin.mergedInto": "Đã gộp vào {name}",
   "tagAdmin.retiredToast": "Đã ngừng dùng {name}",
   "tagAdmin.restoredToast": "Đã khôi phục {name}",
   "tags.archived": "trong kho lưu trữ",
@@ -5979,6 +6097,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tagResult.resultsTitle": "Hồ sơ có thẻ này",
   "tagResult.nothingCarries":
     "Chưa có hồ sơ nào gắn thẻ này. Gắn thẻ từ bất kỳ liên hệ, công ty, deal hoặc lead nào.",
+  "tagResult.retiredNothing":
+    "Không có hồ sơ nào gắn thẻ này. Thẻ đã ngừng dùng nên không thể gắn vào hồ sơ.",
+  "tagResult.mergedBody":
+    "Thẻ này đã được gộp vào {name}. Các hồ sơ từng có thẻ này đã nhận thẻ {name} khi gộp.",
+  "tagResult.openKept": "Mở {name}",
   "tagResult.loadingRows": "Đang tải {kind}…",
   "tagResult.noneLeft": "Không còn hồ sơ nào gắn thẻ này",
   "tagResult.unnamed": "Chưa đặt tên",
@@ -6035,16 +6158,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.project": "Dự án",
 
   "lead.source.manual": "Tạo thủ công",
-  "lead.source.inbound": "Khách tự liên hệ",
+  "lead.source.siteread": "Từ trang web công ty",
   "lead.source.webform": "Biểu mẫu web",
   "lead.source.webformNamed": "Biểu mẫu web “{name}”",
-  "lead.source.referral": "Giới thiệu",
   "lead.source.import": "Nhập dữ liệu",
-  "lead.source.crawl": "Tìm hiểu trên web",
   "lead.source.api": "Tích hợp",
   "lead.source.automation": "Tự động hóa",
   "lead.source.capture": "Ghi nhận từ một cuộc trao đổi",
-  "lead.source.siteread": "Từ trang web công ty",
   "lead.source.unknown": "Nguồn không rõ",
   "leadSources.removeOnlyTitle":
     "Vai trò hiện tại chỉ xóa được mục, không thêm hay thay đổi được mục nào",
@@ -6185,8 +6305,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Số lượng không thể lọc theo ngành, quốc gia hay quy mô công ty nên không hiển thị.",
   "lead.boardCountsNoOtherFilter":
     "Số lượng không thể áp dụng mọi bộ lọc của danh sách này nên không hiển thị.",
-  "lead.boardCountsNoConnectorSource":
-    "Số lượng không thể lọc theo mọi lead từ một trình kết nối nên không hiển thị.",
   "lead.boardCountsOwnerNotMeasurable":
     "Không hiển thị số lượng lead của người chịu trách nhiệm này. Chỉ quản trị viên cấp được quyền xem số liệu này.",
   "lead.boardTerminalRowsUnavailable":
@@ -7133,7 +7251,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "offer.termsText": "Điều khoản",
   "offer.lines": "Dòng hàng",
   "offer.addLine": "Thêm dòng",
-  "offer.positionTaken": "Một dòng khác đã dùng số thứ tự này.",
+  "offer.lineOrderHint":
+    "Kéo dòng bằng tay nắm, hoặc đặt tiêu điểm vào tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
+  "offer.lineHandle": "Di chuyển {name}, dòng {position} trên {total}",
+  "offer.lineMoved": "{name} giờ ở dòng {position} trên {total}",
+  "offer.lineHandleUnnamed": "Di chuyển dòng {position} trên {total}",
+  "offer.lineMovedUnnamed": "Dòng này giờ ở vị trí {position} trên {total}",
   "offer.lapsed":
     "Ngày “Có hiệu lực đến” của báo giá này đã qua. Với bản nháp, đổi ngày trong “Sửa phần đầu”, còn với báo giá đã gửi thì tạo lại phiên bản.",
   "offer.position": "Số thứ tự",
@@ -7680,6 +7803,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deepread.statusFailed": "Bị lỗi",
   "deepread.statusCancelled": "Đã hủy",
   "deepread.resumesAt": "Tự động chạy tiếp {when}.",
+  "deepread.failure.bot_blocked":
+    "Cơ chế chống bot của trang web đã từ chối việc đọc.",
+  "deepread.failure.http_server_error": "Trang web trả về lỗi máy chủ.",
+  "deepread.failure.timeout": "Trang web không phản hồi kịp.",
+  "deepread.failure.http_client_error":
+    "Không tìm thấy trang chủ của trang web.",
+  "deepread.failure.dns": "Tên miền không trỏ tới máy chủ nào.",
+  "deepread.failure.tls": "Không xác minh được chứng chỉ HTTPS của trang web.",
+  "deepread.failure.robots_disallowed":
+    "Trang web yêu cầu trình thu thập không đọc trang.",
+  "deepread.failure.unreadable":
+    "Trang web có phản hồi nhưng không có nội dung đọc được.",
+  "deepread.failure.internal":
+    "Margince không hoàn tất được việc đọc. Nguyên nhân nằm ở bản cài đặt này, không phải ở trang web. Quản trị viên xem trong nhật ký máy chủ.",
+  "deepread.failure.stale_reclaim": "Lượt đọc ngừng báo cáo nên đã bị dừng.",
   "deepread.pagesSoFar_one": "Đến nay đã đọc {count} trang",
   "deepread.pagesSoFar_other": "Đến nay đã đọc {count} trang",
   "deepread.stoppedEarly": "Dừng sớm: {reason}",
@@ -8968,7 +9106,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "tasks.origin.privacy_request":
     "Được tạo khi liên hệ yêu cầu chỉnh sửa, xóa hoặc ngừng sử dụng dữ liệu của họ. Pháp luật nước họ quy định thời hạn của việc này.",
   "tasks.origin.analytics_decision":
-    "Ghi từ một lần xem xét bán hàng: một quyết định có thành viên chịu trách nhiệm và ngày xem lại. Ghi kết quả trong Quyết định từ lần xem xét trước.",
+    "Ghi từ Tổng kết bán hàng: một quyết định có thành viên chịu trách nhiệm và ngày xem lại. Ghi kết quả trong Quyết định từ lần xem xét trước.",
   "tasks.origin.overnight_reconcile":
     "Việc này được tạo từ một bước tiếp theo do lượt rà soát ban đêm đề xuất.",
   "tasks.origin.commitment":
@@ -8995,7 +9133,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.sectionPipeline": "Pipeline",
   "analytics.sectionOverview": "Tổng quan",
   "analytics.overview.views": "Chế độ xem tổng quan",
-  "analytics.overview.sales": "Báo cáo bán hàng",
+  "analytics.overview.sales": "Tổng kết bán hàng",
   "analytics.overview.prospecting": "Tìm khách của tôi",
   "analytics.overview.readings": "Chỉ số chính",
   "analytics.overview.charts": "Biểu đồ",
@@ -9548,6 +9686,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.share.snapshotHelp":
     "Số liệu tại thời điểm chụp. Số liệu không thay đổi, và liên kết ghi rõ thời điểm chụp.",
   "analytics.share.snapshotUnavailable": "Chưa có ảnh chụp nào cho kỳ này.",
+  "analytics.share.quarterOnly":
+    "Chia sẻ luôn tính theo quý. Hãy chọn Quý để chia sẻ chế độ xem này.",
   "analytics.share.expiryNote": "Liên kết ngừng hoạt động sau 30 ngày.",
   "analytics.share.create": "Tạo liên kết",
   "analytics.share.linkTitle": "Liên kết đã tạo",
@@ -9749,6 +9889,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "forecast.period.quarter": "Quý",
   "forecast.period.month": "Tháng",
   "forecast.period.week": "Tuần",
+  "forecast.quarterCards": "Hai thẻ pipeline bên dưới tính cho cả quý.",
   "forecast.receipt": "Đã kiểm tra dữ liệu và bằng chứng",
   "forecast.eligible": "Deal được tính",
   "forecast.priced": "Có giá",
@@ -11006,7 +11147,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.test.nothing.done": "Xong",
   "import.test.nothing.empty": "Tệp có dòng tiêu đề nhưng không có dòng nào.",
   "import.test.reupload": "Sửa và tải lại",
-  "import.test.issuesUnit": "vấn đề",
   "import.test.import_one": "Nhập 1 dòng",
   "import.test.import_other": "Nhập {count} dòng",
   "import.test.importAnyway_one": "Vẫn nhập 1 dòng",
@@ -11452,6 +11592,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.risk_verdict_sweep": "Kiểm tra rủi ro deal",
   "jobs.kind.signal_scan": "Quét tín hiệu",
   "jobs.kind.site_deep_read": "Đọc trang web công ty",
+  "jobs.kind.standing_line_check": "Kiểm tra tình hình",
   "jobs.kind.stored_object_reap": "Dọn dẹp kho tệp",
   "jobs.kind.suppression_journal_export": "Xuất sổ ghi xóa dữ liệu",
   "jobs.kind.tag_scout": "Gợi ý thẻ",
@@ -12016,6 +12157,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "notifications.delivery.in_app": "Trong ứng dụng",
   "notifications.delivery.email": "Qua email",
   "notifications.delivery.digest": "Bản tổng hợp hằng ngày",
+  "notifications.noMailTitle": "Chưa thiết lập email",
+  "notifications.noMail":
+    "Bản cài đặt này không gửi email thông báo, nên Qua email, Bản tổng hợp hằng ngày và các bản tóm tắt qua email không đến hộp thư nào. Mọi thông báo vẫn hiện trong ứng dụng.",
+  "notifications.noMailGuide": "Cách thiết lập email",
   "privacynotice.title": "Thông tin đang lưu về quý khách",
   "privacynotice.intro":
     "Thông báo này cho quý khách biết về việc xử lý dữ liệu cá nhân của quý khách. Quý khách không cần trả lời hay làm gì.",
@@ -13348,7 +13493,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không bắt buộc. Sao chép khóa sự kiện (whsec_…) từ trang ứng dụng Margince trong chat của bạn. Có khóa này, Margince đọc một kênh ngay khi kênh có tin nhắn mới và kiểm tra phần còn lại mỗi giờ; nếu không, Margince kiểm tra mọi kênh mỗi phút.",
   "connectors.bot.eventsSecretKeepHint": "Để trống để giữ khóa sự kiện đã lưu.",
 
+  "channelLink.identityReviewBody":
+    "Xác nhận lại kênh để liên kết danh tính cố định. Gỡ liên kết rồi chọn kênh từ danh sách. Lịch sử đã lưu vẫn nằm trong bản ghi.",
+  "channelLink.privateTeamsReadOnly":
+    "Kênh riêng tư trong Teams hỗ trợ nhận bản tóm tắt. Hãy dùng kênh tiêu chuẩn để bot gửi cập nhật CRM.",
+  "channelLink.chooseConversation": "Cuộc trò chuyện cần liên kết",
+  "channelLink.specificConversation":
+    "Liên kết một cuộc trò chuyện trong kênh dùng chung",
   "channelLink.title": "Kênh trao đổi",
+
   "channelLink.none": "Chưa có kênh",
   "channelLink.noneSub": "Kênh riêng để cả nhóm nắm tình hình hồ sơ này.",
   "channelLink.create": "Tạo kênh",
@@ -13360,6 +13513,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chọn một kênh riêng tư có bot. Để liên kết kênh khác, hãy thêm bot vào kênh đó trong chat trước.",
   "channelLink.summarize":
     "Tóm tắt cuộc trao đổi đến nay (tối đa 5 bản tóm tắt)",
+  "channelLink.manage": "Quản lý",
+  "channelLink.readDirection": "Lưu cập nhật kênh vào Lịch sử",
+  "channelLink.postDirection": "Gửi cập nhật CRM vào kênh",
+  "channelLink.readOn": "Lưu tóm tắt vào Lịch sử",
+  "channelLink.readOff": "Tắt đồng bộ Lịch sử",
+  "channelLink.postOn": "Bật bài đăng CRM",
+  "channelLink.postOff": "Tắt bài đăng CRM",
   "channelLink.verbosity": "Margince đăng những gì",
   "channelLink.verbosityHint": "Ở mọi mức, thẻ trong kênh luôn được cập nhật.",
   "channelLink.verbosityFailed": "Chưa lưu được cài đặt",
@@ -13459,7 +13619,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chỉ quản trị viên hoặc thành viên Vận hành mới có thể thay đổi quyết định về tên miền. Bạn chỉ có quyền xem danh sách này.",
   "blockedDomains.none":
     "Chưa có tên miền nào bị từ chối. Kết quả về người gửi hàng loạt và các lần từ chối thủ công sẽ hiển thị ở đây.",
-  "blockedDomains.unit": "quyết định tên miền",
   "blockedDomains.col.domain": "Tên miền",
   "blockedDomains.col.admission": "Quyết định",
   "blockedDomains.col.source": "Nguồn quyết định",
@@ -14206,6 +14365,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "mfa.turningOn": "Đang bật…",
   "mfa.codeRefused": "Mã không hợp lệ. Kiểm tra lại rồi thử lại.",
   "mfa.tooManyCodes": "Sai mã quá nhiều lần. Chờ vài phút rồi thử lại.",
+  "mfa.tooManyPasswords":
+    "Sai mật khẩu quá nhiều lần. Chờ một phút rồi thử lại.",
+  "mfa.passwordHint":
+    "Mật khẩu Margince của bạn, không phải mật khẩu Google hay Microsoft.",
   "mfa.confirmFailedTitle": "Chưa bật đăng nhập hai bước",
   "mfa.onTitle": "Đã bật đăng nhập hai bước",
   "mfa.onBody": "Mọi thiết bị khác đã bị đăng xuất.",
@@ -15071,6 +15234,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.audit.addedToReports": "Đã thêm vào báo cáo",
   "cf.audit.removedFromReports": "Đã gỡ khỏi báo cáo",
   "cf.audit.kinds": "Đã đổi loại hoạt động",
+  "audit.kind.chat_bot_delivery": "Gửi cập nhật kênh",
+  "audit.kind.chat_channel_watch": "Thông báo kênh",
+  "audit.kind.chat_member_grant": "Tài khoản nhắn tin",
+  "audit.kind.chat_member_room": "Liên kết trò chuyện riêng",
+  "audit.kind.chat_post_item": "Cập nhật kênh",
+  "audit.kind.chat_root": "Cuộc trò chuyện kênh",
+  "audit.kind.chat_send_attempt": "Lần gửi tin nhắn",
+  "audit.kind.chat_team_installation": "Ứng dụng Teams",
+  "audit.kind.chat_team_thread": "Tham chiếu trò chuyện Teams",
   "audit.kind.customField": "Trường tùy chỉnh",
   "audit.kind.activity_retention_evidence": "Bằng chứng lưu giữ",
   "audit.kind.activity_review_template": "Mẫu đánh giá hoạt động",
@@ -15141,7 +15313,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "audit.kind.lead_disqualify_reason": "Lý do loại lead",
   "audit.kind.lead_origin": "Nguồn gốc lead",
   "audit.kind.lead_privacy_notice": "Thông báo quyền riêng tư cho lead",
-  "audit.kind.lead_source": "Nguồn lead",
   "audit.kind.legal_entity": "Pháp nhân",
   "audit.kind.legal_review": "Xem xét pháp lý",
   "audit.kind.license": "Cài đặt giấy phép",
@@ -15430,7 +15601,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.part.integrations.contact": "Dữ liệu liên hệ",
   "settings.part.integrations.accounting": "Kế toán",
   "settings.part.integrations.webhooks": "Webhook",
-  "settings.part.integrations.telegram": "Chatbot",
+  "settings.part.integrations.telegram": "Nhà cung cấp nhắn tin",
+
   "settings.part.integrations.sharedMailboxes": "Hộp thư dùng chung",
   "sharedMailboxes.title": "Hộp thư dùng chung",
   "sharedMailboxes.intro":
@@ -17109,7 +17281,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "aicalls.open": "Mở lượt gọi {feature} lúc {when}",
   "aicalls.col.when": "Thời điểm",
   "aicalls.filtersLabel": "Bộ lọc",
-  "aicalls.unit": "lượt gọi",
   "aicalls.col.feature": "Tính năng",
   "aicalls.col.model": "Mô hình",
   "aicalls.col.tokens": "Token vào / ra",
@@ -18607,6 +18778,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "operations.technical.label": "Tra cứu kỹ thuật",
   "operations.technical.help":
     "Tần suất tra cứu các tên miền chưa có thông tin kỹ thuật. Nhập 0 để tắt.",
+  "operations.captureCounterparty.label": "Kiểm tra bên gửi thư mới",
+  "operations.captureCounterparty.help":
+    "Tần suất mô hình kiểm tra các bên gửi thư mới.",
+  "operations.captureConfidentiality.label":
+    "Đánh giá độ bảo mật của chuỗi thư",
+  "operations.captureConfidentiality.help":
+    "Tần suất đánh giá các chuỗi thư đã thu thập xem đồng nghiệp có được đọc hay không.",
   "operations.gmailWatchScan.label": "Kiểm tra thông báo đẩy Gmail",
   "operations.gmailWatchScan.help":
     "Tần suất kiểm tra các đăng ký thông báo đẩy Gmail cần gia hạn.",
@@ -19398,9 +19576,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.lead.sla_breached.label": "Quá hạn phản hồi đầu tiên",
   "webhooks.event.lead.sla_breached.when":
     "Lần kiểm tra phát hiện lead đã quá hạn phản hồi đầu tiên mà chưa có câu trả lời.",
-  "webhooks.event.lead_source.changed.label": "Đã đổi danh sách nguồn lead",
-  "webhooks.event.lead_source.changed.when":
-    "Nguồn lead được thêm, sửa hoặc gỡ trong Cài đặt.",
   "webhooks.event.lead_disqualify_reason.changed.label":
     "Đã đổi lý do loại lead",
   "webhooks.event.lead_disqualify_reason.changed.when":
@@ -20742,7 +20917,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.field.phase": "Giai đoạn dự án",
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Loại quan hệ",
-  "filters.field.stage_id": "Giai đoạn",
   "filters.field.tag": "Thẻ",
   "filters.field.technology": "Công nghệ",
   "filters.choosePlaceholder": "Chọn trường",
@@ -21119,6 +21293,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.library.shared": "Được chia sẻ với tôi",
   "filters.library.views": "Chế độ xem đã lưu",
   "filters.library.kindView": "Chế độ xem đã lưu",
+  "filters.library.savedOn.contacts": "Đã lưu trên danh sách Liên hệ",
+  "filters.library.savedOn.companies": "Đã lưu trên danh sách Công ty",
+  "filters.library.savedOn.deals": "Đã lưu trên danh sách Deal",
+  "filters.library.savedOn.leads": "Đã lưu trên danh sách Lead",
+  "filters.library.savedOn.projects": "Đã lưu trên danh sách Dự án",
   "filters.library.rowMore": "Thao tác khác cho {name}",
   "filters.library.records.contact_one": "{count} liên hệ",
   "filters.library.records.contact_other": "{count} liên hệ",
@@ -21654,6 +21833,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.why.now": "Vì sao là bây giờ",
   "worklist.why.consequence": "Nếu không làm gì",
   "worklist.why.todo": "Việc cần làm",
+  "worklist.why.writing": "Đang đọc việc cần làm và các tin nhắn…",
   "worklist.title.deal_at_risk": "{name} đang chững lại",
   "worklist.title.deal_at_risk.close_overdue":
     "{name} đã quá ngày dự kiến chốt",
@@ -21668,8 +21848,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.title.bounce": "Bị trả về: {name}",
   "worklist.title.lead_response": "Liên hệ lead mới {name}",
   "worklist.title.customer_waiting": "{name} đang chờ bạn trả lời",
-  "worklist.todo.task.named":
-    "Làm xong việc với {name} và đánh dấu là xong, hoặc chuyển sang ngày khác.",
   "worklist.todo.deal_at_risk.named":
     "Mở {name} và lên kế hoạch cho bước tiếp theo.",
   "worklist.todo.customer_waiting.named": "Trả lời {name}.",
@@ -21697,7 +21875,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Kiểm tra kết nối lịch để cuộc họp được thu thập trở lại.",
   "worklist.todo.capture_health.calendar.named":
     "Kiểm tra kết nối của {name} để cuộc họp được thu thập trở lại.",
-  "worklist.consequence.task_slips.named": "Việc với {name} vẫn chưa được làm.",
   "worklist.happened.customer_waiting":
     "{name} đã viết vào {when} và chưa có ai trả lời.",
   "worklist.happened.customer_waiting.bare":
@@ -21779,7 +21956,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.task": "Việc này đến hạn vào {due}.",
   "worklist.happened.task.overdue":
     "Việc này đến hạn vào {due} và vẫn đang mở.",
-  "worklist.happened.task.undated": "Việc này không có ngày đến hạn.",
   "worklist.happened.deal": "{deal}: {figures}.",
   "worklist.happened.lastFrom": "Liên hệ gần nhất từ {name}: {when}.",
   "worklist.happened.lastTo": "Liên hệ gần nhất tới {name}: {when}.",
@@ -21802,7 +21978,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "{name} trễ qua ngày chốt dự kiến.",
   "worklist.consequence.meeting_unprepared":
     "Bạn vào cuộc họp mà chưa chuẩn bị.",
-  "worklist.consequence.task_slips": "Việc này vẫn chưa được làm.",
   "worklist.consequence.work_blocked":
     "Công việc phụ thuộc vào quyết định này vẫn bị chặn.",
   "worklist.consequence.customer_never_received":
@@ -21817,8 +21992,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Email trong hộp thư này không vào Margince.",
   "worklist.consequence.data_drifts": "Các bản ghi tiếp tục lệch nhau.",
   "worklist.todo.deal_at_risk": "Mở deal và lên kế hoạch cho bước tiếp theo.",
-  "worklist.todo.task":
-    "Làm xong và đánh dấu là xong, hoặc chuyển sang ngày khác.",
   "worklist.todo.customer_waiting": "Trả lời tin nhắn.",
   "worklist.todo.awaiting_reply": "Gửi thư nhắc lại.",
   "worklist.todo.lead_response": "Liên hệ ngay; lead mới nguội đi rất nhanh.",
@@ -23235,11 +23408,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.commitment.tentative": "Chưa chắc chắn: họ nói sẽ cố gắng",
   "approval.commitment.promiseStatus": "Trạng thái cam kết",
   "approval.commitment.notFulfilled":
-    "Tạo công việc không có nghĩa là cam kết đã được thực hiện.",
+    "Tạo việc không có nghĩa là cam kết đã được thực hiện.",
   "approval.commitment.inactiveAssignment":
-    "Không thể tạo công việc cho {name}: tài khoản này không thể nhận công việc. Bỏ đề xuất này và tạo công việc cho một đồng nghiệp đang hoạt động.",
-  "approval.commitment.createTask_other": "Tạo {count} công việc",
-  "approval.commitment.createTask_one": "Tạo công việc",
+    "Không thể tạo việc cho {name}: tài khoản này không thể nhận việc. Bỏ đề xuất này và tạo việc cho một đồng nghiệp đang hoạt động.",
+  "approval.commitment.createTask_other": "Tạo {count} việc",
+  "approval.commitment.createTask_one": "Tạo việc",
   "magic.action.approval_commitment_task_named": "{party}: {summary}",
   "magic.action.approval_commitment_task_summary": "{summary}",
   "magic.action.approval_commitment_task_unverified":
@@ -24949,4 +25122,257 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "particulars.translationIntro":
     "Email và trang bằng {language} hiển thị nội dung này ở những trường bạn điền. Quảng cáo phải viết bằng {language} chỉ được gửi khi cách từ chối và liên hệ bên quảng cáo đã được điền ở đây.",
   "particulars.objectionExample": "Ví dụ: {example}",
+  "messenger.signingSecret": "Mã bí mật ký",
+  "messenger.signingSecretHint":
+    "Sao chép mã bí mật ký từ trang Basic Information của ứng dụng Slack để đồng bộ kênh. Nhập lại mã khi thay thông tin ứng dụng. Tài khoản Messenger cá nhân được kết nối riêng.",
+  "messenger.writeOutcome": "Viết kết quả",
+  "messenger.shareOutcome": "Chia sẻ kết quả",
+  "messenger.outcomeDestination": "Chọn nơi lưu",
+  "messenger.outcomePrivacy":
+    "Viết kết quả bạn muốn chia sẻ. Cuộc trò chuyện riêng tư và các liên kết của cuộc trò chuyện sẽ không được lưu vào lịch sử CRM.",
+  "messenger.outcomeAudience":
+    "Thao tác này lưu ghi chú CRM. Thành viên có quyền đọc bản ghi đích có thể đọc ghi chú. Nếu bản ghi gửi cập nhật CRM đến kênh đã liên kết, ghi chú cũng có thể được tóm tắt tại đó. Kiểm tra đích và nội dung trước khi lưu.",
+  "messenger.dispactConsent":
+    "Kết nối bằng mã truy cập cá nhân từ tài khoản Dispact của bạn.",
+  "messenger.dispactTokenTitle": "Kết nối tài khoản Dispact",
+  "messenger.dispactTokenHelp":
+    "Trong Dispact, mở Tùy chọn → Mã API. Tạo mã có quyền Đọc và Ghi cho các cuộc trò chuyện của bạn, rồi dán vào bên dưới. Margince xác minh danh tính và lưu mã an toàn. Bạn có thể thu hồi mã trong Dispact bất cứ lúc nào.",
+  "messenger.dispactToken": "Mã API cá nhân",
+  "messenger.dispactOpen": "Mở Dispact",
+  "messenger.loadLater": "Tải câu trả lời tiếp theo",
+  "messenger.verb": "Nhắn tin",
+  "messenger.provider": "Dịch vụ nhắn tin",
+
+  "messenger.channels": "Kênh",
+  "messenger.people": "Mọi người",
+
+  "messenger.change": "Đổi cuộc trò chuyện",
+  "messenger.needsConsent": "Kết nối tài khoản để gửi dưới tên bạn.",
+  "messenger.unavailable":
+    "Dịch vụ chưa khả dụng. Liên hệ quản trị viên công ty để thiết lập.",
+  "messenger.write": "Nhắn cho {name}",
+  "messenger.sendingAs": "Gửi dưới tên {name}",
+  "messenger.sendProblem": "Chưa xác nhận được tin nhắn",
+  "messenger.failed": "Tin nhắn chưa được gửi. Bản nháp vẫn còn đây.",
+  "messenger.checkDelivery":
+    "Chưa xác nhận việc gửi. Kiểm tra biên nhận trước khi gửi lại.",
+  "messenger.checkReceipt": "Kiểm tra biên nhận",
+  "messenger.accepted": "Dịch vụ đã nhận",
+  "messenger.send": "Gửi",
+  "messenger.openedFrom": "Mở từ {name}",
+  "messenger.private":
+    "Tin nhắn riêng không vào lịch sử CRM trừ khi bạn chia sẻ kết quả.",
+  "messenger.audience": "Người nhận: {names}",
+  "messenger.audienceUnknown":
+    "Không xác minh được toàn bộ người nhận. Chưa thể gửi.",
+  "messenger.loadEarlier": "Tải tin nhắn trước",
+  "messenger.newMessages": "Đến tin nhắn mới nhất",
+  "messenger.empty": "Cuộc trò chuyện chưa có tin nhắn.",
+  "messenger.reply": "Trả lời trong luồng",
+  "messenger.back": "Về cuộc trò chuyện",
+  "messenger.deleted": "Tin nhắn đã xóa",
+  "messenger.edited": "Đã sửa",
+  "messenger.loading": "Đang tải cuộc trò chuyện…",
+  "messenger.loadProblem": "Cuộc trò chuyện không khả dụng",
+  "messenger.searchPeople": "Tìm người",
+  "messenger.openPeople": "Mở cuộc trò chuyện",
+  "messenger.more": "Tải thêm",
+
+  "messenger.connect": "Kết nối tài khoản của tôi",
+  "messenger.settings": "Cài đặt dịch vụ nhắn tin",
+  "messenger.connectProblem": "Chưa thể bắt đầu kết nối tài khoản",
+  "oauthApp.slack.title": "Ứng dụng Slack",
+  "oauthApp.slack.sub": "Ứng dụng cho tính năng nhắn tin Slack qua API.",
+  "oauthApp.slack.absent": "Thiết lập ứng dụng Slack để kết nối tài khoản.",
+  "oauthApp.slack.redirectSub":
+    "Đăng ký chính xác địa chỉ gọi lại này trong Slack.",
+  "oauthApp.slack.clientIdPlaceholder": "ID ứng dụng khách Slack",
+  "oauthApp.slack.removeConfirmTitle": "Xóa ứng dụng Slack?",
+  "oauthApp.slack.removeConfirmBody":
+    "Tài khoản người tham gia cần ứng dụng này để kết nối và gia hạn quyền.",
+  "oauthApp.slack.save": "Lưu ứng dụng Slack",
+  "oauthApp.slack.removeSecret": "Bí mật ứng dụng đã lưu sẽ bị xóa.",
+  "oauthApp.slack.removeUsedBy":
+    "Các tài khoản kết nối qua ứng dụng này sẽ không mở được trong Nhắn tin.",
+  "oauthApp.slack.removeOthers":
+    "Thiết lập lại ứng dụng trước khi kết nối tài khoản.",
+  "oauthApp.slack.for": "Dành cho nhóm Slack của bạn.",
+  "oauthApp.slack.setUp": "Thiết lập ứng dụng Slack",
+  "oauthApp.unlock.slack": "Tin nhắn Slack",
+  "oauthApp.drawer.slack.title": "Thiết lập ứng dụng Slack",
+  "oauthApp.drawer.slack.intro":
+    "Đăng ký ứng dụng trong Slack, rồi lưu ID ứng dụng khách và bí mật tại đây.",
+  "oauthApp.drawer.slack.value":
+    "Mọi người tại {company} kết nối tài khoản Slack của họ qua ứng dụng này.",
+  "oauthApp.drawer.slack.redirects":
+    "Trong “OAuth & Permissions”, thêm mọi địa chỉ gọi lại bên dưới vào “Redirect URLs”.",
+  "oauthApp.drawer.slack.step1Title": "Tạo ứng dụng Slack",
+  "oauthApp.drawer.slack.step1Body":
+    "Chọn nhóm trong bảng quản lý ứng dụng Slack. Lấy ID ứng dụng khách và bí mật từ Basic Information.",
+  "oauthApp.drawer.slack.step1Link": "Mở bảng quản lý ứng dụng Slack",
+  "oauthApp.drawer.slack.scopesTitle": "Cho phép người tham gia nhắn tin",
+  "oauthApp.drawer.slack.scopesBody":
+    "Trong “OAuth & Permissions”, cấu hình các quyền người tham gia được hiển thị ở Dịch vụ nhắn tin. Mỗi người cấp quyền qua Kết nối tài khoản của tôi.",
+  "oauthApp.drawer.slack.pasteBody":
+    "Dán ID ứng dụng khách và bí mật từ Basic Information. Bí mật được mã hóa sau khi lưu.",
+  "oauthApp.redirect.messenger_connect": "Tài khoản nhắn tin",
+  "messenger.disconnect": "Ngắt kết nối tài khoản của tôi",
+  "messenger.disconnectTitle": "Ngắt kết nối tài khoản nhắn tin này?",
+  "messenger.disconnectBody":
+    "Nhắn tin sẽ dừng đọc và gửi qua tài khoản của bạn. Các cuộc trò chuyện hiện có vẫn thuộc về người tham gia.",
+  "messenger.myAccounts": "Tài khoản nhắn tin của tôi",
+  "messenger.apps": "Ứng dụng nhắn tin",
+  "messenger.setupDetails": "Chi tiết thiết lập tài khoản",
+  "messenger.appReady": "Ứng dụng đã sẵn sàng để người tham gia cấp quyền.",
+  "messenger.appMissing":
+    "Quản trị viên cần hoàn tất thiết lập ứng dụng trước khi kết nối tài khoản.",
+  "messenger.participantScopes": "Quyền cần thiết của người tham gia",
+  "messenger.teamsTenant":
+    "Ghim ứng dụng Microsoft vào ID thư mục và cấp các quyền ủy quyền được liệt kê trong Entra.",
+  "messenger.editDraft": "Sửa bản nháp",
+  "messenger.reviewDelivery": "Kiểm tra việc gửi trước khi sửa",
+  "messenger.checkedConversation": "Đã kiểm tra cuộc trò chuyện",
+  "messenger.newAttemptWarning":
+    "Kiểm tra xem tin nhắn trước đã xuất hiện trong cuộc trò chuyện chưa. Gửi lại có thể tạo bản trùng. Nội dung vẫn ở đây để bạn sửa.",
+  "messenger.refresh": "Làm mới tin nhắn",
+  "messenger.team": "Nhóm của hồ sơ",
+  "messenger.noTeam":
+    "Hồ sơ chưa có chủ sở hữu hoặc nhóm được phân công. Chọn người hoặc kênh.",
+  "messenger.teamUnresolved":
+    "Cần kiểm tra toàn bộ nhóm. Chọn rõ từng người hoặc giải quyết việc phân công trước khi nhắn cho tất cả.",
+  "messenger.groupLimit":
+    "Dịch vụ này có thể mở nhóm tối đa {limit} người nhận. Chọn kênh hoặc ít người hơn.",
+  "messenger.messageTeam": "Nhắn cho nhóm của hồ sơ",
+  "messenger.matched": "Đã khớp tài khoản",
+  "messenger.you": "Bạn",
+  "messenger.inactive": "Phân công không hoạt động",
+  "messenger.unresolved": "Chưa khớp tài khoản",
+  "messenger.failureReconnect":
+    "Kết nối lại tài khoản trước khi gửi tiếp. Bản nháp vẫn được giữ.",
+  "messenger.failureUnavailable":
+    "Cuộc trò chuyện không khả dụng. Chọn nơi nhận khác. Bản nháp vẫn được giữ.",
+  "messenger.failureReview":
+    "Kiểm tra người nhận và nội dung. Dịch vụ đã từ chối gửi.",
+  "messenger.failureUnsupported": "Dịch vụ không thể gửi đến nơi nhận đã chọn.",
+  "messenger.failureAuthorization":
+    "Quyền truy cập đã thay đổi trước khi gửi. Mở lại cuộc trò chuyện và kiểm tra người nhận.",
+  "messenger.failureRate":
+    "Dịch vụ yêu cầu Margince chờ. Bản nháp vẫn được giữ.",
+  "messenger.retryAfter": "Bạn có thể gửi lại sau {at}.",
+  "messenger.audienceCount_one": "{count} thành viên",
+  "messenger.audienceCount_other": "{count} thành viên",
+  "messenger.viewAudience": "Xem người nhận",
+  "messenger.audienceChanged":
+    "Người nhận đã thay đổi. Kiểm tra trước khi gửi.",
+  "messenger.reviewAudience": "Kiểm tra người nhận",
+  "messenger.useAudience": "Dùng danh sách người nhận này",
+  "messenger.externalAudience":
+    "Cuộc trò chuyện có người bên ngoài. Việc gửi từ Margince đang tạm dừng.",
+  "messenger.externalMember": "Tài khoản bên ngoài",
+  "messenger.inactiveMember": "Tài khoản không hoạt động",
+  "messenger.accountMenu": "Tài khoản nhắn tin",
+  "channelLink.messageDetail": "Mức chi tiết tin nhắn",
+  "channelLink.detailHelp":
+    "Cả hai lựa chọn giữ nguyên điều kiện, ngày tháng và câu hỏi còn mở. Đầy đủ bổ sung bối cảnh.",
+  "channelLink.detailBrief": "Ngắn gọn",
+  "channelLink.detailFull": "Đầy đủ",
+  "channelLink.coverageThrough":
+    "Đã kiểm tra các cuộc trò chuyện đến {at}. Các bản tóm tắt đang chờ được liệt kê bên dưới.",
+  "channelLink.notificationsDelayed": "Thông báo kênh cần được khôi phục",
+  "channelLink.notificationsPolling":
+    "Việc kiểm tra nguồn định kỳ vẫn tiếp tục. Tin nhắn mới có thể xuất hiện chậm hơn trong khi kết nối được khôi phục.",
+  "channelLink.coverageWaiting":
+    "Phạm vi nguồn chưa được xác nhận. Chỉ bao gồm các cuộc trò chuyện trước đây khi đã yêu cầu lịch sử.",
+  "channelLink.conversationQueue":
+    "Bản tóm tắt đang chờ: {pending}. Cuộc trò chuyện cần thử lại: {failed}.",
+  "channelLink.syncNeedsAttention": "Một số cập nhật kênh đang chờ",
+  "channelLink.outboundQueue_one": "Cập nhật CRM đang chờ gửi: {count}.",
+  "channelLink.outboundQueue_other": "Cập nhật CRM đang chờ gửi: {count}.",
+  "channelLink.deliveryUnconfirmed": "Chưa xác nhận gửi đến kênh",
+  "channelLink.deliveryUnconfirmedHelp":
+    "Nhà cung cấp chưa xác nhận việc gửi. Margince sẽ không tự động gửi lại bài này. Mở kênh để kiểm tra nội dung đã nhận.",
+  "channelLink.sourceIncomplete":
+    "Một cập nhật đang chờ vì chưa có toàn bộ tin nhắn nguồn. Các cập nhật đủ điều kiện khác vẫn có thể tiếp tục. Kiểm tra hoạt động gốc và trạng thái thu thập.",
+  "channelLink.sourceTooLong":
+    "Một cuộc trò chuyện vượt quá giới hạn đọc đầy đủ. Nội dung chưa được tóm tắt một phần. Các cuộc trò chuyện khác vẫn tiếp tục đồng bộ.",
+  "channelLink.summaryWaiting":
+    "Một bản tóm tắt đang chờ mô hình AI đã cấu hình. Nguồn vẫn chưa được đánh dấu là đã tóm tắt.",
+  "channelLink.providerWaiting":
+    "Nhà cung cấp yêu cầu chờ. Đồng bộ sẽ tiếp tục sau thời gian chờ.",
+  "channelLink.sourceAccessLost":
+    "Margince hiện không đọc được nguồn đã liên kết. Kiểm tra cài đặt ứng dụng và thành viên kênh.",
+  "channelLink.sourceChanged":
+    "Nguồn đã thay đổi trong khi xử lý. Margince sẽ đọc lại trước khi lưu bản tóm tắt.",
+  "channelLink.sourceUnavailable":
+    "Tạm thời không thể đọc đầy đủ nguồn. Các bản tóm tắt hiện có được giữ lại và cuộc trò chuyện sẽ được kiểm tra lại.",
+  "timeline.chatSummary.sourceCheck": "Kiểm tra quyền truy cập nguồn",
+  "timeline.chatSummary.sourceChecking": "Đang kiểm tra quyền truy cập nguồn…",
+  "timeline.chatSummary.sourceUnavailable":
+    "Không thể xác minh quyền truy cập nguồn.",
+  "channelEnded.title": "Đã kết thúc đồng bộ lúc {at}",
+  "channelEnded.retention":
+    "Lịch sử đủ điều kiện được giữ theo quy tắc truy cập và lưu giữ hiện có. Các thay đổi trong kênh sau thời điểm bao phủ cuối cùng không được phản ánh ở đây.",
+  "channelEnded.read": "Đã kiểm tra kênh đến {at}.",
+  "channelEnded.noRead": "Chưa ghi nhận lần bao phủ kênh thành công.",
+  "channelEnded.posted": "Cập nhật CRM được xác nhận gần nhất: {at}.",
+  "channelEnded.noPost": "Chưa ghi nhận cập nhật CRM được xác nhận.",
+  "channelEnded.copies":
+    "Tin cập nhật còn giữ tại nhà cung cấp: {retained}. Tin đã xác nhận sửa để bỏ nội dung bị thu hồi: {redacted}. Điều này không xác nhận việc xóa các bản sao khác.",
+  "channelEnded.action":
+    "Cần kiểm tra tại nhà cung cấp: {withdrawals} lần thu hồi chưa xác minh và {unknown} lượt gửi chưa xác nhận. Kiểm tra kênh trước khi thực hiện bước tiếp theo.",
+  "channelPreview.title": "Kiểm tra việc gửi vào kênh",
+  "channelPreview.enable": "Bật cập nhật CRM",
+  "channelPreview.help":
+    "Kiểm tra ai có thể đọc kênh và nội dung Margince sẽ đăng trước khi bật gửi tự động.",
+  "channelPreview.loading": "Đang kiểm tra người nhận và nội dung gửi…",
+  "channelPreview.thread": "Cập nhật sẽ được gửi vào luồng đã chọn.",
+  "channelPreview.channel": "Cập nhật sẽ được gửi vào kênh này.",
+  "channelPreview.audience": "Người nhận hiện tại",
+  "channelPreview.settings":
+    "Tần suất: {frequency}. Chi tiết tin nhắn: {detail}.",
+  "channelPreview.scope":
+    "Chỉ chia sẻ cập nhật hồ sơ đủ điều kiện và nội dung mà mọi thành viên kênh đều có quyền đọc. Trao đổi riêng tư và nội dung bị hạn chế được loại trừ.",
+  "channelPreview.overview": "Thẻ tổng quan hiện tại",
+  "channelPreview.updates": "Cập nhật đủ điều kiện đang chờ",
+  "channelPreview.noUpdates":
+    "Không có cập nhật đủ điều kiện đang chờ. Bật gửi sẽ bắt đầu từ các thay đổi mới, không gửi lại lịch sử trước đó.",
+  "channelPreview.excluded":
+    "Một số cập nhật đang chờ không có trong bản xem trước vì không thể chia sẻ với toàn bộ người nhận.",
+  "channelPreview.recheck":
+    "Margince kiểm tra lại người nhận và quyền truy cập trước mỗi lần gửi. Bản xem trước không gửi tin nhắn.",
+  "channelHandoff.title": "Kiểm tra bàn giao triển khai",
+  "channelHandoff.noOutgoing":
+    "Kênh này đã tắt hoặc không hỗ trợ tự động đăng cập nhật CRM. Bắt đầu triển khai sẽ không bật tính năng này.",
+  "channelHandoff.help":
+    "Kiểm tra kênh triển khai, người có quyền đọc, cam kết và thời hạn còn mở trước khi bàn giao.",
+  "channelHandoff.current": "Kênh hiện tại của cơ hội: {channel}.",
+  "channelHandoff.noCurrent": "Cơ hội chưa có kênh được liên kết.",
+  "channelHandoff.preserve":
+    "Dự án đã dùng kênh {channel}. Kênh này sẽ được giữ nguyên.",
+  "channelHandoff.continue":
+    "Dự án chưa có kênh. Tiếp tục sẽ liên kết kênh {channel} với dự án.",
+  "channelHandoff.noChannel":
+    "Cả hai hồ sơ đều chưa có kênh. Có thể tiếp tục bàn giao mà không đồng bộ kênh.",
+  "channelHandoff.choose":
+    "Để dùng kênh triển khai khác, hãy liên kết kênh đó với dự án tại đây trước khi tiếp tục. Cài đặt chia sẻ vẫn độc lập.",
+  "channelHandoff.loading": "Đang đọc thông tin bàn giao…",
+  "channelHandoff.owner": "Người phụ trách triển khai: {owner}.",
+  "channelHandoff.target": "Mốc mục tiêu của dự án: {at}.",
+  "channelHandoff.noTarget": "Chưa ghi nhận ngày mục tiêu của dự án.",
+  "channelHandoff.promises": "Cam kết và thời hạn dự án còn mở",
+  "channelHandoff.noPromises":
+    "Không có cam kết dự án còn mở nào được trả về trong phạm vi quyền đọc.",
+  "channelHandoff.partial": "Một phần thông tin bàn giao bị ẩn",
+  "channelHandoff.omitted":
+    "Quyền của bạn không bao gồm một số phần. Phần bị thiếu không có nghĩa là không còn công việc tồn đọng.",
+  "channelHandoff.gaps": "Nội dung cần làm rõ khi bàn giao",
+  "channelInstall.slackHistoryProfile":
+    "Đồng bộ kênh cần hạn mức lịch sử tiêu chuẩn của Slack, dành cho ứng dụng được Marketplace duyệt và ứng dụng nội bộ. Với giới hạn một yêu cầu mỗi phút, việc xác minh đầy đủ luồng sẽ tạm dừng; hãy dùng loại ứng dụng phù hợp.",
+  "channelLink.outboundNeedsAttention": "Cần kiểm tra chia sẻ CRM",
+  "channelLink.audienceNeedsReview":
+    "Chưa xác minh được toàn bộ người nhận trong kênh cho hồ sơ này. Chia sẻ tự động đã tạm dừng. Kiểm tra thành viên kênh và quyền truy cập hồ sơ, rồi vào Quản lý để kiểm tra việc gửi lại.",
+  "timeline.filters.chatProvider": "Nguồn bản tóm tắt kênh",
+  "timeline.filters.allProviders": "Tất cả nguồn",
+  "timeline.filters.providerOmitsLimited":
+    "Bộ lọc nguồn kênh loại trừ nội dung bạn không có quyền đọc.",
 };

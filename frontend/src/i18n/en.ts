@@ -3,6 +3,8 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "history.field.chat_source_changed": "Conversation source changed",
+  "history.field.chat_source_deleted": "Conversation source removed",
   "history.field.kind": "Kind",
   "history.field.email_security": "Email security",
   "history.field.employee_range": "Employee count range",
@@ -136,6 +138,106 @@ export const en = {
   "payments.ageHelp":
     "Home groups invoices past this age at the bottom. It starts at 365 days. Company totals stay the same.",
   "payments.ageRefusal": "Enter a whole number from 1 to 3,650 days.",
+  "messenger.deliveryPending":
+    "This delivery is still in progress. Check its receipt before starting another attempt.",
+  "messenger.accessWorkspace":
+    "This is a public channel. Colleagues who have not joined can also read it.",
+  "messenger.accessTeam": "Team channel: the full team can read.",
+  "messenger.accessPrivate": "Private channel: only its members can read.",
+  "messenger.accessParticipants":
+    "Private conversation: only its participants can read.",
+  "messenger.accessUnknown": "Channel access type could not be verified.",
+  "messenger.joinedOnly":
+    "This list shows joined members. Other members can read the public channel.",
+  "messenger.appMember": "App or bot",
+  "messenger.teamComparison": "Compared with the assigned record team",
+  "messenger.teamOutside": "Recipients outside the assigned team",
+  "messenger.teamMissing": "Assigned team members outside this conversation",
+  "messenger.teamNotJoined":
+    "Assigned team members who have not joined this channel",
+  "messenger.teamUnverified":
+    "Assigned members without a verified messaging identity",
+  "messenger.teamMatches":
+    "All verified assigned members are in this conversation.",
+  "messenger.messageRequired": "Write a message before sending.",
+  "messenger.recipientsRequired": "Select at least one recipient.",
+  "channelDelivery.review": "Review delivery status",
+  "channelDelivery.cardPaused": "Overview card updates are paused",
+  "channelDelivery.cardPausedHelp":
+    "An overview card had no confirmed receipt. Other eligible CRM updates can continue. A previous card may still exist in the channel.",
+  "channelDelivery.restart": "Create a new overview card",
+  "channelDelivery.restartTitle": "Create one new overview card",
+  "channelDelivery.title": "Review uncertain delivery",
+  "channelDelivery.skip": "Skip these retries",
+  "channelDelivery.restartWarning":
+    "A previous overview card may still exist. This creates one new card and resumes its automatic updates. It does not edit or remove the unconfirmed copy.",
+  "channelDelivery.help":
+    "Check the channel in Messenger or the messaging app first. Skipping stops retries for the listed updates without marking them delivered. A copy or a late provider response may still arrive. This does not cancel a request or remove a provider copy. An uncertain overview card pauses its automatic updates.",
+  "channelDelivery.linkChanged":
+    "The linked channel changed. Close this review and open it again.",
+  "channelDelivery.reviewFirst":
+    "Review the uncertain deliveries before creating another overview card.",
+  "channelDelivery.none":
+    "No uncertain delivery is ready for review. A send may still be in progress; check again after it finishes.",
+  "channelDelivery.list": "Uncertain deliveries",
+  "channelDelivery.card": "Record overview card",
+  "channelDelivery.updates_one": "CRM updates: {count}",
+  "channelDelivery.updates_other": "CRM updates: {count}",
+  "timeline.chatSummary.sourceHelp":
+    "Connect your own messaging account from Messenger on this record, check that you can open the channel there, then check source access again.",
+  "channelInstall.slackReader":
+    "Shared channel installation also asks the installing account for read-only channel history. That account must belong to the linked private channels. It grants no direct-message access or personal sending permission.",
+  "channelProfile.distribution": "Slack app distribution",
+  "channelProfile.declaration":
+    "Choose how this app is distributed. Margince records your declaration and the documented history limits when you install or reconnect it.",
+  "channelProfile.internal": "Internal Slack app",
+  "channelProfile.marketplace": "Slack Marketplace app",
+  "channelProfile.nonMarketplace": "Commercial app outside Slack Marketplace",
+  "channelProfile.details": "Slack history access and limits",
+  "channelProfile.missing":
+    "History limits have not been confirmed for this installation.",
+  "channelProfile.reconnect":
+    "Ask an administrator to reconnect Slack in Shared channel connections, confirm the app distribution and approve read-only channel history. The installing account must belong to the linked private channels. Complete summaries remain paused until access and limits are confirmed.",
+  "channelProfile.unsupported":
+    "This distribution allows only one history and one thread request per minute, with 15 messages per page. Complete channel summaries are unavailable. Personal Messenger and CRM updates to Slack remain separate.",
+  "channelProfile.limits":
+    "History: {history} requests/minute, {historyPage} messages/page. Threads: {replies} requests/minute, {repliesPage} messages/page.",
+  "channelProfile.provenance":
+    "Declared by an administrator on {at}; based on Slack’s documented limits. Slack can still return a longer retry delay.",
+  "messenger.authorUnavailable": "Name unavailable",
+  "channelInstall.title": "Shared channel connections",
+  "channelInstall.separate":
+    "Connect the shared bot here to link channels with CRM records. Each person connects their own account separately to use Messenger.",
+  "channelInstall.slackReady":
+    "The app is ready for Slack connection approval.",
+  "channelInstall.slackMissing":
+    "Set up the Slack app and signing secret below first.",
+  "channelInstall.slackConnect": "Install or reconnect Slack bot",
+  "channelInstall.failed": "Channel connection could not be updated",
+  "channelInstall.callback": "OAuth redirect address",
+  "channelInstall.events": "Bot event address",
+  "channelInstall.adminRequired":
+    "An administrator with channel connection access must approve this connection.",
+  "channelInstall.teamsSteps":
+    "Register the Microsoft bot with the event address below. Upload the app package to Teams and add it to the intended team, approve its team permissions, then refresh and approve that team here.",
+  "channelInstall.teamsApp": "Microsoft app {app}, tenant {tenant}",
+  "channelInstall.refresh": "Refresh installed teams",
+  "channelInstall.noTeams":
+    "No verified team installation yet. Check the bot registration and add the app to your team, then refresh.",
+  "channelInstall.team": "Verified installed team",
+  "channelInstall.approval":
+    "Only this team will be connected. Existing links keep their destination; connecting another team requires disconnecting the current connection first.",
+  "channelInstall.approve": "Approve team connection",
+  "channelInstall.connected":
+    "Team connected. You can now link its channels from a company, deal or project.",
+  "channelInstall.teamsMissing":
+    "Set up the Microsoft app and tenant below first.",
+  "channelInstall.package": "Build the Teams app package",
+  "channelInstall.legal":
+    "Use the HTTPS privacy and terms pages your company provides for this app. These addresses are included in the downloaded package.",
+  "channelInstall.privacy": "Privacy policy URL",
+  "channelInstall.terms": "Terms of use URL",
+  "channelInstall.download": "Download Teams app package",
   "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
   "systemJob.google_directory": "Reading a member’s Google groups",
   "systemJob.legal_review_desk": "Legal review desk",
@@ -2495,6 +2597,7 @@ export const en = {
   "systemJob.stage_evidence": "Deal stage evidence",
   "systemJob.stage_evidence_read": "Deal stage evidence read",
   "systemJob.stage_evidence_reread": "Deal stage evidence reread",
+  "systemJob.standing_line": "How it stands check",
   "systemJob.suppression_journal_worker": "Erasure journal export",
   "systemJob.stored_object_reap_worker": "File storage cleanup",
   "systemJob.technical_backfill": "Technical lookup backlog",
@@ -3247,7 +3350,7 @@ export const en = {
   "amount.refused.grouping":
     "Enter the amount without thousands separators, such as {example}.",
   "amount.refused.notNumber": "Enter the amount in digits, such as {example}.",
-  "amount.refused.tooLarge": "This amount is too large to store.",
+  "amount.refused.tooLarge": "Enter an amount of at most {max}.",
   "amount.refused.noCurrency": "This amount needs a currency first.",
   "amount.waitsForCurrency": "Opens once a currency is set.",
   "amount.currencyUnread":
@@ -3798,10 +3901,9 @@ export const en = {
   "list.viewAll": "All",
   "list.viewHot": "Hot",
 
-  // The list surface (design-system/listtable.tsx). The count says "loaded"
-  // rather than a total on purpose: paging is a keyset cursor, so the number
-  // of rows in hand is the only figure the client can state honestly.
-  "table.range": "{first} to {last} of {count} {unit}",
+  // The list surface (design-system/listtable.tsx). Without a server total the
+  // range says "loaded": the rows in hand are the only figure the client knows.
+  "table.range": "{first}-{last} of {count}",
   "table.pagination": "Pages",
   "table.rowActions": "Actions for {name}",
   "table.page": "Page {number}",
@@ -3827,15 +3929,12 @@ export const en = {
   "table.dialsRefused": "This list cannot be shown with these filters.",
   "table.none": "No {unit} yet.",
   "table.actions": "Actions",
-  "table.rangeLoaded": "{first} to {last} of {count} {unit} loaded",
+  "table.rangeLoaded": "{first}-{last} of {count} loaded",
   "table.rangeIn": "{range} in {scope}",
   "unit.contacts": "contacts",
   "unit.companies": "companies",
   "unit.deals": "deals",
   "unit.leads": "leads",
-  "unit.contact": "contact",
-  "unit.company": "company",
-  "unit.lead": "lead",
   "unit.worklistItems": "tasks and commitments",
   "unit.partners": "partners",
   "unit.products": "products",
@@ -3884,6 +3983,7 @@ export const en = {
   "views.none": "No saved views",
   "views.rename": "Rename",
   "views.renameNamed": "Rename {name}",
+  "views.opensInFilters": "{name}, opens in Filters and views",
   "views.delete": "Delete",
   "views.deleteNamed": "Delete {name}",
   "views.deleteAsk":
@@ -4124,7 +4224,7 @@ export const en = {
   "co.strip.fin.neverInvoiced": "Not invoiced",
   "co.strip.fin.noConnection": "Accounting not connected",
   "co.strip.fin.unmapped": "Customer not matched",
-  "co.strip.fin.syncing": "Syncing",
+  "co.strip.fin.syncing": "First sync pending",
   "co.strip.fin.staleFigure": "Sync outdated",
   "co.strip.fin.notCurrent": "Not current",
   "co.strip.fin.errorFigure": "Last sync failed",
@@ -4359,6 +4459,8 @@ export const en = {
   "standing.title": "How it stands · {date}",
   "standing.noteMore": "Show more",
   "standing.noteLess": "Show less",
+  "standing.citations.source": "The activity",
+  "standing.citations.from": "Read from",
   "standing.latest.title": "Latest",
   "standing.latest.open": "Open in History",
   "standing.sources.records": "From CRM records",
@@ -4608,7 +4710,7 @@ export const en = {
   "finance.none": "Nothing recorded.",
   "finance.loading": "Loading invoices…",
   "finance.syncing":
-    "Syncing with the accounting system. Figures appear after the first sync.",
+    "Waiting for the first sync with the accounting system. It runs every six hours, and an admin can start it sooner in Settings → Integrations.",
   "finance.noConnection":
     "No accounting system connected. Invoices and payment behavior for this customer appear once one is.",
   "finance.unmapped":
@@ -4663,13 +4765,17 @@ export const en = {
   "contracts.status.expired": "Expired",
   "contracts.status.cancelled": "Canceled",
   "contracts.status.superseded": "Superseded",
-  "contracts.endsOn": "Ends {when}",
+  "contracts.cancelledTo": "Canceled, ends {when}",
+  "contracts.cancelledToNotice": "Canceled, ends {when}, notice given {notice}",
+  "contracts.replacedBy": "Replaced by {title}",
+  "contracts.replacedByUnnamed": "Replaced by a later contract",
   "contracts.renewsOn": "Renews {when}",
   "contracts.endedPendingStatus": "Term ended, status pending",
   "contracts.form.title": "Record contract",
   "contracts.form.name": "Title",
   "contracts.form.number": "Contract number",
   "contracts.form.value": "Value",
+  "contracts.form.currency": "Currency",
   "contracts.form.basis": "This value is",
   "contracts.form.arr": "Annual recurring revenue",
   "contracts.form.arrMonthly": "Monthly equivalent:",
@@ -4717,6 +4823,9 @@ export const en = {
   "contracts.statusChange.label": "New status",
   "contracts.statusChange.submit": "Change status",
   "contracts.statusChange.errSame": "The contract already has this status.",
+  "contracts.statusChange.finalTitle": "{status} is final",
+  "contracts.statusChange.finalBody":
+    "Once saved, the status cannot be changed again. To carry on with the agreement, renew it.",
   "contracts.cancel.title": "Record cancellation",
   "contracts.cancel.hint":
     "The customer stays under contract until the effective date. This records notice and does not change the status.",
@@ -5301,6 +5410,8 @@ export const en = {
   "timeline.kind.extension": "Extension",
   "timeline.kind.signal": "Signal",
   "timeline.withheld": "Content for participants only",
+  "timeline.chatSummary.sourceChanged": "Source changed · review recap",
+  "timeline.chatSummary.updated": "Updated {at}",
   "timeline.chatSummary.badge": "AI summary",
   "timeline.chatSummary.from": "From {provider}",
   "timeline.chatSummary.meta_one": "{count} message, until {ended}",
@@ -5881,6 +5992,8 @@ export const en = {
   "co.tech.laneFailed":
     "{lane} did not respond. The previous result is unchanged.",
   "co.tech.laneRefused": "The site blocked the read.",
+  "co.tech.laneFailedFirst":
+    "{lane} did not respond, so nothing has been read from it yet.",
   "co.tech.lane.dns": "DNS",
   "co.tech.lane.certlog": "Certificates",
   "co.tech.lane.homepage": "Homepage",
@@ -5993,6 +6106,7 @@ export const en = {
   "tagAdmin.usedBy_one": "{count} record",
   "tagAdmin.usedBy_other": "{count} records",
   "tagAdmin.retired": "Retired",
+  "tagAdmin.mergedInto": "Merged into {name}",
   "tagAdmin.retiredToast": "{name} retired",
   "tagAdmin.restoredToast": "{name} restored",
   "tags.archived": "archived",
@@ -6061,6 +6175,11 @@ export const en = {
   "tagResult.resultsTitle": "Records with this tag",
   "tagResult.nothingCarries":
     "No records have this tag yet. Apply it from any contact, company, deal or lead.",
+  "tagResult.retiredNothing":
+    "No records have this tag. It is retired, so it cannot be added to a record.",
+  "tagResult.mergedBody":
+    "This tag was merged into {name}. The records that had it received {name} in the merge.",
+  "tagResult.openKept": "Open {name}",
   "tagResult.loadingRows": "Loading {kind}…",
   "tagResult.noneLeft": "No records have this tag anymore",
   "tagResult.unnamed": "Unnamed",
@@ -6117,16 +6236,13 @@ export const en = {
   "lead.project": "Project",
 
   "lead.source.manual": "Created manually",
-  "lead.source.inbound": "Inbound",
+  "lead.source.siteread": "From company website",
   "lead.source.webform": "Web form",
   "lead.source.webformNamed": "Web form “{name}”",
-  "lead.source.referral": "Referral",
   "lead.source.import": "Import",
-  "lead.source.crawl": "Web research",
   "lead.source.api": "Integration",
   "lead.source.automation": "Automation",
   "lead.source.capture": "Captured from a conversation",
-  "lead.source.siteread": "From company website",
   "lead.source.unknown": "Unknown source",
   "leadSources.removeOnlyTitle":
     "Your role can remove entries but not add or change them",
@@ -6263,8 +6379,6 @@ export const en = {
     "The counts cannot narrow by industry, country or company size, so none is shown.",
   "lead.boardCountsNoOtherFilter":
     "The counts cannot apply every filter on this list, so none is shown.",
-  "lead.boardCountsNoConnectorSource":
-    "The counts cannot narrow to every lead from one connector, so none is shown.",
   "lead.boardCountsOwnerNotMeasurable":
     "No count for this owner’s leads. Only an administrator can let you measure them.",
   "lead.boardTerminalRowsUnavailable":
@@ -7268,7 +7382,12 @@ export const en = {
   "offer.termsText": "Terms text",
   "offer.lines": "Line items",
   "offer.addLine": "Add line",
-  "offer.positionTaken": "Another line already has this position.",
+  "offer.lineOrderHint":
+    "Drag a line by its handle, or focus the handle and press the up or down arrow.",
+  "offer.lineHandle": "Move {name}, line {position} of {total}",
+  "offer.lineMoved": "{name} is now line {position} of {total}",
+  "offer.lineHandleUnnamed": "Move line {position} of {total}",
+  "offer.lineMovedUnnamed": "The line is now line {position} of {total}",
   "offer.lapsed":
     "The Valid until date of this offer has passed. Change it under Edit header on a draft, or regenerate a sent offer.",
   "offer.position": "Position",
@@ -7877,6 +7996,22 @@ export const en = {
   "deepread.statusFailed": "Failed",
   "deepread.statusCancelled": "Canceled",
   "deepread.resumesAt": "Resumes automatically {when}.",
+  "deepread.failure.bot_blocked": "The site’s bot protection refused the read.",
+  "deepread.failure.http_server_error":
+    "The site answered with a server error.",
+  "deepread.failure.timeout": "The site did not answer in time.",
+  "deepread.failure.http_client_error":
+    "The site’s front page could not be found.",
+  "deepread.failure.dns": "The domain does not point to a server.",
+  "deepread.failure.tls": "The site’s HTTPS certificate could not be verified.",
+  "deepread.failure.robots_disallowed":
+    "The site asks crawlers not to read it.",
+  "deepread.failure.unreadable":
+    "The site answered, but with nothing readable.",
+  "deepread.failure.internal":
+    "Margince could not finish the read. The cause is on this installation, not on the site, and an admin finds it in the server log.",
+  "deepread.failure.stale_reclaim":
+    "The read stopped reporting, so it was ended.",
   "deepread.pagesSoFar_one": "{count} page read so far",
   "deepread.pagesSoFar_other": "{count} pages read so far",
   "deepread.stoppedEarly": "Stopped early: {reason}",
@@ -9755,6 +9890,8 @@ export const en = {
     "Figures as they stood when the snapshot was taken. They do not change, and the link names the time it was taken.",
   "analytics.share.snapshotUnavailable":
     "No snapshot exists for this period yet.",
+  "analytics.share.quarterOnly":
+    "Sharing covers the quarter. Choose Quarter to share this view.",
   "analytics.share.expiryNote": "The link stops working after 30 days.",
   "analytics.share.create": "Create link",
   "analytics.share.linkTitle": "Your link",
@@ -9954,6 +10091,7 @@ export const en = {
   "forecast.period.quarter": "Quarter",
   "forecast.period.month": "Month",
   "forecast.period.week": "Week",
+  "forecast.quarterCards": "The two pipeline cards below cover the quarter.",
   "forecast.receipt": "Data and evidence checked",
   "forecast.eligible": "Eligible deals",
   "forecast.priced": "Priced",
@@ -11276,7 +11414,6 @@ export const en = {
   "import.test.nothing.done": "Done",
   "import.test.nothing.empty": "The file has a header and no rows.",
   "import.test.reupload": "Fix and re-upload",
-  "import.test.issuesUnit": "issues",
   "import.test.import_one": "Import 1 row",
   "import.test.import_other": "Import {count} rows",
   "import.test.importAnyway_one": "Import 1 row anyway",
@@ -11722,6 +11859,7 @@ export const en = {
   "jobs.kind.risk_verdict_sweep": "Deal risk check",
   "jobs.kind.signal_scan": "Signal scan",
   "jobs.kind.site_deep_read": "Company website read",
+  "jobs.kind.standing_line_check": "How it stands check",
   "jobs.kind.stored_object_reap": "File storage cleanup",
   "jobs.kind.suppression_journal_export": "Erasure journal export",
   "jobs.kind.tag_scout": "Tag suggestions",
@@ -12290,6 +12428,10 @@ export const en = {
   "notifications.delivery.in_app": "In the app",
   "notifications.delivery.email": "Email",
   "notifications.delivery.digest": "Daily digest",
+  "notifications.noMailTitle": "Email is not set up",
+  "notifications.noMail":
+    "This installation sends no notification email, so Email, Daily digest and the email summaries reach no mailbox. Every notice still shows in the app.",
+  "notifications.noMailGuide": "How to set up email",
   "privacynotice.title": "What we hold about you",
   "privacynotice.intro":
     "We are telling you this because the law requires it. You do not need to reply or do anything.",
@@ -13622,6 +13764,13 @@ export const en = {
     "Leave empty to keep the events secret already saved.",
 
   // The team chat card on a deal or project.
+  "channelLink.identityReviewBody":
+    "Confirm this channel again to bind its permanent identity. Unlink it, then choose it from the channel list. Saved History stays on the record.",
+  "channelLink.privateTeamsReadOnly":
+    "Teams supports incoming recaps in private channels. Use a standard channel to send CRM updates as the bot.",
+  "channelLink.chooseConversation": "Conversation to link",
+  "channelLink.specificConversation":
+    "Link one conversation in a shared channel",
   "channelLink.title": "Team chat",
   "channelLink.none": "No channel yet",
   "channelLink.noneSub":
@@ -13634,6 +13783,13 @@ export const en = {
   "channelLink.channelHint":
     "Pick a private channel the bot is in. To link another one, add the bot to it in the chat first.",
   "channelLink.summarize": "Summarize the talk so far (up to 5 summaries)",
+  "channelLink.manage": "Manage",
+  "channelLink.readDirection": "Save channel updates to History",
+  "channelLink.postDirection": "Send CRM updates to channel",
+  "channelLink.readOn": "Recaps saved to History",
+  "channelLink.readOff": "History sync off",
+  "channelLink.postOn": "CRM posts on",
+  "channelLink.postOff": "CRM posts off",
   "channelLink.verbosity": "What Margince posts",
   "channelLink.verbosityHint":
     "The card in the channel stays current at every level.",
@@ -13735,7 +13891,6 @@ export const en = {
     "Only an administrator or operations user can change domain decisions. The list is read-only for you.",
   "blockedDomains.none":
     "No domains refused yet. Bulk-sender results and manual refusals appear here.",
-  "blockedDomains.unit": "domain decisions",
   "blockedDomains.col.domain": "Domain",
   "blockedDomains.col.admission": "Decision",
   "blockedDomains.col.source": "Decided by",
@@ -14536,6 +14691,9 @@ export const en = {
   "mfa.turningOn": "Turning on…",
   "mfa.codeRefused": "The code was not accepted. Check it and retry.",
   "mfa.tooManyCodes": "Too many wrong codes. Wait a few minutes, then retry.",
+  "mfa.tooManyPasswords":
+    "Too many wrong passwords. Wait a minute, then retry.",
+  "mfa.passwordHint": "Your Margince password, not a Google or Microsoft one.",
   "mfa.confirmFailedTitle": "Two-step sign-in not turned on",
   "mfa.onTitle": "Two-step sign-in on",
   "mfa.onBody": "All other devices were signed out.",
@@ -15404,6 +15562,15 @@ export const en = {
   "cf.audit.addedToReports": "Added to reports",
   "cf.audit.removedFromReports": "Removed from reports",
   "cf.audit.kinds": "Activity types changed",
+  "audit.kind.chat_bot_delivery": "Channel delivery",
+  "audit.kind.chat_channel_watch": "Channel notifications",
+  "audit.kind.chat_member_grant": "Messaging account",
+  "audit.kind.chat_member_room": "Private conversation binding",
+  "audit.kind.chat_post_item": "Channel update",
+  "audit.kind.chat_root": "Channel thread",
+  "audit.kind.chat_send_attempt": "Message delivery attempt",
+  "audit.kind.chat_team_installation": "Teams installation",
+  "audit.kind.chat_team_thread": "Teams conversation reference",
   "audit.kind.customField": "Custom field",
   "audit.kind.activity_retention_evidence": "Retention evidence",
   "audit.kind.activity_review_template": "Activity review template",
@@ -15474,7 +15641,6 @@ export const en = {
   "audit.kind.lead_disqualify_reason": "Disqualification reason",
   "audit.kind.lead_origin": "Lead origin",
   "audit.kind.lead_privacy_notice": "Lead privacy notice",
-  "audit.kind.lead_source": "Lead source",
   "audit.kind.legal_entity": "Legal entity",
   "audit.kind.legal_review": "Legal review",
   "audit.kind.license": "License settings",
@@ -15767,7 +15933,7 @@ export const en = {
   "settings.part.integrations.contact": "Contact data",
   "settings.part.integrations.accounting": "Accounting",
   "settings.part.integrations.webhooks": "Webhooks",
-  "settings.part.integrations.telegram": "Chat bots",
+  "settings.part.integrations.telegram": "Messaging providers",
   "settings.part.integrations.sharedMailboxes": "Shared mailboxes",
   "sharedMailboxes.title": "Shared mailboxes",
   "sharedMailboxes.intro":
@@ -17425,7 +17591,6 @@ export const en = {
   "aicalls.open": "Open the {feature} call from {when}",
   "aicalls.col.when": "When",
   "aicalls.filtersLabel": "Filters",
-  "aicalls.unit": "calls",
   "aicalls.col.feature": "Feature",
   "aicalls.col.model": "Model",
   "aicalls.col.tokens": "Tokens in / out",
@@ -18915,6 +19080,12 @@ export const en = {
   "operations.technical.label": "Technical lookup sweep",
   "operations.technical.help":
     "How often domains without technical facts are looked up. 0 switches it off.",
+  "operations.captureCounterparty.label": "New sender checks",
+  "operations.captureCounterparty.help":
+    "How often new senders are judged by the model.",
+  "operations.captureConfidentiality.label": "Thread confidentiality checks",
+  "operations.captureConfidentiality.help":
+    "How often captured threads are judged for whether colleagues may read them.",
   "operations.gmailWatchScan.label": "Gmail push check",
   "operations.gmailWatchScan.help":
     "How often Gmail push subscriptions are checked for renewal.",
@@ -19699,9 +19870,6 @@ export const en = {
   "webhooks.event.lead.sla_breached.label": "First response overdue",
   "webhooks.event.lead.sla_breached.when":
     "A check finds a lead’s first-response deadline passed with no answer.",
-  "webhooks.event.lead_source.changed.label": "Lead source list changed",
-  "webhooks.event.lead_source.changed.when":
-    "A lead source is added, edited or removed in Settings.",
   "webhooks.event.lead_disqualify_reason.changed.label":
     "Disqualify reasons changed",
   "webhooks.event.lead_disqualify_reason.changed.when":
@@ -21065,7 +21233,6 @@ export const en = {
   "filters.field.phase": "Phase",
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Relationship type",
-  "filters.field.stage_id": "Stage",
   "filters.field.tag": "Tags",
   "filters.field.technology": "Technology",
   "filters.choosePlaceholder": "Select field",
@@ -21429,6 +21596,11 @@ export const en = {
   "filters.library.shared": "Shared with me",
   "filters.library.views": "Saved views",
   "filters.library.kindView": "Saved view",
+  "filters.library.savedOn.contacts": "Saved on the Contacts list",
+  "filters.library.savedOn.companies": "Saved on the Companies list",
+  "filters.library.savedOn.deals": "Saved on the Deals list",
+  "filters.library.savedOn.leads": "Saved on the Leads list",
+  "filters.library.savedOn.projects": "Saved on the Projects list",
   "filters.library.rowMore": "More actions for {name}",
   "filters.library.records.contact_one": "{count} contact",
   "filters.library.records.contact_other": "{count} contacts",
@@ -21908,6 +22080,7 @@ export const en = {
   "worklist.why.now": "Why now",
   "worklist.why.consequence": "If nothing is done",
   "worklist.why.todo": "What to do",
+  "worklist.why.writing": "Reading the task and its messages…",
   "worklist.title.deal_at_risk": "{name} has gone quiet",
   "worklist.title.deal_at_risk.close_overdue": "{name} is past its close date",
   "worklist.title.relationship_decay": "No recent contact with {name}",
@@ -21921,8 +22094,6 @@ export const en = {
   "worklist.title.bounce": "Bounced: {name}",
   "worklist.title.lead_response": "Get back to new lead {name}",
   "worklist.title.customer_waiting": "{name} is waiting for your reply",
-  "worklist.todo.task.named":
-    "Finish the task with {name} and mark it done, or move it to another day.",
   "worklist.todo.deal_at_risk.named": "Open {name} and plan the next step.",
   "worklist.todo.customer_waiting.named": "Reply to {name}.",
   "worklist.todo.awaiting_reply.named": "Send {name} a follow-up.",
@@ -21950,7 +22121,6 @@ export const en = {
     "Check the calendar connection so its meetings are captured again.",
   "worklist.todo.capture_health.calendar.named":
     "Check the connection of {name} so its meetings are captured again.",
-  "worklist.consequence.task_slips.named": "The task with {name} stays undone.",
   "worklist.happened.customer_waiting":
     "{name} wrote on {when}, and nobody has answered yet.",
   "worklist.happened.customer_waiting.bare":
@@ -22030,7 +22200,6 @@ export const en = {
   "worklist.happened.meeting.bare": "This meeting is on {when}.",
   "worklist.happened.task": "It is due on {due}.",
   "worklist.happened.task.overdue": "It was due on {due} and is still open.",
-  "worklist.happened.task.undated": "It has no due date.",
   "worklist.happened.deal": "{deal}: {figures}.",
   "worklist.happened.lastFrom": "Last contact from {name}: {when}.",
   "worklist.happened.lastTo": "Last contact to {name}: {when}.",
@@ -22052,7 +22221,6 @@ export const en = {
     "{name} slips past its expected close date.",
   "worklist.consequence.meeting_unprepared":
     "You go into the meeting unprepared.",
-  "worklist.consequence.task_slips": "The task stays undone.",
   "worklist.consequence.work_blocked":
     "Work that depends on this decision stays blocked.",
   "worklist.consequence.customer_never_received":
@@ -22067,8 +22235,6 @@ export const en = {
     "Mail on this mailbox stays out of Margince.",
   "worklist.consequence.data_drifts": "The records drift further apart.",
   "worklist.todo.deal_at_risk": "Open the deal and plan the next step.",
-  "worklist.todo.task":
-    "Do the work and mark it done, or move it to another day.",
   "worklist.todo.customer_waiting": "Reply to the message.",
   "worklist.todo.awaiting_reply": "Send a follow-up.",
   "worklist.todo.lead_response": "Get in touch now; a new lead cools fast.",
@@ -25218,6 +25384,259 @@ export const en = {
   "particulars.translationIntro":
     "Mail and pages in {language} show this text where you fill it in. Advertising that must be in {language} is sent only once the refusal and the advertiser contact are filled in here.",
   "particulars.objectionExample": "Example: {example}",
+  "messenger.signingSecret": "Signing secret",
+  "messenger.signingSecretHint":
+    "Copy the app signing secret from Slack’s Basic Information page for channel sync. Re-enter it when replacing the app credentials. Personal Messenger consent is separate.",
+  "messenger.writeOutcome": "Write outcome",
+  "messenger.shareOutcome": "Share outcome",
+  "messenger.outcomeDestination": "Choose destination",
+  "messenger.outcomePrivacy":
+    "Write the outcome you want to share. The private conversation and its links stay out of CRM History.",
+  "messenger.outcomeAudience":
+    "This saves a CRM note. Members who can read the destination record can read the note. If that record sends CRM updates to a linked channel, the note may also be summarized there. Check the destination and your text before saving.",
+  "messenger.dispactConsent":
+    "Connect with a personal token from your own Dispact account.",
+  "messenger.dispactTokenTitle": "Connect your Dispact account",
+  "messenger.dispactTokenHelp":
+    "In Dispact, open Preferences → API tokens. Create a token with Read and Write access to your conversations. Paste it below. Margince verifies your identity and stores the token securely. You can revoke it in Dispact at any time.",
+  "messenger.dispactToken": "Personal API token",
+  "messenger.dispactOpen": "Open Dispact",
+  "messenger.loadLater": "Load later replies",
+  "messenger.verb": "Messenger",
+  "messenger.provider": "Messaging provider",
+
+  "messenger.channels": "Channels",
+  "messenger.people": "People",
+
+  "messenger.change": "Change conversation",
+  "messenger.needsConsent": "Connect your account to send as yourself.",
+  "messenger.unavailable":
+    "This provider is not available. Ask a company administrator to set it up.",
+  "messenger.write": "Message {name}",
+  "messenger.sendingAs": "Sending as {name}",
+  "messenger.sendProblem": "Your message could not be confirmed",
+  "messenger.failed": "The message was not sent. Your draft is still here.",
+  "messenger.checkDelivery":
+    "Delivery is unconfirmed. Check the receipt before sending again.",
+  "messenger.checkReceipt": "Check receipt",
+  "messenger.accepted": "Accepted by provider",
+  "messenger.send": "Send",
+  "messenger.openedFrom": "Opened from {name}",
+  "messenger.private":
+    "Private messages stay out of CRM History unless you share an outcome.",
+  "messenger.audience": "Recipients: {names}",
+  "messenger.audienceUnknown":
+    "The full audience cannot be verified. Sending is unavailable.",
+  "messenger.loadEarlier": "Load earlier messages",
+  "messenger.newMessages": "Jump to latest messages",
+  "messenger.empty": "No messages in this conversation yet.",
+  "messenger.reply": "Reply in thread",
+  "messenger.back": "Back to conversation",
+  "messenger.deleted": "Message deleted",
+  "messenger.edited": "Edited",
+  "messenger.loading": "Loading conversation…",
+  "messenger.loadProblem": "Conversation unavailable",
+  "messenger.searchPeople": "Find people",
+  "messenger.openPeople": "Open conversation",
+  "messenger.more": "Load more",
+
+  "messenger.connect": "Connect my account",
+  "messenger.settings": "Messaging provider settings",
+  "messenger.connectProblem": "Account connection could not start",
+  "oauthApp.slack.title": "Slack app",
+  "oauthApp.slack.sub": "The app behind native Slack messaging.",
+  "oauthApp.slack.absent": "Set up a Slack app to connect accounts.",
+  "oauthApp.slack.redirectSub": "Register this exact callback in Slack.",
+  "oauthApp.slack.clientIdPlaceholder": "Slack client ID",
+  "oauthApp.slack.removeConfirmTitle": "Remove the Slack app?",
+  "oauthApp.slack.removeConfirmBody":
+    "Participant accounts need this app to connect and renew consent.",
+  "oauthApp.slack.save": "Save Slack app",
+  "oauthApp.slack.removeSecret": "The stored app secret is deleted.",
+  "oauthApp.slack.removeUsedBy":
+    "Accounts connected through this app stop opening in Messenger.",
+  "oauthApp.slack.removeOthers":
+    "Set up the app again before connecting accounts.",
+  "oauthApp.slack.for": "For your Slack team.",
+  "oauthApp.slack.setUp": "Set up Slack app",
+  "oauthApp.unlock.slack": "Slack messages",
+  "oauthApp.drawer.slack.title": "Set up the Slack app",
+  "oauthApp.drawer.slack.intro":
+    "Register the app in Slack, then store its client ID and secret here.",
+  "oauthApp.drawer.slack.value":
+    "People at {company} connect their own Slack accounts through this app.",
+  "oauthApp.drawer.slack.redirects":
+    "In “OAuth & Permissions”, add every callback address below to Redirect URLs.",
+  "oauthApp.drawer.slack.step1Title": "Create a Slack app",
+  "oauthApp.drawer.slack.step1Body":
+    "Choose the Slack team in the app console. Keep the client ID and client secret from Basic Information.",
+  "oauthApp.drawer.slack.step1Link": "Open Slack app console",
+  "oauthApp.drawer.slack.scopesTitle": "Allow participant messaging",
+  "oauthApp.drawer.slack.scopesBody":
+    "Under “OAuth & Permissions”, configure the participant scopes shown in Messaging providers. Each person grants access with Connect my account.",
+  "oauthApp.drawer.slack.pasteBody":
+    "Paste the client ID and client secret from Basic Information. The secret is sealed after saving.",
+  "oauthApp.redirect.messenger_connect": "Messenger account",
+  "messenger.disconnect": "Disconnect my account",
+  "messenger.disconnectTitle": "Disconnect this messaging account?",
+  "messenger.disconnectBody":
+    "Messenger stops reading and sending through your account. Existing provider conversations remain with their participants.",
+  "messenger.myAccounts": "My messaging accounts",
+  "messenger.apps": "Messaging apps",
+  "messenger.setupDetails": "Account setup details",
+  "messenger.appReady": "The app is configured for participant consent.",
+  "messenger.appMissing":
+    "An administrator needs to complete app setup before accounts can connect.",
+  "messenger.participantScopes": "Required participant permissions",
+  "messenger.teamsTenant":
+    "Pin the Microsoft app to your directory ID and grant the listed delegated permissions in Entra.",
+  "messenger.editDraft": "Edit draft",
+  "messenger.reviewDelivery": "Check delivery before editing",
+  "messenger.checkedConversation": "Conversation checked",
+  "messenger.newAttemptWarning":
+    "Check the conversation for your previous message. A new send may duplicate it. Your text stays here for editing.",
+  "messenger.refresh": "Refresh messages",
+  "messenger.team": "Record team",
+  "messenger.noTeam":
+    "No owner or team assignments on this record yet. Choose people or a channel.",
+  "messenger.teamUnresolved":
+    "The full team needs review. Choose people explicitly or resolve the assignments before messaging everyone.",
+  "messenger.groupLimit":
+    "This provider can open a group with up to {limit} recipients. Choose a channel or fewer people.",
+  "messenger.messageTeam": "Message the record team",
+  "messenger.matched": "Matched account",
+  "messenger.you": "You",
+  "messenger.inactive": "Inactive assignment",
+  "messenger.unresolved": "Account not matched",
+  "messenger.failureReconnect":
+    "Reconnect the account before sending again. Your draft is kept.",
+  "messenger.failureUnavailable":
+    "This conversation is unavailable. Choose another destination. Your draft is kept.",
+  "messenger.failureReview":
+    "Review the recipients and message. The provider rejected this send.",
+  "messenger.failureUnsupported":
+    "This provider cannot send to the selected destination.",
+  "messenger.failureAuthorization":
+    "Your access changed before sending. Reopen the conversation and review the recipients.",
+  "messenger.failureRate":
+    "The provider asked Margince to wait. Your draft is kept.",
+  "messenger.retryAfter": "You can send again after {at}.",
+  "messenger.audienceCount_one": "{count} member",
+  "messenger.audienceCount_other": "{count} members",
+  "messenger.viewAudience": "View recipients",
+  "messenger.audienceChanged":
+    "The recipients have changed. Review them before sending.",
+  "messenger.reviewAudience": "Review recipients",
+  "messenger.useAudience": "Use these recipients",
+  "messenger.externalAudience":
+    "This conversation includes external people. Sending from Margince is paused.",
+  "messenger.externalMember": "External account",
+  "messenger.inactiveMember": "Inactive account",
+  "messenger.accountMenu": "Messaging account",
+  "channelLink.messageDetail": "Message detail",
+  "channelLink.detailHelp":
+    "Both options preserve conditions, dates and open questions. Full adds context.",
+  "channelLink.detailBrief": "Brief",
+  "channelLink.detailFull": "Full",
+  "channelLink.coverageThrough":
+    "Conversation discovery checked through {at}. Pending recaps are listed below.",
+  "channelLink.notificationsDelayed": "Channel notifications need recovery",
+  "channelLink.notificationsPolling":
+    "Periodic source checks continue. New messages may take longer to appear while the connection recovers.",
+  "channelLink.coverageWaiting":
+    "Source coverage has not been confirmed. Earlier conversations are included only when history was requested.",
+  "channelLink.conversationQueue":
+    "Recaps pending: {pending}. Conversations needing another attempt: {failed}.",
+  "channelLink.syncNeedsAttention": "Some channel updates are waiting",
+  "channelLink.outboundQueue_one": "CRM updates waiting to be sent: {count}.",
+  "channelLink.outboundQueue_other": "CRM updates waiting to be sent: {count}.",
+  "channelLink.deliveryUnconfirmed": "Channel delivery is unconfirmed",
+  "channelLink.deliveryUnconfirmedHelp":
+    "A provider did not confirm delivery. Margince will not automatically resend this post. Open the channel to check what arrived.",
+  "channelLink.sourceIncomplete":
+    "An update is waiting because the complete source message is unavailable. Other eligible updates can continue. Check the original activity and its capture status.",
+  "channelLink.sourceTooLong":
+    "A conversation exceeds the complete-read limit. It has not been summarized in part. Other conversations continue syncing.",
+  "channelLink.summaryWaiting":
+    "A summary is waiting for the configured AI model. Its source has not been marked as summarized.",
+  "channelLink.providerWaiting":
+    "The provider asked Margince to wait. Sync will resume after its retry window.",
+  "channelLink.sourceAccessLost":
+    "Margince cannot currently read the linked source. Check the app installation and channel membership.",
+  "channelLink.sourceChanged":
+    "The source changed during processing. Margince will read it again before saving a recap.",
+  "channelLink.sourceUnavailable":
+    "A complete source read is temporarily unavailable. Existing recaps are kept and the conversation will be checked again.",
+  "timeline.chatSummary.sourceCheck": "Check source access",
+  "timeline.chatSummary.sourceChecking": "Checking source access…",
+  "timeline.chatSummary.sourceUnavailable":
+    "Source access could not be verified.",
+  "channelEnded.title": "Sync ended {at}",
+  "channelEnded.retention":
+    "Eligible History remains under its existing access and retention rules. No channel changes after the last coverage time are reflected here.",
+  "channelEnded.read": "Channel coverage through {at}.",
+  "channelEnded.noRead": "No successful channel coverage was recorded.",
+  "channelEnded.posted": "Last confirmed CRM update: {at}.",
+  "channelEnded.noPost": "No confirmed CRM update was recorded.",
+  "channelEnded.copies":
+    "Provider update messages retained: {retained}. Messages confirmed rewritten without withdrawn content: {redacted}. This does not confirm removal of other copies.",
+  "channelEnded.action":
+    "Provider-side review is needed: {withdrawals} unverified withdrawals and {unknown} unconfirmed deliveries. Check the channel before taking further action.",
+  "channelPreview.title": "Review channel delivery",
+  "channelPreview.enable": "Enable CRM updates",
+  "channelPreview.help":
+    "Review who can read this channel and what Margince will post before enabling automatic delivery.",
+  "channelPreview.loading": "Checking audience and outgoing content…",
+  "channelPreview.thread": "Updates will go into the selected thread.",
+  "channelPreview.channel": "Updates will go into this channel.",
+  "channelPreview.audience": "Current human audience",
+  "channelPreview.settings":
+    "Frequency: {frequency}. Message detail: {detail}.",
+  "channelPreview.scope":
+    "Only eligible record updates and content every channel member may read are shared. Private exchanges and restricted content are excluded.",
+  "channelPreview.overview": "Current overview card",
+  "channelPreview.updates": "Eligible queued updates",
+  "channelPreview.noUpdates":
+    "There are no eligible updates queued. Enabling delivery starts with future changes; it does not replay earlier history.",
+  "channelPreview.excluded":
+    "Some queued updates are excluded from this preview because they cannot be shared with the complete audience.",
+  "channelPreview.recheck":
+    "Margince checks audience and access again before every delivery. The preview does not send a message.",
+  "channelHandoff.title": "Review delivery handoff",
+  "channelHandoff.noOutgoing":
+    "Automatic CRM posts are off or unavailable for this channel. Starting delivery does not turn them on.",
+  "channelHandoff.help":
+    "Check the delivery room, who can read it, open commitments and dates before handing over.",
+  "channelHandoff.current": "Current deal channel: {channel}.",
+  "channelHandoff.noCurrent": "The deal has no linked channel.",
+  "channelHandoff.preserve":
+    "The project already has {channel}. That channel will be preserved.",
+  "channelHandoff.continue":
+    "The project has no channel. Continuing will carry {channel} into the project.",
+  "channelHandoff.noChannel":
+    "Neither record has a channel. Handoff can continue without channel sync.",
+  "channelHandoff.choose":
+    "To use a different delivery destination, link it to the project here before continuing. Its sharing settings stay independent.",
+  "channelHandoff.loading": "Reading the delivery brief…",
+  "channelHandoff.owner": "Delivery owner: {owner}.",
+  "channelHandoff.target": "Project target: {at}.",
+  "channelHandoff.noTarget": "No project target date is recorded.",
+  "channelHandoff.promises": "Open project commitments and dates",
+  "channelHandoff.noPromises":
+    "No readable open project commitments were returned.",
+  "channelHandoff.partial": "Some handoff information is withheld",
+  "channelHandoff.omitted":
+    "Your permissions exclude some sections. A missing section does not mean there is nothing outstanding.",
+  "channelHandoff.gaps": "Gaps to resolve at handoff",
+  "channelInstall.slackHistoryProfile":
+    "Channel sync needs Slack’s standard history limits, available to Marketplace-approved apps and internal apps. With the one-request-per-minute limit, complete thread verification stays paused; use an eligible app profile.",
+  "channelLink.outboundNeedsAttention": "CRM sharing needs attention",
+  "channelLink.audienceNeedsReview":
+    "The channel audience could not be cleared for this record. Automatic sharing is paused. Review channel members and their record access, then use Manage to review delivery again.",
+  "timeline.filters.chatProvider": "Channel recap source",
+  "timeline.filters.allProviders": "All sources",
+  "timeline.filters.providerOmitsLimited":
+    "Channel source filters exclude content you cannot read.",
 } as const;
 
 export type MessageKey = keyof typeof en;

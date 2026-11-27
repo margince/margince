@@ -10,6 +10,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/projects"
@@ -65,6 +66,32 @@ func PartyDataTask() datatask.Task {
 		Steps: []datatask.Step{
 			step("contact_sources", contacts.CorrectContactSourcesTx, contacts.CountUnlistedContactSources),
 			step("company_sources", contacts.CorrectCompanySourcesTx, contacts.CountUnlistedCompanySources),
+		},
+	}
+}
+
+// LeadDataTask moves every lead whose source is off the fixed channel list onto
+// its channel, through the mapping contacts use.
+func LeadDataTask() datatask.Task {
+	return datatask.Task{
+		ID: "core/1795710028_lead_source_channels", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795710028_lead_source_channels"),
+		Requires: []string{"core/1795710028"},
+		Steps: []datatask.Step{
+			step("lead_sources", contacts.CorrectLeadSourcesTx, contacts.CountUnlistedLeadSources),
+		},
+	}
+}
+
+// ActivityDataTask moves every activity whose source is off the fixed channel
+// list onto its channel. The writer an older word named moves to source_system.
+func ActivityDataTask() datatask.Task {
+	return datatask.Task{
+		ID: "core/1795786877_activity_source_channels", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795786877_activity_source_channels"),
+		Requires: []string{"core/1795786877"},
+		Steps: []datatask.Step{
+			step("activity_sources", activities.CorrectActivitySourcesTx, activities.CountUnlistedActivitySources),
 		},
 	}
 }

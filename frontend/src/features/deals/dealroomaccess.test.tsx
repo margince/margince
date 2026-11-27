@@ -273,7 +273,7 @@ describe("the invite form", () => {
       ),
     );
     await user.type(screen.getByLabelText(/^Name/), "Dana Buyer");
-    await user.type(screen.getByLabelText(/^Email/), "dana@example");
+    await user.type(screen.getByLabelText(/^Email/), "dana@example.c0m");
     await user.click(screen.getByRole("button", { name: "Invite" }));
 
     expect(

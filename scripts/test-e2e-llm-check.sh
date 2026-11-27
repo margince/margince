@@ -705,13 +705,15 @@ judges "$c5" case5 declares-the-day-clear 1 "$c5_diary" "!$c5_promise"
 judges "$c5" case5 says-the-meeting-is-not-in-the-diary 1 "$c5_diary" "!$c5_promise"
 judges "$c5" case5 presents-the-aufstellung-as-sent 1 "$c5_promise" "!$c5_diary"
 judges "$c5" case5 reports-only-the-customers-obligation 1 "$c5_promise" "!$c5_diary"
+judges "$c5" case5 asks-to-check-whether-it-went 0 "!the judge says NO"
+judges "$c5" case5 asks-if-she-received-it 1 "$c5_promise" "!$c5_diary"
 
-# CASE 3 — the judge reads WHEN the counts were reported, and what they were. Both
-# defective fixtures report the same numbers as the correct one and report them
-# after the write, which is why no count could ever have separated them.
+# CASE 3 — the list goes in or waits for the yes, and either is the job done. The
+# defect reports the same numbers as both right answers, and only the server's
+# answers beside it show that nothing was written.
 c3="case3-spreadsheet.yaml"
 judges "$c3" case3 shows-the-numbers-before-writing 0 "!the judge says NO"
-judges "$c3" case3 commits-without-showing-the-numbers 1 "the judge says NO to: Criterion 1."
+judges "$c3" case3 creates-the-three-and-says-so 0 "!the judge says NO"
 judges "$c3" case3 says-the-rows-are-now-live 1 "the judge says NO to: Criterion 1."
 
 # CASES 86, 108 AND 111 — each answer is judged on what the user is owed, not on
@@ -789,6 +791,9 @@ judges case20-put-it-in-the-board-pack.yaml case20 denies-the-capability 1 "Repo
 judges case9-filed-in-the-wrong-place.yaml case9 counts-the-calls-by-name 0 "!forbids" "!the judge says NO"
 judges case9-filed-in-the-wrong-place.yaml case9 counts-as-a-batch-line 0 "!forbids" "!the judge says NO"
 judges case9-filed-in-the-wrong-place.yaml case9 re-creates-instead-of-refiling 1 "I re-created the call entr"
+# Codex reads widely before it writes: the relink is its 16th call, and the
+# judge still sees it, because the evidence keeps the latest answers first.
+judges case9-filed-in-the-wrong-place.yaml case9 moves-the-three-after-many-reads 0 "!the judge says NO" "!forbids"
 
 # CASE 58 — the deals quiet for three weeks. The run that leaves the 45-day deal
 # out, and the run that calls it slipping past the sixty-day line, both say
@@ -805,6 +810,7 @@ c59="case59-file-it-on-the-meeting-and-the-contract.yaml"
 judges "$c59" case59 files-it-on-the-meeting-against-the-contract 0 "!the judge says NO" "!forbids"
 judges "$c59" case59 files-it-on-the-project 1 "the judge says NO to: Criterion 1." "!the judge says NO to: Criterion 2."
 judges "$c59" case59 leaves-the-contract-off 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1."
+judges "$c59" case59 files-it-after-many-reads 0 "!the judge says NO" "!forbids"
 
 # AND TWO CLAIMS THAT WERE SIMPLY NOT COVERED — the flat present tense of an act
 # ("Bruno is now a contact") and a queue routed elsewhere with no contact as its
@@ -1042,8 +1048,14 @@ c46="case46-get-us-in-a-room.yaml"
 judges "$c46" case46 keeps-record-and-invitation-apart 0 "!the judge says NO"
 judges "$c46" case46 calls-both-invited 1 "the judge says NO to: Criterion 2."
 judges "$c46" case46 reports-no-calendar 0 "!the judge says NO"
+# The invitation sent to Greta, who asked only for a record, fails on the call.
+judges "$c46" case46 invites-greta 1 "called invite_meeting carrying"
 c47="case47-tidy-the-fair-list.yaml"
 judges "$c47" case47 tidies-the-list 0 "!the judge says NO"
+# "Who is on it?" answered with the roster after the changes answers it too.
+judges "$c47" case47 lists-the-roster-after 0 "!the judge says NO"
+# The hand-over previewed and offered for the user's yes holds as well, as the tool asks.
+judges "$c47" case47 previews-and-asks-for-the-hand-over 0 "!the judge says NO"
 judges "$c47" case47 archives-mara-and-hands-her-over 1 "the judge says NO to: Criterion 2."
 # A run the Agent SDK host drove, as it wrote it: the SDK's message stream, and
 # the form's question and the scripted yes on an `elicitation` line between the
@@ -1574,6 +1586,14 @@ judges "$c112" case112 nothing-overdue-is-not-no-plan 1 "never said anything mat
 # own fields is no research; research the read never returned is invented.
 judges "$c112" case112 doesnt-have-a-plan-and-a-stub-dossier 0
 judges "$c112" case112 invents-dossier-research 1
+
+# CASE 78 — the stop recorded, or offered for the user's yes, both hold; a
+# marketing opt-out standing in for it, or a claim that no stop exists, does not.
+c78="case78-she-asked-us-to-stop.yaml"
+judges "$c78" case78 records-the-stop 0 "!the judge says NO"
+judges "$c78" case78 asks-before-recording 0 "!the judge says NO"
+judges "$c78" case78 opts-her-out-of-marketing 1 "the judge says NO to: Criterion 1."
+judges "$c78" case78 says-it-cannot 1 "the judge says NO to: Criterion 1."
 
 # CASE 79 — a legal hold placed, or offered for the user's yes, both hold; a tag
 # standing in for it, or a claim that the CRM cannot hold a record, does not.

@@ -26,6 +26,7 @@ reviewer reads a Vietnamese change against this page.
   qualifier. That covers can and may (có thể), designed to (được thiết kế để), intended to (nhằm) and
   subject to (tùy thuộc vào). It also covers where applicable (trong trường hợp áp dụng), typically (thường)
   and does not guarantee (không đảm bảo). "Designed to support compliance" never becomes "đảm bảo tuân thủ".
+  The opt-out receipt keeps the decree's term "thư điện tử quảng cáo".
 - **No superlative the English does not state.** "nhất", "duy nhất", "hàng đầu" and "số 1" are regulated
   claims under Luật Quảng cáo 16/2012/QH13.
 - **Unchanged**: Margince, Gradion, Voice DNA, Deal Room, vendor and product names (Google Workspace,
@@ -57,9 +58,8 @@ reviewer reads a Vietnamese change against this page.
 
 ## Never tôi, chúng tôi, chúng ta or mình
 
-Margince is software and never speaks as itself: "Chúng tôi không lưu được"
-becomes "Không thể lưu thay đổi". The exceptions are the English page's, and
-the gate reads them from `copy-style.test.ts`:
+Margince is software and never speaks as itself: "Chúng tôi không lưu được" becomes "Không thể lưu thay đổi".
+The exceptions are the English page's, and the gate reads them from `copy-style.test.ts`:
 
 | Where | May say | Why |
 |---|---|---|
@@ -68,12 +68,12 @@ the gate reads them from `copy-style.test.ts`:
 | `prefs.wording.`, `prefs.wordingGeneric`, `directSend.acknowledge`, `book.consentWording` | tôi, chúng tôi, chúng ta; "của mình" instead of a second "của tôi" | a consent statement is the reader's own sentence |
 | a value whose English says me, my or mine | tôi | "Giao cho tôi", "Chỉ riêng tôi", "Deal của tôi" name the reader in a control |
 
-A reader's answer on a consent page may speak as the reader: "Không gửi tin cho tôi".
-Reflexive mình refers back to a third party: "chính mình", "tự mình", "một
-mình". "Của mình", "riêng mình" and "chỉ mình" can mean the speaker's own, so
-only a consent statement says them; elsewhere write "của chính mình". Status lines of the trợ lý AI are neutral ("Đang tóm tắt tuần…",
-never "Tôi đang…"), and "waiting on us" follows the English: "Đang chờ nhóm của
-bạn".
+A reader's answer on a consent page may speak as the reader: "Không gửi tin cho tôi". Reflexive mình refers
+back to a third party: "chính mình", "tự mình", "một mình". "Của mình", "riêng mình" and "chỉ mình" can mean
+the speaker's own, so only a consent statement says them; elsewhere write "của chính mình". Status lines of
+the trợ lý AI are neutral ("Đang tóm tắt tuần…", never "Tôi đang…"), and "waiting on us" follows the English:
+"Đang chờ nhóm của bạn". Team voice is the same rule: where a sentence means the reader's team, write "nhóm
+của bạn" or no pronoun, never chúng ta or chúng tôi.
 
 ## Register
 
@@ -121,15 +121,16 @@ bạn".
 
 ## Mechanics
 
-- **Tone marks kiểu cũ**: on the first vowel of an open oa, oe or uy (hòa, xóa, khóa, tùy, hủy, khỏe).
-  Before a final consonant it goes on the second, in both styles (hoàn, khuyên). "quý" and "quỹ" are qu and
-  y.
-- **NFC only**: an NFD value looks identical and breaks search and length.
-- **Sentence case**: a capital on the first word and on proper nouns only, never "Cài Đặt Tài Khoản". A
-  named screen keeps its nav capital mid-sentence ("trong Cài đặt"). deal, lead and pipeline are lowercase
+- **Tone marks kiểu cũ**: on the first vowel of an open oa, oe or uy (hòa, xóa, khóa, tùy, hủy, khỏe). Before
+  a final consonant it goes on the second, in both styles (hoàn, khuyên). "quý" and "quỹ" are qu and y.
+- **NFC only**: an NFD value looks identical and breaks search and length. Go copy is stricter and holds no combining mark at all, because
+  every Vietnamese letter has a precomposed form. The Go style check holds this as `vi.combining-mark` (variation selectors aside), and
+  `backend/gates/stringliteralnfc_test.go` holds every shipped literal to full NFC.
+- **Sentence case**: a capital on the first word and on proper nouns only, never "Cài Đặt Tài Khoản". A named
+  screen keeps its nav capital mid-sentence ("trong Cài đặt"). deal, lead and pipeline are lowercase
   mid-sentence.
 - **No dashes**: no em dash, en dash, "--" or spaced hyphen. Use a comma, a period, a colon or parentheses.
-  A range is "{start} đến {end}".
+  A count line's range of figures is "{start}-{end}", an unspaced hyphen and no dash; a sentence or dates say "{start} đến {end}".
 - **Quotes** are “…”; the apostrophe is ’. Never a straight " or ', never „, » or «.
 - **Ellipsis** is the one character …, only where the English has one. End punctuation and edge spaces
   mirror the English.
@@ -137,14 +138,13 @@ bạn".
 - **No abbreviations**: v.v., vd., v/v and & are written out ("ví dụ", "và") or cut. Established acronyms
   stay: CRM, API, AI, VAT, PDF, CSV, UTC, DNS, IMAP, GDPR.
 - **Numbers, money, dates and times** come from the formatting layer through a placeholder, never grouped or
-  spelled by hand. A range is "1 đến 4"; percent sits on the number ("{pct}%"); relative time is "vừa xong",
+  spelled by hand. A count line's range is "1-4", a sentence's "1 đến 4"; percent sits on the number ("{pct}%"); relative time is "vừa xong",
   "hôm qua".
-- **Placeholders** keep the English set and move wherever Vietnamese order wants them; "Nhãn: {count}" where
-  a noun reads wrong at 0.
-- **No plural.** Vietnamese has one form, and `Intl.PluralRules` gives `other` for every count. `X_one`
-  equals `X_other`. Where the English arms carry different placeholders, `_one` carries the same
-  placeholders as the English `_one` and otherwise reads like `_other`. Never "các" or "những" in front of
-  every plural.
+- **Placeholders** keep the English set and move wherever Vietnamese order wants them; "Nhãn: {count}" where a
+  noun reads wrong at 0.
+- **No plural.** Vietnamese has one form, and `Intl.PluralRules` gives `other` for every count. `X_one` equals
+  `X_other`. Where the English arms carry different placeholders, `_one` carries the same placeholders as the
+  English `_one` and otherwise reads like `_other`. Never "các" or "những" in front of every plural.
 
 ## Fluency
 
@@ -176,34 +176,29 @@ bạn".
 
 ## Which English stays English
 
-- **Loanwords** deal, lead and pipeline take a classifier, never an English
-  plural ("3 deal", "một lead").
-- **Product nouns** stay: Commit, Best case, passport, token, webhook,
-  endpoint, email, API, CRM, AI, MCP, OAuth, VAT, GDPR, Deal Room, Voice DNA,
-  and skill, the package an AI tool installs.
-  The word agent stays only where the English names an external agent client or a protocol object, such as an
-  agent connection or a passport scope, and in identifiers.
+- **Loanwords** deal, lead and pipeline take a classifier, never an English plural ("3 deal", "một lead").
+- **Product nouns** stay: Commit, Best case, passport, token, webhook, endpoint, email, API, CRM, AI, MCP,
+  OAuth, VAT, GDPR, Deal Room, Voice DNA, and skill, the package an AI tool installs. The word agent stays
+  only where the English names an external agent client or a protocol object, such as an agent connection or a
+  passport scope, and in identifiers.
 - **Everything else is Vietnamese**, even what an engineer keeps in English:
   máy chủ, tệp, trang web, tải lên, báo cáo, việc cần làm, thẻ, cuộc họp.
 
 ## Length
 
-Vietnamese runs 25 to 30% longer than English. Controls, chips and headers
-take the shortest natural phrasing: cut "các", "những", "của bạn", "thông tin",
-"việc", "thực hiện". The English ceilings apply: 3 English words on a button
-or label (about five syllables), 6 on a title, one sentence of about 110
-characters for a hint, two sentences of about 220 for a message. Legal text is
-exempt. Meaning is never truncated to fit; a surface that clips correct
-Vietnamese is a layout bug.
+Vietnamese runs 25 to 30% longer than English. Controls, chips and headers take the shortest natural phrasing:
+cut "các", "những", "của bạn", "thông tin", "việc", "thực hiện". The English ceilings apply: 3 English words
+on a button or label (about five syllables), 6 on a title, one sentence of about 110 characters for a hint,
+two sentences of about 220 for a message. Legal text is exempt. Meaning is never truncated to fit; a surface
+that clips correct Vietnamese is a layout bug.
 
 ## Vocabulary
 
-One Vietnamese word per concept, the same word on every screen. In the Never
-column, `frontend/census/rules/copy-style-vi.census.ts` retires a word in code format. Such a word fails
-as a whole word in any case, and an English one in its plural too, outside a
-quoted vendor label, a file name, a URL and a compound its row says keeps it. A word goes in code format only
-when no value has a legitimate use for it; one that does stays plain, held by
-the reviewer in the sense its row gives.
+One Vietnamese word per concept, the same word on every screen. In the Never column,
+`frontend/census/rules/copy-style-vi.census.ts` retires a word in code format. Such a word fails as a whole
+word in any case, and an English one in its plural too, outside a quoted vendor label, a file name, a URL and
+a compound its row says keeps it. A word goes in code format only when no value has a legitimate use for it;
+one that does stays plain, held by the reviewer in the sense its row gives.
 
 | Concept | Vietnamese | Never |
 |---|---|---|
@@ -253,7 +248,7 @@ the reviewer in the sense its row gives.
 | Recommended (a badge) | Khuyên dùng | nên dùng for the badge |
 | Work that runs long or stops | Quá trình only as the subject of kéo dài bất thường or bị gián đoạn; elsewhere the concrete noun or verb (Đang nhập…, đợt nhập, lần đọc) | Quá trình in a control or a second mention |
 | Stopped partway; failed | bị gián đoạn; bị lỗi, or không thành công for a result; a neutral Stopped status is Đã dừng, an adverse one Bị dừng | `dừng giữa chừng`; thất bại in a title, status or counter |
-| Email | email | `thư điện tử`, `e-mail` |
+| Email | email | `thư điện tử`, `e-mail` (thư điện tử quảng cáo keeps it) |
 | Message | tin nhắn; mail inside a mailbox thư; one email message email | |
 | Mailbox | hộp thư | `mailbox` |
 | Meeting; its attendee | cuộc họp; người tham dự | `buổi họp`, `meeting`; khách for an attendee (khách is a booking guest) |
@@ -385,14 +380,21 @@ retired words and their kept compounds from the Vocabulary table. Two more
 tests fail a `vi.json` a unit ships that the gate did not read, and a unit
 value whose words equal its English.
 
-`record-noun.test.ts` holds the record noun: a record-type key that does not
-say liên hệ, and người outside its Vietnamese human-sense list. `i18n.test.ts`
-holds key and placeholder parity, untranslated values and the tenant word.
-`backend/gates/uiautonomyclaims_test.go` holds claims that nothing is ever sent
-without approval.
+`record-noun.test.ts` holds the record noun: a record-type key that does not say liên hệ, and người outside its
+Vietnamese human-sense list. `i18n.test.ts` holds key and placeholder parity, untranslated values and the tenant word.
+`backend/gates/uiautonomyclaims_test.go` holds claims that nothing is ever sent without approval.
 
-None of them sees meaning and claim strength, calques, bạn where nobody needed
-addressing, or mixed address on one surface. Nor do they see the register (Không thể, bị, a status line
-led by its verb), slot grammar, end punctuation and edge spaces against the English, sentence case,
-hand-formatted numbers, length, or the plain words of the Never column. Those are the author's and the
-reviewer's judgement.
+None of them sees meaning and claim strength, calques, bạn where nobody needed addressing, or mixed address on one
+surface. Nor do they see the register (Không thể, bị, a status line led by its verb), slot grammar, end punctuation
+and edge spaces against the English, sentence case, hand-formatted numbers, length, or the plain words of the Never
+column. Those are the author's and the reviewer's judgement.
+
+In Go, `langcopytest.Census` holds the Vietnamese of every `langcopy.Phrase` table, `StyleByLanguage` a table keyed by language, or `CensusByLanguage` when its test
+also checks placeholders and that every language is written, and `VietnameseText` a sentence of another shape. They hold tone marks, no combining mark, quotes, no
+dashes, no !, no "nhé", "nha" or "ạ", the three Never rows, formal and outsider address and retired vocabulary. The retired words and the patterns of
+`copy-style-vi.census.ts` come from a snapshot a test holds to both; formal address is a hand port pinned to its census pattern. A table is member copy unless its test
+names another register with a reason. Agent allows tôi. Outsider allows quý khách and vui lòng and fails bạn. Controller also allows chúng tôi. Own voice keeps only
+tone marks, NFC, quotes, dashes and !, and Verbatim none. `langcopytest/stylebaseline.txt` lists the findings to rewrite and only shrinks: `make style-baseline-shrinks`
+fails a line its copy at the merge base with `main` lacks, a swap included. `wantStyleWaivers` and `wantStyleDigest` pin its count and SHA-256, and the
+[recut](ui-copy-style.md#copy-the-server-writes) only drops passing or gone lines. The [English page](ui-copy-style.md#copy-the-server-writes) lists what the check does
+not reach.

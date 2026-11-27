@@ -3,11 +3,11 @@
 
 package assignments
 
-// The administered vocabulary of responsibilities (record_role). Same catalog
-// shape as deal_acquisition_source and lead_source — stable key, editable
-// label, retire rather than delete — plus the two applicability sets that make
-// a role mean something: which record kinds it can be held on, and whether a
-// user, a team or either may hold it.
+// The administered vocabulary of responsibilities (record_role). It has the
+// catalog shape of deal_acquisition_source and lead_origin: a stable key, an
+// editable label, retired rather than deleted. Two applicability sets give a
+// role its meaning. One names the record kinds it can be held on. The other
+// says whether a user, a team or either may hold it.
 
 import (
 	"context"

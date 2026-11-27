@@ -61,7 +61,7 @@ export function customFieldLabel(
 }
 
 // The type set mirrors fieldcatalog.Types() in the backend, in its order.
-// backend/gates/frontendcustomfieldtypes_test.go fails when the two differ in
+// backend/gates/frontendvocabularymirrors_test.go fails when the two differ in
 // either direction. The create request takes a CfType, so a member the
 // contract lacks fails to compile.
 export const CF_TYPES = [

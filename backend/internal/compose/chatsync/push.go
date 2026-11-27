@@ -21,6 +21,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
@@ -77,7 +78,12 @@ type Marks interface {
 type PullEnqueuer func(ctx context.Context, workspace, connection ids.UUID) error
 
 // Receiver verifies Dispact's notices and acts on them.
+type RootNotices interface {
+	InvalidateNativeRoot(context.Context, ids.UUID, string, chatwire.RootRef) error
+}
+
 type Receiver struct {
+	Roots   RootNotices
 	Bots    EventBots
 	Links   EventLinks
 	Replays Replays
@@ -222,7 +228,11 @@ func (r *Receiver) act(ctx context.Context, connection ids.UUID, notice crmcontr
 	if err := r.Marks.Mark(ctx, noticeKey(connection), r.Now(), PushFresh); err != nil {
 		r.Log.WarnContext(ctx, "chat links: the notice was not marked; the sweep keeps reading every minute", "err", err)
 	}
-	link, found, err := r.linkOf(ctx, connection, deref(notice.ChannelSlug))
+	channel := deref(notice.ChannelId)
+	if channel == "" {
+		channel = deref(notice.ChannelSlug)
+	}
+	_, found, err := r.linkOf(ctx, connection, channel)
 	if err != nil {
 		return crmcontracts.DispactChannelEventReceipt{}, err
 	}
@@ -231,12 +241,29 @@ func (r *Receiver) act(ctx context.Context, connection ids.UUID, notice crmcontr
 	}
 	switch notice.Type {
 	case crmcontracts.DispactChannelEventTypeChannelArchived:
-		if err := r.Links.MarkChannelGone(ctx, link.ID); err != nil {
-			return crmcontracts.DispactChannelEventReceipt{}, fmt.Errorf("chat links: pausing the archived channel's link: %w", err)
+		links, err := r.Links.PullLinks(ctx, connection)
+		if err != nil {
+			return crmcontracts.DispactChannelEventReceipt{}, err
+		}
+		for _, linked := range links {
+			if linked.ChannelSlug == channel {
+				if err := r.Links.MarkChannelGone(ctx, linked.ID); err != nil {
+					return crmcontracts.DispactChannelEventReceipt{}, err
+				}
+			}
 		}
 		return receipt(crmcontracts.DispactChannelEventReceiptStatusLinkPaused), nil
 	case crmcontracts.DispactChannelEventTypeMessageCreated, crmcontracts.DispactChannelEventTypeThreadReplied,
-		crmcontracts.DispactChannelEventTypeMessageUpdated:
+		crmcontracts.DispactChannelEventTypeMessageUpdated, crmcontracts.DispactChannelEventTypeMessageDeleted:
+		if r.Roots != nil && deref(notice.ChannelId) != "" && deref(notice.RootMessageId) != "" {
+			root := chatwire.RootRef{ID: deref(notice.RootMessageId), Revision: deref(notice.EventId), Deleted: notice.Type == crmcontracts.DispactChannelEventTypeMessageDeleted && deref(notice.MessageId) == deref(notice.RootMessageId)}
+			if root.Revision == "" {
+				root.Revision = ids.NewV7().String()
+			}
+			if err := r.Roots.InvalidateNativeRoot(ctx, connection, channel, root); err != nil {
+				return crmcontracts.DispactChannelEventReceipt{}, err
+			}
+		}
 		ws, ok := principal.WorkspaceID(ctx)
 		if !ok {
 			return crmcontracts.DispactChannelEventReceipt{}, errors.New("chat links: a notice outside a workspace context")

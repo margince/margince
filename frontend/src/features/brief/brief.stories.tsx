@@ -14,7 +14,6 @@ import {
   firstWeek,
   lapsed,
   meetingRow,
-  NOT_FOUND,
   narratedWeek,
   noMarginceChanges,
   pipelineRows,
@@ -35,6 +34,7 @@ import {
   expectDialPlacement,
   expectReportFillsPane,
 } from "../../testing/briefheadchecks";
+import { commitmentProposal } from "../../testing/magic.approval.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -58,7 +58,7 @@ import { briefReady } from "./meetingbrief/fixtures";
 type Frame = {
   /** Proposals available to the agenda and its review drawers. */
   approvals: Approval[];
-  /** The week just gone, or null for the 404 a rep sees before their first
+  /** The week just gone, or null for the 204 a rep sees before their first
    *  full week. Its two null-narrative states are the ones worth a screenshot:
    *  a week nobody narrated, and a week a pass found unremarkable. */
   weekly?: WeeklyReview | null;
@@ -134,7 +134,7 @@ function brief({
       ...approvalRoutes,
       "GET /weekly-reviews": () => jsonResponse(ARCHIVE),
       "GET /weekly-reviews/latest": () =>
-        weekly ? jsonResponse(weekly) : jsonResponse(NOT_FOUND, 404),
+        weekly ? jsonResponse(weekly) : new Response(null, { status: 204 }),
       "GET /deals": () =>
         jsonResponse({ data: deals, page: { next_cursor: null } }),
       "GET /companies/company-nordwind": () =>
@@ -170,7 +170,7 @@ function brief({
       "GET /magic": () => jsonResponse(quietNight),
       // No stored run yet. `items` is required on a run, so the fallback list
       // page would crash the deal-suggestions opener, which counts them.
-      "GET /brief": () => jsonResponse(NOT_FOUND, 404),
+      "GET /brief": () => new Response(null, { status: 204 }),
       "GET /deal-corrections/pending": () => jsonResponse(noMarginceChanges),
       // The plan's week is required by the contract, which the fallback list
       // page lacks.
@@ -201,6 +201,27 @@ type Story = StoryObj<typeof BriefScreen>;
 
 export const DecisionsInToday: Story = {
   render: brief({ approvals: [...singles, ...bundle] }),
+};
+
+// A decision the day's cards do not show joins them as one more card.
+export const WaitingApprovalCard: Story = {
+  render: brief({
+    approvals: [],
+    extra: {
+      "GET /me": meRoute({ deal: ["read"] }),
+      "GET /magic": () =>
+        jsonResponse({
+          ...quietNight,
+          needs_you: [commitmentProposal],
+          totals: { ...quietNight.totals, needs_you: 1 },
+        }),
+    },
+  }),
+};
+
+export const WaitingApprovalCardDark: Story = {
+  ...WaitingApprovalCard,
+  globals: { theme: "dark" },
 };
 
 export const OneDecision: Story = {

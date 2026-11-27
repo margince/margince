@@ -1347,6 +1347,27 @@ func (e MeetingResponse) Valid() bool {
 	}
 }
 
+// Defines values for MessengerProvider.
+const (
+	Dispact MessengerProvider = "dispact"
+	Slack   MessengerProvider = "slack"
+	Teams   MessengerProvider = "teams"
+)
+
+// Valid indicates whether the value is a known member of the MessengerProvider enum.
+func (e MessengerProvider) Valid() bool {
+	switch e {
+	case Dispact:
+		return true
+	case Slack:
+		return true
+	case Teams:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OccurredPrecision.
 const (
 	OccurredPrecisionDay     OccurredPrecision = "day"
@@ -2067,7 +2088,7 @@ type Activity struct {
 	// ReplyChannel Task only. For a `reply` or `reach_out` task, the kind of the activity it follows (`source_activity_id`), so the answer goes back the way the conversation went: a commitment made in a mail is kept by mail. Null for every other type, and for a task with no source of one of these kinds.
 	ReplyChannel *ActivityReplyChannel `json:"reply_channel,omitempty"`
 
-	// Source Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
+	// Source The channel the row arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. `source_system` names the connector or the product's own writer when there is one. An older row can show another value until the background correction reaches it.
 	Source string `json:"source"`
 
 	// SourceActivityId The conversation or note this task follows from, whether added by a human or read from a conversation. Opening the source requires current source access. A task cannot grant access to its source or disclose content from a withheld source. On a transcript created with `records_meeting_id`, the meeting it records.
@@ -2327,16 +2348,24 @@ type AddressCountryMismatch struct {
 // body.
 type BodyCompleteness string
 
-// ChatEpisode The chat talk a summary note was written from. The talk itself is not kept: open `url`
-// to read it in the chat.
+// ChatEpisode The source metadata of a channel recap. Source URLs are withheld from ordinary activity reads;
+// obtain a short-lived authorized link through the chat-source endpoint.
 type ChatEpisode struct {
+	// ChannelName Channel name recorded when the recap was written.
+	ChannelName *string `json:"channel_name,omitempty"`
+
 	// EndedAt When the last of them was posted.
 	EndedAt time.Time `json:"ended_at"`
 
 	// MessageCount How many messages the summary covers.
-	MessageCount int `json:"message_count" minimum:"1"`
+	MessageCount int                `json:"message_count" minimum:"1"`
+	Provider     *MessengerProvider `json:"provider,omitempty"`
 
-	// Url The first message in the chat.
+	// SourceChanged The source changed after a human edited this recap; review the preserved text.
+	SourceChanged *bool `json:"source_changed,omitempty"`
+
+	// Url Empty on activity reads. Obtain an authorized link through the chat-source endpoint.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Url string `json:"url"`
 }
 
@@ -2685,7 +2714,9 @@ type CreateActivityRequest struct {
 
 	// SenderContactId Inbound message, call, meeting or email only: the linked contact who wrote or said it. Set it whenever one contact sent the message, for example the one member of a group chat who asked for a follow-up. Only that contact counts as its author, so only they asked to hear from us. Without it, an inbound activity linked to one contact names that contact as the sender. One linked to two or more contacts names no sender, and each contact is kept as copied. The stated `participants` of an email win over this field. A contact that is not in `links` returns `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`, returns `422 code: field_not_valid_for_kind`.
 	SenderContactId *string `json:"sender_contact_id,omitempty"`
-	Source          string  `json:"source"`
+
+	// Source The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+	Source string `json:"source"`
 
 	// SourceActivityId For a task, the conversation or note it follows from. The caller and assignee need access to that source. The task preserves its audience and inherits its visible links when no links are supplied. For a logged note, call or meeting, the task whose outcome is being recorded; a meeting transcript naming one needs `meeting_status`. This reference alone does not complete that task or accept a request.
 	SourceActivityId *string `json:"source_activity_id,omitempty"`
@@ -3288,6 +3319,9 @@ type MeetingInvitationSummary struct {
 
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
 type MeetingResponse string
+
+// MessengerProvider defines model for MessengerProvider.
+type MessengerProvider string
 
 // OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
 type OccurredPrecision string

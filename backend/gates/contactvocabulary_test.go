@@ -26,7 +26,9 @@ package gates
 // retired word and says nothing about the new one.
 //
 // The corpus comes from the index, so a new file is in scope automatically and
-// an untracked scratch file is not.
+// an untracked scratch file is not. The walk is a row of
+// TestEachRecordIsCalledByItsName (companyvocabulary_test.go); this file holds
+// the word, its exemptions and its planted cases.
 
 import (
 	"encoding/json"
@@ -195,20 +197,21 @@ func recordedCriteria() []string {
 // point: a waiver nobody had to justify is how a second spelling survives
 // review for a year.
 var retired = gatekit.Waive(map[string]string{
-	"backend/internal/compose/meetingbrief/coachingcopy.go":  "German human-role wording names the sales colleague and accountable actor, not the contact record type",
-	"backend/internal/compose/meetingbrief/advancecopy.go":   "German human-role wording names the responsible colleague or buying role, not the contact record type",
-	"backend/internal/compose/meetingbrief/objectivecopy.go": "German human-role wording names the responsible colleague or buying role, not the contact record type",
-	"backend/internal/compose/metriccopy/metriccopy.go":      "German human-role wording names the responsible colleague or buying role, not the contact record type",
-	"backend/internal/compose/metriccopy/labels.go":          "German human-role wording names the responsible colleague or buying role, not the contact record type",
-	"backend/internal/modules/reporting/statuscopy.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",
-	"backend/internal/shared/kernel/dealrole/words.go":       "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/meetingbrief/coachingcopy.go":                 "German human-role wording names the sales colleague and accountable actor, not the contact record type",
+	"backend/internal/compose/meetingbrief/advancecopy.go":                  "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/meetingbrief/objectivecopy.go":                "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/metriccopy/metriccopy.go":                     "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"backend/internal/compose/metriccopy/labels.go":                         "German human-role wording names the responsible colleague or buying role, not the contact record type",
+	"frontend/src/components/messenger":                                     "People names provider participants and internal colleagues in a private conversation, never the CRM Contact type",
+	"backend/internal/modules/chatlinks":                                    "people and person name provider conversation participants and internal member rosters, never the CRM contact record type",
+	"backend/internal/compose/messengeraccounts/roster.go":                  "RecordPerson is an internal assignee or owner resolved to a provider participant, never a CRM contact",
+	"backend/internal/compose/messengeraccounts/roster_integration_test.go": "fixture directory participants and internal assignees exercise the provider roster, never the CRM contact type",
 
 	"backend/internal/modules/contacts/reachfunction.go":      "\"head of people\" is an HR job title the reach card sorts LinkedIn connections by, not the record type",
 	"backend/internal/modules/contacts/reachfunction_test.go": "the same HR job titles, as the test table that pins them",
 
 	"backend/migrations/core": "shipped migrations are never edited — the SQL that built the " +
 		"old names is the record of how the schema got here",
-	"backend/migrations/custom": "the same, one namespace over",
 	"backend/migrations/baseline": "written from the shipped migrations above, so it carries " +
 		"their names and comments",
 	"backend/migrationrewrites.txt": "each line opens with a shipped migration's file name, verbatim, " +
@@ -225,8 +228,6 @@ var retired = gatekit.Waive(map[string]string{
 	"backend/migrations/contactretentionscope_integration_test.go": "it seeds the retention rows " +
 		"an installation stored under the retired name, which is what the migration it replays exists " +
 		"to carry over",
-	"LICENSE": "the licence defines a Seat as a natural person, a legal term the licensor " +
-		"chose, and a licence is not restyled by a vocabulary rule",
 	"backend/internal/modules/capture/graphcal/data/LICENSE-cldr.txt": "the copied Unicode " +
 		"licence grants rights to any person, a legal term that ships verbatim with the data",
 	"backend/internal/platform/cldrzone/data/LICENSE-cldr.txt": "the same Unicode licence, " +
@@ -306,18 +307,12 @@ var retired = gatekit.Waive(map[string]string{
 	"scripts/handbook-ask/questions.txt": "questions in the words users type — \"add a new " +
 		"contact\" is not what they say — and the bank exists to prove the handbook answers them anyway",
 
-	"backend/internal/compose/auditlegacytype.go": "the word audit rows written before the " +
-		"rename still carry. `trg_audit_no_mutate` refuses an UPDATE on audit_log, so those rows " +
-		"keep it forever and the two reads that filter the trail by record type have to match it " +
-		"— the file exists to say so once instead of twice",
-
 	"docs/reference/record-vocabulary.md": "it states the rule, which it cannot do without " +
 		"naming the word the rule retires",
 	"docs/reference/ui-copy-style-de.md": "it states the German human-sense rule that " +
 		"record-noun.test.ts holds, which it cannot do without the German word for a human being",
 
 	"backend/gates/contactvocabulary_test.go": "this file names the word in order to refuse it",
-	"backend/gates/uiautonomyclaims_test.go":  "this gate quotes the retired slogan to forbid it",
 
 	// Surfe serves POST /v2/people/enrich and reads its subjects from a
 	// `people` array. That is the VENDOR's noun for its own API, and this
@@ -375,60 +370,6 @@ func withoutHumanSense(line string) string {
 		}
 	}
 	return line
-}
-
-func TestTheRecordIsCalledAContact(t *testing.T) {
-	t.Parallel()
-	// A waiver that stopped matching reads as ratification of code that is
-	// gone, so the full sweep below is the one place that can say so.
-	defer retired.AssertAllMatched(t)
-
-	read := 0
-	for _, f := range trackedFiles(t) {
-		if f.symlink || !readableAsText(f.path) {
-			continue
-		}
-		if retirementCovers(t, f.path) {
-			continue
-		}
-		// The PATH says the word as loudly as the contents do, and a census
-		// that read only the contents let personname.go, personaccess.tsx and
-		// personautoenrich.go through — three files whose bodies had been
-		// renamed and whose names had not.
-		if pathNamesTheRetiredWord(f.path) {
-			t.Errorf("%s is NAMED for the record's retired name. It is called a contact.", f.path)
-		}
-		body, err := gatekit.ReadFile(filepath.Join(repoRoot, f.path))
-		if err != nil {
-			t.Fatalf("reading %s: %v", f.path, err)
-		}
-		if binary(body) {
-			continue
-		}
-		read++
-		for i, line := range strings.Split(string(body), "\n") {
-			if !namesTheRetiredWord(beyondTheExemptions(line)) {
-				continue
-			}
-			t.Errorf("%s:%d calls the record by its retired name:\n\t%s\n"+
-				"It is called a contact. If this one is something else — a personal mail "+
-				"verdict, an in-person exchange, the seats settings group — add the path to "+
-				"retired, with the reason.",
-				f.path, i+1, strings.TrimSpace(line))
-		}
-	}
-
-	// Under-recognition is the one way this can fail without failing: read a
-	// smaller tree, report PASS, and no assertion notices.
-	if read < 1000 {
-		t.Fatalf("the census read %d files, too few to be this tree — a scan that comes up "+
-			"short reports the clean result it never looked for", read)
-	}
-	if len(humanSense()) < 50 {
-		t.Fatalf("the census derived %d human-sense sentences from the catalogs, too few to be "+
-			"the list record-noun.test.ts holds — a derivation that comes up short makes this "+
-			"gate louder, not quieter, and the next author turns it off", len(humanSense()))
-	}
 }
 
 // TestTheCensusSeesAConcatenatedName plants the case the stem guards exist for.

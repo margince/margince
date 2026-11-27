@@ -90,6 +90,30 @@ describe("sharing a forecast view", () => {
     ).toBeTruthy();
   });
 
+  it("holds Create link while the page has left the quarter, and frees it on return", async () => {
+    vi.stubGlobal("fetch", shareStub());
+    const scope = { kind: "workspace", label: "Whole company" } as const;
+    const button = (refusal?: string) => (
+      <ShareViewButton target="forecast" scope={scope} refusal={refusal} />
+    );
+    const { client, rerender } = render(button());
+    // The same providers, so the open dialog survives the period change.
+    const onPage = (refusal?: string) => (
+      <QueryClientProvider client={client}>
+        <LocaleProvider initial="en">{button(refusal)}</LocaleProvider>
+      </QueryClientProvider>
+    );
+    await userEvent.click(screen.getByRole("button", { name: "Share view" }));
+    const create = () => screen.getByRole("button", { name: "Create link" });
+    expect(create()).toBeEnabled();
+
+    rerender(onPage("Sharing covers a quarter."));
+    expect(create()).toBeDisabled();
+
+    rerender(onPage());
+    expect(create()).toBeEnabled();
+  });
+
   it("says the frozen kind is unavailable when nothing has been frozen", async () => {
     vi.stubGlobal("fetch", shareStub());
     render(

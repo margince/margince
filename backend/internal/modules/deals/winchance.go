@@ -99,7 +99,7 @@ func (s *Store) stampOne(ctx context.Context, tx pgx.Tx, d crmcontracts.Deal) (c
 
 // bindMembershipChance makes a live list narrowing the list read applies filter
 // on the win chance, as the read's own win probability filters do.
-func (s *Store) bindMembershipChance(ctx context.Context, tx pgx.Tx, in *ListDealsInput) {
+func (s *Store) bindMembershipChance(ctx context.Context, tx pgx.Tx, in *ListDealsInput, now time.Time) {
 	inner := in.Membership
 	if inner == nil || s.winChanceSQL == nil {
 		return
@@ -110,7 +110,7 @@ func (s *Store) bindMembershipChance(ctx context.Context, tx pgx.Tx, in *ListDea
 			return "", err
 		}
 		return winprobability.Rebind(clause, "t", func() (string, error) {
-			return s.winChanceSQL(ctx, tx, s.clock(), "t", arg)
+			return s.winChanceSQL(ctx, tx, now, "t", arg)
 		})
 	}
 }

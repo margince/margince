@@ -5,27 +5,10 @@
 
 package gates
 
-// Anything in the compose tier that returns a record is a read. A query handing
-// back a reference to a row-scoped record applies that record's row scope.
-//
-// The class this closes is the reference held across time. A read model, a link
-// row and a graph edge all store somebody else's record id, and the scope was
-// checked when the id was WRITTEN — by which point the deal can be reassigned,
-// the contact merged, the company's owner moved teams. The read that hands the id
-// back inherits nothing from that write, and the failure is quiet: the caller
-// gets a well-formed answer naming a record whose own read path refuses them.
-//
-// Why the compose tier is the frame. A module never imports a sibling, so a
-// cross-module read model assembled here has no sibling store's gate in front
-// of it — compose is where these references are joined and served.
-// rbacgate_test.go holds internal/modules' store entry points and says in its
-// own header that it pins the OBJECT half, "row-scope composition itself stays
-// a call-site obligation"; its entryPointsOutsideModules set then ratifies the
-// compose read services as subjects it has deliberately not judged. This gate
-// is that judgement, for the half rbacgate leaves open. Extending it over
-// internal/modules is a separate change with its own evidence — that tier holds
-// several times as many statements of this shape, and a store that owns its
-// table is a different question from a read model pointing at someone else's.
+// A returned record reference is a read. Compose joins row-scoped records
+// across modules, so references inherit current access rather than access at
+// write time. The module RBAC gate holds object grants; this census holds
+// compose's row scope.
 //
 // What the gate asks, in three derived steps:
 //
@@ -72,6 +55,7 @@ const (
 
 // unscopedReferenceReads names the authority used instead of row scope, keyed by package and function.
 var unscopedReferenceReads = gatekit.Waive(map[string]string{
+	"internal/compose/chatsync:HandleEvent":         "system event routing reads company IDs only to queue work for their live associations. It serves no record to a human; the delivery engine separately checks complete audience and current record/content authority before posting",
 	"internal/compose/tasktaken:linkedRecordsOf":    "the records one taken task is filed under, read in the take's transaction to find each record's owner. No record is served: only its owner is told, and only after mayBeTold asks the task's content gate as that owner",
 	"internal/compose:readDealSummary":              "the extension system read of one deal, which no caller scopes. It answers the deal's own merged_into_id, a deal id that names the deal carrying on, to a unit authorised for system deal reads under SystemReadDeals",
 	"internal/modules/forecasting:addTeamStandings": "a team freeze's deal ids go through the snapshot lens before the caller sees any: the lens applies the reader's deal row scope and the team's assertion check, as FocusLists does",
@@ -784,7 +768,7 @@ func referencedTables(sql string, vocab referenceVocabulary) []tableReference {
 	// ROLE. The schema says which table each one points at, so a reference is
 	// found by what it REFERS TO rather than by what it is called.
 	for column, table := range vocab.columns {
-		if column == table+"_id" || !vocab.tables[table] || boundToCallerArgument(sql, column) {
+		if column == table+"_id" || !vocab.tables[table] || !strings.Contains(sql, column) || boundToCallerArgument(sql, column) {
 			continue
 		}
 		at := namedColumn(column).FindStringIndex(sql)

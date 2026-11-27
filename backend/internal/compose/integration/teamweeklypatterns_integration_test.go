@@ -375,8 +375,8 @@ func TestTheFunnelAttributesEachMoveToItsOwnerThen(t *testing.T) {
 	e.WsExec(t, `INSERT INTO deal_stage_history (deal_id, to_stage_id, changed_by, changed_at,
 		owner_id_at_change, semantic_at_change) VALUES ($1, $2, 'human:x', $3, $4, 'open')`,
 		legacy, entered, teamClock.AddDate(0, 0, -30), e.Rep1)
-	run := integration.SeedIDRow(t, integration.OwnerConn(t), `INSERT INTO import_run (id, connector, status, source_ref, source, captured_by)
-		VALUES ($1, 'csv', 'running', 'deals.csv', 'upload', 'human:test')`)
+	run := integration.SeedIDRow(t, integration.OwnerConn(t), `INSERT INTO import_run (id, connector, status, source_ref, captured_by)
+		VALUES ($1, 'csv', 'running', 'deals.csv', 'human:test')`)
 	seedFunnelMovesMadeElsewhere(t, e, pipeline, entered, next, "imported", &run)
 	seedFunnelMovesMadeElsewhere(t, e, pipeline, entered, next, "synced", nil)
 	writeRepWeek(t, e, e.Rep1)

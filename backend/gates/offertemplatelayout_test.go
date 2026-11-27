@@ -45,7 +45,7 @@ func TestTheOfferTemplateFormWritesTheKeysTheRendererPrints(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the offer-template form: %v", err)
 	}
-	form := tsComment.ReplaceAllString(string(source), " ")
+	form := gatekit.TSWithoutComments(string(source))
 	printed := slices.Sorted(slices.Values(deals.OfferTemplateLayoutTextKeys()))
 
 	literals := tsLayoutLiteral.FindAllStringSubmatch(form, -1)

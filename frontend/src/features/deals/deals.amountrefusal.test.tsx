@@ -72,7 +72,11 @@ describe("a deal amount the currency cannot hold", () => {
     ],
     ["Value", "1.999", "This amount has more decimals than EUR allows."],
     ["Value", "-3", "Enter an amount of zero or more."],
-    ["Value", "900000000000000", "This amount is too large to store."],
+    [
+      "Value",
+      "900000000000000",
+      "Enter an amount of at most 90071992547409.91.",
+    ],
   ])(
     "refuses %s %s under the field and sends nothing",
     (label, typed, sentence) => {

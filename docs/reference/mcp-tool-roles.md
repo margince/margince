@@ -43,7 +43,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | [Compliance and privacy](#compliance-and-privacy) | 47 | 47✓ 0✗ | 27✓ 20✗ | 27✓ 20✗ | 32✓ 15✗ | 11✓ 36✗ | 26✓ 21✗ |
 | [Capture and connectors](#capture-and-connectors) | 44 | 44✓ 0✗ | 38✓ 6✗ | 38✓ 6✗ | 44✓ 0✗ | 28✓ 16✗ | 37✓ 7✗ |
 | [Workspace settings a non-admin can reach](#workspace-settings-a-non-admin-can-reach) | 40 | 40✓ 0✗ | 40✓ 0✗ | 40✓ 0✗ | 40✓ 0✗ | 35✓ 5✗ | 40✓ 0✗ |
-| [Admin settings](#admin-settings) | 117 | 117✓ 0✗ | 10✓ 107✗ | 0✓ 117✗ | 84✓ 33✗ | 0✓ 117✗ | 0✓ 117✗ |
+| [Admin settings](#admin-settings) | 114 | 114✓ 0✗ | 10✓ 104✗ | 0✓ 114✗ | 81✓ 33✗ | 0✓ 114✗ | 0✓ 114✗ |
 | [The user's own account and security](#the-users-own-account-and-security) | 18 | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 18✓ 0✗ | 17✓ 1✗ | 18✓ 0✗ |
 | [Agent governance](#agent-governance) | 4 | 4✓ 0✗ | 4✓ 0✗ | 4✓ 0✗ | 4✓ 0✗ | 3✓ 1✗ | 4✓ 0✗ |
 | [Operator and system](#operator-and-system) | 16 | 16✓ 0✗ | 0✓ 16✗ | 0✓ 16✗ | 16✓ 0✗ | 0✓ 16✗ | 0✓ 16✗ |
@@ -671,7 +671,6 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Call | admin | management | manager | ops | read_only | rep |
 |---|---|---|---|---|---|---|
-| `change_activities.file_channel_message` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_capture.cancel_backfill` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `change_capture.disconnect_channel` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_capture.disconnect_mailbox` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -690,6 +689,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_workspace.connector_containers` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.connectors` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.provider_connections` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `run_research.file_channel_message` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `run_research.start_backfill` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `send_outbound.link_channel` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 
@@ -836,16 +836,13 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `change_settings.create_acquisition_source` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.create_disqualify_reason` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.create_lead_origin` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| `change_settings.create_lead_source` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.create_loss_reason` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.decide_legacy_loss_reason` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.delete_disqualify_reason` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.delete_lead_origin` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| `change_settings.delete_lead_source` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.update_acquisition_source` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.update_disqualify_reason` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.update_lead_origin` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
-| `change_settings.update_lead_source` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_settings.update_loss_reason` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `read_workspace.legacy_loss_reasons` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 
@@ -1570,7 +1567,6 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Capture review | `read_workspace.held_threads` | `list_held_threads` |  |
 | Capture review | `read_workspace.my_capture_activity` | `list_my_capture_activity` |  |
 | Capture review | `read_workspace.workspace_capture_activity` | `list_workspace_capture_activity` | `capture_trace.read` |
-| Connectors and provider connections | `change_activities.file_channel_message` | `file_channel_message` | `activity.create` `activity.read` `company.read` `contact.read` |
 | Connectors and provider connections | `change_capture.cancel_backfill` | `cancel_connector_backfill` |  |
 | Connectors and provider connections | `change_capture.disconnect_channel` | `disconnect_channel` | `channel_connection.delete` |
 | Connectors and provider connections | `change_capture.disconnect_mailbox` | `disconnect_connector` |  |
@@ -1589,6 +1585,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Connectors and provider connections | `read_workspace.connector_containers` | `list_connector_containers` |  |
 | Connectors and provider connections | `read_workspace.connectors` | `list_connectors` |  |
 | Connectors and provider connections | `read_workspace.provider_connections` | `list_provider_connections` | `integrations.read` |
+| Connectors and provider connections | `run_research.file_channel_message` | `file_channel_message` | `activity.create` `activity.read` `company.read` `contact.read` `deal.read` |
 | Connectors and provider connections | `run_research.start_backfill` | `start_connector_backfill` | `activity.create` `contact.create` `lead.create` |
 | Connectors and provider connections | `send_outbound.link_channel` | `link_channel` | `deal.update` |
 | Accounting source | `change_settings.disconnect_finance_source` | `disconnect_finance_source` | `integrations.delete` |
@@ -1666,16 +1663,13 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Sales lists and reasons | `change_settings.create_acquisition_source` | `create_acquisition_source` | `custom_field.create` |
 | Sales lists and reasons | `change_settings.create_disqualify_reason` | `create_lead_disqualify_reason` | `custom_field.create` `lead.read` |
 | Sales lists and reasons | `change_settings.create_lead_origin` | `create_lead_origin` | `custom_field.create` `lead.read` |
-| Sales lists and reasons | `change_settings.create_lead_source` | `create_lead_source` | `custom_field.create` `lead.read` |
 | Sales lists and reasons | `change_settings.create_loss_reason` | `create_loss_reason` | `custom_field.create` |
 | Sales lists and reasons | `change_settings.decide_legacy_loss_reason` | `decide_legacy_loss_reason` | `custom_field.update` |
 | Sales lists and reasons | `change_settings.delete_disqualify_reason` | `delete_lead_disqualify_reason` | `custom_field.delete` `lead.read` |
 | Sales lists and reasons | `change_settings.delete_lead_origin` | `delete_lead_origin` | `custom_field.delete` `lead.read` |
-| Sales lists and reasons | `change_settings.delete_lead_source` | `delete_lead_source` | `custom_field.delete` `lead.read` |
 | Sales lists and reasons | `change_settings.update_acquisition_source` | `update_acquisition_source` | `custom_field.update` |
 | Sales lists and reasons | `change_settings.update_disqualify_reason` | `update_lead_disqualify_reason` | `custom_field.update` `lead.read` |
 | Sales lists and reasons | `change_settings.update_lead_origin` | `update_lead_origin` | `custom_field.update` `lead.read` |
-| Sales lists and reasons | `change_settings.update_lead_source` | `update_lead_source` | `custom_field.update` `lead.read` |
 | Sales lists and reasons | `change_settings.update_loss_reason` | `update_loss_reason` | `custom_field.update` |
 | Sales lists and reasons | `read_workspace.legacy_loss_reasons` | `list_legacy_loss_reasons` | `custom_field.update` `deal.read` |
 | Sales rules and templates | `change_settings.create_review_template` | `create_activity_review_template` | `custom_field.create` |

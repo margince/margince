@@ -35,7 +35,7 @@ func TestAnImportCannotAdoptAnObjectDuringOrAfterItsReap(t *testing.T) {
 	assertRefused := func() {
 		t.Helper()
 		_, err := runs.CreateDraftRun(ctx, migration.CreateDraftRunInput{
-			SourceRef: key, Source: "import_api", Profile: []byte(`{"files":[]}`),
+			SourceRef: key, Profile: []byte(`{"files":[]}`),
 		})
 		if !errors.Is(err, apperrors.ErrNotFound) {
 			t.Fatalf("adopting a condemned source = %v, want upload-again refusal", err)
@@ -115,7 +115,7 @@ func TestAnImportCannotAdoptWhileAClaimedDeleteNeedsARetry(t *testing.T) {
 		t.Fatal(err)
 	}
 	runs := migration.NewRunStore(e.DB())
-	_, err := runs.CreateDraftRun(e.As(e.Rep1, nil, importerPerms()), migration.CreateDraftRunInput{SourceRef: key, Source: "import_api", Profile: []byte(`{"files":[]}`)})
+	_, err := runs.CreateDraftRun(e.As(e.Rep1, nil, importerPerms()), migration.CreateDraftRunInput{SourceRef: key, Profile: []byte(`{"files":[]}`)})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("adoption during delete retry was not refused: %v", err)
 	}

@@ -157,7 +157,9 @@ describe("ChannelPanel", () => {
         "2 invited members have no chat account. 1 invited member was not added. Check the app’s audience in Dispact.",
       ),
     ).toBeInTheDocument();
-    expect(writes).toEqual([{ method: "POST", body: { mode: "create" } }]);
+    expect(writes).toEqual([
+      { method: "POST", body: { mode: "create", provider: "dispact" } },
+    ]);
   });
 
   it("links an existing channel picked from the ones the bot is in, with the history summary asked for by default", async () => {
@@ -201,6 +203,7 @@ describe("ChannelPanel", () => {
       {
         method: "POST",
         body: {
+          provider: "dispact",
           mode: "existing",
           channel: "deal-acme-renewal",
           verbosity: "milestones",
@@ -275,6 +278,7 @@ describe("ChannelPanel", () => {
     );
     const user = userEvent.setup();
     renderPanel();
+    await user.click(await screen.findByRole("button", { name: "Manage" }));
     const verbosity = await screen.findByRole("combobox", {
       name: englishCopy["channelLink.verbosity"],
     });
@@ -292,6 +296,48 @@ describe("ChannelPanel", () => {
         englishCopy["channelLink.verbosity.silent"],
       ),
     );
+  });
+
+  it("changes message detail without rewriting frequency or either sync direction", async () => {
+    const writes = stubServer(
+      { state: "linked", link: { ...link, message_detail: "brief" } },
+      (write) =>
+        jsonResponse({
+          state: "linked",
+          link: { ...link, message_detail: "brief", ...(write.body as object) },
+        }),
+    );
+    const user = userEvent.setup();
+    renderPanel();
+    await user.click(await screen.findByRole("button", { name: "Manage" }));
+    const detail = screen.getByRole("combobox", {
+      name: englishCopy["channelLink.messageDetail"],
+    });
+    await pickOption(user, detail, "Full");
+    await waitFor(() =>
+      expect(writes).toEqual([
+        {
+          method: "PATCH",
+          body: { message_detail: "full", expected_link_id: link.id },
+        },
+      ]),
+    );
+    await waitFor(() => expect(detail).toHaveTextContent("Full"));
+    expect(
+      screen.getByRole("combobox", {
+        name: englishCopy["channelLink.verbosity"],
+      }),
+    ).toHaveTextContent(englishCopy["channelLink.verbosity.important"]);
+    expect(
+      screen.getByRole("switch", {
+        name: englishCopy["channelLink.readDirection"],
+      }),
+    ).toBeChecked();
+    expect(
+      screen.getByRole("switch", {
+        name: englishCopy["channelLink.postDirection"],
+      }),
+    ).toBeChecked();
   });
 
   it("unlinks only after the reader confirms", async () => {
@@ -333,13 +379,50 @@ describe("ChannelPanel", () => {
     ).toBeNull();
   });
 
+  it("switches each sync direction without changing the other", async () => {
+    const writes = stubServer({ state: "linked", link }, (write) =>
+      jsonResponse({
+        state: "linked",
+        link: { ...link, ...(write.body as object) },
+      }),
+    );
+    const user = userEvent.setup();
+    renderPanel();
+    await user.click(await screen.findByRole("button", { name: "Manage" }));
+    await user.click(
+      screen.getByRole("switch", {
+        name: englishCopy["channelLink.readDirection"],
+      }),
+    );
+    await waitFor(() =>
+      expect(writes).toEqual([
+        {
+          method: "PATCH",
+          body: { save_channel_updates: false, expected_link_id: link.id },
+        },
+      ]),
+    );
+    await waitFor(() =>
+      expect(
+        screen.getByRole("switch", {
+          name: englishCopy["channelLink.readDirection"],
+        }),
+      ).not.toBeChecked(),
+    );
+    expect(
+      screen.getByRole("switch", {
+        name: englishCopy["channelLink.postDirection"],
+      }),
+    ).toBeChecked();
+  });
+
   it("offers no verb to a reader who may not edit the record", async () => {
     stubServer({ state: "linked", link });
     renderPanel(false);
-    const verbosity = await screen.findByRole("combobox", {
-      name: englishCopy["channelLink.verbosity"],
-    });
-    expect(verbosity).toBeDisabled();
+    expect(
+      await screen.findByText(/Recaps saved to History/),
+    ).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: "Manage" })).toBeNull();
     expect(
       screen.queryByRole("button", { name: englishCopy["record.moreActions"] }),
     ).toBeNull();

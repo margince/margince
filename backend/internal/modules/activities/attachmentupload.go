@@ -13,6 +13,7 @@ package activities
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"io"
 
@@ -57,7 +58,7 @@ type AttachmentInput struct {
 type EmptyUploadError struct{ Filename string }
 
 func (e *EmptyUploadError) Error() string {
-	return fmt.Sprintf("%q is empty, so there is nothing to upload; choose the file again", e.Filename)
+	return fmt.Sprintf("The file %q is empty, so there is nothing to upload. Choose the file again.", e.Filename)
 }
 
 // FieldFault names the part of the upload the caller must correct.
@@ -96,20 +97,25 @@ func (s *Store) mayUpload(ctx context.Context, in AttachmentInput) error {
 	})
 }
 
-// UploadAttachment stores an object and records its metadata row. Authority
-// inherits from the parent entity: the caller must hold Update on the parent
-// object type and be able to see the parent row; both are checked before any
-// bytes are written, so an upload to a hidden or cross-tenant entity cannot
-// land an object (no storage abuse). The object is put before the row commits
-// (a committed row always has its bytes; a failed write leaves at worst an
-// orphan object, never a row promising bytes that are not there).
+// UploadAttachment stores an object and records its metadata row, as upload
+// does without reuse.
 func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmcontracts.Attachment, error) {
+	att, _, err := s.upload(ctx, in, false)
+	return att, err
+}
+
+// upload checks Update on the parent's type and sight of the parent before any
+// bytes are written, so a hidden record never receives an object. The object
+// is put before its row commits: a row never promises bytes that are missing.
+// With reuse, a live file with the same bytes on the record and agreement is
+// answered instead of a copy, and the bool says so.
+func (s *Store) upload(ctx context.Context, in AttachmentInput, reuse bool) (crmcontracts.Attachment, bool, error) {
 	if err := s.mayUpload(ctx, in); err != nil {
-		return crmcontracts.Attachment{}, err
+		return crmcontracts.Attachment{}, false, err
 	}
 	by, err := storekit.CapturedBy(ctx)
 	if err != nil {
-		return crmcontracts.Attachment{}, err
+		return crmcontracts.Attachment{}, false, err
 	}
 
 	id := ids.NewV7()
@@ -121,26 +127,21 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 	// Before the digest, so a refused file is never stored.
 	in, err = acceptUploadedFile(in)
 	if err != nil {
-		return crmcontracts.Attachment{}, err
+		return crmcontracts.Attachment{}, false, err
 	}
 
-	checksum, size, err := blobstore.Digest(in.Content)
+	checksum, size, err := digestUpload(in)
 	if err != nil {
-		return crmcontracts.Attachment{}, err
+		return crmcontracts.Attachment{}, false, err
 	}
-	// Refused HERE, where the contact still has the file in front of them and can
-	// pick the one they meant. A file with no content is not a limit one
-	// transport dislikes — no send path anywhere can do anything with it — and
-	// the counted size is the only honest witness: a declared length can
-	// disagree with the bytes, which is why nothing declares one.
-	//
-	// Before the object is stored, so an empty upload leaves nothing behind.
-	if size == 0 {
-		return crmcontracts.Attachment{}, &EmptyUploadError{Filename: in.Filename}
+	if reuse {
+		if held, found, err := s.identicalAttachment(ctx, in, checksum, size); err != nil || found {
+			return held, found, err
+		}
 	}
 
 	if err := s.storeAttachmentBytes(ctx, key, in, size); err != nil {
-		return crmcontracts.Attachment{}, err
+		return crmcontracts.Attachment{}, false, err
 	}
 
 	var out crmcontracts.Attachment
@@ -185,7 +186,37 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 		out = att
 		return nil
 	})
-	return out, err
+	return out, false, err
+}
+
+// identicalAttachment is the oldest live file with these bytes filed straight
+// on the record and against the same agreement. Every such row is visible to a
+// caller who may see the record, and that is asked again here.
+func (s *Store) identicalAttachment(ctx context.Context, in AttachmentInput, checksum string, size int64) (crmcontracts.Attachment, bool, error) {
+	var held crmcontracts.Attachment
+	found := false
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		if err := ensureAttachmentParentVisible(ctx, tx, in.EntityType, in.EntityID); err != nil {
+			return err
+		}
+		var id ids.UUID
+		err := tx.QueryRow(ctx, `
+			SELECT id FROM attachment
+			 WHERE entity_type = $1 AND entity_id = $2 AND checksum = $3 AND byte_size = $4
+			   AND contract_id IS NOT DISTINCT FROM $5 AND archived_at IS NULL
+			 ORDER BY created_at, id LIMIT 1`,
+			in.EntityType, in.EntityID, checksum, size, in.ContractID).Scan(&id)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return nil
+		}
+		if err != nil {
+			return fmt.Errorf("find an identical file on the record: %w", err)
+		}
+		held, err = readAttachment(ctx, tx, id)
+		found = err == nil
+		return err
+	})
+	return held, found, err
 }
 
 // acceptUploadedFile makes the typed name safe and settles the stored type.
@@ -203,6 +234,20 @@ func (s *Store) UploadAttachment(ctx context.Context, in AttachmentInput) (crmco
 // and are shown by the same list.
 //
 // The type is resolved from the typed name and then held against the bytes.
+// digestUpload counts and hashes the bytes, and refuses an empty file before
+// any object is stored. The counted size decides, because a declared length can
+// disagree with the bytes.
+func digestUpload(in AttachmentInput) (string, int64, error) {
+	checksum, size, err := blobstore.Digest(in.Content)
+	if err != nil {
+		return "", 0, err
+	}
+	if size == 0 {
+		return "", 0, &EmptyUploadError{Filename: in.Filename}
+	}
+	return checksum, size, nil
+}
+
 func acceptUploadedFile(in AttachmentInput) (AttachmentInput, error) {
 	typed := in.Filename
 	in.Filename = extension.SafeFilename(in.Filename, 0)

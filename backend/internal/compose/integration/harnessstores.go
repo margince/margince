@@ -17,6 +17,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/consent"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
@@ -37,7 +38,7 @@ func (e *Env) bindStores(t testing.TB, db *database.DB) {
 	// A no-op rename: the installation-name edge is compose's, which this package
 	// cannot import, and compose's installationname suites prove it.
 	// Merge readers use stored plan dates; no current-week calculation is needed.
-	e.Contacts = contacts.NewStore(db).WithConsumerMail(capture.MatcherTx).
+	e.Contacts = contacts.NewStore(db).WithCompanyReferenceCarrier(chatlinks.MoveCompanyRefsTx).WithConsumerMail(capture.MatcherTx).
 		WithSenderStamp(activities.StampProvenSendersTx).
 		WithParticipantRosterReader(activities.EnsureParticipantRosterVisibleTx).
 		WithProviderRunReader(integrations.ReadRunForContactTx).

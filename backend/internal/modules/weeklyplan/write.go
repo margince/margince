@@ -74,7 +74,7 @@ func (s *Store) StartWeek(ctx context.Context, now time.Time) (Plan, error) {
 		}); err != nil {
 			return err
 		}
-		plan = Plan{ID: id, OwnerID: owner, LocalWeekStart: week, Status: PlanOpen, Version: 1}
+		plan = Plan{ID: id, OwnerID: owner, LocalWeekStart: week, Status: PlanOpen}
 		return nil
 	})
 	if err != nil {
@@ -195,7 +195,7 @@ func (s *Store) openPlanTx(
 			VALUES ($1, $2, $3) RETURNING id`, owner, week, capturedBy).Scan(&id); err != nil {
 			return Plan{}, fmt.Errorf("weeklyplan: opening the week: %w", err)
 		}
-		return Plan{ID: id, OwnerID: owner, LocalWeekStart: week, Status: PlanOpen, Version: 1}, nil
+		return Plan{ID: id, OwnerID: owner, LocalWeekStart: week, Status: PlanOpen}, nil
 	case err != nil:
 		return Plan{}, err
 	}

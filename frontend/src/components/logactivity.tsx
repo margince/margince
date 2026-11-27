@@ -28,7 +28,7 @@ import { ActivityBodyField } from "./activitybodyfield";
 import { useActivityGate } from "./activitygate";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
-import { dueBoundsOf, latestDayOf } from "./logactivity.days";
+import { dueBoundsOf, earliestDayOf, latestDayOf } from "./logactivity.days";
 import { ActivityKindField } from "./logactivity.kindfield";
 import {
   completeLoggedTask,
@@ -78,6 +78,7 @@ export function LogActivityForm({
   askedKind,
   frame,
   onlyTasks = false,
+  onlyNotes = false,
   sourceActivityId,
   taskToComplete,
   inheritSourceLinks = false,
@@ -91,6 +92,7 @@ export function LogActivityForm({
   askedKind?: OpeningKind;
   // Opened as Add task: no other kind is offered, so no date stops at today.
   onlyTasks?: boolean;
+  onlyNotes?: boolean;
   sourceActivityId?: string;
   taskToComplete?: Readonly<{ id: string; version?: number }>;
   inheritSourceLinks?: boolean;
@@ -290,7 +292,7 @@ export function LogActivityForm({
   const draftFields = () => (
     <>
       <div className="form-row">
-        {!onlyTasks && (
+        {!onlyTasks && !onlyNotes && (
           <ActivityKindField
             value={draft.kind}
             offersTask={!taskToComplete}
@@ -314,6 +316,7 @@ export function LogActivityForm({
               {...control}
               value={isoOrBlank(draft.day)}
               // Match occurredFields so the picker and submission accept the same days.
+              min={earliestDayOf(draft.kind, recordZone)}
               max={latestDayOf(draft.kind, recordZone)}
               {...dueBoundsOf(draft.kind, recordZone)}
               today={isoOrBlank(todayDay(draft.kind, recordZone)) || undefined}

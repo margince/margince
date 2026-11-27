@@ -128,8 +128,7 @@ type Server struct {
 	promiseTakeOverHandlers
 	importHandlers
 	channelHandlers
-	chatLinkHandlers
-	chatEventHandlers
+	messagingHandlers
 	whatsAppEventHandlers
 	traceHandlers
 	pipelineTraceHandlers
@@ -167,6 +166,7 @@ type Server struct {
 	contact360Handlers
 	project360Handlers
 	contactBriefHandlers
+	taskExplainHandlers
 	meetingBriefHandlers
 	dealStatusHandlers
 	roomBriefHandlers
@@ -217,8 +217,7 @@ type Server struct {
 	// itself. In compose because a pass is assembled from the deals and
 	// coverage seams, which assurance owns nothing of.
 	assuranceRunHandlers
-	// Introductions: one rep asks a colleague to open a door, and what came of it.
-	introductionHandlers
+	introductionHandlers // one rep asks a colleague to open a door, and what came of it
 	initiativeHandlers
 
 	// signInProviders accumulates the federated sign-in providers this

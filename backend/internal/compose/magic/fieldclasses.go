@@ -220,6 +220,8 @@ var syntheticAuditFields = setOf(
 	"snoozed_until",
 	"social.linkedin",
 	"source_activity_id",
+	"source_changed",
+	"source_deleted",
 	"source_id",
 	"source_revision",
 	"source_system",

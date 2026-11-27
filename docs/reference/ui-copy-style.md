@@ -45,6 +45,8 @@ items and most help text are statements that address no one.
   plans or feelings. `We could not save` becomes `Changes were not saved`. In the
   voice of the product, the one exception is the privacy notice. There the data
   controller addresses the data subject and, in law, speaks as `we`.
+- Team voice is `we` too. Where `we` means the reader's team, write `your team`
+  or drop the pronoun: `We owe them a reply` becomes `Your team owes them a reply`.
 - Never `I` in the voice of the product. An agent is the exception, on a
   conversation surface where it speaks in a message bubble (the onboarding
   conversation). There it says `I` in short, factual sentences, and nowhere else. Status lines, notices and activity
@@ -102,9 +104,11 @@ items and most help text are statements that address no one.
 - **Spacing.** One space between words, never two. A value may start or end
   with a space only when it is a fragment the code joins around markup. There
   the code depends on that edge space.
-- **Numbers** as digits, with a comma as the thousands separator. `to` for
-  ranges (`1 to 4`, never `1-4`), `of` for part of a set (`3 of 12`). No
-  ordinals in UI (`1st`, `2nd`).
+- **Numbers** as digits, with a comma as the thousands separator. A range of
+  figures is two numbers joined by a hyphen with no spaces (`1-4`); that hyphen
+  is not a dash. A sentence keeps its words (`from 1 to 4`), and so does a
+  range of dates. `of` for part of a set (`3 of 12`). No ordinals in UI
+  (`1st`, `2nd`).
 - **Abbreviations**: none of `e.g.`, `i.e.`, `etc.`, `vs.`, `w/` or `&`. Write
   `for example`, `that is`, `and`. Known acronyms are fine when the reader shares
   them: CRM, API, VAT, DNS, IMAP, PDF, CSV, UTC.
@@ -217,6 +221,67 @@ sentence case, articles, periods, tense, voice, a spaced hyphen, `w/`, numbers
 and ranges, and list form. They also judge length
 limits, vocabulary past the retired words, message shapes, and a contraction
 outside its list. And `you` used where no one needed it.
+
+### Copy the server writes
+
+The Go copy tables answer to part of this page. `langcopytest.Census` checks the
+English of every `langcopy.Phrase` table, and `langcopytest.StyleByLanguage` a
+table keyed by language. `langcopytest.CensusByLanguage` takes that table when
+its test also checks placeholders and that every language is written.
+`langcopytest.EnglishText` checks a sentence of another shape from its own test.
+All four live in
+`backend/internal/shared/kernel/langcopy/langcopytest/`.
+
+They fail a dash as punctuation: an em dash, an en dash, `--` or a spaced
+hyphen. They also fail a contraction, `we`, `I`, a British spelling and `&`.
+They read those patterns from `stylesources_gen.go`, a snapshot of
+`copy-style.test.ts`. A test of that folder fails when the two differ, and its
+`-update` flag rewrites the snapshot.
+
+A table keyed by language is walked from its own test.
+`backend/gates/langcopylanguagetables_test.go` fails one that no test walks. The
+gate names each table no reader sees, with a reason.
+
+A table is the product speaking to a member unless its test names another
+register, with a reason. An agent in a chat bubble may say `I`. The data
+controller may say `we`. A sentence someone says as their own keeps only the
+dash, spelling and `&` rules. Text a program matches, or a reader copies as it
+stands, keeps none of them.
+
+Findings that wait for a rewrite are listed in `stylebaseline.txt` in that
+folder, one rule and sentence a line. The file only gets shorter.
+
+`make style-baseline-shrinks` compares it with its copy at the merge base with
+`main`. It fails on each line that copy does not hold, so a changed line counts
+as a new one. Removed lines and comments pass. A file that `main` has never held
+passes whole, as the start of the list. CI runs the check, and fails when it
+finds no `main` to compare with.
+
+A test fails a line whose sentence now passes, or that no Go string spells. Two
+pins in `stylebaseline_test.go` hold its lines: `wantStyleWaivers` is how many
+there are, and `wantStyleDigest` the SHA-256 of them sorted, comments left out.
+A test fails when either differs, so `go test` shows an edit before CI does.
+
+The command below only drops the lines whose sentence now passes or that no Go
+string spells any more, and rewrites both pins to match. A line dropped by hand
+sets both pins in the same change. Run it from `backend/`:
+
+```sh
+go test ./internal/shared/kernel/langcopy/langcopytest -run '^TestRecutStyleBaseline$' -recut
+```
+
+The check does not reach:
+
+- the voice of a draft the member sends as themselves (`draftfloor`, introduction notes);
+- the demo mail of `capture/offlinedemo`;
+- word lists a matcher reads (`draftcheck`, `salutation`, `searchplan`);
+- text a function returns from a `switch` and not from a table;
+- a table whose map type another package declares, which the census of
+  language-keyed tables cannot resolve;
+- a map type that takes its key type as a parameter, used with
+  `textlang.Lang` as the key;
+- strings outside a table: problem details, `crm.yaml` and the copy of MCP tools,
+  which issues #13561 and #13562 track.
 
 ## Sources
 

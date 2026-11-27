@@ -161,7 +161,7 @@ it("refuses a figure too large to store and sends nothing", async () => {
   expect(confirm).toBeDisabled();
   await f.user.click(confirm);
   expect(
-    screen.getByText(englishCopy["amount.refused.tooLarge"]),
+    screen.getByText("Enter an amount of at most 90071992547409.91."),
   ).toBeVisible();
   expect(f.posted).toHaveLength(0);
 });

@@ -7,9 +7,9 @@ writes: true
 prompt: |
   The Leitstand Goslar project slipped a month, and I would call it at risk now. Record that as the project's health.
 
+# A note beside the act is no fault: the end state finds the act or fails the run.
 must_not_call_with:
   - change_state~move_project
-  - log_activity~.
 
 may_call:
   - find_records

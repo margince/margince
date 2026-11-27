@@ -28,8 +28,8 @@ var teamWords = struct {
 	ManagerCall  langcopy.Phrase
 	Median       langcopy.Phrase
 }{
-	Counted:      langcopy.Phrase{En: "%d of %d members counted; %d deals won and %d lost.", De: "Erfasste Teammitglieder: %d von %d; %d Deals gewonnen und %d verloren.", Vi: "Đã tính %d trên %d thành viên; chốt %d deal và thất bại %d."},
-	CountedOne:   langcopy.Phrase{En: "%d of %d members counted; 1 deal won and %d lost.", De: "Erfasste Teammitglieder: %d von %d; ein Deal gewonnen und %d verloren.", Vi: "Đã tính %d trên %d thành viên; chốt một deal và thất bại %d."},
+	Counted:      langcopy.Phrase{En: "%d of %d members counted; %d deals won and %d lost.", De: "Erfasste Teammitglieder: %d von %d; %d Deals gewonnen und %d verloren.", Vi: "Đã tính %d trên %d thành viên; chốt %d deal và thua %d."},
+	CountedOne:   langcopy.Phrase{En: "%d of %d members counted; 1 deal won and %d lost.", De: "Erfasste Teammitglieder: %d von %d; ein Deal gewonnen und %d verloren.", Vi: "Đã tính %d trên %d thành viên; chốt một deal và thua %d."},
 	Help:         langcopy.Phrase{En: "Asked for help: %s.", De: "Um Hilfe gebeten: %s.", Vi: "Đã yêu cầu hỗ trợ: %s."},
 	Strong:       langcopy.Phrase{En: "Strong week: %s.", De: "Starke Woche: %s.", Vi: "Tuần làm việc tốt: %s."},
 	AtRisk:       langcopy.Phrase{En: "%s: coverage at risk against %s (%d%%); a replan is recommended.", De: "%s: Deckung gegenüber %s gefährdet (%d%%); eine neue Planung wird empfohlen.", Vi: "%s: mức bao phủ có rủi ro so với %s (%d%%); nên lập lại kế hoạch."},

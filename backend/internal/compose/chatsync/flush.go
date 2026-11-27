@@ -18,8 +18,10 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
@@ -41,11 +43,13 @@ func NewFlusher(pool *pgxpool.Pool, chats chatlinks.Chats, store *chatlinks.Stor
 
 // Flusher sends one link's flush.
 type Flusher struct {
-	Pool   *pgxpool.Pool
-	Store  *chatlinks.Store
-	Chats  chatlinks.Chats
-	Origin string
-	Log    *slog.Logger
+	previewOnly bool
+	Lane        ai.Completer
+	Pool        *pgxpool.Pool
+	Store       *chatlinks.Store
+	Chats       chatlinks.Chats
+	Origin      string
+	Log         *slog.Logger
 }
 
 // Flush sends what the link has pending. ctx carries the job's workspace; the
@@ -63,7 +67,7 @@ func (w *Flusher) Flush(ctx context.Context, linkID ids.UUID) error {
 	if pending.Link.Status != chatlinks.StatusActive {
 		return nil
 	}
-	session, err := w.Chats.Open(ctx)
+	session, err := chatlinks.OpenProvider(ctx, w.Chats, pending.Link.Provider)
 	if errors.Is(err, chatlinks.ErrBotNotConnected) {
 		return nil
 	}
@@ -76,7 +80,10 @@ func (w *Flusher) Flush(ctx context.Context, linkID ids.UUID) error {
 		return w.Store.MarkChannelGone(ctx, pending.Link.ID)
 	}
 	if err := w.send(ctx, session, pending); err != nil {
-		return w.answerFailure(ctx, pending, err)
+		return errors.Join(w.answerFailure(ctx, pending, err), w.Store.RecordPostResult(ctx, linkID, postFailureReason(err)))
+	}
+	if err := w.Store.RecordPostResult(ctx, linkID, ""); err != nil {
+		return err
 	}
 	more, err := w.Store.HasPending(ctx, pending.Link.ID)
 	if err != nil {
@@ -91,29 +98,44 @@ func (w *Flusher) Flush(ctx context.Context, linkID ids.UUID) error {
 // send keeps the card current, rewrites narrowed posts, and posts what is
 // pending. The order puts the card before the first update.
 func (w *Flusher) send(ctx context.Context, session chatlinks.Session, pending chatlinks.Pending) error {
+	if _, err := chatlinks.LinkedChannel(ctx, session.Chat, pending.Link); err != nil {
+		return err
+	}
 	record, err := readRecord(ctx, w.Pool, pending.Link)
 	if err != nil {
 		return err
 	}
-	if err := w.refreshCard(ctx, session.Chat, pending.Link, record); err != nil {
+	if err := w.refreshEnabledCard(ctx, session.Chat, pending.Link, record); err != nil {
 		return err
 	}
 	for _, rewrite := range pending.Rewrites {
+		if _, native := session.Chat.(chatwire.RootReader); native {
+			if err := w.rewriteNative(ctx, session.Chat, pending.Link, record, rewrite.MessageID, rewrite.Items); err != nil {
+				return err
+			}
+			continue
+		}
 		lines, err := w.lines(ctx, rewrite.Items)
 		if err != nil {
 			return err
 		}
-		if err := session.Chat.Update(ctx, pending.Link.ChannelSlug, rewrite.MessageID, chatPostText(record, lines, w.Origin)); err != nil && !errors.Is(err, dispact.ErrChannelGone) {
+		if err := session.Chat.Update(ctx, pending.Link.ChannelSlug, rewrite.MessageID, chatPostText(record, lines, w.Origin)); err != nil {
 			return err
 		}
 		if err := w.Store.MarkRewritten(ctx, pending.Link.ID, rewrite.MessageID); err != nil {
 			return err
 		}
 	}
+	if pending.Link.PostDisabled {
+		return nil
+	}
 	return w.post(ctx, session.Chat, pending, record)
 }
 
 func (w *Flusher) post(ctx context.Context, chat chatlinks.Chat, pending chatlinks.Pending, record chatRecord) error {
+	if _, native := chat.(chatwire.RootReader); native {
+		return w.postNative(ctx, chat, pending, record)
+	}
 	lines, err := w.lines(ctx, pending.Items)
 	if err != nil || len(pending.Items) == 0 {
 		return err
@@ -126,13 +148,13 @@ func (w *Flusher) post(ctx context.Context, chat chatlinks.Chat, pending chatlin
 	// same client_msg_id and the chat posts it once.
 	postID := pending.Items[0].ID
 	if len(lines) == 0 {
-		return w.Store.MarkPosted(ctx, pending.Link.ID, postID, "", carried)
+		return w.Store.MarkPosted(ctx, pending.Link.ID, postID, "", carried, pending.Link.MessageDetail)
 	}
-	posted, err := chat.Post(ctx, pending.Link.ChannelSlug, chatPostText(record, lines, w.Origin), postID.String(), "")
+	posted, err := chat.Post(ctx, pending.Link.ChannelSlug, chatPostText(record, lines, w.Origin), postID.String(), pending.Link.RootID)
 	if err != nil {
 		return err
 	}
-	return w.Store.MarkPosted(ctx, pending.Link.ID, postID, posted.ID, carried)
+	return w.Store.MarkPosted(ctx, pending.Link.ID, postID, posted.ID, carried, pending.Link.MessageDetail)
 }
 
 // lines renders each item, reading an activity through sharedActivity. An
@@ -167,13 +189,16 @@ func (w *Flusher) lines(ctx context.Context, items []chatlinks.Item) ([]string, 
 // refreshCard posts the card once and edits it only when a fact it shows
 // changed. A card deleted in the chat is posted again.
 func (w *Flusher) refreshCard(ctx context.Context, chat chatlinks.Chat, link chatlinks.Link, record chatRecord) error {
+	if link.RootID != "" || link.CardPaused {
+		return nil
+	}
 	text := chatCardText(record, w.Origin)
 	fingerprint := chatFingerprint(text)
 	if link.CardMessageID != "" && fingerprint == link.CardFingerprint {
 		return nil
 	}
 	if link.CardMessageID != "" {
-		err := chat.Update(ctx, link.ChannelSlug, link.CardMessageID, text)
+		err := w.updateReviewed(ctx, chat, link, link.CardMessageID, text)
 		if err == nil {
 			return w.Store.SetCard(ctx, link.ID, link.CardMessageID, fingerprint)
 		}
@@ -181,7 +206,11 @@ func (w *Flusher) refreshCard(ctx context.Context, chat chatlinks.Chat, link cha
 			return err
 		}
 	}
-	posted, err := chat.Post(ctx, link.ChannelSlug, text, "card:"+link.ID.String()+":"+fingerprint, "")
+	key := "card:" + link.ID.String() + ":" + fingerprint
+	if link.CardGeneration != "" {
+		key += ":" + link.CardGeneration
+	}
+	posted, err := w.postReviewed(ctx, chat, link, text, key, "")
 	if err != nil {
 		return err
 	}
@@ -194,6 +223,8 @@ func (w *Flusher) refreshCard(ctx context.Context, chat chatlinks.Chat, link cha
 func (w *Flusher) answerFailure(ctx context.Context, pending chatlinks.Pending, err error) error {
 	var limited *connector.RateLimitedError
 	switch {
+	case errors.Is(err, chatlinks.ErrChannelIdentityNeedsReview):
+		return w.Store.MarkIdentityNeedsReview(ctx, pending.Link.ID)
 	case errors.Is(err, dispact.ErrTokenRejected):
 		return capture.StopPollingChannelConnection(ctx, w.Pool, pending.Link.ConnectionID,
 			capture.ChannelPollStoppedByBadToken, "the chat refused the bot token")
@@ -230,4 +261,11 @@ func (w *Worker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 		return jobs.FaultContext(ctx, err)
 	}
 	return jobs.FaultContext(bound, w.Flusher.Flush(bound, job.Args.Link()))
+}
+
+func (w *Flusher) refreshEnabledCard(ctx context.Context, chat chatlinks.Chat, link chatlinks.Link, record chatRecord) error {
+	if link.PostDisabled {
+		return nil
+	}
+	return w.refreshCard(ctx, chat, link, record)
 }

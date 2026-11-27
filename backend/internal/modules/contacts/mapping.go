@@ -223,7 +223,11 @@ func leadCreateInputAdmitting(req crmcontracts.CreateLeadRequest, importer bool)
 		}
 	}
 	// `source` is nobody's to forge, the importer included.
-	if err := provenance.Refuse(auditKeySource, source); err != nil {
+	if err := provenance.RefuseSource(source); err != nil {
+		return CreateLeadInput{}, err
+	}
+	// After the namespace refusal, which names the reserved field more precisely.
+	if err := provenance.AdmitRecordSource(source); err != nil {
 		return CreateLeadInput{}, err
 	}
 	author, err := storekit.AdmitSourceAuthor(req.SourceAuthorId, req.SourceAuthorName, req.SourceSystem, importer)

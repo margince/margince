@@ -9,6 +9,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/json"
+	"errors"
 	"fmt"
 	"reflect"
 	"strings"
@@ -38,12 +39,13 @@ func (b *seededRecoveryBrain) Complete(ctx context.Context, req model.Request) (
 		return model.Response{Text: b.reply}, runner.Meta{ModelID: "fixture/recovery", Tier: "fixture"}, nil
 	}
 	if !b.observed.Swap(true) {
-		observation := req.System
+		var observation strings.Builder
+		observation.WriteString(req.System)
 		for _, message := range req.Messages {
-			observation += message.Content
+			observation.WriteString(message.Content)
 		}
-		if !strings.Contains(observation, "tool call refused:") {
-			return model.Response{}, runner.Meta{}, fmt.Errorf("candidate did not receive the seeded refusal")
+		if !strings.Contains(observation.String(), "tool call refused:") {
+			return model.Response{}, runner.Meta{}, errors.New("candidate did not receive the seeded refusal")
 		}
 	}
 	return b.Brain.Complete(ctx, req)

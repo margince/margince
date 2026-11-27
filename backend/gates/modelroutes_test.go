@@ -28,6 +28,7 @@ package gates
 // has — so the marker's own doc comment says to read the handler first.
 
 import (
+	"go/ast"
 	"regexp"
 	"strconv"
 	"strings"
@@ -243,23 +244,33 @@ func modelRouteDeadlinePatterns(t *testing.T) []string {
 // shape they read.
 func modelRouteDeadlineList(t *testing.T, name string) []string {
 	t.Helper()
-	source, err := gatekit.ReadFile(modelRouteDeadlineFile)
+	file, err := gatekit.ParseFile(modelRouteDeadlineFile, 0)
 	if err != nil {
-		t.Fatalf("reading %s: %v", modelRouteDeadlineFile, err)
+		t.Fatal(err)
 	}
-	start := indexAfter(string(source), "var "+name+" = []string{")
-	if start < 0 {
-		t.Fatalf("%s no longer declares %s as a []string literal — this gate is reading a shape that is gone", modelRouteDeadlineFile, name)
-	}
-	end := strings.Index(string(source)[start:], "}")
-	if end < 0 {
-		t.Fatalf("%s's %s literal is unterminated", modelRouteDeadlineFile, name)
-	}
-	block := tsComment.ReplaceAllString(string(source)[start:start+end], " ")
 	var entries []string
-	for _, m := range goStringLiteral.FindAllStringSubmatch(block, -1) {
-		entries = append(entries, m[1])
-	}
+	ast.Inspect(file, func(node ast.Node) bool {
+		spec, ok := node.(*ast.ValueSpec)
+		if !ok || len(spec.Names) != 1 || spec.Names[0].Name != name || len(spec.Values) != 1 {
+			return true
+		}
+		literal, ok := spec.Values[0].(*ast.CompositeLit)
+		if !ok {
+			t.Fatalf("%s is not a slice literal", name)
+		}
+		for _, element := range literal.Elts {
+			value, ok := element.(*ast.BasicLit)
+			if !ok {
+				t.Fatalf("%s contains a nonliteral path", name)
+			}
+			path, err := strconv.Unquote(value.Value)
+			if err != nil {
+				t.Fatal(err)
+			}
+			entries = append(entries, path)
+		}
+		return false
+	})
 	if len(entries) == 0 {
 		t.Fatalf("no entries parsed out of %s's %s — a gate that reads nothing agrees with everything", modelRouteDeadlineFile, name)
 	}
@@ -297,7 +308,6 @@ func deadlineReaches(path string, suffixes, patterns []string) bool {
 
 // goStringLiteral reads one Go double-quoted string literal. modelRouteSuffixes
 // holds plain suffixes with no escapes, so this does not need to unescape them.
-var goStringLiteral = regexp.MustCompile(`"([^"]*)"`)
 
 // clientModelRoutes is the client's table, read out of its source: the constant
 // is module-private and exported by nothing, which is right for the client and
@@ -317,7 +327,7 @@ func clientModelRoutes(t *testing.T) map[string]string {
 	if end < 0 {
 		t.Fatalf("%s's %s literal is unterminated", modelRouteClient, marker)
 	}
-	table := tsComment.ReplaceAllString(string(source)[start:start+end], " ")
+	table := gatekit.TSWithoutComments(string(source)[start : start+end])
 	entries := map[string]string{}
 	for _, m := range tsModelRouteEntry.FindAllStringSubmatch(table, -1) {
 		entries[m[1]] = m[2]
@@ -363,7 +373,7 @@ func TestTheClientsModelRouteDeadlineMatchesTheServers(t *testing.T) {
 	// commented-out or example declaration mentioning the same name is not a
 	// second real one, and without this the LAST match in source order would
 	// silently win over the real, live one above it.
-	text := tsComment.ReplaceAllString(string(source), " ")
+	text := gatekit.TSWithoutComments(string(source))
 	const name = "MODEL_ROUTE_TIMEOUT_MS"
 	var found []string
 	for _, m := range tsNumericConst.FindAllStringSubmatch(text, -1) {

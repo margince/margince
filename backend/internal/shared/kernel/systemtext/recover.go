@@ -7,6 +7,7 @@ import (
 	"errors"
 	"fmt"
 	"regexp"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -22,11 +23,7 @@ func RecoverCanonicalText(value string) (*Component, error) {
 	var recovered *Component
 	best, ambiguous := 0, false
 	for code, definition := range catalog {
-		literal := len(strings.TrimSpace(recoveryVerb.ReplaceAllString(Copy(code, textlang.English), "")))
-		if literal == 0 || literal < best {
-			continue
-		}
-		candidate, err := recoverCanonicalComponent(code, definition, value)
+		candidate, literal, err := recoverCode(code, definition, value, best)
 		if err != nil {
 			return nil, err
 		}
@@ -56,9 +53,24 @@ func RecoverCanonicalText(value string) (*Component, error) {
 	return recovered, nil
 }
 
+// recoverCode matches value against code's English wordings that hold no fewer
+// literal bytes than best, today's first, and reports the match's literal bytes.
+func recoverCode(code string, definition Definition, value string, best int) (*Component, int, error) {
+	for _, template := range storedWordings(definition, textlang.English) {
+		literal := len(strings.TrimSpace(recoveryVerb.ReplaceAllString(template, "")))
+		if literal == 0 || literal < best {
+			continue
+		}
+		candidate, err := recoverCanonicalComponent(code, definition, template, value)
+		if err != nil || candidate != nil {
+			return candidate, literal, err
+		}
+	}
+	return nil, 0, nil
+}
+
 //nolint:nilnil // Pattern mismatches are expected nonmatches.
-func recoverCanonicalComponent(code string, definition Definition, value string) (*Component, error) {
-	template := Copy(code, textlang.English)
+func recoverCanonicalComponent(code string, definition Definition, template, value string) (*Component, error) {
 	verbs := recoveryVerb.FindAllStringSubmatchIndex(template, -1)
 	if len(verbs) == 0 && template != value {
 		return nil, nil
@@ -106,7 +118,11 @@ func recoverCanonicalComponent(code string, definition Definition, value string)
 		return nil, nil
 	}
 	component := Sentence(code, arguments...)
-	if Canonical(component, textlang.English) != value || strings.Contains(template[last:], "%") {
+	rendered, err := component.renderings(reading{lang: textlang.English, original: value, asStored: true}, 0)
+	if err != nil {
+		return nil, err
+	}
+	if !slices.Contains(rendered, value) || strings.Contains(template[last:], "%") {
 		return nil, nil
 	}
 	return component, nil

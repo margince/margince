@@ -33,6 +33,8 @@ import (
 // their history would be the wrong way to find that out. The register carries
 // what each table is and what deciding its window would cost.
 var runLedgerWindow = gatekit.Waive(map[string]string{
+	"chat_bot_delivery": "durable delivery and provider-copy evidence, deleted with its association; unresolved sends must keep blocking retries, and retained receipts let restriction work locate delivered copies. Pruning by age would lose both guarantees",
+	"chat_send_attempt": "owner-scoped idempotency and receipt evidence without message bodies, deleted with its user; its grant stays referenced while evidence remains. An unknown send must not become a new send because a time window expired",
 	"activity_reminder_delivery": "one row per task, keyed by the task and overwritten when its reminder " +
 		"moves; the task's delete cascades to it, so the task count bounds it and no window applies",
 	"data_task_run": "one durable row per release task step, bounded by the shipped catalog rather than execution count. Deleting a completed cursor would rerun a correction after restart; retirement requires an explicit minimum supported upgrade release.",
@@ -122,12 +124,9 @@ func TestEveryLedgerOfExecutionsStatesItsWindow(t *testing.T) {
 // ledgerTables derives the corpus from the catalog.
 func ledgerTables(t *testing.T) []string {
 	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	raw := headCatalog(t)
 	seen := map[string]bool{}
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		m := regexp.MustCompile(`^public\.([a-z_0-9]+)\.`).FindStringSubmatch(strings.TrimSpace(line))
 		if m != nil && ledgerName.MatchString(m[1]) {
 			seen[m[1]] = true
@@ -155,6 +154,10 @@ func windowedLedgers(t *testing.T) map[string]bool {
 			raw, readErr := gatekit.ReadFile(path)
 			if readErr != nil {
 				return readErr
+			}
+			// Every windowed delete spells DELETE FROM.
+			if text := string(raw); !mayHoldFolded(text, "delete") || !mayHoldFolded(text, "from") {
+				return nil
 			}
 			for _, m := range windowedDelete.FindAllStringSubmatch(string(raw), -1) {
 				if timeBound.MatchString(m[2]) {

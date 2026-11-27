@@ -52,6 +52,9 @@ const storedClock = "stored clock without a precision column, issue #8910"
 // place, each with the reason. Keyed "<spec> <schema path>.<property>" as the
 // census prints it.
 var precisionlessTimes = gatekit.Waive(map[string]string{
+	"api/crm.yaml ChannelEndedSync.last_posted_at":                        "when the provider accepted the last outgoing card, a delivery instant rather than the source activity time",
+	"api/crm.yaml ChannelSyncHealth.coverage_at":                          "when source metadata discovery completed, an operational instant rather than a source message date",
+	"api/crm.yaml MessengerAttempt.retry_at":                              "earliest retry instant from provider backoff, never a source activity time",
 	"api/crm.yaml GoogleDirectoryStatus.last_checked_at":                  "when the newest Google directory check ran, a server instant and not an activity time",
 	"api/crm.yaml CustomerPayments.last_synced_at":                        "when the accounting import finished; always an instant, never an activity date",
 	"api/crm.yaml LicenseTrial.ends_at":                                   "when an unlicensed installation's trial ends, a server instant derived from the workspace's creation, not an activity time",
@@ -59,6 +62,7 @@ var precisionlessTimes = gatekit.Waive(map[string]string{
 	"api/crm.yaml EmailCalendarBefore.ends_at":                            "the earlier send's end, read with the same starts_precision as EmailCalendarChange.ends_at",
 	"api/crm.yaml MarginceChangeBundle.latest_at":                         "when Margince last changed the deal, the correction row's own write instant, not an activity time",
 	"api/crm.yaml ReportingForecastBasis.call_at":                         "when a manager submitted a forecast call, the call row's exact write instant",
+	"api/crm.yaml StandingLine.written_at":                                "when the status line was written, the job's own write instant, not an activity time",
 	"api/crm.yaml SalesProgress.planned_valued_at":                        "the evaluation instant the open deals were converted at, not an activity time",
 	"api/crm.yaml AssessNoticeSource.obtained_at":                         "The privacy user enters a source date; this does not copy a captured activity timestamp.",
 	"api/crm.yaml NoticeCase.source_obtained_at":                          "The saved human source date is used for a calendar deadline, without an activity timestamp or its precision.",

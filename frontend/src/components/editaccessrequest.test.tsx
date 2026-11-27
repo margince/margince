@@ -72,9 +72,7 @@ function serve(kind: EditAccessRecordType, seat: Seat = "full", asked = false) {
         return new Response(null, { status: 204 });
       }
       if (key === `GET ${path}`) {
-        return requested
-          ? json(open)
-          : json({ status: 404, title: "Not found" }, 404);
+        return requested ? json(open) : new Response(null, { status: 204 });
       }
       return json({});
     }),

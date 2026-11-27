@@ -5,7 +5,12 @@
 
 package gates
 
-import "testing"
+import (
+	"fmt"
+	"maps"
+	"slices"
+	"testing"
+)
 
 // Preview admissions ask for the eventual write grant while leaving every row unchanged.
 func classifyReadOnlyPreviewAdmissions(t *testing.T, packages map[string]map[string]map[string]*writeAuthorityFn) {
@@ -96,4 +101,73 @@ func TestPreviewClassificationSurvivesThePackageFunctionView(t *testing.T) {
 	if visibleWriteAuthorityFns(functions, "Writer")["preview"].previewOnly {
 		t.Fatal("a distinct writer inherited the package function's read-only classification")
 	}
+}
+
+// cloneWriteAuthorityIndex is a deep copy of a shared index, for the gate that
+// marks preview admissions on it.
+func cloneWriteAuthorityIndex(index map[string]map[string]map[string]*writeAuthorityFn) map[string]map[string]map[string]*writeAuthorityFn {
+	out := make(map[string]map[string]map[string]*writeAuthorityFn, len(index))
+	for dir, byReceiver := range index {
+		receivers := make(map[string]map[string]*writeAuthorityFn, len(byReceiver))
+		for recv, fns := range byReceiver {
+			copied := make(map[string]*writeAuthorityFn, len(fns))
+			for name, fn := range fns {
+				copied[name] = &writeAuthorityFn{
+					probes: slices.Clone(fn.probes), requires: maps.Clone(fn.requires), mutates: fn.mutates,
+					previewOnly: fn.previewOnly, calls: maps.Clone(fn.calls), writes: maps.Clone(fn.writes),
+					dynamicWrite: slices.Clone(fn.dynamicWrite),
+				}
+			}
+			receivers[recv] = copied
+		}
+		out[dir] = receivers
+	}
+	return out
+}
+
+// Marking a copy of the shared index leaves the shared index as it was.
+func TestMarkingACopyOfTheWriteAuthorityIndexLeavesTheSharedOneUnchanged(t *testing.T) {
+	t.Parallel()
+	shared := readOnlyWriteAuthorityIndex(t)
+	before := writeAuthorityIndexLines(shared)
+	marked := 0
+	for _, byReceiver := range cloneWriteAuthorityIndex(shared) {
+		for _, fns := range byReceiver {
+			for _, fn := range fns {
+				fn.previewOnly, fn.mutates = true, true
+				fn.probes = append(fn.probes, probeSite{fn: "planted"})
+				fn.dynamicWrite = append(fn.dynamicWrite, "planted")
+				for _, set := range []map[string]bool{fn.requires, fn.calls, fn.writes} {
+					if set != nil {
+						set["planted"] = true
+					}
+				}
+				marked++
+			}
+		}
+	}
+	if marked == 0 {
+		t.Fatal("the shared write-authority index holds no function, so this check marked nothing")
+	}
+	if after := writeAuthorityIndexLines(shared); !slices.Equal(before, after) {
+		t.Errorf("marking a copy changed the shared write-authority index: %d entries before, %d after",
+			len(before), len(after))
+	}
+}
+
+// writeAuthorityIndexLines spells each function of an index on one line, its
+// sets and the lines sorted.
+func writeAuthorityIndexLines(index map[string]map[string]map[string]*writeAuthorityFn) []string {
+	var lines []string
+	for dir, byReceiver := range index {
+		for recv, fns := range byReceiver {
+			for name, fn := range fns {
+				lines = append(lines, fmt.Sprintf("%s %s.%s %v %v %v %v %v %v %v", dir, recv, name, fn.previewOnly, fn.mutates,
+					fn.probes, slices.Sorted(maps.Keys(fn.requires)), slices.Sorted(maps.Keys(fn.calls)),
+					slices.Sorted(maps.Keys(fn.writes)), fn.dynamicWrite))
+			}
+		}
+	}
+	slices.Sort(lines)
+	return lines
 }

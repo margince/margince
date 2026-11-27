@@ -72,3 +72,19 @@ export const LinkedDark: Story = {
   globals: { theme: "dark" },
   render: stateStory({ state: "linked", link }),
 };
+
+export const SyncEnded: Story = {
+  render: stateStory({
+    state: "off",
+    last_sync: {
+      provider: "slack",
+      ended_at: "2026-06-02T10:00:00Z",
+      read_through: "2026-06-02T09:40:00Z",
+      last_posted_at: "2026-06-02T09:30:00Z",
+      retained_messages: 2,
+      confirmed_redactions: 1,
+      unverified_withdrawals: 1,
+      unconfirmed_deliveries: 0,
+    },
+  }),
+};

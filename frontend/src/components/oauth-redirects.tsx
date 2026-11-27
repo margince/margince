@@ -25,6 +25,8 @@ function purposeLabel(purpose: string, t: ReturnType<typeof useT>): string {
       return t("oauthApp.redirect.calendar_connect");
     case "documents_connect":
       return t("oauthApp.redirect.documents_connect");
+    case "messenger_connect":
+      return t("oauthApp.redirect.messenger_connect");
     case "extension_connect":
       return t("oauthApp.redirect.extension_connect");
     default:

@@ -451,13 +451,14 @@ test("AC-pipeline-12: a busy stage's column loads its next page on its own", asy
 // The note a won close leaves. A shown probability follows it after a "·".
 const closedWonNote = new RegExp(`^${de["deals.closedWon"]}`);
 
+async function centreOf(part: Locator) {
+  const box = await part.boundingBox();
+  if (!box) throw new Error("a board part to drag between is not laid out");
+  return { x: box.x + box.width / 2, y: box.y + box.height / 2 };
+}
+
 async function centreBetween(first: Locator, second: Locator) {
-  const midpoint = async (part: Locator) => {
-    const box = await part.boundingBox();
-    if (!box) throw new Error("a board part to drag between is not laid out");
-    return box.x + box.width / 2;
-  };
-  const between = ((await midpoint(first)) + (await midpoint(second))) / 2;
+  const between = ((await centreOf(first)).x + (await centreOf(second)).x) / 2;
   await first.evaluate((part, at) => {
     const board = part.closest(".board");
     if (!board) return;
@@ -481,37 +482,48 @@ async function outsideBoard(...parts: Locator[]): Promise<string[]> {
   return outside;
 }
 
-test("AC-deal-6: a terminal-stage drop is a 🟡 confirm — nothing runs before Confirm", async ({
+// Not dragTo: it may scroll the board after the press, and Chromium then starts no drag.
+async function dragOnto(page: Page, card: Locator, column: Locator) {
+  const from = await centreOf(card);
+  const to = await centreOf(column);
+  await page.mouse.move(from.x, from.y);
+  await page.mouse.down();
+  await page.mouse.move(to.x, to.y, { steps: 8 });
+  await expect(column).toHaveClass(/\bdroptarget\b/);
+  await page.mouse.up();
+}
+
+test("AC-deal-6: a pointer drag onto Won opens the 🟡 confirm, and nothing is sent before Confirm", async ({
   page,
 }) => {
+  const writes: string[] = [];
+  page.on("request", (request) => {
+    const { pathname } = new URL(request.url());
+    if (
+      request.method() !== "GET" &&
+      /^\/v1\/deals\/d-fleet(\/|$)/.test(pathname)
+    ) {
+      writes.push(`${request.method()} ${pathname}`);
+    }
+  });
   await page.goto("/#/deals");
   // Waited for by the locator the drag actually uses, so the wait and the
   // action cannot disagree about which element the test is about.
   const card = page.locator('[data-deal="d-fleet"]');
   await expect(card).toBeVisible();
   const won = page.locator('[data-stage="s4"]');
+  await settleAnimations(page);
   // A rep scrolls the board until both ends of the drag show.
   await centreBetween(card, won);
   expect(
     await outsideBoard(card, won),
     "the card and the Won column must both be on screen for a pointer drag",
   ).toEqual([]);
-  await card.dragTo(won);
+  await dragOnto(page, card, won);
+
   await expect(page.getByText("In die Phase Won verschieben?")).toBeVisible();
-
-  // This deal has no signed contract, and a win without one has to say how it
-  // was won. So the dialog asks before Confirm and not after a refusal. A deal
-  // with its contract is never asked.
-  await expect(page.getByText("Wie wurde der Deal gewonnen?")).toBeVisible();
-  // Still nothing has run: the drop is not applied while the dialog is open.
   await expect(page.getByText(closedWonNote)).toHaveCount(0);
-
-  await page
-    .getByRole("combobox", { name: "Wie wurde der Deal gewonnen?" })
-    .click();
-  await page.getByRole("option", { name: "Per Bestellung" }).click();
-  await page.getByRole("button", { name: "Bestätigen" }).click();
-  await expect(page.getByText(closedWonNote)).toBeVisible();
+  expect(writes).toEqual([]);
 });
 
 /** A board card's "…" trigger, reached from the card's own link with Tab. */

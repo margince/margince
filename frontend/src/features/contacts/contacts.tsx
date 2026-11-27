@@ -23,6 +23,7 @@ import {
 } from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
 import { salutationFilter } from "../../lib/contactsalutation";
+import { CONTACTS_INITIAL_SORT } from "../../lib/listopenings";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useActionRefusal } from "../../lib/writerefusal";
@@ -37,11 +38,7 @@ import {
   useSavedViewTabs,
 } from "../lists/savedviews";
 import { ContactCreateActions } from "./contactcreate";
-import {
-  CONTACTS_INITIAL_SORT,
-  CONTACTS_LIST_KEY,
-  fetchContactsPage,
-} from "./contacts.queries";
+import { CONTACTS_LIST_KEY, fetchContactsPage } from "./contacts.queries";
 
 // Contacts list + contact 360 (B-EP09.10a/b). Every row carries its
 // provenance chip (captured_by is server truth); the 360 renders the
@@ -128,9 +125,10 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
     key: CONTACTS_LIST_KEY,
     initialSort: CONTACTS_INITIAL_SORT,
     fetchPage: fetchContactsPage,
+    readsAtOffset: { rowKey: (contact) => contact.id },
   });
   const selection = useBulkSelection({
-    rows: state.rows,
+    rows: state.held,
     recordType: "contact",
     labelOf: (contact) => contact.full_name,
   });
@@ -143,7 +141,6 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
         title={pageName}
         state={state}
         unit="unit.contacts"
-        unitOne="unit.contact"
         emptyLine={
           mineEmptyLine({ t, state, viewerId, unit: "unit.contacts" }) ??
           sharedEmptyLine({ t, state, unit: "unit.contacts" })

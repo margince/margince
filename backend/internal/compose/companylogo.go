@@ -204,7 +204,7 @@ func readImageUpload(w http.ResponseWriter, r *http.Request, limit int64) (sourc
 		httperr.Write(w, r, err)
 		return nil, "", false
 	}
-	return source, header.Filename, true
+	return source, httperr.MultipartFilename(header), true
 }
 
 // boundedFilename is what the field's history will show for this change. A

@@ -1,8 +1,6 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-//gate:kind census H2
-
 package gates
 
 // `deal` is an RBAC object, and until this gate nothing held the object half of
@@ -27,8 +25,6 @@ package gates
 // account page's advice band, and a pre-meeting brief.
 
 import (
-	"go/ast"
-	"path"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -130,11 +126,11 @@ var predicateDealReads = gatekit.Waive(map[string]string{
 // gate would admit them anyway and the entry records why asking was never the
 // point.
 var lifecycleDealReads = gatekit.Waive(map[string]string{
+	"internal/modules/privacy/erasurebriefcache.go:summarisedRecords":           "the contact-delete-authorized eraser and the retention anonymize read a deal only for its company id, to delete the cached summaries of both inside the same transaction. Only ids leave the statement, and they go to the store that deletes them",
 	"internal/modules/deals/proposalstage.go:ProposalStageFor":                  "the deal a sent proposal went out on, read under the system principal by the suggester to decide whether the owner is asked at all. The name, stage and status leave only into an approval whose decider is the deal's owner, and whose deciding takes deal update (approvals decisionGrants) and the owner-only narrowing (seatnarrowing.go)",
 	"internal/modules/deals/proposalstage.go:proposalStillApplies":              "re-reads a deal's status, hold and stage under the deal's row lock inside the accept, past the approvals engine's deal update grant for the deciding owner. Only a refusal reason leaves it",
 	"internal/modules/deals/proposalstage.go:ProposalStageOutdated":             "whether a waiting proposal question has nothing left to ask, read under the system principal by the sweep that withdraws it. One boolean leaves, and no deal field",
 	"internal/compose/chatsync/summarycontext.go:companyName":                   "reads a deal only to reach its company, for the chat summary request under the chat engine's system principal. The deal is one every reader was admitted to, and the company passes every reader's object and row scope. No deal field leaves the query",
-	"internal/compose/chatsync/render.go:readRecord":                            "the name, stage, status, close date and owner of the deal a chat channel is linked to, for the card the chat engine posts and the chat summary it asks for under its system principal. The amount is left out because it is masked per reader, and the channel's members linked the record through auth.HoldWritableLive",
 	"internal/compose/chatsync/sync.go:chatRecordQueries":                       "the deal and project ids an event touches, so the chat engine under its system principal finds the linked channels. Only ids leave the query",
 	"internal/modules/chatlinks/linkwrite.go:linkedRecords":                     "the project id of the deal being linked, read after auth.HoldWritableLive on that deal so the deal's project shares its channel. Only the id leaves, stored on the link",
 	"internal/modules/chatlinks/linkwrite.go:AdoptProject":                      "the project id of a linked deal, read under the chat engine's system principal when the deal gains a project, so the project shares its channel. Only the id leaves, stored on the link",
@@ -294,65 +290,10 @@ var dealVerdicts = []namedVerdict{
 	{"deferred", deferredDealReads},
 }
 
-// wantMinimumGatedDealSites is the floor below the count of sites that
-// satisfy the gate today. It exists for the reason every floor in this
-// directory does: an extractor that stops recognising SQL finds no sites and
-// reports nothing, which is indistinguishable from a clean tree.
-const wantMinimumGatedDealSites = 16
-
-var dealReaderScope = gatekit.Scope{
-	Roots:   []string{"internal"},
-	Subject: readsDealTable,
-	Exempt:  gatekit.Waive(map[string]string{}),
-}
-
-func readsDealTable(filePath string, file *ast.File) bool {
-	return gatekit.FileReadsTable(filePath, file, dealGate.literal)
-}
-
-func TestEveryReaderOfTheDealTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
-	t.Parallel()
-	files := dealReaderScope.Files(t)
-	walk := dealGate.walkPackages(t, files)
-	consts := constantTable{}
-
-	var satisfied int
-	for _, parsed := range files {
-		pkg := path.Dir(parsed.Path)
-		for _, site := range dealGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := site.subject(parsed.Path)
-			carriesGate := walk.carries(t, dealGate, parsed, site, consts.of(t, pkg))
-			verdict := verdictIn(t, subject, dealVerdicts)
-
-			switch {
-			case carriesGate && verdict != "":
-				t.Errorf("%s carries the deal object gate AND a %s verdict — remove the verdict, it "+
-					"now describes code that is gated", subject, verdict)
-			case carriesGate:
-				satisfied++
-			case verdict == "":
-				t.Errorf("%s reads the deal table without the object gate and without a verdict.\n"+
-					"  Reading a deal discloses the commercial position — the figure, the stage "+
-					"and the close date — which is what the deal grant governs.\n"+
-					"  Either ask auth.Require(ctx, \"deal\", …) — or auth.ReadGranted where the "+
-					"read must degrade rather than refuse — or declare it in "+
-					"predicateDealReads / lifecycleDealReads / calleeGatedDealReads / "+
-					"ruledDealReads with the reason it needs no gate.\n"+
-					"  Left alone it is indistinguishable from a read nobody considered.\n"+
-					"  The read: %s", subject, site.sql)
-			}
-		}
-	}
-
-	if satisfied < wantMinimumGatedDealSites {
-		t.Errorf("only %d deal reads satisfy the object gate, want at least %d — a literal extractor "+
-			"that stopped recognising this tree's SQL would report exactly this, and it reads the "+
-			"same as a clean tree", satisfied, wantMinimumGatedDealSites)
-	}
-	t.Logf("deal reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled, %d DEFERRED (still disclosing)",
-		satisfied, len(predicateDealReads.Subjects()), len(lifecycleDealReads.Subjects()),
-		len(calleeGatedDealReads.Subjects()), len(ruledDealReads.Subjects()), len(deferredDealReads.Subjects()))
-
+// sweepDealVerdicts fails a verdict no read matched any more. The
+// gate census asks for each sweep by name, so the list is written out.
+func sweepDealVerdicts(t *testing.T) {
+	t.Helper()
 	predicateDealReads.AssertAllMatched(t)
 	lifecycleDealReads.AssertAllMatched(t)
 	calleeGatedDealReads.AssertAllMatched(t)
@@ -360,3 +301,8 @@ func TestEveryReaderOfTheDealTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
 	ruledDealReads.AssertAllMatched(t)
 	deferredDealReads.AssertAllMatched(t)
 }
+
+// wantMinimumGatedDealSites is the floor below the count of sites that
+// satisfy the gate today. An extractor that stops recognising SQL finds no sites
+// and reports nothing, which reads the same as a clean tree.
+const wantMinimumGatedDealSites = 16

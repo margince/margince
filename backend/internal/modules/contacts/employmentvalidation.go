@@ -4,9 +4,16 @@
 package contacts
 
 import (
+	"context"
+	"fmt"
 	"strings"
+	"time"
+
+	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const employmentStatusField = "employment_status"
@@ -23,6 +30,26 @@ func validEmploymentAssertion(kind string, status, startedPrecision, endedPrecis
 	}{{"started_precision", startedPrecision}, {"ended_precision", endedPrecision}} {
 		if field.value != nil && (kind != employmentKind || (*field.value != "day" && *field.value != "month")) {
 			return &EmploymentImportError{Field: field.name, Message: "Employment date precision must be day or month."}
+		}
+	}
+	return nil
+}
+
+// refuseFormerEndingAhead refuses a former job whose end day is still ahead in
+// the installation's day, the one IsCurrentSQL reads. A current job may end
+// ahead: that is a notice period.
+func refuseFormerEndingAhead(ctx context.Context, tx pgx.Tx, status *string, endedAt *time.Time) error {
+	if status == nil || *status != employmentFormer || endedAt == nil {
+		return nil
+	}
+	var ahead bool
+	if err := tx.QueryRow(ctx, `SELECT $1::date > `+occurredday.TodaySQL("now()"), *endedAt).Scan(&ahead); err != nil {
+		return fmt.Errorf("contacts: reading whether a former job ends ahead: %w", err)
+	}
+	if ahead {
+		return &values.ParseError{
+			Field: wireEndedAt, Code: "future",
+			Message: "a former job ends on or before today; choose an earlier end date or mark the job current",
 		}
 	}
 	return nil

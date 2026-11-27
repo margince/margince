@@ -6,7 +6,7 @@ The list screens in Margince are **Contacts**, **Companies**, **Leads**, **Deals
 
 ## How a list screen looks
 
-Every Margince list screen has the same three rows. The header row holds the view tabs (such as **All** and **Mine**), the count ("1 to 25 of 200 contacts") and the create button. On a phone drag the tabs left or right. The toolbar row holds the **Search** box and one **View** button, and the rows sit under it. A table ends with **Previous**, **Next** and **Rows per page**; a board has **Load more** in each **Deals** column and one below **Leads**. Click a row to open the record.
+Every Margince list screen has the same three rows. The header row holds the view tabs (such as **All** and **Mine**), the count ("1-25 of 200") and the create button. On a phone drag the tabs left or right. The toolbar row holds the **Search** box and one **View** button, and the rows sit under it. A table ends with the pages, **Previous**, **Next** and **Rows per page**; a board has **Load more** in each **Deals** column and one below **Leads**. Click a row to open the record.
 
 **View** opens a panel: a small window on a computer, a full screen on a phone. On **Deals** and **Leads** the **Table** / **Board** switch is at the top. Then comes one row for each setting: **Pipeline** (Deals, with several pipelines), **Filters**, **Sort** and **Columns**. Each row shows its value now, and a dot when it differs from how the list opens (never for **Default order**). Press a row to open its step, and press the step's name at the top to go back. Next come **Show archived** and **Compact**, which are On or Off.
 
@@ -154,7 +154,7 @@ Also called: add column, remove column, reorder columns, change table layout.
 
 ### How do I show more rows per page?
 To show more rows on a Margince list, open **Rows per page** at the bottom of the list. Pick **25 per page**, **50 per page** or **100 per page**.
-Use **Previous** and **Next**, or a page number, to move through the pages. The count at the top says how many match, for example "1 to 25 of 200 contacts". The page numbers end with the last page: press it to go to the end. Where Margince does not have the full count, it says "loaded" instead and shows only **Previous** and **Next** until the last page is read.
+Use **Previous** and **Next**, or a page number, to move through the pages. The count at the top says which rows show, for example "1-25 of 200", and the same count sits beside or under the page numbers. The page numbers end with the last page, and a screen narrower than a computer's shows fewer of them, with arrows for **Previous** and **Next**. Where Margince does not have the full count, the count says "loaded" and the page numbers end with "…" until the last page is read.
 
 Also called: page size, see all records, load more.
 
@@ -183,16 +183,16 @@ To change a saved view in Margince, press its tab and change the search, the fil
 Also called: edit a saved view, update a view, replace a view.
 
 ### How do I open a saved view?
-To open a saved view in Margince, open the list it was saved on. Press its tab in the header row, next to **All** and **Mine**. The list takes the saved filters, search, sort and **Show archived** at once. A view saved on **Filters and views** opens there instead: press its name in the library.
+To open a saved view in Margince, open the list it was saved on. Press its tab in the header row, next to **All** and **Mine**. The list takes the saved filters, search, sort and **Show archived** at once. Every saved view also opens from its name on **Filters and views**. A view with conditions from **Filters and views** has a tab with an arrow on its list, and the tab opens it back there.
 Also called: use my saved list, go back to my filter.
 
 ### How do I rename or delete a saved view?
-To rename or delete a saved view in Margince, open the list it was saved on. Press **View** → **Manage views**. **Saved views** lists each view.
+To rename or delete a saved view in Margince, open its list and press **View** → **Manage views**. **Saved views** lists each view.
 1. To rename one, choose **Rename** on its row, change the **Name** and press **Save**.
 2. To delete one, choose **Delete** on its row, then **Delete view**. Its tab goes; the records it listed do not change.
 **Manage views** shows once you have saved a view for that list.
 
-A view saved on **Filters and views** has no tab. Press **⋯** on its row in the library, or next to its name once it is open. Choose **Rename**, or **Delete view** and then **Delete view** again to confirm.
+You can also press **⋯** on the view's row on **Filters and views**. A view built there also has **⋯** next to its name once it is open. Choose **Rename**, or **Delete view** and then **Delete view** again to confirm. A name that another view of the same list has is refused, as in **Manage views**.
 Also called: remove a saved view, edit a view, change a view's name.
 
 ### Can I share a saved view with my team?
@@ -205,14 +205,14 @@ Also called: team view, shared list, share a filter, share a segment.
 
 ## Filters and views: detailed filters
 
-**Filters and views** in the sidebar (under **Work**) is the Margince screen for a filter that a list's toolbar cannot build. That means many rules, "any of" instead of "all of", groups inside groups, custom fields, and a colleague other than you. It covers **Contacts**, **Companies**, **Deals** and **Leads**. A filter runs again every time you look, so it always shows the matches of today.
+**Filters and views** in the sidebar (under **Work**) is the Margince screen for a filter that a list's toolbar cannot build. That means many rules, "any of" instead of "all of", groups inside groups, custom fields, and a colleague other than you. Its filters cover **Contacts**, **Companies**, **Deals** and **Leads**. A filter runs again every time you look, so it always shows the matches of today.
 
-The screen opens on the library of every saved view and list you can use. You can narrow it by search and by record type. **Mine** holds your saved views and every list you own, whoever can find it. **Shared with me** holds the lists that someone else owns or that have no owner. With Lists off, one group, **Saved views**, holds your views.
+The screen opens on the library of every saved view and list you can use. You can narrow it by search and by record type. A view saved on a list, **Projects** included, opens that list and says which, such as "Saved on the Contacts list". **Mine** holds your saved views and every list you own, whoever can find it. **Shared with me** holds the lists that someone else owns or that have no owner. With Lists off, one group, **Saved views**, holds your views.
 
 ### How do I build a filter?
 To build a detailed filter in Margince, open **Filters and views** in the sidebar. Press **New filter** and pick **Contacts**, **Companies**, **Deals** or **Leads**.
 1. The new filter opens with two ways to start. Under **Build it condition by condition**, press **Add condition**.
-2. Pick a field under **Select field**. Then pick how to compare (**is**, **is not**, **is any of**, **contains**…) and the value.
+2. Pick a field under **Select field**. Then pick how to compare (**is**, **is not**, **is any of**, **contains**…) and the value. A typed value ignores capitals, blanks before or after it, and marks such as the one in "Müller". So **is** "cto" finds "CTO", and **contains** "Muller" finds "Müller", as **Search** does.
 3. Press **Add condition** for more. The **and** between conditions means all of them must match.
 4. Press an **and** to switch that one word to **or**. Each word between two conditions switches by itself. **and** comes before **or**. So "A and B or C" matches A and B together, or C alone. Conditions joined by **and** sit in a box headed **All of these**.
 5. **Add a group**, next to **Add condition**, puts a group inside the filter. At the top of a group, press **All of these** or **Any of these** to choose how its conditions match. Groups go at most 4 levels down.
@@ -246,7 +246,7 @@ To save a filter built on **Filters and views**, fill at least one condition and
 1. Type a **Name**. Under **Keep it as**, choose **Saved view** (only you can find it) or **Live List** (see [Live Lists and Shortlists](#live-lists-and-shortlists)).
 2. Press **Save view** or **Save list**. A saved view opens as its own page, and a Live List opens the list's page.
 
-To use a saved view again, press its name in the library. It opens and shows its conditions as a sentence. Press **Edit conditions**, change them, then press **Save changes**, or **Save as new view** to keep both. If the view changed somewhere else since you opened it, Margince saves nothing and offers **Reload view**. A filter saved here does not show as a tab on the list screens. A list's saved view does not show in the library.
+To use a saved view again, press its name in the library. It opens and shows its conditions as a sentence. Press **Edit conditions**, change them, then press **Save changes**, or **Save as new view** to keep both. If the view changed somewhere else since you opened it, Margince saves nothing and offers **Reload view**. A view with conditions from here shows as a tab on its list, with an arrow, and that tab opens it here.
 
 Also called: save a segment, keep an advanced search.
 

@@ -5,6 +5,8 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "history.field.chat_source_changed": "Gesprächsquelle geändert",
+  "history.field.chat_source_deleted": "Gesprächsquelle entfernt",
   "history.field.kind": "Art",
   "history.field.email_security": "E-Mail-Sicherheit",
   "history.field.employee_range": "Spanne der Mitarbeiterzahl",
@@ -94,7 +96,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.participant_addresses_not_lowercase":
     "Teilnehmeradressen mit Großbuchstaben",
   "history.field.participant_seats": "Teilnehmende Mitglieder",
-  "history.field.participant_users": "Teilnehmende Personen",
+  "history.field.participant_users": "Teilnehmende Teammitglieder",
   "history.field.partner_accepted_at": "Partner angenommen am",
   "history.field.partner_accepted_by": "Partner angenommen von",
   "history.field.partner_archived_at": "Partner archiviert am",
@@ -142,6 +144,109 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "payments.ageHelp":
     "Home gruppiert ältere Rechnungen unten. Vorgabe sind 365 Tage. Die Summen beim Unternehmen bleiben gleich.",
   "payments.ageRefusal": "Gib eine ganze Zahl von 1 bis 3.650 Tagen ein.",
+  "messenger.deliveryPending":
+    "Diese Nachricht wird noch gesendet. Prüfe die Sendebestätigung, bevor du einen neuen Versuch startest.",
+  "messenger.accessWorkspace":
+    "Dies ist ein öffentlicher Kanal. Auch Mitglieder, die nicht beigetreten sind, können mitlesen.",
+  "messenger.accessTeam": "Teamkanal: Das gesamte Team kann mitlesen.",
+  "messenger.accessPrivate":
+    "Privater Kanal: Nur seine Mitglieder können mitlesen.",
+  "messenger.accessParticipants":
+    "Private Unterhaltung: Nur die Beteiligten können mitlesen.",
+  "messenger.accessUnknown": "Der Kanalzugriff konnte nicht geprüft werden.",
+  "messenger.joinedOnly":
+    "Diese Liste zeigt beigetretene Mitglieder. Weitere Mitglieder können den öffentlichen Kanal lesen.",
+  "messenger.appMember": "App oder Bot",
+  "messenger.teamComparison": "Vergleich mit dem zugeordneten Team",
+  "messenger.teamOutside": "Mitglieder außerhalb des zugeordneten Teams",
+  "messenger.teamMissing":
+    "Zugeordnete Teammitglieder außerhalb dieser Unterhaltung",
+  "messenger.teamNotJoined":
+    "Zugeordnete Teammitglieder, die dem Kanal nicht beigetreten sind",
+  "messenger.teamUnverified":
+    "Zugeordnete Mitglieder ohne geprüfte Messenger-Identität",
+  "messenger.teamMatches":
+    "Alle geprüften zugeordneten Mitglieder sind in dieser Unterhaltung.",
+  "messenger.messageRequired": "Schreibe vor dem Senden eine Nachricht.",
+  "messenger.recipientsRequired": "Wähle mindestens ein Mitglied aus.",
+  "channelDelivery.review": "Zustellung prüfen",
+  "channelDelivery.cardPaused": "Übersichtskarte wird nicht aktualisiert",
+  "channelDelivery.cardPausedHelp":
+    "Für eine Übersichtskarte fehlt die Zustellbestätigung. Andere freigegebene CRM-Updates können fortgesetzt werden. Eine frühere Karte kann noch im Kanal vorhanden sein.",
+  "channelDelivery.restart": "Neue Übersichtskarte erstellen",
+  "channelDelivery.restartTitle": "Eine neue Übersichtskarte erstellen",
+  "channelDelivery.title": "Unbestätigte Zustellung prüfen",
+  "channelDelivery.skip": "Diese Wiederholungen überspringen",
+  "channelDelivery.restartWarning":
+    "Eine frühere Übersichtskarte kann noch vorhanden sein. Dies erstellt eine neue Karte und setzt deren automatische Aktualisierung fort. Die unbestätigte Kopie wird weder geändert noch entfernt.",
+  "channelDelivery.help":
+    "Prüfe zuerst den Kanal im Messenger oder in der Nachrichten-App. Überspringen beendet die Wiederholungen der aufgeführten Updates, ohne sie als zugestellt zu markieren. Eine Kopie oder eine verspätete Antwort des Anbieters kann noch eintreffen. Dies bricht keine Anfrage ab und entfernt keine Kopie beim Anbieter. Bei einer unbestätigten Übersichtskarte werden deren automatische Updates pausiert.",
+  "channelDelivery.linkChanged":
+    "Der verknüpfte Kanal hat sich geändert. Schließe diese Prüfung und öffne sie erneut.",
+  "channelDelivery.reviewFirst":
+    "Prüfe die unbestätigten Zustellungen, bevor du eine weitere Übersichtskarte erstellst.",
+  "channelDelivery.none":
+    "Keine unbestätigte Zustellung ist zur Prüfung bereit. Ein Versand kann noch laufen. Prüfe nach dessen Abschluss erneut.",
+  "channelDelivery.list": "Unbestätigte Zustellungen",
+  "channelDelivery.card": "Übersichtskarte des Datensatzes",
+  "channelDelivery.updates_one": "CRM-Updates: {count}",
+  "channelDelivery.updates_other": "CRM-Updates: {count}",
+  "timeline.chatSummary.sourceHelp":
+    "Verbinde dein eigenes Messaging-Konto über Messenger in diesem Datensatz. Prüfe dort, ob du den Kanal öffnen kannst, und prüfe den Quellzugriff erneut.",
+  "channelInstall.slackReader":
+    "Die gemeinsame Kanalinstallation fragt das installierende Konto auch nach Lesezugriff auf den Kanalverlauf. Dieses Konto muss Mitglied der verknüpften privaten Kanäle sein. Es erhält dadurch weder Zugriff auf Direktnachrichten noch eine persönliche Sendeberechtigung.",
+  "channelProfile.distribution": "Verteilung der Slack-App",
+  "channelProfile.declaration":
+    "Wähle, wie diese App verteilt wird. Margince speichert deine Angabe und die dokumentierten Verlaufslimits beim Installieren oder erneuten Verbinden.",
+  "channelProfile.internal": "Interne Slack-App",
+  "channelProfile.marketplace": "App im Slack Marketplace",
+  "channelProfile.nonMarketplace":
+    "Kommerzielle App außerhalb des Slack Marketplace",
+  "channelProfile.details": "Slack-Verlauf: Zugriff und Limits",
+  "channelProfile.missing":
+    "Die Verlaufslimits dieser Installation sind noch nicht bestätigt.",
+  "channelProfile.reconnect":
+    "Frage einen Admin, Slack unter Gemeinsame Kanalverbindungen erneut zu verbinden, die App-Verteilung zu bestätigen und Lesezugriff auf den Kanalverlauf zu erlauben. Das installierende Konto muss Mitglied der verknüpften privaten Kanäle sein. Vollständige Zusammenfassungen bleiben pausiert, bis Zugriff und Limits bestätigt sind.",
+  "channelProfile.unsupported":
+    "Diese Verteilung erlaubt nur eine Verlaufs- und eine Thread-Anfrage pro Minute mit 15 Nachrichten pro Seite. Vollständige Kanalzusammenfassungen sind nicht verfügbar. Persönlicher Messenger und CRM-Updates an Slack bleiben unabhängig davon.",
+  "channelProfile.limits":
+    "Verlauf: {history} Anfragen/Minute, {historyPage} Nachrichten/Seite. Threads: {replies} Anfragen/Minute, {repliesPage} Nachrichten/Seite.",
+  "channelProfile.provenance":
+    "Am {at} von einem Admin angegeben; Grundlage sind die dokumentierten Slack-Limits. Slack kann eine längere Wartezeit zurückgeben.",
+  "messenger.authorUnavailable": "Name nicht verfügbar",
+  "channelInstall.title": "Verbindungen für gemeinsame Kanäle",
+  "channelInstall.separate":
+    "Verbinde hier den gemeinsamen Bot, um Kanäle mit CRM-Datensätzen zu verknüpfen. Für Messenger verbindet jedes Mitglied sein eigenes Konto.",
+  "channelInstall.slackReady":
+    "Die App ist für die Zustimmung im Slack-Team bereit.",
+  "channelInstall.slackMissing":
+    "Richte zuerst unten die Slack-App und das Signaturgeheimnis ein.",
+  "channelInstall.slackConnect": "Slack-Bot installieren oder neu verbinden",
+  "channelInstall.failed": "Kanalverbindung konnte nicht aktualisiert werden",
+  "channelInstall.callback": "OAuth-Weiterleitungsadresse",
+  "channelInstall.events": "Adresse für Bot-Ereignisse",
+  "channelInstall.adminRequired":
+    "Ein Admin mit Zugriff auf Kanalverbindungen muss diese Verbindung bestätigen.",
+  "channelInstall.teamsSteps":
+    "Registriere den Microsoft-Bot mit der Ereignisadresse unten. Lade das App-Paket in Teams hoch, füge es dem gewünschten Team hinzu und bestätige die Teamberechtigungen. Aktualisiere das Team und bestätige anschließend hier die Verbindung.",
+  "channelInstall.teamsApp": "Microsoft-App {app}, Verzeichnis-ID {tenant}",
+  "channelInstall.refresh": "Installierte Teams aktualisieren",
+  "channelInstall.noTeams":
+    "Noch keine bestätigte Teaminstallation. Prüfe die Bot-Registrierung, füge die App deinem Team hinzu und aktualisiere die Liste.",
+  "channelInstall.team": "Bestätigtes installiertes Team",
+  "channelInstall.approval":
+    "Nur dieses Team wird verbunden. Bestehende Verknüpfungen behalten ihr Ziel. Um ein anderes Team zu verbinden, trenne zuerst die aktuelle Verbindung.",
+  "channelInstall.approve": "Teamverbindung bestätigen",
+  "channelInstall.connected":
+    "Team verbunden. Du kannst seine Kanäle jetzt von einem Unternehmen, einem Deal oder einem Projekt aus verknüpfen.",
+  "channelInstall.teamsMissing":
+    "Richte zuerst unten die Microsoft-App und die Verzeichnis-ID ein.",
+  "channelInstall.package": "Teams-App-Paket erstellen",
+  "channelInstall.legal":
+    "Verwende die HTTPS-Seiten für Datenschutz und Nutzungsbedingungen, die dein Unternehmen für diese App bereitstellt. Die Adressen werden in das heruntergeladene Paket aufgenommen.",
+  "channelInstall.privacy": "URL der Datenschutzerklärung",
+  "channelInstall.terms": "URL der Nutzungsbedingungen",
+  "channelInstall.download": "Teams-App-Paket herunterladen",
   "systemJob.proposal_stage":
     "Fragen, ob ein gesendetes Angebot den Deal verschiebt",
   "systemJob.google_directory": "Google-Gruppen eines Mitglieds lesen",
@@ -2587,6 +2692,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "systemJob.stage_evidence": "Phasenbelege",
   "systemJob.stage_evidence_read": "Auswertung der Phasenbelege",
   "systemJob.stage_evidence_reread": "Erneute Auswertung der Phasenbelege",
+  "systemJob.standing_line": "Prüfung von „Wie es steht“",
   "systemJob.suppression_journal_worker": "Export des Löschjournals",
   "systemJob.stored_object_reap_worker": "Bereinigung des Dateispeichers",
   "systemJob.technical_backfill": "Nachholen der technischen Abfrage",
@@ -3342,7 +3448,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "amount.refused.grouping":
     "Gib den Betrag ohne Tausendertrennzeichen ein, etwa {example}.",
   "amount.refused.notNumber": "Gib den Betrag in Ziffern ein, etwa {example}.",
-  "amount.refused.tooLarge": "Dieser Betrag ist zu groß zum Speichern.",
+  "amount.refused.tooLarge": "Gib einen Betrag von höchstens {max} ein.",
   "amount.refused.noCurrency": "Dieser Betrag braucht zuerst eine Währung.",
   "amount.waitsForCurrency": "Eingabe möglich, sobald eine Währung feststeht.",
   "amount.currencyUnread":
@@ -3878,7 +3984,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "list.viewAll": "Alle",
   "list.viewHot": "Heiß",
 
-  "table.range": "{unit} {first} bis {last} von {count}",
+  "table.range": "{first}-{last} von {count}",
   "table.pagination": "Seiten",
   "table.rowActions": "Aktionen für {name}",
   "table.page": "Seite {number}",
@@ -3905,15 +4011,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Mit diesen Filtern lässt sich die Liste nicht anzeigen.",
   "table.none": "Noch keine {unit}.",
   "table.actions": "Aktionen",
-  "table.rangeLoaded": "Geladene {unit} {first} bis {last} von {count}",
+  "table.rangeLoaded": "{first}-{last} von {count} geladen",
   "table.rangeIn": "{range} in {scope}",
   "unit.contacts": "Kontakte",
   "unit.companies": "Unternehmen",
   "unit.deals": "Deals",
   "unit.leads": "Leads",
-  "unit.contact": "Kontakt",
-  "unit.company": "Unternehmen",
-  "unit.lead": "Lead",
   "unit.worklistItems": "Aufgaben und Zusagen",
   "unit.partners": "Partner",
   "unit.products": "Produkte",
@@ -3960,6 +4063,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "views.none": "Keine gespeicherten Ansichten",
   "views.rename": "Umbenennen",
   "views.renameNamed": "{name} umbenennen",
+  "views.opensInFilters": "{name}, öffnet in Filter und Ansichten",
   "views.delete": "Löschen",
   "views.deleteNamed": "{name} löschen",
   "views.deleteAsk":
@@ -4205,7 +4309,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.strip.fin.neverInvoiced": "Nicht fakturiert",
   "co.strip.fin.noConnection": "Buchhaltung nicht verbunden",
   "co.strip.fin.unmapped": "Kunde nicht zugeordnet",
-  "co.strip.fin.syncing": "Wird synchronisiert",
+  "co.strip.fin.syncing": "Erste Synchronisierung ausstehend",
   "co.strip.fin.staleFigure": "Synchronisierung veraltet",
   "co.strip.fin.notCurrent": "Nicht aktuell",
   "co.strip.fin.errorFigure": "Letzte Synchronisierung fehlgeschlagen",
@@ -4427,6 +4531,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "standing.title": "Wie es steht · {date}",
   "standing.noteMore": "Mehr anzeigen",
   "standing.noteLess": "Weniger anzeigen",
+  "standing.citations.source": "Die Aktivität",
+  "standing.citations.from": "Gelesen aus",
   "standing.latest.title": "Zuletzt",
   "standing.latest.open": "Im Verlauf öffnen",
   "standing.sources.records": "Aus den CRM-Daten",
@@ -4672,7 +4778,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "finance.none": "Nichts erfasst.",
   "finance.loading": "Rechnungen werden geladen…",
   "finance.syncing":
-    "Synchronisierung mit dem Buchhaltungssystem läuft. Die Zahlen erscheinen nach der ersten Synchronisierung.",
+    "Die erste Synchronisierung mit dem Buchhaltungssystem steht noch aus. Margince synchronisiert alle sechs Stunden, und ein Admin kann die Synchronisierung unter Einstellungen → Anbindungen früher starten.",
   "finance.noConnection":
     "Kein Buchhaltungssystem verbunden. Rechnungen und Zahlungsverhalten dieses Kunden erscheinen, sobald eines verbunden ist.",
   "finance.unmapped":
@@ -4729,13 +4835,17 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contracts.status.expired": "Ausgelaufen",
   "contracts.status.cancelled": "Gek\u00fcndigt",
   "contracts.status.superseded": "Ersetzt",
-  "contracts.endsOn": "Endet am {when}",
+  "contracts.cancelledTo": "Gekündigt zum {when}",
+  "contracts.cancelledToNotice": "Gekündigt zum {when}, Kündigung am {notice}",
+  "contracts.replacedBy": "Ersetzt durch {title}",
+  "contracts.replacedByUnnamed": "Durch einen späteren Vertrag ersetzt",
   "contracts.renewsOn": "Verl\u00e4ngert sich am {when}",
   "contracts.endedPendingStatus": "Laufzeit beendet, Status ausstehend",
   "contracts.form.title": "Vertrag erfassen",
   "contracts.form.name": "Titel",
   "contracts.form.number": "Vertragsnummer",
   "contracts.form.value": "Wert",
+  "contracts.form.currency": "Währung",
   "contracts.form.basis": "Dieser Wert ist",
   "contracts.form.arr": "Jährlich wiederkehrender Umsatz",
   "contracts.form.arrMonthly": "Monatlicher Gegenwert:",
@@ -4781,6 +4891,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "contracts.statusChange.label": "Neuer Status",
   "contracts.statusChange.submit": "Status ändern",
   "contracts.statusChange.errSame": "Der Vertrag hat bereits diesen Status.",
+  "contracts.statusChange.finalTitle": "{status} ist endgültig",
+  "contracts.statusChange.finalBody":
+    "Nach dem Speichern lässt sich der Status nicht mehr ändern. Um die Vereinbarung fortzusetzen, verlängere sie.",
   "contracts.cancel.title": "Kündigung erfassen",
   "contracts.cancel.hint":
     "Der Kunde bleibt unter Vertrag, bis die Kündigung wirksam wird. Damit wird die Kündigung erfasst. Der Status ändert sich nicht.",
@@ -5372,6 +5485,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.extension": "Erweiterung",
   "timeline.kind.signal": "Signal",
   "timeline.withheld": "Inhalt nur für Teilnehmende",
+  "timeline.chatSummary.sourceChanged":
+    "Quelle geändert · Zusammenfassung prüfen",
+  "timeline.chatSummary.updated": "Aktualisiert {at}",
   "timeline.chatSummary.badge": "KI-Zusammenfassung",
   "timeline.chatSummary.from": "Aus {provider}",
   "timeline.chatSummary.meta_one": "{count} Nachricht, bis {ended}",
@@ -5956,6 +6072,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.tech.laneFailed":
     "{lane} hat nicht geantwortet. Das vorherige Ergebnis ist unverändert.",
   "co.tech.laneRefused": "Die Website hat die Analyse blockiert.",
+  "co.tech.laneFailedFirst":
+    "{lane} hat nicht geantwortet, daher liegt noch kein Ergebnis vor.",
   "co.tech.lane.dns": "DNS",
   "co.tech.lane.certlog": "Zertifikate",
   "co.tech.lane.homepage": "Startseite",
@@ -6071,6 +6189,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tagAdmin.usedBy_one": "{count} Datensatz",
   "tagAdmin.usedBy_other": "{count} Datensätze",
   "tagAdmin.retired": "Stillgelegt",
+  "tagAdmin.mergedInto": "In {name} zusammengeführt",
   "tagAdmin.retiredToast": "{name} stillgelegt",
   "tagAdmin.restoredToast": "{name} wiederhergestellt",
   "tags.archived": "archiviert",
@@ -6142,6 +6261,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "tagResult.resultsTitle": "Datensätze mit diesem Tag",
   "tagResult.nothingCarries":
     "Noch keine Datensätze mit diesem Tag. Vergib das Tag bei einem Kontakt, einem Unternehmen, einem Deal oder einem Lead.",
+  "tagResult.retiredNothing":
+    "Keine Datensätze haben dieses Tag. Es ist stillgelegt und kann keinem Datensatz mehr hinzugefügt werden.",
+  "tagResult.mergedBody":
+    "Dieses Tag wurde in {name} zusammengeführt. Die Datensätze mit diesem Tag haben bei der Zusammenführung {name} erhalten.",
+  "tagResult.openKept": "{name} öffnen",
   "tagResult.loadingRows": "{kind} werden geladen…",
   "tagResult.noneLeft": "Keine Datensätze mehr mit diesem Tag",
   "tagResult.unnamed": "Ohne Namen",
@@ -6198,16 +6322,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "lead.project": "Projekt",
 
   "lead.source.manual": "Manuell erstellt",
-  "lead.source.inbound": "Eingehend",
+  "lead.source.siteread": "Von der Unternehmenswebsite",
   "lead.source.webform": "Webformular",
   "lead.source.webformNamed": "Webformular „{name}“",
-  "lead.source.referral": "Empfehlung",
   "lead.source.import": "Import",
-  "lead.source.crawl": "Webrecherche",
   "lead.source.api": "Integration",
   "lead.source.automation": "Automatisierung",
   "lead.source.capture": "Aus einer Unterhaltung erfasst",
-  "lead.source.siteread": "Von der Unternehmenswebsite",
   "lead.source.unknown": "Unbekannte Quelle",
   "leadSources.removeOnlyTitle":
     "Deine Rolle darf Einträge entfernen, aber nicht hinzufügen oder ändern",
@@ -6352,8 +6473,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht nach Branche, Land oder Unternehmensgröße eingrenzen lassen.",
   "lead.boardCountsNoOtherFilter":
     "Es wird keine Anzahl angezeigt, da die Anzahlen nicht jeden Filter dieser Liste berücksichtigen können.",
-  "lead.boardCountsNoConnectorSource":
-    "Es wird keine Anzahl angezeigt, da sich die Anzahlen nicht auf alle Leads eines Connectors eingrenzen lassen.",
   "lead.boardCountsOwnerNotMeasurable":
     "Keine Anzahl für die Leads dieser verantwortlichen Person. Nur Admins können dir erlauben, diese Anzahl auszuwerten.",
   "lead.boardTerminalRowsUnavailable":
@@ -7320,7 +7439,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "offer.termsText": "Bedingungstext",
   "offer.lines": "Positionen",
   "offer.addLine": "Position hinzufügen",
-  "offer.positionTaken": "Eine andere Zeile hat schon diese Position.",
+  "offer.lineOrderHint":
+    "Ziehe eine Position am Griff, oder fokussiere den Griff und drücke die Pfeiltaste nach oben oder unten.",
+  "offer.lineHandle": "{name} verschieben, Position {position} von {total}",
+  "offer.lineMoved": "{name} ist jetzt Position {position} von {total}",
+  "offer.lineHandleUnnamed": "Position {position} von {total} verschieben",
+  "offer.lineMovedUnnamed":
+    "Die Position ist jetzt Position {position} von {total}",
   "offer.lapsed":
     "Das Datum „Gültig bis“ dieses Angebots ist überschritten. Ändere es bei einem Entwurf unter „Kopfdaten bearbeiten“ oder erzeuge für ein gesendetes Angebot eine neue Revision.",
   "offer.position": "Position",
@@ -7874,6 +7999,24 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "deepread.statusFailed": "Fehlgeschlagen",
   "deepread.statusCancelled": "Abgebrochen",
   "deepread.resumesAt": "Wird am {when} automatisch fortgesetzt.",
+  "deepread.failure.bot_blocked":
+    "Der Bot-Schutz der Website hat das Lesen abgelehnt.",
+  "deepread.failure.http_server_error":
+    "Die Website hat mit einem Serverfehler geantwortet.",
+  "deepread.failure.timeout": "Die Website hat nicht rechtzeitig geantwortet.",
+  "deepread.failure.http_client_error":
+    "Die Startseite der Website wurde nicht gefunden.",
+  "deepread.failure.dns": "Die Domain verweist auf keinen Server.",
+  "deepread.failure.tls":
+    "Das HTTPS-Zertifikat der Website ließ sich nicht prüfen.",
+  "deepread.failure.robots_disallowed":
+    "Die Website bittet Crawler, sie nicht zu lesen.",
+  "deepread.failure.unreadable":
+    "Die Website hat geantwortet, aber nichts Lesbares geliefert.",
+  "deepread.failure.internal":
+    "Margince konnte das Lesen nicht abschließen. Die Ursache liegt bei dieser Installation, nicht bei der Website. Ein Admin findet sie im Serverprotokoll.",
+  "deepread.failure.stale_reclaim":
+    "Das Lesen hat sich nicht mehr gemeldet und wurde beendet.",
   "deepread.pagesSoFar_one": "Bisher {count} Seite analysiert",
   "deepread.pagesSoFar_other": "Bisher {count} Seiten analysiert",
   "deepread.stoppedEarly": "Vorzeitig beendet: {reason}",
@@ -9814,6 +9957,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Zahlen zum Zeitpunkt des Snapshots. Die Zahlen ändern sich nicht, und der Link nennt den Zeitpunkt der Aufnahme.",
   "analytics.share.snapshotUnavailable":
     "Für diesen Zeitraum gibt es noch keinen Snapshot.",
+  "analytics.share.quarterOnly":
+    "Geteilt wird immer das Quartal. Wähle Quartal, um diese Ansicht zu teilen.",
   "analytics.share.expiryNote":
     "Der Link funktioniert nach 30 Tagen nicht mehr.",
   "analytics.share.create": "Link erstellen",
@@ -10019,6 +10164,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.period.quarter": "Quartal",
   "forecast.period.month": "Monat",
   "forecast.period.week": "Woche",
+  "forecast.quarterCards":
+    "Die beiden Pipeline-Karten unten gelten für das Quartal.",
   "forecast.receipt": "Daten und Belege geprüft",
   "forecast.eligible": "Berücksichtigte Deals",
   "forecast.priced": "Bepreist",
@@ -11320,7 +11467,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.test.nothing.done": "Fertig",
   "import.test.nothing.empty": "Die Datei hat eine Kopfzeile und keine Zeilen.",
   "import.test.reupload": "Korrigieren und neu hochladen",
-  "import.test.issuesUnit": "Probleme",
   "import.test.import_one": "1 Zeile importieren",
   "import.test.import_other": "{count} Zeilen importieren",
   "import.test.importAnyway_one": "1 Zeile trotzdem importieren",
@@ -11777,6 +11923,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "jobs.kind.risk_verdict_sweep": "Prüfung des Deal-Risikos",
   "jobs.kind.signal_scan": "Suche nach Signalen",
   "jobs.kind.site_deep_read": "Analyse der Unternehmenswebsite",
+  "jobs.kind.standing_line_check": "Prüfung von „Wie es steht“",
   "jobs.kind.stored_object_reap": "Bereinigung des Dateispeichers",
   "jobs.kind.suppression_journal_export": "Export des Löschjournals",
   "jobs.kind.tag_scout": "Tag-Vorschläge",
@@ -12351,6 +12498,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "notifications.delivery.in_app": "In der App",
   "notifications.delivery.email": "E-Mail",
   "notifications.delivery.digest": "Tägliche Zusammenfassung",
+  "notifications.noMailTitle": "E-Mail ist nicht eingerichtet",
+  "notifications.noMail":
+    "Diese Installation versendet keine Benachrichtigungen per E-Mail, daher erreichen E-Mail, tägliche Zusammenfassung und Zusammenfassungen per E-Mail kein Postfach. Jede Benachrichtigung erscheint weiter in der App.",
+  "notifications.noMailGuide": "E-Mail einrichten",
   "privacynotice.title": "Was wir über Sie gespeichert haben",
   "privacynotice.intro":
     "Wir teilen Ihnen dies mit, da wir dazu gesetzlich verpflichtet sind. Sie müssen nicht darauf antworten oder irgendetwas unternehmen.",
@@ -13707,6 +13858,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "connectors.bot.eventsSecretKeepHint":
     "Leer lassen, um den gespeicherten Ereignis-Schlüssel zu behalten.",
 
+  "channelLink.identityReviewBody":
+    "Bestätige den Kanal erneut, damit seine dauerhafte Identität verknüpft wird. Entferne die Verknüpfung und wähle ihn aus der Kanalliste. Der gespeicherte Verlauf bleibt beim Datensatz.",
+  "channelLink.privateTeamsReadOnly":
+    "In privaten Teams-Kanälen können Zusammenfassungen übernommen werden. Verwende einen Standardkanal, damit der Bot CRM-Updates senden kann.",
+  "channelLink.chooseConversation": "Zu verknüpfende Unterhaltung",
+  "channelLink.specificConversation":
+    "Eine Unterhaltung in einem gemeinsam genutzten Kanal verknüpfen",
   "channelLink.title": "Team-Chat",
   "channelLink.none": "Noch kein Kanal",
   "channelLink.noneSub":
@@ -13720,6 +13878,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Wähle einen privaten Kanal, in dem der Bot ist. Für einen anderen Kanal füge den Bot dort zuerst im Chat hinzu.",
   "channelLink.summarize":
     "Bisherige Unterhaltung zusammenfassen (bis zu 5 Zusammenfassungen)",
+  "channelLink.manage": "Verwalten",
+  "channelLink.readDirection": "Kanalaktualisierungen im Verlauf speichern",
+  "channelLink.postDirection": "CRM-Änderungen im Kanal veröffentlichen",
+  "channelLink.readOn": "Zusammenfassungen im Verlauf",
+  "channelLink.readOff": "Verlaufssynchronisierung aus",
+  "channelLink.postOn": "CRM-Beiträge an",
+  "channelLink.postOff": "CRM-Beiträge aus",
   "channelLink.verbosity": "Was Margince postet",
   "channelLink.verbosityHint":
     "Die Karte im Kanal bleibt auf jeder Stufe aktuell.",
@@ -13821,7 +13986,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Nur Admins und Operations können Domain-Entscheidungen ändern. Für dich ist die Liste schreibgeschützt.",
   "blockedDomains.none":
     "Noch keine abgelehnten Domains. Ergebnisse zu Massenversand und manuelle Ablehnungen erscheinen hier.",
-  "blockedDomains.unit": "Domain-Entscheidungen",
   "blockedDomains.col.domain": "Domain",
   "blockedDomains.col.admission": "Entscheidung",
   "blockedDomains.col.source": "Entschieden von",
@@ -14590,6 +14754,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Code wurde nicht akzeptiert. Prüfe ihn und versuche es erneut.",
   "mfa.tooManyCodes":
     "Zu viele falsche Codes. Warte ein paar Minuten und versuche es dann erneut.",
+  "mfa.tooManyPasswords":
+    "Zu viele falsche Passwörter. Warte eine Minute und versuche es dann erneut.",
+  "mfa.passwordHint":
+    "Dein Margince-Passwort, nicht das von Google oder Microsoft.",
   "mfa.confirmFailedTitle": "Zweistufige Anmeldung nicht eingeschaltet",
   "mfa.onTitle": "Zweistufige Anmeldung an",
   "mfa.onBody": "Alle anderen Geräte wurden abgemeldet.",
@@ -15499,6 +15667,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.audit.addedToReports": "In Berichten nutzbar",
   "cf.audit.removedFromReports": "Aus Berichten entfernt",
   "cf.audit.kinds": "Aktivitätstypen geändert",
+  "audit.kind.chat_bot_delivery": "Kanalversand",
+  "audit.kind.chat_channel_watch": "Kanalbenachrichtigungen",
+  "audit.kind.chat_member_grant": "Nachrichtenkonto",
+  "audit.kind.chat_member_room": "Private Unterhaltung",
+  "audit.kind.chat_post_item": "Kanalaktualisierung",
+  "audit.kind.chat_root": "Kanalunterhaltung",
+  "audit.kind.chat_send_attempt": "Nachrichtenversand",
+  "audit.kind.chat_team_installation": "Teams-Installation",
+  "audit.kind.chat_team_thread": "Teams-Unterhaltung",
   "audit.kind.customField": "Eigenes Feld",
   "audit.kind.activity_retention_evidence": "Aufbewahrungsnachweis",
   "audit.kind.activity_review_template": "Vorlage für Aktivitätsbewertungen",
@@ -15570,7 +15747,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "audit.kind.lead_disqualify_reason": "Disqualifizierungsgrund",
   "audit.kind.lead_origin": "Lead-Herkunft",
   "audit.kind.lead_privacy_notice": "Datenschutzhinweis zum Lead",
-  "audit.kind.lead_source": "Lead-Quelle",
   "audit.kind.legal_entity": "Rechtsträger",
   "audit.kind.legal_review": "Rechtliche Prüfung",
   "audit.kind.license": "Lizenzeinstellungen",
@@ -15862,7 +16038,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "settings.part.integrations.contact": "Kontaktdaten",
   "settings.part.integrations.accounting": "Buchhaltung",
   "settings.part.integrations.webhooks": "Webhooks",
-  "settings.part.integrations.telegram": "Chat-Bots",
+  "settings.part.integrations.telegram": "Messaging-Anbieter",
   "settings.part.integrations.sharedMailboxes": "Gemeinsame Postfächer",
   "sharedMailboxes.title": "Gemeinsame Postfächer",
   "sharedMailboxes.intro":
@@ -17585,7 +17761,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "aicalls.open": "Aufruf {feature} von {when} öffnen",
   "aicalls.col.when": "Zeitpunkt",
   "aicalls.filtersLabel": "Filter",
-  "aicalls.unit": "Aufrufe",
   "aicalls.col.feature": "Funktion",
   "aicalls.col.model": "Modell",
   "aicalls.col.tokens": "Tokens ein / aus",
@@ -19122,6 +19297,12 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "operations.technical.label": "Technische Abfragen",
   "operations.technical.help":
     "Wie oft Unternehmensdomains ohne technische Angaben nachgeschlagen werden. 0 deaktiviert die Abfragen.",
+  "operations.captureCounterparty.label": "Prüfung neuer Absendeadressen",
+  "operations.captureCounterparty.help":
+    "Wie oft neue Absendeadressen vom Modell geprüft werden.",
+  "operations.captureConfidentiality.label": "Vertraulichkeits-Beurteilung",
+  "operations.captureConfidentiality.help":
+    "Wie oft erfasste Threads daraufhin geprüft werden, ob Mitglieder sie lesen dürfen.",
   "operations.gmailWatchScan.label": "Gmail-Push-Prüfung",
   "operations.gmailWatchScan.help":
     "Wie oft Gmail-Push-Abos auf Erneuerung geprüft werden.",
@@ -19938,9 +20119,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webhooks.event.lead.sla_breached.label": "Erste Antwort überfällig",
   "webhooks.event.lead.sla_breached.when":
     "Eine Prüfung stellt fest, dass die Frist für die erste Antwort auf einen Lead ohne Antwort verstrichen ist.",
-  "webhooks.event.lead_source.changed.label": "Lead-Quellen geändert",
-  "webhooks.event.lead_source.changed.when":
-    "Eine Lead-Quelle wird in den Einstellungen hinzugefügt, bearbeitet oder entfernt.",
   "webhooks.event.lead_disqualify_reason.changed.label":
     "Disqualifizierungsgründe geändert",
   "webhooks.event.lead_disqualify_reason.changed.when":
@@ -21322,7 +21500,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.phase": "Projektphase",
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Beziehungstyp",
-  "filters.field.stage_id": "Phase",
   "filters.field.tag": "Tags",
   "filters.field.technology": "Technologie",
   "filters.choosePlaceholder": "Feld ausw\u00e4hlen",
@@ -21694,6 +21871,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.library.shared": "Mit mir geteilt",
   "filters.library.views": "Gespeicherte Ansichten",
   "filters.library.kindView": "Gespeicherte Ansicht",
+  "filters.library.savedOn.contacts": "Auf der Liste Kontakte gespeichert",
+  "filters.library.savedOn.companies": "Auf der Liste Unternehmen gespeichert",
+  "filters.library.savedOn.deals": "Auf der Liste Deals gespeichert",
+  "filters.library.savedOn.leads": "Auf der Liste Leads gespeichert",
+  "filters.library.savedOn.projects": "Auf der Liste Projekte gespeichert",
   "filters.library.rowMore": "Weitere Aktionen für {name}",
   "filters.library.records.contact_one": "{count} Kontakt",
   "filters.library.records.contact_other": "{count} Kontakte",
@@ -22236,6 +22418,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.why.now": "Warum jetzt",
   "worklist.why.consequence": "Wenn nichts passiert",
   "worklist.why.todo": "Was zu tun ist",
+  "worklist.why.writing": "Aufgabe und Nachrichten werden gelesen…",
   "worklist.title.deal_at_risk": "Bei {name} tut sich nichts mehr",
   "worklist.title.deal_at_risk.close_overdue":
     "{name} ist über das Abschlussdatum",
@@ -22250,8 +22433,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.title.bounce": "Unzustellbar: {name}",
   "worklist.title.lead_response": "Neuen Lead {name} kontaktieren",
   "worklist.title.customer_waiting": "{name} wartet auf deine Antwort",
-  "worklist.todo.task.named":
-    "Erledige die Aufgabe mit {name} und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
   "worklist.todo.deal_at_risk.named":
     "Öffne {name} und plane den nächsten Schritt.",
   "worklist.todo.customer_waiting.named": "Antworte {name}.",
@@ -22281,8 +22462,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Prüfe die Verbindung des Kalenders, damit seine Termine wieder erfasst werden.",
   "worklist.todo.capture_health.calendar.named":
     "Prüfe die Verbindung von {name}, damit seine Termine wieder erfasst werden.",
-  "worklist.consequence.task_slips.named":
-    "Die Aufgabe mit {name} bleibt unerledigt.",
   "worklist.happened.customer_waiting":
     "{name} hat am {when} geschrieben, und noch niemand hat geantwortet.",
   "worklist.happened.customer_waiting.bare":
@@ -22368,7 +22547,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "worklist.happened.task": "Die Aufgabe ist am {due} fällig.",
   "worklist.happened.task.overdue":
     "Die Aufgabe war am {due} fällig und ist noch offen.",
-  "worklist.happened.task.undated": "Die Aufgabe hat kein Fälligkeitsdatum.",
   "worklist.happened.deal": "{deal}: {figures}.",
   "worklist.happened.lastFrom": "Letzter Kontakt von {name}: {when}",
   "worklist.happened.lastTo": "Letzter Kontakt an {name}: {when}",
@@ -22393,7 +22571,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "{name} rutscht über das erwartete Abschlussdatum.",
   "worklist.consequence.meeting_unprepared":
     "Du gehst unvorbereitet in den Termin.",
-  "worklist.consequence.task_slips": "Die Aufgabe bleibt unerledigt.",
   "worklist.consequence.work_blocked":
     "Arbeit, die an dieser Entscheidung hängt, bleibt blockiert.",
   "worklist.consequence.customer_never_received": "Die Nachricht kommt nie an.",
@@ -22409,8 +22586,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Datensätze laufen weiter auseinander.",
   "worklist.todo.deal_at_risk":
     "Öffne den Deal und plane den nächsten Schritt.",
-  "worklist.todo.task":
-    "Erledige sie und markiere sie als erledigt, oder verschiebe sie auf einen anderen Tag.",
   "worklist.todo.customer_waiting": "Beantworte die Nachricht.",
   "worklist.todo.awaiting_reply": "Sende eine Nachfrage.",
   "worklist.todo.lead_response":
@@ -25640,4 +25815,266 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "particulars.translationIntro":
     "E-Mails und Seiten auf {language} zeigen diesen Text, wo du ihn ausfüllst. Werbung, die auf {language} sein muss, geht erst raus, wenn Ablehnung und Kontaktdaten des werbenden Unternehmens hier ausgefüllt sind.",
   "particulars.objectionExample": "Beispiel: {example}",
+  "messenger.signingSecret": "Signaturgeheimnis",
+  "messenger.signingSecretHint":
+    "Kopiere für die Kanalsynchronisierung das Signaturgeheimnis aus „Basic Information“ der Slack-App. Gib es beim Ersetzen der App-Zugangsdaten erneut ein. Dein Messenger-Konto wird separat verbunden.",
+  "messenger.writeOutcome": "Ergebnis schreiben",
+  "messenger.shareOutcome": "Ergebnis teilen",
+  "messenger.outcomeDestination": "Ziel auswählen",
+  "messenger.outcomePrivacy":
+    "Schreibe das Ergebnis, das du teilen möchtest. Die private Unterhaltung und ihre Links bleiben außerhalb des CRM-Verlaufs.",
+  "messenger.outcomeAudience":
+    "Dies speichert eine CRM-Notiz. Mitglieder mit Leserechten auf den Ziel-Datensatz können sie lesen. Sendet der Datensatz CRM-Aktualisierungen an einen verknüpften Kanal, kann die Notiz dort zusammengefasst werden. Prüfe Ziel und Text vor dem Speichern.",
+  "messenger.dispactConsent":
+    "Verbinde dein eigenes Dispact-Konto mit einem persönlichen Token.",
+  "messenger.dispactTokenTitle": "Dein Dispact-Konto verbinden",
+  "messenger.dispactTokenHelp":
+    "Öffne in Dispact Einstellungen → API-Tokens. Erstelle ein Token mit Lese- und Schreibzugriff auf deine Unterhaltungen. Füge es unten ein. Margince prüft deine Identität und speichert das Token sicher. Du kannst es jederzeit in Dispact widerrufen.",
+  "messenger.dispactToken": "Persönliches API-Token",
+  "messenger.dispactOpen": "Dispact öffnen",
+  "messenger.loadLater": "Weitere Antworten laden",
+  "messenger.verb": "Messenger",
+  "messenger.provider": "Nachrichtendienst",
+
+  "messenger.channels": "Kanäle",
+  "messenger.people": "Personen",
+
+  "messenger.change": "Unterhaltung wechseln",
+  "messenger.needsConsent":
+    "Verbinde dein Konto, um unter deinem Namen zu schreiben.",
+  "messenger.unavailable":
+    "Dieser Dienst ist nicht verfügbar. Wende dich für die Einrichtung an einen Unternehmensadmin.",
+  "messenger.write": "Nachricht an {name}",
+  "messenger.sendingAs": "Senden als {name}",
+  "messenger.sendProblem": "Deine Nachricht konnte nicht bestätigt werden",
+  "messenger.failed":
+    "Die Nachricht wurde nicht gesendet. Dein Entwurf bleibt erhalten.",
+  "messenger.checkDelivery":
+    "Die Zustellung ist unbestätigt. Prüfe die Bestätigung vor dem erneuten Senden.",
+  "messenger.checkReceipt": "Bestätigung prüfen",
+  "messenger.accepted": "Vom Dienst angenommen",
+  "messenger.send": "Senden",
+  "messenger.openedFrom": "Geöffnet aus {name}",
+  "messenger.private":
+    "Private Nachrichten bleiben außerhalb des CRM-Verlaufs, bis du ein Ergebnis teilst.",
+  "messenger.audience": "Mitglieder: {names}",
+  "messenger.audienceUnknown":
+    "Der vollständige Mitgliederkreis lässt sich nicht prüfen. Senden ist nicht verfügbar.",
+  "messenger.loadEarlier": "Ältere Nachrichten laden",
+  "messenger.newMessages": "Zu den neuesten Nachrichten",
+  "messenger.empty": "In dieser Unterhaltung gibt es noch keine Nachrichten.",
+  "messenger.reply": "Im Thread antworten",
+  "messenger.back": "Zurück zur Unterhaltung",
+  "messenger.deleted": "Nachricht gelöscht",
+  "messenger.edited": "Bearbeitet",
+  "messenger.loading": "Unterhaltung wird geladen…",
+  "messenger.loadProblem": "Unterhaltung nicht verfügbar",
+  "messenger.searchPeople": "Personen suchen",
+  "messenger.openPeople": "Unterhaltung öffnen",
+  "messenger.more": "Mehr laden",
+
+  "messenger.connect": "Mein Konto verbinden",
+  "messenger.settings": "Einstellungen der Nachrichtendienste",
+  "messenger.connectProblem": "Kontoverbindung konnte nicht starten",
+  "oauthApp.slack.title": "Slack-App",
+  "oauthApp.slack.sub": "Die App für native Slack-Nachrichten.",
+  "oauthApp.slack.absent": "Richte eine Slack-App ein, um Konten zu verbinden.",
+  "oauthApp.slack.redirectSub":
+    "Trage diese genaue Rückrufadresse in Slack ein.",
+  "oauthApp.slack.clientIdPlaceholder": "Slack-Client-ID",
+  "oauthApp.slack.removeConfirmTitle": "Slack-App entfernen?",
+  "oauthApp.slack.removeConfirmBody":
+    "Mitgliederkonten brauchen diese App für die Verbindung und erneute Zustimmung.",
+  "oauthApp.slack.save": "Slack-App speichern",
+  "oauthApp.slack.removeSecret": "Das gespeicherte App-Secret wird gelöscht.",
+  "oauthApp.slack.removeUsedBy":
+    "Über diese App verbundene Konten lassen sich im Messenger nicht mehr öffnen.",
+  "oauthApp.slack.removeOthers":
+    "Richte die App erneut ein, bevor du Konten verbindest.",
+  "oauthApp.slack.for": "Für deinen Slack-Team.",
+  "oauthApp.slack.setUp": "Slack-App einrichten",
+  "oauthApp.unlock.slack": "Slack-Nachrichten",
+  "oauthApp.drawer.slack.title": "Slack-App einrichten",
+  "oauthApp.drawer.slack.intro":
+    "Registriere die App in Slack und speichere dann ihre Client-ID und ihr Secret hier.",
+  "oauthApp.drawer.slack.value":
+    "Personen bei {company} verbinden ihre eigenen Slack-Konten über diese App.",
+  "oauthApp.drawer.slack.redirects":
+    "Füge unter OAuth & Permissions alle folgenden Rückrufadressen bei Redirect URLs hinzu.",
+  "oauthApp.drawer.slack.step1Title": "Slack-App erstellen",
+  "oauthApp.drawer.slack.step1Body":
+    "Wähle dein Slack-Team in der Slack-App-Konsole. Halte die Client-ID und das Client-Secret aus Basic Information bereit.",
+  "oauthApp.drawer.slack.step1Link": "Slack-App-Konsole öffnen",
+  "oauthApp.drawer.slack.scopesTitle": "Nachrichten von Mitgliedern erlauben",
+  "oauthApp.drawer.slack.scopesBody":
+    "Richte unter OAuth & Permissions die in Nachrichtendienste gezeigten Mitgliederberechtigungen ein. Jede Person stimmt über Mein Konto verbinden zu.",
+  "oauthApp.drawer.slack.pasteBody":
+    "Füge die Client-ID und das Client-Secret aus Basic Information ein. Das Secret wird nach dem Speichern verschlüsselt.",
+  "oauthApp.redirect.messenger_connect": "Messenger-Konto",
+  "messenger.disconnect": "Mein Konto trennen",
+  "messenger.disconnectTitle": "Dieses Nachrichtenkonto trennen?",
+  "messenger.disconnectBody":
+    "Der Messenger liest und sendet nicht mehr über dein Konto. Bestehende Unterhaltungen bleiben bei ihren Mitgliedern.",
+  "messenger.myAccounts": "Meine Nachrichtenkonten",
+  "messenger.apps": "Nachrichten-Apps",
+  "messenger.setupDetails": "Details zur Kontoeinrichtung",
+  "messenger.appReady":
+    "Die App ist für die Zustimmung der Mitglieder eingerichtet.",
+  "messenger.appMissing":
+    "Die Administration muss die App-Einrichtung abschließen, bevor Konten verbunden werden können.",
+  "messenger.participantScopes": "Erforderliche Mitgliederberechtigungen",
+  "messenger.teamsTenant":
+    "Beschränke die Microsoft-App auf deine Verzeichnis-ID und gewähre die aufgeführten delegierten Berechtigungen in Entra.",
+  "messenger.editDraft": "Entwurf bearbeiten",
+  "messenger.reviewDelivery": "Vor dem Bearbeiten die Zustellung prüfen",
+  "messenger.checkedConversation": "Unterhaltung geprüft",
+  "messenger.newAttemptWarning":
+    "Prüfe, ob deine vorherige Nachricht in der Unterhaltung steht. Erneutes Senden kann sie doppelt zustellen. Dein Text bleibt zum Bearbeiten erhalten.",
+  "messenger.refresh": "Nachrichten aktualisieren",
+  "messenger.team": "Team am Datensatz",
+  "messenger.noTeam":
+    "Dieser Datensatz hat noch keinen Verantwortlichen und keine Team-Zuweisungen. Wähle Personen oder einen Kanal.",
+  "messenger.teamUnresolved":
+    "Das vollständige Team muss geprüft werden. Wähle Personen ausdrücklich aus oder kläre die Zuweisungen, bevor du alle anschreibst.",
+  "messenger.groupLimit":
+    "Dieser Dienst kann eine Gruppe mit bis zu {limit} Mitgliedern öffnen. Wähle einen Kanal oder weniger Personen.",
+  "messenger.messageTeam": "Team am Datensatz anschreiben",
+  "messenger.matched": "Konto zugeordnet",
+  "messenger.you": "Du",
+  "messenger.inactive": "Inaktive Zuweisung",
+  "messenger.unresolved": "Konto nicht zugeordnet",
+  "messenger.failureReconnect":
+    "Verbinde das Konto erneut, bevor du wieder sendest. Dein Entwurf bleibt erhalten.",
+  "messenger.failureUnavailable":
+    "Diese Unterhaltung ist nicht verfügbar. Wähle ein anderes Ziel. Dein Entwurf bleibt erhalten.",
+  "messenger.failureReview":
+    "Prüfe die Mitglieder und die Nachricht. Der Dienst hat den Versand abgelehnt.",
+  "messenger.failureUnsupported":
+    "Dieser Dienst kann nicht an das gewählte Ziel senden.",
+  "messenger.failureAuthorization":
+    "Dein Zugriff hat sich vor dem Senden geändert. Öffne die Unterhaltung erneut und prüfe die Mitglieder.",
+  "messenger.failureRate":
+    "Der Dienst hat Margince zum Warten aufgefordert. Dein Entwurf bleibt erhalten.",
+  "messenger.retryAfter": "Du kannst nach {at} erneut senden.",
+  "messenger.audienceCount_one": "{count} Mitglied",
+  "messenger.audienceCount_other": "{count} Mitglieder",
+  "messenger.viewAudience": "Mitglieder ansehen",
+  "messenger.audienceChanged":
+    "Die Mitglieder haben sich geändert. Prüfe sie vor dem Senden.",
+  "messenger.reviewAudience": "Mitglieder prüfen",
+  "messenger.useAudience": "Diese Mitglieder verwenden",
+  "messenger.externalAudience":
+    "Diese Unterhaltung enthält externe Personen. Das Senden aus Margince ist pausiert.",
+  "messenger.externalMember": "Externes Konto",
+  "messenger.inactiveMember": "Inaktives Konto",
+  "messenger.accountMenu": "Nachrichtenkonto",
+  "channelLink.messageDetail": "Nachrichtendetails",
+  "channelLink.detailHelp":
+    "Beide Optionen erhalten Bedingungen, Termine und offene Fragen. Vollständig ergänzt den Kontext.",
+  "channelLink.detailBrief": "Kurz",
+  "channelLink.detailFull": "Vollständig",
+  "channelLink.coverageThrough":
+    "Die Kanalsuche wurde bis {at} geprüft. Ausstehende Zusammenfassungen stehen unten.",
+  "channelLink.notificationsDelayed":
+    "Kanalbenachrichtigungen müssen wiederhergestellt werden",
+  "channelLink.notificationsPolling":
+    "Die regelmäßigen Quellenprüfungen laufen weiter. Neue Nachrichten können später erscheinen, bis die Verbindung wiederhergestellt ist.",
+  "channelLink.coverageWaiting":
+    "Die Quellenabdeckung ist noch nicht bestätigt. Frühere Gespräche werden nur bei angefordertem Verlauf einbezogen.",
+  "channelLink.conversationQueue":
+    "Ausstehende Zusammenfassungen: {pending}. Gespräche mit erneutem Versuch: {failed}.",
+  "channelLink.syncNeedsAttention": "Einige Kanalaktualisierungen warten",
+  "channelLink.outboundQueue_one": "CRM-Aktualisierungen zum Senden: {count}.",
+  "channelLink.outboundQueue_other":
+    "CRM-Aktualisierungen zum Senden: {count}.",
+  "channelLink.deliveryUnconfirmed": "Kanalzustellung ist unbestätigt",
+  "channelLink.deliveryUnconfirmedHelp":
+    "Ein Anbieter hat die Zustellung nicht bestätigt. Margince sendet diesen Beitrag nicht automatisch erneut. Öffne den Kanal und prüfe, was angekommen ist.",
+  "channelLink.sourceIncomplete":
+    "Ein Update wartet, weil die vollständige Quellnachricht nicht verfügbar ist. Andere bestätigte Updates können fortgesetzt werden. Prüfe die ursprüngliche Aktivität und ihren Erfassungsstatus.",
+  "channelLink.sourceTooLong":
+    "Ein Gespräch überschreitet die Grenze für vollständiges Lesen. Es wurde nicht teilweise zusammengefasst. Andere Gespräche werden weiter synchronisiert.",
+  "channelLink.summaryWaiting":
+    "Eine Zusammenfassung wartet auf das konfigurierte KI-Modell. Die Quelle gilt weiterhin als nicht zusammengefasst.",
+  "channelLink.providerWaiting":
+    "Der Anbieter fordert eine Wartezeit. Die Synchronisierung wird danach fortgesetzt.",
+  "channelLink.sourceAccessLost":
+    "Margince kann die verknüpfte Quelle derzeit nicht lesen. Prüfe die App-Installation und Kanalmitgliedschaft.",
+  "channelLink.sourceChanged":
+    "Die Quelle hat sich während der Verarbeitung geändert. Margince liest sie vor dem Speichern erneut.",
+  "channelLink.sourceUnavailable":
+    "Die Quelle kann vorübergehend nicht vollständig gelesen werden. Vorhandene Zusammenfassungen bleiben erhalten. Das Gespräch wird erneut geprüft.",
+  "timeline.chatSummary.sourceCheck": "Quellzugriff prüfen",
+  "timeline.chatSummary.sourceChecking": "Quellzugriff wird geprüft…",
+  "timeline.chatSummary.sourceUnavailable":
+    "Der Zugriff auf die Quelle konnte nicht bestätigt werden.",
+  "channelEnded.title": "Synchronisierung beendet: {at}",
+  "channelEnded.retention":
+    "Zulässige Verlaufseinträge bleiben nach den bestehenden Zugriffs- und Aufbewahrungsregeln erhalten. Kanaländerungen nach dem letzten Abdeckungszeitpunkt sind hier nicht berücksichtigt.",
+  "channelEnded.read": "Kanal geprüft bis {at}.",
+  "channelEnded.noRead": "Es wurde keine erfolgreiche Kanalabdeckung erfasst.",
+  "channelEnded.posted": "Letzte bestätigte CRM-Aktualisierung: {at}.",
+  "channelEnded.noPost":
+    "Es wurde keine bestätigte CRM-Aktualisierung erfasst.",
+  "channelEnded.copies":
+    "Im Anbieterkanal verbleibende Aktualisierungen: {retained}. Nachrichten, die bestätigt ohne zurückgezogene Inhalte überarbeitet wurden: {redacted}. Das bestätigt keine Entfernung anderer Kopien.",
+  "channelEnded.action":
+    "Prüfung beim Anbieter erforderlich: {withdrawals} unbestätigte Rücknahmen und {unknown} unbestätigte Zustellungen. Prüfe den Kanal vor weiteren Schritten.",
+  "channelPreview.title": "Kanalzustellung prüfen",
+  "channelPreview.enable": "CRM-Aktualisierungen aktivieren",
+  "channelPreview.help":
+    "Prüfe vor der automatischen Zustellung, wer den Kanal lesen kann und was Margince dort veröffentlicht.",
+  "channelPreview.loading": "Mitglieder und ausgehende Inhalte werden geprüft…",
+  "channelPreview.thread": "Aktualisierungen erscheinen im gewählten Thread.",
+  "channelPreview.channel": "Aktualisierungen erscheinen in diesem Kanal.",
+  "channelPreview.audience": "Aktuelle Mitglieder",
+  "channelPreview.settings":
+    "Häufigkeit: {frequency}. Nachrichtendetails: {detail}.",
+  "channelPreview.scope":
+    "Nur zulässige Datensatzänderungen und Inhalte, die alle Kanalmitglieder lesen dürfen, werden geteilt. Private Gespräche und eingeschränkte Inhalte bleiben ausgeschlossen.",
+  "channelPreview.overview": "Aktuelle Übersichtskarte",
+  "channelPreview.updates": "Zulässige ausstehende Aktualisierungen",
+  "channelPreview.noUpdates":
+    "Es stehen keine zulässigen Aktualisierungen aus. Die Zustellung beginnt mit künftigen Änderungen; frühere Einträge werden nicht erneut gesendet.",
+  "channelPreview.excluded":
+    "Einige ausstehende Aktualisierungen fehlen in der Vorschau, weil sie nicht mit allen Mitgliedern geteilt werden dürfen.",
+  "channelPreview.recheck":
+    "Margince prüft Mitglieder und Zugriff vor jeder Zustellung erneut. Die Vorschau sendet keine Nachricht.",
+  "channelHandoff.title": "Übergabe an die Umsetzung prüfen",
+  "channelHandoff.noOutgoing":
+    "Automatische CRM-Nachrichten sind für diesen Kanal ausgeschaltet oder nicht verfügbar. Wenn du die Lieferung startest, bleiben sie ausgeschaltet.",
+  "channelHandoff.help":
+    "Prüfe vor der Übergabe den Zielkanal, seinen Leserkreis sowie offene Zusagen und Termine.",
+  "channelHandoff.current": "Aktueller Deal-Kanal: {channel}.",
+  "channelHandoff.noCurrent": "Der Deal hat keinen verknüpften Kanal.",
+  "channelHandoff.preserve":
+    "Das Projekt nutzt bereits {channel}. Dieser Kanal bleibt erhalten.",
+  "channelHandoff.continue":
+    "Das Projekt hat noch keinen Kanal. Beim Fortfahren wird {channel} mit dem Projekt verbunden.",
+  "channelHandoff.noChannel":
+    "Keiner der Datensätze hat einen Kanal. Die Übergabe kann ohne Kanalsynchronisierung fortgesetzt werden.",
+  "channelHandoff.choose":
+    "Für ein anderes Ziel verknüpfe hier vor der Übergabe einen Kanal mit dem Projekt. Die Einstellungen zum Teilen bleiben unabhängig.",
+  "channelHandoff.loading": "Übergabeübersicht wird geladen…",
+  "channelHandoff.owner": "Verantwortlich für die Umsetzung: {owner}.",
+  "channelHandoff.target": "Projektzieltermin: {at}.",
+  "channelHandoff.noTarget": "Es ist kein Projektzieltermin erfasst.",
+  "channelHandoff.promises": "Offene Projektzusagen und Termine",
+  "channelHandoff.noPromises":
+    "Es wurden keine lesbaren offenen Projektzusagen zurückgegeben.",
+  "channelHandoff.partial":
+    "Einige Übergabeinformationen sind nicht freigegeben",
+  "channelHandoff.omitted":
+    "Deine Berechtigungen schließen einige Bereiche aus. Ein fehlender Bereich bedeutet nicht, dass nichts offen ist.",
+  "channelHandoff.gaps": "Bei der Übergabe zu klären",
+  "channelInstall.slackHistoryProfile":
+    "Kanalsynchronisierung benötigt die regulären Verlaufslimits von Slack, wie sie für Marketplace-geprüfte und interne Apps gelten. Bei einem Aufruf pro Minute bleibt die Prüfung vollständiger Threads pausiert. Verwende ein geeignetes App-Profil.",
+  "channelLink.outboundNeedsAttention":
+    "Teilen von CRM-Updates muss geprüft werden",
+  "channelLink.audienceNeedsReview":
+    "Der Leserkreis des Kanals konnte für diesen Datensatz nicht bestätigt werden. Das automatische Teilen pausiert. Prüfe die Kanalmitglieder und ihren Datensatzzugriff und prüfe danach die Zustellung unter Verwalten erneut.",
+  "timeline.filters.chatProvider": "Quelle der Kanalzusammenfassung",
+  "timeline.filters.allProviders": "Alle Quellen",
+  "timeline.filters.providerOmitsLimited":
+    "Kanalquellenfilter schließen Inhalte aus, die du nicht lesen darfst.",
 };

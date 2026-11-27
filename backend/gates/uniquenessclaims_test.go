@@ -196,8 +196,15 @@ func testFunctions(t *testing.T) map[string][]string {
 			if readErr != nil {
 				return readErr
 			}
-			for _, match := range goTestFunc.FindAllStringSubmatch(string(source), -1) {
-				found[match[1]] = append(found[match[1]], filepath.ToSlash(path))
+			// goTestFunc never spans a newline and opens at a line start, so
+			// asking it line by line finds the same matches in the same order.
+			for line := range strings.Lines(string(source)) {
+				if goTestFuncWords != nil && !mayHoldFolded(line, goTestFuncWords...) {
+					continue
+				}
+				if match := goTestFunc.FindStringSubmatch(line); match != nil {
+					found[match[1]] = append(found[match[1]], filepath.ToSlash(path))
+				}
 			}
 			return nil
 		})
@@ -207,6 +214,10 @@ func testFunctions(t *testing.T) map[string][]string {
 	}
 	return found
 }
+
+// goTestFuncWords are the words every goTestFunc match holds, derived so an
+// edit to the pattern cannot leave the line filter stale.
+var goTestFuncWords = requiredWords(goTestFunc)
 
 func TestEveryUniquenessClaimNamesItsGateOrIsRegisteredDebt(t *testing.T) {
 	t.Parallel()
@@ -468,10 +479,10 @@ func TestTheRegisterHoldsNoEntryThatIsNoLongerAClaim(t *testing.T) {
 // a row falling, so the two kinds of progress are told apart by which number
 // moved and whether the tree moved with it.
 var shapeCensus = map[string]int{
-	"cannot-drift":   143,
+	"cannot-drift":   141,
 	"once":           150,
-	"one-of-a-kind":  136,
-	"is-every-named": 81,
+	"one-of-a-kind":  134,
+	"is-every-named": 80,
 	"only-noun":      9,
 	"no-second":      10,
 	"never-twice":    6,

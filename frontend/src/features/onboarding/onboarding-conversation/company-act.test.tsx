@@ -248,7 +248,7 @@ describe("the dossier's legal-entity picker", () => {
             ],
           }),
         "GET /onboarding/company/proposal": () =>
-          jsonResponse({ title: "not ready", code: "not_found" }, 404),
+          new Response(null, { status: 204 }),
       },
       {},
     );

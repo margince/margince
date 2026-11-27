@@ -44,12 +44,14 @@ func TestIsReservedAddressReadsOnlyTheDomain(t *testing.T) {
 		"buyer@example.com":      true,
 		"Buyer@Mail.Example.COM": true,
 		"ada@acme.test":          true,
-		"buyer@notexample.com":   false,
-		"buyer@example.co":       false,
-		"buyer@gmail.com":        false,
-		"not an address":         false,
-		"":                       false,
-		"buyer@.example.com":     false,
+		// Refused for a new write, yet a stored row holding it still classifies.
+		"ops@localhost":        true,
+		"buyer@notexample.com": false,
+		"buyer@example.co":     false,
+		"buyer@gmail.com":      false,
+		"not an address":       false,
+		"":                     false,
+		"buyer@.example.com":   false,
 		// A quoted local part is no plain address, whichever side names a
 		// reserved host.
 		`"qa@example.com"@acme.de`: false,

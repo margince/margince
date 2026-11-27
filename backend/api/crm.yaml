@@ -602,7 +602,7 @@ paths:
       security: []
       x-agent-access: human-only
       summary: Redeem a reset token and set a new password.
-      description: 'Validates the single-use token (`auth_token` purpose=`password_reset`), sets the new password, marks the token used, and invalidates existing sessions. An expired, consumed, or unknown token produces one neutral error. Audited.'
+      description: 'Validates the single-use token, sets the new password, marks the token used, and invalidates existing sessions. An expired, consumed, or unknown token produces one neutral error. Audited.'
       requestBody:
         required: true
         content:
@@ -1531,6 +1531,7 @@ paths:
           schema: { type: string, enum: [mr, ms, none, unset] }
           description: Filter by an explicit salutation; unset finds records whose choice is null.
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -3597,6 +3598,7 @@ paths:
       x-mcp-tool: { verb: list_records, record_type: company, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -5258,12 +5260,15 @@ paths:
       operationId: getPartner
       summary: Read the partner extension on a company (404 if the company is not a partner).
       x-mcp-tool: { verb: read_record, record_type: partner, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The partner record.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/Partner' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
@@ -5488,12 +5493,15 @@ paths:
         404 when the account has never been looked up, which is the honest difference between
         "never tried" and "tried and found nothing".
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: What each source last did for this account.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TechnicalEnrichStatus' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -5520,12 +5528,15 @@ paths:
         404 when the number has never been consulted, which is the honest difference between
         "never asked" and "asked and told no".
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The current standing, and the proof it was checked.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CompanyVatCheck' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -5580,12 +5591,15 @@ paths:
         stand on. 404 when the account has never been read, which is the honest
         difference between "never tried" and "tried and got nothing".
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The newest read's report.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/SiteReadReport' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -6656,6 +6670,7 @@ paths:
       x-mcp-tool: { verb: list_records, record_type: deal, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -7864,6 +7879,7 @@ paths:
       x-mcp-tool: { verb: list_records, record_type: project, tier: auto_execute, scope: read }
       parameters:
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/Sort'
         - $ref: '#/components/parameters/IncludeArchived'
@@ -9523,6 +9539,10 @@ paths:
             type: string
             enum: [reached, not_reached, voicemail, call_back_later, put_through]
             x-enum-varnames: [ListCallOutcomeReached, ListCallOutcomeNotReached, ListCallOutcomeVoicemail, ListCallOutcomeCallBackLater, ListCallOutcomePutThrough]
+        - name: chat_provider
+          in: query
+          description: Generated channel recaps from this provider. Content visibility is required for a match.
+          schema: { $ref: '#/components/schemas/MessengerProvider' }
         - name: channel_provider
           in: query
           description: |
@@ -10224,6 +10244,40 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MeetingBrief' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /activities/{id}/task-explanation:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    get:
+      tags: [Activities]
+      operationId: getTaskExplanation
+      x-waits-on-model: on-miss
+      x-agent-access: human-only
+      x-human-only-reason: covered   # an agent reads the task and its contact through read_record and read_context
+      security: [ { cookieAuth: [] } ]   # human session only (x-agent-access: human-only)
+      summary: Why one task is on the reader's list, written from that task's own records.
+      description: |
+        What happened, what it costs if nothing is done, and what to do, for one open task. A
+        sentence's `nature` says which: a `fact` is what happened, an `assessment` is what is at
+        stake, a `recommendation` is the one next step.
+
+        Written from the task, the message it came from, and the relationship with its contact
+        as the CALLER sees them, so it describes only records that caller could open. Cached per
+        reader on a fingerprint of those inputs and rewritten before the answer when they move.
+
+        Degrades rather than fails: with no model lane, the sentences are the facts alone,
+        each citing its message, and `generated_by` says so. It never falls back to a sentence
+        that would fit any task.
+      responses:
+        '200':
+          description: The task's explanation.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TaskExplanation' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -10962,12 +11016,15 @@ paths:
         exactly like one whose reading had failed. 404 when this transcript has never been read, which
         is the honest difference between "never tried" and "tried and got nothing".
       x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The newest reading's report.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TranscriptReadReport' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -11514,6 +11571,7 @@ paths:
         surface, not this route.
       x-mcp-tool: { verb: get_mail_draft, router: read_details, action: mail_draft, tier: auto_execute, scope: read, served_by: route }
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: anchor_type
           in: query
           required: true
@@ -11528,6 +11586,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MailDraft' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '404':
           description: |
             No draft of the caller's for this anchor, or an anchor the caller can no longer
@@ -13655,6 +13714,7 @@ paths:
           schema: { type: string, enum: [mr, ms, none, unset] }
           description: Filter by an explicit salutation; unset finds records whose choice is null.
         - $ref: '#/components/parameters/Cursor'
+        - $ref: '#/components/parameters/Offset'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
         - $ref: '#/components/parameters/Sort'
@@ -13685,8 +13745,8 @@ paths:
             Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
         - name: source
           in: query
-          schema: { type: string }
-          description: Filter by how the row was written (import, crawl, manual, `connector:<name>`, ...). Not the origin; use `origin` to filter by where the lead came from.
+          schema: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string }
+          description: Filter by the channel the lead arrived by. Not the origin; use `origin` to filter by where the lead came from.
         - name: origin
           in: query
           schema: { type: string }
@@ -14625,106 +14685,10 @@ paths:
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # -------------------------- /relationships --------------------------------
-  # ------------------------------ /lead-sources -----------------------------
+  # ------------------------------ /lead-origins -----------------------------
   # The installation's lead vocabularies. Installation-scoped configuration
   # like pipelines: read by everyone, written by a human session holding the
   # custom_field object (the same posture as the custom-field catalog).
-  /lead-sources:
-    get:
-      tags: [Leads]
-      operationId: listLeadSources
-      deprecated: true
-      x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }
-      summary: List lead sources, active and inactive, in display order.
-      description: |
-        Deprecated: the list says how a row reached Margince, which nothing scores any more.
-        Use `/lead-origins` for where a lead came from.
-
-        `data` is the administered list. `discovered` names source values that
-        live on leads but are not in the list — connector-written keys such as
-        `connector:apollo:…` grouped by their connector prefix, seed values,
-        imports — with how many live leads carry each. Adding one as a source
-        (POST with that key) makes it administrable.
-      responses:
-        '200':
-          description: The lead source list.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/LeadSourceListResponse' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
-    post:
-      tags: [Leads]
-      operationId: createLeadSource
-      deprecated: true
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: create_lead_source, router: change_settings, action: create_lead_source, tier: auto_execute, scope: write, served_by: route }
-      summary: Add a lead source.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/CreateLeadSourceRequest' }
-      responses:
-        '201':
-          description: Created lead source.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/LeadSource' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-
-  /lead-sources/{id}:
-    parameters:
-      - $ref: '#/components/parameters/Id'
-    patch:
-      tags: [Leads]
-      operationId: updateLeadSource
-      deprecated: true
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: update_lead_source, router: change_settings, action: update_lead_source, tier: auto_execute, scope: write, served_by: route }
-      summary: Rename, reorder, re-weight or (de)activate a lead source.
-      description: |
-        Changing `intent` does not rescore existing leads; each lead picks the
-        new weight up on its next recompute. A built-in (`system`) source
-        accepts every field here — it only refuses deletion.
-      parameters:
-        - $ref: '#/components/parameters/IdempotencyKey'
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema: { $ref: '#/components/schemas/UpdateLeadSourceRequest' }
-      responses:
-        '200':
-          description: Updated lead source.
-          content:
-            application/json:
-              schema: { $ref: '#/components/schemas/LeadSource' }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-    delete:
-      tags: [Leads]
-      operationId: deleteLeadSource
-      deprecated: true
-      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: delete_lead_source, router: change_settings, action: delete_lead_source, tier: auto_execute, scope: write, served_by: route }
-      summary: Remove a lead source nothing uses.
-      description: |
-        409 when the source is built-in or any live lead still carries it —
-        deactivate it instead, which hides it from the create form and the
-        filter while every existing lead keeps its value.
-      responses:
-        '204': { description: Removed. }
-        '403': { $ref: '#/components/responses/Forbidden' }
-        '404': { $ref: '#/components/responses/NotFound' }
-        '409': { $ref: '#/components/responses/Conflict' }
-        '422': { $ref: '#/components/responses/ValidationError' }
-
   /lead-origins:
     get:
       tags: [Leads]
@@ -14819,9 +14783,8 @@ paths:
       summary: List deal acquisition sources, active and retired, in display order.
       description: |
         The administered business channels a deal can be attributed to. This list is
-        deliberately separate from `/lead-sources`: that one also models how a RECORD
-        reached Margince (connector, import, crawl) and scores lead intent, while this
-        one only names how an OPPORTUNITY reached the business. Retired entries are
+        deliberately separate from `/lead-origins`, which names where a LEAD came from;
+        this one only names how an OPPORTUNITY reached the business. Retired entries are
         returned so a deal still carrying one renders its label and a filter can still
         find it; they cannot be newly assigned.
       responses:
@@ -18444,6 +18407,846 @@ paths:
   # keeps a card in the channel and posts what happens on the record; what the
   # channel decides comes back as summarised notes. Linking needs the right to
   # edit the record, and reading needs the right to see it.
+  /activities/{id}/chat-source:
+    get:
+      tags: [Activities]
+      operationId: getChatSummarySource
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [{ cookieAuth: [] }]
+      summary: Verify the current reader's native source access for a visible chat recap.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Availability of the native source without source identifiers when unavailable.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatSourceAccess' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /channel-events/teams/graph:
+    post:
+      tags: [Connectors]
+      operationId: receiveTeamsGraphNotification
+      x-agent-access: human-only
+      security: []
+      summary: Authenticate metadata-only Graph channel notifications and lifecycle recovery with sealed client state.
+      parameters:
+        - { name: validationToken, in: query, schema: { type: string, maxLength: 4096 } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+          text/plain:
+            schema: { type: string, maxLength: 4096 }
+      responses:
+        '200':
+          description: Endpoint validation or a verified notification batch receipt.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DispactChannelEventReceipt' }
+            text/plain:
+              schema: { type: string, maxLength: 4096 }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '413':
+          description: Notification batch exceeds the size limit.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Retry after the returned wait.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Notification recovery could not be queued yet.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-events/teams/bot:
+    post:
+      tags: [Connectors]
+      operationId: receiveTeamsBotActivity
+      x-agent-access: human-only
+      security: []
+      summary: Verify a Microsoft bot activity and retain only installation and conversation references.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Activity accepted or ignored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DispactChannelEventReceipt' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '413':
+          description: Activity exceeds the size limit.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: Retry after the returned wait.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-events/slack:
+    post:
+      tags: [Connectors]
+      operationId: receiveSlackChannelEvent
+      x-agent-access: human-only
+      security: []
+      summary: Verify a signed Slack event and queue a canonical channel read.
+      description: Message bodies are discarded after signature and routing checks. Only root identifiers and revisions reach the queue ledger.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Challenge response or accepted event.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DispactChannelEventReceipt' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429':
+          description: Retry after the returned rate limit wait.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-providers/teams/setup:
+    get:
+      tags: [Connectors]
+      operationId: getTeamsChannelSetup
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Microsoft team installations verified by signed bot events, separate from participant consent.
+      responses:
+        '200':
+          description: Setup instructions and verified installed teams without credentials.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeamsChannelSetup' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Configure the Microsoft app before managing its team installation.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-providers/teams/connect:
+    post:
+      tags: [Connectors]
+      operationId: connectTeamsChannels
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Approve a verified team installation for record channel links.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [installation_id]
+              properties:
+                installation_id: { type: string, format: uuid }
+      responses:
+        '204': { description: The approved team is connected. }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Configure the Microsoft app before managing its team installation.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-providers/teams/package:
+    post:
+      tags: [Connectors]
+      operationId: downloadTeamsChannelPackage
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Build the team-scoped app package with the operator's legal URLs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [privacy_url, terms_url]
+              properties:
+                privacy_url: { type: string, format: uri, maxLength: 8192 }
+                terms_url: { type: string, format: uri, maxLength: 8192 }
+      responses:
+        '200':
+          description: The app manifest and its required icons.
+          content:
+            application/zip:
+              schema: { type: string, format: binary }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Configure the Microsoft app before managing its team installation.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-providers/slack/setup:
+    get:
+      tags: [Connectors]
+      operationId: getSlackChannelSetup
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Slack workspace installation requirements, separate from participant consent.
+      responses:
+        '200':
+          description: Public installation metadata without credentials.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelProviderSetup' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /channel-providers/slack/connect:
+    post:
+      tags: [Connectors]
+      operationId: connectSlackChannels
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Start admin consent for the Slack bot used by record channel links.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [distribution]
+              properties:
+                distribution: { type: string, enum: [internal, marketplace, non_marketplace] }
+      responses:
+        '200':
+          description: The native bot consent URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [authorize_url]
+                properties:
+                  authorize_url: { type: string, maxLength: 8192 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503':
+          description: Configure the Slack app and signing secret before installing the bot.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-providers/slack/callback:
+    get:
+      tags: [Connectors]
+      operationId: slackChannelsOAuthCallback
+      x-agent-access: human-only
+      security: []
+      summary: Complete workspace bot consent using signed state and the initiating browser nonce.
+      parameters:
+        - { name: state, in: query, required: true, schema: { type: string, maxLength: 8192 } }
+        - { name: code, in: query, schema: { type: string, maxLength: 8192 } }
+        - { name: error, in: query, schema: { type: string, maxLength: 256 } }
+      responses:
+        '302': { description: Return to Messaging providers with an explicit installation result. }
+        '400':
+          description: The callback cannot be authenticated.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /messenger/{provider}/setup:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { $ref: '#/components/schemas/MessengerProvider' } }
+    get:
+      tags: [Connectors]
+      operationId: getMessengerSetup
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: The configured account-consent flow and its required participant scopes.
+      responses:
+        '200':
+          description: App setup facts without credentials.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessengerSetup' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /messenger/dispact/credential:
+    post:
+      tags: [Connectors]
+      operationId: connectDispactParticipant
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Connect your own Dispact personal token to the configured workspace.
+      description: |
+        Verifies the token's live participant identity against the configured Dispact workspace.
+        The token is sealed for the signed-in member. It never becomes the installation bot's token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [personal_token]
+              properties:
+                personal_token: { type: string, minLength: 5, maxLength: 8192, pattern: '^pat_', writeOnly: true }
+      responses:
+        '204': { description: Your participant credential is verified and sealed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Connect the Dispact installation before connecting your participant account.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /messenger/{provider}/connect:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { $ref: '#/components/schemas/MessengerProvider' } }
+    post:
+      tags: [Connectors]
+      operationId: connectMessenger
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Start consent for the current participant's messaging account.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MessengerConnectRequest' }
+      responses:
+        '200':
+          description: The provider consent URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [authorize_url]
+                properties:
+                  authorize_url: { type: string, maxLength: 8192 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503':
+          description: Configure the messaging app before starting consent.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /messenger/{provider}/callback:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { $ref: '#/components/schemas/MessengerProvider' } }
+    get:
+      tags: [Connectors]
+      operationId: messengerOAuthCallback
+      x-agent-access: human-only
+      security: []
+      summary: Complete participant consent using signed state and the initiating browser's nonce.
+      parameters:
+        - { name: state, in: query, required: true, schema: { type: string, maxLength: 8192 } }
+        - { name: code, in: query, schema: { type: string, maxLength: 8192 } }
+        - { name: error, in: query, schema: { type: string, maxLength: 256 } }
+      responses:
+        '302':
+          description: Return to Messaging providers with an explicit consent result.
+        '400':
+          description: The callback cannot be authenticated.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  "/messenger/{provider}/identity":
+    parameters:
+      -
+        name: "provider"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/MessengerProvider"
+    get:
+      tags:
+        - "Connectors"
+      operationId: "getMessengerIdentity"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Check the current member’s Messenger connection."
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerIdentity"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+    delete:
+      tags:
+        - "Connectors"
+      operationId: "disconnectMessengerIdentity"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Disconnect the current member’s Messenger grant."
+      responses:
+        '204':
+          description: "The participant-authorized result."
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /messenger/{provider}/{record_type}/{id}/team:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { $ref: '#/components/schemas/MessengerProvider' } }
+      - { name: record_type, in: path, required: true, schema: { $ref: '#/components/schemas/ChannelLinkRecordType' } }
+      - { $ref: '#/components/parameters/Id' }
+    get:
+      tags: [Connectors]
+      operationId: getMessengerTeam
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Resolve the owner and assigned record team to this participant's provider directory.
+      responses:
+        '200':
+          description: Matched, inactive and unresolved members remain explicit.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [members]
+                properties:
+                  members: { type: array, maxItems: 1000, items: { $ref: '#/components/schemas/MessengerTeamMember' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  "/messenger/{provider}/{record_type}/{id}/channels":
+    parameters:
+      -
+        name: "provider"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/MessengerProvider"
+      -
+        name: "record_type"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/ChannelLinkRecordType"
+      -
+        "$ref": "#/components/parameters/Id"
+    get:
+      tags:
+        - "Connectors"
+      operationId: "listMessengerChannels"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Find channels the participant can select."
+      parameters:
+        -
+          name: "cursor"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            maxLength: 65536
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerChannels"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  "/messenger/{provider}/{record_type}/{id}/members":
+    parameters:
+      -
+        name: "provider"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/MessengerProvider"
+      -
+        name: "record_type"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/ChannelLinkRecordType"
+      -
+        "$ref": "#/components/parameters/Id"
+    get:
+      tags:
+        - "Connectors"
+      operationId: "listMessengerMembers"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Find eligible internal colleagues."
+      parameters:
+        -
+          name: "q"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            maxLength: 200
+        -
+          name: "cursor"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            maxLength: 65536
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerMembers"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  "/messenger/{provider}/{record_type}/{id}/conversation":
+    parameters:
+      -
+        name: "provider"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/MessengerProvider"
+      -
+        name: "record_type"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/ChannelLinkRecordType"
+      -
+        "$ref": "#/components/parameters/Id"
+    get:
+      tags: [Connectors]
+      operationId: getMessengerConversation
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Read the selected conversation and verify its current participants.
+      parameters:
+        - { name: conversation_id, in: query, required: true, schema: { type: string, maxLength: 1024 } }
+      responses:
+        '200':
+          description: The current sender and audience.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessengerContext' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+    post:
+      tags:
+        - "Connectors"
+      operationId: "openMessengerConversation"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Open a verified channel or exact participant roster."
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/MessengerOpenRequest"
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerContext"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  "/messenger/{provider}/{record_type}/{id}/messages":
+    parameters:
+      -
+        name: "provider"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/MessengerProvider"
+      -
+        name: "record_type"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/ChannelLinkRecordType"
+      -
+        "$ref": "#/components/parameters/Id"
+    get:
+      tags:
+        - "Connectors"
+      operationId: "getMessengerMessages"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Read the participant’s conversation without filing it in History."
+      parameters:
+        -
+          name: "conversation_id"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+            maxLength: 1024
+        -
+          name: "root_id"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            maxLength: 1024
+        -
+          name: "cursor"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            maxLength: 65536
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerPage"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+    post:
+      tags:
+        - "Connectors"
+      operationId: "sendMessengerMessage"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Send once under the participant’s reviewed audience."
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/MessengerSendRequest"
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerAttempt"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  "/messenger/{provider}/{record_type}/{id}/attempts/{request_id}":
+    parameters:
+      -
+        name: "provider"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/MessengerProvider"
+      -
+        name: "record_type"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/ChannelLinkRecordType"
+      -
+        "$ref": "#/components/parameters/Id"
+      -
+        name: "request_id"
+        in: "path"
+        required: true
+        schema:
+          type: "string"
+          format: "uuid"
+    get:
+      tags:
+        - "Connectors"
+      operationId: "getMessengerAttempt"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Read this participant’s delivery receipt."
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerAttempt"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /channel-links/{record_type}/{id}:
     parameters:
       - name: record_type
@@ -18477,7 +19280,7 @@ paths:
       operationId: linkChannel
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: link_channel, router: send_outbound, action: link_channel, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
-      summary: Link a deal or project to a new or existing private chat channel.
+      summary: Link a company, deal or project to an authorized work channel.
       description: |
         `create` makes a private channel named after the record and invites every live member who may
         open the record, the record's owner and the member linking it first, at most 50. A member with
@@ -18581,6 +19384,10 @@ paths:
         schema: { $ref: '#/components/schemas/ChannelLinkRecordType' }
       - $ref: '#/components/parameters/Id'
     get:
+      parameters:
+        - name: provider
+          in: query
+          schema: { $ref: '#/components/schemas/MessengerProvider' }
       tags: [Connectors]
       operationId: listLinkableChannels
       # Human-only: the picker in the web form's Link an existing channel. An
@@ -18614,6 +19421,100 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+  /channel-links/{record_type}/{id}/delivery-preview:
+    parameters:
+      - { name: record_type, in: path, required: true, schema: { $ref: '#/components/schemas/ChannelLinkRecordType' } }
+      - { $ref: '#/components/parameters/Id' }
+    get:
+      tags: [Connectors]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [{ cookieAuth: [] }]
+      operationId: previewChannelDelivery
+      x-waits-on-model: always
+      summary: Preview the effective channel audience and eligible outgoing content without posting.
+      responses:
+        '200':
+          description: Current audience, overview and eligible queued update preview.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelDeliveryPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: The provider requires a pause before another preview.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '502':
+          description: The provider could not supply a complete preview.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: The provider cannot currently supply a complete preview.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-links/{record_type}/{id}/delivery-review:
+    parameters:
+      - { name: record_type, in: path, required: true, schema: { $ref: '#/components/schemas/ChannelLinkRecordType' } }
+      - { $ref: '#/components/parameters/Id' }
+    get:
+      tags: [Connectors]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [{ cookieAuth: [] }]
+      operationId: getChannelDeliveryReview
+      summary: Review uncertain automated sends without exposing their source bodies.
+      responses:
+        '200':
+          description: Unconfirmed delivery metadata for the current linked record.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelDeliveryReview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Channel delivery review is unavailable in this role.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    post:
+      tags: [Connectors]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [{ cookieAuth: [] }]
+      operationId: reviewChannelDeliveries
+      summary: Explicitly stop retrying reviewed unknown sends, or request a fresh overview card.
+      description: This action never confirms delivery and never claims to remove a provider copy. Skipping an uncertain overview pauses automatic card posting; restarting it requires a separate explicit acknowledgement.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewChannelDeliveryRequest' }
+      responses:
+        '200':
+          description: Current review metadata after the human decision.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelDeliveryReview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Channel delivery review is unavailable in this role.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /channel-links/{record_type}/{id}/notes:
     parameters:
       - name: record_type
@@ -18624,8 +19525,9 @@ paths:
     post:
       tags: [Connectors]
       operationId: fileChannelMessage
+      x-waits-on-model: always
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: file_channel_message, router: change_activities, action: file_channel_message, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: file_channel_message, router: run_research, action: file_channel_message, tier: auto_execute, scope: enrich, served_by: route }
       summary: File a summary of one message in a record's channel, or of its thread, as a note.
       description: |
         Reads the message from the chat, has the AI write a short summary of it, and files that
@@ -19585,7 +20487,9 @@ paths:
       description: |
         The undo for a retirement somebody regrets. It refuses when a LIVE tag has taken the
         name in the meantime: two words a reader cannot tell apart is the exact state the
-        vocabulary exists to prevent, and the caller has to rename one of them first.
+        vocabulary exists to prevent, and the caller has to rename one of them first. It also
+        refuses a tag that carries `merged_into`: the merge moved its records to the survivor,
+        and a restore would not move them back.
       responses:
         '200':
           description: The restored tag.
@@ -20605,12 +21509,15 @@ paths:
         persisted state receives 404; the client starts from the server-derived creator/member path.
       x-mcp-tool: { verb: read_onboarding_state, router: read_workspace, action: onboarding_state, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The acting user's current onboarding state.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OnboardingState' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
     put:
@@ -20691,6 +21598,7 @@ paths:
       x-mcp-tool: { verb: read_onboarding_company_proposal, router: read_workspace, action: onboarding_company_proposal, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: locale
           in: query
           required: false
@@ -20706,6 +21614,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OnboardingCompanyProposal' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -20738,12 +21647,15 @@ paths:
         edit the installation's own name. Whether this installation has described itself YET is a
         different question and is not administered: the growth fit and the onboarding conversation
         both resolve it, for any seat.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The anchor company's profile.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/CompanyProfile' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -24061,19 +24973,15 @@ paths:
       operationId: getMorningDigest
       deprecated: true
       x-deprecated-reason: >
-        Retired with the behaviour behind it. The path stays declared for one release and answers 501, ahead of its removal.
+        Retired with the behaviour behind it. The path stays declared, and answers 410 `endpoint_retired`, until the notice window allows its removal.
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
       x-human-only-reason: security
       summary: The calling user's morning digest — what capture did overnight.
       description: |
-        Reads the CAP-DDL-6 payload built by the nightly suite (CAP-WIRE-6): capture totals,
-        review counts (open dedupe candidates, pending 🟡 approvals, the classify summary), and
-        the connector health strip. `404 no_digest_yet` before the first nightly run — the
-        client renders the honest empty state. A `date` the nightly run has not reached
-        answers `404 no_digest_for_date`, which is a different state: digests exist, that day
-        has none. An empty `date=` is refused as `422 invalid_date` rather than read as the
-        year one. v1 delivery is in-app; email is delivery-only later, same object.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       responses:
         '200':
           description: The digest.
@@ -24082,6 +24990,7 @@ paths:
               schema: { $ref: '#/components/schemas/MorningDigest' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '410': { $ref: '#/components/responses/Retired' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /installation/authentication-policy:
@@ -24537,7 +25446,7 @@ paths:
       x-settings-audience: member
       summary: Every vendor whose OAuth app this installation can hold, and whether it holds one.
       description: |
-        The core's own vendors (`google`, `microsoft`) first, then one entry per OAuth app a
+        The core vendors (`google`, `microsoft`, `slack`) first, then one entry per OAuth app a
         composed extension unit declares, ordered by provider. A unit's entry carries the unit's
         `title` for it and the `unit` that declared it. Each entry answers exactly what
         `GET /installation/oauth-apps/{provider}` answers for that vendor.
@@ -26662,12 +27571,15 @@ paths:
         `404` when the contact is in no open case and was not merged away. A contact that was merged
         away answers `status: resolved` with the contact it went into, so a reviewer holding an old
         tab sees who settled it.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The case.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ContactCase' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -30488,12 +31400,15 @@ paths:
       x-mcp-tool: { verb: get_ownership_request, router: read_details, action: ownership_request, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: The caller's open request to be handed this record.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The caller's open request.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OwnershipRequest' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -30560,12 +31475,15 @@ paths:
       x-mcp-tool: { verb: get_edit_access_request, router: read_details, action: edit_access_request, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: The caller's open request for edit access to this record.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The caller's open request.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/EditAccessRequest' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -30640,12 +31558,15 @@ paths:
       x-mcp-tool: { verb: get_ownership_offer, router: read_details, action: ownership_offer, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: The caller's open offer of this record.
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The caller's open offer.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/OwnershipOffer' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
         '422': { $ref: '#/components/responses/ValidationError' }
@@ -34935,12 +35856,15 @@ paths:
       #
       # The tool spends one call, like every read.
       x-mcp-tool: { verb: read_brief, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The latest brief run with its ranked queue.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/MorningBrief' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -35035,6 +35959,7 @@ paths:
         the team's week closed on.
       x-mcp-tool: { verb: get_team_weekly_review, router: read_details, action: team_weekly_review, tier: auto_execute, scope: read, served_by: route }
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: team
           in: query
           required: true
@@ -35052,6 +35977,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/TeamWeeklyReview' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -35073,6 +35999,7 @@ paths:
         erase it. That is also why the weekly is its own aggregate rather than living on
         `brief_item`, whose rows cascade away with their deal.
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: week
           in: query
           required: false
@@ -35085,6 +36012,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WeeklyReview' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -35282,12 +36210,15 @@ paths:
         evaluated. Compared against the previous run it shows a pass that covered less of
         the pipeline.
       x-mcp-tool: { verb: forecast_input_checks, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The most recent completed run.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/ForecastAssurance' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -35385,12 +36316,15 @@ paths:
         one would read as "checked up to then" when nothing was read at all — which is the
         difference between a quiet week and a broken connector.
       x-mcp-tool: { verb: data_coverage, tier: auto_execute, scope: read }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The most recent run's source health.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/DataCoverage' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404':
@@ -36566,12 +37500,15 @@ paths:
         would put an empty week in every rep's history the first time they opened the page,
         and "did this contact plan their week" would stop being answerable.
       x-mcp-tool: { verb: get_current_weekly_plan, router: read_details, action: weekly_plan, tier: auto_execute, scope: read, served_by: route }
+      parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
       responses:
         '200':
           description: The week as planned.
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WeeklyPlan' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -36607,6 +37544,7 @@ paths:
         is itself something a stranger may not learn.
       x-mcp-tool: { verb: get_teammate_weekly_plan, router: read_details, action: teammate_weekly_plan, tier: auto_execute, scope: read, served_by: route }
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: owner_id
           in: path
           required: true
@@ -36618,6 +37556,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/WeeklyPlan' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -37183,7 +38122,17 @@ paths:
                 entity_type: { type: string, enum: [contact, company, deal, activity, lead, project] }
                 entity_id: { type: string, format: uuid }
                 file: { type: string, format: binary }
+                reuse_identical:
+                  type: boolean
+                  description: 'When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy.'
       responses:
+        '200':
+          description: The identical file the record already held, answered for `reuse_identical`. Nothing was stored.
+          headers:
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attachment' }
         '201':
           description: The stored attachment metadata.
           headers:
@@ -38265,6 +39214,9 @@ paths:
         Verifies a code against the pending secret and, on success, activates the factor and
         returns a fresh set of one-time recovery codes — shown exactly once, never retrievable
         again (`Cache-Control: no-store`). A wrong code leaves the enrolment pending (401).
+        The caller's current password authorizes the confirmation, as it authorizes a password
+        change: a confirmed factor is asked for at every later password sign-in, so a session
+        alone must not install one. A wrong password counts toward the account lockout.
       requestBody:
         required: true
         content:
@@ -38279,13 +39231,25 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RecoveryCodes' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '401':
+          description: >
+            A refused password carries its own machine `code`: `current_password_invalid` (the
+            password is wrong) or `account_locked` (the lockout is in force, and waiting is the
+            remedy). A missing session and a wrong authenticator code both answer `unauthorized`.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '409':
           description: 'Refused with `code: mfa_already_enrolled` — the factor is already confirmed.'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: 'Too many wrong current-password attempts for this account.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /me/working-hours:
     get:
@@ -39093,6 +40057,7 @@ paths:
         `chat_capture` reading (403): it is the model's transcript of an image that no quote
         could be checked against, a suggestion until someone files it, and not evidence.
       parameters:
+        - $ref: '#/components/parameters/PreferAbsent'
         - name: question
           in: query
           required: false
@@ -39103,6 +40068,7 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/AttachmentExtraction' }
+        '204': { $ref: '#/components/responses/NothingYet' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
@@ -40801,36 +41767,15 @@ paths:
       operationId: revertStageProgression
       deprecated: true
       x-deprecated-reason: >
-        Retired with the behaviour behind it. The path stays declared for one release and answers 501, ahead of its removal.
+        Retired with the behaviour behind it. The path stays declared, and answers 410 `endpoint_retired`, until the notice window allows its removal.
       x-agent-access: human-only
       x-human-only-reason: covered
       security: [ { cookieAuth: [] } ]
       summary: Take back a stage move the product made by itself.
       description: |
-        Undo for an AUTOMATICALLY applied stage move, inside the window the
-        transition's rule allows (`undo_window_hours`, default 72).
-
-        It is a separate verb rather than the general undo path because a stage
-        move is not restorable by writing the field back: it wrote
-        `deal_stage_history` and the progression ledger beside the column, so
-        restoring `stage_id` alone would leave the history saying the deal is
-        somewhere it is not. The general replay engine refuses `advance_stage`
-        for exactly this reason.
-
-        What it does: moves the deal back to the stage it came from, appends a
-        new `deal_stage_history` row for the move back (history is append-only;
-        nothing is erased), and marks the progression ledger row `reversed` with
-        who did it and when.
-
-        **A reversal does not refute the evidence.** Taking a move back says the
-        deal should not have moved, which is a different claim from "the
-        criteria were wrongly read" — a rep may agree with every observation and
-        still want the deal where it was. Evidence is withdrawn only through its
-        own correction path.
-
-        Refused after the window closes: the move stands, the audit trail keeps
-        it, and moving the deal back by hand is the remaining route — which is
-        counted as a reversal too, on the same ledger.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       parameters:
       responses:
         '200':
@@ -40856,6 +41801,7 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '410': { $ref: '#/components/responses/Retired' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /stage-automation/report:
@@ -40864,35 +41810,15 @@ paths:
       operationId: getStageAutomationReport
       deprecated: true
       x-deprecated-reason: >
-        Retired with the behaviour behind it. The path stays declared for one release and answers 501, ahead of its removal.
+        Retired with the behaviour behind it. The path stays declared, and answers 410 `endpoint_retired`, until the notice window allows its removal.
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
       x-human-only-reason: covered
       summary: What each stage transition has earned.
       description: |
-        Every from→to transition in one pipeline, with what happened to the moves
-        the product proposed on it. This is the evidence behind letting a
-        transition move deals by itself: it reports, and decides nothing.
-
-        Every rate is a fraction of `reviewed` — proposals a human actually
-        answered. A card nobody opened is not evidence that anyone agreed with
-        it, so `proposed`, `expired` and `superseded` are counted and reported
-        but kept OUT of the denominator. They are reported because their absence
-        would hide the case that matters most: a transition whose cards are
-        mostly ignored, whose acceptance rate is then computed over the few
-        somebody happened to open.
-
-        `expired` is not `rejected`. Both are refusals, and the product's answer
-        to each is opposite — a rejected transition needs a better proposal, an
-        expired one needs somebody to look.
-
-        `unsafe_rate` is a union, not a sum: a move that was reversed AND whose
-        evidence a human corrected is one mistake, and counting it twice would
-        put a transition over a ceiling it had not crossed.
-
-        `observation_days` is the span from the first answered proposal to the
-        last, rounded DOWN — a fine acceptance rate earned entirely on one
-        afternoon has not been observed, however many proposals it saw.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       responses:
         '200':
           description: The pipeline's transitions and their record.
@@ -40901,6 +41827,7 @@ paths:
               schema: { $ref: '#/components/schemas/StageAutomationReport' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '410': { $ref: '#/components/responses/Retired' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # -------------------- /stage-automation/policies/{id} ----------------------
@@ -40912,27 +41839,15 @@ paths:
       operationId: listTransitionPolicies
       deprecated: true
       x-deprecated-reason: >
-        Retired with the behaviour behind it. The path stays declared for one release and answers 501, ahead of its removal.
+        Retired with the behaviour behind it. The path stays declared, and answers 410 `endpoint_retired`, until the notice window allows its removal.
       security: [ { cookieAuth: [] } ]
       x-agent-access: human-only
       x-human-only-reason: covered
       summary: What each transition in this pipeline is allowed to do.
       description: |
-        One rule per from→to transition an admin has decided about. A transition
-        absent from this list has no rule, which is the default state of every
-        transition in the product and means it proposes.
-
-        A rule saying `auto` does NOT mean moves are applying. Asking is not
-        being allowed: the thresholds are re-checked in the transaction that
-        would apply each move, so a transition can be turned on before it has
-        earned the bar and start applying by itself the day its record clears —
-        without anybody coming back. Read `/stage-automation/report` to see
-        whether it has.
-
-        `suspended_at` is the product's own act, not an admin's. A rule the
-        product turned off went off for a measured reason and comes back only
-        through a deliberate resume; the admin's `mode` survives underneath it,
-        so resuming returns the transition to what was actually asked for.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       responses:
         '200':
           description: The pipeline's transition rules.
@@ -40941,13 +41856,14 @@ paths:
               schema: { $ref: '#/components/schemas/TransitionPolicyList' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '410': { $ref: '#/components/responses/Retired' }
         '422': { $ref: '#/components/responses/ValidationError' }
     put:
       tags: [Pipelines]
       operationId: setTransitionPolicy
       deprecated: true
       x-deprecated-reason: >
-        Retired with the behaviour behind it. The path stays declared for one release and answers 501, ahead of its removal.
+        Retired with the behaviour behind it. The path stays declared, and answers 410 `endpoint_retired`, until the notice window allows its removal.
       x-agent-access: human-only
       x-human-only-reason: covered
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
@@ -40956,19 +41872,9 @@ paths:
       # governance decision about the product's own autonomy, and an agent
       # granting itself that is the thing the whole mechanism guards against.
       description: |
-        Records what an admin wants for ONE transition, named in the body rather
-        than the path because a pipeline has many and each is decided
-        separately.
-
-        Every threshold is optional and omitting one KEEPS what the rule has,
-        or takes the product default on a first write. A caller who only means
-        to turn a transition on does not have to restate four thresholds, and
-        cannot silently reset them by leaving one out.
-
-        It does not clear a suspension. A rule the product turned off went off
-        for a measured reason, and letting an ordinary save clear it would make
-        the safety mechanism a checkbox — `POST .../resume` is the separate,
-        deliberate act.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       parameters:
       requestBody:
         required: true
@@ -40988,6 +41894,7 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '409': { $ref: '#/components/responses/Conflict' }
+        '410': { $ref: '#/components/responses/Retired' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /stage-automation/policies/{id}/resume:
@@ -40998,21 +41905,15 @@ paths:
       operationId: resumeTransitionPolicy
       deprecated: true
       x-deprecated-reason: >
-        Retired with the behaviour behind it. The path stays declared for one release and answers 501, ahead of its removal.
+        Retired with the behaviour behind it. The path stays declared, and answers 410 `endpoint_retired`, until the notice window allows its removal.
       x-agent-access: human-only
       x-human-only-reason: covered
       security: [ { cookieAuth: [] } ]   # human session only — rejects agent bearer/Passport (x-agent-access: human-only)
       summary: Lift a suspension the product put on a transition.
       description: |
-        A separate verb from saving a rule, so lifting a safety stop is
-        something an admin does on purpose rather than a side effect of editing
-        a threshold.
-
-        It does NOT re-enable. The rule comes back to whatever mode it was in,
-        and if that is `auto` the thresholds still have to hold in the
-        transaction that would apply — a resumed rule on a record that is still
-        bad simply proposes. Resuming a rule that is not suspended does
-        nothing and is not an error.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       requestBody:
         required: true
         content:
@@ -41026,6 +41927,7 @@ paths:
               schema: { $ref: '#/components/schemas/TransitionPolicy' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '410': { $ref: '#/components/responses/Retired' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   # ------------------------ /stages/{id}/exit-criteria ------------------------
@@ -41035,17 +41937,15 @@ paths:
       operationId: getForecastAssuranceEnforcement
       deprecated: true
       x-deprecated-reason: >
-        Retired with the behaviour behind it. The path stays declared for one release and answers 501, ahead of its removal.
+        Retired with the behaviour behind it. The path stays declared, and answers 410 `endpoint_retired`, until the notice window allows its removal.
       x-agent-access: human-only
       x-human-only-reason: covered
       security: [ { cookieAuth: [] } ]
       summary: Whether the qualified forecast applies the viability reviews.
       description: |
-        `state` is `not_enrolled` before the input check has ever run, `observing` once it
-        runs and raises reviews and tasks but the forecast figures are unchanged, and
-        `enforcing` once an admin switched enforcement on. Only while `enforcing` does a
-        forecast reading carry `qualified`, and only then does the close-date sweep stop
-        lowering forecast categories.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       responses:
         '200':
           description: The installation's enforcement state.
@@ -41054,30 +41954,21 @@ paths:
               schema: { $ref: '#/components/schemas/ForecastAssuranceEnforcement' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '410': { $ref: '#/components/responses/Retired' }
     put:
       tags: [Reports]
       operationId: setForecastAssuranceEnforcement
       deprecated: true
       x-deprecated-reason: >
-        Retired with the behaviour behind it. The path stays declared for one release and answers 501, ahead of its removal.
+        Retired with the behaviour behind it. The path stays declared, and answers 410 `endpoint_retired`, until the notice window allows its removal.
       x-agent-access: human-only
       x-human-only-reason: covered
       security: [ { cookieAuth: [] } ]
       summary: Switch the qualified forecast's enforcement on or off.
       description: |
-        Admin only. A setting fixed by the environment is refused with
-        `409 setting_locked_by_boot_source`.
-
-        Switching on changes the qualified forecast figures for every reader. It sends
-        `preview_digest`, the `digest` of the preview the admin saw, and is refused with
-        `409 preview_stale` when the deals' treatment changed since, so nobody switches
-        on a picture that is no longer true. It is then refused with
-        `409 input_check_not_started` until a check has judged a deal: before that the
-        qualified forecast would count nothing.
-
-        Switching off takes effect at once. The reviews, their tasks and their history
-        stay; only the qualified readings disappear, and the baseline readings never
-        changed.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       requestBody:
         required: true
         content:
@@ -41100,6 +41991,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
         '409': { $ref: '#/components/responses/SettingLocked' }
+        '410': { $ref: '#/components/responses/Retired' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /forecast/assurance/exceptions/{id}/wait:
     post:
@@ -41107,18 +41999,15 @@ paths:
       operationId: waitInputCheck
       deprecated: true
       x-deprecated-reason: >
-        Retired with the behaviour behind it. The path stays declared for one release and answers 501, ahead of its removal.
+        Retired with the behaviour behind it. The path stays declared, and answers 410 `endpoint_retired`, until the notice window allows its removal.
       x-agent-access: human-only
       x-human-only-reason: covered
       security: [ { cookieAuth: [] } ]
       summary: Answer a customer review with the day the customer asked you to wait until.
       description: |
-        For a `deal_viability` review only. One transaction records the customer's wait on
-        the deal (`wait_until`) and answers the review `remind_later` for the same day. The
-        review stays open and the deal stays out of the qualified forecast while it waits:
-        a wait is not support. The review comes back on that day.
-
-        404 when the finding is not an open customer review.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       parameters:
         - name: id
           in: path
@@ -41140,6 +42029,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '410': { $ref: '#/components/responses/Retired' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /forecast/assurance/exceptions/{id}/close-lost:
     post:
@@ -41147,18 +42037,15 @@ paths:
       operationId: closeLostInputCheck
       deprecated: true
       x-deprecated-reason: >
-        Retired with the behaviour behind it. The path stays declared for one release and answers 501, ahead of its removal.
+        Retired with the behaviour behind it. The path stays declared, and answers 410 `endpoint_retired`, until the notice window allows its removal.
       x-agent-access: human-only
       x-human-only-reason: covered
       security: [ { cookieAuth: [] } ]
       summary: Answer a customer review by closing its deal as lost.
       description: |
-        For a `deal_viability` review only. One transaction moves the deal to its pipeline's
-        lost stage with the reason given, and answers the review `not_relevant` with that
-        reason. A review is never answered `not_relevant` while its deal is still open.
-
-        404 when the finding is not an open customer review. 422 when the pipeline has no
-        lost stage.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       parameters:
         - name: id
           in: path
@@ -41181,6 +42068,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '410': { $ref: '#/components/responses/Retired' }
         '422': { $ref: '#/components/responses/ValidationError' }
   /deals/{id}/viability:
     parameters:
@@ -41190,23 +42078,15 @@ paths:
       operationId: getDealViability
       deprecated: true
       x-deprecated-reason: >
-        Retired with the behaviour behind it. The path stays declared for one release and answers 501, ahead of its removal.
+        Retired with the behaviour behind it. The path stays declared, and answers 410 `endpoint_retired`, until the notice window allows its removal.
       x-agent-access: human-only
       x-human-only-reason: covered
       security: [ { cookieAuth: [] } ]
       summary: Whether the customer still supports this deal, and the review behind the answer.
       description: |
-        The deal's treatment in the qualified forecast and what it rests on: the input check's
-        last receipt and its reasons, the close date's standing, the stage chance, and the open
-        `deal_viability` review with its task. The review is shown while it is open, even when
-        its task is done: completing the task does not answer the review.
-
-        Needs `forecast:read` and the deal under the caller's row scope, checked in the same
-        transaction as the read; a deal outside it answers 404. The review's task is shown only
-        while it is still linked to this deal and the caller may discover it. Carries no amount,
-        so nothing here needs masking.
-        `qualification` is computed whether or not the installation enforces it;
-        `qualification_mode` says whether the qualified forecast applies it.
+        Retired. The behaviour behind this operation is gone. Calls that pass
+        the route's authentication and parameter checks answer `410 endpoint_retired`.
+        The operation stays declared until the notice window allows its removal.
       responses:
         '200':
           description: The deal's viability.
@@ -41216,6 +42096,7 @@ paths:
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
+        '410': { $ref: '#/components/responses/Retired' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
 components:
@@ -41395,11 +42276,21 @@ components:
         Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
         effective `sort` of the originating request (field + direction) plus the last row's keyset
         (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-        under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+        under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+        to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
         together with a `sort` that differs from the one the cursor was minted under returns
         `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
         **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
         remaining pages see, so re-issue the query without the cursor when changing filters.
+    Offset:
+      name: offset
+      in: query
+      schema: { type: integer, minimum: 0, maximum: 10000 }
+      description: >-
+        Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page
+        without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from
+        there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and
+        past 10000; a deeper page is reached through the cursor.
     Limit:
       name: limit
       in: query
@@ -41559,9 +42450,29 @@ components:
         rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
         re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
         Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+    PreferAbsent:
+      name: Prefer
+      in: header
+      schema: { type: string, maxLength: 1024 }
+      description: |
+        An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+        read finds nothing yet. The token is matched without case, and every other preference is
+        ignored. A row the caller may not see still answers `404`. Every answer of an operation
+        that takes this header carries `Vary: Prefer`.
 
   # --------------------------- shared responses -----------------------------
   responses:
+    NothingYet:
+      description: |
+        Nothing exists yet. Only when the request carries `Prefer: absent=204`; without it the same
+        case answers `404`.
+      headers:
+        Preference-Applied:
+          description: '`absent=204`, the preference this answer honours.'
+          schema: { type: string }
+        Vary:
+          description: '`Prefer`: the answer depends on that request header.'
+          schema: { type: string }
     Unauthorized:
       description: No valid credential — a missing/invalid/expired `crm_session` cookie (human path) or a missing/invalid/expired bearer token (agent path).
       content:
@@ -41677,6 +42588,14 @@ components:
           examples:
             notFound:
               value: { type: 'https://errors.gradion.com/not_found', title: Not found, status: 404, code: not_found, detail: Resource not found. }
+    Retired:
+      description: 'The operation is retired and its behaviour is gone (`code: endpoint_retired`). A call that passes the route''s authentication and parameter checks answers 410 with that code, until the notice window allows its removal.'
+      content:
+        application/problem+json:
+          schema: { $ref: '#/components/schemas/Problem' }
+          examples:
+            retired:
+              value: { type: 'https://errors.gradion.com/endpoint_retired', title: Gone, status: 410, code: endpoint_retired, detail: this endpoint is retired and its behaviour is gone }
     PayloadTooLarge:
       description: 'The uploaded body exceeds the ceiling this installation grants the route (`code: body_too_large`; OPS-CFG-12). The refusal NAMES the configured number rather than one compiled in, because a truncated read that stores half a file and reports success is the failure this status exists to avoid.'
       content:
@@ -43422,6 +44341,8 @@ components:
         retention_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'Set the value `OperationSettings.retention_sweep_interval_seconds` describes.' }
         geocode_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'Set the value `OperationSettings.geocode_backfill_interval_seconds` describes.' }
         technical_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'Set the value `OperationSettings.technical_backfill_interval_seconds` describes.' }
+        capture_counterparty_verdict_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'Set the value `OperationSettings.capture_counterparty_verdict_interval_seconds` describes.' }
+        capture_confidentiality_verdict_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'Set the value `OperationSettings.capture_confidentiality_verdict_interval_seconds` describes.' }
         gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes.' }
         graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes.' }
         gmail_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 144, description: 'Set the value `OperationSettings.gmail_watch_renew_within_hours` describes.' }
@@ -44299,8 +45220,12 @@ components:
     TotpConfirmRequest:
       type: object
       additionalProperties: false
-      required: [code]
+      required: [current_password, code]
       properties:
+        current_password:
+          type: string
+          minLength: 1
+          description: The caller's current password, which authorizes the confirmation.
         code:
           type: string
           description: The current code from the authenticator being enrolled.
@@ -44537,7 +45462,7 @@ components:
       properties:
         purpose:
           type: string
-          enum: [sign_in, mailbox_connect, calendar_connect, documents_connect, extension_connect]
+          enum: [sign_in, mailbox_connect, calendar_connect, documents_connect, extension_connect, messenger_connect]
           x-extensible-enum: true
           description: >-
             Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and
@@ -44563,6 +45488,12 @@ components:
       additionalProperties: false
       required: [client_id, client_secret]
       properties:
+        signing_secret:
+          type: string
+          minLength: 1
+          maxLength: 512
+          writeOnly: true
+          description: Slack only. The app signing secret used to verify channel notifications. Stored sealed with the client secret.
         client_id:
           type: string
           minLength: 1
@@ -45197,7 +46128,7 @@ components:
         The worker's operating values: how often each background pass runs, how far ahead a
         mailbox subscription is renewed, and how fast one mailbox sends. A running worker reads
         them again within a minute of a change, so none needs a restart.
-      required: [agent_runner_interval_seconds, webhook_retry_interval_seconds, time_scan_interval_seconds, close_date_sweep_interval_seconds, follow_up_reconcile_interval_seconds, retention_sweep_interval_seconds, geocode_backfill_interval_seconds, technical_backfill_interval_seconds, gmail_watch_scan_interval_seconds, graph_watch_scan_interval_seconds, gmail_watch_renew_within_hours, graph_watch_renew_within_hours, send_rate_limit, send_rate_window_seconds, send_max_age_hours]
+      required: [agent_runner_interval_seconds, webhook_retry_interval_seconds, time_scan_interval_seconds, close_date_sweep_interval_seconds, follow_up_reconcile_interval_seconds, retention_sweep_interval_seconds, geocode_backfill_interval_seconds, technical_backfill_interval_seconds, capture_counterparty_verdict_interval_seconds, capture_confidentiality_verdict_interval_seconds, gmail_watch_scan_interval_seconds, graph_watch_scan_interval_seconds, gmail_watch_renew_within_hours, graph_watch_renew_within_hours, send_rate_limit, send_rate_window_seconds, send_max_age_hours]
       properties:
         agent_runner_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'How often scheduled agents are checked for a run that is due, in seconds. Default 30.' }
         webhook_retry_interval_seconds: { type: integer, minimum: 10, maximum: 3600, description: 'How often failed webhook deliveries are retried, in seconds. Default 30.' }
@@ -45207,6 +46138,8 @@ components:
         retention_sweep_interval_seconds: { type: integer, minimum: 3600, maximum: 604800, description: 'How often data past its retention period is removed, in seconds. Default 86400. It cannot be switched off.' }
         geocode_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'How often addresses without coordinates are looked up, in seconds, from 300; 0 switches the sweep off. Default 3600.' }
         technical_backfill_interval_seconds: { type: integer, minimum: 0, maximum: 604800, description: 'How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600.' }
+        capture_counterparty_verdict_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'How often new senders are judged by the model, in seconds. Default 600.' }
+        capture_confidentiality_verdict_interval_seconds: { type: integer, minimum: 60, maximum: 86400, description: 'How often captured threads are judged for whether colleagues may read them, in seconds. Default 600.' }
         gmail_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600.' }
         graph_watch_scan_interval_seconds: { type: integer, minimum: 600, maximum: 43200, description: 'How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600.' }
         gmail_watch_renew_within_hours: { type: integer, minimum: 24, maximum: 144, description: 'How far ahead of expiry a Gmail push subscription is renewed, in hours. A watch lasts seven days. Default 48.' }
@@ -48946,7 +49879,7 @@ components:
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [telegram, telegram_business, dispact, whatsapp, zalo_oa], x-extensible-enum: true }
+        provider: { type: string, enum: [telegram, telegram_business, dispact, whatsapp, zalo_oa, slack, teams], x-extensible-enum: true }
         channelId:
           type: string
           description: The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.
@@ -49199,10 +50132,12 @@ components:
       properties:
         type:
           type: string
-          enum: [url_verification, message.created, thread.replied, message.updated, channel.archived]
+          enum: [url_verification, message.created, thread.replied, message.updated, message.deleted, channel.archived]
         challenge: { type: string, maxLength: 500, description: The value a URL check expects back. }
         workspace_id: { type: string, description: The Dispact team; it must be the connected bot's team. }
         channel_slug: { type: string }
+        channel_id: { type: string, maxLength: 1024, description: Immutable channel identity when supported by the source. }
+        root_message_id: { type: string, maxLength: 1024, description: Immutable conversation root identity when supported by the source. }
         seq: { type: integer, description: 'The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal.' }
         message_id: { type: string }
         event_id: { type: string }
@@ -49220,10 +50155,374 @@ components:
           description: '`pull_queued`: the channel''s history is read soon. `link_paused`: the archived channel''s link is paused. `ignored`: no live link has this channel. `already_taken`: this `webhook-id` was taken in the last 24 hours, so nothing changes.'
 
     # ---- chat channel links ----
+    TeamsChannelSetup:
+      type: object
+      additionalProperties: false
+      required: [configured, app_id, tenant_id, events_url, scopes, installations]
+      properties:
+        configured: { type: boolean }
+        app_id: { type: string, maxLength: 256 }
+        tenant_id: { type: string, maxLength: 256 }
+        events_url: { type: string, maxLength: 8192 }
+        scopes: { type: array, maxItems: 100, items: { type: string, maxLength: 256 } }
+        installations:
+          type: array
+          maxItems: 1000
+          items: { $ref: '#/components/schemas/TeamsChannelInstallation' }
+    TeamsChannelInstallation:
+      type: object
+      additionalProperties: false
+      required: [id, name, team_id]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 500 }
+        team_id: { type: string, maxLength: 256 }
+    SlackHistoryProfile:
+      type: object
+      additionalProperties: false
+      required: [distribution, history_per_minute, replies_per_minute, history_page_size, replies_page_size, source, recorded_at, canonical_supported]
+      properties:
+        distribution: { type: string, enum: [internal, marketplace, non_marketplace], x-extensible-enum: true }
+        history_per_minute: { type: integer, minimum: 1, maximum: 50 }
+        replies_per_minute: { type: integer, minimum: 1, maximum: 50 }
+        history_page_size: { type: integer, minimum: 1, maximum: 200 }
+        replies_page_size: { type: integer, minimum: 1, maximum: 100 }
+        source: { type: string, enum: [admin_declared], x-extensible-enum: true }
+        recorded_at: { type: string, format: date-time }
+        canonical_supported: { type: boolean }
+    ChannelProviderSetup:
+      type: object
+      additionalProperties: false
+      required: [configured, callback_url, events_url, scopes]
+      properties:
+        history_profile: { $ref: '#/components/schemas/SlackHistoryProfile' }
+        configured: { type: boolean }
+        callback_url: { type: string, maxLength: 8192 }
+        events_url: { type: string, maxLength: 8192 }
+        scopes: { type: array, maxItems: 100, items: { type: string, maxLength: 256 } }
+    MessengerTeamMember:
+      type: object
+      additionalProperties: false
+      required: [crm_id, kind, name, member_id, state]
+      properties:
+        crm_id: { type: string, format: uuid }
+        kind: { type: string, enum: [user, team], x-extensible-enum: true }
+        name: { type: string, maxLength: 1024 }
+        member_id: { type: string, maxLength: 1024 }
+        state: { type: string, enum: [matched, self, unresolved, inactive], x-extensible-enum: true }
+    MessengerSetup:
+      type: object
+      additionalProperties: false
+      required: [provider, configured, callback_url, participant_scopes, max_group_recipients]
+      properties:
+        provider: { $ref: '#/components/schemas/MessengerProvider' }
+        configured: { type: boolean }
+        callback_url: { type: string, maxLength: 8192 }
+        account_url: { type: string, maxLength: 8192, description: The configured provider page for creating a personal credential. }
+        participant_scopes: { type: array, maxItems: 100, items: { type: string, maxLength: 256 } }
+        max_group_recipients: { type: integer, minimum: 0, maximum: 1000 }
+    MessengerProvider:
+      type: "string"
+      enum:
+        - "dispact"
+        - "slack"
+        - "teams"
+      x-extensible-enum: true
+    MessengerMember:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "id"
+        - "name"
+        - "active"
+        - "external"
+      properties:
+        bot: { type: boolean }
+        id:
+          type: "string"
+          maxLength: 1024
+        name:
+          type: "string"
+          maxLength: 1024
+        email:
+          type: "string"
+          maxLength: 1024
+        active:
+          type: "boolean"
+        external:
+          type: "boolean"
+    MessengerConversation:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "id"
+        - "name"
+        - "kind"
+        - "members"
+        - "audience_known"
+        - "external"
+      properties:
+        access:
+          type: string
+          enum: [workspace, team, private, participants, unknown]
+          x-extensible-enum: true
+        supports_threads: { type: boolean, description: Whether this conversation supports native thread replies. }
+        id:
+          type: "string"
+          maxLength: 1024
+        name:
+          type: "string"
+          maxLength: 1024
+        kind:
+          type: "string"
+          enum:
+            - "channel"
+            - "group"
+            - "direct"
+          x-extensible-enum: true
+        members:
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/MessengerMember"
+          maxItems: 25000
+        audience_known:
+          type: "boolean"
+        external:
+          type: "boolean"
+    MessengerConnectRequest:
+      type: object
+      additionalProperties: false
+      required: [record_type, record_id]
+      properties:
+        record_type: { $ref: '#/components/schemas/ChannelLinkRecordType' }
+        record_id: { type: string, format: uuid }
+    MessengerContext:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "grant_version"
+        - "provider"
+        - "workspace"
+        - "sender"
+        - "conversation"
+        - "audience_key"
+      properties:
+        unresolved_attempt:
+          "$ref": "#/components/schemas/MessengerAttempt"
+        grant_version:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+          maximum: 9007199254740991
+        provider:
+          "$ref": "#/components/schemas/MessengerProvider"
+        workspace:
+          type: "string"
+          maxLength: 1024
+        sender:
+          "$ref": "#/components/schemas/MessengerMember"
+        conversation:
+          "$ref": "#/components/schemas/MessengerConversation"
+        audience_key:
+          type: "string"
+          maxLength: 64
+    MessengerOpenRequest:
+      type: "object"
+      additionalProperties: false
+      required: []
+      properties:
+        conversation_id:
+          type: "string"
+          maxLength: 1024
+        members:
+          type: "array"
+          items:
+            type: "string"
+            maxLength: 1024
+          maxItems: 999
+    MessengerMessage:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "id"
+        - "root_id"
+        - "author"
+        - "text"
+        - "at"
+        - "edited"
+        - "deleted"
+      properties:
+        id:
+          type: "string"
+          maxLength: 1024
+        root_id:
+          type: "string"
+          maxLength: 1024
+        author:
+          type: "string"
+          maxLength: 1024
+        text:
+          type: "string"
+          maxLength: 200000
+        at:
+          type: "string"
+          format: "date-time"
+        edited:
+          type: "boolean"
+        deleted:
+          type: "boolean"
+    MessengerPage:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "messages"
+        - "next_cursor"
+      properties:
+        cursor_direction: { type: string, enum: [older, newer], x-extensible-enum: true, description: Whether next_cursor continues into older history or later replies. Omitted means older. }
+        messages:
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/MessengerMessage"
+          maxItems: 1000
+        next_cursor:
+          type: "string"
+          maxLength: 65536
+    MessengerChannels:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "conversations"
+        - "next_cursor"
+      properties:
+        conversations:
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/MessengerConversation"
+          maxItems: 1000
+        next_cursor:
+          type: "string"
+          maxLength: 65536
+    MessengerMembers:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "members"
+        - "next_cursor"
+      properties:
+        members:
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/MessengerMember"
+          maxItems: 1000
+        next_cursor:
+          type: "string"
+          maxLength: 65536
+    MessengerSendRequest:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "request_id"
+        - "grant_version"
+        - "conversation_id"
+        - "text"
+        - "audience_key"
+      properties:
+        acknowledged_request_id:
+          type: "string"
+          format: "uuid"
+        request_id:
+          type: "string"
+          format: "uuid"
+        grant_version:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+          maximum: 9007199254740991
+        conversation_id:
+          type: "string"
+          maxLength: 1024
+        root_id:
+          type: "string"
+          maxLength: 1024
+        text:
+          type: "string"
+          minLength: 1
+          maxLength: 90000
+        audience_key:
+          type: "string"
+          minLength: 64
+          maxLength: 64
+    MessengerAttempt:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "id"
+        - "request_id"
+        - "conversation_id"
+        - "provider_message_id"
+        - "state"
+        - "updated_at"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        request_id:
+          type: "string"
+          format: "uuid"
+        conversation_id:
+          type: "string"
+          maxLength: 1024
+        provider_message_id:
+          type: "string"
+          maxLength: 1024
+        state:
+          type: "string"
+          enum:
+            - "pending"
+            - "accepted"
+            - "failed"
+            - "unknown"
+          x-extensible-enum: true
+        failure_code: { type: string, maxLength: 128 }
+        retry_at: { type: string, format: date-time }
+        updated_at:
+          type: "string"
+          format: "date-time"
+    MessengerIdentity:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "state"
+        - "provider"
+      properties:
+        state:
+          type: "string"
+          enum:
+            - "connected"
+            - "needs_consent"
+            - "unavailable"
+          x-extensible-enum: true
+        provider:
+          "$ref": "#/components/schemas/MessengerProvider"
+        grant_version:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+          maximum: 9007199254740991
+        workspace:
+          type: "string"
+          maxLength: 1024
+        sender:
+          "$ref": "#/components/schemas/MessengerMember"
+
     ChannelLinkRecordType:
       type: string
-      enum: [deal, project]
+      enum: [company, deal, project]
       description: The kind of record a chat channel is linked to.
+    ChannelMessageDetail:
+      type: string
+      enum: [brief, full]
+      x-extensible-enum: true
     ChannelVerbosity:
       type: string
       enum: [everything, important, milestones, silent]
@@ -49234,6 +50533,8 @@ components:
       additionalProperties: false
       required: [state]
       properties:
+        last_sync: { $ref: '#/components/schemas/ChannelEndedSync' }
+        sync: { $ref: '#/components/schemas/ChannelSyncHealth' }
         state:
           type: string
           enum: [off, none, linked, paused]
@@ -49243,20 +50544,119 @@ components:
           $ref: '#/components/schemas/ChannelLink'
         invites:
           $ref: '#/components/schemas/ChannelInvites'
+    ChannelEndedSync:
+      type: object
+      additionalProperties: false
+      required: [provider, ended_at, retained_messages, confirmed_redactions, unverified_withdrawals, unconfirmed_deliveries]
+      properties:
+        provider: { $ref: '#/components/schemas/MessengerProvider' }
+        ended_at: { type: string, format: date-time }
+        read_through: { type: [string, 'null'], format: date-time }
+        last_posted_at: { type: [string, 'null'], format: date-time }
+        retained_messages: { type: integer, minimum: 0 }
+        confirmed_redactions: { type: integer, minimum: 0, description: Messages successfully rewritten without withdrawn content; this does not prove deletion of other copies. }
+        unverified_withdrawals: { type: integer, minimum: 0 }
+        unconfirmed_deliveries: { type: integer, minimum: 0 }
+    ChannelUncertainDelivery:
+      type: object
+      additionalProperties: false
+      required: [id, state, created_at, update_count, overview_card]
+      properties:
+        id: { type: string, format: uuid }
+        state: { type: string, enum: [sending, unknown], x-extensible-enum: true }
+        created_at: { type: string, format: date-time }
+        update_count: { type: integer, minimum: 0 }
+        overview_card: { type: boolean }
+    ChannelPreviewMember:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+    ChannelDeliveryPreview:
+      type: object
+      additionalProperties: false
+      required: [link_id, version, provider, workspace, channel_name, audience, overview_text, update_text, pending_updates, excluded_updates, verbosity, message_detail]
+      properties:
+        link_id: { type: string, format: uuid }
+        version: { type: integer, format: int64 }
+        provider: { $ref: '#/components/schemas/MessengerProvider' }
+        workspace: { type: string }
+        channel_name: { type: string }
+        root_id: { type: string }
+        audience: { type: array, items: { $ref: '#/components/schemas/ChannelPreviewMember' } }
+        overview_text: { type: string }
+        update_text: { type: string }
+        pending_updates: { type: integer, minimum: 0 }
+        excluded_updates: { type: integer, minimum: 0 }
+        verbosity: { $ref: '#/components/schemas/ChannelVerbosity' }
+        message_detail: { $ref: '#/components/schemas/ChannelMessageDetail' }
+    ChannelProviderCopies:
+      type: object
+      additionalProperties: false
+      required: [retained_messages, confirmed_redactions, unverified_withdrawals, unconfirmed_deliveries]
+      properties:
+        retained_messages: { type: integer, minimum: 0 }
+        confirmed_redactions: { type: integer, minimum: 0 }
+        unverified_withdrawals: { type: integer, minimum: 0 }
+        unconfirmed_deliveries: { type: integer, minimum: 0 }
+    ChannelDeliveryReview:
+      type: object
+      additionalProperties: false
+      required: [link_id, overview_card_paused, deliveries]
+      properties:
+        provider_copies: { $ref: '#/components/schemas/ChannelProviderCopies' }
+        link_id: { type: string, format: uuid }
+        overview_card_paused: { type: boolean }
+        deliveries: { type: array, items: { $ref: '#/components/schemas/ChannelUncertainDelivery' } }
+    ReviewChannelDeliveryRequest:
+      type: object
+      additionalProperties: false
+      required: [link_id, action, acknowledged, delivery_ids]
+      properties:
+        link_id: { type: string, format: uuid }
+        action: { type: string, enum: [skip_unknown, restart_card] }
+        acknowledged: { type: boolean }
+        delivery_ids: { type: array, maxItems: 100, uniqueItems: true, items: { type: string, format: uuid } }
+    ChannelSyncHealth:
+      type: object
+      additionalProperties: false
+      required: [pending_conversations, failed_conversations, pending_crm_updates, unconfirmed_deliveries]
+      properties:
+        delivery_error: { type: [string, 'null'], enum: [audience_changed, delivery_unknown, source_incomplete, source_unavailable, source_too_long, model_unavailable, rate_limited, access_lost, source_changed, null], x-extensible-enum: true }
+        notifications_delayed: { type: boolean, description: Teams push notifications need recovery; periodic source reads continue independently. }
+        coverage_at: { type: [string, 'null'], format: date-time, description: Metadata discovery checked through this time. Pending recaps are reported separately. }
+        last_error: { type: [string, 'null'], enum: [history_profile, source_incomplete, source_unavailable, source_too_long, model_unavailable, rate_limited, access_lost, source_changed, null], x-extensible-enum: true }
+        pending_conversations: { type: integer, minimum: 0 }
+        failed_conversations: { type: integer, minimum: 0 }
+        pending_crm_updates: { type: integer, minimum: 0 }
+        unconfirmed_deliveries: { type: integer, minimum: 0 }
     ChannelLink:
       type: object
       additionalProperties: false
       required: [id, provider, channel_slug, channel_name, channel_url, verbosity, status, created_at]
       properties:
+        history_profile: { $ref: '#/components/schemas/SlackHistoryProfile' }
+        native_identity: { type: boolean, description: Whether this association uses an explicitly confirmed immutable provider channel identity. }
+        overview_card_paused: { type: boolean }
+        can_send_crm_updates:
+          type: boolean
+          description: Whether the native provider permits bot delivery in this channel. False for private Teams channels.
+        root_id: { type: string, maxLength: 1024 }
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [dispact], x-extensible-enum: true }
+        provider: { $ref: '#/components/schemas/MessengerProvider' }
         channel_slug: { type: string }
         channel_name: { type: string }
         channel_url: { type: string, description: The channel's address in the chat. }
+        message_detail: { $ref: '#/components/schemas/ChannelMessageDetail' }
         verbosity: { $ref: '#/components/schemas/ChannelVerbosity' }
-        status: { type: string, enum: [active, channel_gone], x-extensible-enum: true }
+        status: { type: string, enum: [active, channel_gone, identity_needs_review], x-extensible-enum: true }
+        company_id: { type: [string, 'null'], format: uuid }
         deal_id: { type: [string, 'null'], format: uuid }
         project_id: { type: [string, 'null'], format: uuid }
+        save_channel_updates: { type: boolean, description: Whether future eligible channel activity is filed in History. }
+        send_crm_updates: { type: boolean, description: Whether eligible CRM events are posted to the channel. }
         created_at: { type: string, format: date-time }
     ChannelInvites:
       type: object
@@ -49348,6 +50748,15 @@ components:
       additionalProperties: false
       required: [mode]
       properties:
+        root_id:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          description: Existing native thread root explicitly assigned to this record. A shared channel uses separate root assignments for each record.
+        provider:
+          allOf: [{ $ref: '#/components/schemas/MessengerProvider' }]
+          default: dispact
+          description: Native provider whose shared bot owns this link.
         mode:
           type: string
           enum: [create, existing]
@@ -49362,9 +50771,14 @@ components:
     SetChannelVerbosityRequest:
       type: object
       additionalProperties: false
-      required: [verbosity]
+      minProperties: 1
       properties:
+        expected_link_id: { type: string, format: uuid }
+        expected_version: { type: integer, format: int64 }
+        message_detail: { $ref: '#/components/schemas/ChannelMessageDetail' }
         verbosity: { $ref: '#/components/schemas/ChannelVerbosity' }
+        save_channel_updates: { type: boolean }
+        send_crm_updates: { type: boolean }
 
     FileChannelMessageRequest:
       type: object
@@ -49376,23 +50790,37 @@ components:
           minLength: 1
           maxLength: 500
           description: |
-            The message in the record's channel: its sequence number, `#slug:seq`, the chat's
-            `<m:#slug:seq|…>` mention, or its link. A message in another channel is not found.
+            A native message ID or link in the record's linked channel. Dispact also accepts
+            a sequence number, `#slug:seq`, or `<m:#slug:seq|…>` mention. A message in another
+            channel or outside a linked thread is not found.
         thread:
           type: boolean
-          description: True files the message and the replies in its thread that follow it.
+          description: True files the complete available thread containing the selected message.
 
+    ChatSourceAccess:
+      type: object
+      additionalProperties: false
+      required: [available, user_id]
+      properties:
+        available: { type: boolean }
+        user_id: { type: string, format: uuid }
+        url: { type: string, maxLength: 8192 }
+        valid_until: { type: string, format: date-time }
     ChatEpisode:
       type: object
       readOnly: true
       description: |
-        The chat talk a summary note was written from. The talk itself is not kept: open `url`
-        to read it in the chat.
+        The source metadata of a channel recap. Source URLs are withheld from ordinary activity reads;
+        obtain a short-lived authorized link through the chat-source endpoint.
       required: [message_count, ended_at, url]
       properties:
+        provider:
+          $ref: '#/components/schemas/MessengerProvider'
+        source_changed: { type: boolean, description: The source changed after a human edited this recap; review the preserved text. }
+        channel_name: { type: string, description: Channel name recorded when the recap was written. }
         message_count: { type: integer, minimum: 1, description: How many messages the summary covers. }
         ended_at: { type: string, format: date-time, description: When the last of them was posted. }
-        url: { type: string, description: The first message in the chat. }
+        url: { type: string, deprecated: true, description: Empty on activity reads. Obtain an authorized link through the chat-source endpoint. }
 
     ImportObject:
       type: string
@@ -50286,11 +51714,18 @@ components:
       description: |
         The calling seat's whole set — one entry per class the product sends, always all of them,
         so a screen rendering one row per class never has to take the others from its own memory.
-      required: [items]
+      required: [items, email_delivery_available]
       properties:
         items:
           type: array
           items: { $ref: '#/components/schemas/NotificationPreference' }
+        email_delivery_available:
+          type: boolean
+          description: |
+            Whether this installation sends its own mail. False means `email` and `digest` reach
+            no mailbox: the notice still lands in the app, and no message leaves. A screen says
+            so beside the choices rather than offering mail that will not arrive. It answers the
+            caller's own delivery, so every seat that reads its settings is told.
     NotificationItem:
       type: object
       description: |
@@ -50483,9 +51918,10 @@ components:
             Where it is sent it is exact rather than an estimate, counted over
             the same filters and the same row scope as the page beside it, in
             the same transaction, so the two cannot disagree about what
-            matching means. The contact, company and lead lists count on the
-            first page only and send no total with a cursor, so a client keeps
-            the first page's total while it loads further pages.
+            matching means. The contact, company, lead, deal and project lists
+            count on a page read without a cursor, which is the first page or a
+            page opened by `offset`, and send no total with a cursor, so a
+            client keeps that total while it loads further pages.
 
     # ---- mixins ----
     Provenance:
@@ -51578,9 +53014,11 @@ components:
         address: { $ref: '#/components/schemas/Address' }
         emails:
           type: array
+          maxItems: 25
           items: { $ref: '#/components/schemas/ContactEmailInput' }
         phones:
           type: array
+          maxItems: 25
           items: { $ref: '#/components/schemas/ContactPhoneInput' }
         source: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this contact arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the contact''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.' }
         source_id: { type: [string, 'null'], maxLength: 128, description: 'The id this contact has in source_system. Needs source_system, and the pair is unique: a second contact with the same pair is 409.' }
@@ -51643,7 +53081,7 @@ components:
         profile_url:
           type: [string, 'null']
           description: 'The LinkedIn profile this was read from. Stored, never fetched. It must be a LinkedIn profile (`/in/<name>`): a page off LinkedIn is refused with 422 `linkedin_url_not_linkedin` on this field, and a company page with `linkedin_url_not_profile`.'
-        email: { type: [string, 'null'], format: email, description: 'Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.' }
+        email: { type: [string, 'null'], maxLength: 254, format: email, description: 'Refused with 422 `email_names_no_one` when the local part names a sending system, as ContactEmailInput.email is.' }
         phone: { type: [string, 'null'] }
         convert_lead_ids:
           type: array
@@ -51888,8 +53326,24 @@ components:
     ContactEmailInput:
       type: object
       description: |
-        One address on a contact, as a writer supplies it. One schema for create and update,
-        so the two cannot describe an address differently.
+        One address supplied when creating a contact.
+      required: [email]
+      properties:
+        email:
+          type: string
+          maxLength: 254
+          format: email
+          description: 'An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.'
+        email_type: { type: string, enum: [work, personal, other], default: work }
+        is_primary: { type: boolean, default: false, description: 'The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.' }
+        position: { type: integer, default: 0 }
+
+    ContactEmailReplacementInput:
+      type: object
+      x-go-type: ContactEmailInput
+      description: |
+        Mirrors ContactEmailInput except for the state-dependent address ceiling.
+        A held legacy address may remain unchanged; a new address must fit the write limit.
       required: [email]
       properties:
         email:
@@ -51970,7 +53424,7 @@ components:
         address: { $ref: '#/components/schemas/Address' }
         emails:
           type: array
-          items: { $ref: '#/components/schemas/ContactEmailInput' }
+          items: { $ref: '#/components/schemas/ContactEmailReplacementInput' }
           description: |
             REPLACES the contact's addresses with exactly this list, which is what a
             correction needs: a bounced address is fixed by sending the set that should
@@ -51979,6 +53433,11 @@ components:
             Omitting the field leaves the addresses untouched, like every other field
             here. Sending an empty array removes them all, which is a real answer — a
             contact who no longer has a working address is a fact worth recording.
+
+            A list past 25 addresses is 422 `too_many`, unless the contact already
+            holds at least as many: a longer stored list may be sent back, and not grown.
+            Held legacy addresses may remain unchanged. New addresses must fit the
+            normalized 254-byte ceiling and name a dotted domain.
         phones:
           type: array
           items: { $ref: '#/components/schemas/ContactPhoneInput' }
@@ -51989,7 +53448,8 @@ components:
             that now reaches somebody else.
 
             Omitting the field leaves the numbers untouched. Sending an empty array
-            removes them all.
+            removes them all. A list past 25 numbers is 422 `too_many`, unless the
+            contact already holds at least as many.
 
             `Contact360.dead_addresses` already names which address bounced; until now the
             contract's own remedy for that was to visit the contact page, because the write
@@ -52374,7 +53834,7 @@ components:
           pattern: '^https://([a-z]{2,3}\.)?linkedin\.com/company/[^/?#]+/?$'
         legal_name: { x-single-line: true, type: [string, 'null'], maxLength: 500 }
         phone: { type: [string, 'null'], maxLength: 20000, description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
-        email: { type: [string, 'null'], format: email, maxLength: 20000, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
+        email: { type: [string, 'null'], format: email, maxLength: 254, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
         description: { type: [string, 'null'], maxLength: 20000, description: A description of what the company does. }
         industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.' }
         size_band: { type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+'] }
@@ -52383,6 +53843,7 @@ components:
         parent_company_id: { type: [string, 'null'], format: uuid }
         domains:
           type: array
+          maxItems: 100
           items: { $ref: '#/components/schemas/CompanyDomainInput' }
         source: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this company arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the company''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.' }
         source_system: { type: [string, 'null'], maxLength: 128, description: 'Which external system this record came from, when a caller imported it. The reserved mirror: namespace is refused on this wire except for a declared importer: a signed-in human holding import_run:create (an agent carrying those grants is still refused).' }
@@ -52403,7 +53864,7 @@ components:
         display_name: { x-single-line: true, type: string, maxLength: 120 }
         legal_name: { x-single-line: true, type: [string, 'null'], maxLength: 500 }
         phone: { type: [string, 'null'], maxLength: 20000, description: "The company's main number. A formatted number is accepted and stored in E.164 form (for example +49301234567). It is never a contact's own number." }
-        email: { type: [string, 'null'], format: email, maxLength: 20000, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
+        email: { type: [string, 'null'], format: email, maxLength: 254, description: "The company's general address, for example info@example.com. It never creates or matches a contact." }
         description: { type: [string, 'null'], maxLength: 20000, description: 'A description of what the company does. Absent leaves it untouched; an empty string clears it, the same spelling every other nullable text field on this record uses.' }
         industry: { type: [string, 'null'], maxLength: 2000, description: 'An industry code, or text the server can map to one. Text that names no code stores no code and is kept in the description.' }
         size_band: { type: [string, 'null'], enum: [null, '1-10', '11-50', '51-200', '201-500', '501-1000', '1001-5000', '5000+'] }
@@ -52419,7 +53880,7 @@ components:
             archived answers 422 naming this field. Absent leaves it untouched.
         domains:
           type: array
-          description: Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains.
+          description: Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. A list past 100 domains is 422 `too_many`, unless the company already holds at least as many.
           items: { $ref: '#/components/schemas/CompanyDomainInput' }
         visibility:
           type: string
@@ -54489,6 +55950,9 @@ components:
           format: date-time
           description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
         company: { $ref: '#/components/schemas/Company' }
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         moment:
           description: >-
             The ONE thing this account needs today, selected server-side by the same rule the
@@ -54936,6 +56400,9 @@ components:
           format: date-time
           description: The assembly clock. Mail coverage carries its own evaluation time; Read Committed does not guarantee one snapshot across sections.
         contact: { $ref: '#/components/schemas/Contact' }
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         created_by:
           allOf: [{ $ref: '#/components/schemas/PrincipalAttribution' }]
           description: |
@@ -55982,6 +57449,42 @@ components:
             or risk. A sentence whose citations cannot be resolved is dropped whole rather than
             shown uncited.
           items: { $ref: '#/components/schemas/CompanyBriefSentence' }
+
+    TaskExplanation:
+      type: object
+      description: |
+        Why one task is on the reader's list, from that task's own records. Per reader, cached
+        on its inputs, every sentence cited. `generated_by` says whether the model or the
+        facts-only floor wrote it.
+      required: [task_id, generated_at, generated_by, sentences]
+      properties:
+        task_id: { type: string, format: uuid }
+        generated_at: { type: string, format: date-time }
+        generated_by: { $ref: '#/components/schemas/WrittenBy' }
+        sentences:
+          type: array
+          description: >-
+            Facts say what happened, an assessment what is at stake if nothing is done, a
+            recommendation the one next step. A sentence whose citations cannot be resolved is
+            dropped whole rather than shown uncited.
+          items: { $ref: '#/components/schemas/CompanyBriefSentence' }
+
+    StandingLine:
+      type: object
+      description: |
+        Where a record stands after its latest activity, in one sentence the model wrote in
+        the background when that activity landed. Shared by the record's readers, and served
+        only to a reader who may open every activity it cites.
+      required: [text, activity_ids, written_at]
+      properties:
+        text: { type: string }
+        activity_ids:
+          type: array
+          description: |
+            The activities the sentence rests on, as the model cited them. The page opens
+            each one, so a reader can check the line against what was said.
+          items: { type: string, format: uuid }
+        written_at: { type: string, format: date-time }
 
     ContactConsentGuard:
       type: object
@@ -60811,6 +62314,9 @@ components:
           format: date-time
           description: The instant the assembling transaction read. Sections are consistent to this moment under Read Committed.
         project: { $ref: '#/components/schemas/Project' }
+        standing_line:
+          $ref: '#/components/schemas/StandingLine'
+          description: Absent until an activity was read, or when this reader may not open one it was written from.
         sections_omitted:
           type: array
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
@@ -62871,8 +64377,11 @@ components:
         source:
           type: string
           description: >-
-            Where the row came from. `manual` is anything typed, by a member or by an assistant
-            working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do.
+            The channel the row arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`.
+            `manual` is anything typed, by a member or by an assistant working for one, so it never says
+            who typed it: `captured_by` and `recorded_by_agent` do. `source_system` names the connector
+            or the product's own writer when there is one. An older row can show another value until the
+            background correction reaches it.
         captured_by: { type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.' }
         recorded_by_agent:
           type: boolean
@@ -63295,7 +64804,7 @@ components:
             properties:
               entity_type: { type: string, enum: [contact, company, deal, lead, project], x-extensible-enum: true }
               entity_id: { type: string, format: uuid }
-        source: { type: string }
+        source: { type: string, maxLength: 128, enum: [api, automation, capture, import, manual, webform], x-extensible-enum: true, x-go-type: string, description: 'The channel this task arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.' }
       additionalProperties: false
     ActivityDealFilingRecordType:
       type: string
@@ -63491,7 +65000,7 @@ components:
             properties:
               entity_type: { type: string, enum: [contact, company, deal, lead, project] }
               entity_id: { type: string, format: uuid }
-        source: { type: string }
+        source: { type: string, maxLength: 128, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.' }
         raw:
           type: [object, 'null']
           additionalProperties: true
@@ -66329,8 +67838,7 @@ components:
         next_task_due_has_time: { type: boolean, readOnly: true, description: 'True when next_task_due_at names a time of day; false when the next task is due on a date with no time.' }
         next_task_due_intent: { allOf: [{ $ref: '#/components/schemas/IntentTime' }], readOnly: true, description: 'The date and clock the next task was set for, in the zone it was chosen in. A task with only a date is due on this date for every reader.' }
         score_reason: { type: [string, 'null'], readOnly: true, description: 'The highest-impact factor in the retained current score explanation, for a compact queue reason.' }
-        source: { type: string, description: 'How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from. The `lead_source` list that administered it is deprecated.' }
-        source_label: { type: [string, 'null'], readOnly: true, description: 'The label the deprecated lead_source list gives `source`; null for connector, seed and other free values.' }
+        source: { type: string, description: 'The channel this lead arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older lead can show another value until the background correction reaches it. It never scores; use `origin` for where the lead came from.' }
         web_form_name: { type: [string, 'null'], readOnly: true, description: 'The current name of the website form this lead came through; null for every other lead, and for one whose form was deleted.' }
         origin: { type: [string, 'null'], description: 'Where the lead came from, a key from `/lead-origins`. Null when nobody has classified the lead; such a lead scores neutral. Set by a human, an importer or capture, and the only lead fact the score and the origin filter read.' }
         origin_label: { type: [string, 'null'], readOnly: true, description: 'The label `/lead-origins` gives `origin`; null when `origin` is null.' }
@@ -66398,7 +67906,7 @@ components:
       properties:
         salutation: { $ref: '#/components/schemas/Salutation' }
         full_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
-        email: { type: [string, 'null'], format: email }
+        email: { type: [string, 'null'], maxLength: 254, format: email }
         phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
         linkedin_url: { type: [string, 'null'], description: 'Normalized LinkedIn profile URL — the E12.11 exact-match dedupe key for LinkedIn-captured leads.' }
         title: { x-single-line: true, type: [string, 'null'] }
@@ -66428,7 +67936,7 @@ components:
         source_author_id: { type: [string, 'null'], format: uuid, description: 'Who wrote this record in the system it came from, when the author holds a seat here. Written only by a declared importer (a signed-in human holding import_run:create), only beside a source_system; either author field or both may be sent, and the seat''s current name wins on read. captured_by still names the caller.' }
         source_author_name: { type: [string, 'null'], maxLength: 200, description: 'The source system''s own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat.' }
         source_id: { type: [string, 'null'] }
-        source: { type: string, description: 'How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from.' }
+        source: { type: string, enum: [api, automation, capture, import, manual, webform], x-go-type: string, description: 'The channel this lead arrived by. Optional: the server writes `manual` when none is sent, and an integration sends `api`. The other system and the lead''s id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`. Never scored; send `origin` for where the lead came from.' }
         origin: { type: [string, 'null'], description: 'Where the lead came from: an ACTIVE key from `/lead-origins` (422 `unknown_lead_origin` or `inactive_lead_origin` otherwise). Omit for an unclassified lead, which scores neutral.' }
         origin_detail: { type: [string, 'null'], maxLength: 500, description: 'A short note beside `origin`.' }
       additionalProperties: true
@@ -66444,7 +67952,7 @@ components:
       properties:
         salutation: { $ref: '#/components/schemas/Salutation' }
         full_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
-        email: { type: [string, 'null'], format: email }
+        email: { type: [string, 'null'], maxLength: 254, format: email }
         phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
         title: { x-single-line: true, type: [string, 'null'] }
         company_name: { x-single-line: true, type: [string, 'null'] }
@@ -66687,13 +68195,13 @@ components:
         data: { type: array, items: { $ref: '#/components/schemas/Lead' } }
         page: { $ref: '#/components/schemas/PageInfo' }
 
-    # ---- Lead vocabularies (sources, disqualification reasons) ----
+    # ---- Lead vocabularies (origins, disqualification reasons) ----
     LeadSourceIntent:
       type: string
       enum: [high, neutral, low]
       x-extensible-enum: true
       x-enum-varnames: [LeadSourceIntentHigh, LeadSourceIntentNeutral, LeadSourceIntentLow]
-      description: 'What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.'
+      description: 'What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.'
 
     ReviewQuestion:
       type: object
@@ -66767,7 +68275,7 @@ components:
         choice_answers: { type: object, additionalProperties: { type: array, items: { type: string } }, description: 'Selected options by question key; values must belong to the frozen question vocabulary.' }
         answers: { type: object, additionalProperties: { type: string }, description: 'Keyed by question key. Every key here has a question in `questions`.' }
         created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time }
+        updated_at: { type: string, format: date-time, description: 'Always equal to `created_at`: a review is not edited after it is submitted.' }
 
     OutcomeReviewListResponse:
       type: object
@@ -67181,56 +68689,6 @@ components:
       type: object
       properties:
         label: { x-single-line: true, type: string, minLength: 1, maxLength: 120 }
-        intent: { $ref: '#/components/schemas/LeadSourceIntent' }
-        sort_order: { type: integer }
-        active: { type: boolean }
-
-    LeadSource:
-      type: object
-      deprecated: true
-      description: 'Deprecated: how a row reached Margince is no longer scored. One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.'
-      required: [id, key, label, intent, sort_order, active, system, lead_count, version, created_at, updated_at]
-      properties:
-        id: { type: string, format: uuid }
-        key: { type: string, description: 'Lowercase stable key, the stored value. Never changes after creation.' }
-        label: { type: string }
-        intent: { $ref: '#/components/schemas/LeadSourceIntent' }
-        sort_order: { type: integer }
-        active: { type: boolean, description: 'Inactive sources leave the create form and the filter; leads carrying them keep the value.' }
-        system: { type: boolean, readOnly: true, description: 'Built-in. Can be renamed, re-weighted and deactivated, never deleted.' }
-        lead_count: { type: integer, readOnly: true, description: 'Live leads carrying this key.' }
-        version: { $ref: '#/components/schemas/RowVersion' }
-        created_at: { type: string, format: date-time }
-        updated_at: { type: string, format: date-time }
-
-    DiscoveredLeadSource:
-      type: object
-      description: A source value present on leads but absent from the administered list — a connector family, a seed, an import.
-      required: [key, lead_count]
-      properties:
-        key: { type: string, description: 'The stored value, or for `connector:<name>:<id>` values the `connector:<name>` family.' }
-        lead_count: { type: integer }
-
-    LeadSourceListResponse:
-      type: object
-      required: [data, discovered]
-      properties:
-        data: { type: array, items: { $ref: '#/components/schemas/LeadSource' } }
-        discovered: { type: array, items: { $ref: '#/components/schemas/DiscoveredLeadSource' } }
-
-    CreateLeadSourceRequest:
-      type: object
-      required: [label]
-      properties:
-        label: { x-single-line: true, type: string, minLength: 1 }
-        key: { type: string, description: 'Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique.' }
-        intent: { $ref: '#/components/schemas/LeadSourceIntent' }
-        sort_order: { type: integer }
-
-    UpdateLeadSourceRequest:
-      type: object
-      properties:
-        label: { x-single-line: true, type: string, minLength: 1 }
         intent: { $ref: '#/components/schemas/LeadSourceIntent' }
         sort_order: { type: integer }
         active: { type: boolean }
@@ -68652,6 +70110,13 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        merged_into:
+          allOf: [{ $ref: '#/components/schemas/RowTag' }]
+          description: |
+            The tag a merge folded this one into, named as it reads now. Present only on a tag
+            archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+            destination and may itself have been merged since; follow each `merged_into` until a tag
+            has none to find the tag that carries the records now.
         carried_by:
           type: integer
           readOnly: true
@@ -68742,6 +70207,13 @@ components:
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
         archived_at: { type: [string, 'null'], format: date-time }
+        merged_into:
+          allOf: [{ $ref: '#/components/schemas/RowTag' }]
+          description: |
+            The tag a merge folded this one into, named as it reads now. Present only on a tag
+            archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+            destination and may itself have been merged since; follow each `merged_into` until a tag
+            has none to find the tag that carries the records now.
         usage: { $ref: '#/components/schemas/TagUsage' }
 
     TagSuggestion:
@@ -71026,14 +72498,14 @@ components:
       properties:
         resource: { $ref: '#/components/schemas/SavedViewTarget' }
         name: { x-single-line: true, type: string }
-        query: { type: object, additionalProperties: true }
+        query: { type: object, additionalProperties: true, description: 'At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.' }
 
     UpdateSavedViewRequest:
       type: object
       description: A partial update; omitted fields keep their stored value.
       properties:
         name: { x-single-line: true, type: string }
-        query: { type: object, additionalProperties: true }
+        query: { type: object, additionalProperties: true, description: 'Replaces the stored query whole. At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`.' }
 
     SavedViewListResponse:
       type: object
@@ -71078,7 +72550,7 @@ components:
       required: [display_name, email, expected_updated_at]
       properties:
         display_name: { type: string, minLength: 1, maxLength: 120 }
-        email: { type: string, format: email, description: May change only before the account has been used to sign in. }
+        email: { type: string, format: email, description: 'May change only before the account has been used to sign in. A new address holds at most 254 characters; an unchanged stored address may be longer.' }
         role: { type: string, description: Omit to keep the current roles. }
         team_ids:
           type: array
@@ -71481,6 +72953,8 @@ components:
           description: >-
             Their work address as the source system spelled it. It is the identity the
             seat is keyed on, so a second record for the same address is refused.
+            A new address holds at most 254 characters. A longer stored address may
+            still resolve a merged member to its survivor.
         display_name: { type: string, minLength: 1, maxLength: 120 }
         role:
           type: string
@@ -71505,7 +72979,7 @@ components:
       description: Admin-supplied details for a new member. No password — the invite issues a set-password token.
       required: [email, display_name, role]
       properties:
-        email: { type: string, format: email }
+        email: { type: string, maxLength: 254, format: email }
         display_name: { type: string, minLength: 1, maxLength: 120 }
         greeting_name:
           type: [string, 'null']
@@ -73199,6 +74673,13 @@ components:
           type: string
           format: date-time
           description: The instant a snapshot share's state describes. Absent on a live share.
+        scope_label:
+          type: string
+          description: >-
+            The name of the population the readings cover, as this reader's own lens names
+            it: the team, the team member, or the whole company. Absent when that lens does
+            not reach the team member or team, so a link never names a subject its reader
+            could not choose; `readings.scope_kind` still says which kind it is.
         readings: { $ref: '#/components/schemas/ForecastReadings' }
         withheld:
           type: boolean
@@ -75967,6 +77448,12 @@ components:
         before: { type: [object, 'null'], additionalProperties: true }
         after: { type: [object, 'null'], additionalProperties: true }
         summary: { type: string }
+        reason:
+          type: [string, 'null']
+          description: >-
+            Why a project's phase was moved, in the words given with the move, so a walk
+            through the history says why each move was made. Null on every other row, on a
+            move made without a reason, and for a reader whose role does not read the phase.
         undid_audit_log_id:
           type: [string, 'null']
           format: uuid
@@ -82250,7 +83737,7 @@ components:
           description: |
             When buyer access lapses. A past instant is accepted and stored as the
             time of the call, so the room opens with buyer access already ended.
-        source: { type: string }
+        source: { type: string, maxLength: 128 }
       additionalProperties: false
 
     UpdateDealRoomRequest:
@@ -82393,12 +83880,12 @@ components:
       required: [full_name, email, source]
       properties:
         full_name: { type: string, minLength: 1 }
-        email: { type: string, format: email }
+        email: { type: string, maxLength: 254, format: email }
         capability:
           allOf:
             - $ref: '#/components/schemas/DealRoomParticipantCapability'
           description: Defaults to `view` — the least that lets someone read the room.
-        source: { type: string }
+        source: { type: string, maxLength: 128 }
       additionalProperties: false
 
     UpdateDealRoomParticipantRequest:
@@ -82408,6 +83895,7 @@ components:
         full_name: { type: string, minLength: 1 }
         email:
           type: string
+          maxLength: 254
           format: email
           description: |
             Only while their credential is unconsumed. Changing it invalidates the link
@@ -82561,7 +84049,7 @@ components:
           minLength: 1
           description: The buyer-facing name. Defaults to the attachment's filename.
         position: { type: integer, description: Order within the group. Defaults to 0. }
-        source: { type: string }
+        source: { type: string, maxLength: 128 }
       additionalProperties: false
 
     UpdateDealRoomDocumentRequest:
@@ -82665,7 +84153,7 @@ components:
         required_change:
           type: boolean
           description: Only with a document. Marks the thread as one the seller still owes an answer on.
-        source: { type: string, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.' }
+        source: { type: string, maxLength: 128, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.' }
         request_id:
           type: string
           format: uuid
@@ -82688,7 +84176,7 @@ components:
       required: [body]
       properties:
         body: { type: string, minLength: 1 }
-        source: { type: string, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.' }
+        source: { type: string, maxLength: 128, description: 'Provenance. A user''s client names it on the seller edge. An agent that omits it records `agent`, and a buyer''s comment always records the credential.' }
         request_id:
           type: string
           format: uuid
@@ -82742,7 +84230,7 @@ components:
       type: object
       required: [email]
       properties:
-        email: { type: string, format: email }
+        email: { type: string, format: email, description: 'Looks up an existing participant; stored addresses past the current write limit are accepted.' }
       additionalProperties: false
 
     BuyerRoomAccess:
@@ -83009,7 +84497,7 @@ components:
       type: object
       description: Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422).
       properties:
-        position: { type: integer, minimum: 1 }
+        position: { type: integer, minimum: 1, description: 'Moves the line to this place in the offer. The lines between shift to make room, and the offer''s lines are numbered from 1 again. A place past the last line puts it last.' }
         description: { type: string }
         unit: { type: string }
         quantity: { type: number, format: double }
@@ -83387,6 +84875,10 @@ components:
             `oauth:` label prefix, is what tells the two kinds apart: a label is display text a human
             can also type.
         created_at: { type: string, format: date-time }
+        granted_by:
+          type: string
+          format: uuid
+          description: The member who granted the passport its authority. A server built before this field omits it.
         expires_at: { type: [string, 'null'], format: date-time }
         last_used_at: { type: [string, 'null'], format: date-time }
         revoked_at: { type: [string, 'null'], format: date-time }

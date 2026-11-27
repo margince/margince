@@ -108,7 +108,6 @@ type Plan struct {
 	OwnerID        ids.UUID
 	LocalWeekStart time.Time
 	Status         string
-	Version        int64
 	Commitments    []Commitment
 	// Outcome is what the week came to, stamped at close. Nil while the week
 	// is open: there is no outcome yet, and a zero would claim one.
@@ -244,6 +243,9 @@ func (s *Store) planForOwner(ctx context.Context, owner ids.UUID, now time.Time)
 			return err
 		}
 		plan, err = readPlan(ctx, tx, owner, week)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return apperrors.ErrNothingYet
+		}
 		return err
 	})
 	if err != nil {
@@ -268,11 +270,11 @@ func readPlan(ctx context.Context, tx pgx.Tx, owner ids.UUID, week time.Time) (P
 	plan := Plan{OwnerID: owner, LocalWeekStart: week}
 	var due, kept *int
 	err := tx.QueryRow(ctx, `
-		SELECT id, local_week_start, status, version, commitments_due, commitments_kept,
+		SELECT id, local_week_start, status, commitments_due, commitments_kept,
 		       risks, capacity_note
 		  FROM weekly_plan
 		 WHERE owner_id = $1 AND local_week_start = $2`, owner, week).
-		Scan(&plan.ID, &plan.LocalWeekStart, &plan.Status, &plan.Version, &due, &kept,
+		Scan(&plan.ID, &plan.LocalWeekStart, &plan.Status, &due, &kept,
 			&plan.Risks, &plan.CapacityNote)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Plan{}, apperrors.ErrNotFound

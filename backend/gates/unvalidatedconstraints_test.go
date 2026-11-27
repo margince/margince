@@ -65,6 +65,7 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 		"precision data task fills in only the rows the noon repair's audit proves; the rest stay " +
 		"unknown on purpose, and the rule binds every row written since",
 	"confirm_token.confirm_token_question_locale_fkey":            unlistedLanguage,
+	"standing_line.standing_line_language_fkey":                   unlistedLanguage,
 	"activity.activity_language_fkey":                             largeTableLanguage,
 	"consent_text_version.consent_text_version_locale_fkey":       unlistedLanguage,
 	"legal_entity.legal_entity_default_language_fkey":             unlistedLanguage,
@@ -86,6 +87,15 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 	"ai_call.ai_call_reasoning_tokens_not_negative":               negativeHistory,
 	"ai_call.ai_call_cached_tokens_not_negative":                  negativeHistory,
 	"ai_call.ai_call_cache_write_tokens_not_negative":             negativeHistory,
+	"activity.activity_source_check":                              unlistedRecordSource,
+	"lead.lead_source_check":                                      unlistedRecordSource,
+	"activity.activity_duration_not_negative": "" +
+		"rows written before the API refused a negative duration may hold one, and the negative counts " +
+		"data task clears them after the migrations ran. A VALIDATE would fail the upgrade of an " +
+		"installation whose task has not finished. A restricted row is immutable, so the task leaves " +
+		"it, and the update that lifts its restriction clears the duration. Until then an update that " +
+		"carries an old negative duration clears it, so the row stays editable; validating needs a " +
+		"minimum upgrade-from release, and no restricted row left holding a negative duration",
 	"activity_participant.activity_participant_address_is_canonical": "" +
 		"rows written before the check hold the address as typed, and the participant address data " +
 		"task lowercases them after the migrations ran. A VALIDATE would fail the upgrade of an " +

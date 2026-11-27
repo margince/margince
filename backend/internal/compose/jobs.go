@@ -5,11 +5,8 @@ package compose
 
 // The job runner's assembly: NewJobRunner, the queue set, the uniqueness
 // window every periodic pass shares, and the wiring of each module's workers
-// and ticks. The per-concern job files beside it (jobs_deals.go,
-// jobs_capture.go, jobs_automation.go, jobs_retention.go)
-// own the args types and worker adapters themselves; those adapters are the
-// only code in the tree that knows about River, which is what keeps every
-// module's own pass River-agnostic.
+// and ticks. The job files beside it (jobs_deals.go, and so on) own their args
+// and worker adapters. Only those adapters know River, so no module does.
 
 import (
 	"context"
@@ -159,7 +156,8 @@ type JobRunnerConfig struct {
 	// ChannelVault is the custodian of a channel connection's sealed tokens. Nil
 	// registers no Telegram poller, because a poll cannot authenticate without
 	// its token, and a WhatsApp media download drops its file for want of one.
-	ChannelVault keyvault.Vault
+	ChannelVault   keyvault.Vault
+	MessagingGraph GraphConfig
 	// AIKeyVault holds the sealed vendor keys the price sweep lists models with.
 	// Nil lists with the environment's keys only; the sweep still registers.
 	AIKeyVault keyvault.Vault
@@ -252,6 +250,7 @@ type JobRunnerConfig struct {
 	// registers nothing: no human is waiting on the row, so an installation
 	// without a model keeps the deterministic evidence and reads no prose.
 	StageEvidenceBrain completer
+	StandingLineLane
 	// TranscriptProposeBrain is the lane a queued transcript reading runs on.
 	// Nil = no AI configured, and the kind registers anyway so the reading
 	// FAILS with a message the rep can see rather than sitting queued behind a
@@ -443,58 +442,4 @@ func wireJobs(pool *pgxpool.Pool, log *slog.Logger, cfg JobRunnerConfig) (*jobRe
 		placedSchedules(cfg),
 	)
 	return reg, periodic
-}
-
-// placedSchedules names every schedule this file places, whether or not this boot
-// places it. Each carries its own gate: cadence, configuration, absent-dependency cost.
-func placedSchedules(cfg JobRunnerConfig) []*river.PeriodicJob {
-	return slices.Concat(
-		periodicFor(cfg, AssuranceSweepArgs{}),
-		periodicFor(cfg, CloseDateSweepArgs{}),
-		periodicFor(cfg, MeetingProfileRetractSweepArgs{}),
-		periodicFor(cfg, TranscriptAudienceSweepArgs{}),
-		periodicFor(cfg, PromiseKeptSweepArgs{}),
-		periodicFor(cfg, FollowUpReconcileArgs{}),
-		periodicFor(cfg, ForecastSnapshotSweepArgs{}),
-		periodicFor(cfg, InitiativeEnrolmentSweepArgs{}),
-		periodicFor(cfg, ReportScheduleSweepArgs{}),
-		periodicFor(cfg, RiskVerdictSweepArgs{}),
-		periodicFor(cfg, TimeScanArgs{}),
-		periodicFor(cfg, VoiceBuildRetryArgs{}),
-		periodicFor(cfg, AIBudgetResumeArgs{}),
-		periodicFor(cfg, IdempotencyRetentionArgs{}),
-		periodicFor(cfg, StoredObjectReapArgs{}),
-		periodicFor(cfg, SuppressionJournalArgs{}),
-		periodicFor(cfg, AgentTaskRetentionArgs{}),
-		periodicFor(cfg, AIActivityReconcileArgs{}),
-		periodicFor(cfg, AIActivityRetentionArgs{}),
-		periodicFor(cfg, MailDraftRetentionArgs{}),
-		periodicFor(cfg, RequestProofExpiryArgs{}),
-		periodicFor(cfg, WaitingHorizonRefreshArgs{}),
-		periodicFor(cfg, EvidenceAuthorshipArgs{}),
-		periodicFor(cfg, ApprovalExpiryArgs{}),
-		periodicFor(cfg, PastActivityClockRefoldArgs{}),
-		periodicFor(cfg, ApprovalNoticeReconcileArgs{}),
-		periodicFor(cfg, IntroExpiryArgs{}),
-		periodicFor(cfg, ApprovalAutoApplyArgs{}),
-		periodicFor(cfg, CaptureAutoEnrichSweepArgs{}),
-		periodicFor(cfg, CaptureClassifyArgs{}),
-		periodicFor(cfg, OwedVerdictArgs{}),
-		periodicFor(cfg, CaptureEnrichArgs{}),
-		periodicFor(cfg, CounterpartyVerdictArgs{}),
-		periodicFor(cfg, ConfidentialityVerdictArgs{}),
-		periodicFor(cfg, CaptureTraceSweepArgs{}),
-		periodicFor(cfg, ChatClarificationSweepArgs{}),
-		periodicFor(cfg, CapturedDealRefileSweepArgs{}),
-		periodicFor(cfg, CompanyNamePromotionArgs{}),
-		periodicFor(cfg, CaptureBackfillReconcileArgs{}),
-		periodicFor(cfg, CaptureHistoryNarrowingArgs{}),
-		periodicFor(cfg, BriefGenerateArgs{}),
-		periodicFor(cfg, NotificationDigestArgs{}),
-		periodicFor(cfg, WeeklyReviewGenerateArgs{}),
-		periodicFor(cfg, GmailSyncArgs{}),
-		periodicFor(cfg, GmailWatchArgs{}),
-		periodicFor(cfg, GraphWatchArgs{}),
-		periodicFor(cfg, AuthzDisagreementArgs{}),
-	)
 }

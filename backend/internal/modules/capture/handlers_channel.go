@@ -14,6 +14,7 @@ package capture
 // response text onto the wire.
 
 import (
+	"context"
 	"errors"
 	"net/http"
 
@@ -90,7 +91,7 @@ func (h ChannelHandlers) ConnectChannel(w http.ResponseWriter, r *http.Request) 
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	conn, err := h.store.Connect(r.Context(), ConnectRequest{
+	conn, err := h.ConnectBot(r.Context(), ConnectRequest{
 		Provider:     string(req.Provider),
 		BotToken:     req.BotToken,
 		Address:      deref(req.Address),
@@ -222,4 +223,27 @@ func optionalString(value string) *string {
 		return nil
 	}
 	return &value
+}
+
+// ConnectBot shares bot-connection validation with the composition transport.
+func (h ChannelHandlers) ConnectBot(ctx context.Context, req ConnectRequest) (ChannelConnection, error) {
+	if h.store == nil {
+		return ChannelConnection{}, ErrChannelWiringIncomplete
+	}
+	if req.Provider == "slack" || req.Provider == "teams" {
+		connections, err := h.store.List(ctx)
+		if err != nil {
+			return ChannelConnection{}, err
+		}
+		for _, current := range connections {
+			if current.Provider != req.Provider {
+				continue
+			}
+			if err := h.store.ReplaceToken(ctx, current.ID, req.BotToken, req.EventsSecret); err != nil {
+				return ChannelConnection{}, err
+			}
+			return h.store.Get(ctx, current.ID)
+		}
+	}
+	return h.store.Connect(ctx, req)
 }

@@ -84,6 +84,7 @@ func (s *Store) GetProjectTx(ctx context.Context, tx pgx.Tx, id ids.ProjectID, a
 // ListProjectsInput is one filtered, sorted, cursor-paginated list read.
 type ListProjectsInput struct {
 	Cursor    *string
+	Offset    *int
 	Limit     *int
 	Query     *string
 	CompanyID *ids.CompanyID
@@ -179,10 +180,16 @@ func (s *Store) ListProjects(ctx context.Context, in ListProjectsInput) ([]crmco
 		if err != nil {
 			return err
 		}
-		where, err := appendProjectFilters(ctx, pre.Where(), in, pre.Arg)
+		if err := pre.Skip(in.Offset); err != nil {
+			return err
+		}
+		terms := func(arg func(any) int) ([]string, error) { return appendProjectFilters(ctx, nil, in, arg) }
+		own, err := terms(pre.Arg)
 		if err != nil {
 			return err
 		}
+		pre.Count(terms)
+		where := append(pre.Where(), own...)
 		out, page, err = storekit.RunListPageTx(ctx, tx, pre, projectObject, projectColumns, active, where, scanProjectPage,
 			func(p crmcontracts.Project) (time.Time, ids.UUID) { return p.CreatedAt, ids.UUID(p.Id) },
 			func(tx pgx.Tx, page []crmcontracts.Project) error {

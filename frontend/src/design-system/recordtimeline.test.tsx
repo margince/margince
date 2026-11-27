@@ -336,6 +336,36 @@ describe("a record timeline you can work in", () => {
     );
   });
 
+  it("requests provider-filtered history instead of reusing an unfiltered record seed", async () => {
+    const user = userEvent.setup();
+    const feed = activityFeed({
+      first: { data: [OLDER], page: { has_more: false } },
+    });
+    vi.stubGlobal("fetch", feed.fetcher);
+    mount({ data: [NEWEST], page: { has_more: false } });
+    expect(feed.calls).toHaveLength(0);
+    await pickOption(
+      user,
+      screen.getByLabelText(englishCopy["timeline.filters.chatProvider"]),
+      "Slack",
+    );
+    await waitFor(() =>
+      expect(feed.last().searchParams.get("chat_provider")).toBe("slack"),
+    );
+    expect(await screen.findByText("Invoice question")).toBeTruthy();
+    await pickOption(
+      user,
+      screen.getByLabelText(englishCopy["timeline.filters.kind"]),
+      "Tasks",
+    );
+    await waitFor(() =>
+      expect(feed.last().searchParams.has("chat_provider")).toBe(false),
+    );
+    expect(
+      screen.queryByLabelText(englishCopy["timeline.filters.chatProvider"]),
+    ).toBeNull();
+  });
+
   it("sends the kind to the server rather than filtering the page it holds", async () => {
     const user = userEvent.setup();
     const feed = activityFeed({

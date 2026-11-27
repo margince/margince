@@ -23,9 +23,9 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
+	"maps"
 	"regexp"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -39,7 +39,7 @@ func TestTheBaseCurrencyGuardCountsEveryFrozenRate(t *testing.T) {
 	t.Parallel()
 	schema := tablesWithFrozenRateColumn(t)
 	if len(schema) == 0 {
-		t.Fatal("no table carries fx_rate_to_base — this test has stopped reading the migrations it derives from")
+		t.Fatal("no table carries fx_rate_to_base — this test has stopped reading the head catalog it derives from")
 	}
 
 	counted := map[string]bool{}
@@ -65,66 +65,18 @@ func TestTheBaseCurrencyGuardCountsEveryFrozenRate(t *testing.T) {
 	}
 	for table := range counted {
 		if !contains(schema, table) {
-			t.Errorf("deals.frozenRateTables counts %s, which has no fx_rate_to_base column in the migrations — the guard runs a query against a column that is not there, and every base-currency read fails", table)
+			t.Errorf("deals.frozenRateTables counts %s, which has no fx_rate_to_base column in the head catalog — the guard runs a query against a column that is not there, and every base-currency read fails", table)
 		}
 	}
 }
 
-// frozenRateColumn matches the column's appearance in a CREATE TABLE body or a
-// later ADD COLUMN. The type is part of the pattern so a comment mentioning the
-// column, or a query selecting it, is not read as a definition.
-var frozenRateColumn = regexp.MustCompile(`(?i)\bfx_rate_to_base\s+numeric`)
-
-// tablesWithFrozenRateColumn reads the migrations rather than the live schema,
-// so the test needs no database and fails in the unit lane, where a wrong
-// answer is cheapest to act on.
+// tablesWithFrozenRateColumn reads the head catalog rather than the live
+// schema. So the test needs no database, and fails in the unit lane where a
+// wrong answer is cheapest to act on.
 func tablesWithFrozenRateColumn(t *testing.T) []string {
 	t.Helper()
-	found := map[string]bool{}
-	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
-				return err
-			}
-			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- a *.up.sql file from walking the trusted migrations tree
-			if err != nil {
-				return err
-			}
-			for _, table := range tablesDefiningFrozenRate(withCurrentNames(string(raw))) {
-				found[table] = true
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("walking %s: %v", root, err)
-		}
-	}
-	out := make([]string, 0, len(found))
-	for table := range found {
-		out = append(out, table)
-	}
-	sort.Strings(out)
-	return out
+	return slices.Sorted(maps.Keys(parseHeadCatalog(t).tablesWithColumn("fx_rate_to_base", "numeric")))
 }
-
-// tablesDefiningFrozenRate attributes each occurrence of the column to the
-// CREATE TABLE or ALTER TABLE statement it sits inside — the nearest such
-// statement above it in the file.
-func tablesDefiningFrozenRate(sql string) []string {
-	var tables []string
-	subject := ""
-	for line := range strings.SplitSeq(sql, "\n") {
-		if m := tableStatement.FindStringSubmatch(line); m != nil {
-			subject = m[1]
-		}
-		if subject != "" && frozenRateColumn.MatchString(line) {
-			tables = append(tables, subject)
-		}
-	}
-	return tables
-}
-
-var tableStatement = regexp.MustCompile(`(?i)^\s*(?:CREATE TABLE(?:\s+IF NOT EXISTS)?|ALTER TABLE)\s+([a-z_][a-z0-9_]*)`)
 
 func contains(haystack []string, needle string) bool {
 	return slices.Contains(haystack, needle)
@@ -143,7 +95,7 @@ func TestNoArchiveColumnIsOnlyPassedForTablesWithoutOne(t *testing.T) {
 	// whole guard exists around; if the schema reader cannot see its
 	// archived_at, it is reading nothing.
 	if !archivable["company"] {
-		t.Fatal("the migration reader found no archived_at on company — it has stopped reading the schema it derives from")
+		t.Fatal("the catalog reader found no archived_at on company — it has stopped reading the schema it derives from")
 	}
 	claimed := tablesPassedNoArchiveColumn(t)
 	if len(claimed) == 0 {
@@ -184,34 +136,7 @@ func tablesPassedNoArchiveColumn(t *testing.T) map[string]string {
 	return found
 }
 
-var archivedAtColumn = regexp.MustCompile(`(?i)\barchived_at\s+timestamptz`)
-
 func tablesWithArchivedAt(t *testing.T) map[string]bool {
 	t.Helper()
-	found := map[string]bool{}
-	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
-				return err
-			}
-			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- a *.up.sql file from walking the trusted migrations tree
-			if err != nil {
-				return err
-			}
-			subject := ""
-			for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
-				if m := tableStatement.FindStringSubmatch(line); m != nil {
-					subject = m[1]
-				}
-				if subject != "" && archivedAtColumn.MatchString(line) {
-					found[subject] = true
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("walking %s: %v", root, err)
-		}
-	}
-	return found
+	return parseHeadCatalog(t).tablesWithColumn("archived_at", "timestamp with time zone")
 }

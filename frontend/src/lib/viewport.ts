@@ -18,6 +18,11 @@ export const PHONE_MAX_WIDTH = 700;
 // fails a fold block that spells another number.
 export const FOLD_MAX_WIDTH = 720;
 
+// From this width a list's pager draws seven slots and the words Previous and
+// Next. Below it, on a tablet or a phone, it draws five and chevrons. No
+// stylesheet reads it: the strip's slots are counted in code.
+export const DESKTOP_MIN_WIDTH = 1024;
+
 // The width at which a LIST HEADER stops fitting its verbs. Below it the row of
 // actions folds into one overflow menu (design-system/listsurface.tsx). It is
 // wider than the phone breakpoint on purpose: nothing about the shell changes
@@ -68,6 +73,11 @@ export function useCoarsePointer(): boolean {
 /** Whether the viewport is at phone width, where the sidebar is a bottom bar. */
 export function usePhoneViewport(): boolean {
   return useViewportUnder(PHONE_MAX_WIDTH);
+}
+
+/** Whether the viewport is narrower than a desktop, a tablet's or a phone's. */
+export function useBelowDesktop(): boolean {
+  return useViewportUnder(DESKTOP_MIN_WIDTH - 1);
 }
 
 /** Whether the layout has folded to its narrow arrangement. */

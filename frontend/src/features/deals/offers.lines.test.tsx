@@ -220,7 +220,6 @@ describe("a line row", () => {
     await screen.findByText("ANG-2026-0007");
 
     for (const column of [
-      "Position",
       "Description",
       "Unit",
       "Quantity",
@@ -233,6 +232,46 @@ describe("a line row", () => {
     expect(screen.getByRole("button", { name: "Remove line 2" })).toBe(
       screen.getByTestId("remove-line-li-2"),
     );
+    expect(
+      screen.getByRole("button", { name: "Move Workshop, line 2 of 2" }),
+    ).toBeTruthy();
+  });
+
+  it("moves a line up by its grip and sends only its new place", async () => {
+    const user = userEvent.setup();
+    const moved = draft([
+      { ...line2, position: 1 },
+      { ...line1, position: 2 },
+    ]);
+    const calls = serve(draft([line1, line2]), () => ({
+      status: 200,
+      body: moved,
+    }));
+    renderOffer();
+    const grip = await screen.findByRole("button", {
+      name: "Move Workshop, line 2 of 2",
+    });
+    grip.focus();
+    await user.keyboard("{ArrowUp}");
+
+    await waitFor(() => expect(calls).toHaveLength(1));
+    expect(calls[0].url).toMatch(/\/offers\/o-1\/line-items\/li-2$/);
+    expect(calls[0].body).toEqual({ position: 1 });
+    expect(
+      await screen.findByRole("button", { name: "Move Workshop, line 1 of 2" }),
+    ).toBeTruthy();
+  });
+
+  it("names the grip of a line with no description by its place", async () => {
+    serve(draft([line1, { ...line2, description: "  " }]), () => ({
+      status: 500,
+      body: {},
+    }));
+    renderOffer();
+
+    expect(
+      await screen.findByRole("button", { name: "Move line 2 of 2" }),
+    ).toBeTruthy();
   });
 
   it("names each line's own unit box after its line", async () => {

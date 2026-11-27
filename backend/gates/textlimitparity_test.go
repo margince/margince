@@ -7,18 +7,21 @@
 
 package gates
 
-// Each text cap a module applies is a hand-typed mirror of a number
+// Each text cap the server applies is a hand-typed mirror of a number
 // `api/crm.yaml` publishes, because the generated server enforces no string
 // length. This gate fails the day one of them drifts. Raise the contract alone
 // and the server refuses what the schema calls valid. Raise the constant alone
 // and a client truncates to a bound nobody applies. A cap joins the list when a
-// module copies the number instead of reading it.
+// package copies the number instead of reading it.
 
 import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"reflect"
+	"slices"
 	"strconv"
+	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -81,6 +84,62 @@ var textLimits = []textLimit{
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusName", corpusBody("patch", "/knowledge/corpora/{id}", "name")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusTopic", corpusBody("patch", "/knowledge/corpora/{id}", "topic_statement")},
 	{"internal/modules/knowledge/corpustext.go", "maxCorpusDescription", corpusBody("patch", "/knowledge/corpora/{id}", "description")},
+	{"internal/modules/contacts/contacttextbounds.go", "ContactNameLimit", schemaProperty("CreateLeadRequest", "full_name")},
+	{"internal/modules/contacts/contacttextbounds.go", "ContactNameLimit", schemaProperty("UpdateLeadRequest", "full_name")},
+	{
+		"internal/modules/deals/win_evidence.go", "maxWonReasonDetail",
+		schemaPath("components", "schemas", "AdvanceDealRequest", "properties", "won_without_contract_detail"),
+	},
+	{
+		"internal/shared/kernel/statedreason/statedreason.go", "Max",
+		schemaPath("components", "schemas", "RetentionOverrideRequest", "properties", "reason"),
+	},
+	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "CreateCompanyRequest", "properties", "description")},
+	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "UpdateCompanyRequest", "properties", "description")},
+	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "CreateDealRequest", "properties", "description")},
+	{sharedTextLimits, "TextDocumentCharacters", schemaPath("components", "schemas", "UpdateDealRequest", "properties", "description")},
+}
+
+// sourceBodies are the create bodies whose free-text `source` goes through
+// provenance.RefuseSource, which refuses it past SourceIDMax.
+var sourceBodies = []string{
+	"AddDealRoomDocumentRequest", "CreateActivityRequest",
+	"CreateDealRoomRequest", "CreateTaskRequest", "InviteDealRoomParticipantRequest",
+	"OpenDealRoomThreadRequest", "PostDealRoomCommentRequest",
+}
+
+// emailPaths are the addresses whose writer parses them with values.ParseEmail,
+// which refuses one past MaxEmailLength.
+var emailPaths = [][]string{
+	schemaProperty("ContactEmailInput", "email"), schemaProperty("QuickCaptureContactRequest", "email"),
+	schemaProperty("CreateLeadRequest", "email"), schemaProperty("UpdateLeadRequest", "email"),
+	schemaProperty("CreateCompanyRequest", "email"), schemaProperty("UpdateCompanyRequest", "email"),
+	schemaProperty("InviteDealRoomParticipantRequest", "email"), schemaProperty("UpdateDealRoomParticipantRequest", "email"),
+	schemaProperty("InviteUserRequest", "email"),
+}
+
+// sharedCapLimits are the caps one shared function applies to many bodies.
+func sharedCapLimits() []textLimit {
+	var limits []textLimit
+	for _, body := range sourceBodies {
+		limits = append(limits, textLimit{"internal/shared/kernel/provenance/sourceid.go", "SourceIDMax", schemaProperty(body, "source")})
+	}
+	for _, path := range emailPaths {
+		limits = append(limits, textLimit{"internal/shared/kernel/values/email.go", "MaxEmailLength", path})
+	}
+	return limits
+}
+
+// Create ceilings are unconditional. Replace-set updates admit stored lists
+// past those ceilings, which maxItems cannot express.
+var createListLimits = []textLimit{
+	{"internal/modules/contacts/listcaps.go", "maxContactEmails", schemaProperty("CreateContactRequest", "emails")},
+	{"internal/modules/contacts/listcaps.go", "maxContactPhones", schemaProperty("CreateContactRequest", "phones")},
+	{"internal/modules/contacts/listcaps.go", "maxCompanyDomains", schemaProperty("CreateCompanyRequest", "domains")},
+}
+
+func schemaProperty(schema, property string) []string {
+	return schemaPath("components", "schemas", schema, "properties", property)
 }
 
 func corpusBody(method, route, property string) []string {
@@ -89,7 +148,75 @@ func corpusBody(method, route, property string) []string {
 
 func TestEachMirroredTextCapIsTheContractsMaxLength(t *testing.T) {
 	t.Parallel()
+	doc := textLimitsContract(t)
+	for _, limit := range slices.Concat(textLimits, sharedCapLimits()) {
+		published := publishedBound(t, doc, limit.path, "maxLength")
+		if applied := appliedIntConst(t, limit.file, limit.constant); applied != published {
+			t.Errorf("%s in %s applies %d and api/crm.yaml publishes maxLength %d at %v — one refuses what the other calls valid",
+				limit.constant, limit.file, applied, published, limit.path)
+		}
+	}
+}
 
+func TestEachMirroredListCapIsTheContractsMaxItems(t *testing.T) {
+	t.Parallel()
+	doc := textLimitsContract(t)
+	for _, limit := range createListLimits {
+		published := publishedBound(t, doc, limit.path, "maxItems")
+		if applied := appliedIntConst(t, limit.file, limit.constant); applied != published {
+			t.Errorf("%s applies %d and api/crm.yaml publishes maxItems %d at %v — one refuses what the other calls valid",
+				limit.constant, applied, published, limit.path)
+		}
+	}
+}
+
+func TestReplaceSetSchemasAdmitStoredListsPastTheCreateCap(t *testing.T) {
+	t.Parallel()
+	doc := textLimitsContract(t)
+	for _, limit := range createListLimits {
+		path := slices.Clone(limit.path)
+		path[2] = "Update" + strings.TrimPrefix(path[2], "Create")
+		if _, bounded := textLimitSchema(t, doc, path)["maxItems"]; bounded {
+			t.Errorf("%v has maxItems: remove the unconditional ceiling so oversized stored lists can shrink", path)
+		}
+	}
+}
+
+func TestEmailReferenceSchemasAdmitStoredAddressesPastTheWriteCap(t *testing.T) {
+	t.Parallel()
+	doc := textLimitsContract(t)
+	for _, path := range [][]string{
+		schemaProperty("UpdateMemberRequest", "email"),
+		schemaProperty("ContactEmailReplacementInput", "email"),
+		schemaProperty("FormerMemberRequest", "email"),
+		schemaProperty("DealRoomLinkRequest", "email"),
+		corpusBody("post", "/auth/forgot-password", "email"),
+	} {
+		if _, bounded := textLimitSchema(t, doc, path)["maxLength"]; bounded {
+			t.Errorf("%v has maxLength: existing addresses must reach their lookup or unchanged-value check", path)
+		}
+	}
+}
+
+func TestContactEmailReplacementMirrorsTheCreateShape(t *testing.T) {
+	t.Parallel()
+	doc := textLimitsContract(t)
+	create := textLimitSchema(t, doc, schemaPath("components", "schemas", "ContactEmailInput"))
+	replace := textLimitSchema(t, doc, schemaPath("components", "schemas", "ContactEmailReplacementInput"))
+	if replace["x-go-type"] != "ContactEmailInput" {
+		t.Fatal("contact replacements must use the create shape's generated Go mapping")
+	}
+	delete(replace, "x-go-type")
+	delete(create, "description")
+	delete(replace, "description")
+	delete(textLimitSchema(t, doc, schemaProperty("ContactEmailInput", "email")), "maxLength")
+	if !reflect.DeepEqual(create, replace) {
+		t.Error("contact email creation and replacement differ beyond the address ceiling")
+	}
+}
+
+func textLimitsContract(t *testing.T) map[string]any {
+	t.Helper()
 	raw, err := gatekit.ReadFile("api/crm.yaml")
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
@@ -98,19 +225,28 @@ func TestEachMirroredTextCapIsTheContractsMaxLength(t *testing.T) {
 	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
-	for _, limit := range textLimits {
-		published := publishedMaxLength(t, doc, limit.path)
-		if applied := appliedIntConst(t, limit.file, limit.constant); applied != published {
-			t.Errorf("%s applies %d and api/crm.yaml publishes maxLength %d at %v — one refuses what the other calls valid",
-				limit.constant, applied, published, limit.path)
-		}
-	}
+	return doc
 }
 
-// publishedMaxLength walks the contract to a schema node and answers its
-// maxLength. It fails when the node moved or carries none, because a gate
-// whose subject vanished must say so rather than pass over nothing.
 func publishedMaxLength(t *testing.T, doc map[string]any, path []string) int {
+	t.Helper()
+	return publishedBound(t, doc, path, "maxLength")
+}
+
+// publishedBound walks the contract to a schema node and answers its bound
+// keyword. It fails when the node moved or carries none, because a gate
+// whose subject vanished must say so rather than pass over nothing.
+func publishedBound(t *testing.T, doc map[string]any, path []string, keyword string) int {
+	t.Helper()
+	schema := textLimitSchema(t, doc, path)
+	bound, ok := schema[keyword].(int)
+	if !ok || bound <= 0 {
+		t.Fatalf("api/crm.yaml %v publishes no positive %s — retire the cap from this gate or restore the bound", path, keyword)
+	}
+	return bound
+}
+
+func textLimitSchema(t *testing.T, doc map[string]any, path []string) map[string]any {
 	t.Helper()
 	var node any = doc
 	for _, key := range path {
@@ -126,14 +262,10 @@ func publishedMaxLength(t *testing.T, doc map[string]any, path []string) int {
 	if !ok {
 		t.Fatalf("api/crm.yaml %v is not a schema node", path)
 	}
-	length, ok := schema["maxLength"].(int)
-	if !ok || length <= 0 {
-		t.Fatalf("api/crm.yaml %v publishes no positive maxLength — retire the cap from this gate or restore the bound", path)
-	}
-	return length
+	return schema
 }
 
-// appliedIntConst reads a module's integer constant from source. The constants
+// appliedIntConst reads a package's integer constant from source. The constants
 // stay unexported: exporting one to suit a gate would widen the surface to make
 // the check convenient.
 // sharedTextLimits declares the four shared limits a cap may name instead of a literal.

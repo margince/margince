@@ -143,6 +143,8 @@ const STORED_COLUMN_LABELS = new Map<string, MessageKey>([
 // this lookup carries no entity context, so `suppression_kind` rather than
 // `kind`.
 const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
+  ["source_changed", "history.field.chat_source_changed"],
+  ["source_deleted", "history.field.chat_source_deleted"],
   ["kind", "history.field.kind"],
   ["capability", "co.factField.capability"],
   ["certification", "co.factField.certification"],
@@ -439,9 +441,9 @@ export function hasFieldWord(field: string): boolean {
   return fieldWordKey(field) !== undefined;
 }
 
-// The same map as a lookup, for the census that holds it against the contract.
+// Field pickers and History share labels for request and stored columns.
 export function historyFieldLabelKey(field: string): MessageKey | undefined {
-  return HISTORY_FIELD_LABELS.get(field);
+  return fieldWordKey(field);
 }
 
 // The synthetic map's own keys, for the test that holds each one to an i18n

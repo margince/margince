@@ -46,7 +46,10 @@ const (
 	// Raised by 1 for reportexactrange.go, which withholds a report number past the
 	// exact range at every scan that puts report numbers on the wire.
 	// Raised by 1 for the seat-bound deal reads a unit asks as its own user.
-	composeRootProductionFiles = 1392
+	// Raised by the files develop's import, analytics and release fixes added,
+	// met with main's in the back-sync.
+	// Provider callbacks bind private Server state; shared engines live in subpackages.
+	composeRootProductionFiles = 1_402
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -68,7 +71,12 @@ const (
 	// jobs, which drive the unexported job and effect wiring.
 	// Raised by 1 test file for the link suggestion tools an agent reads and
 	// answers through, which read the unexported tool registry.
-	composeRootTestFiles = 1936
+	// Raised by 2 production and 2 test files for the How it stands job and the
+	// task explanation's certification case, which reuses the unexported contact
+	// brief fixture.
+	// Raised by 1 test file for the re-ingest vector reuse cases, which drive the
+	// unexported knowledge ingest worker.
+	composeRootTestFiles = 1_941
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -103,6 +111,8 @@ const (
 	// extractor and transcript proposer.
 	// Raised by 49 test lines for the gate that keeps an agent's offered text from
 	// naming a tool it is not offered. It drives the unexported scheduled catalog.
+	// Raised by 64 test lines for the offer draft cases that read the tax from the
+	// sheet. They drive the unexported offer drafter and its staged line.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
 	// Raised by 21 test lines when main's root compose cases met develop's in the
@@ -154,13 +164,42 @@ const (
 	// and its cases, met with develop's in the sync.
 	// Raised by 64 production lines and 1 test line when develop's chat
 	// clarification ask met the sync; develop's own ceiling already covers them.
-	composeRootProductionLines = 232_606
+	// Raised by 2 production and 27 test lines for the unread mail period on the
+	// owner's connection row, mapped and checked in the unexported connection wire.
+	// Raised by 44 test lines for the contact page reads the plan reuse census
+	// drives through its unexported statement recorder and partial index check.
+	// Raised by 1 production line when main's forecast scope label met develop
+	// in the sync.
+	// Raised by 231 production and 190 test lines. They hold
+	// the How it stands job and its page case, and the task explanation's
+	// certification case and its test. The job needs the unexported job
+	// context; the cases drive the contact page.
+	// Raised by develop's import, analytics and release fixes met with main's.
+	// Raised by 1 production line for the notices handlers' mail delivery, set on
+	// the unexported server options.
+	composeRootProductionLines = 233_827
 	// Raised by 18 test lines for the link suggestion tool cases.
 	// Raised by 2 test lines for the actor census waivers of the two jobs that
 	// bind their colleague inside a method.
 	// Raised by 48 test lines for main's gate that keeps an agent's offered text
 	// from naming a tool it is not offered.
-	composeRootTestLines = 364_131
+	// Raised by 37 test lines for main's unread mail period and contact page
+	// census cases, met with develop's in the sync.
+	// Raised by 1 test line when main's forecast scope label case met develop
+	// in the sync.
+	// Raised by 11 test lines for develop's shared-calendar meeting party cases.
+	// Raised by 5 test lines for the full seat a take test now binds.
+	// Raised by 64 test lines for the offer draft cases that read the tax from the
+	// sheet. They drive the unexported offer drafter and its staged line.
+	// Raised by 197 test lines for the re-ingest vector reuse cases, which drive
+	// the unexported knowledge ingest worker and its embedder fixture.
+	// Raised by 3 test lines for the generated Prefer parameter the unwired
+	// transcript read now takes.
+	// Raised by 1 test line for the second staged approval in the site-read
+	// finish case, which checks a repeated id keeps its first place.
+	// Raised by 21 test lines for the case that reads a timeline entry's request
+	// state into the deal status input, which is unexported.
+	composeRootTestLines = 364_269
 )
 
 // A read under these floors stopped early or read the wrong place, and would

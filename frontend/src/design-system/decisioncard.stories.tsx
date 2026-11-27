@@ -598,7 +598,7 @@ export const DecidedRejected: Story = {
 const FOLLOW_UP = approval({
   kind: "deal_follow_up",
   summary:
-    'Draft a follow-up on "Helvetia Rail pilot" — the email on 9 Nov 2026 left no next step planned',
+    'Draft a follow-up on "Helvetia Rail pilot": the email on 9 Nov 2026 left no next step planned',
   proposed_change: {
     subject: "Follow up on Helvetia Rail pilot",
     due_date: "2026-11-12",

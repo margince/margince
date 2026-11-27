@@ -95,7 +95,11 @@ const WebFormSource = "web_form"
 // is the channel, the talk's first message and the record, so a replay files
 // nothing. A client that could spell it would claim a summary before it is
 // written.
-const ChatSummarySource = "dispact"
+const (
+	ChatSummarySource = "dispact"
+	// ChatSummaryOrigin identifies recaps whose source provenance must remain traceable.
+	ChatSummaryOrigin = "chat_links"
+)
 
 // WebsiteInquirySource binds a task and its handling run to one accepted submission.
 const WebsiteInquirySource = "website_inquiry"
@@ -204,6 +208,13 @@ func EngineReminderSources() []string {
 // Inquiry work keeps its own lifecycle and is not a quiet-account reminder.
 func EngineTaskSources() []string {
 	return append(EngineReminderSources(), WebsiteInquirySource, LeadForContactSource)
+}
+
+// SystemTaskSources are the identities of the work the system opens under its
+// own name, which a follow-up completes. Such work may also name none. Another
+// writer's task, such as a commitment's, keeps its own lifecycle.
+func SystemTaskSources() []string {
+	return append(EngineTaskSources(), LeadSLATaskSource, AssuranceTaskSource, LeadRepliedSource)
 }
 
 // EngineTaskSource reports whether source is one of EngineTaskSources.
@@ -351,7 +362,7 @@ func RefuseWireAdmitting(source string, sourceSystem *string, importer bool) err
 			return err
 		}
 	}
-	return Refuse("source", source)
+	return RefuseSource(source)
 }
 
 // Refuse guards ONE provenance field on a create wire. The flip stamps

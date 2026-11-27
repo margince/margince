@@ -56,7 +56,7 @@ func subjectAuthoredMessages(ctx context.Context, tx pgx.Tx, contactID ids.Conta
 	if err != nil {
 		return nil, err
 	}
-	return reach.activities(ctx, tx, contactID, []string{"from"})
+	return reach.activities(ctx, tx, contactID, []string{senderRole})
 }
 
 // subjectMessages resolves, once per export, every mail the subject sent or
@@ -91,7 +91,10 @@ func subjectHasMessage(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, 
 	return found, nil
 }
 
-var subjectMessageRoles = []string{"from", "to", "cc", "bcc"}
+// senderRole is the participant role of the one who sent a message.
+const senderRole = "from"
+
+var subjectMessageRoles = []string{senderRole, "to", "cc", "bcc"}
 
 // messageArms holds the participant arms both selectors share. One arm per
 // index, so each can use its own: the link, the participant's contact,

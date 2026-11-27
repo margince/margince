@@ -144,7 +144,14 @@ func (h Handlers) ConfirmMyTotp(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, httperr.Validation("code", "required", "the authenticator code is required"))
 		return
 	}
-	recovery, err := h.svc.ConfirmTOTP(r.Context(), req.Code, currentSessionHash(r))
+	// The current password authorizes the confirmation, with change-password's budget and refusals.
+	if !h.admitPasswordProof(w, r, req.CurrentPassword) {
+		return
+	}
+	recovery, err := h.svc.ConfirmTOTP(r.Context(), req.CurrentPassword, req.Code, currentSessionHash(r))
+	if h.writePasswordProofRefusal(w, r, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, errBadMFACode):
 		httperr.Unauthorized(w, r, "the code is not valid")

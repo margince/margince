@@ -37,12 +37,6 @@ export const WALKERS: ReadonlyMap<string, ReadonlySet<string>> = new Map([
     "extensionFrontendFiles",
   ),
   walker(join(srcDir, "testing", "screenfiles.ts"), "screenFiles"),
-  walker(
-    lib("conformance-corpus.ts"),
-    "sourceFiles",
-    "extensionFrontends",
-    "files",
-  ),
   walker(lib("css-rules.ts"), "appStylesheets"),
   walker(lib("dialoglayout.corpus.ts"), "markupFiles", "sheetTexts"),
   walker(lib("dialoglayout.ts"), "markupFiles", "sheetTexts"),

@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"io"
+	"log/slog"
 	"net/http"
 	"time"
 
@@ -39,10 +40,11 @@ var (
 
 // Delivery is one signed request as it arrived.
 type Delivery struct {
-	ID        string
-	Timestamp string
-	Signature string
-	Body      []byte
+	Authorization string
+	ID            string
+	Timestamp     string
+	Signature     string
+	Body          []byte
 }
 
 // EventReceiver verifies one delivery and acts on it. compose implements it,
@@ -54,8 +56,14 @@ type EventReceiver interface {
 // EventHandlers is the push receiver's transport. A role that composes no
 // receiver leaves it zero, and the route answers 503.
 type EventHandlers struct {
-	receiver EventReceiver
-	perPeer  *ratelimit.Limiter
+	graph     EventReceiver
+	graphPeer *ratelimit.Limiter
+	teams     EventReceiver
+	teamsPeer *ratelimit.Limiter
+	receiver  EventReceiver
+	slack     EventReceiver
+	slackPeer *ratelimit.Limiter
+	perPeer   *ratelimit.Limiter
 }
 
 // NewEventHandlers wires the transport over the receiver.
@@ -75,19 +83,79 @@ func eventHandlersOn(receiver EventReceiver, newLimiter func(string, ratelimit.K
 
 // ReceiveDispactChannelEvent takes one signed notice from Dispact.
 func (h EventHandlers) ReceiveDispactChannelEvent(w http.ResponseWriter, r *http.Request) {
-	if h.receiver == nil {
+	h.receiveEvent(w, r, h.receiver, h.perPeer, MaxEventBody, "dispact")
+}
+
+// WithSlack routes signed Slack notices through the common event boundary.
+func (h EventHandlers) WithSlack(receiver EventReceiver) EventHandlers {
+	h.slack = receiver
+	h.slackPeer = ratelimit.New("channel-events/slack", ratelimit.FailClosed, eventsPerMinute, time.Minute)
+	return h
+}
+
+// ReceiveSlackChannelEvent passes signed Slack notices to the shared event receiver.
+func (h EventHandlers) ReceiveSlackChannelEvent(w http.ResponseWriter, r *http.Request) {
+	h.receiveEvent(w, r, h.slack, h.slackPeer, 1<<20, "slack")
+}
+
+// WithTeams routes verified Bot Framework activities through the common event boundary.
+func (h EventHandlers) WithTeams(receiver EventReceiver) EventHandlers {
+	h.teams = receiver
+	h.teamsPeer = ratelimit.New("channel-events/teams/bot", ratelimit.FailClosed, eventsPerMinute, time.Minute)
+	return h
+}
+
+// ReceiveTeamsBotActivity validates Bot Framework activities before recording their source binding.
+func (h EventHandlers) ReceiveTeamsBotActivity(w http.ResponseWriter, r *http.Request) {
+	h.receiveEvent(w, r, h.teams, h.teamsPeer, 1<<20, "teams")
+}
+
+// WithTeamsGraph routes validated Graph notifications through the common event boundary.
+func (h EventHandlers) WithTeamsGraph(receiver EventReceiver) EventHandlers {
+	h.graph = receiver
+	h.graphPeer = ratelimit.New("channel-events/teams/graph", ratelimit.FailClosed, eventsPerMinute, time.Minute)
+	return h
+}
+
+// ReceiveTeamsGraphNotification validates the notification binding before reading channel changes.
+func (h EventHandlers) ReceiveTeamsGraphNotification(w http.ResponseWriter, r *http.Request, params crmcontracts.ReceiveTeamsGraphNotificationParams) {
+	if params.ValidationToken != nil {
+		if len(*params.ValidationToken) == 0 || len(*params.ValidationToken) > 4096 {
+			writeEventErr(w, r, ErrEventMalformed)
+			return
+		}
+		if h.graph == nil || h.graphPeer == nil {
+			writeEventErr(w, r, ErrEventsUnavailable)
+			return
+		}
+		if !h.graphPeer.Allow(httpserver.ClientIP(r)) {
+			httperr.Write(w, r, &httperr.DetailedError{Status: http.StatusTooManyRequests, Code: failureRateLimited, RetryAfterSeconds: h.graphPeer.RetryAfterSeconds(), Detail: "Too many validation requests. Retry after the wait."})
+			return
+		}
+		w.Header().Set("Content-Type", "text/plain; charset=utf-8")
+		w.Header().Set("X-Content-Type-Options", "nosniff")
+		if _, err := io.WriteString(w, *params.ValidationToken); err != nil {
+			slog.Default().ErrorContext(r.Context(), "write notification validation response", "error", err)
+		}
+		return
+	}
+	h.receiveEvent(w, r, h.graph, h.graphPeer, 1<<20, "teams_graph")
+}
+
+func (h EventHandlers) receiveEvent(w http.ResponseWriter, r *http.Request, receiver EventReceiver, peer *ratelimit.Limiter, bodyLimit int64, provider string) {
+	if receiver == nil || peer == nil {
 		writeEventErr(w, r, ErrEventsUnavailable)
 		return
 	}
-	if !h.perPeer.Allow(httpserver.ClientIP(r)) {
-		ratelimit.SetHeaders(w.Header(), h.perPeer.Limit(), h.perPeer.RetryAfterSeconds())
+	if !peer.Allow(httpserver.ClientIP(r)) {
+		ratelimit.SetHeaders(w.Header(), peer.Limit(), peer.RetryAfterSeconds())
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusTooManyRequests, Code: "rate_limited",
-			RetryAfterSeconds: h.perPeer.RetryAfterSeconds(), Detail: "Too many notices. Send it again after the wait.",
+			RetryAfterSeconds: peer.RetryAfterSeconds(), Detail: "Too many notices. Send it again after the wait.",
 		})
 		return
 	}
-	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, MaxEventBody))
+	body, err := io.ReadAll(http.MaxBytesReader(w, r.Body, bodyLimit))
 	if _, tooLarge := errors.AsType[*http.MaxBytesError](err); tooLarge {
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusRequestEntityTooLarge, Code: "channel_event_too_large",
@@ -99,12 +167,18 @@ func (h EventHandlers) ReceiveDispactChannelEvent(w http.ResponseWriter, r *http
 		writeEventErr(w, r, ErrEventMalformed)
 		return
 	}
-	receipt, err := h.receiver.Receive(r.Context(), Delivery{
-		ID:        r.Header.Get("webhook-id"),
-		Timestamp: r.Header.Get("webhook-timestamp"),
-		Signature: r.Header.Get("webhook-signature"),
-		Body:      body,
-	})
+	delivery := Delivery{
+		Authorization: r.Header.Get("Authorization"),
+		ID:            r.Header.Get("webhook-id"),
+		Timestamp:     r.Header.Get("webhook-timestamp"),
+		Signature:     r.Header.Get("webhook-signature"),
+		Body:          body,
+	}
+	if provider == "slack" {
+		delivery.Timestamp = r.Header.Get("X-Slack-Request-Timestamp")
+		delivery.Signature = r.Header.Get("X-Slack-Signature")
+	}
+	receipt, err := receiver.Receive(r.Context(), delivery)
 	if err != nil {
 		writeEventErr(w, r, err)
 		return
@@ -121,8 +195,8 @@ var eventRefusals = []struct {
 	code   string
 	detail string
 }{
-	{ErrEventRejected, http.StatusUnauthorized, "channel_event_rejected", "The notice is not signed by the connected Dispact bot."},
-	{ErrEventMalformed, http.StatusBadRequest, "channel_event_malformed", "The body is not a Dispact notice."},
+	{ErrEventRejected, http.StatusUnauthorized, "channel_event_rejected", "The notice is not signed by the connected provider."},
+	{ErrEventMalformed, http.StatusBadRequest, "channel_event_malformed", "The body is not a provider notice."},
 	{ErrEventsUnavailable, http.StatusServiceUnavailable, "channel_events_unavailable", "The notice could not be taken now. Send it again later."},
 }
 

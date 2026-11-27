@@ -262,7 +262,12 @@ func activityColumns(ctx context.Context, contentArm string, arg func(any) int) 
 		case "a.body":
 			out[i] = "CASE WHEN (" + contentArm + ") THEN a.body END AS body"
 		case "a.raw":
-			out[i] = "CASE WHEN (" + contentArm + ") THEN a.raw END AS raw"
+			out[i] = "CASE WHEN (" + contentArm + ") THEN " + chatSourceReadSQL(ctx, "a.raw", safeChatMetadataSQL) + " END AS raw"
+		case "a.source_id":
+			out[i] = chatSourceReadSQL(ctx, "a.source_id", "NULL")
+			if out[i] != c.sql {
+				out[i] += " AS source_id"
+			}
 		default:
 			out[i] = c.sql
 		}
@@ -423,58 +428,6 @@ func automaticKindToWire(row relstrength.Evidence) *crmcontracts.ActivityAutomat
 	}
 	wire := crmcontracts.ActivityAutomaticKind(kind)
 	return &wire
-}
-
-// RowEmailSummary is the email row's fields, for the kind that has them.
-//
-// Exported because compose/contact360 assembles its own Activity from a
-// hand-written twin of this projection and cannot reach record(). That twin is
-// why this is exported rather than private: it has gone missing a column twice
-// before, and a summary it did not carry would make the contract's "present
-// exactly when kind=email" false on the contact page alone.
-//
-// Present exactly when kind=email, so a reader branches on the field rather
-// than on the kind word: a call and a note are activities too, and neither has
-// an email's shape. A withheld row still gets a summary — the status says the
-// content is not this caller's, which is what keeps a withheld row visibly
-// withheld rather than absent.
-func RowEmailSummary(a crmcontracts.Activity) *crmcontracts.EmailSummary {
-	if a.Kind != crmcontracts.ActivityKindEmail {
-		return nil
-	}
-	withheld := a.ContentState != nil && *a.ContentState == crmcontracts.ActivityContentStateWithheld
-	summary := crmcontracts.EmailSummary{
-		ActivityId:        a.Id,
-		OccurredAt:        a.OccurredAt,
-		OccurredPrecision: a.OccurredPrecision,
-		DisplayStatus:     crmcontracts.EmailAccessStatusWithheld,
-		Move:              crmcontracts.EmailSummaryMoveNone,
-	}
-	if a.Version != nil {
-		summary.Version = *a.Version
-	}
-	if a.Direction != nil {
-		d := crmcontracts.EmailSummaryDirection(*a.Direction)
-		summary.Direction = &d
-	}
-	if withheld {
-		return &summary
-	}
-	// The narrow word, always. This projection has no transaction and so cannot
-	// ask whether a workspace audience is narrowed by the records the message
-	// is filed against; WithEmailRowFacts asks that for the whole page and
-	// widens the rows that reach everyone. A label that guesses guesses DOWN.
-	summary.DisplayStatus = crmcontracts.EmailAccessStatusTeam
-	if a.Audience != nil {
-		summary.DisplayStatus = narrowStatusForAudience(*a.Audience)
-	}
-	summary.Subject = a.Subject
-	if a.Body != nil {
-		if preview := EmailSummaryText(*a.Body, deref(a.Subject)); preview != "" {
-			summary.Preview = &preview
-		}
-	}
-	return &summary
 }
 
 func (s *activityScan) contentProjection(ctx context.Context, a *crmcontracts.Activity) (*string, *string, *string) {

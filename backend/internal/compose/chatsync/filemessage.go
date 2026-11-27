@@ -13,14 +13,15 @@ import (
 	"errors"
 	"fmt"
 	"strconv"
-	"strings"
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/chatsummary"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -28,14 +29,17 @@ import (
 
 // Filer files a chosen channel message on its record.
 type Filer struct {
+	Reconfirm  ReconfirmationWriter
 	Pool       *pgxpool.Pool
 	Store      *chatlinks.Store
 	Chats      chatlinks.Chats
 	Activities *activities.Store
 	// Contacts resolves a chat author's address to a contact, so a restricted or
 	// erased subject's message is not filed.
-	Contacts *contacts.Store
-	Lane     ai.Completer
+	Contacts      *contacts.Store
+	Lane          ai.Completer
+	Reauthorize   func(context.Context) (context.Context, error)
+	PreviewOrigin func() string
 }
 
 // restricted answers which of the author addresses the summary must withhold.
@@ -47,57 +51,68 @@ func (f *Filer) restricted(ctx context.Context, emails []string) (map[string]boo
 // whole thread, and files one summary note. A ref is a seq, a #slug:seq, the
 // chat's <m:#slug:seq|…> mention, or a message link.
 func (f *Filer) FileMessage(ctx context.Context, kind string, id ids.UUID, ref string, thread bool) (crmcontracts.Activity, error) {
+	var err error
+	if f.Reauthorize != nil {
+		ctx, err = f.Reauthorize(ctx)
+		if err != nil {
+			return crmcontracts.Activity{}, err
+		}
+	}
 	link, err := f.Store.FilingLink(ctx, kind, id)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	seq, ok := messageSeq(ref, link.ChannelSlug)
-	if !ok {
-		return crmcontracts.Activity{}, chatlinks.ErrMessageNotFound
-	}
-	session, err := f.Chats.Open(ctx)
+
+	session, err := chatlinks.OpenProvider(ctx, f.Chats, link.Provider)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
 	if session.ConnectionID != link.ConnectionID {
 		return crmcontracts.Activity{}, chatlinks.ErrBotNotConnected
 	}
+	if _, err := chatlinks.LinkedChannel(ctx, session.Chat, link); err != nil {
+		return crmcontracts.Activity{}, err
+	}
+	if reader, ok := session.Chat.(chatwire.RootReader); ok {
+		return f.fileNativeMessage(ctx, session, link, reader, ref, thread)
+	}
+	seq, ok := dispact.MessageSequence(ref, link.ChannelSlug, thread)
+	if !ok {
+		return crmcontracts.Activity{}, chatlinks.ErrMessageNotFound
+	}
 	messages, err := chosenMessages(ctx, session.Chat, link, seq, thread)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	record, err := readRecord(ctx, f.Pool, link)
+	reply, err := f.summariseChosen(ctx, link, messages)
 	if err != nil {
 		return crmcontracts.Activity{}, err
 	}
-	reply, err := summariser{lane: f.Lane, pool: f.Pool, restricted: f.restricted}.summarise(ctx, link, record, messages, true)
-	// errUnmatchableAuthor is a restricted or unidentifiable author: like a
-	// missing model, it files nothing and answers that no summary is available.
-	if errors.Is(err, errNoModel) || errors.Is(err, errUnmatchableAuthor) {
-		return crmcontracts.Activity{}, chatlinks.ErrNoSummaryModel
-	}
-	if err != nil {
-		return crmcontracts.Activity{}, fmt.Errorf("%w: %w", chatlinks.ErrSummaryFailed, err)
+	if f.Reauthorize != nil {
+		ctx, err = f.Reauthorize(ctx)
+		if err != nil {
+			return crmcontracts.Activity{}, err
+		}
 	}
 	key := link.ChannelSlug + ":" + strconv.FormatInt(seq, 10) + ":message"
 	if thread {
 		key = link.ChannelSlug + ":" + strconv.FormatInt(seq, 10) + ":thread"
 	}
 	url := chatlinks.ChannelURL(session.Address, link.ChannelSlug)
-	return fileNote(ctx, filing{pool: f.Pool, store: f.Store, acts: f.Activities, link: link}, talkOf(key, url, messages), reply)
+	return fileNote(ctx, filing{reconfirm: f.Reconfirm, pool: f.Pool, store: f.Store, acts: f.Activities, link: link}, talkOf(key, url, messages), reply)
 }
 
 // chosenMessages reads the message at seq and, for a thread, the replies in
 // its thread that follow it, all posted since the link was made.
-func chosenMessages(ctx context.Context, chat chatlinks.Chat, link chatlinks.Link, seq int64, thread bool) ([]dispact.Message, error) {
+func chosenMessages(ctx context.Context, chat chatlinks.Chat, link chatlinks.Link, seq int64, thread bool) ([]chatwire.Message, error) {
 	from := seq - 1
 	link.HistoryCursor = &from
 	pages := 1
 	if thread {
 		pages = pullPages
 	}
-	var anchor *dispact.Message
-	read, err := readHistory(ctx, chat, link, pages, func(m dispact.Message) bool {
+	var anchor *chatwire.Message
+	read, err := readHistory(ctx, chat, link, pages, func(m chatwire.Message) bool {
 		if m.Seq == seq {
 			anchor = &m
 			return true
@@ -119,20 +134,19 @@ func chosenMessages(ctx context.Context, chat chatlinks.Chat, link chatlinks.Lin
 	return read.kept, nil
 }
 
-// messageSeq reads the seq out of a message reference, refusing one that
-// names another channel.
-func messageSeq(ref, slug string) (int64, bool) {
-	ref = strings.TrimSpace(ref)
-	if inner, ok := strings.CutPrefix(ref, "<m:"); ok {
-		ref, _, _ = strings.Cut(strings.TrimSuffix(inner, ">"), "|")
+func (f *Filer) summariseChosen(ctx context.Context, link chatlinks.Link, messages []chatwire.Message) (chatsummary.Reply, error) {
+	record, err := readRecord(ctx, f.Pool, link)
+	if err != nil {
+		return chatsummary.Reply{}, err
 	}
-	if channel, number, found := strings.Cut(ref, ":"); found {
-		if strings.ToLower(strings.TrimPrefix(channel, "#")) != slug {
-			return 0, false
-		}
-		// The thread-reply form names the thread's first message, then the reply.
-		ref, _, _ = strings.Cut(number, ":")
+	reply, err := summariser{lane: f.Lane, pool: f.Pool, restricted: f.restricted}.summarise(ctx, link, record, messages, true)
+	// errUnmatchableAuthor is a restricted or unidentifiable author: like a
+	// missing model, it files nothing and answers that no summary is available.
+	if errors.Is(err, errNoModel) || errors.Is(err, errUnmatchableAuthor) {
+		return chatsummary.Reply{}, chatlinks.ErrNoSummaryModel
 	}
-	seq, err := strconv.ParseInt(ref, 10, 64)
-	return seq, err == nil && seq > 0
+	if err != nil {
+		return chatsummary.Reply{}, fmt.Errorf("%w: %w", chatlinks.ErrSummaryFailed, err)
+	}
+	return reply, nil
 }

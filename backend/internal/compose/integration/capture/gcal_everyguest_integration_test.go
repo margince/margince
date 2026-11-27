@@ -472,7 +472,7 @@ func importMeetingUnder(
 		OccurredAt:   &start,
 		SourceSystem: &system,
 		SourceId:     &sourceID,
-		Source:       "hubspot_import:1",
+		Source:       "import",
 		IcalUid:      &uid,
 		IcalInstance: &instance,
 	}

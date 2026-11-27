@@ -1,4 +1,5 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
@@ -57,7 +58,9 @@ describe("ListTable alternate body paging ownership", () => {
       </LocaleProvider>,
     );
 
-    expect(screen.getByText("1 to 1 of 1 rows loaded")).toBeTruthy();
+    expect(document.querySelector(".lt-count")).toHaveTextContent(
+      /^1-1 of 1 loaded$/,
+    );
     expect(screen.getByRole("navigation", { name: "Pages" })).toBeTruthy();
   });
 

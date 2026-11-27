@@ -263,7 +263,7 @@ func TestADeliveryThroughTheRealHandlerRecordsAndRefuses(t *testing.T) {
 				}
 				return rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
 					_, coreErr = tx.Core().Activities().Create(ctx, crm.CreateActivityRequest{
-						Kind: crm.CreateActivityRequestKindNote, Source: "extension:probe",
+						Kind: crm.CreateActivityRequestKindNote, Source: "api",
 					})
 					return tx.Record(ctx,
 						extension.Change{

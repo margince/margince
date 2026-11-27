@@ -19,7 +19,7 @@ import (
 const (
 	// MigrationVersion is the migration that created the language table and put a
 	// foreign key on every language column.
-	MigrationVersion = "core/1795713760"
+	MigrationVersion = "core/1795772274"
 
 	// ReasonNotRegistered names a stored value the language table does not hold.
 	// Its sentence and remedy are in systemtext.
@@ -51,6 +51,9 @@ var columns = []column{
 	{table: "team_weekly_review", name: "summary_language", id: "id"},
 	{table: "legal_entity", name: "default_language", id: "id"},
 	{table: "offer", name: "language", id: "id"},
+	// A status line is keyed by the record it describes, so that record is
+	// what a reader is pointed to.
+	{table: "standing_line", name: "language", id: "entity_id"},
 	// A product's translations have no row id of their own, so the product is
 	// what a reader is pointed to.
 	{table: "product_translation", name: "language", id: "product_id"},

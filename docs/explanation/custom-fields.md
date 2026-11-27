@@ -50,7 +50,7 @@ Each type maps to one column type:
 The type names are written in three places: `ports/fieldcatalog`, the catalog's `CHECK` constraint (in
 `migrations/core/`), and `CF_TYPES` in `frontend/src/lib/customfields.logic.ts`. The engine's constants
 are the port's. `TestFieldTypes_IsTheCatalogCheckSet` holds the port against the `CHECK` in the head
-schema, and `backend/gates/frontendcustomfieldtypes_test.go` holds `CF_TYPES` against the port. Both fail
+schema, and `backend/gates/frontendvocabularymirrors_test.go` holds `CF_TYPES` against the port. Both fail
 in either direction.
 
 The admin never names the column. `label` is the only text a caller supplies. The engine derives the

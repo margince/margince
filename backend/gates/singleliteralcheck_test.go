@@ -41,10 +41,7 @@ type heldToOneValue string
 // oneValueColumns are the columns a CHECK holds to a single literal on purpose,
 // each naming the writer that makes it a discriminator rather than a default
 // nobody moves.
-var oneValueColumns = gatekit.Waive(map[heldToOneValue]string{
-	"chat_link.provider": "the chat a channel lives in, written by chatlinks.insertLink and read with the link. It " +
-		"carries no default, so a second chat (Slack) widens the CHECK rather than adding a column every reader must learn",
-})
+var oneValueColumns = gatekit.Waive(map[heldToOneValue]string{})
 
 // singleLiteralCheck matches a constraint whose WHOLE body equals a bare column
 // against one literal. Conditional forms — `x IS NULL OR col = 'lit'` — say

@@ -397,6 +397,9 @@ describe("the kinds the cut can be narrowed by", () => {
 
   it("leaves an unnarrowed read alone", () => {
     expect(conversationFilters({})).toEqual({});
+    expect(
+      conversationFilters({ chat_provider: "slack", q: "renewal" }),
+    ).toEqual({ q: "renewal", chat_provider: undefined });
   });
 
   it("asks the server for every conversation kind until the reader picks one", () => {

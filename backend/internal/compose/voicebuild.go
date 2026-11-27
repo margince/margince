@@ -145,7 +145,7 @@ func (w *voiceBuildWorker) reclaimAfter() time.Duration { return voiceBuildTimeo
 // both for the requester: visibleProfile admits only the profile owner. work
 // is nil when the requester left or lost their seat, and the build is then
 // failed through books.
-func (w *voiceBuildWorker) voiceBuildWorkerCtx(ctx context.Context, args VoiceBuildArgs) (books, work context.Context, err error) {
+func voiceBuildWorkerCtx(ctx context.Context, users *identity.Service, args VoiceBuildArgs) (books, work context.Context, err error) {
 	requester, err := ids.Parse(args.RequestedBy)
 	if err != nil {
 		return nil, nil, fmt.Errorf("voice_build: requester id: %w", err)
@@ -154,7 +154,7 @@ func (w *voiceBuildWorker) voiceBuildWorkerCtx(ctx context.Context, args VoiceBu
 	if err != nil {
 		return nil, nil, err
 	}
-	books, work, err = forColleague(principal.WithCorrelationID(ctx, ids.NewV7()), w.users, requester, voiceBuilder)
+	books, work, err = forColleague(principal.WithCorrelationID(ctx, ids.NewV7()), users, requester, voiceBuilder)
 	if err != nil && !workRefused(err) {
 		return nil, nil, err
 	}
@@ -164,7 +164,7 @@ func (w *voiceBuildWorker) voiceBuildWorkerCtx(ctx context.Context, args VoiceBu
 func (w *voiceBuildWorker) Work(ctx context.Context, job *river.Job[VoiceBuildArgs]) error {
 	// Into their own variables: voiceBuildWorkerCtx returns nils on an error,
 	// and assigning over ctx would hand that nil to the fault below.
-	books, work, err := w.voiceBuildWorkerCtx(ctx, job.Args)
+	books, work, err := voiceBuildWorkerCtx(ctx, w.users, job.Args)
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}

@@ -36,6 +36,7 @@ func (t journalMeterTx) Query(ctx context.Context, sql string, args ...any) (pgx
 	}
 	return rows, nil
 }
+
 func (t journalMeterTx) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
 	row := t.Tx.QueryRow(ctx, sql, args...)
 	if strings.Contains(sql, "source_changes") {
@@ -69,6 +70,7 @@ func (r journalMeterRow) Scan(dest ...any) error {
 	countJournalBytes(r.transferred, dest)
 	return nil
 }
+
 func countJournalBytes(total *int, dest []any) {
 	for _, value := range dest {
 		switch raw := value.(type) {
@@ -103,7 +105,7 @@ func TestSourceJournalTransfersEachPendingChangeWithoutRepeatingTheWholeDocument
 		}
 		meter := journalMeterTx{Tx: tx, transferred: &transferred}
 		previous := "Unrelated journal audit"
-		for i := 0; i < edits; i++ {
+		for i := range edits {
 			name := fmt.Sprintf("Unrelated journal audit %d", i)
 			if _, err := tx.Exec(ctx, `UPDATE company SET display_name=$2,version=version+1,updated_at=now() WHERE id=$1`, company, name); err != nil {
 				return err

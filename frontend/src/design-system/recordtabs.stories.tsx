@@ -348,3 +348,46 @@ function InPane() {
     </div>
   );
 }
+
+export const CountedCompanyAtPhoneWidth: Story = {
+  tags: ["uat-phone"],
+  parameters: { layout: "fullscreen" },
+  render: () => (
+    <div style={{ inlineSize: "390px", maxInlineSize: "100%" }}>
+      <RecordTabs
+        label="Company"
+        options={[
+          "overview",
+          "contacts",
+          "deals",
+          "projects",
+          "history",
+          "files",
+        ]}
+        value="overview"
+        onChange={() => undefined}
+        labels={{
+          overview: "Overview",
+          contacts: "Contacts",
+          deals: "Deals",
+          projects: "Projects",
+          history: "History",
+          files: "Files",
+        }}
+        counts={{ contacts: 10, deals: 3, projects: 2, history: 27, files: 8 }}
+      />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const strip = canvasElement.querySelector(".recordtabs-strip");
+    if (!(strip instanceof HTMLElement)) throw new Error("no tab strip drawn");
+    await waitFor(() =>
+      expect(strip.scrollWidth).toBeLessThanOrEqual(strip.clientWidth),
+    );
+    await expect(
+      within(canvasElement).getByRole("button", {
+        name: englishCopy["record.tabs.moreLabel"],
+      }),
+    ).toBeVisible();
+  },
+};

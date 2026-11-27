@@ -120,6 +120,10 @@ func rawSeatMatches(t *testing.T) []seatMatchSite {
 // seatMatchesIn reads one file's raw seat-login comparisons, in each of the
 // spellings above, and answers how many compared email operands it judged.
 func seatMatchesIn(path, source string) ([]seatMatchSite, int) {
+	// Every spelling names lower() and an email column.
+	if !mayHoldFolded(source, "lower") || !mayHoldFolded(source, "email") {
+		return nil, 0
+	}
 	var sites []seatMatchSite
 	operands := 0
 	aliases := boundTables(source)

@@ -14,6 +14,8 @@ import (
 	"regexp"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 const (
@@ -23,9 +25,6 @@ const (
 )
 
 var (
-	// A line comment, but not the `//` of a URL, which the package's tsComment
-	// would cut out of every help link.
-	tsLineComment  = regexp.MustCompile(`(?m)(^|[^:])//[^\n]*`)
 	tsStringList   = regexp.MustCompile(`"([a-z-]+)"`)
 	tsURLConst     = regexp.MustCompile(`const ([A-Z_]+) =\s*"(https://[^"]+)";`)
 	tsPathKey      = regexp.MustCompile(`(?m)^  "([a-z]+-[a-z]+)": \{`)
@@ -37,7 +36,7 @@ var (
 
 func TestTheAIAccessPageAndTheSkillReadmeOfferTheSameConnections(t *testing.T) {
 	t.Parallel()
-	module := tsLineComment.ReplaceAllString(readGateFile(t, aiConnectModule), "$1")
+	module := gatekit.TSWithoutComments(readGateFile(t, aiConnectModule))
 	paths := connectPathHelps(t, module)
 	readme := readGateFile(t, skillReadme)
 

@@ -13,6 +13,19 @@ import (
 	"testing"
 )
 
+func TestRedirectURIFaultNamesMalformedEscapes(t *testing.T) {
+	for raw, want := range map[string]string{
+		"https://client.example/%zz":      "a redirect URI must use valid percent-escapes",
+		"https://%zz.example/cb":          "a redirect URI must use valid percent-escapes",
+		"https://client.example/\n":       "a redirect URI must be an absolute URL",
+		"https://client.example/cb?q=%zz": "a redirect URI's query must be well formed",
+	} {
+		if got := redirectURIFault(raw); got != want {
+			t.Errorf("redirectURIFault(%q) = %q, want %q", raw, got, want)
+		}
+	}
+}
+
 func TestRedirectURIMatchingIsPortAgnosticForLoopbackOnly(t *testing.T) {
 	for name, tc := range map[string]struct {
 		registered, presented string
@@ -103,7 +116,7 @@ func TestClientResponseURICarriesOnlyOurAnswer(t *testing.T) {
 			"https://client.example/cb?code=AUTHCODE",
 		},
 
-		// validRedirectURI refuses a fragment at registration; matching is
+		// redirectURIFault refuses a fragment at registration; matching is
 		// port/scheme/host/path only, so a loopback client can present one
 		// anyway. It must not ride into the Location.
 		"a smuggled fragment is dropped": {
@@ -132,8 +145,8 @@ func TestClientResponseURICarriesOnlyOurAnswer(t *testing.T) {
 func TestClientResponseURIRefusesAQueryItCannotReproduce(t *testing.T) {
 	const malformed = "https://client.example/cb?%zz=1&ok=2"
 
-	if validRedirectURI(malformed) {
-		t.Fatalf("validRedirectURI(%q) = true, want false: an undecodable query must be refused at registration", malformed)
+	if redirectURIFault(malformed) == "" {
+		t.Fatalf("redirectURIFault(%q) admitted it, want a refusal: an undecodable query must be refused at registration", malformed)
 	}
 	got, err := clientResponseURI(
 		authorizeRequest{RedirectURI: malformed, State: "S"}, url.Values{"code": {"AUTHCODE"}},
@@ -146,8 +159,8 @@ func TestClientResponseURIRefusesAQueryItCannotReproduce(t *testing.T) {
 // A query a client may legitimately register still registers.
 func TestValidRedirectURIAdmitsADecodableQuery(t *testing.T) {
 	const withQuery = "https://client.example/cb?tenant=acme"
-	if !validRedirectURI(withQuery) {
-		t.Fatalf("validRedirectURI(%q) = false, want true", withQuery)
+	if fault := redirectURIFault(withQuery); fault != "" {
+		t.Fatalf("redirectURIFault(%q) = %q, want it admitted", withQuery, fault)
 	}
 }
 
@@ -203,8 +216,8 @@ func TestValidRedirectURIMatchesTheSharedCorpus(t *testing.T) {
 		t.Fatalf("the corpus holds %d cases, want its full census", len(corpus))
 	}
 	for _, c := range corpus {
-		if got := validRedirectURI(c.URI); got != c.Valid {
-			t.Errorf("%s: validRedirectURI(%q) = %v, the corpus says %v", c.Note, c.URI, got, c.Valid)
+		if got := redirectURIFault(c.URI) == ""; got != c.Valid {
+			t.Errorf("%s: redirectURIFault(%q) admits = %v, the corpus says %v", c.Note, c.URI, got, c.Valid)
 		}
 	}
 }

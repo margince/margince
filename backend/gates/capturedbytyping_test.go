@@ -19,90 +19,41 @@ package gates
 // whole gate suite green. Nothing derived the obligation from the tree, so
 // nothing noticed that one table disagreed with the other thirty.
 //
-// It reads the FINAL declaration of each column rather than every historical
-// one, because a shipped migration is never edited: 0262 stays wrong forever
-// and 0265 is what repairs it. What must hold is the shape an installation
-// ends up with, which is the last statement to touch the column.
+// It reads each column as the head catalog states it, not every historical
+// declaration. A shipped migration is never edited: 0262 stays wrong forever and
+// 0265 is what repairs it. What must hold is the shape an installation ends up with.
 
 import (
-	"path/filepath"
-	"regexp"
-	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// capturedByColumn matches a `captured_by` column definition and captures the
-// type and the rest of its line, so both the type and any inline FK are read.
-var capturedByColumn = regexp.MustCompile(`(?mi)^\s*captured_by\s+(\w+)([^,\n]*)`)
-
-// capturedByAlter matches a later migration retyping the column.
-var capturedByAlter = regexp.MustCompile(`(?mis)ALTER\s+COLUMN\s+captured_by\s+TYPE\s+(\w+)`)
-
-// createdTable names the table a migration statement operates on, so a repair
-// in a later file is matched against the CREATE that first declared it.
-var createdTable = regexp.MustCompile(`(?mi)(?:CREATE\s+TABLE(?:\s+IF\s+NOT\s+EXISTS)?|ALTER\s+TABLE)\s+(?:public\.)?(\w+)`)
-
-func tableOfMigration(body string) string {
-	if m := createdTable.FindStringSubmatch(body); m != nil {
-		return strings.ToLower(m[1])
-	}
-	return ""
-}
+// capturedByFloor is the fewest captured_by columns the catalog may yield and
+// still be believed. It sits below the real count, to catch a reader that broke.
+const capturedByFloor = 20
 
 func TestCapturedByIsAlwaysTextAndNeverAUserForeignKey(t *testing.T) {
 	t.Parallel()
-	migrations, err := gatekit.Glob(filepath.Join("migrations", "core", "*.up.sql"))
-	if err != nil {
-		t.Fatalf("listing core migrations: %v", err)
-	}
-	// No floor on the FILE count. core opens with a single baseline holding every
-	// table, so "at least N files" would be satisfied by the one file existing
-	// and says nothing about whether it was read. The `declared` floor below is
-	// the real vacuous-pass guard: it counts captured_by columns actually parsed
-	// out, which is what stops working when the glob or the pattern breaks.
-
-	// The last word on each table wins: migrations apply in order, so a later
-	// ALTER repairs an earlier CREATE and the final shape is what ships.
-	finalType := map[string]string{}
-	finalRest := map[string]string{}
-	finalSource := map[string]string{}
-
-	var declared int
-	for _, path := range migrations {
-		body, err := gatekit.ReadFile(path)
-		if err != nil {
-			t.Fatalf("reading %s: %v", path, err)
+	schema := parseHeadCatalog(t)
+	declared := 0
+	for _, name := range schema.tableNames() {
+		table := schema.tables[name]
+		column, ok := columnNamed(table, "captured_by")
+		if !ok {
+			continue
 		}
-		table := tableOfMigration(string(body))
-		for _, match := range capturedByColumn.FindAllStringSubmatch(string(body), -1) {
-			declared++
-			finalType[table] = strings.ToLower(match[1])
-			finalRest[table] = strings.ToLower(match[2])
-			finalSource[table] = filepath.Base(path)
-		}
-		// An ALTER that retypes the column is the later word on it.
-		if m := capturedByAlter.FindStringSubmatch(string(body)); m != nil {
-			finalType[table] = strings.ToLower(m[1])
-			finalRest[table] = ""
-			finalSource[table] = filepath.Base(path)
-		}
-	}
-	if declared < 20 {
-		t.Fatalf("only %d captured_by declarations found — the pattern lost its source", declared)
-	}
-
-	for table, columnType := range finalType {
-		if columnType != "text" {
+		declared++
+		if column.dataType != "text" {
 			t.Errorf("%s leaves captured_by as %q — it holds a prefixed principal "+
 				"(\"human:<id>\" / \"agent:<id>\"), so every write against a non-text column fails",
-				finalSource[table], columnType)
+				name, column.dataType)
 		}
-		if strings.Contains(finalRest[table], "references app_user") {
+		if table.singleColumnFKs["captured_by"].parent == "app_user" {
 			t.Errorf("%s leaves captured_by with a foreign key to app_user — an agent acting under "+
 				"a passport is not a row there, so the key refuses the write instead of recording who made it",
-				finalSource[table])
+				name)
 		}
+	}
+	if declared < capturedByFloor {
+		t.Fatalf("only %d captured_by columns found in %s — the reader lost its source", declared, headCatalogPath)
 	}
 }

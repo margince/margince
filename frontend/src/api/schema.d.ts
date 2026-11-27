@@ -296,7 +296,7 @@ export interface paths {
         put?: never;
         /**
          * Redeem a reset token and set a new password.
-         * @description Validates the single-use token (`auth_token` purpose=`password_reset`), sets the new password, marks the token used, and invalidates existing sessions. An expired, consumed, or unknown token produces one neutral error. Audited.
+         * @description Validates the single-use token, sets the new password, marks the token used, and invalidates existing sessions. An expired, consumed, or unknown token produces one neutral error. Audited.
          */
         post: operations["resetPassword"];
         delete?: never;
@@ -6805,6 +6805,39 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/task-explanation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /**
+         * Why one task is on the reader's list, written from that task's own records.
+         * @description What happened, what it costs if nothing is done, and what to do, for one open task. A
+         *     sentence's `nature` says which: a `fact` is what happened, an `assessment` is what is at
+         *     stake, a `recommendation` is the one next step.
+         *
+         *     Written from the task, the message it came from, and the relationship with its contact
+         *     as the CALLER sees them, so it describes only records that caller could open. Cached per
+         *     reader on a fingerprint of those inputs and rewritten before the answer when they move.
+         *
+         *     Degrades rather than fails: with no model lane, the sentences are the facts alone,
+         *     each citing its message, and `generated_by` says so. It never falls back to a sentence
+         *     that would fit any task.
+         */
+        get: operations["getTaskExplanation"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/activities/{id}/reader-rendering": {
         parameters: {
             query?: never;
@@ -9802,71 +9835,6 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
-    "/lead-sources": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        /**
-         * List lead sources, active and inactive, in display order.
-         * @deprecated
-         * @description Deprecated: the list says how a row reached Margince, which nothing scores any more.
-         *     Use `/lead-origins` for where a lead came from.
-         *
-         *     `data` is the administered list. `discovered` names source values that
-         *     live on leads but are not in the list — connector-written keys such as
-         *     `connector:apollo:…` grouped by their connector prefix, seed values,
-         *     imports — with how many live leads carry each. Adding one as a source
-         *     (POST with that key) makes it administrable.
-         */
-        get: operations["listLeadSources"];
-        put?: never;
-        /**
-         * Add a lead source.
-         * @deprecated
-         */
-        post: operations["createLeadSource"];
-        delete?: never;
-        options?: never;
-        head?: never;
-        patch?: never;
-        trace?: never;
-    };
-    "/lead-sources/{id}": {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        get?: never;
-        put?: never;
-        post?: never;
-        /**
-         * Remove a lead source nothing uses.
-         * @deprecated
-         * @description 409 when the source is built-in or any live lead still carries it —
-         *     deactivate it instead, which hides it from the create form and the
-         *     filter while every existing lead keeps its value.
-         */
-        delete: operations["deleteLeadSource"];
-        options?: never;
-        head?: never;
-        /**
-         * Rename, reorder, re-weight or (de)activate a lead source.
-         * @deprecated
-         * @description Changing `intent` does not rescore existing leads; each lead picks the
-         *     new weight up on its next recompute. A built-in (`system`) source
-         *     accepts every field here — it only refuses deletion.
-         */
-        patch: operations["updateLeadSource"];
-        trace?: never;
-    };
     "/lead-origins": {
         parameters: {
             query?: never;
@@ -9930,9 +9898,8 @@ export interface paths {
         /**
          * List deal acquisition sources, active and retired, in display order.
          * @description The administered business channels a deal can be attributed to. This list is
-         *     deliberately separate from `/lead-sources`: that one also models how a RECORD
-         *     reached Margince (connector, import, crawl) and scores lead intent, while this
-         *     one only names how an OPPORTUNITY reached the business. Retired entries are
+         *     deliberately separate from `/lead-origins`, which names where a LEAD came from;
+         *     this one only names how an OPPORTUNITY reached the business. Retired entries are
          *     returned so a deal still carrying one renders its label and a filter can still
          *     find it; they cannot be newly assigned.
          */
@@ -11956,6 +11923,412 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/chat-source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verify the current reader's native source access for a visible chat recap. */
+        get: operations["getChatSummarySource"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/teams/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Authenticate metadata-only Graph channel notifications and lifecycle recovery with sealed client state. */
+        post: operations["receiveTeamsGraphNotification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/teams/bot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify a Microsoft bot activity and retain only installation and conversation references. */
+        post: operations["receiveTeamsBotActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/slack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify a signed Slack event and queue a canonical channel read.
+         * @description Message bodies are discarded after signature and routing checks. Only root identifiers and revisions reach the queue ledger.
+         */
+        post: operations["receiveSlackChannelEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-providers/teams/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Microsoft team installations verified by signed bot events, separate from participant consent. */
+        get: operations["getTeamsChannelSetup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-providers/teams/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a verified team installation for record channel links. */
+        post: operations["connectTeamsChannels"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-providers/teams/package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Build the team-scoped app package with the operator's legal URLs. */
+        post: operations["downloadTeamsChannelPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-providers/slack/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Slack workspace installation requirements, separate from participant consent. */
+        get: operations["getSlackChannelSetup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-providers/slack/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start admin consent for the Slack bot used by record channel links. */
+        post: operations["connectSlackChannels"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-providers/slack/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Complete workspace bot consent using signed state and the initiating browser nonce. */
+        get: operations["slackChannelsOAuthCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        /** The configured account-consent flow and its required participant scopes. */
+        get: operations["getMessengerSetup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/dispact/credential": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect your own Dispact personal token to the configured workspace.
+         * @description Verifies the token's live participant identity against the configured Dispact workspace.
+         *     The token is sealed for the signed-in member. It never becomes the installation bot's token.
+         */
+        post: operations["connectDispactParticipant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start consent for the current participant's messaging account. */
+        post: operations["connectMessenger"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        /** Complete participant consent using signed state and the initiating browser's nonce. */
+        get: operations["messengerOAuthCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        /** Check the current member’s Messenger connection. */
+        get: operations["getMessengerIdentity"];
+        put?: never;
+        post?: never;
+        /** Disconnect the current member’s Messenger grant. */
+        delete: operations["disconnectMessengerIdentity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/{record_type}/{id}/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Resolve the owner and assigned record team to this participant's provider directory. */
+        get: operations["getMessengerTeam"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/{record_type}/{id}/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Find channels the participant can select. */
+        get: operations["listMessengerChannels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/{record_type}/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Find eligible internal colleagues. */
+        get: operations["listMessengerMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/{record_type}/{id}/conversation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Read the selected conversation and verify its current participants. */
+        get: operations["getMessengerConversation"];
+        put?: never;
+        /** Open a verified channel or exact participant roster. */
+        post: operations["openMessengerConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/{record_type}/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Read the participant’s conversation without filing it in History. */
+        get: operations["getMessengerMessages"];
+        put?: never;
+        /** Send once under the participant’s reviewed audience. */
+        post: operations["sendMessengerMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/{record_type}/{id}/attempts/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        /** Read this participant’s delivery receipt. */
+        get: operations["getMessengerAttempt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channel-links/{record_type}/{id}": {
         parameters: {
             query?: never;
@@ -11977,7 +12350,7 @@ export interface paths {
         get: operations["getChannelLink"];
         put?: never;
         /**
-         * Link a deal or project to a new or existing private chat channel.
+         * Link a company, deal or project to an authorized work channel.
          * @description `create` makes a private channel named after the record and invites every live member who may
          *     open the record, the record's owner and the member linking it first, at most 50. A member with
          *     no chat account is counted in `not_in_chat`, and members over the 50 in `skipped_over_cap`.
@@ -12030,6 +12403,52 @@ export interface paths {
         get: operations["listLinkableChannels"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-links/{record_type}/{id}/delivery-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Preview the effective channel audience and eligible outgoing content without posting. */
+        get: operations["previewChannelDelivery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-links/{record_type}/{id}/delivery-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Review uncertain automated sends without exposing their source bodies. */
+        get: operations["getChannelDeliveryReview"];
+        put?: never;
+        /**
+         * Explicitly stop retrying reviewed unknown sends, or request a fresh overview card.
+         * @description This action never confirms delivery and never claims to remove a provider copy. Skipping an uncertain overview pauses automatic card posting; restarting it requires a separate explicit acknowledgement.
+         */
+        post: operations["reviewChannelDeliveries"];
         delete?: never;
         options?: never;
         head?: never;
@@ -12629,7 +13048,9 @@ export interface paths {
          * Bring an archived tag back into the vocabulary.
          * @description The undo for a retirement somebody regrets. It refuses when a LIVE tag has taken the
          *     name in the meantime: two words a reader cannot tell apart is the exact state the
-         *     vocabulary exists to prevent, and the caller has to rename one of them first.
+         *     vocabulary exists to prevent, and the caller has to rename one of them first. It also
+         *     refuses a tag that carries `merged_into`: the merge moved its records to the survivor,
+         *     and a restore would not move them back.
          */
         post: operations["restoreTag"];
         delete?: never;
@@ -16031,13 +16452,9 @@ export interface paths {
         /**
          * The calling user's morning digest — what capture did overnight.
          * @deprecated
-         * @description Reads the CAP-DDL-6 payload built by the nightly suite (CAP-WIRE-6): capture totals,
-         *     review counts (open dedupe candidates, pending 🟡 approvals, the classify summary), and
-         *     the connector health strip. `404 no_digest_yet` before the first nightly run — the
-         *     client renders the honest empty state. A `date` the nightly run has not reached
-         *     answers `404 no_digest_for_date`, which is a different state: digests exist, that day
-         *     has none. An empty `date=` is refused as `422 invalid_date` rather than read as the
-         *     year one. v1 delivery is in-app; email is delivery-only later, same object.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getMorningDigest"];
         put?: never;
@@ -16399,7 +16816,7 @@ export interface paths {
         };
         /**
          * Every vendor whose OAuth app this installation can hold, and whether it holds one.
-         * @description The core's own vendors (`google`, `microsoft`) first, then one entry per OAuth app a
+         * @description The core vendors (`google`, `microsoft`, `slack`) first, then one entry per OAuth app a
          *     composed extension unit declares, ordered by provider. A unit's entry carries the unit's
          *     `title` for it and the `unit` that declared it. Each entry answers exactly what
          *     `GET /installation/oauth-apps/{provider}` answers for that vendor.
@@ -26111,6 +26528,9 @@ export interface paths {
          * @description Verifies a code against the pending secret and, on success, activates the factor and
          *     returns a fresh set of one-time recovery codes — shown exactly once, never retrievable
          *     again (`Cache-Control: no-store`). A wrong code leaves the enrolment pending (401).
+         *     The caller's current password authorizes the confirmation, as it authorizes a password
+         *     change: a confirmed factor is asked for at every later password sign-in, so a session
+         *     alone must not install one. A wrong password counts toward the account lockout.
          */
         post: operations["confirmMyTotp"];
         delete?: never;
@@ -27871,30 +28291,9 @@ export interface paths {
         /**
          * Take back a stage move the product made by itself.
          * @deprecated
-         * @description Undo for an AUTOMATICALLY applied stage move, inside the window the
-         *     transition's rule allows (`undo_window_hours`, default 72).
-         *
-         *     It is a separate verb rather than the general undo path because a stage
-         *     move is not restorable by writing the field back: it wrote
-         *     `deal_stage_history` and the progression ledger beside the column, so
-         *     restoring `stage_id` alone would leave the history saying the deal is
-         *     somewhere it is not. The general replay engine refuses `advance_stage`
-         *     for exactly this reason.
-         *
-         *     What it does: moves the deal back to the stage it came from, appends a
-         *     new `deal_stage_history` row for the move back (history is append-only;
-         *     nothing is erased), and marks the progression ledger row `reversed` with
-         *     who did it and when.
-         *
-         *     **A reversal does not refute the evidence.** Taking a move back says the
-         *     deal should not have moved, which is a different claim from "the
-         *     criteria were wrongly read" — a rep may agree with every observation and
-         *     still want the deal where it was. Evidence is withdrawn only through its
-         *     own correction path.
-         *
-         *     Refused after the window closes: the move stands, the audit trail keeps
-         *     it, and moving the deal back by hand is the remaining route — which is
-         *     counted as a reversal too, on the same ledger.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["revertStageProgression"];
         delete?: never;
@@ -27913,29 +28312,9 @@ export interface paths {
         /**
          * What each stage transition has earned.
          * @deprecated
-         * @description Every from→to transition in one pipeline, with what happened to the moves
-         *     the product proposed on it. This is the evidence behind letting a
-         *     transition move deals by itself: it reports, and decides nothing.
-         *
-         *     Every rate is a fraction of `reviewed` — proposals a human actually
-         *     answered. A card nobody opened is not evidence that anyone agreed with
-         *     it, so `proposed`, `expired` and `superseded` are counted and reported
-         *     but kept OUT of the denominator. They are reported because their absence
-         *     would hide the case that matters most: a transition whose cards are
-         *     mostly ignored, whose acceptance rate is then computed over the few
-         *     somebody happened to open.
-         *
-         *     `expired` is not `rejected`. Both are refusals, and the product's answer
-         *     to each is opposite — a rejected transition needs a better proposal, an
-         *     expired one needs somebody to look.
-         *
-         *     `unsafe_rate` is a union, not a sum: a move that was reversed AND whose
-         *     evidence a human corrected is one mistake, and counting it twice would
-         *     put a transition over a ceiling it had not crossed.
-         *
-         *     `observation_days` is the span from the first answered proposal to the
-         *     last, rounded DOWN — a fine acceptance rate earned entirely on one
-         *     afternoon has not been observed, however many proposals it saw.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getStageAutomationReport"];
         put?: never;
@@ -27959,39 +28338,17 @@ export interface paths {
         /**
          * What each transition in this pipeline is allowed to do.
          * @deprecated
-         * @description One rule per from→to transition an admin has decided about. A transition
-         *     absent from this list has no rule, which is the default state of every
-         *     transition in the product and means it proposes.
-         *
-         *     A rule saying `auto` does NOT mean moves are applying. Asking is not
-         *     being allowed: the thresholds are re-checked in the transaction that
-         *     would apply each move, so a transition can be turned on before it has
-         *     earned the bar and start applying by itself the day its record clears —
-         *     without anybody coming back. Read `/stage-automation/report` to see
-         *     whether it has.
-         *
-         *     `suspended_at` is the product's own act, not an admin's. A rule the
-         *     product turned off went off for a measured reason and comes back only
-         *     through a deliberate resume; the admin's `mode` survives underneath it,
-         *     so resuming returns the transition to what was actually asked for.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["listTransitionPolicies"];
         /**
          * Decide what one transition may do.
          * @deprecated
-         * @description Records what an admin wants for ONE transition, named in the body rather
-         *     than the path because a pipeline has many and each is decided
-         *     separately.
-         *
-         *     Every threshold is optional and omitting one KEEPS what the rule has,
-         *     or takes the product default on a first write. A caller who only means
-         *     to turn a transition on does not have to restate four thresholds, and
-         *     cannot silently reset them by leaving one out.
-         *
-         *     It does not clear a suspension. A rule the product turned off went off
-         *     for a measured reason, and letting an ordinary save clear it would make
-         *     the safety mechanism a checkbox — `POST .../resume` is the separate,
-         *     deliberate act.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         put: operations["setTransitionPolicy"];
         post?: never;
@@ -28016,15 +28373,9 @@ export interface paths {
         /**
          * Lift a suspension the product put on a transition.
          * @deprecated
-         * @description A separate verb from saving a rule, so lifting a safety stop is
-         *     something an admin does on purpose rather than a side effect of editing
-         *     a threshold.
-         *
-         *     It does NOT re-enable. The rule comes back to whatever mode it was in,
-         *     and if that is `auto` the thresholds still have to hold in the
-         *     transaction that would apply — a resumed rule on a record that is still
-         *     bad simply proposes. Resuming a rule that is not suspended does
-         *     nothing and is not an error.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["resumeTransitionPolicy"];
         delete?: never;
@@ -28043,29 +28394,17 @@ export interface paths {
         /**
          * Whether the qualified forecast applies the viability reviews.
          * @deprecated
-         * @description `state` is `not_enrolled` before the input check has ever run, `observing` once it
-         *     runs and raises reviews and tasks but the forecast figures are unchanged, and
-         *     `enforcing` once an admin switched enforcement on. Only while `enforcing` does a
-         *     forecast reading carry `qualified`, and only then does the close-date sweep stop
-         *     lowering forecast categories.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getForecastAssuranceEnforcement"];
         /**
          * Switch the qualified forecast's enforcement on or off.
          * @deprecated
-         * @description Admin only. A setting fixed by the environment is refused with
-         *     `409 setting_locked_by_boot_source`.
-         *
-         *     Switching on changes the qualified forecast figures for every reader. It sends
-         *     `preview_digest`, the `digest` of the preview the admin saw, and is refused with
-         *     `409 preview_stale` when the deals' treatment changed since, so nobody switches
-         *     on a picture that is no longer true. It is then refused with
-         *     `409 input_check_not_started` until a check has judged a deal: before that the
-         *     qualified forecast would count nothing.
-         *
-         *     Switching off takes effect at once. The reviews, their tasks and their history
-         *     stay; only the qualified readings disappear, and the baseline readings never
-         *     changed.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         put: operations["setForecastAssuranceEnforcement"];
         post?: never;
@@ -28087,12 +28426,9 @@ export interface paths {
         /**
          * Answer a customer review with the day the customer asked you to wait until.
          * @deprecated
-         * @description For a `deal_viability` review only. One transaction records the customer's wait on
-         *     the deal (`wait_until`) and answers the review `remind_later` for the same day. The
-         *     review stays open and the deal stays out of the qualified forecast while it waits:
-         *     a wait is not support. The review comes back on that day.
-         *
-         *     404 when the finding is not an open customer review.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["waitInputCheck"];
         delete?: never;
@@ -28113,12 +28449,9 @@ export interface paths {
         /**
          * Answer a customer review by closing its deal as lost.
          * @deprecated
-         * @description For a `deal_viability` review only. One transaction moves the deal to its pipeline's
-         *     lost stage with the reason given, and answers the review `not_relevant` with that
-         *     reason. A review is never answered `not_relevant` while its deal is still open.
-         *
-         *     404 when the finding is not an open customer review. 422 when the pipeline has no
-         *     lost stage.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["closeLostInputCheck"];
         delete?: never;
@@ -28140,17 +28473,9 @@ export interface paths {
         /**
          * Whether the customer still supports this deal, and the review behind the answer.
          * @deprecated
-         * @description The deal's treatment in the qualified forecast and what it rests on: the input check's
-         *     last receipt and its reasons, the close date's standing, the stage chance, and the open
-         *     `deal_viability` review with its task. The review is shown while it is open, even when
-         *     its task is done: completing the task does not answer the review.
-         *
-         *     Needs `forecast:read` and the deal under the caller's row scope, checked in the same
-         *     transaction as the read; a deal outside it answers 404. The review's task is shown only
-         *     while it is still linked to this deal and the caller may discover it. Carries no amount,
-         *     so nothing here needs masking.
-         *     `qualification` is computed whether or not the installation enforces it;
-         *     `qualification_mode` says whether the qualified forecast applies it.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getDealViability"];
         put?: never;
@@ -29536,6 +29861,10 @@ export interface components {
             geocode_backfill_interval_seconds?: number;
             /** @description Set the value `OperationSettings.technical_backfill_interval_seconds` describes. */
             technical_backfill_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.capture_counterparty_verdict_interval_seconds` describes. */
+            capture_counterparty_verdict_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.capture_confidentiality_verdict_interval_seconds` describes. */
+            capture_confidentiality_verdict_interval_seconds?: number;
             /** @description Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes. */
             gmail_watch_scan_interval_seconds?: number;
             /** @description Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes. */
@@ -30130,6 +30459,8 @@ export interface components {
             otpauth_uri: string;
         };
         TotpConfirmRequest: {
+            /** @description The caller's current password, which authorizes the confirmation. */
+            current_password: string;
             /** @description The current code from the authenticator being enrolled. */
             code: string;
         };
@@ -30286,7 +30617,7 @@ export interface components {
              *     None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
              * @enum {string}
              */
-            purpose: "sign_in" | "mailbox_connect" | "calendar_connect" | "documents_connect" | "extension_connect";
+            purpose: "sign_in" | "mailbox_connect" | "calendar_connect" | "documents_connect" | "extension_connect" | "messenger_connect";
             /**
              * Format: uri
              * @description The absolute URL to register, exactly as it must be pasted.
@@ -30294,6 +30625,8 @@ export interface components {
             url: string;
         };
         ConnectorAppInput: {
+            /** @description Slack only. The app signing secret used to verify channel notifications. Stored sealed with the client secret. */
+            signing_secret?: string;
             /** @description The vendor's OAuth client id. Google's end in `.apps.googleusercontent.com`; Microsoft's is the Application (client) ID from the Entra app registration's Overview, a GUID. A value of neither shape is refused: it is almost always a neighbouring field copied from the same console screen — the project number, an API key, or the app's display name. */
             client_id: string;
             /** @description The app's client secret. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
@@ -30758,6 +31091,10 @@ export interface components {
             geocode_backfill_interval_seconds: number;
             /** @description How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600. */
             technical_backfill_interval_seconds: number;
+            /** @description How often new senders are judged by the model, in seconds. Default 600. */
+            capture_counterparty_verdict_interval_seconds: number;
+            /** @description How often captured threads are judged for whether colleagues may read them, in seconds. Default 600. */
+            capture_confidentiality_verdict_interval_seconds: number;
             /** @description How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600. */
             gmail_watch_scan_interval_seconds: number;
             /** @description How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600. */
@@ -34295,7 +34632,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            provider: "telegram" | "telegram_business" | "dispact" | "whatsapp" | "zalo_oa";
+            provider: "telegram" | "telegram_business" | "dispact" | "whatsapp" | "zalo_oa" | "slack" | "teams";
             /** @description The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id. */
             channelId: string;
             /** @description The bot's @username. Display only — a username is mutable and re-assignable, so it identifies nothing. */
@@ -34529,12 +34866,16 @@ export interface components {
         /** @description One signed notice from Dispact, or its URL check. A notice names the channel and the newest message sequence, and never carries message text. */
         DispactChannelEvent: {
             /** @enum {string} */
-            type: "url_verification" | "message.created" | "thread.replied" | "message.updated" | "channel.archived";
+            type: "url_verification" | "message.created" | "thread.replied" | "message.updated" | "message.deleted" | "channel.archived";
             /** @description The value a URL check expects back. */
             challenge?: string;
             /** @description The Dispact team; it must be the connected bot's team. */
             workspace_id?: string;
             channel_slug?: string;
+            /** @description Immutable channel identity when supported by the source. */
+            channel_id?: string;
+            /** @description Immutable conversation root identity when supported by the source. */
+            root_message_id?: string;
             /** @description The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal. */
             seq?: number;
             message_id?: string;
@@ -34554,17 +34895,179 @@ export interface components {
              */
             status?: "pull_queued" | "link_paused" | "ignored" | "already_taken";
         };
+        TeamsChannelSetup: {
+            configured: boolean;
+            app_id: string;
+            tenant_id: string;
+            events_url: string;
+            scopes: string[];
+            installations: components["schemas"]["TeamsChannelInstallation"][];
+        };
+        TeamsChannelInstallation: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            team_id: string;
+        };
+        SlackHistoryProfile: {
+            /** @enum {string} */
+            distribution: "internal" | "marketplace" | "non_marketplace";
+            history_per_minute: number;
+            replies_per_minute: number;
+            history_page_size: number;
+            replies_page_size: number;
+            /** @enum {string} */
+            source: "admin_declared";
+            /** Format: date-time */
+            recorded_at: string;
+            canonical_supported: boolean;
+        };
+        ChannelProviderSetup: {
+            history_profile?: components["schemas"]["SlackHistoryProfile"];
+            configured: boolean;
+            callback_url: string;
+            events_url: string;
+            scopes: string[];
+        };
+        MessengerTeamMember: {
+            /** Format: uuid */
+            crm_id: string;
+            /** @enum {string} */
+            kind: "user" | "team";
+            name: string;
+            member_id: string;
+            /** @enum {string} */
+            state: "matched" | "self" | "unresolved" | "inactive";
+        };
+        MessengerSetup: {
+            provider: components["schemas"]["MessengerProvider"];
+            configured: boolean;
+            callback_url: string;
+            /** @description The configured provider page for creating a personal credential. */
+            account_url?: string;
+            participant_scopes: string[];
+            max_group_recipients: number;
+        };
+        /** @enum {string} */
+        MessengerProvider: "dispact" | "slack" | "teams";
+        MessengerMember: {
+            bot?: boolean;
+            id: string;
+            name: string;
+            email?: string;
+            active: boolean;
+            external: boolean;
+        };
+        MessengerConversation: {
+            /** @enum {string} */
+            access?: "workspace" | "team" | "private" | "participants" | "unknown";
+            /** @description Whether this conversation supports native thread replies. */
+            supports_threads?: boolean;
+            id: string;
+            name: string;
+            /** @enum {string} */
+            kind: "channel" | "group" | "direct";
+            members: components["schemas"]["MessengerMember"][];
+            audience_known: boolean;
+            external: boolean;
+        };
+        MessengerConnectRequest: {
+            record_type: components["schemas"]["ChannelLinkRecordType"];
+            /** Format: uuid */
+            record_id: string;
+        };
+        MessengerContext: {
+            unresolved_attempt?: components["schemas"]["MessengerAttempt"];
+            /** Format: int64 */
+            grant_version: number;
+            provider: components["schemas"]["MessengerProvider"];
+            workspace: string;
+            sender: components["schemas"]["MessengerMember"];
+            conversation: components["schemas"]["MessengerConversation"];
+            audience_key: string;
+        };
+        MessengerOpenRequest: {
+            conversation_id?: string;
+            members?: string[];
+        };
+        MessengerMessage: {
+            id: string;
+            root_id: string;
+            author: string;
+            text: string;
+            /** Format: date-time */
+            at: string;
+            edited: boolean;
+            deleted: boolean;
+        };
+        MessengerPage: {
+            /**
+             * @description Whether next_cursor continues into older history or later replies. Omitted means older.
+             * @enum {string}
+             */
+            cursor_direction?: "older" | "newer";
+            messages: components["schemas"]["MessengerMessage"][];
+            next_cursor: string;
+        };
+        MessengerChannels: {
+            conversations: components["schemas"]["MessengerConversation"][];
+            next_cursor: string;
+        };
+        MessengerMembers: {
+            members: components["schemas"]["MessengerMember"][];
+            next_cursor: string;
+        };
+        MessengerSendRequest: {
+            /** Format: uuid */
+            acknowledged_request_id?: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: int64 */
+            grant_version: number;
+            conversation_id: string;
+            root_id?: string;
+            text: string;
+            audience_key: string;
+        };
+        MessengerAttempt: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            request_id: string;
+            conversation_id: string;
+            provider_message_id: string;
+            /** @enum {string} */
+            state: "pending" | "accepted" | "failed" | "unknown";
+            failure_code?: string;
+            /** Format: date-time */
+            retry_at?: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        MessengerIdentity: {
+            /** @enum {string} */
+            state: "connected" | "needs_consent" | "unavailable";
+            provider: components["schemas"]["MessengerProvider"];
+            /** Format: int64 */
+            grant_version?: number;
+            workspace?: string;
+            sender?: components["schemas"]["MessengerMember"];
+        };
         /**
          * @description The kind of record a chat channel is linked to.
          * @enum {string}
          */
-        ChannelLinkRecordType: "deal" | "project";
+        ChannelLinkRecordType: "company" | "deal" | "project";
+        /** @enum {string} */
+        ChannelMessageDetail: "brief" | "full";
         /**
          * @description How much Margince posts into a linked channel.
          * @enum {string}
          */
         ChannelVerbosity: "everything" | "important" | "milestones" | "silent";
         ChannelLinkState: {
+            last_sync?: components["schemas"]["ChannelEndedSync"];
+            sync?: components["schemas"]["ChannelSyncHealth"];
             /**
              * @description `off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.
              * @enum {string}
@@ -34573,22 +35076,118 @@ export interface components {
             link?: components["schemas"]["ChannelLink"];
             invites?: components["schemas"]["ChannelInvites"];
         };
-        ChannelLink: {
+        ChannelEndedSync: {
+            provider: components["schemas"]["MessengerProvider"];
+            /** Format: date-time */
+            ended_at: string;
+            /** Format: date-time */
+            read_through?: string | null;
+            /** Format: date-time */
+            last_posted_at?: string | null;
+            retained_messages: number;
+            /** @description Messages successfully rewritten without withdrawn content; this does not prove deletion of other copies. */
+            confirmed_redactions: number;
+            unverified_withdrawals: number;
+            unconfirmed_deliveries: number;
+        };
+        ChannelUncertainDelivery: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            provider: "dispact";
+            state: "sending" | "unknown";
+            /** Format: date-time */
+            created_at: string;
+            update_count: number;
+            overview_card: boolean;
+        };
+        ChannelPreviewMember: {
+            id: string;
+            name: string;
+        };
+        ChannelDeliveryPreview: {
+            /** Format: uuid */
+            link_id: string;
+            /** Format: int64 */
+            version: number;
+            provider: components["schemas"]["MessengerProvider"];
+            workspace: string;
+            channel_name: string;
+            root_id?: string;
+            audience: components["schemas"]["ChannelPreviewMember"][];
+            overview_text: string;
+            update_text: string;
+            pending_updates: number;
+            excluded_updates: number;
+            verbosity: components["schemas"]["ChannelVerbosity"];
+            message_detail: components["schemas"]["ChannelMessageDetail"];
+        };
+        ChannelProviderCopies: {
+            retained_messages: number;
+            confirmed_redactions: number;
+            unverified_withdrawals: number;
+            unconfirmed_deliveries: number;
+        };
+        ChannelDeliveryReview: {
+            provider_copies?: components["schemas"]["ChannelProviderCopies"];
+            /** Format: uuid */
+            link_id: string;
+            overview_card_paused: boolean;
+            deliveries: components["schemas"]["ChannelUncertainDelivery"][];
+        };
+        ReviewChannelDeliveryRequest: {
+            /** Format: uuid */
+            link_id: string;
+            /** @enum {string} */
+            action: "skip_unknown" | "restart_card";
+            acknowledged: boolean;
+            delivery_ids: string[];
+        };
+        ChannelSyncHealth: {
+            /** @enum {string|null} */
+            delivery_error?: "audience_changed" | "delivery_unknown" | "source_incomplete" | "source_unavailable" | "source_too_long" | "model_unavailable" | "rate_limited" | "access_lost" | "source_changed" | null;
+            /** @description Teams push notifications need recovery; periodic source reads continue independently. */
+            notifications_delayed?: boolean;
+            /**
+             * Format: date-time
+             * @description Metadata discovery checked through this time. Pending recaps are reported separately.
+             */
+            coverage_at?: string | null;
+            /** @enum {string|null} */
+            last_error?: "history_profile" | "source_incomplete" | "source_unavailable" | "source_too_long" | "model_unavailable" | "rate_limited" | "access_lost" | "source_changed" | null;
+            pending_conversations: number;
+            failed_conversations: number;
+            pending_crm_updates: number;
+            unconfirmed_deliveries: number;
+        };
+        ChannelLink: {
+            history_profile?: components["schemas"]["SlackHistoryProfile"];
+            /** @description Whether this association uses an explicitly confirmed immutable provider channel identity. */
+            native_identity?: boolean;
+            overview_card_paused?: boolean;
+            /** @description Whether the native provider permits bot delivery in this channel. False for private Teams channels. */
+            can_send_crm_updates?: boolean;
+            root_id?: string;
+            /** Format: uuid */
+            id: string;
+            provider: components["schemas"]["MessengerProvider"];
             channel_slug: string;
             channel_name: string;
             /** @description The channel's address in the chat. */
             channel_url: string;
+            message_detail?: components["schemas"]["ChannelMessageDetail"];
             verbosity: components["schemas"]["ChannelVerbosity"];
             /** @enum {string} */
-            status: "active" | "channel_gone";
+            status: "active" | "channel_gone" | "identity_needs_review";
+            /** Format: uuid */
+            company_id?: string | null;
             /** Format: uuid */
             deal_id?: string | null;
             /** Format: uuid */
             project_id?: string | null;
+            /** @description Whether future eligible channel activity is filed in History. */
+            save_channel_updates?: boolean;
+            /** @description Whether eligible CRM events are posted to the channel. */
+            send_crm_updates?: boolean;
             /** Format: date-time */
             created_at: string;
         };
@@ -34656,6 +35255,13 @@ export interface components {
             name: string;
         };
         LinkChannelRequest: {
+            /** @description Existing native thread root explicitly assigned to this record. A shared channel uses separate root assignments for each record. */
+            root_id?: string;
+            /**
+             * @description Native provider whose shared bot owns this link.
+             * @default dispact
+             */
+            provider: components["schemas"]["MessengerProvider"];
             /** @enum {string} */
             mode: "create" | "existing";
             /** @description For `existing`, the channel's slug or its link. */
@@ -34665,22 +35271,43 @@ export interface components {
             summarize_history?: boolean;
         };
         SetChannelVerbosityRequest: {
-            verbosity: components["schemas"]["ChannelVerbosity"];
+            /** Format: uuid */
+            expected_link_id?: string;
+            /** Format: int64 */
+            expected_version?: number;
+            message_detail?: components["schemas"]["ChannelMessageDetail"];
+            verbosity?: components["schemas"]["ChannelVerbosity"];
+            save_channel_updates?: boolean;
+            send_crm_updates?: boolean;
         };
         FileChannelMessageRequest: {
             /**
-             * @description The message in the record's channel: its sequence number, `#slug:seq`, the chat's
-             *     `<m:#slug:seq|…>` mention, or its link. A message in another channel is not found.
+             * @description A native message ID or link in the record's linked channel. Dispact also accepts
+             *     a sequence number, `#slug:seq`, or `<m:#slug:seq|…>` mention. A message in another
+             *     channel or outside a linked thread is not found.
              */
             message: string;
-            /** @description True files the message and the replies in its thread that follow it. */
+            /** @description True files the complete available thread containing the selected message. */
             thread?: boolean;
         };
+        ChatSourceAccess: {
+            available: boolean;
+            /** Format: uuid */
+            user_id: string;
+            url?: string;
+            /** Format: date-time */
+            valid_until?: string;
+        };
         /**
-         * @description The chat talk a summary note was written from. The talk itself is not kept: open `url`
-         *     to read it in the chat.
+         * @description The source metadata of a channel recap. Source URLs are withheld from ordinary activity reads;
+         *     obtain a short-lived authorized link through the chat-source endpoint.
          */
         ChatEpisode: {
+            provider?: components["schemas"]["MessengerProvider"];
+            /** @description The source changed after a human edited this recap; review the preserved text. */
+            source_changed?: boolean;
+            /** @description Channel name recorded when the recap was written. */
+            channel_name?: string;
             /** @description How many messages the summary covers. */
             message_count: number;
             /**
@@ -34688,7 +35315,10 @@ export interface components {
              * @description When the last of them was posted.
              */
             ended_at: string;
-            /** @description The first message in the chat. */
+            /**
+             * @deprecated
+             * @description Empty on activity reads. Obtain an authorized link through the chat-source endpoint.
+             */
             url: string;
         };
         /**
@@ -35502,6 +36132,13 @@ export interface components {
          */
         NotificationPreferenceList: {
             items: components["schemas"]["NotificationPreference"][];
+            /**
+             * @description Whether this installation sends its own mail. False means `email` and `digest` reach
+             *     no mailbox: the notice still lands in the app, and no message leaves. A screen says
+             *     so beside the choices rather than offering mail that will not arrive. It answers the
+             *     caller's own delivery, so every seat that reads its settings is told.
+             */
+            email_delivery_available: boolean;
         };
         /**
          * @description One line of the notification centre: a durable notice addressed to the caller, and
@@ -35663,7 +36300,7 @@ export interface components {
             /** @description Opaque cursor for the next page, or null if none. */
             next_cursor?: string | null;
             has_more: boolean;
-            /** @description How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company and lead lists count on the first page only and send no total with a cursor, so a client keeps the first page's total while it loads further pages. */
+            /** @description How many rows match this request in total, ignoring the cursor and the page size — what the reader is told the list holds. Optional because a keyset page does not need one: a list that omits it says it does not count, never that it counted zero, so a client reads absence as unknown and falls back to how many rows it has loaded. Where it is sent it is exact rather than an estimate, counted over the same filters and the same row scope as the page beside it, in the same transaction, so the two cannot disagree about what matching means. The contact, company, lead, deal and project lists count on a page read without a cursor, which is the first page or a page opened by `offset`, and send no total with a cursor, so a client keeps that total while it loads further pages. */
             total?: number;
         };
         /** @description Provenance carried on every captured/user-entered domain row (data-model §1.6). */
@@ -36666,11 +37303,31 @@ export interface components {
              */
             action: "imported" | "replaced" | "kept" | "not_in_card";
         };
-        /**
-         * @description One address on a contact, as a writer supplies it. One schema for create and update,
-         *     so the two cannot describe an address differently.
-         */
+        /** @description One address supplied when creating a contact. */
         ContactEmailInput: {
+            /**
+             * Format: email
+             * @description An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
+             */
+            email: string;
+            /**
+             * @default work
+             * @enum {string}
+             */
+            email_type: "work" | "personal" | "other";
+            /**
+             * @description The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.
+             * @default false
+             */
+            is_primary: boolean;
+            /** @default 0 */
+            position: number;
+        };
+        /**
+         * @description Mirrors ContactEmailInput except for the state-dependent address ceiling.
+         *     A held legacy address may remain unchanged; a new address must fit the write limit.
+         */
+        ContactEmailReplacementInput: {
             /**
              * Format: email
              * @description An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
@@ -36767,8 +37424,13 @@ export interface components {
              *     Omitting the field leaves the addresses untouched, like every other field
              *     here. Sending an empty array removes them all, which is a real answer — a
              *     contact who no longer has a working address is a fact worth recording.
+             *
+             *     A list past 25 addresses is 422 `too_many`, unless the contact already
+             *     holds at least as many: a longer stored list may be sent back, and not grown.
+             *     Held legacy addresses may remain unchanged. New addresses must fit the
+             *     normalized 254-byte ceiling and name a dotted domain.
              */
-            emails?: components["schemas"]["ContactEmailInput"][];
+            emails?: components["schemas"]["ContactEmailReplacementInput"][];
             /**
              * @description REPLACES the contact's numbers with exactly this list, the same way `emails`
              *     replaces addresses. A number that has been reassigned is corrected by sending
@@ -36776,7 +37438,8 @@ export interface components {
              *     that now reaches somebody else.
              *
              *     Omitting the field leaves the numbers untouched. Sending an empty array
-             *     removes them all.
+             *     removes them all. A list past 25 numbers is 422 `too_many`, unless the
+             *     contact already holds at least as many.
              *
              *     `Contact360.dead_addresses` already names which address bounced; until now the
              *     contract's own remedy for that was to visit the contact page, because the write
@@ -37069,7 +37732,7 @@ export interface components {
              *     archived answers 422 naming this field. Absent leaves it untouched.
              */
             assess_against_entity_id?: string | null;
-            /** @description Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. */
+            /** @description Replace-set of the company's live domains (add new, archive removed, flip is_primary). Absent = untouched; an empty array clears all domains. A list past 100 domains is 422 `too_many`, unless the company already holds at least as many. */
             domains?: components["schemas"]["CompanyDomainInput"][];
             /**
              * @description Who may see this company: `workspace` for everyone holding the read grant, `owner` for
@@ -38664,6 +39327,8 @@ export interface components {
              */
             as_of: string;
             company: components["schemas"]["Company"];
+            /** @description Absent until an activity was read, or when this reader may not open one it was written from. */
+            standing_line?: components["schemas"]["StandingLine"];
             /**
              * @description The ONE thing this account needs today, selected server-side by the same rule the contact page uses. Today it fires on what we OWE the account's contacts — a commitment past its date, or the next one coming due — read from both places a commitment is recorded: a task somebody filed, and a commitment an extractor read out of a conversation. Absent when the caller lacks a grant the rule needs, named in `sections_omitted` as `moments`; the quiet success state is a moment of kind `nothing_needed`, not an absence.
              *     The schema is `ContactMoment` because the card is the same card — same evidence, same dismissal, same verb. What differs is the subject, and the headline says whose commitment it is.
@@ -39038,6 +39703,8 @@ export interface components {
              */
             as_of: string;
             contact: components["schemas"]["Contact"];
+            /** @description Absent until an activity was read, or when this reader may not open one it was written from. */
+            standing_line?: components["schemas"]["StandingLine"];
             /**
              * @description Who created the contact, from its earliest create audit row: for an agent, the
              *     colleague it worked for and the tool it was typed through, each when the row
@@ -39699,6 +40366,35 @@ export interface components {
             generated_by: components["schemas"]["WrittenBy"];
             /** @description Two to five sentences: who this contact is in the current commercial context, what they have explicitly cared about, what recently changed, and the unresolved decision or risk. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited. */
             sentences: components["schemas"]["CompanyBriefSentence"][];
+        };
+        /**
+         * @description Why one task is on the reader's list, from that task's own records. Per reader, cached
+         *     on its inputs, every sentence cited. `generated_by` says whether the model or the
+         *     facts-only floor wrote it.
+         */
+        TaskExplanation: {
+            /** Format: uuid */
+            task_id: string;
+            /** Format: date-time */
+            generated_at: string;
+            generated_by: components["schemas"]["WrittenBy"];
+            /** @description Facts say what happened, an assessment what is at stake if nothing is done, a recommendation the one next step. A sentence whose citations cannot be resolved is dropped whole rather than shown uncited. */
+            sentences: components["schemas"]["CompanyBriefSentence"][];
+        };
+        /**
+         * @description Where a record stands after its latest activity, in one sentence the model wrote in
+         *     the background when that activity landed. Shared by the record's readers, and served
+         *     only to a reader who may open every activity it cites.
+         */
+        StandingLine: {
+            text: string;
+            /**
+             * @description The activities the sentence rests on, as the model cited them. The page opens
+             *     each one, so a reader can check the line against what was said.
+             */
+            activity_ids: string[];
+            /** Format: date-time */
+            written_at: string;
         };
         /**
          * @description Facts recorded for this contact, per purpose and channel, with their reason.
@@ -43818,6 +44514,8 @@ export interface components {
              */
             as_of: string;
             project: components["schemas"]["Project"];
+            /** @description Absent until an activity was read, or when this reader may not open one it was written from. */
+            standing_line?: components["schemas"]["StandingLine"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
             sections_omitted: components["schemas"]["Project360Section"][];
             company?: components["schemas"]["Project360Company"];
@@ -45597,7 +46295,7 @@ export interface components {
              */
             readonly reply_channel?: "email" | "call" | "message" | null;
             email_target?: components["schemas"]["ActivityEmailTarget"];
-            /** @description Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. */
+            /** @description The channel the row arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. `source_system` names the connector or the product's own writer when there is one. An older row can show another value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
@@ -45917,7 +46615,11 @@ export interface components {
                 /** Format: uuid */
                 entity_id: string;
             }[];
-            source: string;
+            /**
+             * @description The channel this task arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
         };
         /** @enum {string} */
         ActivityDealFilingRecordType: "contact" | "company";
@@ -46048,7 +46750,11 @@ export interface components {
                 /** Format: uuid */
                 entity_id: string;
             }[];
-            source: string;
+            /**
+             * @description The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
             /** @description Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text. */
             raw?: {
                 [key: string]: unknown;
@@ -48313,10 +49019,8 @@ export interface components {
             readonly next_task_due_intent?: components["schemas"]["IntentTime"];
             /** @description The highest-impact factor in the retained current score explanation, for a compact queue reason. */
             readonly score_reason?: string | null;
-            /** @description How the row reached Margince: `manual` for a typed lead, or the value an import, connector or capture wrote (`connector:<name>:<id>`). It never scores and never feeds the origin filter or report; use `origin` for where the lead came from. The `lead_source` list that administered it is deprecated. */
+            /** @description The channel this lead arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older lead can show another value until the background correction reaches it. It never scores; use `origin` for where the lead came from. */
             source: string;
-            /** @description The label the deprecated lead_source list gives `source`; null for connector, seed and other free values. */
-            readonly source_label?: string | null;
             /** @description The current name of the website form this lead came through; null for every other lead, and for one whose form was deleted. */
             readonly web_form_name?: string | null;
             /** @description Where the lead came from, a key from `/lead-origins`. Null when nobody has classified the lead; such a lead scores neutral. Set by a human, an importer or capture, and the only lead fact the score and the origin filter read. */
@@ -48418,8 +49122,11 @@ export interface components {
             /** @description The source system's own spelling of who wrote this record. Same door as source_author_id: a declared importer only, beside a source_system. Kept when a seat is also named, so the name survives the seat. */
             source_author_name?: string | null;
             source_id?: string | null;
-            /** @description How the row was written. Optional: the server writes `manual` when none is sent. Never scored; send `origin` for where the lead came from. */
-            source?: string;
+            /**
+             * @description The channel this lead arrived by. Optional: the server writes `manual` when none is sent, and an integration sends `api`. The other system and the lead's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`. Never scored; send `origin` for where the lead came from.
+             * @enum {string}
+             */
+            source?: "api" | "automation" | "capture" | "import" | "manual" | "webform";
             /** @description Where the lead came from: an ACTIVE key from `/lead-origins` (422 `unknown_lead_origin` or `inactive_lead_origin` otherwise). Omit for an unclassified lead, which scores neutral. */
             origin?: string | null;
             /** @description A short note beside `origin`. */
@@ -48672,7 +49379,7 @@ export interface components {
             page: components["schemas"]["PageInfo"];
         };
         /**
-         * @description What the scorer makes of a lead from this origin (the deprecated lead source list carries the same field, which nothing reads): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
+         * @description What the scorer makes of a lead from this origin (lead origins carry it): high adds the high-intent points, low subtracts the low-intent penalty, neutral does neither.
          * @enum {string}
          */
         LeadSourceIntent: "high" | "neutral" | "low";
@@ -48771,7 +49478,10 @@ export interface components {
             };
             /** Format: date-time */
             created_at: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Always equal to `created_at`: a review is not edited after it is submitted.
+             */
             updated_at: string;
         };
         OutcomeReviewListResponse: {
@@ -49082,53 +49792,6 @@ export interface components {
             sort_order?: number;
         };
         UpdateLeadOriginRequest: {
-            label?: string;
-            intent?: components["schemas"]["LeadSourceIntent"];
-            sort_order?: number;
-            active?: boolean;
-        };
-        /**
-         * @deprecated
-         * @description Deprecated: how a row reached Margince is no longer scored. One administered lead source. `key` is the value stored on `lead.source`; `label` is what a user sees.
-         */
-        LeadSource: {
-            /** Format: uuid */
-            id: string;
-            /** @description Lowercase stable key, the stored value. Never changes after creation. */
-            key: string;
-            label: string;
-            intent: components["schemas"]["LeadSourceIntent"];
-            sort_order: number;
-            /** @description Inactive sources leave the create form and the filter; leads carrying them keep the value. */
-            active: boolean;
-            /** @description Built-in. Can be renamed, re-weighted and deactivated, never deleted. */
-            readonly system: boolean;
-            /** @description Live leads carrying this key. */
-            readonly lead_count: number;
-            version: components["schemas"]["RowVersion"];
-            /** Format: date-time */
-            created_at: string;
-            /** Format: date-time */
-            updated_at: string;
-        };
-        /** @description A source value present on leads but absent from the administered list — a connector family, a seed, an import. */
-        DiscoveredLeadSource: {
-            /** @description The stored value, or for `connector:<name>:<id>` values the `connector:<name>` family. */
-            key: string;
-            lead_count: number;
-        };
-        LeadSourceListResponse: {
-            data: components["schemas"]["LeadSource"][];
-            discovered: components["schemas"]["DiscoveredLeadSource"][];
-        };
-        CreateLeadSourceRequest: {
-            label: string;
-            /** @description Optional; derived from the label (lowercased, non-alphanumerics collapsed to `_`) when absent. Must be unique. */
-            key?: string;
-            intent?: components["schemas"]["LeadSourceIntent"];
-            sort_order?: number;
-        };
-        UpdateLeadSourceRequest: {
             label?: string;
             intent?: components["schemas"]["LeadSourceIntent"];
             sort_order?: number;
@@ -50429,6 +51092,13 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+            /**
+             * @description The tag a merge folded this one into, named as it reads now. Present only on a tag
+             *     archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+             *     destination and may itself have been merged since; follow each `merged_into` until a tag
+             *     has none to find the tag that carries the records now.
+             */
+            merged_into?: components["schemas"]["RowTag"];
             /** @description How many live contacts, companies, deals and leads carry this tag, as THIS caller may see them: a type the caller may not read counts nothing, and within a readable type only the rows the caller's scope admits are counted. The sum of the tag page's `usage`. Set on the list read that asks `with_carried_by`; absent otherwise. */
             readonly carried_by?: number;
         };
@@ -50502,6 +51172,13 @@ export interface components {
             updated_at?: string;
             /** Format: date-time */
             archived_at?: string | null;
+            /**
+             * @description The tag a merge folded this one into, named as it reads now. Present only on a tag
+             *     archived by a merge, and such a tag cannot be restored. The named tag is the next merge
+             *     destination and may itself have been merged since; follow each `merged_into` until a tag
+             *     has none to find the tag that carries the records now.
+             */
+            merged_into?: components["schemas"]["RowTag"];
             usage: components["schemas"]["TagUsage"];
         };
         /**
@@ -52087,6 +52764,7 @@ export interface components {
         CreateSavedViewRequest: {
             resource: components["schemas"]["SavedViewTarget"];
             name: string;
+            /** @description At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`. */
             query: {
                 [key: string]: unknown;
             };
@@ -52094,6 +52772,7 @@ export interface components {
         /** @description A partial update; omitted fields keep their stored value. */
         UpdateSavedViewRequest: {
             name?: string;
+            /** @description Replaces the stored query whole. At most 65536 bytes as JSON; a larger one is 422 `too_large` on `query`. */
             query?: {
                 [key: string]: unknown;
             };
@@ -52130,7 +52809,7 @@ export interface components {
             display_name: string;
             /**
              * Format: email
-             * @description May change only before the account has been used to sign in.
+             * @description May change only before the account has been used to sign in. A new address holds at most 254 characters; an unchanged stored address may be longer.
              */
             email: string;
             /** @description Omit to keep the current roles. */
@@ -52345,7 +53024,7 @@ export interface components {
         FormerMemberRequest: {
             /**
              * Format: email
-             * @description Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused.
+             * @description Their work address as the source system spelled it. It is the identity the seat is keyed on, so a second record for the same address is refused. A new address holds at most 254 characters. A longer stored address may still resolve a merged member to its survivor.
              */
             email: string;
             display_name: string;
@@ -53449,6 +54128,8 @@ export interface components {
              * @description The instant a snapshot share's state describes. Absent on a live share.
              */
             as_of?: string;
+            /** @description The name of the population the readings cover, as this reader's own lens names it: the team, the team member, or the whole company. Absent when that lens does not reach the team member or team, so a link never names a subject its reader could not choose; `readings.scope_kind` still says which kind it is. */
+            scope_label?: string;
             readings: components["schemas"]["ForecastReadings"];
             /** @description Whether anything was kept back from this reader. A boolean and never a count: a count of what somebody may not see states how much of it there is. */
             withheld: boolean;
@@ -55266,6 +55947,8 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             summary: string;
+            /** @description Why a project's phase was moved, in the words given with the move, so a walk through the history says why each move was made. Null on every other row, on a move made without a reason, and for a reader whose role does not read the phase. */
+            reason?: string | null;
             /**
              * Format: uuid
              * @description The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.
@@ -60917,7 +61600,10 @@ export interface components {
             expires_at: string;
         };
         DealRoomLinkRequest: {
-            /** Format: email */
+            /**
+             * Format: email
+             * @description Looks up an existing participant; stored addresses past the current write limit are accepted.
+             */
             email: string;
         };
         /**
@@ -61287,6 +61973,7 @@ export interface components {
         };
         /** @description Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422). */
         UpdateOfferLineItemRequest: {
+            /** @description Moves the line to this place in the offer. The lines between shift to make room, and the offer's lines are numbered from 1 again. A place past the last line puts it last. */
             position?: number;
             description?: string;
             unit?: string;
@@ -61650,6 +62337,11 @@ export interface components {
             connection?: components["schemas"]["PassportConnection"];
             /** Format: date-time */
             created_at: string;
+            /**
+             * Format: uuid
+             * @description The member who granted the passport its authority. A server built before this field omits it.
+             */
+            granted_by?: string;
             /** Format: date-time */
             expires_at?: string | null;
             /** Format: date-time */
@@ -66585,6 +67277,20 @@ export interface components {
         };
     };
     responses: {
+        /**
+         * @description Nothing exists yet. Only when the request carries `Prefer: absent=204`; without it the same
+         *     case answers `404`.
+         */
+        NothingYet: {
+            headers: {
+                /** @description `absent=204`, the preference this answer honours. */
+                "Preference-Applied"?: string;
+                /** @description `Prefer`: the answer depends on that request header. */
+                Vary?: string;
+                [name: string]: unknown;
+            };
+            content?: never;
+        };
         /** @description No valid credential — a missing/invalid/expired `crm_session` cookie (human path) or a missing/invalid/expired bearer token (agent path). */
         Unauthorized: {
             headers: {
@@ -66710,6 +67416,15 @@ export interface components {
         };
         /** @description No such resource in your company (or out of RBAC scope). */
         NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description The operation is retired and its behaviour is gone (`code: endpoint_retired`). A call that passes the route's authentication and parameter checks answers 410 with that code, until the notice window allows its removal. */
+        Retired: {
             headers: {
                 [name: string]: unknown;
             };
@@ -66915,13 +67630,16 @@ export interface components {
          * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
          *     effective `sort` of the originating request (field + direction) plus the last row's keyset
          *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-         *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+         *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+         *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
          *     together with a `sort` that differs from the one the cursor was minted under returns
          *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
          *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
          *     remaining pages see, so re-issue the query without the cursor when changing filters.
          */
         Cursor: string;
+        /** @description Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor. */
+        Offset: number;
         /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
         Limit: number;
         /**
@@ -67056,6 +67774,13 @@ export interface components {
          *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
          */
         IfMatch: string;
+        /**
+         * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+         *     read finds nothing yet. The token is matched without case, and every other preference is
+         *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+         *     that takes this header carries `Vary: Prefer`.
+         */
+        PreferAbsent: string;
     };
     requestBodies: never;
     headers: never;
@@ -68331,13 +69056,16 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
+                /** @description Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor. */
+                offset?: components["parameters"]["Offset"];
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
@@ -70009,7 +70737,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -70407,13 +71136,16 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
+                /** @description Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor. */
+                offset?: components["parameters"]["Offset"];
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
@@ -71300,7 +72032,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -71946,7 +72679,15 @@ export interface operations {
     getPartner: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -71964,6 +72705,7 @@ export interface operations {
                     "application/json": components["schemas"]["Partner"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
         };
@@ -72230,7 +72972,15 @@ export interface operations {
     getLatestTechnicalEnrich: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -72248,6 +72998,7 @@ export interface operations {
                     "application/json": components["schemas"]["TechnicalEnrichStatus"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -72257,7 +73008,15 @@ export interface operations {
     getCompanyVatCheck: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -72275,6 +73034,7 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyVatCheck"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -72318,7 +73078,15 @@ export interface operations {
     getLatestSiteRead: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -72336,6 +73104,7 @@ export interface operations {
                     "application/json": components["schemas"]["SiteReadReport"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
@@ -72375,7 +73144,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -72644,7 +73414,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -72902,7 +73673,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -73128,7 +73900,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -73670,13 +74443,16 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
+                /** @description Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor. */
+                offset?: components["parameters"]["Offset"];
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
@@ -75117,13 +75893,16 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
+                /** @description Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor. */
+                offset?: components["parameters"]["Offset"];
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
@@ -75845,7 +76624,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -77303,7 +78083,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -77333,6 +78114,8 @@ export interface operations {
                 kind?: ("email" | "call" | "meeting" | "note" | "task" | "message")[];
                 /** @description Calls that ended this way. Matches calls only. */
                 call_outcome?: "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
+                /** @description Generated channel recaps from this provider. Content visibility is required for a match. */
+                chat_provider?: components["schemas"]["MessengerProvider"];
                 /**
                  * @description Filter to messages carried by one transport. Since `kind=message` no longer names
                  *     the transport, this is the only way to ask the question `kind=telegram` used to
@@ -77959,6 +78742,33 @@ export interface operations {
                 };
                 content: {
                     "application/json": components["schemas"]["MeetingBrief"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getTaskExplanation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The task's explanation. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TaskExplanation"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -78664,7 +79474,15 @@ export interface operations {
     getLatestTranscriptRead: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -78682,6 +79500,7 @@ export interface operations {
                     "application/json": components["schemas"]["TranscriptReadReport"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
@@ -79252,7 +80071,15 @@ export interface operations {
                 anchor_type: components["schemas"]["MailDraftAnchorType"];
                 anchor_id: string;
             };
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -79267,6 +80094,7 @@ export interface operations {
                     "application/json": components["schemas"]["MailDraft"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             /**
              * @description No draft of the caller's for this anchor, or an anchor the caller can no longer
              *     see. The two are one answer, so a draft is never read back past its author's
@@ -81634,7 +82462,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -81814,7 +82643,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -81890,13 +82720,16 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
                  *     remaining pages see, so re-issue the query without the cursor when changing filters.
                  */
                 cursor?: components["parameters"]["Cursor"];
+                /** @description Rows to skip in the list's own order (its filters, row scope and `sort`), to open a page without walking the cursor to it. The answer carries `page.next_cursor`, so reading on from there uses the keyset. Refused with `422` (`field: offset`) together with `cursor`, and past 10000; a deeper page is reached through the cursor. */
+                offset?: components["parameters"]["Offset"];
                 /** @description Max items in the page. A value below 1 is refused with `422`; a value above 200 is served as 200. */
                 limit?: components["parameters"]["Limit"];
                 /**
@@ -81997,8 +82830,8 @@ export interface operations {
                  *     Mutually exclusive with `owner_id` and `owner_team_id`; combining them is `422`.
                  */
                 unassigned?: boolean;
-                /** @description Filter by how the row was written (import, crawl, manual, `connector:<name>`, ...). Not the origin; use `origin` to filter by where the lead came from. */
-                source?: string;
+                /** @description Filter by the channel the lead arrived by. Not the origin; use `origin` to filter by where the lead came from. */
+                source?: "api" | "automation" | "capture" | "import" | "manual" | "webform";
                 /** @description Filter by origin, an exact key from `/lead-origins`. Matched literally; `unset` names the leads with no origin. */
                 origin?: string;
                 /** @description Triage by first-response SLA state (formulas §18.1). `breached` is the overdue queue. */
@@ -82904,7 +83737,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -83089,166 +83923,6 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    listLeadSources: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path?: never;
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description The lead source list. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadSourceListResponse"];
-                };
-            };
-            401: components["responses"]["Unauthorized"];
-        };
-    };
-    createLeadSource: {
-        parameters: {
-            query?: never;
-            header?: {
-                /**
-                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
-                 *     create (API-CC-6). **Scope:** the key is unique within
-                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. A connected agent's principal is its connection, so a
-                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
-                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running and carries `Retry-After`;
-                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-                 *     request under the key failed after it had started, so check whether it took effect before
-                 *     retrying under a new key.
-                 *     A request the server stopped for time answers `503 code: request_timed_out` with
-                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
-                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
-                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
-                 *     attempt already bumped the version.
-                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
-                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
-                 *     to retry blind.
-                 */
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-            };
-            path?: never;
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["CreateLeadSourceRequest"];
-            };
-        };
-        responses: {
-            /** @description Created lead source. */
-            201: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadSource"];
-                };
-            };
-            403: components["responses"]["Forbidden"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    deleteLeadSource: {
-        parameters: {
-            query?: never;
-            header?: never;
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody?: never;
-        responses: {
-            /** @description Removed. */
-            204: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content?: never;
-            };
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
-            422: components["responses"]["ValidationError"];
-        };
-    };
-    updateLeadSource: {
-        parameters: {
-            query?: never;
-            header?: {
-                /**
-                 * @description Client-supplied key making a mutation safe to retry — an update exactly as much as a
-                 *     create (API-CC-6). **Scope:** the key is unique within
-                 *     `(workspace_id, principal, request-path)` and retained **24h**; a replay within that window
-                 *     returns the original status + body. A connected agent's principal is its connection, so a
-                 *     retry on a refreshed token replays too. An agent tool that runs this route takes the same
-                 *     key as its `idempotency_key`. Reusing the same key with a *different* request body
-                 *     returns `409 code: idempotency_key_conflict` (never a silent replay of mismatched intent;
-                 *     do not retry). Two more `409` codes tell a client what to do: `idempotency_key_in_progress`
-                 *     means the first request under the key is still running and carries `Retry-After`;
-                 *     resend the same request after that wait, and repeat until it answers with the recorded result; `idempotency_key_failed` means an earlier
-                 *     request under the key failed after it had started, so check whether it took effect before
-                 *     retrying under a new key.
-                 *     A request the server stopped for time answers `503 code: request_timed_out` with
-                 *     `Retry-After`. If it saved nothing, the key is free again: resend the same request after that wait.
-                 *     If it saved before it was stopped, a retry answers `409 idempotency_key_failed`.
-                 *     **On an update behind `If-Match`** the key is what separates "not applied" from "applied,
-                 *     answer lost": without it the blind retry answers `409 version_skew`, because the first
-                 *     attempt already bumped the version.
-                 *     **Precedence vs natural keys:** on `logActivity`/`createLead`, the Idempotency-Key (transport
-                 *     retry-safety) is checked first; if absent, the `(source_system, source_id)` natural key
-                 *     (data-model dedupe) governs. The two never both create a row. **Declaring this parameter is
-                 *     what makes an operation replay-safe** — an operation that omits it ignores the header rather
-                 *     than half-honouring it, so read this contract, not the client, to know which calls are safe
-                 *     to retry blind.
-                 */
-                "Idempotency-Key"?: components["parameters"]["IdempotencyKey"];
-            };
-            path: {
-                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
-                id: components["parameters"]["Id"];
-            };
-            cookie?: never;
-        };
-        requestBody: {
-            content: {
-                "application/json": components["schemas"]["UpdateLeadSourceRequest"];
-            };
-        };
-        responses: {
-            /** @description Updated lead source. */
-            200: {
-                headers: {
-                    [name: string]: unknown;
-                };
-                content: {
-                    "application/json": components["schemas"]["LeadSource"];
-                };
-            };
-            403: components["responses"]["Forbidden"];
-            404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -84279,7 +84953,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84597,7 +85272,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -84805,7 +85481,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -85834,7 +86511,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -87365,6 +88043,905 @@ export interface operations {
             };
         };
     };
+    getChatSummarySource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Availability of the native source without source identifiers when unavailable. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSourceAccess"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    receiveTeamsGraphNotification: {
+        parameters: {
+            query?: {
+                validationToken?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+                "text/plain": string;
+            };
+        };
+        responses: {
+            /** @description Endpoint validation or a verified notification batch receipt. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispactChannelEventReceipt"];
+                    "text/plain": string;
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Notification batch exceeds the size limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Retry after the returned wait. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Notification recovery could not be queued yet. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    receiveTeamsBotActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Activity accepted or ignored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispactChannelEventReceipt"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Activity exceeds the size limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Retry after the returned wait. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    receiveSlackChannelEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Challenge response or accepted event. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispactChannelEventReceipt"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Retry after the returned rate limit wait. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getTeamsChannelSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Setup instructions and verified installed teams without credentials. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamsChannelSetup"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description Configure the Microsoft app before managing its team installation. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connectTeamsChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    installation_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The approved team is connected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description Configure the Microsoft app before managing its team installation. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    downloadTeamsChannelPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uri */
+                    privacy_url: string;
+                    /** Format: uri */
+                    terms_url: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The app manifest and its required icons. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description Configure the Microsoft app before managing its team installation. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSlackChannelSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public installation metadata without credentials. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelProviderSetup"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    connectSlackChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    distribution: "internal" | "marketplace" | "non_marketplace";
+                };
+            };
+        };
+        responses: {
+            /** @description The native bot consent URL. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        authorize_url: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Configure the Slack app and signing secret before installing the bot. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    slackChannelsOAuthCallback: {
+        parameters: {
+            query: {
+                state: string;
+                code?: string;
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Return to Messaging providers with an explicit installation result. */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The callback cannot be authenticated. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMessengerSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description App setup facts without credentials. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerSetup"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    connectDispactParticipant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    personal_token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Your participant credential is verified and sealed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            /** @description Connect the Dispact installation before connecting your participant account. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connectMessenger: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MessengerConnectRequest"];
+            };
+        };
+        responses: {
+            /** @description The provider consent URL. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        authorize_url: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            /** @description Configure the messaging app before starting consent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    messengerOAuthCallback: {
+        parameters: {
+            query: {
+                state: string;
+                code?: string;
+                error?: string;
+            };
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Return to Messaging providers with an explicit consent result. */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The callback cannot be authenticated. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMessengerIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerIdentity"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    disconnectMessengerIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The participant-authorized result. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMessengerTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matched, inactive and unresolved members remain explicit. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        members: components["schemas"]["MessengerTeamMember"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listMessengerChannels: {
+        parameters: {
+            query?: {
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerChannels"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listMessengerMembers: {
+        parameters: {
+            query?: {
+                q?: string;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerMembers"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMessengerConversation: {
+        parameters: {
+            query: {
+                conversation_id: string;
+            };
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current sender and audience. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerContext"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    openMessengerConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessengerOpenRequest"];
+            };
+        };
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerContext"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMessengerMessages: {
+        parameters: {
+            query: {
+                conversation_id: string;
+                root_id?: string;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerPage"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    sendMessengerMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessengerSendRequest"];
+            };
+        };
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerAttempt"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMessengerAttempt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerAttempt"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getChannelLink: {
         parameters: {
             query?: never;
@@ -87535,7 +89112,9 @@ export interface operations {
     };
     listLinkableChannels: {
         parameters: {
-            query?: never;
+            query?: {
+                provider?: components["schemas"]["MessengerProvider"];
+            };
             header?: never;
             path: {
                 record_type: components["schemas"]["ChannelLinkRecordType"];
@@ -87570,6 +89149,142 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             /** @description The chat could not be reached (`code: channel_provider_unreachable`). */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewChannelDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current audience, overview and eligible queued update preview. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelDeliveryPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The provider requires a pause before another preview. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The provider could not supply a complete preview. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The provider cannot currently supply a complete preview. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getChannelDeliveryReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unconfirmed delivery metadata for the current linked record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelDeliveryReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description Channel delivery review is unavailable in this role. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reviewChannelDeliveries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewChannelDeliveryRequest"];
+            };
+        };
+        responses: {
+            /** @description Current review metadata after the human decision. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelDeliveryReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description Channel delivery review is unavailable in this role. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };
@@ -88412,7 +90127,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -89305,7 +91021,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -89555,7 +91272,15 @@ export interface operations {
     getOnboardingState: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -89570,6 +91295,7 @@ export interface operations {
                     "application/json": components["schemas"]["OnboardingState"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
         };
@@ -89673,7 +91399,15 @@ export interface operations {
                 /** @description Language for the open questions' copy; option values are locale-invariant. */
                 locale?: "en" | "de" | "vi";
             };
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -89688,6 +91422,7 @@ export interface operations {
                     "application/json": components["schemas"]["OnboardingCompanyProposal"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description No onboarding state exists yet, or it references no website read. */
@@ -89705,7 +91440,15 @@ export interface operations {
     getAnchorCompany: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -89720,6 +91463,7 @@ export interface operations {
                     "application/json": components["schemas"]["CompanyProfile"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description No company saved yet — onboarding has not been completed. */
@@ -90867,7 +92611,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -92994,6 +94739,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -93231,7 +94977,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -93766,7 +95513,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -93802,7 +95550,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -94016,7 +95765,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -94947,7 +96697,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -95227,7 +96978,15 @@ export interface operations {
     getContactCase: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Any member of the case. */
                 contact_id: string;
@@ -95245,6 +97004,7 @@ export interface operations {
                     "application/json": components["schemas"]["ContactCase"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -95498,7 +97258,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -95837,7 +97598,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -96586,7 +98348,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -96636,7 +98399,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -96763,7 +98527,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -96807,7 +98572,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -97506,7 +99272,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -97678,7 +99445,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -97773,7 +99541,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -98383,7 +100152,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -98980,7 +100750,15 @@ export interface operations {
     getOwnershipRequest: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 record_type: "contact" | "company";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -98999,6 +100777,7 @@ export interface operations {
                     "application/json": components["schemas"]["OwnershipRequest"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
@@ -99109,7 +100888,15 @@ export interface operations {
     getEditAccessRequest: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 record_type: "contact" | "company" | "deal" | "lead" | "project";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -99128,6 +100915,7 @@ export interface operations {
                     "application/json": components["schemas"]["EditAccessRequest"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
@@ -99234,7 +101022,15 @@ export interface operations {
     getOwnershipOffer: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 record_type: "contact" | "company";
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
@@ -99253,6 +101049,7 @@ export interface operations {
                     "application/json": components["schemas"]["OwnershipOffer"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
             422: components["responses"]["ValidationError"];
@@ -99398,7 +101195,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -99540,7 +101338,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -101079,7 +102878,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -101832,7 +103632,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -102058,7 +103859,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -102182,7 +103984,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -102484,7 +104287,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -103299,7 +105103,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -103713,7 +105518,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -104329,7 +106135,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -104684,7 +106491,15 @@ export interface operations {
     getMorningBrief: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -104699,6 +106514,7 @@ export interface operations {
                     "application/json": components["schemas"]["MorningBrief"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description The rep has no brief run yet (none has been generated). */
@@ -104776,7 +106592,15 @@ export interface operations {
                  */
                 week?: string;
             };
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -104791,6 +106615,7 @@ export interface operations {
                     "application/json": components["schemas"]["TeamWeeklyReview"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -104803,7 +106628,15 @@ export interface operations {
                 /** @description The Monday of the week to open, in the installation reporting timezone. Omitted serves the most recent. */
                 week?: string;
             };
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -104818,6 +106651,7 @@ export interface operations {
                     "application/json": components["schemas"]["WeeklyReview"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description The rep has no review for that week. */
@@ -104966,7 +106800,15 @@ export interface operations {
     getForecastAssurance: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -104981,6 +106823,7 @@ export interface operations {
                     "application/json": components["schemas"]["ForecastAssurance"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description No run has completed yet. A fresh installation has not been checked. */
@@ -105048,7 +106891,15 @@ export interface operations {
     getDataCoverage: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -105063,6 +106914,7 @@ export interface operations {
                     "application/json": components["schemas"]["DataCoverage"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             /** @description No run has completed yet. A fresh installation has not been checked. */
@@ -105669,7 +107521,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -105947,7 +107800,15 @@ export interface operations {
     getCurrentWeeklyPlan: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path?: never;
             cookie?: never;
         };
@@ -105962,6 +107823,7 @@ export interface operations {
                     "application/json": components["schemas"]["WeeklyPlan"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -105992,7 +107854,15 @@ export interface operations {
     getTeammateWeeklyPlan: {
         parameters: {
             query?: never;
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Whose week to read. */
                 owner_id: string;
@@ -106010,6 +107880,7 @@ export interface operations {
                     "application/json": components["schemas"]["WeeklyPlan"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -106481,7 +108352,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -106534,10 +108406,22 @@ export interface operations {
                     entity_id: string;
                     /** Format: binary */
                     file: string;
+                    /** @description When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy. */
+                    reuse_identical?: boolean;
                 };
             };
         };
         responses: {
+            /** @description The identical file the record already held, answered for `reuse_identical`. Nothing was stored. */
+            200: {
+                headers: {
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Attachment"];
+                };
+            };
             /** @description The stored attachment metadata. */
             201: {
                 headers: {
@@ -106645,7 +108529,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -107504,7 +109389,15 @@ export interface operations {
                     "application/json": components["schemas"]["RecoveryCodes"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
+            /** @description A refused password carries its own machine `code`: `current_password_invalid` (the password is wrong) or `account_locked` (the lockout is in force, and waiting is the remedy). A missing session and a wrong authenticator code both answer `unauthorized`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description Refused with `code: mfa_already_enrolled` — the factor is already confirmed. */
             409: {
                 headers: {
@@ -107515,6 +109408,15 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+            /** @description Too many wrong current-password attempts for this account. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getMyWorkingHours: {
@@ -107867,7 +109769,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -108180,7 +110083,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -108312,7 +110216,15 @@ export interface operations {
             query?: {
                 question?: "deal_facts" | "chat_capture";
             };
-            header?: never;
+            header?: {
+                /**
+                 * @description An RFC 7240 preference. `absent=204` asks for `204 No Content` instead of `404` when the
+                 *     read finds nothing yet. The token is matched without case, and every other preference is
+                 *     ignored. A row the caller may not see still answers `404`. Every answer of an operation
+                 *     that takes this header carries `Vary: Prefer`.
+                 */
+                Prefer?: components["parameters"]["PreferAbsent"];
+            };
             path: {
                 /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
                 id: components["parameters"]["Id"];
@@ -108330,6 +110242,7 @@ export interface operations {
                     "application/json": components["schemas"]["AttachmentExtraction"];
                 };
             };
+            204: components["responses"]["NothingYet"];
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
@@ -108574,7 +110487,8 @@ export interface operations {
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
                  *     (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
-                 *     under concurrent inserts/updates (keyset pagination, not offset). Supplying `cursor`
+                 *     under concurrent inserts/updates, because the cursor names a row rather than a count of rows
+                 *     to skip. A list that takes `offset` refuses it together with a cursor. Supplying `cursor`
                  *     together with a `sort` that differs from the one the cursor was minted under returns
                  *     `422 code: cursor_param_mismatch` — re-issue the query without the cursor. Filters are
                  *     **not** fingerprinted by the cursor: changing a filter mid-walk changes which rows the
@@ -110094,6 +112008,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -110117,6 +112032,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -110143,6 +112059,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -110182,6 +112099,7 @@ export interface operations {
                 };
             };
             409: components["responses"]["Conflict"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -110212,6 +112130,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -110235,6 +112154,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            410: components["responses"]["Retired"];
         };
     };
     setForecastAssuranceEnforcement: {
@@ -110266,6 +112186,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             409: components["responses"]["SettingLocked"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -110297,6 +112218,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -110329,6 +112251,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -110356,6 +112279,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };

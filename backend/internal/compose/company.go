@@ -16,7 +16,6 @@ package compose
 
 import (
 	"net/http"
-	"net/url"
 	"strings"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
@@ -124,7 +123,7 @@ func (h companyHandlers) contextCapabilities() crmcontracts.CompanyContextCapabi
 	}
 }
 
-func (h companyHandlers) GetAnchorCompany(w http.ResponseWriter, r *http.Request) {
+func (h companyHandlers) GetAnchorCompany(w http.ResponseWriter, r *http.Request, _ crmcontracts.GetAnchorCompanyParams) {
 	if h.store == nil {
 		httperr.NotImplemented(w, r, "getAnchorCompany")
 		return
@@ -189,8 +188,8 @@ func (h companyHandlers) PutAnchorCompany(w http.ResponseWriter, r *http.Request
 			website = &trimmed
 		}
 	}
-	if website != nil && !parseableWebsite(*website) {
-		httperr.Write(w, r, httperr.Validation("website", "invalid", "website must be a domain (acme.com) or an absolute http(s) URL"))
+	if website != nil && !values.PublicWebsite(*website) {
+		httperr.Write(w, r, httperr.Validation("website", "invalid", "website must be a public domain (acme.com) or an absolute http(s) URL on one"))
 		return
 	}
 
@@ -255,20 +254,6 @@ func trimOptional(value *string) *string {
 	}
 	trimmed := strings.TrimSpace(*value)
 	return &trimmed
-}
-
-// parseableWebsite accepts what a human types — a bare domain as readily as a
-// full URL — and rejects what could not name a host either way.
-func parseableWebsite(website string) bool {
-	candidate := strings.TrimSpace(website)
-	if !strings.Contains(candidate, "://") {
-		candidate = "https://" + candidate
-	}
-	parsed, err := url.Parse(candidate)
-	if err != nil || parsed.Hostname() == "" {
-		return false
-	}
-	return parsed.Scheme == schemeHTTP || parsed.Scheme == schemeHTTPS
 }
 
 // toContractCompany maps the store's view onto the wire shape. A field nobody

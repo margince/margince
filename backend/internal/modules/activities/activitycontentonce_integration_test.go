@@ -87,7 +87,7 @@ func decisionLoops(ctx context.Context, t *testing.T, store *Store, statement tr
 	if n := strings.Count(statement.sql, "AS available OFFSET 0) content_decision"); n != 1 {
 		t.Fatalf("statement carries %d content decisions, want 1:\n%s", n, statement.sql)
 	}
-	for _, payload := range []string{"a.body", "a.raw"} {
+	for _, payload := range []string{"a.body", chatSourceReadSQL(ctx, "a.raw", safeChatMetadataSQL)} {
 		if !strings.Contains(statement.sql, "CASE WHEN (content_decision.available) THEN "+payload+" END") {
 			t.Fatalf("%s is not gated by the shared decision:\n%s", payload, statement.sql)
 		}

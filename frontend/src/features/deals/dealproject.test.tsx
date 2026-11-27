@@ -180,6 +180,23 @@ function dealBackend(opts: {
         }
         return jsonResponse(current);
       }
+      if (pathname.startsWith("/v1/channel-links/"))
+        return jsonResponse({ state: "off" });
+      if (pathname.endsWith("/handoff"))
+        return jsonResponse({
+          project_id: "pr-1",
+          name: "CRM rollout",
+          phase: "planning",
+          as_of: "2026-06-01T09:00:00Z",
+          deals: [],
+          stakeholders: [],
+          open_commitments: [],
+          gaps: [],
+          sections_omitted: [],
+          owner_name: "Rita Rep",
+        });
+      if (pathname.endsWith("/commitments"))
+        return jsonResponse({ data: [], complete: true, has_more: false });
       const company = companyNamesAnswer(
         url,
         Object.fromEntries(
@@ -527,7 +544,8 @@ describe("the deal page", () => {
       screen.getByText(/Attach it to CRM rollout and move the project/),
     ).toBeTruthy();
     await user.click(start);
-
+    expect(writes).toHaveLength(0);
+    await confirmDelivery(user);
     await waitFor(() => expect(writes).toHaveLength(2));
     expect(writes[0]).toMatchObject({
       method: "PATCH",
@@ -594,12 +612,14 @@ describe("the deal page", () => {
     render(<DealScreen id="d1" />);
     await overviewDrawn();
     await user.click(await screen.findByTestId("deal-start-delivery"));
+    await confirmDelivery(user);
     // The PATCH landed, the advance did not: the deal re-reads as attached,
     // and the offer now says only the project is still owed.
     expect(
       await screen.findByText(/attached to CRM rollout, but the project/),
     ).toBeTruthy();
     await user.click(screen.getByTestId("deal-start-delivery"));
+    await confirmDelivery(user);
     await waitFor(() => expect(advances).toBe(2));
     // One PATCH in total: the retry never attaches a second time.
     expect(writes.filter((write) => write.method === "PATCH")).toHaveLength(1);
@@ -711,3 +731,14 @@ describe("the deal page", () => {
     expect(same?.map((o) => o.label)).toContain("Joint rollout");
   });
 });
+
+async function confirmDelivery(user: ReturnType<typeof userEvent.setup>) {
+  const dialog = await screen.findByRole("dialog", {
+    name: englishCopy["channelHandoff.title"],
+  });
+  const confirm = within(dialog).getByRole("button", {
+    name: englishCopy["deal.startDeliveryTitle"],
+  });
+  await waitFor(() => expect(confirm.hasAttribute("disabled")).toBe(false));
+  await user.click(confirm);
+}

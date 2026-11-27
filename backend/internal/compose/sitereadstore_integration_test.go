@@ -114,7 +114,7 @@ func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T)
 
 	// Finish records the whole crawl report in one terminal write.
 	stopped := "page_cap"
-	proposal := ids.NewV7()
+	proposal, other := stageApprovalForTask(t, e).UUID, stageApprovalForTask(t, e).UUID
 	err = store.FinishSiteRead(worker, read.ID, contacts.FinishSiteReadInput{
 		Status: "partial",
 		Pages: []contacts.SiteReadPage{
@@ -124,7 +124,7 @@ func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T)
 		Skipped:       []contacts.SiteReadSkip{{URL: "https://acme.example/blog", Reason: "robots"}},
 		StoppedReason: &stopped,
 		FactCount:     7,
-		ProposalIDs:   []ids.UUID{proposal},
+		ProposalIDs:   []ids.UUID{proposal, other, proposal},
 	})
 	if err != nil {
 		t.Fatalf("FinishSiteRead: %v", err)
@@ -143,8 +143,9 @@ func TestSiteReadWorkerAdvancesTheDossierThroughGuardedTransitions(t *testing.T)
 	if done.StoppedReason == nil || *done.StoppedReason != "page_cap" {
 		t.Fatalf("stopped_reason = %v, want page_cap", done.StoppedReason)
 	}
-	if len(done.ProposalIDs) != 1 || done.ProposalIDs[0] != proposal {
-		t.Fatalf("proposal_ids = %v, want [%s]", done.ProposalIDs, proposal)
+	if len(done.ProposalIDs) != 2 || done.ProposalIDs[0] != proposal || done.ProposalIDs[1] != other ||
+		e.WsCount(t, `SELECT count(*) FROM site_read WHERE id = $1 AND proposal_ids = ARRAY(SELECT approval_id FROM site_read_proposal WHERE site_read_id = $1 ORDER BY position)`, read.ID) != 1 {
+		t.Fatalf("proposal_ids = %v, want [%s %s] with keyed rows in that order: staging order, a repeat kept once", done.ProposalIDs, proposal, other)
 	}
 
 	// The terminal write is a CAS too: a finished read cannot finish again.

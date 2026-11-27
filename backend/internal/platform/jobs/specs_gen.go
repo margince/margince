@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "d37be303bd7365871c0d702a01453fec176e75c6cbffde37f0dcf5898ad9f5cf"
+const JobContractHash = "3168e4b5bdbcb7eadf1c09904bdcbc779157b6fa9e8302852b4ef4bd308740c1"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -228,7 +228,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 20 * time.Minute},
 		OptsOwner: OptsCaller,
-		Cadence:   Cadence{Fixed: 10 * time.Minute},
+		Cadence:   Cadence{Setting: "installation.capture_confidentiality_verdict_interval_seconds"},
 	},
 	"capture_counterparty_verdict": {
 		Kind:      "capture_counterparty_verdict",
@@ -238,7 +238,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 20 * time.Minute},
 		OptsOwner: OptsCaller,
-		Cadence:   Cadence{Fixed: 10 * time.Minute},
+		Cadence:   Cadence{Setting: "installation.capture_counterparty_verdict_interval_seconds"},
 	},
 	"capture_enrich": {
 		Kind:         "capture_enrich",
@@ -1017,6 +1017,16 @@ var specs = map[string]Spec{
 		OptsOwner:    OptsCaller,
 		Registration: Registration{When: []string{"StageEvidenceBrain"}, AbsentRegistersAnyway: true},
 		Args:         []ArgField{{Name: "After"}, {Name: "Domain", Scalar: true, Reason: "The removed own domain is an installation setting the admin list already showed; it names no contact and carries no mail content."}, {Name: "Removal"}, {Name: "Workspace"}},
+	},
+	"standing_line_check": {
+		Kind:         "standing_line_check",
+		GoType:       "StandingLineCheckArgs",
+		Role:         Worker,
+		Queue:        "ai_capture",
+		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Registration: Registration{When: []string{"StandingLineBrain"}},
+		Args:         []ArgField{{Name: "ActivityID"}, {Name: "Workspace"}},
 	},
 	"stored_object_reap": {
 		Kind:         "stored_object_reap",

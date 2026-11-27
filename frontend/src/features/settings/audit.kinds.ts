@@ -5,6 +5,16 @@ import type { MessageKey } from "../../i18n/en";
 
 // The words for each record type an audit row names, by its wire value.
 export const AUDIT_KIND_LABEL: Readonly<Record<string, MessageKey>> = {
+  chat_bot_delivery: "audit.kind.chat_bot_delivery",
+  chat_channel_watch: "audit.kind.chat_channel_watch",
+  chat_member_grant: "audit.kind.chat_member_grant",
+  chat_member_room: "audit.kind.chat_member_room",
+  chat_post_item: "audit.kind.chat_post_item",
+  chat_root: "audit.kind.chat_root",
+  chat_send_attempt: "audit.kind.chat_send_attempt",
+  chat_team_installation: "audit.kind.chat_team_installation",
+  chat_team_thread: "audit.kind.chat_team_thread",
+
   consent_purpose: "settings.purposes",
   activity_retention_evidence: "audit.kind.activity_retention_evidence",
   activity_review_template: "audit.kind.activity_review_template",
@@ -86,7 +96,6 @@ export const AUDIT_KIND_LABEL: Readonly<Record<string, MessageKey>> = {
   lead_disqualify_reason: "audit.kind.lead_disqualify_reason",
   lead_origin: "audit.kind.lead_origin",
   lead_privacy_notice: "audit.kind.lead_privacy_notice",
-  lead_source: "audit.kind.lead_source",
   legal_entity: "audit.kind.legal_entity",
   legal_review: "audit.kind.legal_review",
   license: "audit.kind.license",

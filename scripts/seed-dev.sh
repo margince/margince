@@ -219,6 +219,19 @@ echo "  OK: $API_BASE is up"
 echo "== seed-dev: demo installation =="
 sign_in_as_admin
 
+# `make seed-dev` runs this last, after seed-dev.sql has linked the demo
+# customers: the first finance pass mirrors only linked customers, so it is
+# queued once they exist, through the endpoint Sync now uses.
+if [[ "${1:-}" = "--queue-finance-sync" ]]; then
+  status="$(api POST /finance/source/sync)"
+  case "$status" in
+    202) echo "  OK: first finance sync queued" ;;
+    404|501) echo "  SKIP: no accounting source to sync (HTTP $status)" ;;
+    *) cat "$workdir/body" >&2; fail "POST /v1/finance/source/sync returned HTTP $status" ;;
+  esac
+  exit 0
+fi
+
 # The installation's own company — the anchor company, and the one row the
 # app shell gates on. GET /company 404s until it exists, and that 404 IS the
 # "this installation has not described itself yet" signal onboarding reads, so
@@ -304,7 +317,7 @@ ensure_activity() { # ensure_activity <label> <subject> <source-id> <json-body>
   # "Quarterly review with Demo GmbH" is all it takes to hold the subject.
   #
   # The KEY is what says the row is this seeder's — the subject is a title
-  # anybody may reuse, and `source: "seed"` is a claim about who wrote a row
+  # anybody may reuse, and `source` is a claim about how a row arrived
   # rather than about which row it is.
   #
   # THROUGH find_first, which follows the pages. A single-page probe answers
@@ -577,7 +590,7 @@ alice_id="$(contact_id "Alice Müller" "alice@demo.test")"
 # second rather than write a duplicate; the read above it is what keeps a seeder
 # from skipping the links when somebody else's row holds the subject.
 ensure_activity "task: call Alice back" "Call Alice back about the retrofit" "task:call-alice-back" "$(jq -n --arg p "$alice_id" --arg due "$(iso_in_days 0)" \
-  '{kind:"task",subject:"Call Alice back about the retrofit",source:"seed",due_at:$due,
+  '{kind:"task",subject:"Call Alice back about the retrofit",source:"api",due_at:$due,
     source_system:"seed",source_id:"task:call-alice-back",
     links:[{entity_type:"contact",entity_id:$p}]}')"
 
@@ -595,7 +608,7 @@ ensure_activity "task: call Alice back" "Call Alice back about the retrofit" "ta
 # through a public endpoint — and should not, since impersonating one is exactly
 # what captured_by exists to prevent.
 ensure_activity "task: follow up with the lead" "Follow up with the new lead" "task:follow-up-new-lead" "$(jq -n --arg p "$alice_id" --arg due "$(iso_in_days 1)" \
-  '{kind:"task",subject:"Follow up with the new lead",source:"seed",due_at:$due,
+  '{kind:"task",subject:"Follow up with the new lead",source:"api",due_at:$due,
     source_system:"seed",source_id:"task:follow-up-new-lead",
     links:[{entity_type:"contact",entity_id:$p}]}')"
 
@@ -638,7 +651,7 @@ ensure_conversation() { # ensure_conversation <slug> <subject> <kind> <direction
   ensure_activity "$kind \"$subject\"" "$subject" "$slug" \
     "$(jq -n --arg s "$subject" --arg k "$kind" --arg at "$(iso_in_days "-$back")" \
         --arg key "$slug" --argjson l "$links" --argjson dir "$direction_field" \
-        '{kind:$k,subject:$s,occurred_at:$at,source:"seed",
+        '{kind:$k,subject:$s,occurred_at:$at,source:"api",
           source_system:"seed",source_id:$key,links:$l} + $dir')"
 }
 

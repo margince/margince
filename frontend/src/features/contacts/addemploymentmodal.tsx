@@ -15,7 +15,11 @@ import {
 import { useFieldFaults } from "../../design-system/savepage";
 import { stable } from "../../format/collate";
 import { useLocale, useT } from "../../i18n";
-import { stillHeld, useEmploymentZone } from "../../lib/employmentcurrency";
+import {
+  stillHeld,
+  today,
+  useEmploymentZone,
+} from "../../lib/employmentcurrency";
 import { fieldCheckSentence } from "../../lib/problem";
 import {
   type Employment,
@@ -256,7 +260,12 @@ export function AddEmploymentModal({
           variant="primary"
           pending={create.isPending}
           onClick={async () => {
-            const found = employmentDateFaults(locale, t, { start, end });
+            const found = employmentDateFaults(locale, t, {
+              start,
+              end,
+              status,
+              today: today(employmentZone),
+            });
             if (!company) {
               found.set(
                 "company",

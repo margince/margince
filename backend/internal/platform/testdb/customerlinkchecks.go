@@ -6,6 +6,7 @@
 package testdb
 
 import (
+	"slices"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -29,6 +30,33 @@ func WithCustomerLinkChecksLifted(t *testing.T, mutate func(pgx.Tx) error) {
 func WithParticipantAddressCheckLifted(t *testing.T, mutate func(pgx.Tx) error) {
 	t.Helper()
 	withChecksLifted(t, []string{"activity_participant_address_is_canonical"}, mutate)
+}
+
+// negativeCountFloorSQL names the floors an upgraded database holds `NOT
+// VALID`, so rows written before them may hold a negative count. Read from the
+// catalog, so a floor added later is lifted too.
+const negativeCountFloorSQL = `SELECT conname FROM pg_constraint
+	 WHERE contype = 'c' AND conname LIKE '%\_not\_negative'
+	   AND conrelid IN ('activity'::regclass, 'ai_call'::regclass) ORDER BY conname`
+
+// WithNegativeCountFloorsLifted runs mutate with every negative count floor
+// dropped, then adds each back. The rows it plants hold a count as older
+// writers stored it.
+func WithNegativeCountFloorsLifted(t *testing.T, mutate func(pgx.Tx) error) {
+	t.Helper()
+	var floors []string
+	withFixtureOwnerTx(t, func(tx pgx.Tx) error {
+		rows, err := tx.Query(t.Context(), negativeCountFloorSQL)
+		if err != nil {
+			return err
+		}
+		floors, err = pgx.CollectRows(rows, pgx.RowTo[string])
+		return err
+	})
+	if !slices.Contains(floors, "activity_duration_not_negative") {
+		t.Fatalf("the negative count floors read %v; the schema no longer holds the activity floor", floors)
+	}
+	withChecksLifted(t, floors, mutate)
 }
 
 // withChecksLifted runs mutate with the named checks dropped, then adds each

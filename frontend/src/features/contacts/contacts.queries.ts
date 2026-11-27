@@ -10,9 +10,11 @@ import {
 } from "../../components/listquery.options";
 import {
   type ListQuery,
+  type ListReach,
   listFetchLimit,
   listQueryFromParams,
 } from "../../components/listqueryparams";
+import { CONTACTS_INITIAL_SORT } from "../../lib/listopenings";
 import { unwrap } from "../../lib/problem";
 import { listQueryParams } from "../../lib/tagfilter";
 import { NO_URL_PARAMS } from "../../lib/urlstate";
@@ -21,13 +23,11 @@ type Contact = components["schemas"]["Contact"];
 
 export const CONTACTS_LIST_KEY = "contacts";
 
-/** The order the Contacts list opens on before a reader picks one. */
-export const CONTACTS_INITIAL_SORT = "-created_at";
-
 export async function fetchContactsPage(
   query: ListQuery,
   cursor: string | null,
   signal?: AbortSignal,
+  reach?: ListReach,
 ): Promise<ListPage<Contact>> {
   const data = unwrap(
     await api.GET("/contacts", {
@@ -38,7 +38,8 @@ export async function fetchContactsPage(
           sort: query.sort || undefined,
           include_archived: query.includeArchived || undefined,
           cursor: cursor || undefined,
-          limit: listFetchLimit(query.perPage),
+          limit: listFetchLimit(query.perPage, reach),
+          offset: reach?.offset,
           ...listQueryParams(query.filters),
         },
       },

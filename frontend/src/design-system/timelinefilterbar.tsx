@@ -6,6 +6,10 @@ import { useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { isImeCommit } from "../lib/imecommit";
 import { labelFor } from "../lib/labelfor";
+import {
+  isMessengerProvider,
+  MESSENGER_PROVIDERS,
+} from "../lib/messagingproviders";
 import { SearchField } from "./atoms";
 import { DateInput } from "./dateinput";
 import { useSettledValue } from "./debouncedsearch";
@@ -121,9 +125,27 @@ export function TimelineFilterBar({
             onChange({
               ...value,
               kind: isActivityKind(next) ? next : undefined,
+              chat_provider:
+                next && next !== "note" ? undefined : value.chat_provider,
             })
           }
         />
+        {kinds.includes("note") && (!value.kind || value.kind === "note") && (
+          <Select
+            aria-label={t("timeline.filters.chatProvider")}
+            options={[
+              { value: "", label: t("timeline.filters.allProviders") },
+              ...MESSENGER_PROVIDERS,
+            ]}
+            value={value.chat_provider ?? ""}
+            onChange={(next) =>
+              onChange({
+                ...value,
+                chat_provider: isMessengerProvider(next) ? next : undefined,
+              })
+            }
+          />
+        )}
         <SearchField
           value={draft}
           aria-label={t("timeline.filters.search")}
@@ -169,8 +191,14 @@ export function TimelineFilterBar({
           </DateBound>
         </span>
       </div>
-      {value.q && (
-        <p className="t-caption">{t("timeline.filters.searchOmitsLimited")}</p>
+      {(value.q || value.chat_provider) && (
+        <p className="t-caption">
+          {t(
+            value.q
+              ? "timeline.filters.searchOmitsLimited"
+              : "timeline.filters.providerOmitsLimited",
+          )}
+        </p>
       )}
     </div>
   );

@@ -14,10 +14,10 @@ import { ForecastReview } from "./analytics.forecast.review";
 
 // The check a workspace has not had yet.
 //
-// What these hold is the honesty of the panel in the one state it used to have
-// nothing to say in. A 404 from the assurance read means nobody has started
-// this workspace — the nightly pass skips it — and a panel that drew that as an
-// ordinary empty state would tell a reader the pipeline was found clean.
+// These tests hold the panel's wording in the one state it used to say nothing
+// in. A 204 from the assurance read means nobody has started this workspace,
+// and the nightly pass skips it. A panel that drew that as an ordinary empty
+// state would tell a reader the pipeline was found clean.
 
 const PREVIEW = {
   started: false,
@@ -33,7 +33,7 @@ const PREVIEW = {
 type Posted = { url: string };
 
 // The server as a never-checked workspace presents it: the assurance read
-// answers 404 and the preview answers what a first pass would find.
+// answers 204 and the preview answers what a first pass would find.
 function show({
   conflict,
   preview = PREVIEW,
@@ -79,7 +79,7 @@ function show({
         return jsonResponse({ data: [] });
       }
       if (url.includes("/forecast/assurance")) {
-        return jsonResponse({ title: "Not found", status: 404 }, 404);
+        return new Response(null, { status: 204 });
       }
       return jsonResponse({}, 404);
     }),

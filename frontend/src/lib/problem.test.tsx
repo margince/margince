@@ -613,12 +613,24 @@ describe("a field refusal read in the reader's language", () => {
       details: { errors: [fault] },
     });
 
+  const unknownRule = () =>
+    new ProblemError({
+      status: 422,
+      code: "validation_error",
+      details: {
+        errors: [
+          {
+            field: "note",
+            // problem-code:unknown-field: exercises the generic fallback for an unknown server rule.
+            code: "not_a_known_code",
+            message: "bad note",
+          },
+        ],
+      },
+    });
+
   it("never says no cause was reported when the server named a field and a code", () => {
-    const line = problemMessageOf(
-      // problem-code:unknown-field: exercises the generic fallback for an unknown server rule.
-      refusal({ field: "note", code: "not_a_known_code", message: "bad note" }),
-      german,
-    );
+    const line = problemMessageOf(unknownRule(), german);
     expect(line).toBe(german("common.fieldInvalid"));
     expect(line).not.toBe(german("common.errorNoCause"));
   });
@@ -664,12 +676,7 @@ describe("a field refusal read in the reader's language", () => {
   });
 
   it("words the callout and the line under the field the same way", () => {
-    const error = refusal({
-      field: "note",
-      // problem-code:unknown-field: exercises the generic fallback for an unknown server rule.
-      code: "not_a_known_code",
-      message: "bad note",
-    });
+    const error = unknownRule();
     expect(problemFieldSentencesOf(error, "de").get("note")).toBe(
       problemMessageOf(error, german),
     );
