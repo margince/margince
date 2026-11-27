@@ -7604,6 +7604,8 @@ public.lead.lead_score_range CHECK (((score >= 0) AND (score <= 100)))
 public.lead.lead_sla_breach_follows_creation CHECK (((sla_breached_at IS NULL) OR (sla_breached_at >= created_at)))
 public.lead.lead_source_author_id_fkey FOREIGN KEY (source_author_id) REFERENCES app_user(id) ON DELETE SET NULL
 public.lead.lead_source_author_needs_a_source CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))
+public.lead.lead_source_channel CREATE TRIGGER lead_source_channel BEFORE INSERT OR UPDATE ON public.lead FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) EXECUTE FUNCTION move_lead_source_onto_its_channel()
+public.lead.lead_source_check CHECK ((source = ANY (ARRAY['api'::text, 'automation'::text, 'capture'::text, 'import'::text, 'manual'::text, 'webform'::text]))) NOT VALID
 public.lead.lead_status_check CHECK ((status = ANY (ARRAY['new'::text, 'contacted'::text, 'engaged'::text, 'promoted'::text, 'disqualified'::text])))
 public.lead.lead_status_set_by_check CHECK (((status_set_by IS NULL) OR (status_set_by = ANY (ARRAY['human'::text, 'system'::text]))))
 public.lead.lead_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -7757,26 +7759,6 @@ public.lead_score_history.score_computed smallint NOT NULL gen=- def=-
 public.lead_score_history.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lead_score_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"override_reason":2000}')
 public.lead_score_history.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lead_score_history FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"override_reason": 2000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"override_reason":2000}')
 public.lead_score_history_pkey CREATE UNIQUE INDEX lead_score_history_pkey ON public.lead_score_history USING btree (id)
-public.lead_source acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.lead_source.active boolean NOT NULL gen=- def=true
-public.lead_source.created_at timestamp with time zone NOT NULL gen=- def=now()
-public.lead_source.id uuid NOT NULL gen=- def=uuidv7()
-public.lead_source.intent text NOT NULL gen=- def='neutral'::text
-public.lead_source.key text NOT NULL gen=- def=-
-public.lead_source.label text NOT NULL gen=- def=-
-public.lead_source.lead_source_intent_check CHECK ((intent = ANY (ARRAY['high'::text, 'neutral'::text, 'low'::text])))
-public.lead_source.lead_source_key_shape CHECK (((key = lower(key)) AND (length(btrim(key)) > 0)))
-public.lead_source.lead_source_label_present CHECK ((length(btrim(label)) > 0))
-public.lead_source.lead_source_pkey PRIMARY KEY (id)
-public.lead_source.lead_source_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
-public.lead_source.sort_order integer NOT NULL gen=- def=0
-public.lead_source.system boolean NOT NULL gen=- def=false
-public.lead_source.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.lead_source FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"key": 20000, "label": 120, "intent": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"intent":20000,"key":20000,"label":120}')
-public.lead_source.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.lead_source FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "label": 120, "intent": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"intent":20000,"key":20000,"label":120}')
-public.lead_source.trg_lead_source_updated CREATE TRIGGER trg_lead_source_updated BEFORE UPDATE ON public.lead_source FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
-public.lead_source.updated_at timestamp with time zone NOT NULL gen=- def=now()
-public.lead_source.version bigint NOT NULL gen=- def=1
-public.lead_source_pkey CREATE UNIQUE INDEX lead_source_pkey ON public.lead_source USING btree (id)
 public.legal_entity acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.legal_entity.address_city text gen=- def=-
 public.legal_entity.address_line1 text gen=- def=-
@@ -8316,6 +8298,12 @@ BEGIN
       UPDATE company SET last_activity_at = v WHERE id = rid AND last_activity_at IS DISTINCT FROM v;
   END CASE;
   PERFORM set_config('margince.last_activity_move', 'off', true);
+END;
+
+public.move_lead_source_onto_its_channel() secdef=false cfg=- acl=- 
+BEGIN
+ NEW.source := party_source_channel(NEW.source, NEW.source_system);
+ RETURN NEW;
 END;
 
 public.move_party_source_onto_its_channel() secdef=false cfg=- acl=- 
@@ -11777,7 +11765,6 @@ public.uq_lead_manual_signal_live CREATE UNIQUE INDEX uq_lead_manual_signal_live
 public.uq_lead_privacy_notice_delivery CREATE UNIQUE INDEX uq_lead_privacy_notice_delivery ON public.lead_privacy_notice USING btree (delivery_id) WHERE (delivery_id IS NOT NULL)
 public.uq_lead_privacy_notice_lead CREATE UNIQUE INDEX uq_lead_privacy_notice_lead ON public.lead_privacy_notice USING btree (lead_id) WHERE (lead_id IS NOT NULL)
 public.uq_lead_source CREATE UNIQUE INDEX uq_lead_source ON public.lead USING btree (source_system, source_id) WHERE ((source_system IS NOT NULL) AND (source_id IS NOT NULL))
-public.uq_lead_source_key CREATE UNIQUE INDEX uq_lead_source_key ON public.lead_source USING btree (key)
 public.uq_legal_entity_default CREATE UNIQUE INDEX uq_legal_entity_default ON public.legal_entity USING btree ((true)) WHERE is_default
 public.uq_legal_entity_live_name CREATE UNIQUE INDEX uq_legal_entity_live_name ON public.legal_entity USING btree (lower(display_name)) WHERE ((archived_at IS NULL) AND (NOT is_default))
 public.uq_legal_review_open_deal CREATE UNIQUE INDEX uq_legal_review_open_deal ON public.legal_review USING btree (deal_id) WHERE (status = 'requested'::text)

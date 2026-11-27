@@ -68,11 +68,10 @@ var preservedResetTables = map[string]bool{
 	// activity_channel_provider_fkey constraints and abort the whole sweep
 	// transaction outright.
 	"activity_kind": true, "channel_provider": true,
-	// The two administered lead vocabularies — sources and disqualification
-	// reasons — are installation configuration on the same footing as
-	// `setting`: the migration seeds the built-ins and an administrator shapes
-	// the rest, and neither is a record of this workspace's customers.
-	"lead_source": true, "lead_origin": true, "lead_disqualify_reason": true,
+	// The lead origins and disqualification reasons are installation
+	// configuration, like `setting`. The migration seeds the built-ins and an
+	// administrator shapes the rest; neither is a record of a customer.
+	"lead_origin": true, "lead_disqualify_reason": true,
 	// The SDR handoff and deal loss reasons and the partner stages, seeded the same way.
 	"sdr_handoff_reason": true, "deal_loss_reason": true, "partner_stage": true,
 	// Installation configuration beside the users kept; only the migration seeds the default.
