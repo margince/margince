@@ -68,6 +68,8 @@ type IngestSource struct {
 	CorpusID   ids.UUID
 	StorageKey string
 	Checksum   string
+	// carried are the vectors the document held before this attempt deleted them.
+	carried carriedVectors
 }
 
 // IngestOwed reports whether a document is still waiting for its ingest or part
@@ -89,7 +91,8 @@ func (s *Store) IngestOwed(ctx context.Context, documentID ids.UUID) (bool, erro
 }
 
 // BeginIngest opens an attempt: the document moves to running, and whatever a
-// previous attempt wrote for it is deleted.
+// previous attempt wrote for it is deleted. Its vectors are read first, so
+// EmbedIngest can give them back to passages whose text did not change.
 //
 // The delete is the whole retry protocol. Without it a crashed attempt's chunks
 // are counted by the next one's ceiling check and cited twice by every answer.
@@ -108,10 +111,15 @@ func (s *Store) BeginIngest(ctx context.Context, documentID ids.UUID) (IngestSou
 			Scan(&src.CorpusID, &src.StorageKey, &src.Checksum); err != nil {
 			return notFoundOr(err, "read the document to ingest")
 		}
+		carried, err := readCarriedVectors(ctx, tx, documentID)
+		if err != nil {
+			return err
+		}
+		src.carried = carried
 		if err := deleteChunksOf(ctx, tx, documentID); err != nil {
 			return err
 		}
-		_, err := tx.Exec(ctx,
+		_, err = tx.Exec(ctx,
 			`UPDATE knowledge_document
 			 SET ingest_status = 'running', ingest_detail = NULL, chunk_count = 0,
 			     ingest_started_at = now()
@@ -295,6 +303,17 @@ func (s *Store) FailIngest(ctx context.Context, documentID ids.UUID, detail stri
 // binary holds in other bytes than the row names is refused.
 func (s *Store) OpenDocument(ctx context.Context, src IngestSource) (io.ReadCloser, error) {
 	return s.openIngestContent(ctx, src)
+}
+
+// retireChunksOf takes a replaced document's passages out of every read but keeps
+// the rows, so the ingest the replacement queues can carry their vectors over.
+func retireChunksOf(ctx context.Context, tx pgx.Tx, documentID ids.UUID) error {
+	if _, err := tx.Exec(ctx,
+		`UPDATE knowledge_chunk SET archived_at = now() WHERE document_id = $1 AND archived_at IS NULL`,
+		documentID); err != nil {
+		return fmt.Errorf("retire the replaced document's passages: %w", err)
+	}
+	return nil
 }
 
 func deleteChunksOf(ctx context.Context, tx pgx.Tx, documentID ids.UUID) error {
