@@ -1,6 +1,8 @@
 /** @vitest-environment happy-dom */
+import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render as rtlRender,
   screen,
@@ -11,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { EntityRef } from "../../components/entityref";
+import { companyReferenceQuery } from "../../components/entityref.queries";
 import { LocaleProvider } from "../../i18n";
 import { en } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
@@ -75,10 +78,12 @@ function jsonResponse(body: unknown, status = 200) {
   });
 }
 
-function render(ui: ReactNode) {
-  const client = new QueryClient({
-    defaultOptions: { queries: { retry: false } },
-  });
+function render(ui: ReactNode, cached?: QueryClient) {
+  const client =
+    cached ??
+    new QueryClient({
+      defaultOptions: { queries: { retry: false } },
+    });
   seedWriter(client);
   return rtlRender(
     <QueryClientProvider client={client}>
@@ -88,6 +93,88 @@ function render(ui: ReactNode) {
 }
 
 describe("EntityRef", () => {
+  it.each(["company", "contact", "lead", "deal", "project"] as const)(
+    "keeps a supplied name while resolving the %s archive state",
+    async (kind) => {
+      const id = `archived-${kind}`;
+      const fetch = vi.fn(async () =>
+        jsonResponse({ data: [{ id, name: "Current name", archived: true }] }),
+      );
+      vi.stubGlobal("fetch", fetch);
+      render(<EntityRef kind={kind} id={id} name="Historical name" />);
+      expect(
+        screen.getByRole("link", { name: "Historical name" }),
+      ).toBeInTheDocument();
+      await screen.findByText(en["record.archived"]);
+      expect(
+        screen.getByRole("link", { name: "Historical name" }),
+      ).toBeInTheDocument();
+      expect(fetch).toHaveBeenCalledTimes(1);
+    },
+  );
+
+  it.each([true, false])(
+    "uses supplied archive state %s without a read",
+    async (archived) => {
+      const fetch = vi.fn(async () => jsonResponse({}, 500));
+      vi.stubGlobal("fetch", fetch);
+      render(
+        <EntityRef
+          kind="company"
+          id="known"
+          name="Known company"
+          archived={archived}
+        />,
+      );
+      await act(async () => {
+        await Promise.resolve();
+      });
+      expect(
+        screen.getByRole("link", { name: "Known company" }),
+      ).toBeInTheDocument();
+      expect(screen.queryByText(en["record.archived"]) !== null).toBe(archived);
+      expect(fetch).not.toHaveBeenCalled();
+    },
+  );
+
+  it("refreshes a legacy cached name to learn the archive state", async () => {
+    const client = new QueryClient();
+    client.setQueryData(
+      companyReferenceQuery("legacy").queryKey,
+      "Cached name",
+    );
+    const fetch = vi.fn(async () =>
+      jsonResponse({
+        data: [{ id: "legacy", name: "Current name", archived: true }],
+      }),
+    );
+    vi.stubGlobal("fetch", fetch);
+    render(
+      <EntityRef kind="company" id="legacy" name="Snapshot name" />,
+      client,
+    );
+    await screen.findByText(en["record.archived"]);
+    expect(
+      screen.getByRole("link", { name: "Snapshot name" }),
+    ).toBeInTheDocument();
+    expect(fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("keeps a supplied name when archive metadata is withheld", async () => {
+    const fetch = vi.fn(async () => jsonResponse({ data: [] }));
+    vi.stubGlobal("fetch", fetch);
+    render(
+      <EntityRef kind="company" id="withheld-metadata" name="Snapshot name" />,
+    );
+    await act(async () => {
+      await Promise.resolve();
+    });
+    expect(
+      screen.getByRole("link", { name: "Snapshot name" }),
+    ).toBeInTheDocument();
+    expect(screen.queryByText(en["record.archived"])).not.toBeInTheDocument();
+  });
+
   it("renders the resolved name and backlinks to the record's 360 on click", async () => {
     vi.stubGlobal(
       "fetch",

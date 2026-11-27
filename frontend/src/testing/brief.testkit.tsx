@@ -161,6 +161,8 @@ const DEFAULTS: Routes = {
   "GET /agent-tools": () => jsonResponse(emptyPage),
   // A row names its owner by id; naming nobody leaves the id as the label.
   "GET /users/names": () => jsonResponse({ data: [] }),
+  // Supplied receipt names still ask for archive state. These fixtures withhold metadata.
+  "GET /records/references": () => jsonResponse({ data: [] }),
   // The focus card reads the task it holds. Linked to no contact, it offers no
   // next steps.
   // Task details explain the task when they open. An empty answer shows the

@@ -5,6 +5,8 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "systemJob.website_lead_owner":
+    "Website-Lead-Verantwortliche benachrichtigen",
   "systemJob.proposal_stage":
     "Fragen, ob ein gesendetes Angebot den Deal verschiebt",
   "systemJob.google_directory": "Google-Gruppen eines Mitglieds lesen",
@@ -5608,6 +5610,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.narrative.add": "Hinzufügen",
   "co.narrative.notOnSite": "Nicht auf ihrer Website",
   "co.narrative.notReadYet": "Website noch nicht analysiert",
+  "co.leads.title": "Verknüpfte Leads",
+  "co.leads.empty":
+    "Mit diesem Unternehmen sind keine offenen Leads verknüpft.",
+  "co.leads.more": "Alle verknüpften Leads anzeigen",
+  "co.leads.list": "Leadliste öffnen",
   "co.contacts.engagement": "Engagement",
   "co.contacts.lastInteraction": "Letzter Austausch",
   "co.contacts.strength": "Beziehung",
@@ -7865,6 +7872,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.company": "Neues Unternehmen",
   "create.lead": "Neuer Lead",
   "create.deal": "Neuer Deal",
+  "create.salutation": "Anredeform",
+  "salutation.any": "Alle Anredeformen",
+  "salutation.unset": "Nicht festgelegt",
+  "salutation.mr": "Herr",
+  "salutation.ms": "Frau",
+  "salutation.none": "Keine geschlechtsspezifische Anrede",
+  "salutation.hint":
+    "Nur eine mitgeteilte Anrede erfassen. Niemals aus dem Namen ableiten.",
+  "history.field.salutation": "Anredeform",
   "create.fullName": "Vollständiger Name",
   "create.firstName": "Vorname",
   "create.lastName": "Nachname",
@@ -8997,8 +9013,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotConnected":
     "Es ist kein Postfach verbunden. Verbinde eines, um aus Margince zu senden.",
   "compose.mailboxNotConnectedGoto": "Postfach verbinden",
-  "compose.sharedUnsubscribeToken":
-    "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
   "compose.relinkTarget":
     "Kontakte, Unternehmen, Deals, Leads oder Projekte suchen",
@@ -9463,6 +9477,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.open_deal_unpriced": "Nicht bewertete offene Deals",
   "analytics.field.overdue_commitments": "Überfällige Aufgaben",
   "analytics.field.close_month": "Abschlussmonat",
+  "analytics.field.days_since_activity": "Tage seit der letzten Aktivität",
+  "analytics.field.meeting_ahead": "Termin geplant",
+  "analytics.field.company_days_since_activity": "Tage seit der letzten Aktivität des Unternehmens",
   "analytics.field.owner_id": "Verantwortlich",
   "analytics.field.partner_company_id": "Partnerunternehmen",
   "analytics.field.partner_sourced": "Von Partnern vermittelt",
@@ -10869,6 +10886,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "import.object.contact": "Kontakte",
   "import.object.deal": "Deals",
   "import.object.activity": "Aktivitäten",
+  "import.object.project": "Projekte",
+  "import.object.product": "Produkte",
   "import.profiled_one":
     "„Ausgefüllt“ und „Werte“ stammen aus der ersten Zeile der Datei.",
   "import.profiled_other":
@@ -11304,6 +11323,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{value}“ ist keine Datensatz-ID. Exportiere die Liste, um die IDs zu erhalten, oder lasse die Spalte leer, um die Zeile als neuen Datensatz zu importieren.",
   "import.reason.id_record_not_visible":
     "Kein Datensatz, den du sehen kannst, hat die ID „{value}“. Er kann archiviert oder zusammengeführt worden sein oder aus einem anderen System stammen.",
+  "import.reason.not_your_record":
+    "Diese Zeile passt zu einem Datensatz, der einem anderen Mitglied gehört. Dein Import ändert nur deine eigenen Datensätze, daher wird die Zeile nicht übernommen.",
   "import.reason.ref_taken_by_another_record":
     "Die Referenz „{ref}“ steht bereits für einen anderen Datensatz aus einem früheren Import, daher wird diese Zeile nicht übernommen. Verwende eine neue Referenz für diese Zeile oder korrigiere die ID-Spalte.",
   "import.reason.id_not_visible":
@@ -11360,6 +11381,22 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "„{value}“ braucht die Landesvorwahl, zum Beispiel +49 30 1234567.",
   "import.reason.record_archived":
     "Der Datensatz dieser Zeile wurde archiviert und wird daher nicht aktualisiert. Stelle ihn wieder her, um ihn zu aktualisieren.",
+  "import.reason.project_unnamed": "Gib dem Projekt einen Namen.",
+  "import.reason.project_company_missing":
+    "Ein Projekt gehört zu einem Unternehmen. Nenne es in der Unternehmensspalte.",
+  "import.reason.project_company_fixed":
+    "Ein Projekt behält das Unternehmen, für das es erstellt wurde, daher wird diese Zeile nicht übernommen. Lass die Unternehmensspalte unverändert oder importiere die Zeile als neues Projekt.",
+  "import.reason.project_phase_unknown":
+    "„{value}“ ist keine Startphase eines Projekts. Mögliche Phasen: {names}.",
+  "import.reason.project_phase_closed":
+    "Ein Projekt wird nicht geschlossen erstellt, weil das Schließen einen Grund braucht. Importiere es in einer anderen Phase und schließe es dann in der App.",
+  "import.reason.project_dates_inverted":
+    "Das geplante Enddatum liegt vor dem Startdatum.",
+  "import.reason.project_deal_refused":
+    "Der Deal kann dieses Projekt nicht starten: {detail}",
+  "import.reason.product_unnamed": "Gib dem Produkt einen Namen.",
+  "import.reason.product_sku_held":
+    "Ein anderes aktives Produkt hat bereits die Artikelnummer „{value}“.",
   "import.reason.ref_taken_by_another_company":
     "Die Referenz „{ref}“ steht bereits für ein anderes Unternehmen aus einem früheren Import, daher wird diese Zeile nicht übernommen. Verwende eine neue Referenz für dieses Unternehmen oder korrigiere die ID-Spalte.",
   "import.reason.row_key_empty":
@@ -11998,6 +12035,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.correctionNote": "Begründung (der Kontakt kann nachfragen)",
   "privacy.correctionAccept": "Annehmen und aktualisieren",
   "privacy.correctionReject": "Unverändert lassen",
+  "privacy.purposeRename": "Umbenennen",
+  "privacy.purposeRenameTitle": "{label} umbenennen",
+  "privacy.purposeArchiveTitle": "{label} archivieren",
+  "privacy.purposeInUse":
+    "Für diesen Zweck sind bereits Einwilligungen erfasst. Lege einen neuen Zweck an.",
   "privacy.purposesRegistry": "Registrierte Zwecke",
   "privacy.purposeKeyTaken": "Diesen Schlüssel verwendet bereits {label}.",
   "privacy.purposeKeyTakenUnnamed":
@@ -12011,7 +12053,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeFrequency.quarterly": "Etwa einmal im Quartal",
   "privacy.purposeCreate": "Zweck erstellen",
   "privacy.purposeAppendOnly":
-    "Ein Zweck lässt sich nach dem Erstellen weder umbenennen noch entfernen. Der Katalog kann nur ergänzt werden. Wähle den Schlüssel mit Bedacht.",
+    "Einen ungenutzten Zweck kannst du umbenennen oder archivieren. Sobald eine Einwilligung, ein Hinweis, ein Einwilligungstext oder eine geplante Nachricht darauf verweist, bleibt er unverändert. Lege dann einen neuen Zweck an.",
   "notice.title": "Informationspflichten",
   "notice.sub": "Pflichten nach Frist; Quellenprüfungen nach Erfassungszeit.",
   "notice.facetLabel": "Pflichten anzeigen",
@@ -12670,6 +12712,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "translation.nameIn.en": "Name auf Englisch",
   "translation.nameIn.de": "Name auf Deutsch",
   "translation.nameIn.vi": "Name auf Vietnamesisch",
+  "translation.missing.en": "Kein Name auf Englisch",
+  "translation.missing.de": "Kein Name auf Deutsch",
+  "translation.missing.vi": "Kein Name auf Vietnamesisch",
+  "translation.suggest": "Übersetzung vorschlagen",
+  "translation.suggestNeedsName":
+    "Gib zuerst den Namen ein, dann kann eine Übersetzung vorgeschlagen werden.",
+  "translation.suggesting": "Wird vorgeschlagen…",
+  "translation.suggestFailed":
+    "Es kam kein Vorschlag zurück. Gib den Namen ein oder versuche es noch einmal.",
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.nameTaken":
@@ -15293,6 +15344,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Auswahl von „{label}“ gespeichert. {count} Datensatz geändert.",
   "cf.choices.saved_other":
     "Auswahl von „{label}“ gespeichert. {count} Datensätze geändert.",
+  "cf.filterAny": "Beliebiger Wert",
+  "cf.filterApply": "Filter anwenden",
+  "cf.filterValueRequired": "Gib einen Wert zum Filtern ein.",
   "cf.gate.title": "Dieses Feld hinzufügen?",
   "cf.gate.body":
     "Nach der Bestätigung wird es jedem {object} hinzugefügt: auf der 360-Seite, in Suche und Filtern, Listen, Export und der API. Das Hinzufügen wird im Audit-Log erfasst.",
@@ -19316,6 +19370,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Signaturschlüssel, den die Webflow-API einmal zurückgibt, wenn sie den Webhook anlegt. Einen Webhook, den eine OAuth-App anlegt, signiert stattdessen das Client Secret dieser App. Lass das Feld leer, bis du ihn hast: Bis dahin nimmt das Formular nichts an.",
   "webForms.field.senderSecretKeep":
     "Leer lassen, um den gespeicherten Signaturschlüssel zu behalten.",
+  "webForms.field.notifyOwnerHint":
+    "Benachrichtigt die verantwortliche Person beim Eingang oder sobald der Bearbeitungsplan oder die Lead-Zuweisung erstmals eine zuständige Person festlegt.",
+  "webForms.field.notifyOwner":
+    "Den Verantwortlichen über jede neue Anfrage informieren",
+  "notifications.class.website_lead.label": "Neue Website-Anfragen",
+  "notifications.class.website_lead.help":
+    "Eine neue Formularanfrage zu einem Lead oder Kontakt in deiner Verantwortung.",
   "webForms.field.consentRequired":
     "Einwilligung verlangen, bevor eine Sendung angenommen wird",
   "webForms.field.consentWording": "Einwilligungstext",

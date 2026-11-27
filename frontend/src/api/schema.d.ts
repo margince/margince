@@ -6885,6 +6885,35 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/label-translations": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Suggest a stage or custom field name in another UI language.
+         * @description Writes one admin-named label, a stage name or a custom field name or option, in the
+         *     language `language` names. It is a suggestion for the editor: nothing is stored, and
+         *     the admin saves it with the stage or field as any typed name.
+         *
+         *     Needs `pipeline:update` or `custom_field:update`, the grants that edit the labels this
+         *     serves; without either it answers 403. When the label is already in the target language
+         *     the answer is `unchanged: true` and the label itself, with no model call. With no AI
+         *     model it answers 409 `ai_not_configured`. An empty `text` is 422 `required`, and one past
+         *     200 characters is 422 `too_long`. A model that was asked and did not answer is 503
+         *     `assistant_unavailable`.
+         */
+        post: operations["suggestLabelTranslation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/rewrites": {
         parameters: {
             query?: never;
@@ -19455,6 +19484,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/consent-purposes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Archive an unused consent purpose.
+         * @description Requires consent_config:update. Any reference to the purpose prevents an archive.
+         */
+        delete: operations["archiveConsentPurpose"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename an unused consent purpose.
+         * @description Requires consent_config:update. Any reference to the purpose prevents a change.
+         */
+        patch: operations["renameConsentPurpose"];
+        trace?: never;
+    };
     "/consent-purposes/send-counts": {
         parameters: {
             query?: never;
@@ -25887,11 +25940,8 @@ export interface paths {
          *     housekeeping: dropping them silently would leave the lead who wrote them believing they
          *     had been read.
          *
-         *     `email` is accepted for `approval_pending` alone, and any other class answers `422`. It
-         *     is the one class a producer stages a message for; the others would record a word the
-         *     product does not keep, and a reader who chose it would stop watching the screen while
-         *     waiting for mail that was never going to arrive. `digest` is how every other class
-         *     reaches a mailbox.
+         *     `email` is accepted for `approval_pending` and `website_lead`. Other classes
+         *     answer `422` and can reach a mailbox through `digest`.
          */
         put: operations["saveNotificationPreference"];
         post?: never;
@@ -28667,6 +28717,8 @@ export interface components {
         };
         /** @description A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored. */
         WebForm: {
+            /** @description Tell the final active owner about accepted posts through their notification preference. Defaults to false. */
+            notify_owner?: boolean;
             /** Format: uuid */
             id: string;
             name: string;
@@ -28755,6 +28807,8 @@ export interface components {
             secrets_available: boolean;
         };
         CreateWebFormRequest: {
+            /** @description Tell the final active owner about accepted posts through their notification preference. Defaults to false. */
+            notify_owner?: boolean;
             name: string;
             sender: components["schemas"]["WebFormSender"];
             /** @description The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow's secret is pasted. Refused for any other sender. */
@@ -28783,6 +28837,8 @@ export interface components {
             success_message?: string | null;
         };
         UpdateWebFormRequest: {
+            /** @description Tell the final active owner about accepted posts through their notification preference. Defaults to false. */
+            notify_owner?: boolean;
             /**
              * Format: uuid
              * @description Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.
@@ -29036,6 +29092,11 @@ export interface components {
             timezone: string;
             /** @description ISO-4217 code every money roll-up converts to. */
             base_currency: string;
+            /**
+             * @description The UI languages active members chose, each once and with no member named. Stage
+             *     settings mark an admin-named label with no name in one of them.
+             */
+            member_languages?: ("en" | "de" | "vi")[];
             /**
              * @description The language AI writes in when what it writes is read by the whole team — claims,
              *     signals, extracted facts, agent answers. Not a user's display language, which is
@@ -34513,6 +34574,16 @@ export interface components {
          *
          *     `company` creates companies.
          *
+         *     `project` creates projects, after the deals of the same upload. A
+         *     row names the company it belongs to, by that company's `ref`, domain,
+         *     name or id, and may name the deal it comes from. A project is born in
+         *     the `initiative`, `pursuing` or `delivering` phase, never closed. A
+         *     corrected export of projects, with its `id` column, updates them.
+         *
+         *     `product` creates rate-card products. A
+         *     row is known by its `sku`, or by its `ref` when it has none. A price is
+         *     written in the major units of its `currency`.
+         *
          *     `deal` creates deals, after the companies and contacts of the same
          *     upload. A deal row needs a `ref`, and names its pipeline and stage by
          *     name.
@@ -34544,7 +34615,7 @@ export interface components {
          *     merge.
          * @enum {string}
          */
-        ImportObject: "company" | "lead" | "contact" | "deal" | "activity";
+        ImportObject: "company" | "lead" | "contact" | "deal" | "activity" | "project" | "product";
         /** @description One column of the uploaded file, described well enough to map it without opening the file elsewhere. */
         ImportColumn: {
             /** @description The column name as the file spells it. */
@@ -34671,7 +34742,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_link_ambiguous_will_drop" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "amount_needs_currency" | "amount_too_many_decimals" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_far" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_not_found_will_drop" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_not_money" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_field_not_for_pipeline" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_not_found_will_drop" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_column_empty_will_drop" | "employer_not_found" | "employer_not_found_dropped" | "employer_not_found_will_drop" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_not_found_will_drop" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_ambiguous_will_drop" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_not_found_will_drop" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_row_skipped_will_drop" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_a_phone" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_link_ambiguous_will_drop" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "amount_needs_currency" | "amount_too_many_decimals" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_far" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_not_found_will_drop" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_not_money" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_field_not_for_pipeline" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_not_found_will_drop" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_column_empty_will_drop" | "employer_not_found" | "employer_not_found_dropped" | "employer_not_found_will_drop" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_not_found_will_drop" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_ambiguous_will_drop" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_not_found_will_drop" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_row_skipped_will_drop" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_your_record" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_a_phone" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "product_sku_held" | "product_unnamed" | "project_company_fixed" | "project_company_missing" | "project_dates_inverted" | "project_deal_refused" | "project_phase_closed" | "project_phase_unknown" | "project_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -35275,15 +35346,13 @@ export interface components {
          *     raises is placed in one of them.
          * @enum {string}
          */
-        NotificationClass: "automation" | "lead_sla" | "approval_pending" | "capture" | "coach" | "system" | "project_health";
+        NotificationClass: "automation" | "lead_sla" | "approval_pending" | "website_lead" | "capture" | "coach" | "system" | "project_health";
         /**
          * @description Where a class of notification reaches its reader.
          *
          *     `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
-         *     sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
-         *     the only class with a sending leg, and taking the word for any other would record a
-         *     choice the product does not keep; the others answer `422 value_not_allowed` and reach a
-         *     mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+         *     sends a message as each one lands for `approval_pending` and `website_lead`.
+         *     Other classes answer `422 value_not_allowed` and reach a mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
          *     following morning, and is accepted for every class.
          *
          *     `off` records the notice and stops there: no lane, no badge, no message. It does NOT
@@ -36057,8 +36126,14 @@ export interface components {
              */
             retrieved_at: string;
         };
+        /**
+         * @description Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+         * @enum {string|null}
+         */
+        Salutation: "mr" | "ms" | "none" | null;
         /** @description A contact. Mirrors the `contact` table. */
         Contact: {
+            salutation?: components["schemas"]["Salutation"];
             /** @description The live request the contact's acquisition records: they asked for a quote or a meeting, or gave permission in person. A send may rest on it with no age limit until somebody takes it back (`retractAcquisitionRequest`). Served on a read of one contact; absent when there is none or it was taken back, and on lists. */
             readonly acquisition_request?: components["schemas"]["ContactAcquisitionRequest"];
             /**
@@ -36220,6 +36295,7 @@ export interface components {
         };
         /** @description Requires at least one nonblank email, phone or LinkedIn URL (including social.linkedin). Name-only requests return 422 contact_channel_required. CSV import retains and warns about name-only rows. Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment. */
         CreateContactRequest: {
+            salutation?: components["schemas"]["Salutation"];
             full_name: string;
             /**
              * Format: uuid
@@ -36512,6 +36588,7 @@ export interface components {
         };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdateContactRequest: {
+            salutation?: components["schemas"]["Salutation"];
             /**
              * @description Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
              * @enum {string|null}
@@ -37954,6 +38031,7 @@ export interface components {
         };
         /** @description One current employee of the account, as the company view shows them. */
         Company360Contact: {
+            salutation?: components["schemas"]["Salutation"];
             /** Format: uuid */
             contact_id: string;
             full_name: string;
@@ -38486,7 +38564,9 @@ export interface components {
             next_meeting?: components["schemas"]["Company360NextMeeting"];
             health?: components["schemas"]["Company360Health"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("contacts" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments" | "billing_contacts" | "commitments")[];
+            sections_omitted: ("contacts" | "leads" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments" | "billing_contacts" | "commitments")[];
+            /** @description A bounded page of leads explicitly linked to this company, under the caller's lead row scope. Continue with GET /leads and company_id using the returned cursor. */
+            leads?: components["schemas"]["LeadListResponse"];
             contacts?: {
                 data: components["schemas"]["Company360Contact"][];
                 page: components["schemas"]["PageInfo"];
@@ -39082,7 +39162,7 @@ export interface components {
             status: "open" | "done" | "dismissed";
             /** Format: date-time */
             due_at?: string | null;
-            /** @description Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution. */
+            /** @description This commitment does not pass the current evidence checks. Show the warning instead of presenting it as a current obligation. */
             needs_review: boolean;
             /**
              * Format: date-time
@@ -47997,6 +48077,7 @@ export interface components {
         };
         /** @description A thin, segregated prospect. Mirrors the `lead` table. */
         Lead: {
+            salutation?: components["schemas"]["Salutation"];
             /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
             readonly legal_hold?: boolean;
             tags?: components["schemas"]["RowTag"][];
@@ -48188,6 +48269,7 @@ export interface components {
             [key: string]: unknown;
         };
         CreateLeadRequest: {
+            salutation?: components["schemas"]["Salutation"];
             full_name?: string | null;
             /** Format: email */
             email?: string | null;
@@ -48257,6 +48339,7 @@ export interface components {
          *     POST /leads/{id}/promote. Both terminal states are therefore excluded from this enum.
          */
         UpdateLeadRequest: {
+            salutation?: components["schemas"]["Salutation"];
             full_name?: string | null;
             /** Format: email */
             email?: string | null;
@@ -48591,7 +48674,6 @@ export interface components {
             answers: {
                 [key: string]: string;
             };
-            revision: number;
             /** Format: date-time */
             created_at: string;
             /**
@@ -49971,6 +50053,26 @@ export interface components {
             voice_profile_version?: number | null;
             /** @description True when the sender's voice could not be looked up for an email rewrite, so it may lack a voice its sender built. */
             voice_degraded?: boolean;
+        };
+        LabelTranslationRequest: {
+            /** @description The label as stored. */
+            text: string;
+            /**
+             * @description The UI language to write the label in.
+             * @enum {string}
+             */
+            language: "en" | "de" | "vi";
+        };
+        /** @description One label in one UI language, a suggestion stored nowhere. */
+        LabelTranslation: {
+            /** @description The label in the target language. */
+            text: string;
+            /** @enum {string} */
+            language: "en" | "de" | "vi";
+            /** @description True when the label is already in the target language; `text` is then the label itself. */
+            unchanged: boolean;
+            /** @description The model that wrote the suggestion. Absent when no model was asked. */
+            model_used?: string;
         };
         ActivityReaderRenderingRequest: {
             /** @enum {string} */
@@ -51825,12 +51927,6 @@ export interface components {
             id: string;
             /** Format: uuid */
             owner_id: string;
-            /**
-             * @description V1 enforces private.
-             * @default private
-             * @enum {string}
-             */
-            shared_scope: "private" | "team" | "workspace";
             resource: components["schemas"]["SavedViewTarget"];
             name: string;
             /** @description The saved column choice, sort, and filter state, in the list-view vocabulary; persisted and restored verbatim. */
@@ -53285,11 +53381,25 @@ export interface components {
                 [key: string]: "row_currency" | "base_currency";
             };
             /**
+             * @description The fields a question may narrow by and cannot group by or aggregate, such as a count of
+             *     days since the last activity. Fields that can also be grouped or measured are not repeated here.
+             */
+            filters?: components["schemas"]["AnalyticsFilterField"][];
+            /**
              * @description The installation's own fields among `group_by`, with the label and choices an
              *     administrator gave them. A field an administrator opted into reporting shows here, and
              *     only such a field: its label and choices are published to every reader of the population.
              */
             custom_fields?: components["schemas"]["AnalyticsCustomField"][];
+        };
+        AnalyticsFilterField: {
+            /** @description The field as a filter names it. */
+            name: string;
+            /**
+             * @description What a filter value is: send a number unquoted, true or false for a boolean, and text for the rest.
+             * @enum {string}
+             */
+            shape: "text" | "number" | "boolean" | "id";
         };
         AnalyticsCustomField: {
             /** @description The field as `group_by` and a filter name it. */
@@ -57307,6 +57417,19 @@ export interface components {
          *     (ErrVersionSkew) so the client re-reads before retrying.
          */
         RowVersion: number;
+        /** @description The two recorded program gate metrics. Unknown keys are refused by name. */
+        PartnerGateMetrics: {
+            /**
+             * Format: int32
+             * @description Number of certified staff.
+             */
+            certified_staff?: number;
+            /**
+             * Format: int32
+             * @description Whole percentage of customers retained. Omitted when unknown.
+             */
+            retention_rate?: number;
+        } | null;
         /**
          * @description First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
          *     has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
@@ -57338,10 +57461,7 @@ export interface components {
              * @enum {string|null}
              */
             margin_tier?: null | "tier1_15" | "tier2_20" | "tier3_25";
-            /** @description Program gate metrics (certified seats, CSAT, ...). */
-            gate_metrics?: {
-                [key: string]: unknown;
-            } | null;
+            gate_metrics?: components["schemas"]["PartnerGateMetrics"];
             /** @description The key of the stage from `/partner-stages` the partner stands on. */
             relationship_stage?: string;
             /** @description The label `/partner-stages` gives `relationship_stage`. */
@@ -57418,9 +57538,7 @@ export interface components {
             cert_status?: "applied" | "certified" | "suspended";
             /** @enum {string|null} */
             margin_tier?: null | "tier1_15" | "tier2_20" | "tier3_25";
-            gate_metrics?: {
-                [key: string]: unknown;
-            } | null;
+            gate_metrics?: components["schemas"]["PartnerGateMetrics"];
             /**
              * @description An active key from `/partner-stages`, or the stage the partner already stands on (422
              *     `unknown_partner_stage` or `inactive_partner_stage`). A stage meaning `active` is 422
@@ -58309,8 +58427,6 @@ export interface components {
              * @enum {string}
              */
             state: "needs_context" | "needs_repair" | "resolved" | "superseded" | "cancelled";
-            /** @enum {string} */
-            kind: "single";
             /**
              * Format: uuid
              * @description The held message this review can resume. A refused send freezes the message into a held
@@ -68110,6 +68226,8 @@ export interface operations {
     listContacts: {
         parameters: {
             query?: {
+                /** @description Filter by an explicit salutation; unset finds records whose choice is null. */
+                salutation?: "mr" | "ms" | "none" | "unset";
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -77854,6 +77972,43 @@ export interface operations {
             };
         };
     };
+    suggestLabelTranslation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["LabelTranslationRequest"];
+            };
+        };
+        responses: {
+            /** @description The label in the target language. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["LabelTranslation"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The model was asked and did not answer (`code: assistant_unavailable`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     rewriteText: {
         parameters: {
             query?: never;
@@ -81711,6 +81866,8 @@ export interface operations {
     listLeads: {
         parameters: {
             query?: {
+                /** @description Filter by an explicit salutation; unset finds records whose choice is null. */
+                salutation?: "mr" | "ms" | "none" | "unset";
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -81866,6 +82023,8 @@ export interface operations {
                  *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
                  */
                 tag_mode?: "any" | "all" | "none";
+                /** @description Leads explicitly linked to this company. A company the caller cannot read matches no leads. */
+                company_id?: string;
                 /**
                  * @deprecated
                  * @description Only older leads that retain this historical contact link. New leads cannot be
@@ -96976,6 +97135,62 @@ export interface operations {
                     "application/json": components["schemas"]["ConsentPurpose"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    archiveConsentPurpose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    renameConsentPurpose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    label: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Renamed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentPurpose"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

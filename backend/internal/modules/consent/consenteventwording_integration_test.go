@@ -22,6 +22,13 @@ func wordingOf(t *testing.T, e *channelConsentEnv) (*string, *string) {
 		e.contact).Scan(&text, &version); err != nil {
 		t.Fatalf("reading the proof row: %v", err)
 	}
+	var current *string
+	if err := e.owner.QueryRow(e.ctx, `SELECT policy_version FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2`, e.contact, e.newsletter).Scan(&current); err != nil {
+		t.Fatal(err)
+	}
+	if (current == nil) != (version == nil) || (current != nil && *current != *version) {
+		t.Fatalf("current version %v differs from proof version %v", current, version)
+	}
 	return text, version
 }
 
@@ -90,5 +97,43 @@ func TestThePairCheckRefusesAHalfRecordedWording(t *testing.T) {
 	}
 	if !strings.Contains(err.Error(), "consent_event_wording_pairs") {
 		t.Errorf("refused by %v, want the pair CHECK", err)
+	}
+}
+
+func TestConsentStateTracksEachProofVersionAndClearsOnWithdrawal(t *testing.T) {
+	e := setupChannelConsent(t)
+	shown := "Send the newsletter"
+	for _, version := range []string{"policy-1", "policy-2"} {
+		in := RecordInput{ContactID: e.contact, PurposeID: e.newsletter, NewState: "granted", PolicyText: &shown, PolicyVersion: &version}
+		grant, err := e.store.Record(e.ctx, in)
+		if err != nil || !grant.Changed {
+			t.Fatalf("grant %s: changed=%v err=%v", version, grant.Changed, err)
+		}
+		assertStateProofVersion(t, e, grant, &version)
+		unchanged, err := e.store.Record(e.ctx, in)
+		if err != nil || unchanged.Changed {
+			t.Fatalf("idempotent grant: changed=%v err=%v", unchanged.Changed, err)
+		}
+		withdrawal, err := e.store.Record(e.ctx, RecordInput{ContactID: e.contact, PurposeID: e.newsletter, NewState: "withdrawn"})
+		if err != nil || !withdrawal.Changed {
+			t.Fatalf("withdrawal: changed=%v err=%v", withdrawal.Changed, err)
+		}
+		assertStateProofVersion(t, e, withdrawal, nil)
+	}
+}
+
+func assertStateProofVersion(t *testing.T, e *channelConsentEnv, proof State, want *string) {
+	t.Helper()
+	var state, event *string
+	if err := e.owner.QueryRow(e.ctx, `
+		SELECT c.policy_version, e.policy_version FROM contact_consent c
+		JOIN consent_event e ON e.id = $3
+		WHERE c.contact_id = $1 AND c.purpose_id = $2`, e.contact, e.newsletter, proof.ProofEventID).Scan(&state, &event); err != nil {
+		t.Fatal(err)
+	}
+	for name, got := range map[string]*string{"state": state, "proof": event} {
+		if (got == nil) != (want == nil) || (got != nil && *got != *want) {
+			t.Errorf("%s policy version = %v, want %v", name, got, want)
+		}
 	}
 }

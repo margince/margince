@@ -5,6 +5,7 @@ package importwire
 
 import (
 	"fmt"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"regexp"
 	"strings"
 
@@ -56,8 +57,14 @@ func SuggestedSourceName(fileName string) string {
 // two old CRMs is two records. An empty name keeps the namespace runs used
 // before source names. The wire mappers refuse the reserved prefix, so a
 // client cannot plant a row under a guessed import id.
-func SourceSystem(sourceName string) string {
+//
+// An own import (ownSeat set) gets its seat's namespace, so its refs never
+// meet a workspace import's bindings or another seat's.
+func SourceSystem(sourceName string, ownSeat *ids.UserID) string {
 	base := provenance.ReservedSourceSystemPrefix + migration.ConnectorCSV
+	if ownSeat != nil {
+		base += ":" + provenance.OwnImportSeatSegment + ownSeat.String()
+	}
 	if sourceName == "" {
 		return base
 	}

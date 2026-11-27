@@ -19,7 +19,7 @@ import (
 // human's import grant stages and commits imports through the same code, and
 // must not become the one who names authors.
 func TestTheAuthorColumnIsTheDeclaredImportersAlone(t *testing.T) {
-	grant := principal.Permissions{Objects: map[string]principal.ObjectGrant{"import_run": {Create: true}}}
+	grant := principal.Permissions{Objects: map[string]principal.ObjectGrant{"import_run": {Create: true, Read: true, Update: true, Delete: true}}}
 	as := func(p principal.Principal) context.Context {
 		return principal.WithActor(context.Background(), p)
 	}

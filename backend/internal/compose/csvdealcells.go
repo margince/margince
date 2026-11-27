@@ -13,11 +13,10 @@ import (
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
-	"github.com/margince/margince/backend/internal/compose/importcells"
+	"github.com/margince/margince/backend/internal/compose/importrecords"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // checkCells reads a deal row's stage, amount, currency and close date into
@@ -33,7 +32,7 @@ func (d dealStages) checkCells(fields map[string]string, typed map[string]any) (
 	if staged {
 		typed[dealTargetPipeline], typed[dealTargetStage] = choice.pipeline, choice.stage
 	}
-	problems.add(checkDealMoney(fields, typed))
+	problems.add(importrecords.CheckMoney(fields, typed, dealTargetAmount, dealTargetCurrency))
 	problems.add(d.checkCloseDate(fields, choice, typed))
 	if choice.semantic == crmcontracts.StageSemanticLost && strings.TrimSpace(fields[dealTargetLostReason]) == "" {
 		problems.add(problemOf(dealTargetLostReason, fields[dealTargetLostReason],
@@ -58,38 +57,6 @@ func (d dealStages) stageOf(fields map[string]string) (stageChoice, bool, *cellP
 	}
 	choice, problem := d.resolve(fields[dealTargetPipeline], stage)
 	return choice, problem == nil, problem
-}
-
-// checkDealMoney reads the amount in the minor units of its currency, which
-// must be named beside it.
-func checkDealMoney(fields map[string]string, typed map[string]any) *cellProblem {
-	amount := strings.TrimSpace(fields[dealTargetAmount])
-	currency := strings.ToUpper(strings.TrimSpace(fields[dealTargetCurrency]))
-	if currency != "" {
-		if !values.AssignableCurrency(currency) {
-			return problemOf(dealTargetCurrency, fields[dealTargetCurrency],
-				migration.Why(migration.ReasonCurrencyNotACode, "value", currency))
-		}
-		// Only the import refuses these: in a file they are slips for a real code.
-		if !values.NamesMoney(currency) {
-			return problemOf(dealTargetCurrency, fields[dealTargetCurrency],
-				migration.Why(migration.ReasonCurrencyNotMoney, "value", currency))
-		}
-		typed[dealTargetCurrency] = currency
-	}
-	if amount == "" {
-		return nil
-	}
-	if currency == "" {
-		return problemOf(dealTargetAmount, fields[dealTargetAmount],
-			migration.Why(migration.ReasonAmountNeedsCurrency, "value", amount))
-	}
-	minor, ok := values.MinorUnits(amount, currency)
-	if !ok {
-		return problemOf(dealTargetAmount, fields[dealTargetAmount], importcells.AmountReason(amount, currency))
-	}
-	typed[dealTargetAmount] = minor
-	return nil
 }
 
 // closeDateHorizonYears is how far ahead a close date lies before the import

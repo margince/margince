@@ -319,31 +319,18 @@ func namedByDerivation(spec reportSpec, plan derivationPlan) referencedColumns {
 	for _, p := range plan.preds {
 		if p.isNull || !valueGatedSet(spec, p.field) {
 			named[p.expr] = true
+			// The field name finds the id a joined attribute hangs off; a
+			// threshold has no expression to find it by.
+			nameScopeVia(spec, p.field, named)
 		}
 	}
-	// And what the HEADLINE grouped by, which the handle names even where it
-	// pins no value. A result-level handle explains every cell of one answer at
-	// once, so it binds no group key — but the answer it explains was still
-	// narrowed by grouping over a reference, and a drill-through that forgot
-	// that opened records the count above it never counted.
+	// And what the headline grouped by, even where the handle pins no value.
+	// Forgetting it opens records the count never counted.
 	for _, field := range plan.groupBy {
 		if expr, ok := spec.dimensions[field]; ok {
 			named[expr] = true
 		}
 		nameScopeVia(spec, field, named)
-	}
-	// A predicate is carried as an EXPRESSION, so a joined attribute pinned by
-	// the handle arrives here as the attribute and never as the id it hangs
-	// off. The vocabulary is walked back to find which name that expression
-	// belongs to, so the drill-through narrows on the same column the headline
-	// did — without it the cell opens rows the count above it never counted.
-	for name, column := range spec.scopeVia {
-		if expr, ok := spec.dimensions[name]; ok && named[expr] {
-			named[column] = true
-		}
-		if expr, ok := spec.filters[name]; ok && named[expr] {
-			named[column] = true
-		}
 	}
 	return named
 }

@@ -52,6 +52,12 @@ func (r reminderEnv) auditRowsOf(t *testing.T, task ids.ActivityID) int {
 
 func TestAColleagueTakesAnUnheldTaskOnARecordTheyMayChange(t *testing.T) {
 	r := setupReminders(t)
+	actor, ok := principal.Actor(r.rep2)
+	if !ok {
+		t.Fatal("the colleague has no principal")
+	}
+	actor.SeatType = principal.SeatFull
+	r.rep2 = principal.WithActor(r.rep2, actor)
 	e := r.e
 	// A take is offered to a human on a full seat only.
 	r.rep2 = integration.OnSeat(r.rep2, principal.SeatFull)

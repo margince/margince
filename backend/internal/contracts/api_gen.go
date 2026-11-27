@@ -2230,6 +2230,30 @@ func (e AnalyticsFilterOp) Valid() bool {
 	}
 }
 
+// Defines values for AnalyticsFilterFieldShape.
+const (
+	AnalyticsFilterFieldShapeBoolean AnalyticsFilterFieldShape = "boolean"
+	AnalyticsFilterFieldShapeId      AnalyticsFilterFieldShape = "id"
+	AnalyticsFilterFieldShapeNumber  AnalyticsFilterFieldShape = "number"
+	AnalyticsFilterFieldShapeText    AnalyticsFilterFieldShape = "text"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsFilterFieldShape enum.
+func (e AnalyticsFilterFieldShape) Valid() bool {
+	switch e {
+	case AnalyticsFilterFieldShapeBoolean:
+		return true
+	case AnalyticsFilterFieldShapeId:
+		return true
+	case AnalyticsFilterFieldShapeNumber:
+		return true
+	case AnalyticsFilterFieldShapeText:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AnalyticsMeasureFn.
 const (
 	AnalyticsMeasureFnAnalyticsAvg           AnalyticsMeasureFn = "avg"
@@ -5779,21 +5803,6 @@ func (e CommunicationEvidenceSubjectEntityType) Valid() bool {
 	}
 }
 
-// Defines values for CommunicationReviewKind.
-const (
-	CommunicationReviewKindSingle CommunicationReviewKind = "single"
-)
-
-// Valid indicates whether the value is a known member of the CommunicationReviewKind enum.
-func (e CommunicationReviewKind) Valid() bool {
-	switch e {
-	case CommunicationReviewKindSingle:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for CommunicationReviewState.
 const (
 	CommunicationReviewStateCancelled    CommunicationReviewState = "cancelled"
@@ -6043,6 +6052,7 @@ const (
 	Company360SectionsOmittedDeals            Company360SectionsOmitted = "deals"
 	Company360SectionsOmittedHealth           Company360SectionsOmitted = "health"
 	Company360SectionsOmittedLastTouch        Company360SectionsOmitted = "last_touch"
+	Company360SectionsOmittedLeads            Company360SectionsOmitted = "leads"
 	Company360SectionsOmittedListMemberships  Company360SectionsOmitted = "list_memberships"
 	Company360SectionsOmittedMoments          Company360SectionsOmitted = "moments"
 	Company360SectionsOmittedNextMeeting      Company360SectionsOmitted = "next_meeting"
@@ -6072,6 +6082,8 @@ func (e Company360SectionsOmitted) Valid() bool {
 	case Company360SectionsOmittedHealth:
 		return true
 	case Company360SectionsOmittedLastTouch:
+		return true
+	case Company360SectionsOmittedLeads:
 		return true
 	case Company360SectionsOmittedListMemberships:
 		return true
@@ -15428,6 +15440,8 @@ const (
 	ImportObjectContact  ImportObject = "contact"
 	ImportObjectDeal     ImportObject = "deal"
 	ImportObjectLead     ImportObject = "lead"
+	ImportObjectProduct  ImportObject = "product"
+	ImportObjectProject  ImportObject = "project"
 )
 
 // Valid indicates whether the value is a known member of the ImportObject enum.
@@ -15442,6 +15456,10 @@ func (e ImportObject) Valid() bool {
 	case ImportObjectDeal:
 		return true
 	case ImportObjectLead:
+		return true
+	case ImportObjectProduct:
+		return true
+	case ImportObjectProject:
 		return true
 	default:
 		return false
@@ -15647,6 +15665,7 @@ const (
 	ImportReasonCodeNotAnAmount                   ImportReasonCode = "not_an_amount"
 	ImportReasonCodeNotAnEmail                    ImportReasonCode = "not_an_email"
 	ImportReasonCodeNotYesNo                      ImportReasonCode = "not_yes_no"
+	ImportReasonCodeNotYourRecord                 ImportReasonCode = "not_your_record"
 	ImportReasonCodeNoteRepeated                  ImportReasonCode = "note_repeated"
 	ImportReasonCodeOccurredAtFuture              ImportReasonCode = "occurred_at_future"
 	ImportReasonCodeOccurredAtUnnamed             ImportReasonCode = "occurred_at_unnamed"
@@ -15659,6 +15678,15 @@ const (
 	ImportReasonCodePipelineNoOpenStage           ImportReasonCode = "pipeline_no_open_stage"
 	ImportReasonCodePipelineUnknown               ImportReasonCode = "pipeline_unknown"
 	ImportReasonCodePipelineUnnamed               ImportReasonCode = "pipeline_unnamed"
+	ImportReasonCodeProductSkuHeld                ImportReasonCode = "product_sku_held"
+	ImportReasonCodeProductUnnamed                ImportReasonCode = "product_unnamed"
+	ImportReasonCodeProjectCompanyFixed           ImportReasonCode = "project_company_fixed"
+	ImportReasonCodeProjectCompanyMissing         ImportReasonCode = "project_company_missing"
+	ImportReasonCodeProjectDatesInverted          ImportReasonCode = "project_dates_inverted"
+	ImportReasonCodeProjectDealRefused            ImportReasonCode = "project_deal_refused"
+	ImportReasonCodeProjectPhaseClosed            ImportReasonCode = "project_phase_closed"
+	ImportReasonCodeProjectPhaseUnknown           ImportReasonCode = "project_phase_unknown"
+	ImportReasonCodeProjectUnnamed                ImportReasonCode = "project_unnamed"
 	ImportReasonCodeRecordArchived                ImportReasonCode = "record_archived"
 	ImportReasonCodeRefTakenByAnotherCompany      ImportReasonCode = "ref_taken_by_another_company"
 	ImportReasonCodeRefTakenByAnotherRecord       ImportReasonCode = "ref_taken_by_another_record"
@@ -15903,6 +15931,8 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeNotYesNo:
 		return true
+	case ImportReasonCodeNotYourRecord:
+		return true
 	case ImportReasonCodeNoteRepeated:
 		return true
 	case ImportReasonCodeOccurredAtFuture:
@@ -15926,6 +15956,24 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodePipelineUnknown:
 		return true
 	case ImportReasonCodePipelineUnnamed:
+		return true
+	case ImportReasonCodeProductSkuHeld:
+		return true
+	case ImportReasonCodeProductUnnamed:
+		return true
+	case ImportReasonCodeProjectCompanyFixed:
+		return true
+	case ImportReasonCodeProjectCompanyMissing:
+		return true
+	case ImportReasonCodeProjectDatesInverted:
+		return true
+	case ImportReasonCodeProjectDealRefused:
+		return true
+	case ImportReasonCodeProjectPhaseClosed:
+		return true
+	case ImportReasonCodeProjectPhaseUnknown:
+		return true
+	case ImportReasonCodeProjectUnnamed:
 		return true
 	case ImportReasonCodeRecordArchived:
 		return true
@@ -16345,6 +16393,27 @@ func (e InstallationSettingsForecastForwardMeasure) Valid() bool {
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureManagerCall:
 		return true
 	case InstallationSettingsForecastForwardMeasureSettingsForwardMeasureWeighted:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for InstallationSettingsMemberLanguages.
+const (
+	InstallationSettingsMemberLanguagesDe InstallationSettingsMemberLanguages = "de"
+	InstallationSettingsMemberLanguagesEn InstallationSettingsMemberLanguages = "en"
+	InstallationSettingsMemberLanguagesVi InstallationSettingsMemberLanguages = "vi"
+)
+
+// Valid indicates whether the value is a known member of the InstallationSettingsMemberLanguages enum.
+func (e InstallationSettingsMemberLanguages) Valid() bool {
+	switch e {
+	case InstallationSettingsMemberLanguagesDe:
+		return true
+	case InstallationSettingsMemberLanguagesEn:
+		return true
+	case InstallationSettingsMemberLanguagesVi:
 		return true
 	default:
 		return false
@@ -16873,6 +16942,48 @@ func (e KnowledgeEmbedState) Valid() bool {
 	case KnowledgeEmbedStateIndexing:
 		return true
 	case KnowledgeEmbedStateNoEmbeddingModel:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LabelTranslationLanguage.
+const (
+	LabelTranslationLanguageDe LabelTranslationLanguage = "de"
+	LabelTranslationLanguageEn LabelTranslationLanguage = "en"
+	LabelTranslationLanguageVi LabelTranslationLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the LabelTranslationLanguage enum.
+func (e LabelTranslationLanguage) Valid() bool {
+	switch e {
+	case LabelTranslationLanguageDe:
+		return true
+	case LabelTranslationLanguageEn:
+		return true
+	case LabelTranslationLanguageVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for LabelTranslationRequestLanguage.
+const (
+	LabelTranslationRequestLanguageDe LabelTranslationRequestLanguage = "de"
+	LabelTranslationRequestLanguageEn LabelTranslationRequestLanguage = "en"
+	LabelTranslationRequestLanguageVi LabelTranslationRequestLanguage = "vi"
+)
+
+// Valid indicates whether the value is a known member of the LabelTranslationRequestLanguage enum.
+func (e LabelTranslationRequestLanguage) Valid() bool {
+	switch e {
+	case LabelTranslationRequestLanguageDe:
+		return true
+	case LabelTranslationRequestLanguageEn:
+		return true
+	case LabelTranslationRequestLanguageVi:
 		return true
 	default:
 		return false
@@ -19372,6 +19483,7 @@ const (
 	NotificationClassLeadSla         NotificationClass = "lead_sla"
 	NotificationClassProjectHealth   NotificationClass = "project_health"
 	NotificationClassSystem          NotificationClass = "system"
+	NotificationClassWebsiteLead     NotificationClass = "website_lead"
 )
 
 // Valid indicates whether the value is a known member of the NotificationClass enum.
@@ -19390,6 +19502,8 @@ func (e NotificationClass) Valid() bool {
 	case NotificationClassProjectHealth:
 		return true
 	case NotificationClassSystem:
+		return true
+	case NotificationClassWebsiteLead:
 		return true
 	default:
 		return false
@@ -23770,6 +23884,27 @@ func (e SalesProgressSummaryRequestScopeKind) Valid() bool {
 	}
 }
 
+// Defines values for Salutation.
+const (
+	SalutationMr   Salutation = "mr"
+	SalutationMs   Salutation = "ms"
+	SalutationNone Salutation = "none"
+)
+
+// Valid indicates whether the value is a known member of the Salutation enum.
+func (e Salutation) Valid() bool {
+	switch e {
+	case SalutationMr:
+		return true
+	case SalutationMs:
+		return true
+	case SalutationNone:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for SaveContactResearchClaimField.
 const (
 	SaveContactResearchClaimFieldAddress     SaveContactResearchClaimField = "address"
@@ -23839,27 +23974,6 @@ func (e SaveMyTimezoneRequestSource) Valid() bool {
 	case SaveMyTimezoneRequestSourceBrowser:
 		return true
 	case SaveMyTimezoneRequestSourceChosen:
-		return true
-	default:
-		return false
-	}
-}
-
-// Defines values for SavedViewSharedScope.
-const (
-	SavedViewSharedScopePrivate   SavedViewSharedScope = "private"
-	SavedViewSharedScopeTeam      SavedViewSharedScope = "team"
-	SavedViewSharedScopeWorkspace SavedViewSharedScope = "workspace"
-)
-
-// Valid indicates whether the value is a known member of the SavedViewSharedScope enum.
-func (e SavedViewSharedScope) Valid() bool {
-	switch e {
-	case SavedViewSharedScopePrivate:
-		return true
-	case SavedViewSharedScopeTeam:
-		return true
-	case SavedViewSharedScopeWorkspace:
 		return true
 	default:
 		return false
@@ -31945,6 +32059,30 @@ func (e ResolveConfirmSubmissionJSONBodyResolution) Valid() bool {
 	}
 }
 
+// Defines values for ListContactsParamsSalutation.
+const (
+	ListContactsParamsSalutationMr    ListContactsParamsSalutation = "mr"
+	ListContactsParamsSalutationMs    ListContactsParamsSalutation = "ms"
+	ListContactsParamsSalutationNone  ListContactsParamsSalutation = "none"
+	ListContactsParamsSalutationUnset ListContactsParamsSalutation = "unset"
+)
+
+// Valid indicates whether the value is a known member of the ListContactsParamsSalutation enum.
+func (e ListContactsParamsSalutation) Valid() bool {
+	switch e {
+	case ListContactsParamsSalutationMr:
+		return true
+	case ListContactsParamsSalutationMs:
+		return true
+	case ListContactsParamsSalutationNone:
+		return true
+	case ListContactsParamsSalutationUnset:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ListContactsParamsCapturedByKind.
 const (
 	ListContactsParamsCapturedByKindAgent     ListContactsParamsCapturedByKind = "agent"
@@ -32701,6 +32839,30 @@ func (e DownloadImportProblemsParamsLang) Valid() bool {
 	case DownloadImportProblemsParamsLangEn:
 		return true
 	case DownloadImportProblemsParamsLangVi:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ListLeadsParamsSalutation.
+const (
+	ListLeadsParamsSalutationMr    ListLeadsParamsSalutation = "mr"
+	ListLeadsParamsSalutationMs    ListLeadsParamsSalutation = "ms"
+	ListLeadsParamsSalutationNone  ListLeadsParamsSalutation = "none"
+	ListLeadsParamsSalutationUnset ListLeadsParamsSalutation = "unset"
+)
+
+// Valid indicates whether the value is a known member of the ListLeadsParamsSalutation enum.
+func (e ListLeadsParamsSalutation) Valid() bool {
+	switch e {
+	case ListLeadsParamsSalutationMr:
+		return true
+	case ListLeadsParamsSalutationMs:
+		return true
+	case ListLeadsParamsSalutationNone:
+		return true
+	case ListLeadsParamsSalutationUnset:
 		return true
 	default:
 		return false
@@ -37060,6 +37222,10 @@ type AnalyticsEntity struct {
 	// only such a field: its label and choices are published to every reader of the population.
 	CustomFields *[]AnalyticsCustomField `json:"custom_fields,omitempty"`
 
+	// Filters The fields a question may narrow by and cannot group by or aggregate, such as a count of
+	// days since the last activity. Fields that can also be grouped or measured are not repeated here.
+	Filters *[]AnalyticsFilterField `json:"filters,omitempty"`
+
 	// GroupBy The fields this population can be grouped by.
 	GroupBy []string `json:"group_by"`
 
@@ -37120,6 +37286,18 @@ type AnalyticsFilter struct {
 
 // AnalyticsFilterOp defines model for AnalyticsFilter.Op.
 type AnalyticsFilterOp string
+
+// AnalyticsFilterField defines model for AnalyticsFilterField.
+type AnalyticsFilterField struct {
+	// Name The field as a filter names it.
+	Name string `json:"name"`
+
+	// Shape What a filter value is: send a number unquoted, true or false for a boolean, and text for the rest.
+	Shape AnalyticsFilterFieldShape `json:"shape"`
+}
+
+// AnalyticsFilterFieldShape What a filter value is: send a number unquoted, true or false for a boolean, and text for the rest.
+type AnalyticsFilterFieldShape string
 
 // AnalyticsIdLabels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
 type AnalyticsIdLabels map[string]map[string]string
@@ -42338,9 +42516,8 @@ type CommunicationReview struct {
 	// Null for a review whose message could not be held: a channel reply, which the held row's
 	// shape cannot carry; a recipient the installation has since been asked to forget; or a hold
 	// that failed while the refusal still had to be answered.
-	DeliveryIntentId *openapi_types.UUID     `json:"delivery_intent_id,omitempty"`
-	Id               openapi_types.UUID      `json:"id"`
-	Kind             CommunicationReviewKind `json:"kind"`
+	DeliveryIntentId *openapi_types.UUID `json:"delivery_intent_id,omitempty"`
+	Id               openapi_types.UUID  `json:"id"`
 
 	// ReasonCode The strongest reason across the recipients, so a queue can order without opening the snapshot.
 	ReasonCode string `json:"reason_code"`
@@ -42369,9 +42546,6 @@ type CommunicationReview struct {
 	// decision is unspent. The original reason remains on the instruction.
 	WordingCorrection *WordingCorrectionContext `json:"wording_correction,omitempty"`
 }
-
-// CommunicationReviewKind defines model for CommunicationReview.Kind.
-type CommunicationReviewKind string
 
 // CommunicationReviewState What is NEEDED rather than who is blocked: `needs_context` is a fact about the message
 // and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
@@ -42599,6 +42773,9 @@ type Company360 struct {
 	// LastOutboundPrecision How to read `last_outbound_at`, from the row it names. Absent when that is null or absent.
 	LastOutboundPrecision *OccurredPrecision `json:"last_outbound_precision,omitempty"`
 
+	// Leads A bounded page of leads explicitly linked to this company, under the caller's lead row scope. Continue with GET /leads and company_id using the returned cursor.
+	Leads *LeadListResponse `json:"leads,omitempty"`
+
 	// ListMemberships The Shortlists this company is on that the caller may find. Absent while the installation has not switched lists on.
 	ListMemberships *[]List `json:"list_memberships,omitempty"`
 
@@ -42768,6 +42945,9 @@ type Company360Contact struct {
 	// advice nobody can take. Their historical messages still count on the timeline; the
 	// contact is gone, what happened is not.
 	Routes *Company360ContactRoutes `json:"routes,omitempty"`
+
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Strength Deterministic relationship-strength (features/07 §4) — a transparent function over captured
 	// interaction features (recency, frequency, direction, reciprocity), NOT a trained model. A fixed
@@ -45974,6 +46154,9 @@ type Contact struct {
 	// RelationshipMark Set when the workspace's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
 	RelationshipMark *ContactRelationshipMark `json:"relationship_mark,omitempty"`
 
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
+
 	// Social The contact's links by platform: github, linkedin, twitter. linkedin is a LinkedIn profile link.
 	Social *map[string]interface{} `json:"social,omitempty"`
 
@@ -47884,7 +48067,7 @@ type ConversationClaim struct {
 	// LooksKept A guest of the name the promise to invite someone names, at the same company, accepted a later meeting this reader may open. On an open promise with no responsible seat this is a hint and nothing is settled; the reader decides through the settle verb. On `auto_kept` it is the evidence Margince closed on.
 	LooksKept *ConversationClaimLooksKept `json:"looks_kept,omitempty"`
 
-	// NeedsReview Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution.
+	// NeedsReview This commitment does not pass the current evidence checks. Show the warning instead of presenting it as a current obligation.
 	NeedsReview bool       `json:"needs_review"`
 	OccurredAt  *time.Time `json:"occurred_at,omitempty"`
 
@@ -48357,6 +48540,9 @@ type CreateContactRequest struct {
 	OwnerId     *openapi_types.UUID  `json:"owner_id,omitempty"`
 	Phones      *[]ContactPhoneInput `json:"phones,omitempty"`
 
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
+
 	// Social Links by platform. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
 	Social *map[string]interface{} `json:"social,omitempty"`
 
@@ -48589,6 +48775,16 @@ type CreateImportRunRequest struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects, after the deals of the same upload. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -48749,6 +48945,9 @@ type CreateLeadRequest struct {
 	// ProductId The product the lead is interested in. Omit it when nobody knows yet.
 	ProductId *openapi_types.UUID `json:"product_id,omitempty"`
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Source The channel this lead arrived by. Optional: the server writes `manual` when none is sent, and an integration sends `api`. The other system and the lead's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`. Never scored; send `origin` for where the lead came from.
 	Source *string `json:"source,omitempty"`
@@ -49299,16 +49498,19 @@ type CreateVoiceProfileRequest struct {
 // CreateWebFormRequest defines model for CreateWebFormRequest.
 type CreateWebFormRequest struct {
 	// AllowedOrigins Required, and only allowed, for a `browser` form.
-	AllowedOrigins       *[]string           `json:"allowed_origins,omitempty"`
-	ConsentPolicyVersion *string             `json:"consent_policy_version,omitempty"`
-	ConsentRequired      *bool               `json:"consent_required,omitempty"`
-	ConsentWording       *string             `json:"consent_wording,omitempty"`
-	FieldMap             *map[string]string  `json:"field_map,omitempty"`
-	LeadOrigin           *string             `json:"lead_origin,omitempty"`
-	Name                 string              `json:"name"`
-	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
-	PrivacyNotice        *string             `json:"privacy_notice,omitempty"`
-	PrivacyNoticeUrl     *string             `json:"privacy_notice_url,omitempty"`
+	AllowedOrigins       *[]string          `json:"allowed_origins,omitempty"`
+	ConsentPolicyVersion *string            `json:"consent_policy_version,omitempty"`
+	ConsentRequired      *bool              `json:"consent_required,omitempty"`
+	ConsentWording       *string            `json:"consent_wording,omitempty"`
+	FieldMap             *map[string]string `json:"field_map,omitempty"`
+	LeadOrigin           *string            `json:"lead_origin,omitempty"`
+	Name                 string             `json:"name"`
+
+	// NotifyOwner Tell the final active owner about accepted posts through their notification preference. Defaults to false.
+	NotifyOwner      *bool               `json:"notify_owner,omitempty"`
+	OwnerId          *openapi_types.UUID `json:"owner_id,omitempty"`
+	PrivacyNotice    *string             `json:"privacy_notice,omitempty"`
+	PrivacyNoticeUrl *string             `json:"privacy_notice_url,omitempty"`
 
 	// ProductId The product every lead this form creates is interested in. Omit it or send null to capture leads with no product.
 	ProductId   *openapi_types.UUID `json:"product_id,omitempty"`
@@ -55086,6 +55288,16 @@ type ImportFormatFile struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects, after the deals of the same upload. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -55133,6 +55345,16 @@ type ImportIgnoredEntryReason string
 // ImportObject What the file's rows are, and therefore what the run creates.
 //
 // `company` creates companies.
+//
+// `project` creates projects, after the deals of the same upload. A
+// row names the company it belongs to, by that company's `ref`, domain,
+// name or id, and may name the deal it comes from. A project is born in
+// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+// corrected export of projects, with its `id` column, updates them.
+//
+// `product` creates rate-card products. A
+// row is known by its `sku`, or by its `ref` when it has none. A price is
+// written in the major units of its `currency`.
 //
 // `deal` creates deals, after the companies and contacts of the same
 // upload. A deal row needs a `ref`, and names its pipeline and stage by
@@ -55216,6 +55438,16 @@ type ImportPartProfile struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects, after the deals of the same upload. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -55273,6 +55505,16 @@ type ImportPartReport struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects, after the deals of the same upload. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -55317,6 +55559,16 @@ type ImportPartRequest struct {
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
+	//
+	// `project` creates projects, after the deals of the same upload. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
 	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
@@ -55448,6 +55700,16 @@ type ImportRun struct {
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
+	//
+	// `project` creates projects, after the deals of the same upload. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
 	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
@@ -55617,6 +55879,16 @@ type ImportRunPart struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects, after the deals of the same upload. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -55776,6 +56048,16 @@ type ImportSourceProfile struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects, after the deals of the same upload. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -55883,6 +56165,16 @@ type ImportUndoReport struct {
 		//
 		// `company` creates companies.
 		//
+		// `project` creates projects, after the deals of the same upload. A
+		// row names the company it belongs to, by that company's `ref`, domain,
+		// name or id, and may name the deal it comes from. A project is born in
+		// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+		// corrected export of projects, with its `id` column, updates them.
+		//
+		// `product` creates rate-card products. A
+		// row is known by its `sku`, or by its `ref` when it has none. A price is
+		// written in the major units of its `currency`.
+		//
 		// `deal` creates deals, after the companies and contacts of the same
 		// upload. A deal row needs a `ref`, and names its pipeline and stage by
 		// name.
@@ -55928,6 +56220,16 @@ type ImportUndoReport struct {
 		// Object What the file's rows are, and therefore what the run creates.
 		//
 		// `company` creates companies.
+		//
+		// `project` creates projects, after the deals of the same upload. A
+		// row names the company it belongs to, by that company's `ref`, domain,
+		// name or id, and may name the deal it comes from. A project is born in
+		// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+		// corrected export of projects, with its `id` column, updates them.
+		//
+		// `product` creates rate-card products. A
+		// row is known by its `sku`, or by its `ref` when it has none. A price is
+		// written in the major units of its `currency`.
 		//
 		// `deal` creates deals, after the companies and contacts of the same
 		// upload. A deal row needs a `ref`, and names its pipeline and stage by
@@ -56334,6 +56636,10 @@ type InstallationSettings struct {
 	// little room rather than compare a file against it exactly.
 	MaxUploadBytes int64 `json:"max_upload_bytes"`
 
+	// MemberLanguages The UI languages active members chose, each once and with no member named. Stage
+	// settings mark an admin-named label with no name in one of them.
+	MemberLanguages *[]InstallationSettingsMemberLanguages `json:"member_languages,omitempty"`
+
 	// Name The company's display name. An administrator saving the anchor company's `display_name`
 	// (`PUT /company`, a profile-field correction or a company edit) sets it in the same
 	// transaction; before the first save it is the name the installation was configured with.
@@ -56395,6 +56701,9 @@ type InstallationSettingsDateFormat string
 // With no measure saved, the landing uses `likely`. A saved measure is used as saved.
 // The set can grow, so a client shows an unknown value by its name.
 type InstallationSettingsForecastForwardMeasure string
+
+// InstallationSettingsMemberLanguages defines model for InstallationSettings.MemberLanguages.
+type InstallationSettingsMemberLanguages string
 
 // InstallationSettingsTimeFormat Display times using the UI language, a 24-hour clock, or a 12-hour clock. Defaults to locale; never changes timezones or stored instants.
 type InstallationSettingsTimeFormat string
@@ -57267,6 +57576,35 @@ type KnowledgeDocumentList struct {
 //   - `complete`: every live passage carries a vector under the model bound now.
 type KnowledgeEmbedState string
 
+// LabelTranslation One label in one UI language, a suggestion stored nowhere.
+type LabelTranslation struct {
+	Language LabelTranslationLanguage `json:"language"`
+
+	// ModelUsed The model that wrote the suggestion. Absent when no model was asked.
+	ModelUsed *string `json:"model_used,omitempty"`
+
+	// Text The label in the target language.
+	Text string `json:"text"`
+
+	// Unchanged True when the label is already in the target language; `text` is then the label itself.
+	Unchanged bool `json:"unchanged"`
+}
+
+// LabelTranslationLanguage defines model for LabelTranslation.Language.
+type LabelTranslationLanguage string
+
+// LabelTranslationRequest defines model for LabelTranslationRequest.
+type LabelTranslationRequest struct {
+	// Language The UI language to write the label in.
+	Language LabelTranslationRequestLanguage `json:"language"`
+
+	// Text The label as stored.
+	Text string `json:"text"`
+}
+
+// LabelTranslationRequestLanguage The UI language to write the label in.
+type LabelTranslationRequestLanguage string
+
 // LabelTranslations An admin-named label in further UI languages, keyed by language. A reader whose UI
 // language has an entry sees it; any other reader sees the stored label. On a write the
 // map replaces the stored one, an empty text drops its language, and a language outside
@@ -57532,6 +57870,9 @@ type Lead struct {
 
 	// RoutedAt When routing assigned an owner. Starts the §18 first-response clock; null means the clock starts at created_at.
 	RoutedAt *time.Time `json:"routed_at,omitempty"`
+
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Score Lead-local scoring; never reads the contact graph. While an override is in force this is the human-set value (see score_override_reason).
 	Score int `json:"score"`
@@ -61201,10 +61542,8 @@ type NotificationClass string
 // NotificationDelivery Where a class of notification reaches its reader.
 //
 // `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
-// sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
-// the only class with a sending leg, and taking the word for any other would record a
-// choice the product does not keep; the others answer `422 value_not_allowed` and reach a
-// mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+// sends a message as each one lands for `approval_pending` and `website_lead`.
+// Other classes answer `422 value_not_allowed` and reach a mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
 // following morning, and is accepted for every class.
 //
 // `off` records the notice and stops there: no lane, no badge, no message. It does NOT
@@ -61310,10 +61649,8 @@ type NotificationPreference struct {
 	// Delivery Where a class of notification reaches its reader.
 	//
 	// `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
-	// sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
-	// the only class with a sending leg, and taking the word for any other would record a
-	// choice the product does not keep; the others answer `422 value_not_allowed` and reach a
-	// mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+	// sends a message as each one lands for `approval_pending` and `website_lead`.
+	// Other classes answer `422 value_not_allowed` and reach a mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
 	// following morning, and is accepted for every class.
 	//
 	// `off` records the notice and stops there: no lane, no badge, no message. It does NOT
@@ -61959,7 +62296,6 @@ type OutcomeReview struct {
 
 	// Questions The questions as they were asked, FROZEN at submission. The template they came from is editable, and an edit must not change what this review appears to have asked.
 	Questions       []ReviewQuestion `json:"questions"`
-	Revision        int              `json:"revision"`
 	TemplateKey     string           `json:"template_key"`
 	TemplateVersion int              `json:"template_version"`
 
@@ -62090,8 +62426,8 @@ type Partner struct {
 	CompanyId openapi_types.UUID `json:"company_id"`
 	CreatedAt time.Time          `json:"created_at"`
 
-	// GateMetrics Program gate metrics (certified seats, CSAT, ...).
-	GateMetrics *map[string]interface{} `json:"gate_metrics,omitempty"`
+	// GateMetrics The two recorded program gate metrics. Unknown keys are refused by name.
+	GateMetrics *PartnerGateMetrics `json:"gate_metrics,omitempty"`
 
 	// LastContactAt Never set; always null. Kept so existing clients keep compiling.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
@@ -62157,6 +62493,15 @@ type PartnerMarginTier string
 
 // PartnerPartnerRole Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.
 type PartnerPartnerRole string
+
+// PartnerGateMetrics The two recorded program gate metrics. Unknown keys are refused by name.
+type PartnerGateMetrics struct {
+	// CertifiedStaff Number of certified staff.
+	CertifiedStaff *int32 `json:"certified_staff,omitempty" maximum:"32767" minimum:"0"`
+
+	// RetentionRate Whole percentage of customers retained. Omitted when unknown.
+	RetentionRate *int32 `json:"retention_rate,omitempty" maximum:"100" minimum:"0"`
+}
 
 // PartnerKind What a partner does with us. Implementation and development work is never a partner kind.
 type PartnerKind string
@@ -67905,6 +68250,9 @@ type SalesProgressSummaryRequestPeriod string
 // SalesProgressSummaryRequestScopeKind Absent reads the caller's own figures.
 type SalesProgressSummaryRequestScopeKind string
 
+// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+type Salutation string
+
 // SaveContactResearchClaim One claim a human accepted, with the evidence that makes it checkable.
 type SaveContactResearchClaim struct {
 	// Field Which profile field this fills. A closed set, so a claim cannot be stored under a name no reader looks for.
@@ -68056,18 +68404,12 @@ type SavedView struct {
 	Query map[string]interface{} `json:"query"`
 
 	// Resource The list a saved view is over: one of core's lists, or `ext:<unit>:<kind>` for a kind an extension declared. One schema for the record, the create body and the list filter, so the three cannot drift.
-	Resource SavedViewTarget `json:"resource"`
-
-	// SharedScope V1 enforces private.
-	SharedScope *SavedViewSharedScope `json:"shared_scope,omitempty"`
-	UpdatedAt   *time.Time            `json:"updated_at,omitempty"`
+	Resource  SavedViewTarget `json:"resource"`
+	UpdatedAt *time.Time      `json:"updated_at,omitempty"`
 
 	// Version Optimistic-concurrency version; echo it in If-Match on update.
 	Version int64 `json:"version"`
 }
-
-// SavedViewSharedScope V1 enforces private.
-type SavedViewSharedScope string
 
 // SavedViewListResponse defines model for SavedViewListResponse.
 type SavedViewListResponse struct {
@@ -72434,6 +72776,9 @@ type UpdateContactRequest struct {
 	// RelationshipMark Marks the contact (`vendor_marketing`) or clears the mark (null). The mark records who set it, so a mark set by hand is never lifted by the automatic check that lifts the mark the sender check set.
 	RelationshipMark *UpdateContactRequestRelationshipMark `json:"relationship_mark,omitempty"`
 
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
+
 	// Social Merged into the stored links: a key not sent keeps its link, and a key sent as "" or null removes it. Only github, linkedin and twitter are taken; any other key is refused with 422 `social_platform_unknown`. linkedin takes only a LinkedIn profile link (https://www.linkedin.com/in/<name>).
 	Social *map[string]interface{} `json:"social,omitempty"`
 	Title  *string                 `json:"title,omitempty" singleline:"true"`
@@ -72723,6 +73068,16 @@ type UpdateImportRunRequest struct {
 	// Object What the file's rows are, and therefore what the run creates.
 	//
 	// `company` creates companies.
+	//
+	// `project` creates projects, after the deals of the same upload. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
 	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
@@ -73105,6 +73460,9 @@ type UpdateLeadRequest struct {
 
 	// ProjectId The body of work this lead belongs to; carries no same-company guard, also for a lead linked to a company.
 	ProjectId *openapi_types.UUID `json:"project_id,omitempty"`
+
+	// Salutation Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+	Salutation *Salutation `json:"salutation,omitempty"`
 
 	// Score Manual human score override (formulas §3.1, AC-S1). Omit to keep the computed lead-local score. Setting it REQUIRES `score_override_reason`; passing null clears the override and resumes recompute.
 	Score *int `json:"score,omitempty" maximum:"100" minimum:"0"`
@@ -73581,9 +73939,12 @@ type UpdateWebFormRequest struct {
 	HandlingAutomationId *openapi_types.UUID `json:"handling_automation_id,omitempty"`
 	LeadOrigin           *string             `json:"lead_origin,omitempty"`
 	Name                 *string             `json:"name,omitempty"`
-	OwnerId              *openapi_types.UUID `json:"owner_id,omitempty"`
-	PrivacyNotice        *string             `json:"privacy_notice,omitempty"`
-	PrivacyNoticeUrl     *string             `json:"privacy_notice_url,omitempty"`
+
+	// NotifyOwner Tell the final active owner about accepted posts through their notification preference. Defaults to false.
+	NotifyOwner      *bool               `json:"notify_owner,omitempty"`
+	OwnerId          *openapi_types.UUID `json:"owner_id,omitempty"`
+	PrivacyNotice    *string             `json:"privacy_notice,omitempty"`
+	PrivacyNoticeUrl *string             `json:"privacy_notice_url,omitempty"`
 
 	// ProductId The product every lead this form creates is interested in. Send null to stop naming one.
 	ProductId      *openapi_types.UUID        `json:"product_id,omitempty"`
@@ -73619,8 +73980,10 @@ type UpdateWebhookSubscriptionRequestState string
 // UpsertPartnerRequest Send `partner_kinds`, or the deprecated `partner_role`; one of the two is required (422
 // `partner_kinds_required` otherwise). `partner_kinds` wins when both are sent.
 type UpsertPartnerRequest struct {
-	CertStatus  *UpsertPartnerRequestCertStatus `json:"cert_status,omitempty"`
-	GateMetrics *map[string]interface{}         `json:"gate_metrics,omitempty"`
+	CertStatus *UpsertPartnerRequestCertStatus `json:"cert_status,omitempty"`
+
+	// GateMetrics The two recorded program gate metrics. Unknown keys are refused by name.
+	GateMetrics *PartnerGateMetrics             `json:"gate_metrics,omitempty"`
 	MarginTier  *UpsertPartnerRequestMarginTier `json:"margin_tier,omitempty"`
 
 	// NextStep Deprecated as stored text: a value sent here is written as a task on the partner's company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.
@@ -74273,6 +74636,9 @@ type WebForm struct {
 	LeadOrigin *string `json:"lead_origin,omitempty"`
 	Name       string  `json:"name"`
 
+	// NotifyOwner Tell the final active owner about accepted posts through their notification preference. Defaults to false.
+	NotifyOwner *bool `json:"notify_owner,omitempty"`
+
 	// OwnerId Who owns the leads this form creates; null leaves them in the unassigned queue.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
 
@@ -74368,6 +74734,9 @@ type WebFormCreated struct {
 	// LeadOrigin The `/lead-origins` key every lead from this form carries.
 	LeadOrigin *string `json:"lead_origin,omitempty"`
 	Name       string  `json:"name"`
+
+	// NotifyOwner Tell the final active owner about accepted posts through their notification preference. Defaults to false.
+	NotifyOwner *bool `json:"notify_owner,omitempty"`
 
 	// OwnerId Who owns the leads this form creates; null leaves them in the unassigned queue.
 	OwnerId *openapi_types.UUID `json:"owner_id,omitempty"`
@@ -80916,8 +81285,16 @@ type ListConsentPurposeSendCountsParams struct {
 	Days *int `form:"days,omitempty" json:"days,omitempty" maximum:"366" minimum:"1"`
 }
 
+// RenameConsentPurposeJSONBody defines parameters for RenameConsentPurpose.
+type RenameConsentPurposeJSONBody struct {
+	Label string `json:"label"`
+}
+
 // ListContactsParams defines parameters for ListContacts.
 type ListContactsParams struct {
+	// Salutation Filter by an explicit salutation; unset finds records whose choice is null.
+	Salutation *ListContactsParamsSalutation `form:"salutation,omitempty" json:"salutation,omitempty"`
+
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
@@ -81064,6 +81441,9 @@ type ListContactsParams struct {
 	// and does not say whether the contact exists.
 	RelatedTo *openapi_types.UUID `form:"related_to,omitempty" json:"related_to,omitempty"`
 }
+
+// ListContactsParamsSalutation defines parameters for ListContacts.
+type ListContactsParamsSalutation string
 
 // ListContactsParamsCapturedByKind defines parameters for ListContacts.
 type ListContactsParamsCapturedByKind string
@@ -82986,6 +83366,16 @@ type UploadImportSourceMultipartBody struct {
 	//
 	// `company` creates companies.
 	//
+	// `project` creates projects, after the deals of the same upload. A
+	// row names the company it belongs to, by that company's `ref`, domain,
+	// name or id, and may name the deal it comes from. A project is born in
+	// the `initiative`, `pursuing` or `delivering` phase, never closed. A
+	// corrected export of projects, with its `id` column, updates them.
+	//
+	// `product` creates rate-card products. A
+	// row is known by its `sku`, or by its `ref` when it has none. A price is
+	// written in the major units of its `currency`.
+	//
 	// `deal` creates deals, after the companies and contacts of the same
 	// upload. A deal row needs a `ref`, and names its pipeline and stage by
 	// name.
@@ -83200,6 +83590,9 @@ type UpdateLeadOriginParams struct {
 
 // ListLeadsParams defines parameters for ListLeads.
 type ListLeadsParams struct {
+	// Salutation Filter by an explicit salutation; unset finds records whose choice is null.
+	Salutation *ListLeadsParamsSalutation `form:"salutation,omitempty" json:"salutation,omitempty"`
+
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
 	// effective `sort` of the originating request (field + direction) plus the last row's keyset
 	// (sort-key tuple + the `created_at`/`id` tie-breaker). **Stability:** results are stable
@@ -83349,6 +83742,9 @@ type ListLeadsParams struct {
 	// Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
 	TagMode *ListLeadsParamsTagMode `form:"tag_mode,omitempty" json:"tag_mode,omitempty"`
 
+	// CompanyId Leads explicitly linked to this company. A company the caller cannot read matches no leads.
+	CompanyId *openapi_types.UUID `form:"company_id,omitempty" json:"company_id,omitempty"`
+
 	// FromContactId Only older leads that retain this historical contact link. New leads cannot be
 	// created from contacts.
 	FromContactId *openapi_types.UUID `form:"from_contact_id,omitempty" json:"from_contact_id,omitempty"`
@@ -83363,6 +83759,9 @@ type ListLeadsParams struct {
 	// (403 otherwise), and counts only partners the caller can open.
 	PartnerAccepted *bool `form:"partner_accepted,omitempty" json:"partner_accepted,omitempty"`
 }
+
+// ListLeadsParamsSalutation defines parameters for ListLeads.
+type ListLeadsParamsSalutation string
 
 // ListLeadsParamsCapturedByKind defines parameters for ListLeads.
 type ListLeadsParamsCapturedByKind string
@@ -83935,10 +84334,8 @@ type SaveNotificationPreferenceJSONBody struct {
 	// Delivery Where a class of notification reaches its reader.
 	//
 	// `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
-	// sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
-	// the only class with a sending leg, and taking the word for any other would record a
-	// choice the product does not keep; the others answer `422 value_not_allowed` and reach a
-	// mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+	// sends a message as each one lands for `approval_pending` and `website_lead`.
+	// Other classes answer `422 value_not_allowed` and reach a mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
 	// following morning, and is accepted for every class.
 	//
 	// `off` records the notice and stops there: no lane, no badge, no message. It does NOT
@@ -87922,6 +88319,9 @@ type DismissConnectorSilenceJSONRequestBody = DismissCaptureSilenceRequest
 // CreateConsentPurposeJSONRequestBody defines body for CreateConsentPurpose for application/json ContentType.
 type CreateConsentPurposeJSONRequestBody = CreateConsentPurposeRequest
 
+// RenameConsentPurposeJSONRequestBody defines body for RenameConsentPurpose for application/json ContentType.
+type RenameConsentPurposeJSONRequestBody RenameConsentPurposeJSONBody
+
 // CreateContactJSONRequestBody defines body for CreateContact for application/json ContentType.
 type CreateContactJSONRequestBody = CreateContactRequest
 
@@ -88257,6 +88657,9 @@ type AskCorpusJSONRequestBody AskCorpusJSONBody
 
 // UploadCorpusDocumentMultipartRequestBody defines body for UploadCorpusDocument for multipart/form-data ContentType.
 type UploadCorpusDocumentMultipartRequestBody UploadCorpusDocumentMultipartBody
+
+// SuggestLabelTranslationJSONRequestBody defines body for SuggestLabelTranslation for application/json ContentType.
+type SuggestLabelTranslationJSONRequestBody = LabelTranslationRequest
 
 // ConfirmSendWithoutLawfulBasisJSONRequestBody defines body for ConfirmSendWithoutLawfulBasis for application/json ContentType.
 type ConfirmSendWithoutLawfulBasisJSONRequestBody = LawfulBasisConfirmationRequest
@@ -91181,6 +91584,14 @@ func (a *Contact) UnmarshalJSON(b []byte) error {
 		delete(object, "relationship_mark")
 	}
 
+	if raw, found := object["salutation"]; found {
+		err = json.Unmarshal(raw, &a.Salutation)
+		if err != nil {
+			return fmt.Errorf("error reading 'salutation': %w", err)
+		}
+		delete(object, "salutation")
+	}
+
 	if raw, found := object["social"]; found {
 		err = json.Unmarshal(raw, &a.Social)
 		if err != nil {
@@ -91500,6 +91911,13 @@ func (a Contact) MarshalJSON() ([]byte, error) {
 		object["relationship_mark"], err = json.Marshal(a.RelationshipMark)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'relationship_mark': %w", err)
+		}
+	}
+
+	if a.Salutation != nil {
+		object["salutation"], err = json.Marshal(a.Salutation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'salutation': %w", err)
 		}
 	}
 
@@ -93209,6 +93627,14 @@ func (a *CreateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "phones")
 	}
 
+	if raw, found := object["salutation"]; found {
+		err = json.Unmarshal(raw, &a.Salutation)
+		if err != nil {
+			return fmt.Errorf("error reading 'salutation': %w", err)
+		}
+		delete(object, "salutation")
+	}
+
 	if raw, found := object["social"]; found {
 		err = json.Unmarshal(raw, &a.Social)
 		if err != nil {
@@ -93377,6 +93803,13 @@ func (a CreateContactRequest) MarshalJSON() ([]byte, error) {
 		object["phones"], err = json.Marshal(a.Phones)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'phones': %w", err)
+		}
+	}
+
+	if a.Salutation != nil {
+		object["salutation"], err = json.Marshal(a.Salutation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'salutation': %w", err)
 		}
 	}
 
@@ -94222,6 +94655,14 @@ func (a *CreateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "project_id")
 	}
 
+	if raw, found := object["salutation"]; found {
+		err = json.Unmarshal(raw, &a.Salutation)
+		if err != nil {
+			return fmt.Errorf("error reading 'salutation': %w", err)
+		}
+		delete(object, "salutation")
+	}
+
 	if raw, found := object["source"]; found {
 		err = json.Unmarshal(raw, &a.Source)
 		if err != nil {
@@ -94392,6 +94833,13 @@ func (a CreateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["project_id"], err = json.Marshal(a.ProjectId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'project_id': %w", err)
+		}
+	}
+
+	if a.Salutation != nil {
+		object["salutation"], err = json.Marshal(a.Salutation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'salutation': %w", err)
 		}
 	}
 
@@ -97792,6 +98240,14 @@ func (a *Lead) UnmarshalJSON(b []byte) error {
 		delete(object, "routed_at")
 	}
 
+	if raw, found := object["salutation"]; found {
+		err = json.Unmarshal(raw, &a.Salutation)
+		if err != nil {
+			return fmt.Errorf("error reading 'salutation': %w", err)
+		}
+		delete(object, "salutation")
+	}
+
 	if raw, found := object["score"]; found {
 		err = json.Unmarshal(raw, &a.Score)
 		if err != nil {
@@ -98260,6 +98716,13 @@ func (a Lead) MarshalJSON() ([]byte, error) {
 		object["routed_at"], err = json.Marshal(a.RoutedAt)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'routed_at': %w", err)
+		}
+	}
+
+	if a.Salutation != nil {
+		object["salutation"], err = json.Marshal(a.Salutation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'salutation': %w", err)
 		}
 	}
 
@@ -100811,6 +101274,14 @@ func (a *UpdateContactRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "relationship_mark")
 	}
 
+	if raw, found := object["salutation"]; found {
+		err = json.Unmarshal(raw, &a.Salutation)
+		if err != nil {
+			return fmt.Errorf("error reading 'salutation': %w", err)
+		}
+		delete(object, "salutation")
+	}
+
 	if raw, found := object["social"]; found {
 		err = json.Unmarshal(raw, &a.Social)
 		if err != nil {
@@ -100928,6 +101399,13 @@ func (a UpdateContactRequest) MarshalJSON() ([]byte, error) {
 		object["relationship_mark"], err = json.Marshal(a.RelationshipMark)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'relationship_mark': %w", err)
+		}
+	}
+
+	if a.Salutation != nil {
+		object["salutation"], err = json.Marshal(a.Salutation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'salutation': %w", err)
 		}
 	}
 
@@ -101713,6 +102191,14 @@ func (a *UpdateLeadRequest) UnmarshalJSON(b []byte) error {
 		delete(object, "project_id")
 	}
 
+	if raw, found := object["salutation"]; found {
+		err = json.Unmarshal(raw, &a.Salutation)
+		if err != nil {
+			return fmt.Errorf("error reading 'salutation': %w", err)
+		}
+		delete(object, "salutation")
+	}
+
 	if raw, found := object["score"]; found {
 		err = json.Unmarshal(raw, &a.Score)
 		if err != nil {
@@ -101853,6 +102339,13 @@ func (a UpdateLeadRequest) MarshalJSON() ([]byte, error) {
 		object["project_id"], err = json.Marshal(a.ProjectId)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'project_id': %w", err)
+		}
+	}
+
+	if a.Salutation != nil {
+		object["salutation"], err = json.Marshal(a.Salutation)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'salutation': %w", err)
 		}
 	}
 
@@ -103920,6 +104413,12 @@ type ServerInterface interface {
 	// How many messages went out under each declared consent purpose, and how many the record disputes.
 	// (GET /consent-purposes/send-counts)
 	ListConsentPurposeSendCounts(w http.ResponseWriter, r *http.Request, params ListConsentPurposeSendCountsParams)
+	// Archive an unused consent purpose.
+	// (DELETE /consent-purposes/{id})
+	ArchiveConsentPurpose(w http.ResponseWriter, r *http.Request, id Id)
+	// Rename an unused consent purpose.
+	// (PATCH /consent-purposes/{id})
+	RenameConsentPurpose(w http.ResponseWriter, r *http.Request, id Id)
 	// List contacts (live by default; cursor-paginated).
 	// (GET /contacts)
 	ListContacts(w http.ResponseWriter, r *http.Request, params ListContactsParams)
@@ -104757,6 +105256,9 @@ type ServerInterface interface {
 	// Download a document's own bytes.
 	// (GET /knowledge/documents/{id})
 	DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
+	// Suggest a stage or custom field name in another UI language.
+	// (POST /label-translations)
+	SuggestLabelTranslation(w http.ResponseWriter, r *http.Request)
 	// Record that a user read the no-lawful-basis warning and chose to send anyway.
 	// (POST /lawful-basis-confirmations)
 	ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request)
@@ -108675,6 +109177,18 @@ func (_ Unimplemented) ListConsentPurposeSendCounts(w http.ResponseWriter, r *ht
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Archive an unused consent purpose.
+// (DELETE /consent-purposes/{id})
+func (_ Unimplemented) ArchiveConsentPurpose(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rename an unused consent purpose.
+// (PATCH /consent-purposes/{id})
+func (_ Unimplemented) RenameConsentPurpose(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // List contacts (live by default; cursor-paginated).
 // (GET /contacts)
 func (_ Unimplemented) ListContacts(w http.ResponseWriter, r *http.Request, params ListContactsParams) {
@@ -110346,6 +110860,12 @@ func (_ Unimplemented) DeleteCorpusDocument(w http.ResponseWriter, r *http.Reque
 // Download a document's own bytes.
 // (GET /knowledge/documents/{id})
 func (_ Unimplemented) DownloadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Suggest a stage or custom field name in another UI language.
+// (POST /label-translations)
+func (_ Unimplemented) SuggestLabelTranslation(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -132093,6 +132613,70 @@ func (siw *ServerInterfaceWrapper) ListConsentPurposeSendCounts(w http.ResponseW
 	handler.ServeHTTP(w, r)
 }
 
+// ArchiveConsentPurpose operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveConsentPurpose(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveConsentPurpose(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RenameConsentPurpose operation middleware
+func (siw *ServerInterfaceWrapper) RenameConsentPurpose(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RenameConsentPurpose(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListContacts operation middleware
 func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.Request) {
 
@@ -132109,6 +132693,19 @@ func (siw *ServerInterfaceWrapper) ListContacts(w http.ResponseWriter, r *http.R
 
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ListContactsParams
+
+	// ------------- Optional query parameter "salutation" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "salutation", r.URL.Query(), &params.Salutation, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "salutation"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "salutation", Err: err})
+		}
+		return
+	}
 
 	// ------------- Optional query parameter "cursor" -------------
 
@@ -144106,6 +144703,26 @@ func (siw *ServerInterfaceWrapper) DownloadCorpusDocument(w http.ResponseWriter,
 	handler.ServeHTTP(w, r)
 }
 
+// SuggestLabelTranslation operation middleware
+func (siw *ServerInterfaceWrapper) SuggestLabelTranslation(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SuggestLabelTranslation(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ConfirmSendWithoutLawfulBasis operation middleware
 func (siw *ServerInterfaceWrapper) ConfirmSendWithoutLawfulBasis(w http.ResponseWriter, r *http.Request) {
 
@@ -144491,6 +145108,19 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 	// Parameter object where we will unmarshal all parameters from the context
 	var params ListLeadsParams
 
+	// ------------- Optional query parameter "salutation" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "salutation", r.URL.Query(), &params.Salutation, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "salutation"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "salutation", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "cursor" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -144760,6 +145390,19 @@ func (siw *ServerInterfaceWrapper) ListLeads(w http.ResponseWriter, r *http.Requ
 			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "tag_mode"})
 		} else {
 			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "tag_mode", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "company_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "company_id", r.URL.Query(), &params.CompanyId, runtime.BindQueryParameterOptions{Type: "string", Format: "uuid"})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "company_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "company_id", Err: err})
 		}
 		return
 	}
@@ -166125,6 +166768,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/consent-purposes/send-counts", wrapper.ListConsentPurposeSendCounts)
 	})
 	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/consent-purposes/{id}", wrapper.ArchiveConsentPurpose)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/consent-purposes/{id}", wrapper.RenameConsentPurpose)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts", wrapper.ListContacts)
 	})
 	r.Group(func(r chi.Router) {
@@ -166960,6 +167609,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/knowledge/documents/{id}", wrapper.DownloadCorpusDocument)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/label-translations", wrapper.SuggestLabelTranslation)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/lawful-basis-confirmations", wrapper.ConfirmSendWithoutLawfulBasis)

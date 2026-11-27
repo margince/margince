@@ -116,7 +116,7 @@ const {
 // The answer to a save of words alone: the draft as it was sent.
 const savedAs = (body: Record<string, unknown>) =>
   jsonResponse({ ...BARE, ...body, version: 9 });
-const refused = () => problem("internal", 503);
+const refused = () => problem("internal", 500);
 
 // The saved draft as the composer keeps it: the hook, and the keeping that
 // needs the send's state beside it.

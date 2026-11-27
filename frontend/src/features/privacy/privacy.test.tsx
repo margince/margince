@@ -78,15 +78,15 @@ describe("ConsentPurposesCard", () => {
     });
   });
 
-  // A purpose has no PATCH and no DELETE — say so before they commit, not after.
-  it("warns that a purpose cannot be renamed or removed", async () => {
+  it("explains that recorded use prevents changes to a purpose", async () => {
+    const user = userEvent.setup({ delay: null });
     stubRoutes();
     render(<ConsentPurposesCard />);
-    await userEvent.click(
+    await user.click(
       await screen.findByRole("button", { name: /add purpose/i }),
     );
     expect(
-      screen.getByText(/cannot be renamed or removed/i),
+      screen.getByText(/an unused purpose can be renamed or archived/i),
     ).toBeInTheDocument();
   });
 

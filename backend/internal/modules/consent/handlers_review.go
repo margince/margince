@@ -68,7 +68,6 @@ func wireReview(review Review) crmcontracts.CommunicationReview {
 		AssessmentRevision: &revision,
 		Id:                 openapi_types.UUID(review.ID),
 		State:              crmcontracts.CommunicationReviewState(review.State),
-		Kind:               crmcontracts.CommunicationReviewKind(review.Kind),
 		ReasonCode:         review.ReasonCode,
 		Refusals:           refusals,
 	}

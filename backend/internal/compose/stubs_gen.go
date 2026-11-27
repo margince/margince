@@ -1679,6 +1679,14 @@ func (stubs) ListConsentPurposeSendCounts(w nethttp.ResponseWriter, r *nethttp.R
 	httperr.NotImplemented(w, r, "ListConsentPurposeSendCounts")
 }
 
+func (stubs) ArchiveConsentPurpose(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ArchiveConsentPurpose")
+}
+
+func (stubs) RenameConsentPurpose(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RenameConsentPurpose")
+}
+
 func (stubs) ListContacts(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListContactsParams) {
 	httperr.NotImplemented(w, r, "ListContacts")
 }
@@ -2793,6 +2801,10 @@ func (stubs) DeleteCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, 
 
 func (stubs) DownloadCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DownloadCorpusDocument")
+}
+
+func (stubs) SuggestLabelTranslation(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SuggestLabelTranslation")
 }
 
 func (stubs) ConfirmSendWithoutLawfulBasis(w nethttp.ResponseWriter, r *nethttp.Request) {

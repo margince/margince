@@ -42,6 +42,7 @@ func normalizedPattern(body string, insensitive bool) string {
 func goSplitterTables(t *testing.T) map[string][]string {
 	t.Helper()
 	out := goSplitterFileTables(t, goSplitter)
+	out["subjectLabels"] = goSplitterFileTables(t, "internal/shared/kernel/mailquote/quotedheader.go")["subjectLabels"]
 	for _, path := range mailquoteVocabularyFiles {
 		for name, entries := range goSplitterFileTables(t, path) {
 			if _, exists := out[name]; exists {

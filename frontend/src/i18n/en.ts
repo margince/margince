@@ -3,6 +3,7 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "systemJob.website_lead_owner": "Telling the website lead owner",
   "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
   "systemJob.google_directory": "Reading a member’s Google groups",
   "systemJob.legal_review_desk": "Legal review desk",
@@ -5543,6 +5544,10 @@ export const en = {
   "co.narrative.add": "Add",
   "co.narrative.notOnSite": "Not on their website",
   "co.narrative.notReadYet": "Not read from their website yet",
+  "co.leads.title": "Linked leads",
+  "co.leads.empty": "No leads are linked to this company.",
+  "co.leads.more": "Show all linked leads",
+  "co.leads.list": "Open lead list",
   "co.contacts.engagement": "Engagement",
   "co.contacts.lastInteraction": "Last exchange",
   "co.contacts.strength": "Relationship",
@@ -7872,6 +7877,15 @@ export const en = {
   "create.company": "New company",
   "create.lead": "New lead",
   "create.deal": "New deal",
+  "create.salutation": "Salutation",
+  "salutation.any": "All salutations",
+  "salutation.unset": "Not set",
+  "salutation.mr": "Mr",
+  "salutation.ms": "Ms",
+  "salutation.none": "No gendered salutation",
+  "salutation.hint":
+    "Only record a choice the contact gave you. Never guess it from their name.",
+  "history.field.salutation": "Salutation",
   "create.fullName": "Full name",
   "create.firstName": "First name",
   "create.lastName": "Last name",
@@ -8972,8 +8986,6 @@ export const en = {
   "compose.mailboxNotConnected":
     "No mailbox is connected. Connect one to send from Margince.",
   "compose.mailboxNotConnectedGoto": "Connect a mailbox",
-  "compose.sharedUnsubscribeToken":
-    "A message with an unsubscribe link goes to one recipient at a time, because the link is that recipient’s consent record. Send it once per recipient, with no Cc.",
   "compose.relinkTitle": "Relink this activity",
   "compose.relinkTarget":
     "Search contacts, companies, deals, leads or projects",
@@ -9413,6 +9425,9 @@ export const en = {
   "analytics.field.open_deal_unpriced": "Open deals not priced",
   "analytics.field.overdue_commitments": "Overdue tasks",
   "analytics.field.close_month": "Close month",
+  "analytics.field.days_since_activity": "Days since last activity",
+  "analytics.field.meeting_ahead": "Meeting ahead",
+  "analytics.field.company_days_since_activity": "Days since the company’s last activity",
   "analytics.field.owner_id": "Owner",
   "analytics.field.partner_company_id": "Partner company",
   "analytics.field.partner_sourced": "Partner-sourced",
@@ -10836,6 +10851,8 @@ export const en = {
   "import.object.contact": "Contacts",
   "import.object.deal": "Deals",
   "import.object.activity": "Activities",
+  "import.object.project": "Projects",
+  "import.object.product": "Products",
   "import.profiled_one":
     "“Filled in” and “Values” come from the first row of the file.",
   "import.profiled_other":
@@ -11257,6 +11274,8 @@ export const en = {
     "“{value}” is not a record id. Export the list to get the ids, or leave the column empty to import this row as a new record.",
   "import.reason.id_record_not_visible":
     "No record you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
+  "import.reason.not_your_record":
+    "This row matches a record another member owns. Your import changes only records you own, so the row is not applied.",
   "import.reason.ref_taken_by_another_record":
     "The reference “{ref}” already stands for another record from an earlier import, so this row is not applied. Use a new reference for this row or fix the id column.",
   "import.reason.id_not_visible":
@@ -11312,6 +11331,22 @@ export const en = {
     "“{value}” needs its country code, like +49 30 1234567.",
   "import.reason.record_archived":
     "This row’s record was archived, so it is not updated. Restore the record to update it.",
+  "import.reason.project_unnamed": "Give the project a name.",
+  "import.reason.project_company_missing":
+    "A project belongs to a company. Name it in the company column.",
+  "import.reason.project_company_fixed":
+    "A project keeps the company it was created for, so this row is not applied. Leave the company column as it is, or import the row as a new project.",
+  "import.reason.project_phase_unknown":
+    "“{value}” is not a phase a project starts in. The phases are: {names}.",
+  "import.reason.project_phase_closed":
+    "A project is not created closed, because closing needs a reason. Import it in another phase, then close it in the app.",
+  "import.reason.project_dates_inverted":
+    "The target end date is before the start date.",
+  "import.reason.project_deal_refused":
+    "The deal cannot start this project: {detail}",
+  "import.reason.product_unnamed": "Give the product a name.",
+  "import.reason.product_sku_held":
+    "Another live product already has the SKU “{value}”.",
   "import.reason.ref_taken_by_another_company":
     "The reference “{ref}” already stands for another company from an earlier import, so this row is not applied. Use a new reference for this company or fix the id column.",
   "import.reason.row_key_empty":
@@ -11944,6 +11979,11 @@ export const en = {
   "privacy.correctionNote": "Reason (the contact may ask)",
   "privacy.correctionAccept": "Accept and update",
   "privacy.correctionReject": "Leave as it is",
+  "privacy.purposeRename": "Rename",
+  "privacy.purposeRenameTitle": "Rename {label}",
+  "privacy.purposeArchiveTitle": "Archive {label}",
+  "privacy.purposeInUse":
+    "Consent is already recorded for this purpose. Create a new purpose instead.",
   "privacy.purposesRegistry": "Registered purposes",
   "privacy.purposesReadOnly":
     "Read-only. Adding a purpose needs a permission your role does not have.",
@@ -11958,7 +11998,7 @@ export const en = {
   "privacy.purposeFrequency.quarterly": "About once a quarter",
   "privacy.purposeCreate": "Create purpose",
   "privacy.purposeAppendOnly":
-    "A purpose cannot be renamed or removed once created; the catalog is append-only. Choose the key carefully.",
+    "An unused purpose can be renamed or archived. Any consent, notice, wording or scheduled send fixes the purpose. To change it after use, create a new purpose.",
   "notice.title": "Disclosure duties",
   "notice.sub":
     "Duties sort by deadline; source reviews sort by recorded time.",
@@ -12590,6 +12630,15 @@ export const en = {
   "translation.nameIn.en": "Name in English",
   "translation.nameIn.de": "Name in German",
   "translation.nameIn.vi": "Name in Vietnamese",
+  "translation.missing.en": "No name in English",
+  "translation.missing.de": "No name in German",
+  "translation.missing.vi": "No name in Vietnamese",
+  "translation.suggest": "Suggest translation",
+  "translation.suggestNeedsName":
+    "Type the name first, then a translation can be suggested.",
+  "translation.suggesting": "Suggesting…",
+  "translation.suggestFailed":
+    "No suggestion came back. Type the name, or try again.",
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
   "stage.nameTaken":
@@ -15199,6 +15248,9 @@ export const en = {
   "cf.choices.saved_one": "Choices of “{label}” saved. {count} record changed.",
   "cf.choices.saved_other":
     "Choices of “{label}” saved. {count} records changed.",
+  "cf.filterAny": "Any value",
+  "cf.filterApply": "Apply filter",
+  "cf.filterValueRequired": "Enter a value to filter by.",
   "cf.gate.title": "Add this field?",
   "cf.gate.body":
     "On confirm, it is added to every {object}: on the 360 page, in search and filters, lists, export and the API. The addition is recorded in the audit log.",
@@ -19098,6 +19150,12 @@ export const en = {
   "webForms.field.senderSecretHint":
     "The secret the Webflow API answers once when it makes the webhook. A webhook an OAuth app makes is signed with that app’s client secret instead. Leave it empty until you have it: the form takes no posts until then.",
   "webForms.field.senderSecretKeep": "Leave empty to keep the stored secret.",
+  "webForms.field.notifyOwnerHint":
+    "Tells the owner when the post lands, after its handling plan assigns one, or after lead routing assigns a previously unowned lead.",
+  "webForms.field.notifyOwner": "Tell the owner about each new post",
+  "notifications.class.website_lead.label": "New website leads",
+  "notifications.class.website_lead.help":
+    "An accepted website form post on a lead or contact you own.",
   "webForms.field.consentRequired":
     "Require consent before a submission is taken",
   "webForms.field.consentWording": "Consent wording",

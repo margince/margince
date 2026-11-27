@@ -52,6 +52,8 @@ type Lander struct {
 	catalog    fieldcatalog.Reader
 	legacy     *automation.AutomationStore
 	fieldValue FieldValue
+	arrival    func(context.Context, ids.UUID, ids.UUID, activities.ActivityLinkInput) error
+	within     func(context.Context, func(context.Context) error) error
 }
 
 // New builds the lander. fieldValue reads a cf_<key> field the way the import
@@ -62,9 +64,28 @@ func New(leads *contacts.Store, notes *activities.Store, catalog fieldcatalog.Re
 	return Lander{leads: leads, activities: notes, catalog: catalog, legacy: legacy, fieldValue: fieldValue}
 }
 
+// WithArrival tells the final owner after a post without an inquiry policy lands.
+func (l Lander) WithArrival(arrival func(context.Context, ids.UUID, ids.UUID, activities.ActivityLinkInput) error) Lander {
+	l.arrival = arrival
+	return l
+}
+
+// WithTransaction commits the landed record, note and owner notice together.
+func (l Lander) WithTransaction(within func(context.Context, func(context.Context) error) error) Lander {
+	l.within = within
+	return l
+}
+
 // Land writes the submission's lead, or finds the record that holds its
 // address, and puts the form's note on it.
 func (l Lander) Land(ctx context.Context, landing webforms.Landing) error {
+	if l.within != nil {
+		return l.within(ctx, func(bound context.Context) error { return l.land(bound, landing) })
+	}
+	return l.land(ctx, landing)
+}
+
+func (l Lander) land(ctx context.Context, landing webforms.Landing) error {
 	active, err := l.catalog.ActiveColumns(ctx, "lead")
 	if err != nil {
 		return fmt.Errorf("compose: reading the lead custom fields: %w", err)
@@ -91,13 +112,16 @@ func (l Lander) Land(ctx context.Context, landing webforms.Landing) error {
 	if err != nil {
 		return err
 	}
-	_, _, err = l.activities.LogActivity(ctx, activities.LogActivityInput{
+	note, created, err := l.activities.LogActivity(ctx, activities.LogActivityInput{
 		SystemText: &systemtext.Message{Subject: systemtext.Sentence("form.subject", systemtext.Label(landing.FormName)), Body: webFormBodyComponent(landing, body)},
 		Kind:       string(crmcontracts.ActivityKindNote), Subject: &subject, Body: &body, Links: []activities.ActivityLinkInput{*target},
 		SourceSystem: &system, SourceID: &key, Source: webFormLeadSource, Raw: &raw,
 	})
 	if err != nil {
 		return fmt.Errorf("compose: writing the website form's note: %w", err)
+	}
+	if created && l.arrival != nil && landing.HandlingAutomationID == nil {
+		return l.arrival(ctx, landing.FormID, ids.UUID(note.Id), *target)
 	}
 	return nil
 }
@@ -158,6 +182,7 @@ func LeadInput(landing webforms.Landing) contacts.CreateLeadInput {
 		Email:        &e.Email,
 		FullName:     optional(textbounds.Fit("public.lead.full_name", e.FullName)),
 		Title:        optional(textbounds.Fit("public.lead.title", e.Title)),
+		Salutation:   submittedSalutation(e.Salutation),
 		CompanyName:  optional(textbounds.Fit("public.lead.company_name", e.Company)),
 		SourceSystem: &system, SourceID: &key,
 		Source: webFormLeadSource, Origin: landing.LeadOrigin, OriginDetail: optional(originDetail(e)),
@@ -249,6 +274,7 @@ func webFormNote(landing webforms.Landing) string {
 	line("Phone", e.Phone)
 	line("Company", e.Company)
 	line("Title", e.Title)
+	line("Salutation", e.Salutation)
 	for _, f := range e.Extra {
 		line(f.Name, f.Value)
 	}
@@ -391,4 +417,9 @@ func optional(s string) *string {
 		return nil
 	}
 	return &s
+}
+
+// submittedSalutation keeps the same explicit-choice mapping as CSV import.
+func submittedSalutation(value string) *crmcontracts.Salutation {
+	return contacts.SubmittedSalutation(value)
 }

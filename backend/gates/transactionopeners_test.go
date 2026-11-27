@@ -55,6 +55,7 @@ func TestTheDatabasePackageOpensATransactionInOneFunction(t *testing.T) {
 	}
 
 	nested := gatekit.Waive(map[string]string{
+		"txmemo.go: Begin":     "a savepoint on ownedTx.Tx; the wrapper retains the root commit owner and never begins on a pool",
 		"deferredtx.go: Begin": "a pseudo-nested savepoint on the read snapshot's own transaction, never a pool transaction. It sends the snapshot's deferred session statements first, so none of them lands inside the savepoint",
 	})
 	defer nested.AssertAllMatched(t)

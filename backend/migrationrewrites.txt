@@ -337,3 +337,12 @@
 1795772278_a_saved_view_name_is_unique_for_its_owner_and_resource.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795755969_the_group_six_text_limits_follow_their_columns.up.sql | * | re-creates the text_bound triggers of assurance_run, finance_invoice and contact_provider_claim without the dropped columns' keys; it changes no existing row
 1795755969_the_group_six_text_limits_follow_their_columns.down.sql | * | re-creates those six text_bound triggers as they were; it changes no existing row
+1795775100_only_real_text_fields_have_bounds.down.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
+1795775100_only_real_text_fields_have_bounds.up.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
+1795775200_only_unused_consent_purposes_can_change.down.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
+1795775200_only_unused_consent_purposes_can_change.up.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
+1795775300_source_changes_reach_the_write_history.up.sql | * | the procedural block defines or removes schema checks, functions and triggers; it rewrites no existing records
+1795777013_a_rep_imports_their_own_leads_and_contacts.up.sql | role | one UPDATE of the three fixed system roles rep, manager and management
+1795777013_a_rep_imports_their_own_leads_and_contacts.down.sql | role | one UPDATE of the three fixed system roles rep, manager and management
+1795777900_missing_import_grants_follow_the_seed.up.sql | role | fills missing import_run entries on the six named system roles; existing grants and custom roles are untouched
+1795777900_missing_import_grants_follow_the_seed.down.sql | * | the down migration is a single SELECT 1 that changes nothing

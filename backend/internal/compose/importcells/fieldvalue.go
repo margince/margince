@@ -130,3 +130,6 @@ func unboundReason(col fieldcatalog.Column, text string) migration.Reason {
 	}
 	return migration.Why(migration.ReasonCannotWriteType, "value", text, "type", string(col.Type))
 }
+
+// YesNo reads a cell spelled as one of the spreadsheet's yes or no words.
+func YesNo(text string) (bool, migration.Reason) { return booleanValue(text) }

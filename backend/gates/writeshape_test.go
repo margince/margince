@@ -252,7 +252,7 @@ var auditOnlyWrites = gatekit.Waive(map[string]string{
 	"internal/modules/chatlinks:MarkChannelGone":               chatLinksAuditOnly,
 	"internal/modules/identity:ReleaseAppBinding":              "releasing a revoked app passport's binding is audit-only: the closed catalog (events.md \u00a75) defines no passport verb for it and the closed-verb law forbids inventing one build-side. Nothing downstream goes stale, because the passport is already revoked and the app edge reads the binding again on every call. The audit row records the issuer and subject cleared, never a token",
 	"internal/modules/capture:auditLifecycle":                  "connector lifecycle (connect/reconnect/disconnect) is audit-only because the kernel models NO entity kind for capture_connection \u2014 storekit.Emit needs one, and the closed catalog (events.md \u00a75) defines no connector.* type. Inventing one build-side would break the closed-verb law. Attribution, which is what the privacy boundary actually needs, is carried by the audit row",
-	"internal/modules/deals:CreateProduct":                     "the rate-card is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no product.* type and the closed-verb law forbids inventing one build-side",
+	"internal/modules/deals:createProductIn":                   "the rate-card is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no product.* type and the closed-verb law forbids inventing one build-side",
 	"internal/modules/deals:UpdateProduct":                     "the rate-card is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no product.* type and the closed-verb law forbids inventing one build-side",
 	"internal/modules/deals:auditTranslation":                  "a product's text in another language is part of the rate-card, which is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no product.* type and the closed-verb law forbids inventing one build-side",
 	"internal/modules/deals:ArchiveProductAt":                  "the rate-card is ratified audit-only \u2014 the closed catalog (events.md \u00a75) defines no product.* type and the closed-verb law forbids inventing one build-side",
@@ -507,7 +507,8 @@ type storekitWriterSets struct {
 func storekitWriters(t *testing.T) storekitWriterSets {
 	t.Helper()
 	calls := storekitCalls(t)
-	audit, emit := reachersOf(calls, "insertAuditRows"), reachersOf(calls, "insertEvents")
+	direct := storekitDirectCalls(t)
+	audit, emit := reachersOf(calls, "insertAuditRows"), reachersOf(direct, "insertEvents")
 	sets := storekitWriterSets{audits: map[string]bool{}, emits: map[string]bool{}}
 	for name := range emit {
 		sets.emits[name] = ast.IsExported(name)
@@ -530,7 +531,26 @@ func storekitWriters(t *testing.T) storekitWriterSets {
 
 // storekitCalls maps each storekit function, method and package variable to
 // the names it refers to.
-func storekitCalls(t *testing.T) map[string][]string {
+func storekitCalls(t *testing.T) map[string][]string { return storekitCallGraph(t, referencedNames) }
+
+// Registered callbacks cannot prove the caller emits its own domain change.
+func storekitDirectCalls(t *testing.T) map[string][]string {
+	return storekitCallGraph(t, func(node ast.Node) []string {
+		var names []string
+		ast.Inspect(node, func(n ast.Node) bool {
+			if _, closure := n.(*ast.FuncLit); closure {
+				return false
+			}
+			if ident, ok := n.(*ast.Ident); ok {
+				names = append(names, ident.Name)
+			}
+			return true
+		})
+		return names
+	})
+}
+
+func storekitCallGraph(t *testing.T, references func(ast.Node) []string) map[string][]string {
 	t.Helper()
 	const dir = "internal/platform/database/storekit"
 	entries, err := gatekit.ReadDir(dir)
@@ -553,7 +573,7 @@ func storekitCalls(t *testing.T) map[string][]string {
 				// A method counts under its own name, and a function value
 				// counts as much as a call: either way the writer is reached.
 				if d.Body != nil {
-					calls[d.Name.Name] = append(calls[d.Name.Name], referencedNames(d.Body)...)
+					calls[d.Name.Name] = append(calls[d.Name.Name], references(d.Body)...)
 				}
 			case *ast.GenDecl:
 				// var Writer = Audit makes Writer a writer too.
@@ -561,7 +581,7 @@ func storekitCalls(t *testing.T) map[string][]string {
 					if value, ok := spec.(*ast.ValueSpec); ok {
 						for _, name := range value.Names {
 							for _, expr := range value.Values {
-								calls[name.Name] = append(calls[name.Name], referencedNames(expr)...)
+								calls[name.Name] = append(calls[name.Name], references(expr)...)
 							}
 						}
 					}

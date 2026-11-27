@@ -167,10 +167,11 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// answer. So strength reads the stored row and then the history's dates and the
 	// window's counts. The single-thread threshold is read from the reporting framework's
 	// own table. The contacts and billing contacts lists each count what row scope hid,
-	// from the statement the list reads, so each adds one read. One more names the
-	// colleagues who hold the contacts row scope hid. The status line How it stands
-	// shows is one keyed read.
-	const budget = 67
+	// from the statement the list reads, so each adds one read. The company read
+	// also names the colleagues who hold hidden contacts in one batch.
+	// The linked-leads section adds one scoped page and one completeness count.
+	// The status line How it stands shows is one keyed read.
+	const budget = 69
 	if tracer.languageReads != 2 {
 		t.Errorf("two assemblies read base language %d times, want once each", tracer.languageReads)
 	}

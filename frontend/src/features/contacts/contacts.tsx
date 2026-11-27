@@ -23,6 +23,7 @@ import {
 } from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
 import { CONTACTS_INITIAL_SORT } from "../../lib/listopenings";
+import { salutationFilter } from "../../lib/contactsalutation";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useActionRefusal } from "../../lib/writerefusal";
@@ -135,6 +136,7 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
   return (
     <div className="wrap">
       <ListTable
+        customFieldsKind="contact"
         title={pageName}
         state={state}
         unit="unit.contacts"
@@ -242,6 +244,7 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
           lastActivityColumn<Contact>(t, locale, readerZone),
           createdColumn<Contact>(t, locale, readerZone),
         ]}
+        chips={[salutationFilter()]}
         saveView={<SaveViewAction resource="contacts" state={state} />}
         notice={<SavedViewsFailure resource="contacts" />}
         rowKey={(contact) => contact.id}

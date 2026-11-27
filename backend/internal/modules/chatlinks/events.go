@@ -80,6 +80,7 @@ func (h EventHandlers) ReceiveDispactChannelEvent(w http.ResponseWriter, r *http
 		return
 	}
 	if !h.perPeer.Allow(httpserver.ClientIP(r)) {
+		ratelimit.SetHeaders(w.Header(), h.perPeer.Limit(), h.perPeer.RetryAfterSeconds())
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusTooManyRequests, Code: "rate_limited",
 			RetryAfterSeconds: h.perPeer.RetryAfterSeconds(), Detail: "Too many notices. Send it again after the wait.",

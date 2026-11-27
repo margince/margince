@@ -36,14 +36,14 @@ func TestAReviewWaitingOnACardGoesBackToTheRep(t *testing.T) {
 
 	var waiting, untouched string
 	if err := conn.QueryRow(ctx, `
-		INSERT INTO communication_review (state, kind, reason_code, refusals, approval_id)
-		VALUES ('awaiting_decision', 'single', 'no_grant', '[]', gen_random_uuid())
+		INSERT INTO communication_review (state, reason_code, refusals, approval_id)
+		VALUES ('awaiting_decision', 'no_grant', '[]', gen_random_uuid())
 		RETURNING id`).Scan(&waiting); err != nil {
 		t.Fatalf("seeding a review waiting on a card: %v", err)
 	}
 	if err := conn.QueryRow(ctx, `
-		INSERT INTO communication_review (state, kind, reason_code, refusals)
-		VALUES ('needs_repair', 'single', 'bad_address', '[]')
+		INSERT INTO communication_review (state, reason_code, refusals)
+		VALUES ('needs_repair', 'bad_address', '[]')
 		RETURNING id`).Scan(&untouched); err != nil {
 		t.Fatalf("seeding a review nobody routed: %v", err)
 	}

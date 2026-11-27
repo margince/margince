@@ -18,6 +18,7 @@ import { PROMOTION_TRIGGER_LABEL } from "../format/promotion";
 import { type Locale, translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { CALL_OUTCOME_LABEL } from "./calloutcome";
+import { SALUTATION_LABELS } from "./contactsalutation";
 import { KIND_LABELS } from "./partnerstages.queries";
 import { TASK_TYPE_LABELS } from "./tasktype";
 
@@ -123,6 +124,7 @@ const HISTORY_VALUE_LABELS = new Map<
   ["priority", DEAL_PRIORITY_LABEL],
   ["partner_attribution", DEAL_ATTRIBUTION_LABEL],
   ["greeting_register", GREETING_REGISTER_LABEL],
+  ["salutation", SALUTATION_LABELS],
   ["relationship_mark", MARK_WORDS],
   ["impersonation_warning_raised", IMPERSONATION_WORDS],
   ["impersonation_warning_cleared", IMPERSONATION_WORDS],

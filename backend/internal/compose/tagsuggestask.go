@@ -26,8 +26,6 @@ const (
 	// tagSuggestBatchSize is how many items one call reads, like the other
 	// batched mail passes on the same small-model ladder.
 	tagSuggestBatchSize = 10
-	// tagSuggestBodyLimit truncates each item's text for the prompt.
-	tagSuggestBodyLimit = 1500
 )
 
 // The JSON keys the schema declares and the payload decodes.

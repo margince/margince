@@ -185,14 +185,11 @@ func (t readRecord) Spec() mcp.ToolSpec {
 }
 
 func (t readRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMessage, error) {
-	var args struct {
-		RecordType string   `json:"record_type"`
-		ID         ids.UUID `json:"id"`
-	}
-	if err := decodeArgs(in, &args); err != nil {
+	ref, err := DecodeReadRecordArguments(in)
+	if err != nil {
 		return nil, err
 	}
-	rec, err := t.p.Read(ctx, datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID})
+	rec, err := t.p.Read(ctx, ref)
 	if err != nil {
 		return nil, err
 	}
@@ -201,6 +198,19 @@ func (t readRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 		return nil, err
 	}
 	return json.Marshal(out)
+}
+
+// DecodeReadRecordArguments is read_record's strict argument decoder. The
+// certification loop uses it too, so it observes the same refusal and wording.
+func DecodeReadRecordArguments(in json.RawMessage) (datasource.EntityRef, error) {
+	var args struct {
+		RecordType string   `json:"record_type"`
+		ID         ids.UUID `json:"id"`
+	}
+	if err := decodeArgs(in, &args); err != nil {
+		return datasource.EntityRef{}, err
+	}
+	return datasource.EntityRef{Type: datasource.EntityType(args.RecordType), ID: args.ID}, nil
 }
 
 // --- create_record (🟢 write, reversible) ---

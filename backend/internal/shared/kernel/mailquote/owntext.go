@@ -25,29 +25,53 @@ func Preamble(body string) (preamble, text string) {
 	return preamble, body[len(preamble):]
 }
 
-// OwnTextEnd is the index of the first line of quoted or forwarded mail, or
-// len(lines) when the sender wrote every line.
-//
-// A line a mail program writes above such mail ends the text. A quote marked
-// with ">" ends it only when nothing follows, so an inline reply stays whole.
-//
-// A forward passes its first quoted mail on as its own text. Outlook writes a
-// forward and a reply alike, so only the subject tells them apart.
+// OwnTextEnd keeps forwarded messages while cutting ordinary reply history.
+// Marked inline replies stay visible when new text follows.
 func OwnTextEnd(lines []string, subject string) int {
-	for i := ForwardedBlockEnd(lines, subject); i < len(lines); i++ {
+	end, _ := readOwnText(lines, subject)
+	return end
+}
+
+// ForwardedBlock identifies a forwarded header and the text beneath it.
+type ForwardedBlock struct{ Header, Body int }
+
+// ForwardedBlocks returns only forwards before ordinary quoted reply history.
+func ForwardedBlocks(lines []string, subject string) []ForwardedBlock {
+	_, blocks := readOwnText(lines, subject)
+	return blocks
+}
+
+func readOwnText(lines []string, subject string) (int, []ForwardedBlock) {
+	var blocks []ForwardedBlock
+	start := ForwardedBlockEnd(lines, subject)
+	if start > 0 {
+		header := forwardedHeader(lines)
+		blocks = append(blocks, ForwardedBlock{Header: header, Body: start})
+		subject = readQuotedHeader(lines[header:start]).Subject
+	}
+	for i := start; i < len(lines); i++ {
 		if !startsQuote(lines, i) {
 			continue
 		}
+		if len(blocks) > 0 && (forwardAttribution.MatchString(strings.TrimSpace(lines[i])) || mailsubject.IsForward(subject) && OpensReplyHeader(lines[i], lines[i+1:])) {
+			if header := headerAt(lines, i); header >= 0 {
+				end := forwardedHeaderEnd(lines, header)
+				blocks = append(blocks, ForwardedBlock{Header: header, Body: end})
+				subject = readQuotedHeader(lines[header:end]).Subject
+				i = end - 1
+				continue
+			}
+		}
 		after, marked := markedRunEnd(lines, i)
 		if !marked {
-			return i
+			return i, blocks
 		}
 		if !hasText(lines[after:]) {
-			return attributedStart(lines, i)
+			return attributedStart(lines, i), blocks
 		}
 		i = after - 1
 	}
-	return len(lines)
+	return len(lines), blocks
 }
 
 // ForwardedBlockEnd is the line after the header block of the mail a forward
@@ -62,6 +86,10 @@ func ForwardedBlockEnd(lines []string, subject string) int {
 	if header < 0 {
 		return 0
 	}
+	return forwardedHeaderEnd(lines, header)
+}
+
+func forwardedHeaderEnd(lines []string, header int) int {
 	end := header + 1
 	for end < len(lines) && strings.TrimSpace(lines[end]) != "" && !startsQuote(lines, end) {
 		end++

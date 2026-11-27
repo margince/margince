@@ -317,8 +317,18 @@ func ImportedFrom(sourceSystem *string) *string {
 		name = ""
 	}
 	name = strings.TrimPrefix(name, csvImportConnector+":")
+	if seated, ok := strings.CutPrefix(name, OwnImportSeatSegment); ok && len(seated) >= seatIDLength {
+		name = strings.TrimPrefix(seated[seatIDLength:], ":")
+	}
 	return &name
 }
+
+// OwnImportSeatSegment opens the segment that keeps one seat's own imports in
+// a namespace of their own. ImportedFrom drops it, so the screen shows the
+// source name the importer typed.
+const OwnImportSeatSegment = "seat-"
+
+const seatIDLength = 36
 
 // RefuseWire guards BOTH provenance fields a create wire can carry, in one
 // statement so a mapper spends one line rather than two `if err != nil` blocks.

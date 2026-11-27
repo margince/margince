@@ -32,6 +32,8 @@ func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmco
 		Sort:            params.Sort,
 		TagIDs:          uuidArgs(params.TagId),
 		FromContactID:   idArg[ids.ContactKind](params.FromContactId),
+		CustomFilters:   httperr.CustomFieldFilters(r),
+		CompanyID:       idArg[ids.CompanyKind](params.CompanyId),
 		CompanyFacts: LeadCompanyFactFilters{
 			Industry: enumArg(params.Industry), Country: params.Country, SizeBand: enumArg(params.SizeBand),
 		},
@@ -45,6 +47,11 @@ func (h Handlers) ListLeads(w http.ResponseWriter, r *http.Request, params crmco
 			return
 		}
 	}
+	if params.Salutation != nil {
+		word := string(*params.Salutation)
+		in.Salutation = &word
+	}
+
 	mode, err := storekit.ParseTagMode((*string)(params.TagMode))
 	if err != nil {
 		httperr.Write(w, r, httperr.Validation("tag_mode", "invalid", err.Error()))
@@ -79,8 +86,8 @@ func (h Handlers) CreateLead(w http.ResponseWriter, r *http.Request, _ crmcontra
 		return
 	}
 
-	// A declared importer — a HUMAN holding import_run:create — may stamp the
-	// reserved mirror: namespace, which is what gives an import its own replay
+	// A declared importer (auth.DeclaredImporter) may stamp the reserved
+	// mirror: namespace, which is what gives an import its own replay
 	// key. Everyone else gets the client door, an agent carrying that human's
 	// grants included.
 	mapInput := LeadCreationInput

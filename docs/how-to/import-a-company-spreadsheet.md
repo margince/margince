@@ -126,9 +126,10 @@ call undoes that. An ID fails in none of these ways.
 ## Importing a ZIP over REST
 
 A ZIP holds one CSV for each record type. The file name gives the type: `companies.csv`,
-`contacts.csv`, `leads.csv`, `deals.csv` or `activities.csv`. A run lands companies first, then contacts,
-then leads, then deals, then activities. So a contact can link to a company in the same ZIP, a deal to
-either, and an activity to any of them. Undo goes the other way and archives activities first.
+`contacts.csv`, `leads.csv`, `deals.csv`, `projects.csv`, `products.csv` or `activities.csv`. A run lands
+companies first, then contacts, leads, deals, projects, products and activities. So a contact can link to a
+company in the same ZIP, and a deal to either. A project can link to a company or a deal, and an activity
+to a company, a contact, a lead or a deal. Undo goes the other way and archives activities first.
 
 1. Read `GET /v1/imports/format`. It lists each file, its columns and what goes in each one, and the
    order the files land in. `GET /v1/imports/template` returns the same as a ZIP to fill in.
@@ -185,6 +186,25 @@ skip them. Webhooks get them with that mark, so a receiver decides for itself.
 Undo archives the deals an import created, before contacts, and keeps a deal someone edited since. Only
 an edit to the deal itself keeps it. A note, an email or a task logged against the deal does not keep
 it, and undo archives the deal.
+
+
+### Importing projects and products
+
+A `projects.csv` row can map `name`, `company_ref`, `deal_ref`, `phase`, `started_at`, `target_end_date`,
+`owner_email`, `tags` and `description`. A new project needs a `name` and a `company_ref`, and a `ref` mapped
+to find it again. The company never changes after the project is created, and a row that names another one is
+skipped with `project_company_fixed`. `phase` is `initiative`, `pursuing` or `delivering`, and is written only
+when the row creates the project. An export of projects uploads as the same file, and a row with an `id`
+updates that project.
+
+A `products.csv` row can map `name`, `sku`, `description`, `unit`, `unit_price`, `currency`,
+`default_tax_rate`, `tax_category`, `billing_model`, `billing_interval_months` and `active`. `unit_price` is a
+plain number, written as `amount` is on a deal. A product is matched by its `sku`, or by its `ref` when it has
+none, and it has no owner, tags or custom fields. A `sku` that another live product holds skips the row with
+`product_sku_held`, in the test run as in the commit.
+
+Both types take a single CSV or a part of a ZIP. The test run and the commit give a row the same answer.
+Undo archives only the records the run created that a colleague has not changed since.
 
 ### Importing activities
 

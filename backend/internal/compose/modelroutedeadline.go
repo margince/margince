@@ -51,6 +51,7 @@ var modelRouteSuffixes = []string{
 	"/filters/propose",
 	"/reader-rendering",
 	"/rewrites",
+	"/label-translations",
 	"/analytics/assessment",
 	"/analytics/setup-proposal",
 	"/analytics/progress/summary",

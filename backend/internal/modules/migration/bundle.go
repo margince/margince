@@ -45,6 +45,8 @@ var bundleFileObjects = map[string]string{
 	"contacts": ObjectContact, "contact": ObjectContact,
 	"leads": ObjectLead, "lead": ObjectLead,
 	"deals": ObjectDeal, "deal": ObjectDeal,
+	"projects": ObjectProject, "project": ObjectProject,
+	"products": ObjectProduct, "product": ObjectProduct,
 	// A notes file is an activities file whose rows are notes.
 	"activities": ObjectActivity, "activity": ObjectActivity, "notes": ObjectActivity,
 }
@@ -53,7 +55,7 @@ var bundleFileObjects = map[string]string{
 // be a key of bundleFileObjects, which the detection test holds.
 var templateFileStems = map[string]string{
 	ObjectCompany: "companies", ObjectContact: "contacts", ObjectLead: "leads", ObjectDeal: "deals",
-	ObjectActivity: "activities",
+	ObjectProject: "projects", ObjectProduct: "products", ObjectActivity: "activities",
 }
 
 // BundlePart is one CSV of the bundle matched to the type it imports.

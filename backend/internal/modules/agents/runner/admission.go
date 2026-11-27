@@ -60,6 +60,6 @@ func observeRefusal(win *window, step modelStep, explained string, err error, me
 	return Step{
 		Tool: step.Tool, Args: step.Args, Observation: recorded,
 		ModelID: meta.ModelID, Tier: meta.Tier, TokensIn: resp.InputTokens, TokensOut: resp.OutputTokens,
-		Admission: AdmissionRefused,
+		Admission: AdmissionRefused, TerminalRefusal: directive != "",
 	}
 }

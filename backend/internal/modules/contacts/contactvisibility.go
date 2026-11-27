@@ -174,6 +174,9 @@ func guardVisibilityWrite(
 	if visibility == nil {
 		return nil
 	}
+	if err := recordVisibilityError(visibility); err != nil {
+		return err
+	}
 	if err := refuseStaleVisibility(ctx, tx, id, current); err != nil {
 		return err
 	}

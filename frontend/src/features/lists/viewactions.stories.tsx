@@ -22,7 +22,6 @@ type Story = StoryObj;
 const VIEW: SavedView = {
   id: "v1",
   owner_id: "00000000-0000-4000-8000-000000000001",
-  shared_scope: "private",
   resource: "contacts",
   name: "Berlin contacts",
   query: { filter: { and: [{ field: "city", op: "eq", value: "Berlin" }] } },

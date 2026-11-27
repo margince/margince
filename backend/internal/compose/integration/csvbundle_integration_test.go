@@ -19,7 +19,7 @@ func TestAZipUploadProfilesEveryFileAndListsWhatItIgnores(t *testing.T) {
 	body := zipBytes(t, map[string]string{
 		"export/companies.csv": "\ufeffref,name,domain\nCO-1,Acme,acme.example\n",
 		"export/contacts.csv":  "ref;email;company_ref\nP-1;jo@acme.example;CO-1\n",
-		"products.csv":         "Product\nWidget\n",
+		"invoices.csv":         "Invoice\nINV-1\n",
 		"__MACOSX/._x":         "junk",
 	})
 	profile := uploadZip(t, e, "HubSpot export (2).zip", body)
@@ -39,8 +39,8 @@ func TestAZipUploadProfilesEveryFileAndListsWhatItIgnores(t *testing.T) {
 	if got := byFile["export/companies.csv"].SuggestedMappings["company"]["domain"]; got != "domain" {
 		t.Errorf("company suggestion for domain = %q", got)
 	}
-	if len(profile.Ignored) != 1 || profile.Ignored[0].File != "products.csv" {
-		t.Errorf("ignored = %+v, want products.csv alone", profile.Ignored)
+	if len(profile.Ignored) != 1 || profile.Ignored[0].File != "invoices.csv" {
+		t.Errorf("ignored = %+v, want invoices.csv alone", profile.Ignored)
 	}
 }
 
@@ -177,7 +177,7 @@ func TestAZipWithNoImportableFileIsRefusedAndLeavesNoDraft(t *testing.T) {
 		reason string
 	}{
 		"Pipeline.csv": {map[string]string{"[Content_Types].xml": "<Types/>", "xl/workbook.xml": "<workbook/>"}, "spreadsheet"},
-		"other.zip":    {map[string]string{"products.csv": "Product\nWidget\n"}, "no_importable_file"},
+		"other.zip":    {map[string]string{"invoices.csv": "Invoice\nINV-1\n"}, "no_importable_file"},
 	} {
 		raw, status := postZipFile(t, e, name, zipBytes(t, c.files))
 		errs := fieldRefusalsOf(t, raw)

@@ -145,6 +145,9 @@ func (s *Store) dealUpdatePatch(ctx context.Context, tx pgx.Tx, current crmcontr
 		return nil, err
 	}
 	if in.Description != nil {
+		if err := dealDescriptionWithin(in.Description); err != nil {
+			return nil, err
+		}
 		p.Set("description", current.Description, *in.Description)
 	}
 	if in.CommercialMotion != nil {

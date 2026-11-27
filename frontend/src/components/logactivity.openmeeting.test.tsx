@@ -677,8 +677,8 @@ describe("logging a meeting where one owes its outcome", () => {
     const captured: Captured[] = [];
     stubApi([booked()], captured, () =>
       jsonResponse(
-        { title: "Precondition Failed", status: 412, code: "version_skew" },
-        412,
+        { title: "Conflict", status: 409, code: "version_skew" },
+        409,
       ),
     );
     render();

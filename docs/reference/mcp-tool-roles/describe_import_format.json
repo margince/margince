@@ -4,12 +4,12 @@
   "verb": "describe_import_format",
   "allowed_for": [
     "admin",
-    "ops"
-  ],
-  "refused_for": [
     "management",
     "manager",
-    "read_only",
+    "ops",
     "rep"
+  ],
+  "refused_for": [
+    "read_only"
   ]
 }

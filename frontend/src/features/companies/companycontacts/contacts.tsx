@@ -180,6 +180,7 @@ export function CompanyContactsList({
       <DomainContactsCallout companyId={companyId} />
       {bandSlot?.(narrow)}
       <ListTable
+        customFieldsKind="contact"
         state={state}
         unit="unit.contacts"
         unitOne="unit.contact"

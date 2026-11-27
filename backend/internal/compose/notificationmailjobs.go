@@ -3,8 +3,8 @@
 
 package compose
 
-// The one notice that leaves the product: a decision waiting on a colleague
-// who asked for that class by mail.
+// Immediate notice emails for approvals and accepted website submissions.
+// The recipient chooses whether each class reaches them by mail.
 //
 // Its own file rather than a rung in approvalnotify.go, for the reason the two
 // digests have one: writing the notice is idempotent — the table's dedupe key
@@ -31,13 +31,16 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/emailview"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -243,6 +246,39 @@ func (w *notificationMailWorker) deliver(ctx context.Context, attempt notices.Em
 		return nil
 	}
 	words := recipientMailCopy(seatCtx, w.pool)
+	if attempt.Notice.Kind == notices.KindWebsiteLead {
+		current, err := websiteNoticeStillOwned(seatCtx, w.db, attempt.Notice.Target, attempt.Recipient.UUID)
+		if err != nil {
+			w.recordMailFailure(ctx, attempt.Notice.ID, "website lead could not be read")
+			return nil
+		}
+		if !current {
+			return nil
+		}
+		if attempt.WebsiteActivityID == nil {
+			w.recordMailFailure(ctx, attempt.Notice.ID, "website notice has no accepted post")
+			return nil
+		}
+		if _, err := activities.NewStore(w.db).GetActivity(seatCtx, *attempt.WebsiteActivityID, storekit.LiveOnly); err != nil {
+			if !errors.Is(err, apperrors.ErrPermissionDenied) && !errors.Is(err, apperrors.ErrNotFound) {
+				w.recordMailFailure(ctx, attempt.Notice.ID, "website post could not be read")
+			}
+			return nil
+		}
+		notice := attempt.Notice.InLanguage(textlang.Lang(words.Language))
+		var body emailview.Content
+		body.Heading(mailcopy.OneLine(notice.Subject))
+		body.Paragraph(mailcopy.Snippet(notice.Body, 600))
+		body.Action(words.WebsiteLeadOpen, mailcopy.Destination(w.mail.PublicBaseURL, noticeMailFragment(notice)))
+		message := body.Message(mailcopy.OneLine(notice.Subject), string(words.Language), mailcopy.Snippet(notice.Body, 160))
+		message.AppendContent(routineFooterContent(w.mail.PublicBaseURL, words))
+		bounded, cancel := context.WithTimeout(ctx, notificationMailBudget)
+		defer cancel()
+		if err := mailer.SendProduct(bounded, w.mail.Mailer, address, mailcopy.OneLine(notice.Subject), message); err != nil {
+			return w.answerRelayFailure(ctx, claimed, []approvalMailItem{{attempt: attempt}}, err, lastRung)
+		}
+		return nil
+	}
 	sent := []approvalMailItem{{attempt: attempt, facts: facts}}
 	if attempt.ApprovalID != nil {
 		sent = append(sent, w.approvalBurst(ctx, seatCtx, attempt)...)
@@ -357,6 +393,9 @@ func notificationMessage(notice notices.Notice, facts approvalMailFacts, base st
 
 // noticeMailFragment is where the message's button answers the notice.
 func noticeMailFragment(notice notices.Notice) string {
+	if notice.Kind == notices.KindWebsiteLead {
+		return mailcopy.RecordFragment(notice.Target.Type, notice.Target.ID.String())
+	}
 	if notice.Kind == notices.KindMeetingTeamRequest {
 		return mailcopy.MeetingSettingsFragment
 	}

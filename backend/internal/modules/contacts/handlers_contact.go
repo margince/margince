@@ -20,12 +20,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// MergeContact serves POST /contacts/{id}/merge — merge this contact (A, the path id)
-// into target_id (B, the survivor). Returns the survivor. The store owns
-// the collision-aware relinking and the restrictive consent rule; this
-// handler is wire-only. Agent 🟡 governance is applied by the ADR-0055
-// admission gate that wraps this route (same staging as the merge_records
-// tool), not by this handler.
+// MergeContact returns the survivor of a version-checked contact merge.
+// The store owns collision handling and consent; route admission governs agents.
 func (h Handlers) MergeContact(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.MergeContactParams) {
 	var req crmcontracts.MergeContactJSONBody
 	if !httperr.Decode(w, r, &req) {
@@ -69,6 +65,11 @@ func (h Handlers) ListContacts(w http.ResponseWriter, r *http.Request, params cr
 		CustomFilters:   httperr.CustomFieldFilters(r),
 		TagIDs:          uuidArgs(params.TagId),
 	}
+	if params.Salutation != nil {
+		word := string(*params.Salutation)
+		in.Salutation = &word
+	}
+
 	if params.RelationshipMark != nil {
 		mark := string(*params.RelationshipMark)
 		in.RelationshipMark = &mark
@@ -106,8 +107,8 @@ func (h Handlers) CreateContact(w http.ResponseWriter, r *http.Request, _ crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// A declared importer (a HUMAN holding import_run:create) may stamp the
-	// reserved mirror: namespace; everyone else, an agent carrying that human's
+	// A declared importer (auth.DeclaredImporter) may stamp the reserved
+	// mirror: namespace; everyone else, an agent carrying that human's
 	// grants included, gets the closed door.
 	mapInput := ContactCreationInput
 	if auth.DeclaredImporter(r.Context()) {

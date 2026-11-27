@@ -711,7 +711,7 @@ describe("recovering from a rejected confirm", () => {
               })
             : jsonResponse(
                 { title: "backend unavailable", code: "internal" },
-                503,
+                500,
               );
         },
         [CONFIRM_PATH]: () =>

@@ -297,13 +297,13 @@ func TestASaveRefusesAChoiceTheVocabularyDoesNotHold(t *testing.T) {
 //
 // The refusal narrows the ROUTE and not the possibility, which the second half
 // holds: every class still reaches a mailbox through the daily batch.
-func TestOnlyTheApprovalClassTakesImmediateMail(t *testing.T) {
+func TestOnlyApprovalAndWebsiteLeadClassesTakeImmediateMail(t *testing.T) {
 	t.Parallel()
 	for _, class := range noticeClasses {
 		err := checkPreference(class, DeliveryEmail)
-		if class == ClassApprovalPending {
+		if class == ClassApprovalPending || class == ClassWebsiteLead {
 			if err != nil {
-				t.Errorf("the one class with a sending leg refuses email: %v", err)
+				t.Errorf("a class with a sending leg refuses email: %v", err)
 			}
 			continue
 		}

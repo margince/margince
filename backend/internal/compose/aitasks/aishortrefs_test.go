@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose_test
+package aitasks_test
 
 import (
 	"context"
@@ -42,7 +42,7 @@ func TestNoSiteShowsTheModelARecordUUID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("building the task census: %v", err)
 	}
-	scenarios, err := aicert.LoadCorpus("aicert/corpus", census)
+	scenarios, err := aicert.LoadCorpus("../aicert/corpus", census)
 	if err != nil {
 		t.Fatalf("loading the corpus: %v", err)
 	}

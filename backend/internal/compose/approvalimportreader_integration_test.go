@@ -25,7 +25,7 @@ func TestImportReviewShowsTheActorsTagEffectsToAReaderWithoutUpdateGrant(t *test
 	service, id, _ := stagedImportApproval(t, e, run)
 	perms := integration.AdminPerms
 	perms.Objects = maps.Clone(perms.Objects)
-	perms.Objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true}
+	perms.Objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	grant := perms.Objects["lead"]
 	grant.Update = false
 	perms.Objects["lead"] = grant

@@ -117,8 +117,8 @@ func (h Handlers) CreateDeal(w http.ResponseWriter, r *http.Request, _ crmcontra
 	if !httperr.DecodeJudged(w, r, &req, amountIsJudged) {
 		return
 	}
-	// A declared importer (a HUMAN holding import_run:create) may stamp the
-	// reserved mirror: namespace; everyone else, an agent carrying that human's
+	// A declared importer (auth.DeclaredImporter) may stamp the reserved
+	// mirror: namespace; everyone else, an agent carrying that human's
 	// grants included, gets the closed door.
 	mapInput := DealCreationInput
 	if auth.DeclaredImporter(r.Context()) {

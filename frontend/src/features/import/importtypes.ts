@@ -34,6 +34,8 @@ const IMPORT_OBJECTS = {
   lead: true,
   deal: true,
   activity: true,
+  project: true,
+  product: true,
 } as const satisfies Record<ImportObject, true>;
 
 export function isImportObject(value: unknown): value is ImportObject {

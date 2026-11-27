@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -174,4 +175,16 @@ func WritableDomainHolder(ctx context.Context, pool *pgxpool.Pool, domain string
 		return ids.UUID{}, false, fmt.Errorf("import: checking whether the company holding %q may be changed: %w", domain, err)
 	}
 	return holder, true, nil
+}
+
+// ProductSKUHeld is the refusal the products store makes for a SKU another live
+// product holds. self is the product an update moves the SKU onto, and the zero
+// id for a create.
+func ProductSKUHeld(ctx context.Context, pool *pgxpool.Pool, sku string, self ids.UUID) (bool, error) {
+	var held bool
+	err := probe(ctx, pool, fmt.Sprintf("%q", sku), func(tx pgx.Tx) (err error) {
+		held, err = deals.ProductHoldingSKU(ctx, tx, sku, self)
+		return err
+	})
+	return held, err
 }

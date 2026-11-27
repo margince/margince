@@ -1526,6 +1526,10 @@ paths:
         tier: auto_execute
         scope: read
       parameters:
+        - name: salutation
+          in: query
+          schema: { type: string, enum: [mr, ms, none, unset] }
+          description: Filter by an explicit salutation; unset finds records whose choice is null.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
@@ -10335,6 +10339,50 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /label-translations:
+    post:
+      tags: [AI]
+      operationId: suggestLabelTranslation
+      # on-miss: a label already in the target language answers without a model call.
+      x-waits-on-model: on-miss
+      # Human-only: the Suggest translation button beside a stage or custom field
+      # name in Settings. An agent writes a translation itself.
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [ { cookieAuth: [] } ]
+      summary: Suggest a stage or custom field name in another UI language.
+      description: |
+        Writes one admin-named label, a stage name or a custom field name or option, in the
+        language `language` names. It is a suggestion for the editor: nothing is stored, and
+        the admin saves it with the stage or field as any typed name.
+
+        Needs `pipeline:update` or `custom_field:update`, the grants that edit the labels this
+        serves; without either it answers 403. When the label is already in the target language
+        the answer is `unchanged: true` and the label itself, with no model call. With no AI
+        model it answers 409 `ai_not_configured`. An empty `text` is 422 `required`, and one past
+        200 characters is 422 `too_long`. A model that was asked and did not answer is 503
+        `assistant_unavailable`.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/LabelTranslationRequest' }
+      responses:
+        '200':
+          description: The label in the target language.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/LabelTranslation' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: 'The model was asked and did not answer (`code: assistant_unavailable`).'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+
   /rewrites:
     post:
       tags: [AI]
@@ -13653,6 +13701,10 @@ paths:
         Explicit sort values retain their documented field ordering.
       x-mcp-tool: { verb: list_records, record_type: lead, tier: auto_execute, scope: read }
       parameters:
+        - name: salutation
+          in: query
+          schema: { type: string, enum: [mr, ms, none, unset] }
+          description: Filter by an explicit salutation; unset finds records whose choice is null.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
@@ -13749,6 +13801,10 @@ paths:
             of them, `all` a record carrying every one, `none` a record carrying not one.
 
             Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+        - name: company_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Leads explicitly linked to this company. A company the caller cannot read matches no leads.
         - name: from_contact_id
           in: query
           deprecated: true
@@ -28755,6 +28811,52 @@ paths:
               schema: { $ref: '#/components/schemas/ConsentPurpose' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /consent-purposes/{id}:
+    patch:
+      tags: [Compliance]
+      operationId: renameConsentPurpose
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Rename an unused consent purpose.
+      description: Requires consent_config:update. Any reference to the purpose prevents a change.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [label]
+              properties:
+                label: { type: string, minLength: 1, maxLength: 120 }
+      responses:
+        '200':
+          description: Renamed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentPurpose' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Compliance]
+      operationId: archiveConsentPurpose
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Archive an unused consent purpose.
+      description: Requires consent_config:update. Any reference to the purpose prevents an archive.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204': { description: Archived. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /consent-purposes/send-counts:
     get:
       tags: [Compliance]
@@ -36989,7 +37091,7 @@ paths:
   #   /voice-profiles     (E07; now SPECIFIED above, B-E07.4/.5a — corpus sources via /voice-profiles/{id}/sources)
   #   /drafting-assets    (E07/E08; approval flips `approved` — admin/🟡)
   #   /agent-connections  (E10; revoke via POST /agent-connections/{id}/revoke; events read-only)
-  #   /saved-views        (E15; V1 enforces shared_scope=private)
+  #   /saved-views        (owned and read only by the signed-in user)
   #   /webhook-subscriptions (E10/S-E10.6, A51; HTTPS-only target_url, event_types ⊆ the published
   #                       events.md §2 catalog, signing_secret_ref; state active|paused. create/update
   #                       is 🟡 — registers outbound egress; x-mcp-tool create_record tier confirmation_required.
@@ -38001,11 +38103,8 @@ paths:
         housekeeping: dropping them silently would leave the lead who wrote them believing they
         had been read.
 
-        `email` is accepted for `approval_pending` alone, and any other class answers `422`. It
-        is the one class a producer stages a message for; the others would record a word the
-        product does not keep, and a reader who chose it would stop watching the screen while
-        waiting for mail that was never going to arrive. `digest` is how every other class
-        reaches a mailbox.
+        `email` is accepted for `approval_pending` and `website_lead`. Other classes
+        answer `422` and can reach a mailbox through `digest`.
       requestBody:
         required: true
         content:
@@ -42505,6 +42604,7 @@ components:
         No secret is ever returned here; `secret_configured` says one is stored.
       required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at, last_post_at]
       properties:
+        notify_owner: { type: boolean, description: Tell the final active owner about accepted posts through their notification preference. Defaults to false. }
         id: { type: string, format: uuid }
         name: { type: string }
         form_key: { type: string, description: 'The last segment of the intake address. Public; it is an address, not a credential.' }
@@ -42577,6 +42677,7 @@ components:
       type: object
       required: [name, sender]
       properties:
+        notify_owner: { type: boolean, description: Tell the final active owner about accepted posts through their notification preference. Defaults to false. }
         name: { type: string, minLength: 1, maxLength: 120 }
         sender: { $ref: '#/components/schemas/WebFormSender' }
         sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.' }
@@ -42603,6 +42704,7 @@ components:
     UpdateWebFormRequest:
       type: object
       properties:
+        notify_owner: { type: boolean, description: Tell the final active owner about accepted posts through their notification preference. Defaults to false. }
         handling_automation_id:
           type: [string, 'null']
           format: uuid
@@ -42929,6 +43031,12 @@ components:
         base_currency:
           type: string
           description: ISO-4217 code every money roll-up converts to.
+        member_languages:
+          type: array
+          items: { type: string, enum: [en, de, vi], x-extensible-enum: true }
+          description: |
+            The UI languages active members chose, each once and with no member named. Stage
+            settings mark an admin-named label with no name in one of them.
         base_language:
           type: string
           enum: [en, de, vi]
@@ -49244,12 +49352,22 @@ components:
 
     ImportObject:
       type: string
-      enum: [company, lead, contact, deal, activity]
+      enum: [company, lead, contact, deal, activity, project, product]
       x-extensible-enum: true
       description: |
         What the file's rows are, and therefore what the run creates.
 
         `company` creates companies.
+
+        `project` creates projects, after the deals of the same upload. A
+        row names the company it belongs to, by that company's `ref`, domain,
+        name or id, and may name the deal it comes from. A project is born in
+        the `initiative`, `pursuing` or `delivering` phase, never closed. A
+        corrected export of projects, with its `id` column, updates them.
+
+        `product` creates rate-card products. A
+        row is known by its `sku`, or by its `ref` when it has none. A price is
+        written in the major units of its `currency`.
 
         `deal` creates deals, after the companies and contacts of the same
         upload. A deal row needs a `ref`, and names its pipeline and stage by
@@ -49428,7 +49546,7 @@ components:
 
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_link_ambiguous_will_drop, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, amount_needs_currency, amount_too_many_decimals, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_far, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_not_found_will_drop, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_not_money, currency_unset, deal_already_closed, deal_company_has_contracts, deal_field_not_for_pipeline, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_not_found_will_drop, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_column_empty_will_drop, employer_not_found, employer_not_found_dropped, employer_not_found_will_drop, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_a_record_id, id_not_visible, id_record_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_not_found_will_drop, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_ambiguous_will_drop, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_not_found_will_drop, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_row_skipped_will_drop, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_a_phone, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, ref_taken_by_another_record, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_link_ambiguous_will_drop, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, amount_needs_currency, amount_too_many_decimals, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_far, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_not_found_will_drop, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_not_money, currency_unset, deal_already_closed, deal_company_has_contracts, deal_field_not_for_pipeline, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_not_found_will_drop, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_column_empty_will_drop, employer_not_found, employer_not_found_dropped, employer_not_found_will_drop, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_a_record_id, id_not_visible, id_record_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_not_found_will_drop, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_ambiguous_will_drop, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_not_found_will_drop, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_row_skipped_will_drop, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_your_record, not_a_date, note_repeated, not_a_domain, not_a_number, not_a_phone, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, product_sku_held, product_unnamed, project_company_fixed, project_company_missing, project_dates_inverted, project_deal_refused, project_phase_closed, project_phase_unknown, project_unnamed, record_archived, ref_taken_by_another_company, ref_taken_by_another_record, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
       x-extensible-enum: true
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
 
@@ -50087,7 +50205,7 @@ components:
         than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
         is waiting on your approval", so the choice is made per class and every kind the product
         raises is placed in one of them.
-      enum: [automation, lead_sla, approval_pending, capture, coach, system, project_health]
+      enum: [automation, lead_sla, approval_pending, website_lead, capture, coach, system, project_health]
       x-extensible-enum: true
     NotificationDelivery:
       type: string
@@ -50095,10 +50213,8 @@ components:
         Where a class of notification reaches its reader.
 
         `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
-        sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
-        the only class with a sending leg, and taking the word for any other would record a
-        choice the product does not keep; the others answer `422 value_not_allowed` and reach a
-        mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+        sends a message as each one lands for `approval_pending` and `website_lead`.
+        Other classes answer `422 value_not_allowed` and reach a mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
         following morning, and is accepted for every class.
 
         `off` records the notice and stops there: no lane, no badge, no message. It does NOT
@@ -51078,11 +51194,18 @@ components:
         kind: { type: string, enum: [location, department, seniority], x-extensible-enum: true }
         value: { type: string }
         retrieved_at: { type: string, format: date-time, description: When the run that last reported this value retrieved it. }
+    Salutation:
+      type: [string, 'null']
+      enum: [mr, ms, none, null]
+      x-extensible-enum: true
+      description: Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+
     Contact:
       type: object
       description: A contact. Mirrors the `contact` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         acquisition_request:
           readOnly: true
           allOf: [{ $ref: '#/components/schemas/ContactAcquisitionRequest' }]
@@ -51387,6 +51510,7 @@ components:
       type: object
       required: [full_name, source]
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         full_name: { x-single-line: true, type: string, maxLength: 120 }
         created_from_activity_id:
           type: [string, 'null']
@@ -51748,6 +51872,7 @@ components:
       type: object
       description: Partial update. Omitted fields are unchanged.
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         greeting_register:
           type: [string, 'null']
           enum: [formal, familiar, null]
@@ -53715,6 +53840,7 @@ components:
       description: One current employee of the account, as the company view shows them.
       required: [contact_id, full_name, strength, deal_roles, consent, attachable]
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         contact_id: { type: string, format: uuid }
         full_name: { type: string }
         attachable:
@@ -54367,8 +54493,11 @@ components:
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
           items:
             type: string
-            enum: [contacts, deals, projects, strength, activities, tags, list_memberships, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments, billing_contacts, commitments]
+            enum: [contacts, leads, deals, projects, strength, activities, tags, list_memberships, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments, billing_contacts, commitments]
             x-extensible-enum: true
+        leads:
+          allOf: [{ $ref: '#/components/schemas/LeadListResponse' }]
+          description: A bounded page of leads explicitly linked to this company, under the caller's lead row scope. Continue with GET /leads and company_id using the returned cursor.
         contacts:
           type: object
           required: [data, page]
@@ -55165,8 +55294,8 @@ components:
         needs_review:
           type: boolean
           description: >-
-            Contradictory evidence exists for this claim. The surface shows both sources and
-            asks — newest-wins is not a resolution.
+            This commitment does not pass the current evidence checks. Show the warning
+            instead of presenting it as a current obligation.
         corrected_at:
           type: [string, 'null']
           format: date-time
@@ -66067,6 +66196,7 @@ components:
       description: A thin, segregated prospect. Mirrors the `lead` table.
       required: [id, status, score, source, captured_by, created_at, updated_at]
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         legal_hold:
           type: boolean
           readOnly: true
@@ -66247,6 +66377,7 @@ components:
     CreateLeadRequest:
       type: object
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         full_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
         email: { type: [string, 'null'], format: email }
         phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
@@ -66292,6 +66423,7 @@ components:
         "disqualified ⇒ archived" is enforced on that one path); `promoted` is reachable only via
         POST /leads/{id}/promote. Both terminal states are therefore excluded from this enum.
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         full_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
         email: { type: [string, 'null'], format: email }
         phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
@@ -66600,7 +66732,7 @@ components:
 
     OutcomeReview:
       type: object
-      required: [id, activity_id, deal_id, closing_occurrence_id, outcome, template_key, template_version, questions, answers, revision, created_at, updated_at]
+      required: [id, activity_id, deal_id, closing_occurrence_id, outcome, template_key, template_version, questions, answers, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
         activity_id: { type: string, format: uuid, description: 'The note this review was written as. It is where the prose, the author and the audience rules live.' }
@@ -66615,7 +66747,6 @@ components:
           description: 'The questions as they were asked, FROZEN at submission. The template they came from is editable, and an edit must not change what this review appears to have asked.'
         choice_answers: { type: object, additionalProperties: { type: array, items: { type: string } }, description: 'Selected options by question key; values must belong to the frozen question vocabulary.' }
         answers: { type: object, additionalProperties: { type: string }, description: 'Keyed by question key. Every key here has a question in `questions`.' }
-        revision: { type: integer }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time, description: 'Always equal to `created_at`: a review is not edited after it is submitted.' }
 
@@ -68170,6 +68301,32 @@ components:
           type: boolean
           description: 'True when the sender''s voice could not be looked up for an email rewrite, so it may lack a voice its sender built.'
 
+    LabelTranslationRequest:
+      type: object
+      additionalProperties: false
+      required: [text, language]
+      properties:
+        text: { type: string, maxLength: 200, description: The label as stored. }
+        language:
+          type: string
+          enum: [en, de, vi]
+          description: The UI language to write the label in.
+    LabelTranslation:
+      type: object
+      description: One label in one UI language, a suggestion stored nowhere.
+      required: [text, language, unchanged]
+      properties:
+        text: { type: string, description: The label in the target language. }
+        language:
+          type: string
+          enum: [en, de, vi]
+          x-extensible-enum: true
+        unchanged:
+          type: boolean
+          description: True when the label is already in the target language; `text` is then the label itself.
+        model_used:
+          type: string
+          description: The model that wrote the suggestion. Absent when no model was asked.
     ActivityReaderRenderingRequest:
       type: object
       additionalProperties: false
@@ -70783,7 +70940,6 @@ components:
       properties:
         id: { type: string, format: uuid }
         owner_id: { type: string, format: uuid }
-        shared_scope: { type: string, enum: [private, team, workspace], x-extensible-enum: true, default: private, description: V1 enforces private. }
         resource: { $ref: '#/components/schemas/SavedViewTarget' }
         name: { type: string }
         query:
@@ -73108,6 +73264,12 @@ components:
             `row_currency` in each record's own currency, which a sum across currencies
             refuses, or `base_currency` converted to the installation's base currency. A
             measure not named here is a plain number, whatever its name.
+        filters:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsFilterField' }
+          description: |
+            The fields a question may narrow by and cannot group by or aggregate, such as a count of
+            days since the last activity. Fields that can also be grouped or measured are not repeated here.
         custom_fields:
           type: array
           items: { $ref: '#/components/schemas/AnalyticsCustomField' }
@@ -73115,6 +73277,17 @@ components:
             The installation's own fields among `group_by`, with the label and choices an
             administrator gave them. A field an administrator opted into reporting shows here, and
             only such a field: its label and choices are published to every reader of the population.
+      additionalProperties: false
+    AnalyticsFilterField:
+      type: object
+      required: [name, shape]
+      properties:
+        name: { type: string, description: "The field as a filter names it." }
+        shape:
+          type: string
+          enum: [text, number, boolean, id]
+          x-extensible-enum: true
+          description: "What a filter value is: send a number unquoted, true or false for a boolean, and text for the rest."
       additionalProperties: false
     AnalyticsCustomField:
       type: object
@@ -78818,6 +78991,24 @@ components:
 
     # ---- Approval token (ADR-0036) ----
     # ---- Partner (ADR-0032) ----
+    PartnerGateMetrics:
+      type: [object, 'null']
+      additionalProperties: false
+      description: The two recorded program gate metrics. Unknown keys are refused by name.
+      properties:
+        certified_staff:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 32767
+          description: Number of certified staff.
+        retention_rate:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100
+          description: Whole percentage of customers retained. Omitted when unknown.
+
     Partner:
       type: object
       description: |
@@ -78851,7 +79042,7 @@ components:
           description: 'Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.'
         cert_status: { type: string, enum: [applied, certified, suspended], x-extensible-enum: true }
         margin_tier: { type: [string, 'null'], enum: [null, tier1_15, tier2_20, tier3_25], x-extensible-enum: true, description: The partner's margin tier; the allowed values are in the table's CHECK constraint. }
-        gate_metrics: { type: [object, 'null'], additionalProperties: true, description: 'Program gate metrics (certified seats, CSAT, ...).' }
+        gate_metrics: { $ref: '#/components/schemas/PartnerGateMetrics' }
         relationship_stage: { type: string, description: 'The key of the stage from `/partner-stages` the partner stands on.' }
         stage_label: { type: string, readOnly: true, description: 'The label `/partner-stages` gives `relationship_stage`.' }
         stage_label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
@@ -78890,7 +79081,7 @@ components:
         partner_role: { type: string, enum: [hosting, consulting, strategic], deprecated: true, description: 'Deprecated: send `partner_kinds`. Read as `partner_kinds: [partner_role]` when `partner_kinds` is absent.' }
         cert_status: { type: string, enum: [applied, certified, suspended] }   # data-model §4.3 CHECK
         margin_tier: { type: [string, 'null'], enum: [null, tier1_15, tier2_20, tier3_25] }
-        gate_metrics: { type: [object, 'null'], additionalProperties: true }
+        gate_metrics: { $ref: '#/components/schemas/PartnerGateMetrics' }
         relationship_stage:
           type: string
           description: |
@@ -79900,7 +80091,7 @@ components:
         What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
         given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
         what the consent rows say today.
-      required: [id, state, kind, reason_code, refusals]
+      required: [id, state, reason_code, refusals]
       properties:
         assessment_revision:
           type: string
@@ -79915,7 +80106,6 @@ components:
             and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
             answer — an objection, a dead address — where offering a context form would invite a rep
             to argue with a withdrawal.
-        kind: { type: string, enum: [single], x-extensible-enum: true }
         delivery_intent_id:
           type: [string, 'null']
           format: uuid

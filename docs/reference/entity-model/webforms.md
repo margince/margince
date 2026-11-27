@@ -6,7 +6,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 
 ## web_form
 
-25 columns · primary key `(id)` · referenced by 1 foreign key
+26 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -21,6 +21,7 @@ The 2 tables owned by `webforms`, as the migrations build them. [Back to the ent
 | `handling_cutover_at` | `timestamp with time zone` |  | When the handling reference last changed; completed submissions retain their original handling. |
 | `lead_origin` | `text` |  | The `/lead-origins` key every lead from this form carries. |
 | `name` | `text` | yes |  |
+| `notify_owner` | `boolean`, default `false` | yes | Tell the final active owner about accepted posts through their notification preference. |
 | `owner_id` | `uuid` |  | Who owns the leads this form creates; null leaves them in the unassigned queue. |
 | `privacy_notice` | `text` |  | The privacy notice the form shows under it at the point of collection, such as what the details are used for. |
 | `privacy_notice_url` | `text` |  | The https address of the privacy policy the notice links to. |

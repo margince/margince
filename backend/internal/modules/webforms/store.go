@@ -61,6 +61,7 @@ type CreateInput struct {
 	ProductID            *ids.UUID
 	FieldMap             map[string]string
 	ConsentRequired      bool
+	NotifyOwner          bool
 	ConsentPolicyVersion *string
 	ConsentWording       *string
 	PrivacyNotice        *string
@@ -155,12 +156,12 @@ func (s *Store) CreateForm(ctx context.Context, in CreateInput) (Form, string, e
 		args := []any{
 			in.Name, key, in.Sender, in.AllowedOrigins, ref, in.LeadOrigin, in.OwnerID, in.ProductID,
 			in.FieldMap, in.ConsentRequired, in.ConsentPolicyVersion, in.ConsentWording, in.PrivacyNotice,
-			in.PrivacyNoticeURL, in.RedirectURL, in.SuccessMessage, by,
+			in.PrivacyNoticeURL, in.RedirectURL, in.SuccessMessage, by, in.NotifyOwner,
 		}
 		row := tx.QueryRow(ctx, `
 			INSERT INTO web_form (name, form_key, sender, allowed_origins, secret_ref, lead_origin, owner_id,
 			  product_id, field_map, consent_required, consent_policy_version, consent_wording, privacy_notice,
-			  privacy_notice_url, redirect_url, success_message, captured_by)
+			  privacy_notice_url, redirect_url, success_message, captured_by, notify_owner)
 			VALUES (`+storekit.Placeholders(args)+`)
 			RETURNING `+formColumns, args...)
 		if out, err = scanForm(row); err != nil {
@@ -231,7 +232,7 @@ func auditImage(f Form) map[string]any {
 		"name": f.Name, "sender": f.Sender, "allowed_origins": f.AllowedOrigins,
 		colLeadOrigin: f.LeadOrigin, colOwnerID: f.OwnerID, colProductID: f.ProductID, "field_map": f.FieldMap,
 		colHandlingAutomationID: f.HandlingAutomationID, colHandlingCutoverAt: f.HandlingCutoverAt,
-		"consent_required": f.ConsentRequired, colConsentPolicyVersion: f.ConsentPolicyVersion,
+		"consent_required": f.ConsentRequired, "notify_owner": f.NotifyOwner, colConsentPolicyVersion: f.ConsentPolicyVersion,
 		colConsentWording: f.ConsentWording,
 		colPrivacyNotice:  f.PrivacyNotice, colPrivacyNoticeURL: f.PrivacyNoticeURL,
 		colRedirectURL: f.RedirectURL, "state": f.State,

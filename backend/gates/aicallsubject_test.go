@@ -164,6 +164,7 @@ var namesItsSubject = map[string]subjectClaim{
 // namesNoSubject: the call is about no single record, and the reason is what
 // stops the next reader adding one.
 var namesNoSubject = gatekit.Waive(map[string]string{
+	"internal/compose/readerrendering/label.go:SuggestLabel":    "a stage or custom field name an admin typed; it is workspace vocabulary, not a record, and carries no personal data",
 	"internal/compose/searchdata.go:answerSearchData":           "a typed question and reader catalogs; no CRM record is loaded before planning, so there is no single record to cite",
 	"internal/compose/captureclassify.go:ask":                   "one call labels a BATCH of unread messages. The batch is the unit the economics are built on, and a citation naming one of its rows would be wrong about the others",
 	"internal/compose/owedclassify.go:ask":                      "one call judges many messages at once, as the classifier above does; a citation naming one row would be wrong about the rest",

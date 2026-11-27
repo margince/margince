@@ -141,7 +141,10 @@ describe("editing a review's questions", () => {
       name: new RegExp(translate("vi", "reviewTemplates.question")),
     });
     if (!why || !lostTo) throw new Error("the drawer shows no question box");
-    expect(why).toHaveProperty("value", "Vì sao deal này thua?");
+    expect(why).toHaveProperty(
+      "value",
+      translate("vi", "reviewTemplates.builtin.question.why_we_lost"),
+    );
     await user.clear(lostTo);
     await user.type(lostTo, "Bên nào thắng?");
     await user.click(

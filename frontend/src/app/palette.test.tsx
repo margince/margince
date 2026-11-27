@@ -23,11 +23,7 @@ import {
   useBuiltinCommands,
 } from "./palette";
 
-// B-EP09.5 (AC-shell-3..7) and RS-1 (live /search records + see-all)
-// acceptance. AC-shell-8 is no longer about this file: it covered the
-// record-scoped Ask composer, and now covers the claim that composer carried
-// about what the agent can reach — asserted on the panel that carries it, in
-// frontend/e2e/ac.spec.ts and agentrail.scope.test.tsx.
+// The palette searches visible records and offers their destinations.
 
 afterEach(() => {
   cleanup();
@@ -815,6 +811,12 @@ describe("useBuiltinCommands", () => {
         if (url.endsWith("/company/context/capabilities")) {
           return jsonResponse(COMPANY_CONTEXT_ON);
         }
+        if (new URL(url, "https://app.test").pathname.endsWith("/search")) {
+          return jsonResponse({
+            data: [],
+            page: { next_cursor: null, has_more: false },
+          });
+        }
         // The installation writer may open Configuration, so search reads it.
         if (url.endsWith("/installation/configuration")) {
           return jsonResponse([]);
@@ -878,10 +880,10 @@ describe("useBuiltinCommands", () => {
     const user = userEvent.setup();
     renderProbeWithCompany({ roles: ["admin"], allow: INSTALLATION_WRITER });
     await user.type(screen.getByRole("combobox"), "website");
-    await waitFor(() => {
-      expect(destinationRows()[0].textContent).toContain("Company profile");
+    const profile = await screen.findByRole("option", {
+      name: /Company profile/,
     });
-    await user.keyboard("{Enter}");
+    await user.click(profile);
     expect(window.location.hash).toBe("#/settings/company");
   });
 

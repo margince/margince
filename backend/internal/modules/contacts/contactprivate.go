@@ -235,6 +235,7 @@ func contactNotWorkedOnSQL(contact string) string {
 	return `NOT EXISTS (
 		           SELECT 1 FROM audit_log a
 		            WHERE a.entity_type = 'contact' AND a.entity_id = ` + contact + `.id
+ AND NOT (` + storekit.RecordSourceCorrectionSQL("a") + `)
 		              AND (a.actor_type = 'human'
 		                   OR (a.on_behalf_of IS NOT NULL AND a.actor_type <> '` + string(principal.PrincipalConnector) + `')))`
 }

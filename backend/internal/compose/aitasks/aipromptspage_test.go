@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose_test
+package aitasks_test
 
 // docs/reference/ai-prompts.md — every instruction this build sends a model,
 // and how many untrusted spans each request carries.
@@ -56,13 +56,13 @@ import (
 var updateAIPrompts = flag.Bool("update-ai-prompts", false,
 	"rewrite docs/reference/ai-prompts.md from the prompts this build actually sends")
 
-var aiPromptsPage = filepath.Join("..", "..", "..", "docs", "reference", "ai-prompts.md")
+var aiPromptsPage = filepath.Join("..", "..", "..", "..", "docs", "reference", "ai-prompts.md")
 
 // aiPromptsDoc is the artifact of RECORD: structured, one object per site, for
 // a differ and for anything that wants to read these prompts as data. The
 // markdown beside it is rendered from this document rather than from a second
 // walk, so a page cannot describe a payload it does not match.
-var aiPromptsDoc = filepath.Join("..", "..", "..", "docs", "reference", "ai-prompts.json")
+var aiPromptsDoc = filepath.Join("..", "..", "..", "..", "docs", "reference", "ai-prompts.json")
 
 type (
 	promptDocument   = modelcontract.Document
@@ -145,7 +145,7 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 	if err != nil {
 		t.Fatalf("building the task census: %v", err)
 	}
-	scenarios, err := aicert.LoadCorpus("aicert/corpus", census)
+	scenarios, err := aicert.LoadCorpus("../aicert/corpus", census)
 	if err != nil {
 		t.Fatalf("loading the corpus: %v", err)
 	}
@@ -285,7 +285,7 @@ func TestTheAIPromptsPageIsCurrent(t *testing.T) {
 		}
 		if string(published) != want {
 			t.Errorf("%s is stale — it no longer matches the prompts this build sends.\n"+
-				"    Regenerate with: cd backend && go test ./internal/compose/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts",
+				"    Regenerate with: cd backend && go test ./internal/compose/aitasks/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts",
 				path)
 		}
 	}
@@ -422,7 +422,7 @@ func renderAIPromptsPage(doc promptDocument) string {
 	b.WriteString("<!-- Generated: do not edit by hand. -->\n\n")
 	b.WriteString("# The prompts this build sends\n\n")
 	b.WriteString("Regenerate with\n")
-	b.WriteString("`cd backend && go test ./internal/compose/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts`.\n\n")
+	b.WriteString("`cd backend && go test ./internal/compose/aitasks/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts`.\n\n")
 	b.WriteString("Every instruction below was read off a real request, by driving that site's\n")
 	b.WriteString("own certification case over its own committed fixture, so it is the text\n")
 	b.WriteString("production sends.\n\n")
@@ -562,13 +562,13 @@ func thousands(n int) string {
 // declarationStillInTree reports whether a sentence a site is published as
 // relying on is still written in the code. A page that kept asserting an
 // isolation after the comment declaring it was deleted would be making a claim
-// nobody holds. The walk root is the backend module, two levels up: this test
+// nobody holds. The walk root is the backend module, three levels up. This test
 // runs with its own package directory as the working directory, like the
 // artifact paths above it.
 func declarationStillInTree(t *testing.T, sentence string) bool {
 	t.Helper()
 	found := false
-	err := filepath.WalkDir(filepath.Join("..", ".."), func(p string, d fs.DirEntry, walkErr error) error {
+	err := filepath.WalkDir(filepath.Join("..", "..", ".."), func(p string, d fs.DirEntry, walkErr error) error {
 		switch {
 		case walkErr != nil:
 			return walkErr
