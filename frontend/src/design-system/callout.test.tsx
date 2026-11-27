@@ -257,6 +257,64 @@ describe("Callout", () => {
   });
 });
 
+describe("Callout in a dialog", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const watchScrolls = () =>
+    vi
+      .spyOn(HTMLElement.prototype, "scrollIntoView")
+      .mockImplementation(() => {});
+
+  it("scrolls a refusal into view when it arrives, so a pinned foot cannot hide it", () => {
+    const scroll = watchScrolls();
+    render(
+      <div className="modal">
+        <Callout kind="outcome" tone="danger" title="The save was refused" />
+      </div>,
+    );
+    expect(scroll).toHaveBeenCalledTimes(1);
+    expect(scroll.mock.calls[0]?.[0]).toMatchObject({ block: "nearest" });
+  });
+
+  it("scrolls again when the refusal's words change, and not on a re-render of the same words", () => {
+    const scroll = watchScrolls();
+    const view = (cause: string) => (
+      <div className="modal">
+        <Callout kind="outcome" tone="danger" title="The save was refused">
+          {cause}
+        </Callout>
+      </div>
+    );
+    const { rerender } = render(view("The name is taken."));
+    rerender(view("The name is taken."));
+    expect(scroll).toHaveBeenCalledTimes(1);
+    rerender(view("You may not change roles."));
+    expect(scroll).toHaveBeenCalledTimes(2);
+  });
+
+  it("leaves a notice that is not an alert where it stands", () => {
+    const scroll = watchScrolls();
+    render(
+      <div className="modal">
+        <Callout kind="standing" tone="danger" title="Read only" />
+        <Callout kind="outcome" tone="success" title="Saved" />
+        <Callout kind="outcome" tone="danger" live="status" title="Partial" />
+      </div>,
+    );
+    expect(scroll).not.toHaveBeenCalled();
+  });
+
+  it("does not scroll a page for an alert outside a dialog", () => {
+    const scroll = watchScrolls();
+    render(
+      <Callout kind="outcome" tone="danger" title="The save was refused" />,
+    );
+    expect(scroll).not.toHaveBeenCalled();
+  });
+});
+
 describe("FactList", () => {
   it("pairs every term with its value", () => {
     render(

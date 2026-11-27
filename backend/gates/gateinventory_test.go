@@ -110,7 +110,7 @@ type gate struct {
 // green, so it takes an assertion rather than a gate noticing.
 func TestNoGoSourceHidesWhereThisCensusCannotSeeIt(t *testing.T) {
 	t.Parallel()
-	atRoot, err := filepath.Glob("*.go")
+	atRoot, err := gatekit.Glob("*.go")
 	if err != nil {
 		t.Fatalf("listing the module root: %v", err)
 	}
@@ -207,7 +207,7 @@ func TestTheGateInventoryPageIsCurrent(t *testing.T) {
 // gates, so the population is derived from the tree rather than from a list.
 func readGateDeclarations(t *testing.T) (gates []gate, untagged []string) {
 	t.Helper()
-	paths, err := filepath.Glob(filepath.Join(gateDir, "*_test.go"))
+	paths, err := gatekit.Glob(filepath.Join(gateDir, "*_test.go"))
 	if err != nil {
 		t.Fatalf("listing this package's test files: %v", err)
 	}

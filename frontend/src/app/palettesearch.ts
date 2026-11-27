@@ -31,9 +31,9 @@ import {
   searchHitHasCard,
   searchHitType,
 } from "../lib/searchkinds";
+import { describeHit } from "../lib/searchstanding";
 import { useViewerZone } from "../lib/viewerzone";
 import type { Command } from "./palette";
-import { describeHit } from "./palettestanding";
 
 type SearchResult = components["schemas"]["SearchResult"];
 

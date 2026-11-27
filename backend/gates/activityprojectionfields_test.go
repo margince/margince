@@ -37,6 +37,7 @@ package gates
 import (
 	"go/ast"
 	"os"
+	"path/filepath"
 	"strings"
 	"testing"
 
@@ -86,11 +87,16 @@ func TestEveryAudienceReasonWriterIsProvedToWithholdIt(t *testing.T) {
 func writersOfAudienceReason(t *testing.T) map[string]bool {
 	t.Helper()
 	out := map[string]bool{}
-	goFilesUnderTree(t, func(path, _ string) {
+	err := gatekit.WalkDir(".", func(path string, d os.DirEntry, err error) error {
+		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return err
+		}
+		path = filepath.ToSlash(path)
 		// The generated contract DECLARES the field; it does not write one.
 		if strings.HasPrefix(path, "internal/contracts/") {
-			return
+			return nil
 		}
+		// Every file is parsed, so a tree that does not parse fails here as it fails the build.
 		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
@@ -107,7 +113,11 @@ func writersOfAudienceReason(t *testing.T) map[string]bool {
 			}
 			return true
 		})
+		return nil
 	})
+	if err != nil {
+		t.Fatalf("walking the source tree: %v", err)
+	}
 	return out
 }
 

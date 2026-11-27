@@ -112,7 +112,7 @@ func publishedTokenOperations(t *testing.T) []string {
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 

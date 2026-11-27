@@ -272,17 +272,9 @@ describe("pagination", () => {
   it("puts the current page between its neighbours and keeps page one reachable", () => {
     // Page one is where a reader who has lost their place goes back to.
     // Walking there one Prev at a time is not going back.
-    expect(pagerSlots(1, 6)).toEqual(["room", "room", 1, 2, 3, "gap"]);
-    expect(pagerSlots(4, 6)).toEqual([1, "gap", 3, 4, 5, "gap"]);
-    expect(pagerSlots(6, 6)).toEqual([1, "gap", 4, 5, 6, "room"]);
-  });
-
-  it("marks skipped pages only, so a gap never stands for a page nobody fetched", () => {
-    // Every page in hand is on the strip, so nothing is being held back. A gap
-    // here would read as hidden pages rather than unfetched ones, which is
-    // Next's to say.
-    expect(pagerSlots(2, 3)).toEqual(["room", "room", 1, 2, 3, "room"]);
-    expect(pagerSlots(1, 2)).toEqual(["room", "room", 1, 2, "room", "room"]);
+    expect(pagerSlots(1, 6)).toEqual(["room", "room", 1, 2, 3, "gap", 6]);
+    expect(pagerSlots(4, 6)).toEqual([1, "gap", 3, 4, 5, "room", 6]);
+    expect(pagerSlots(6, 6)).toEqual([1, "gap", 4, 5, 6, "room", "room"]);
   });
 
   it("holds one width so Next stays where the reader clicked it", () => {
@@ -294,8 +286,36 @@ describe("pagination", () => {
       [6, 6],
       [9, 40],
     ]) {
-      expect(pagerSlots(current, lastPage)).toHaveLength(6);
+      expect(pagerSlots(current, lastPage)).toHaveLength(7);
     }
+  });
+
+  it("numbers the last page, so the strip says how long the list is", () => {
+    expect(pagerSlots(1, 175)).toEqual(["room", "room", 1, 2, 3, "gap", 175]);
+    expect(pagerSlots(90, 175)).toEqual([1, "gap", 89, 90, 91, "gap", 175]);
+    expect(pagerSlots(175, 175)).toEqual([
+      1,
+      "gap",
+      173,
+      174,
+      175,
+      "room",
+      "room",
+    ]);
+  });
+
+  it("puts no gap before a last page that follows the window", () => {
+    expect(pagerSlots(1, 4)).toEqual(["room", "room", 1, 2, 3, "room", 4]);
+    expect(pagerSlots(2, 3)).toEqual(["room", "room", 1, 2, 3, "room", "room"]);
+    expect(pagerSlots(1, 2)).toEqual([
+      "room",
+      "room",
+      1,
+      2,
+      "room",
+      "room",
+      "room",
+    ]);
   });
 
   it("reaches page one from the strip rather than by walking Prev", async () => {

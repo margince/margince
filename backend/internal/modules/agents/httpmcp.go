@@ -356,7 +356,7 @@ func (h *httpMCPHandler) servePost(w http.ResponseWriter, r *http.Request) {
 			Error: &rpcError{
 				Code: codeHeaderMismatch,
 				Message: "header mismatch: " + headerProtocolVersion + " was sent more than once, so this " +
-					"server and an intermediary between us could read different versions from it",
+					"server and an intermediary between client and server could read different versions from it",
 			},
 		}, http.StatusBadRequest)
 		return

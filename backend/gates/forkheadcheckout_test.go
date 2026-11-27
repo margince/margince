@@ -153,7 +153,7 @@ func readTriggeredWorkflow(t *testing.T, path string) triggeredWorkflow {
 		t.Fatalf("reading %s: %v", path, err)
 	}
 	var wf triggeredWorkflow
-	if err := yaml.Unmarshal(raw, &wf); err != nil {
+	if err := unmarshalYAML(raw, &wf); err != nil {
 		t.Fatalf("%s: %v", path, err)
 	}
 	return wf
@@ -258,7 +258,7 @@ func TestEveryLegalSpellingOfOnIsRead(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			var wf triggeredWorkflow
-			if err := yaml.Unmarshal([]byte(tc.doc), &wf); err != nil {
+			if err := unmarshalYAML([]byte(tc.doc), &wf); err != nil {
 				t.Fatalf("decoding %s: %v — this shape is legal, and a gate that cannot read it judges nothing after it", name, err)
 			}
 			if got := triggerNames(&wf.On); !slices.Equal(got, tc.want) {
@@ -281,7 +281,7 @@ func TestAPrivilegedTriggerIsFoundInEveryShape(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			var wf triggeredWorkflow
-			if err := yaml.Unmarshal([]byte(doc), &wf); err != nil {
+			if err := unmarshalYAML([]byte(doc), &wf); err != nil {
 				t.Fatalf("decoding %s: %v", name, err)
 			}
 			if got := privilegedTriggersOf(wf); !slices.Contains(got, "pull_request_review") {

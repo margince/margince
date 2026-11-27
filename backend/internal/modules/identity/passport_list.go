@@ -30,6 +30,7 @@ type PassportRow struct {
 	Scopes    []string
 	Areas     principal.WorkAreas
 	CreatedAt time.Time
+	GrantedBy ids.UserID
 	ExpiresAt time.Time
 	RevokedAt *time.Time
 	// LastUsedAt is when a call last authenticated under this passport, or under
@@ -90,11 +91,11 @@ type PassportConnectionRow struct {
 // a connection is personal — which clients act for this human — and the
 // Settings page that reads it is the human's own.
 const listPassportsSQL = `
-	SELECT id, label, scopes, work_areas, created_at, expires_at, revoked_at, last_used_at,
+	SELECT id, label, scopes, work_areas, created_at, granted_by, expires_at, revoked_at, last_used_at,
 	       grant_id, client_id, client_name, connected_at, renewable, app_bound
 	FROM (
 		SELECT DISTINCT ON (p.oauth_grant_id IS NULL, COALESCE(p.oauth_grant_id, p.id))
-		       p.id, p.label, p.scopes, p.work_areas, p.created_at, p.expires_at, p.revoked_at,
+		       p.id, p.label, p.scopes, p.work_areas, p.created_at, p.granted_by, p.expires_at, p.revoked_at,
 		       CASE WHEN p.oauth_grant_id IS NULL THEN p.last_used_at
 		            ELSE (SELECT max(sibling.last_used_at) FROM passport sibling
 		                   WHERE sibling.oauth_grant_id = p.oauth_grant_id) END AS last_used_at,
@@ -141,7 +142,7 @@ func (s *Service) ListPassports(ctx context.Context, id Identity) ([]PassportRow
 				renewable   *bool
 				areas       []string
 			)
-			if err := rows.Scan(&p.ID, &p.Label, &p.Scopes, &areas, &p.CreatedAt, &p.ExpiresAt, &p.RevokedAt, &p.LastUsedAt,
+			if err := rows.Scan(&p.ID, &p.Label, &p.Scopes, &areas, &p.CreatedAt, &p.GrantedBy, &p.ExpiresAt, &p.RevokedAt, &p.LastUsedAt,
 				&grantID, &clientID, &clientName, &connectedAt, &renewable, &p.AppBound); err != nil {
 				return err
 			}

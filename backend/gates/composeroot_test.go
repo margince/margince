@@ -78,6 +78,8 @@ const (
 	// Raised by 12 production and 73 test lines for the reading refusal that
 	// names its cause per question. Its cases drive the unexported document
 	// extractor and transcript proposer.
+	// Raised by 49 test lines for the gate that keeps an agent's offered text from
+	// naming a tool it is not offered. It drives the unexported scheduled catalog.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
 	// Raised by 21 test lines when main's root compose cases met develop's in the
@@ -106,7 +108,7 @@ const (
 	// Raised by 197 test lines for the re-ingest vector reuse cases, which drive
 	// the unexported knowledge ingest worker and its embedder fixture.
 	composeRootProductionLines = 231_231
-	composeRootTestLines       = 362_090
+	composeRootTestLines       = 362_093
 )
 
 // A read under these floors stopped early or read the wrong place, and would

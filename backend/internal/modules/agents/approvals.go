@@ -331,7 +331,7 @@ func refuseArchiveHere(ctx context.Context, p datasource.SystemOfRecordProvider,
 	if !ok {
 		return fmt.Errorf(
 			"this workspace's system of record cannot archive a %s at a named version, and an approved "+
-				"archive names one — so no approval of this could be carried out as approved: %w",
+				"archive names one, so no approval of this could be carried out as approved: %w",
 			ref.Type, apperrors.ErrUnsupportedBySoR)
 	}
 	return archiver.RefuseArchive(ctx, ref)

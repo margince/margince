@@ -50,12 +50,25 @@ func (s Sides) Direction() Direction {
 
 // TheyWroteSQL admits a message the contact sent us; a colleague's reply on
 // their thread is not theirs. Older mail that lost its `from` row keeps the
-// sender as its counterparty when that address proves the contact. contact is
-// a SQL expression.
+// sender as its counterparty when that address proves the contact. A message
+// stored with no direction is theirs when its sender is unambiguously them.
+// contact is a SQL expression.
 func TheyWroteSQL(contact, activity string) string {
-	return "(" + activity + ".direction = 'inbound' AND (" + SenderSQL(contact, activity) + " OR " +
-		fmt.Sprintf(senderlessCounterpartySQL, activity, AddressProvesSQL(contact, activity+".counterparty_email")) + "))"
+	return "((" + activity + ".direction = 'inbound' AND (" + SenderSQL(contact, activity) + " OR " +
+		fmt.Sprintf(senderlessCounterpartySQL, activity, AddressProvesSQL(contact, activity+".counterparty_email")) + ")) OR " +
+		fmt.Sprintf(directionlessSenderSQL, contact, activity, ParticipantNamesSQL(contact, "df")) + ")"
 }
+
+// directionlessSenderSQL: a message with no direction has one `from` row, it
+// is no member's, and it names this contact by ParticipantNamesSQL. An address
+// another contact holds now has moved, so it cannot say which of the two wrote.
+const directionlessSenderSQL = `(%[2]s.direction IS NULL AND %[2]s.kind IN ('email','message') AND EXISTS (
+		SELECT 1 FROM activity_participant df
+		 WHERE df.activity_id = %[2]s.id AND df.role = 'from' AND df.user_id IS NULL AND %[3]s
+		   AND NOT EXISTS (SELECT 1 FROM contact_email held
+		         WHERE held.email = lower(df.address) AND held.archived_at IS NULL AND held.contact_id <> %[1]s)
+		   AND NOT EXISTS (SELECT 1 FROM activity_participant df2
+		         WHERE df2.activity_id = %[2]s.id AND df2.role = 'from' AND df2.id <> df.id)))`
 
 const senderlessCounterpartySQL = `(NOT EXISTS (SELECT 1 FROM activity_participant af
 		 WHERE af.activity_id = %[1]s.id AND af.role = 'from')
