@@ -60,3 +60,34 @@ func TestARetiredRequestSaysItsSubjectAndAnswerWereRemoved(t *testing.T) {
 		})
 	}
 }
+
+// An officer's answer on a retired case is theirs, except the one word the wire
+// reads there as the erasure's removed answer.
+func TestARetiredCaseRefusesThePlaceholderAsANewAnswer(t *testing.T) {
+	retired := ids.NewV7()
+	open := dsrRow{ID: retired, Kind: "access", Status: "open", SubjectRef: "erased+" + retired.String()}
+	placeholder := open
+	placeholder.Resolution = new(erasedResolution)
+	cases := []struct {
+		name    string
+		current dsrRow
+		answer  string
+		refused bool
+	}{
+		{"the placeholder as a new answer", open, erasedResolution, true},
+		{"the placeholder resent as it stands", placeholder, erasedResolution, false},
+		{"an answer in the officer's words", placeholder, "Nothing left to send.", false},
+		{"the same word on a case no erasure retired", dsrRow{ID: ids.NewV7(), Kind: "access", Status: "open", SubjectRef: "jane@example.com"}, erasedResolution, false},
+	}
+	for _, tc := range cases {
+		t.Run(tc.name, func(t *testing.T) {
+			verr := validateDSRUpdate(tc.current, UpdateDSRInput{Resolution: new(tc.answer)})
+			if (verr != nil) != tc.refused {
+				t.Fatalf("validateDSRUpdate = %v, want refused=%v", verr, tc.refused)
+			}
+			if verr != nil && verr.Field != fieldResolution {
+				t.Errorf("refused on %q, want %q", verr.Field, fieldResolution)
+			}
+		})
+	}
+}

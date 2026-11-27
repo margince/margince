@@ -32,6 +32,14 @@ const TRANSACTIONAL = {
   created_at: "2026-01-02T09:00:00Z",
 };
 
+const NEWSLETTER = {
+  ...TRANSACTIONAL,
+  id: "p2",
+  key: "ban_tin",
+  label: "Bản tin",
+  class: "marketing",
+};
+
 function json(body: unknown, status = 200) {
   return new Response(JSON.stringify(body), {
     status,
@@ -39,7 +47,10 @@ function json(body: unknown, status = 200) {
   });
 }
 
-function stub(answer: () => Response): unknown[] {
+function stub(
+  answer: () => Response,
+  listed: unknown[] = [TRANSACTIONAL],
+): unknown[] {
   const posted: unknown[] = [];
   vi.stubGlobal(
     "fetch",
@@ -58,7 +69,7 @@ function stub(answer: () => Response): unknown[] {
         return answer();
       }
       if (path.endsWith("/consent-purposes")) {
-        return json({ data: [TRANSACTIONAL] });
+        return json({ data: listed });
       }
       return json({ data: [], page: { next_cursor: null, has_more: false } });
     }),
@@ -217,6 +228,33 @@ describe("Add purpose", () => {
       within(dialog).getByRole("textbox", { name: en["privacy.purposeLabel"] }),
     ).toHaveAttribute("aria-invalid", "true");
     expect(posted).toHaveLength(0);
+  });
+
+  // One label typed as a base letter and a combining mark reads as the listed one.
+  // Mutation: drop the NFC step and the decomposed label is sent.
+  it("refuses a label that differs from a listed one only in how its accent is encoded", async () => {
+    const posted = stub(refused({}, 500), [TRANSACTIONAL, NEWSLETTER]);
+    await addPurpose("tin_moi", "Ba\u0309n tin");
+
+    expect(
+      await screen.findByText(
+        `This label reads like ${NEWSLETTER.label}. Choose another label to tell the two purposes apart.`,
+      ),
+    ).toBeVisible();
+    expect(posted).toHaveLength(0);
+  });
+
+  it("sends a label whose accent is another one", async () => {
+    const created = {
+      ...NEWSLETTER,
+      id: "p3",
+      key: "ban_tin_2",
+      label: "Bán tin",
+    };
+    const posted = stub(() => json(created, 201), [TRANSACTIONAL, NEWSLETTER]);
+    await addPurpose(created.key, created.label);
+
+    await waitFor(() => expect(posted).toHaveLength(1));
   });
 
   it("puts a refused field on the field the refusal names, by its label", async () => {

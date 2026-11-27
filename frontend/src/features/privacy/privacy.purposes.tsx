@@ -102,10 +102,16 @@ function keyFromLabel(label: string): string {
     .replace(/^_|_$/g, "");
 }
 
-// A label or key as a reader tells it apart: case, spacing and underscores
-// aside. The mirror of the server's purposeReading, which refuses the same.
+// A label or key as a reader tells it apart: case, spacing, underscores and the
+// encoding of its accents aside. The mirror of the server's purposeReading.
 function purposeReading(text: string): string {
-  return text.toLowerCase().replaceAll("_", " ").trim().split(/\s+/).join(" ");
+  return text
+    .normalize("NFC")
+    .toLowerCase()
+    .replaceAll("_", " ")
+    .trim()
+    .split(/\s+/)
+    .join(" ");
 }
 
 // Four inputs committed together. A stale create error must not outlive the

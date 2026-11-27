@@ -10,6 +10,7 @@ import (
 	"strings"
 
 	"github.com/jackc/pgx/v5"
+	"golang.org/x/text/unicode/norm"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -88,10 +89,10 @@ func refuseConfusableLabel(ctx context.Context, tx pgx.Tx, label string) error {
 	return nil
 }
 
-// purposeReading is a label or key as a reader tells it apart: case, spacing
-// and underscores aside. purposeReading in privacy.purposes.tsx is its mirror.
+// purposeReading is a label or key as a reader tells it apart: case, spacing,
+// underscores and the encoding of its accents aside. privacy.purposes.tsx mirrors it.
 func purposeReading(text string) string {
-	return strings.Join(strings.Fields(strings.ReplaceAll(strings.ToLower(text), "_", " ")), " ")
+	return strings.Join(strings.Fields(strings.ReplaceAll(strings.ToLower(norm.NFC.String(text)), "_", " ")), " ")
 }
 
 // purposeKeyTaken explains a refused key. An archived purpose keeps its key
