@@ -24,24 +24,19 @@ import { useTruncationTooltip } from "../../design-system/tooltip";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
-import {
-  RECORDS_COUNT_LABEL,
-  viewOf,
-  viewPageHref,
-} from "../../lib/filtersaddress";
+import { RECORDS_COUNT_LABEL, viewOf } from "../../lib/filtersaddress";
 import { leadsOpeningFilters } from "../../lib/leads.address";
 import { fromHere } from "../../lib/navigatefrom";
 import { blankRequired, refusalSentences } from "../../lib/problem";
 import { recordKindLabel, useRecordKindDirectory } from "../../lib/recordkinds";
-import { routeHash } from "../../lib/router";
 import { useMe } from "../../lib/session";
 import { EditFilterAction, mayEditFilter } from "./filterlistedit";
 import {
+  hrefOf,
   isArchived,
   keyOf,
   type LibraryGroup,
   type LibraryItem,
-  listViewHref,
   nameOf,
   resourceOf,
 } from "./library";
@@ -205,36 +200,21 @@ export function LibraryTable({
   );
 }
 
-/** Where each row opens; a view saved on the leads queue needs the reader's opening. */
-function useHrefOf(): (item: LibraryItem) => string {
-  const reader = useMe().data;
-  return (item) => {
-    switch (item.kind) {
-      case "view":
-        return viewPageHref(item.tab, item.view.id);
-      case "listView":
-        return listViewHref(
-          item,
-          item.type === "leads" && reader ? leadsOpeningFilters(reader) : {},
-        );
-      case "list":
-        return routeHash({ screen: "lists", id: item.list.id });
-    }
-  };
-}
-
 function LibraryName({
   item,
   caption,
   facts,
 }: Readonly<{ item: LibraryItem; caption: string; facts: ReactNode }>) {
   const t = useT();
-  const hrefOf = useHrefOf();
+  const reader = useMe().data;
   const tip = useTruncationTooltip<HTMLSpanElement>(caption);
   return (
     <span className="library-name-cell">
       <span className="library-name-line">
-        <AppLink className="library-name" href={hrefOf(item)}>
+        <AppLink
+          className="library-name"
+          href={hrefOf(item, reader ? leadsOpeningFilters(reader) : {})}
+        >
           {nameOf(item)}
         </AppLink>
         {item.kind === "list" && <ListHealthBadge list={item.list} />}

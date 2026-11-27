@@ -24,6 +24,7 @@ import {
   type ObjectTab,
   resourceOf as resourceOfTab,
   tabOfViewResource,
+  viewPageHref,
 } from "../../lib/filtersaddress";
 import type { List } from "../../lib/lists.queries";
 import { routeHash } from "../../lib/router";
@@ -135,6 +136,21 @@ export function treeOf(item: LibraryItem): Node | null {
       return item.list.list_type === "dynamic"
         ? decode(item.list.definition)
         : null;
+  }
+}
+
+/** Where a row opens; `leadsOpening` is what the leads queue opens on for this reader. */
+export function hrefOf(
+  item: LibraryItem,
+  leadsOpening: Readonly<Record<string, string>>,
+): string {
+  switch (item.kind) {
+    case "view":
+      return viewPageHref(item.tab, item.view.id);
+    case "listView":
+      return listViewHref(item, item.type === "leads" ? leadsOpening : {});
+    case "list":
+      return routeHash({ screen: "lists", id: item.list.id });
   }
 }
 
