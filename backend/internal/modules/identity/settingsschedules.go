@@ -91,6 +91,18 @@ var (
 		Type: config.Int, Default: seconds(6 * time.Hour), Validate: offOrWithin(5*time.Minute, week),
 		Doc: "Seconds between the sweeps that add missing technical profiles, or 0 for off.",
 	}, scheduleStore)
+	// The two AI verdict passes of mail capture. The floor keeps a value inside
+	// the range from running the model every few seconds.
+	CaptureCounterpartyVerdictIntervalSeconds = config.DefineStored(config.Spec[int]{
+		Key: "installation.capture_counterparty_verdict_interval_seconds", Env: "MARGINCE_INSTALLATION_CAPTURE_COUNTERPARTY_VERDICT_INTERVAL_SECONDS",
+		Type: config.Int, Default: seconds(10 * time.Minute), Min: seconds(time.Minute), Max: seconds(day),
+		Doc: "Seconds between the passes that judge who a new sender is.",
+	}, scheduleStore)
+	CaptureConfidentialityVerdictIntervalSeconds = config.DefineStored(config.Spec[int]{
+		Key: "installation.capture_confidentiality_verdict_interval_seconds", Env: "MARGINCE_INSTALLATION_CAPTURE_CONFIDENTIALITY_VERDICT_INTERVAL_SECONDS",
+		Type: config.Int, Default: seconds(10 * time.Minute), Min: seconds(time.Minute), Max: seconds(day),
+		Doc: "Seconds between the passes that judge whether colleagues may read a captured thread.",
+	}, scheduleStore)
 	// The watch scans run at least twice a day: a renewal window is at least
 	// a day (below), so two scans always land inside it, with room for one
 	// that runs late or fails.
@@ -133,6 +145,7 @@ func ScheduleSettings() []*config.Setting[int] {
 		CloseDateSweepIntervalSeconds, FollowUpReconcileIntervalSeconds, RetentionSweepIntervalSeconds,
 		GeocodeBackfillIntervalSeconds, TechnicalBackfillIntervalSeconds,
 		GmailWatchScanIntervalSeconds, GraphWatchScanIntervalSeconds,
+		CaptureCounterpartyVerdictIntervalSeconds, CaptureConfidentialityVerdictIntervalSeconds,
 		GmailWatchRenewWithinHours, GraphWatchRenewWithinHours,
 	}
 }

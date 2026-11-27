@@ -21,10 +21,18 @@ func TestTheFloorFollowsTheModelNotTheProviderOrWidth(t *testing.T) {
 	}
 }
 
+func TestBgeM3CarriesItsMeasuredFloorUnderBothServedNames(t *testing.T) {
+	for _, identity := range []string{"ollama/bge-m3@1024", "openai_compatible/BAAI/bge-m3@1024"} {
+		if got := BindingFloor(identity); got != 0.54 {
+			t.Errorf("BindingFloor(%q) = %v, want 0.54", identity, got)
+		}
+	}
+}
+
 func TestABindingWithoutASeparatingFloorHasNone(t *testing.T) {
 	for _, identity := range []string{
 		"openai_compatible/mistralai/mistral-embed-2312@1024", // bands overlap
-		"ollama/bge-m3@1024", // never measured
+		"ollama/nomic-embed-text@768",                         // never measured
 		"",
 	} {
 		if got := BindingFloor(identity); got != 0 {
@@ -53,7 +61,8 @@ func TestStartupWarnsWhereAGroundingFloorCannotBeEnforced(t *testing.T) {
 		want     string
 	}{
 		{"openai_compatible/mistralai/mistral-embed-2312@1024", "no floor separates covered from uncovered questions"},
-		{"ollama/bge-m3@1024", "no measured grounding floor"},
+		{"ollama/nomic-embed-text@768", "no measured grounding floor"},
+		{"ollama/bge-m3@1024", ""},
 		{"gemini/gemini-embedding-001@1536", ""},
 		{"", ""},
 	}
