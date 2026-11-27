@@ -128,8 +128,13 @@ parse_test_dsn() {
 # there is no second admin connection path that could point elsewhere. The
 # maintenance `postgres` db is the target: CREATE/DROP DATABASE never runs
 # inside the database being dropped. Runs from the repo root, like build_template.
+# With DB_ADMIN_LOG set, each call appends `<verb> <start> <end>` to that file,
+# so the parallel lane can say what its database admin cost.
 db_admin() {
-  ( cd backend && MARGINCE_OWNER_DSN="${O_PREFIX}/postgres${O_QUERY:+?$O_QUERY}" go run ./cmd/migrate "$@" )
+  local t0="${EPOCHREALTIME:-$(date +%s)}" rc=0
+  ( cd backend && MARGINCE_OWNER_DSN="${O_PREFIX}/postgres${O_QUERY:+?$O_QUERY}" go run ./cmd/migrate "$@" ) || rc=$?
+  [[ -z "${DB_ADMIN_LOG:-}" ]] || printf '%s %s %s\n' "${1:-}" "$t0" "${EPOCHREALTIME:-$(date +%s)}" >> "$DB_ADMIN_LOG"
+  return "$rc"
 }
 
 # ---------------------------------------------------------------------------

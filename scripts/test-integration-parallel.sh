@@ -240,6 +240,11 @@ if [[ -z "$BUILD_OUT" && -z "$BIN_DIR" ]]; then
   trap 'kill "$prebuild_pid" 2>/dev/null || true; wait "$prebuild_pid" 2>/dev/null || true; rm -f "$prebuild_log"' EXIT
 fi
 
+# One line per db_admin call, from this shell and every slot's (lib-testdb.sh),
+# summed below so a shard's log says what its database admin cost.
+DB_ADMIN_LOG="$(mktemp)"
+export DB_ADMIN_LOG
+
 # Build the migrated template once, fresh, before fanning out. Every package
 # clones from it (CREATE DATABASE ... TEMPLATE) instead of re-migrating.
 #
@@ -310,7 +315,7 @@ export MARGINCE_SQL_CENSUS_DIR="$OUTDIR/sql-census"
 # needs the evidence, because the re-run that would reproduce it usually passes.
 # A green run still cleans up: nobody wants a temp dir per passing run.
 KEEP_LOGS=""
-trap 'rm -f "$LANE_PKGS" "$WORK" "$DISCOVERY" "$ASSIGNED" "$RAN" "$UNTAGGED" "$TIMING" "$TEST_TIMING" "$WALLCLOCK" "$FAILED_PKGS" ${GROUPED:+"$GROUPED"} ${PART_GROUPS:+"$PART_GROUPS" "$CLAIMED" "$DONE_GROUPS"}; [[ -n "$KEEP_LOGS" ]] || rm -rf "$OUTDIR"; rm -rf ${REGEX_DIR:+"$REGEX_DIR"}' EXIT
+trap 'rm -f "$DB_ADMIN_LOG" "$LANE_PKGS" "$WORK" "$DISCOVERY" "$ASSIGNED" "$RAN" "$UNTAGGED" "$TIMING" "$TEST_TIMING" "$WALLCLOCK" "$FAILED_PKGS" ${GROUPED:+"$GROUPED"} ${PART_GROUPS:+"$PART_GROUPS" "$CLAIMED" "$DONE_GROUPS"}; [[ -n "$KEEP_LOGS" ]] || rm -rf "$OUTDIR"; rm -rf ${REGEX_DIR:+"$REGEX_DIR"}' EXIT
 prepare_test_extension_manifest "$OUTDIR"
 
 # Static discovery of every top-level Test function of every integration-TAGGED
@@ -738,6 +743,19 @@ if [[ -s "$WALLCLOCK" ]] && [[ -s "$TIMING" ]]; then
         printf "  %ds  %s occupied a slot; it recorded no test duration, so the tests/provisioning split is unavailable\n", ended - began, last
       }
     }'
+fi
+
+# Clone and drop are the lane's own overhead per part, and none of the timings
+# above price them.
+if [[ -s "$DB_ADMIN_LOG" ]]; then
+  admin_us=0
+  while read -r _ began ended; do
+    admin_us=$(( admin_us + $(lane_micros "$ended") - $(lane_micros "$began") ))
+  done < "$DB_ADMIN_LOG"
+  printf 'test-integration-parallel: db_admin — %d calls (%s), %d.%03ds summed over the slots\n' \
+    "$(wc -l < "$DB_ADMIN_LOG" | tr -d ' ')" \
+    "$(cut -d' ' -f1 "$DB_ADMIN_LOG" | LC_ALL=C sort | uniq -c | awk '{ printf "%s%s %s", sep, $1, $2; sep = ", " }')" \
+    $(( admin_us / 1000000 )) $(( admin_us % 1000000 / 1000 ))
 fi
 
 # Leave the durations behind for the next run to dispatch by. Full runs only: a
