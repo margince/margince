@@ -10,7 +10,7 @@ import "github.com/margince/margince/backend/internal/shared/kernel/langcopy"
 var cohortOutcomeWords = map[string]langcopy.Phrase{
 	cohortAdvanced:       {En: "Moved to a later stage", De: "In eine spätere Phase gewechselt", Vi: "Đã sang giai đoạn sau"},
 	cohortWon:            {En: "Won", De: "Gewonnen", Vi: "Đã thắng"},
-	cohortLost:           {En: "Lost", De: "Verloren", Vi: "Đã thua"},
+	cohortLost:           {En: "Lost", De: "Verloren", Vi: "Thất bại"},
 	cohortRegressed:      {En: "Moved back", De: "In eine frühere Phase zurück", Vi: "Đã lùi về giai đoạn trước"},
 	cohortLeftPipeline:   {En: "Moved to another pipeline", De: "In eine andere Pipeline gewechselt", Vi: "Đã chuyển sang pipeline khác"},
 	cohortUnresolved:     {En: "Still open", De: "Noch offen", Vi: "Vẫn đang mở"},

@@ -60,7 +60,7 @@ var Definitions = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	"closed_win_rate": {
 		En: "Of the deals won or lost with a close date in the period you picked, the share that was won, credited to the deal's current owner. Example: 6 deals won and 4 lost in March give a win rate of 60%.",
 		De: "Von allen Deals, die im gewählten Zeitraum gewonnen oder verloren wurden, der Anteil der gewonnenen, gutgeschrieben der Person, die den Deal jetzt verantwortet. Beispiel: 6 gewonnene und 4 verlorene Deals im März ergeben eine Gewinnquote von 60 %.",
-		Vi: "Trong các deal đã thắng hoặc thua có ngày đóng trong khoảng thời gian bạn chọn, phần deal đã thắng, tính cho người đang phụ trách deal. Ví dụ: tháng 3 có 6 deal thắng và 4 deal thua thì tỷ lệ thắng là 60%.",
+		Vi: "Trong các deal đã thắng hoặc thất bại có ngày đóng trong khoảng thời gian bạn chọn, phần deal đã thắng, tính cho người đang phụ trách deal. Ví dụ: tháng 3 có 6 deal thắng và 4 deal thất bại thì tỷ lệ thắng là 60%.",
 	},
 	"open_pipeline": {
 		En: "The total value of all deals open right now, credited to the deal's current owner; the period you pick does not change it, only the expected close filter does. Example: three open deals of €5,000 each give €15,000, whichever period is chosen.",
@@ -140,12 +140,12 @@ var Definitions = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	"stage_conversion": {
 		En: "Of the deals that entered a stage during the period you picked, the share that next moved to a later stage or was won, out of those that have left the stage since. Deals still in the stage are shown apart and never count as lost. Example: 10 deals entered Demo in May, 4 moved on, 1 was won, 3 were lost and 2 are still in Demo, so Demo shows 5 of 8.",
 		De: "Von den Deals, die im gewählten Zeitraum in eine Phase gekommen sind, der Anteil derer, die danach in eine spätere Phase gewechselt sind oder gewonnen wurden, gemessen an denen, die die Phase seitdem verlassen haben. Deals, die noch in der Phase sind, stehen getrennt und zählen nie als verloren. Beispiel: Im Mai kommen 10 Deals in die Phase Demo, 4 gehen weiter, 1 wird gewonnen, 3 gehen verloren und 2 sind noch in Demo, also zeigt Demo 5 von 8.",
-		Vi: "Trong các deal vào một giai đoạn trong khoảng thời gian bạn chọn, phần deal sau đó sang giai đoạn sau hoặc đã thắng, trên số deal đã rời giai đoạn đó. Deal vẫn còn trong giai đoạn được hiển thị riêng và không bao giờ bị tính là thua. Ví dụ: tháng 5 có 10 deal vào giai đoạn Demo, 4 deal đi tiếp, 1 deal thắng, 3 deal thua và 2 deal vẫn ở Demo, nên Demo hiển thị 5 trên 8.",
+		Vi: "Trong các deal vào một giai đoạn trong khoảng thời gian bạn chọn, phần deal sau đó sang giai đoạn sau hoặc đã thắng, trên số deal đã rời giai đoạn đó. Deal vẫn còn trong giai đoạn được hiển thị riêng và không bao giờ bị tính là thất bại. Ví dụ: tháng 5 có 10 deal vào giai đoạn Demo, 4 deal đi tiếp, 1 deal thắng, 3 deal thất bại và 2 deal vẫn ở Demo, nên Demo hiển thị 5 trên 8.",
 	},
 	"lead_cohort_outcomes": {
 		En: "Of the leads that arrived during the period you picked, the share since qualified or handed on and accepted, out of those that reached an outcome; leads still open are shown apart and never count as lost. Example: 20 leads arrived in May, 3 were handed on and accepted, 4 qualified, 5 disqualified and 8 are still open, so May shows 7 of 12.",
 		De: "Von den Leads, die im gewählten Zeitraum eingegangen sind, der Anteil derer, die seitdem qualifiziert oder übergeben und angenommen wurden, gemessen an denen mit einem Ergebnis; noch offene Leads stehen getrennt und zählen nie als verloren. Beispiel: Im Mai gehen 20 Leads ein, 3 werden übergeben und angenommen, 4 qualifiziert, 5 disqualifiziert und 8 sind noch offen, also zeigt der Mai 7 von 12.",
-		Vi: "Trong các lead đến trong khoảng thời gian bạn chọn, phần lead sau đó đủ điều kiện hoặc được bàn giao và chấp nhận, trên số lead đã có kết quả; lead vẫn đang mở được hiển thị riêng và không bao giờ bị tính là thua. Ví dụ: tháng 5 có 20 lead đến, 3 lead được bàn giao và chấp nhận, 4 lead đủ điều kiện, 5 lead bị loại và 8 lead vẫn đang mở, nên tháng 5 hiển thị 7 trên 12.",
+		Vi: "Trong các lead đến trong khoảng thời gian bạn chọn, phần lead sau đó đủ điều kiện hoặc được bàn giao và chấp nhận, trên số lead đã có kết quả; lead vẫn đang mở được hiển thị riêng và không bao giờ bị tính là thất bại. Ví dụ: tháng 5 có 20 lead đến, 3 lead được bàn giao và chấp nhận, 4 lead đủ điều kiện, 5 lead bị loại và 8 lead vẫn đang mở, nên tháng 5 hiển thị 7 trên 12.",
 	},
 	"account_progression": {
 		En: "Of the companies that own the leads that arrived during the period you picked, how many each reached: handoff accepted, qualified, disqualified or still open. A company counts once, under the furthest outcome any of its leads reached. Example: 3 leads from one company arrived in May, one was qualified and two are open, so the company shows once, as qualified.",
@@ -198,7 +198,7 @@ var Attribution = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	"closed_win_rate": {
 		En: "Credit goes to the deal's current owner and pipeline; a reopened deal counts again only once it is won or lost anew.",
 		De: "Gutgeschrieben wird der aktuell verantwortlichen Person und der aktuellen Pipeline des Deals; ein wiedereröffneter Deal zählt erst wieder, wenn er erneut gewonnen oder verloren ist.",
-		Vi: "Kết quả tính cho người đang phụ trách và pipeline hiện tại của deal; deal được mở lại chỉ được tính lại khi đã thắng hoặc thua lần nữa.",
+		Vi: "Kết quả tính cho người đang phụ trách và pipeline hiện tại của deal; deal được mở lại chỉ được tính lại khi đã thắng hoặc thất bại lần nữa.",
 	},
 	"open_pipeline": {
 		En: "Credit goes to the deal's current owner and pipeline, as they are at the moment the figure is read.",
