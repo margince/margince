@@ -252,6 +252,7 @@ const KEPT_IN_ENGLISH = new Set<string>([
 
   // "deal", "pipeline" and "lead" are loanwords Vietnamese keeps.
   "board.count_one",
+  "history.field.lead_id",
   "lead.boardCount_one",
   "deals.pipeline",
   "filters.field.pipeline_id",
