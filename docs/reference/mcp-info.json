@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 250383,
+    "tool_catalog_bytes": 250599,
     "resource_catalog_bytes": 5619,
-    "approx_wire_tokens_total": 64000,
-    "largest_tool_bytes": 15665,
+    "approx_wire_tokens_total": 64054,
+    "largest_tool_bytes": 15881,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
       "description_bytes": 52333,
-      "input_schema_bytes": 151715,
+      "input_schema_bytes": 151931,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 204048
+      "description_plus_input_schema_bytes": 204264
     }
   },
   "tools": {
@@ -6510,6 +6510,24 @@
                 "system",
                 "connector",
                 "buyer"
+              ],
+              "type": "string"
+            },
+            "anchor_id": {
+              "description": "mail_draft only",
+              "format": "uuid",
+              "type": "string"
+            },
+            "anchor_type": {
+              "description": "mail_draft only",
+              "enum": [
+                "activity",
+                "forward",
+                "contact",
+                "company",
+                "deal",
+                "lead",
+                "project"
               ],
               "type": "string"
             },

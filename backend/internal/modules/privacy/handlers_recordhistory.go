@@ -92,6 +92,7 @@ func recordHistoryEntryToWire(e RecordHistoryEntry) crmcontracts.AuditHistoryEnt
 		OnBehalfOfName:    e.OnBehalfOfName,
 		AgentClient:       e.AgentClient,
 		Summary:           e.Summary,
+		Reason:            e.Reason,
 	}
 	if e.OnBehalfOf != nil {
 		onBehalfOf := openapi_types.UUID(*e.OnBehalfOf)
