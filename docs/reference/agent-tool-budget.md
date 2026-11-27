@@ -15,14 +15,14 @@ anything. This page shows what each declared agent pays, how much room that leav
 what to check before adding a tool. Each tool's own cost is the Prompt tokens column of
 [mcp-info.md](mcp-info.md#index).
 
-The heaviest menu is `overnight_at_risk_sweep`: 6715 of the window's 32768 tokens per step (20%).
+The heaviest menu is `overnight_at_risk_sweep`: 6515 of the window's 32768 tokens per step (19%).
 
 ## The declared agents
 
 | Agent | Tools | Of served | Listing | Step schema | Per step | Of the window | Headroom | Dangling refs | Temptation |
 |---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `morning_brief` | 5 | 5 of 48 | 2044 | 1646 | 4420 | 13% | 11964 | 0 | 4 |
-| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3357 | 2628 | 6715 | 20% | 9669 | 4 | 5 |
+| `morning_brief` | 5 | 5 of 48 | 2008 | 1646 | 4384 | 13% | 12000 | 0 | 4 |
+| `overnight_at_risk_sweep` | 7 | 7 of 48 | 3156 | 2628 | 6515 | 19% | 9869 | 0 | 5 |
 | _whole served catalog's listing, for scale; no run is offered it_ | 48 |  | 53929 |  |  | 164% |  |  |  |
 
 ### `morning_brief`
@@ -40,8 +40,8 @@ there are no items, finish without inventing a brief. A tool refusal means the f
 saved: correct it before claiming completion.
 ```
 
-Attaches 5 tools and pays 4420 tokens on every step (2044 listing, 1646 step schema), leaving
-11964 of its budget and 28348 tokens of the
+Attaches 5 tools and pays 4384 tokens on every step (2008 listing, 1646 step schema), leaving
+12000 of its budget and 28384 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `annotate_brief`
@@ -65,8 +65,8 @@ body states the finding and the evidence (cite the records you read). A note wit
 refused. Do not advance stages, send anything, or archive anything.
 ```
 
-Attaches 7 tools and pays 6715 tokens on every step (3357 listing, 2628 step schema), leaving
-9669 of its budget and 26053 tokens of the
+Attaches 7 tools and pays 6515 tokens on every step (3156 listing, 2628 step schema), leaving
+9869 of its budget and 26253 tokens of the
 window for the goal, the grounding and everything it reads.
 
 - `at_risk_relationships`
@@ -76,14 +76,6 @@ window for the goal, the grounding and everything it reads.
 - `read_record`
 - `review_commitments`
 - `whats_slipping_this_week`
-
-**4 dangling cross-references**: this agent's own tool copy points at tools it
-cannot call, so a run may spend a step discovering the refusal:
-
-- at_risk_relationships → read_relationships
-- log_activity → draft_outbound
-- log_activity → send_outbound
-- whats_slipping_this_week → draft_outbound
 
 ## Why a tool is paid for twice
 

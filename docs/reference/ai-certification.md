@@ -37,8 +37,8 @@ from a ready-made setup instead, go to [Can I use this model setup?](#can-i-use-
 
 | Family | Models we tested | Can I trust it? | In plain words | Tries right | Quality scored by |
 |---|---|---|---|---|---|
-| Claude | `claude-haiku-5-5`, `claude-sonnet-5-5` | 🟡 Mostly | Ready in 38 of the 55 places we tested; 1 more work if someone looks over the result; 16 more right every time, on too few tries to grade alone. | 1476 of 1494 | `gemini-3.1-flash-lite`, `gemini-3.8-flash` |
-| Gemini | `gemini-3.1-flash-lite`, `gemini-3.8-flash` | 🟡 Mostly | Ready in 39 of the 55 places we tested; 4 more work if someone looks over the result; 12 more right every time, on too few tries to grade alone. | 1553 of 1560 | `claude-sonnet-5-5` |
+| Claude | `claude-haiku-5-5`, `claude-sonnet-5-5` | 🟡 Mostly | Ready in 36 of the 55 places we tested; 3 more work if someone looks over the result; 16 more right every time, on too few tries to grade alone. | 1497 of 1518 | `gemini-3.1-flash-lite`, `gemini-3.8-flash` |
+| Gemini | `gemini-3.1-flash-lite`, `gemini-3.8-flash` | 🟡 Mostly | Ready in 39 of the 55 places we tested; 4 more work if someone looks over the result; 12 more right every time, on too few tries to grade alone. | 1550 of 1557 | `claude-sonnet-5-5` |
 | GPT | `gpt-6-luna`, `gpt-6-sol`, `gpt-oss-120b` | 🟡 Mostly | Ready in 22 of the 46 places we tested; 4 more work if someone looks over the result; 6 not reliable yet; 14 more right every time, on too few tries to grade alone. | 1067 of 1110 | `claude-sonnet-4-6`, `claude-sonnet-5-5` |
 | Mistral | `ministral-14b-2512`, `ministral-8b-2512`, `mistral-medium-3-5` | 🔴 Not yet | Ready in 15 of the 41 places we tested; 6 more work if someone looks over the result; 9 not reliable yet; 11 more right every time, on too few tries to grade alone. | 648 of 708 | `claude-sonnet-4-6`, `claude-sonnet-5-5` |
 | Gemma | `gemma-4-26b-a4b-it` | ⚪ Not enough tested yet | Tested in only 5 of the 64 places. Ask before relying on it. | 145 of 162 | `claude-sonnet-4-6` |
@@ -55,14 +55,14 @@ A model setup picks which AI model runs each feature, so the same feature can be
 ready under one setup and not under another. Each one is a ready-made
 [preset file](../../config/presets/README.md) an operator copies into the configuration.
 
-91 of the 197 grades below were measured on an older version of the product and
+88 of the 197 grades below were measured on an older version of the product and
 are waiting to be re-checked; each is marked below.
 
 | Model setup | Where your data goes | ✅ Ready | ⚠️ Usable with care | ❌ Not reliable yet | ❔ Not measured | Bottom line |
 |---|---|---:|---:|---:|---:|---|
-| [Google Gemini](#google-gemini) | global cloud | 27 | 10 | 0 | 1 | 27 of 38 features ready (2 re-checks pending) |
-| [Google Gemini in the EU, through Vertex AI](#google-gemini-in-the-eu-through-vertex-ai) | EU-hosted cloud | 27 | 10 | 0 | 1 | 27 of 38 features ready (2 re-checks pending) |
-| [Anthropic Claude](#anthropic-claude) | global cloud | 34 | 3 | 0 | 1 | 34 of 38 features ready (1 re-check pending) |
+| [Google Gemini](#google-gemini) | global cloud | 27 | 10 | 0 | 1 | 27 of 38 features ready (1 re-check pending) |
+| [Google Gemini in the EU, through Vertex AI](#google-gemini-in-the-eu-through-vertex-ai) | EU-hosted cloud | 27 | 10 | 0 | 1 | 27 of 38 features ready (1 re-check pending) |
+| [Anthropic Claude](#anthropic-claude) | global cloud | 33 | 4 | 0 | 1 | 33 of 38 features ready |
 | [OpenAI GPT-6, through OpenRouter](#openai-gpt-6-through-openrouter) | global cloud | 19 | 3 | 3 | 13 | 19 of 38 features ready (re-check pending) |
 | [Open models from OpenAI and Mistral, through OpenRouter](#open-models-from-openai-and-mistral-through-openrouter) | global cloud | 12 | 12 | 7 | 7 | 12 of 38 features ready (re-check pending) |
 | [Gemma 4 you could run yourself, through OpenRouter](#gemma-4-you-could-run-yourself-through-openrouter) | global cloud | 1 | 0 | 4 | 33 | 1 of 38 features ready (re-check pending) |
@@ -101,11 +101,11 @@ measured. The grade is the last one we have, and it is shown until the next test
 
 ### Google Gemini
 
-Your data goes to: global cloud. 27 of 38 features ready (2 re-checks pending). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
+Your data goes to: global cloud. 27 of 38 features ready (1 re-check pending). Preset file: [`gemini_cloud.yaml`](../../config/presets/gemini_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium → gemini-3.1-flash-lite, ❌ Not reliable yet · re-check pending</sub> | Right every time (27 of 27, at least 94%); scored by `claude-sonnet-5-5` · re-check pending |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium → gemini-3.1-flash-lite, ❌ Not reliable yet</sub> | Right every time (24 of 24, at least 93%); scored by `claude-sonnet-5-5` |
 | Assessing a sales report <sub>`report_interpret`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium → gemini-3.1-flash-lite, ⚠️ Usable with care</sub> | Right every time (12 of 12, at least 87%); scored by `claude-sonnet-5-5` |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud → gemini-3.8-flash, ✅ Ready</sub> | Right every time (18 of 18, at least 91%); scored by `claude-sonnet-5-5` |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium → gemini-3.1-flash-lite, ✅ Ready</sub> | Right every time (12 of 12, at least 87%); tested on one model call of it |
@@ -160,7 +160,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
 | `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current |
-| `agent_loop` | `premium` | `gemini-3.8-flash` | ✅ Ready | re-check pending |
+| `agent_loop` | `premium` | `gemini-3.8-flash` | ✅ Ready | current |
 | `brief_ranking` | `premium` | `gemini-3.8-flash` | ✅ Ready | current |
 | `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
 | `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current |
@@ -202,11 +202,11 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### Google Gemini in the EU, through Vertex AI
 
-Your data goes to: EU-hosted cloud. 27 of 38 features ready (2 re-checks pending). Preset file: [`gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml).
+Your data goes to: EU-hosted cloud. 27 of 38 features ready (1 re-check pending). Preset file: [`gemini_vertex_eu.yaml`](../../config/presets/gemini_vertex_eu.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium, measured on `gemini` → gemini-3.1-flash-lite, ❌ Not reliable yet · re-check pending, measured on `gemini`</sub> | Right every time (27 of 27, at least 94%); scored by `claude-sonnet-5-5` · re-check pending |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium, measured on `gemini` → gemini-3.1-flash-lite, ❌ Not reliable yet, measured on `gemini`</sub> | Right every time (24 of 24, at least 93%); scored by `claude-sonnet-5-5` |
 | Assessing a sales report <sub>`report_interpret`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium, measured on `gemini` → gemini-3.1-flash-lite, ⚠️ Usable with care, measured on `gemini`</sub> | Right every time (12 of 12, at least 87%); scored by `claude-sonnet-5-5` |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>gemini-3.1-flash-lite · cheap_cloud, measured on `gemini` → gemini-3.8-flash, ✅ Ready, measured on `gemini`</sub> | Right every time (18 of 18, at least 91%); scored by `claude-sonnet-5-5` |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>gemini-3.8-flash · premium, measured on `gemini` → gemini-3.1-flash-lite, ✅ Ready, measured on `gemini`</sub> | Right every time (12 of 12, at least 87%); tested on one model call of it |
@@ -261,7 +261,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
 | `account_scan` | `cheap_cloud` | `gemini-3.1-flash-lite` | ⚠️ Usable with care | current; measured on `gemini` |
-| `agent_loop` | `premium` | `gemini-3.8-flash` | ✅ Ready | re-check pending; measured on `gemini` |
+| `agent_loop` | `premium` | `gemini-3.8-flash` | ✅ Ready | current; measured on `gemini` |
 | `brief_ranking` | `premium` | `gemini-3.8-flash` | ✅ Ready | current; measured on `gemini` |
 | `capture_classify` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
 | `capture_confidentiality_verdict` | `local_small` | `gemini-3.1-flash-lite` | ✅ Ready | current; measured on `gemini` |
@@ -303,11 +303,11 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### Anthropic Claude
 
-Your data goes to: global cloud. 34 of 38 features ready (1 re-check pending). Preset file: [`anthropic_cloud.yaml`](../../config/presets/anthropic_cloud.yaml).
+Your data goes to: global cloud. 33 of 38 features ready. Preset file: [`anthropic_cloud.yaml`](../../config/presets/anthropic_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>claude-sonnet-5-5 · premium → claude-haiku-5-5, ❌ Not reliable yet · re-check pending</sub> | Right in 26 of 27 tries (at least 88%); scored by `gemini-3.1-flash-lite` · re-check pending |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ⚠️ Usable with care<br><sub>claude-sonnet-5-5 · premium → claude-haiku-5-5, ⚠️ Usable with care</sub> | Right in 35 of 42 tries (at least 74%); scored by `gemini-3.1-flash-lite` |
 | Assessing a sales report <sub>`report_interpret`</sub> | ✅ Ready<br><sub>claude-sonnet-5-5 · premium → claude-haiku-5-5, ✅ Ready</sub> | Right every time (12 of 12, at least 87%); scored by `gemini-3.1-flash-lite` |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>claude-haiku-5-5 · cheap_cloud → claude-sonnet-5-5, ✅ Ready</sub> | Right every time (18 of 18, at least 91%); scored by `gemini-3.1-flash-lite` |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>claude-sonnet-5-5 · premium → claude-haiku-5-5, ✅ Ready</sub> | Right every time (12 of 12, at least 87%); tested on one model call of it |
@@ -362,7 +362,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
 | `account_scan` | `cheap_cloud` | `claude-haiku-5-5` | ✅ Ready | current |
-| `agent_loop` | `premium` | `claude-sonnet-5-5` | ✅ Ready | re-check pending |
+| `agent_loop` | `premium` | `claude-sonnet-5-5` | ⚠️ Usable with care | current |
 | `brief_ranking` | `premium` | `claude-sonnet-5-5` | ✅ Ready | current |
 | `capture_classify` | `local_small` | `claude-haiku-5-5` | ✅ Ready | current |
 | `capture_confidentiality_verdict` | `local_small` | `claude-haiku-5-5` | ✅ Ready | current |
@@ -1122,14 +1122,12 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### Claude
 
-🟡 Mostly: Ready in 38 of the 55 places we tested; 1 more work if someone looks over the result; 16 more right every time, on too few tries to grade alone.
-
-2 of these results were measured on an older version of the product and are re-check pending.
+🟡 Mostly: Ready in 36 of the 55 places we tested; 3 more work if someone looks over the result; 16 more right every time, on too few tries to grade alone.
 
 | Model | Where it ran | Places tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
-| `claude-haiku-5-5` | `cloud_frontier` | 48 | 28 | 7 | 2 | 0.98 [0.98, 0.99] |
-| `claude-sonnet-5-5` | `cloud_frontier` | 45 | 27 | 3 | 0 | 0.98 [0.97, 0.99] |
+| `claude-haiku-5-5` | `cloud_frontier` | 48 | 28 | 8 | 1 | 0.98 [0.98, 0.99] |
+| `claude-sonnet-5-5` | `cloud_frontier` | 45 | 25 | 5 | 0 | 0.97 [0.97, 0.98] |
 
 <details>
 <summary>Best model for each place</summary>
@@ -1137,8 +1135,8 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | Place | Best model in the family | Grade | Right in | Quality scored by |
 |---|---|---|---|---|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ✅ Ready | Right every time (18 of 18, at least 91%) | `gemini-3.1-flash-lite` |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ✅ Ready · re-check pending | Right in 14 of 15 tries (at least 80%) | `gemini-3.1-flash-lite` |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ✅ Ready · re-check pending | Right every time (12 of 12, at least 87%) | `gemini-3.1-flash-lite` |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `anthropic · claude-haiku-5-5 · cloud_frontier` | ⚠️ Usable with care | Right in 29 of 30 tries (at least 89%) | `gemini-3.1-flash-lite` |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ⚠️ Usable with care | Right in 18 of 21 tries (at least 73%) | `gemini-3.1-flash-lite` |
 | [`brief_ranking/rank`](#brief_rankingrank) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ✅ Ready | Right every time (12 of 12, at least 87%) | checked mechanically |
 | [`capture_classify/classify`](#capture_classifyclassify) | `anthropic · claude-haiku-5-5 · cloud_frontier` | ✅ Ready | Right every time (30 of 30, at least 94%) | `gemini-3.1-flash-lite` |
 | [`capture_classify/deal_topic`](#capture_classifydeal_topic) | `anthropic · claude-haiku-5-5 · cloud_frontier` | 🔹 Right every time, too few tries to grade alone | Right every time (9 of 9, at least 84%) | `gemini-3.1-flash-lite` |
@@ -1198,11 +1196,11 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 🟡 Mostly: Ready in 39 of the 55 places we tested; 4 more work if someone looks over the result; 12 more right every time, on too few tries to grade alone.
 
-4 of these results were measured on an older version of the product and are re-check pending.
+2 of these results were measured on an older version of the product and are re-check pending.
 
 | Model | Where it ran | Places tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
-| `gemini-3.1-flash-lite` | `cloud_frontier` | 48 | 21 | 17 | 3 | 0.98 [0.97, 0.98] |
+| `gemini-3.1-flash-lite` | `cloud_frontier` | 48 | 21 | 16 | 4 | 0.97 [0.97, 0.98] |
 | `gemini-3.8-flash` | `cloud_frontier` | 45 | 29 | 3 | 0 | 1.00 [0.99, 1.00] |
 
 <details>
@@ -1211,8 +1209,8 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | Place | Best model in the family | Grade | Right in | Quality scored by |
 |---|---|---|---|---|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | Right every time (18 of 18, at least 91%) | `claude-sonnet-5-5` |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready · re-check pending | Right every time (12 of 12, at least 87%) | `claude-sonnet-5-5` |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready · re-check pending | Right every time (15 of 15, at least 90%) | `claude-sonnet-5-5` |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | Right every time (12 of 12, at least 87%) | `claude-sonnet-5-5` |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | ✅ Ready | Right every time (12 of 12, at least 87%) | `claude-sonnet-5-5` |
 | [`brief_ranking/rank`](#brief_rankingrank) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | Right every time (12 of 12, at least 87%) | checked mechanically |
 | [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | ✅ Ready | Right every time (33 of 33, at least 95%) | `claude-sonnet-5-5` |
 | [`capture_classify/deal_topic`](#capture_classifydeal_topic) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 🔹 Right every time, too few tries to grade alone | Right every time (9 of 9, at least 84%) | `claude-sonnet-5-5` |
@@ -1429,9 +1427,9 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | | |
 |---|---:|
 | Shipped invocation sites | 64 |
-| … best state `current` | 60 |
+| … best state `current` | 62 |
 | … best state `partial` | 0 |
-| … best state `stale` | 2 |
+| … best state `stale` | 0 |
 | … `absent` on every binding | 2 |
 | Scenarios in the corpus | 348 |
 | Committed records | 463 |
@@ -1439,13 +1437,13 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 #### Why the stale records went stale
 
-Counted per record (one task and binding pair) over the 342 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 555 `stale_cause` entries are these 342 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
+Counted per record (one task and binding pair) over the 338 stale record(s) this build can attribute. A record covers every site its task ships, so the JSON beside this page carries it once per site: its 547 `stale_cause` entries are these 338 records. A record appears on more than one row below when a change moved a case and the prompt built from it together.
 
 | What moved | Records | What it means |
 |---|---:|---|
 | the case | 131 | The test case changed. Re-certify: the old result measured a different case. |
-| **the prompt this build sends** | 272 | The product changed. The band measured the old prompt, so it says nothing about the new one. Re-certify: a drop then is the cost of that change and not the model. |
-| how a run is graded | 342 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
+| **the prompt this build sends** | 268 | The product changed. The band measured the old prompt, so it says nothing about the new one. Re-certify: a drop then is the cost of that change and not the model. |
+| how a run is graded | 338 | What the judge is asked, or the rule that turns its scores into a grade, changed. A band can shift with neither the test nor the product touched. |
 
 A site's *best* state is the strongest state any of its bindings reached. A
 site `current` on one model and `stale` on three is counted once, as
@@ -1504,8 +1502,8 @@ Which model to run each site on, and what that choice rests on.
 | Site | Best model tested | Band | Reliability | State | Scenarios | Records |
 |---|---|---|---:|---|---:|---:|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | `certified` | 1.00 [0.92, 1.00] | `current` | 3 | 15 |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | - | - | - | `stale` | 4 | 15 |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | - | - | - | `stale` | 4 | 15 |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.88, 1.00] | `current` | 4 | 15 |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `certified` | 1.00 [0.88, 1.00] | `current` | 4 | 15 |
 | [`brief_ranking/rank`](#brief_rankingrank) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | `certified` | 1.00 [0.88, 1.00] | `current` | 1 | 16 |
 | [`capture_classify/classify`](#capture_classifyclassify) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `certified` | 1.00 [0.95, 1.00] | `current` | 10 | 10 |
 | [`capture_classify/deal_topic`](#capture_classifydeal_topic) | `gemini · gemini-3.1-flash-lite · cloud_frontier` | `too_few_runs` | 1.00 [0.85, 1.00] | `current` | 3 | 6 |
@@ -1593,15 +1591,15 @@ record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `too_few_runs` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `anthropic` | `claude-haiku-5-5` | `cloud_frontier` | 55 | 51 | 0 | 4 | 1341 | 1313 | 0.98 [0.97, 0.98] | 43210ms | 30 | 14 | 9 | 2 |
-| `anthropic` | `claude-sonnet-5-5` | `cloud_frontier` | 52 | 50 | 0 | 2 | 990 | 971 | 0.98 [0.97, 0.99] | 67218ms | 30 | 18 | 4 | 0 |
-| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 58 | 51 | 0 | 7 | 1674 | 1624 | 0.97 [0.96, 0.98] | 10760ms | 24 | 9 | 20 | 5 |
+| `anthropic` | `claude-haiku-5-5` | `cloud_frontier` | 55 | 53 | 0 | 2 | 1371 | 1339 | 0.98 [0.97, 0.98] | 45240ms | 30 | 14 | 10 | 1 |
+| `anthropic` | `claude-sonnet-5-5` | `cloud_frontier` | 52 | 52 | 0 | 0 | 1005 | 980 | 0.98 [0.97, 0.98] | 77209ms | 28 | 18 | 6 | 0 |
+| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 58 | 53 | 0 | 5 | 1686 | 1631 | 0.97 [0.96, 0.97] | 11367ms | 24 | 9 | 19 | 6 |
 | `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 0 | 0 | 6 | 216 | 207 | 0.96 [0.94, 0.97] | 14416ms | 2 | 3 | 1 | 0 |
 | `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 40 | 0 | 0 | 40 | 468 | 468 | 1.00 [1.00, 1.00] | 16000ms | 19 | 19 | 1 | 1 |
 | `gemini` | `gemini-3.5-flash-lite` | `cloud_frontier` | 57 | 0 | 0 | 57 | 1407 | 1336 | 0.95 [0.94, 0.96] | 4842ms | 20 | 17 | 8 | 12 |
 | `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 9 | 0 | 0 | 9 | 201 | 201 | 1.00 [0.99, 1.00] | 10554ms | 5 | 4 | 0 | 0 |
 | `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 41 | 0 | 0 | 41 | 699 | 696 | 1.00 [0.99, 1.00] | 10104ms | 17 | 18 | 5 | 1 |
-| `gemini` | `gemini-3.8-flash` | `cloud_frontier` | 52 | 48 | 0 | 4 | 963 | 959 | 1.00 [0.99, 1.00] | 89447ms | 33 | 16 | 3 | 0 |
+| `gemini` | `gemini-3.8-flash` | `cloud_frontier` | 52 | 50 | 0 | 2 | 960 | 956 | 1.00 [0.99, 1.00] | 44952ms | 33 | 16 | 3 | 0 |
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 0 | 0 | 6 | 189 | 166 | 0.88 [0.84, 0.91] | 15788ms | 1 | 0 | 1 | 4 |
 | `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 53 | 0 | 0 | 53 | 1398 | 1373 | 0.98 [0.98, 0.99] | 28492ms | 28 | 18 | 5 | 2 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 41 | 0 | 0 | 41 | 615 | 488 | 0.79 [0.77, 0.81] | 83052ms | 7 | 8 | 6 | 20 |
@@ -1648,13 +1646,9 @@ model, real network).
 | `account_scan/company_scan` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered; graded by judge claude-sonnet-4-6, and this build grades with claude-sonnet-5-5 |
 | `account_scan/company_scan` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered, scan_reads_the_thread_past_an_answered_ask |
 | `account_scan/company_scan` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): scan_finds_the_promise_we_did_not_keep, scan_finds_the_question_nobody_answered, scan_reads_the_thread_past_an_answered_ask |
-| `agent_loop/morning_brief` | `anthropic · claude-haiku-5-5 · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_an_empty_queue_is_not_annotated, morning_brief_annotates_its_queue_from_the_evidence, morning_brief_retrieved_text_is_not_an_instruction |
-| `agent_loop/morning_brief` | `anthropic · claude-sonnet-5-5 · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_an_empty_queue_is_not_annotated, morning_brief_annotates_its_queue_from_the_evidence, morning_brief_retrieved_text_is_not_an_instruction |
-| `agent_loop/morning_brief` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_an_empty_queue_is_not_annotated, morning_brief_annotates_its_queue_from_the_evidence, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction; the provider's wire translation changed since the run (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
 | `agent_loop/morning_brief` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction; the provider's wire translation changed since the run (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
 | `agent_loop/morning_brief` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction; the provider's wire translation changed since the run (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
-| `agent_loop/morning_brief` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_an_empty_queue_is_not_annotated, morning_brief_annotates_its_queue_from_the_evidence, morning_brief_retrieved_text_is_not_an_instruction |
 | `agent_loop/morning_brief` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
 | `agent_loop/morning_brief` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
 | `agent_loop/morning_brief` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
@@ -1663,13 +1657,9 @@ model, real network).
 | `agent_loop/morning_brief` | `openai_compatible · openai/gpt-6-sol · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
 | `agent_loop/morning_brief` | `openai_compatible · openai/gpt-oss-120b · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
 | `agent_loop/morning_brief` | `openai_compatible · qwen/qwen3.8-27b · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): morning_brief_a_retrieved_deal_is_not_the_queue, morning_brief_retrieved_text_is_not_an_instruction (it also scored morning_brief_reads_its_queue_first, which the corpus no longer holds) |
-| `agent_loop/overnight_at_risk_sweep` | `anthropic · claude-haiku-5-5 · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): overnight_sweep_a_provenance_ref_is_not_a_record_id, overnight_sweep_logs_one_note_per_slipping_deal, overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction |
-| `agent_loop/overnight_at_risk_sweep` | `anthropic · claude-sonnet-5-5 · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): overnight_sweep_a_provenance_ref_is_not_a_record_id, overnight_sweep_logs_one_note_per_slipping_deal, overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction |
-| `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.1-flash-lite · cloud_frontier` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): overnight_sweep_a_provenance_ref_is_not_a_record_id, overnight_sweep_logs_one_note_per_slipping_deal, overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction |
 | `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction; the provider's wire translation changed since the run (it also scored overnight_sweep_reads_what_is_slipping_before_it_logs, which the corpus no longer holds) |
 | `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.5-flash-lite · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction; the provider's wire translation changed since the run (it also scored overnight_sweep_reads_what_is_slipping_before_it_logs, which the corpus no longer holds) |
 | `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction; the provider's wire translation changed since the run (it also scored overnight_sweep_reads_what_is_slipping_before_it_logs, which the corpus no longer holds) |
-| `agent_loop/overnight_at_risk_sweep` | `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | 4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): overnight_sweep_a_provenance_ref_is_not_a_record_id, overnight_sweep_logs_one_note_per_slipping_deal, overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction |
 | `agent_loop/overnight_at_risk_sweep` | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction (it also scored overnight_sweep_reads_what_is_slipping_before_it_logs, which the corpus no longer holds) |
 | `agent_loop/overnight_at_risk_sweep` | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction (it also scored overnight_sweep_reads_what_is_slipping_before_it_logs, which the corpus no longer holds) |
 | `agent_loop/overnight_at_risk_sweep` | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | 2 scenarios it scored have changed since (the case and the prompt this build sends and how a run is graded): overnight_sweep_one_quiet_deal_is_not_the_book, overnight_sweep_retrieved_text_is_not_an_instruction (it also scored overnight_sweep_reads_what_is_slipping_before_it_logs, which the corpus no longer holds) |
@@ -2272,7 +2262,7 @@ Records (15):
 Certified without the company context production prepends (`identity`, `positioning`, `sales`, `offer`): this lane runs with no database to assemble it from.
 
 <details>
-<summary><code>agent_loop/morning_brief</code>: 4 scenario(s), 15 record(s), best state stale</summary>
+<summary><code>agent_loop/morning_brief</code>: 4 scenario(s), 15 record(s), best state current</summary>
 
 ##### `agent_loop/morning_brief`
 
@@ -2291,13 +2281,13 @@ Records (15):
 
 | Binding | State | Scenarios | Band | Judge | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `anthropic · claude-haiku-5-5 · cloud_frontier` | `stale` | 0/4 | `supported_degraded` | `gemini-3.1-flash-lite` | 18 | 17 | 0.94 [0.83, 0.98] | 16194ms | 43210ms | 18 | 0 | 0 | 0 |
-| `anthropic · claude-sonnet-5-5 · cloud_frontier` | `stale` | 0/4 | `certified` | `gemini-3.1-flash-lite` | 15 | 14 | 0.93 [0.80, 0.98] | 22871ms | 67218ms | 15 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/4 | `not_supported` | `claude-sonnet-5-5` | 24 | 22 | 0.92 [0.82, 0.96] | 6190ms | 10760ms | 22 | 2 | 0 | 0 |
+| `anthropic · claude-haiku-5-5 · cloud_frontier` | `current` | 4/4 | `supported_degraded` | `gemini-3.1-flash-lite` | 30 | 29 | 0.97 [0.89, 0.99] | 18836ms | 45240ms | 30 | 0 | 0 | 0 |
+| `anthropic · claude-sonnet-5-5 · cloud_frontier` | `current` | 4/4 | `supported_degraded` | `gemini-3.1-flash-lite` | 21 | 17 | 0.81 [0.68, 0.90] | 24037ms | 77209ms | 21 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `not_supported` | `claude-sonnet-5-5` | 27 | 25 | 0.93 [0.83, 0.97] | 7657ms | 11367ms | 25 | 2 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1950ms | 2502ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1569ms | 1751ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1653ms | 2610ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `certified` | `claude-sonnet-5-5` | 12 | 12 | 1.00 [0.88, 1.00] | 35132ms | 89447ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 4/4 | `certified` | `claude-sonnet-5-5` | 12 | 12 | 1.00 [0.88, 1.00] | 27163ms | 44952ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1982ms | 2244ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1045ms | 2204ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1238ms | 4595ms | 9 | 0 | 0 | 0 |
@@ -2310,7 +2300,7 @@ Records (15):
 </details>
 
 <details>
-<summary><code>agent_loop/overnight_at_risk_sweep</code>: 4 scenario(s), 15 record(s), best state stale</summary>
+<summary><code>agent_loop/overnight_at_risk_sweep</code>: 4 scenario(s), 15 record(s), best state current</summary>
 
 ##### `agent_loop/overnight_at_risk_sweep`
 
@@ -2329,13 +2319,13 @@ Records (15):
 
 | Binding | State | Scenarios | Band | Judge | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `anthropic · claude-haiku-5-5 · cloud_frontier` | `stale` | 0/4 | `not_supported` | `gemini-3.1-flash-lite` | 12 | 9 | 0.75 [0.57, 0.87] | 16194ms | 43210ms | 9 | 3 | 0 | 0 |
-| `anthropic · claude-sonnet-5-5 · cloud_frontier` | `stale` | 0/4 | `certified` | `gemini-3.1-flash-lite` | 12 | 12 | 1.00 [0.88, 1.00] | 22871ms | 67218ms | 12 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `stale` | 0/4 | `supported_degraded` | `claude-sonnet-5-5` | 15 | 15 | 1.00 [0.90, 1.00] | 6190ms | 10760ms | 15 | 0 | 0 | 0 |
+| `anthropic · claude-haiku-5-5 · cloud_frontier` | `current` | 4/4 | `supported_degraded` | `gemini-3.1-flash-lite` | 30 | 23 | 0.77 [0.66, 0.85] | 18836ms | 45240ms | 23 | 7 | 0 | 0 |
+| `anthropic · claude-sonnet-5-5 · cloud_frontier` | `current` | 4/4 | `supported_degraded` | `gemini-3.1-flash-lite` | 21 | 18 | 0.86 [0.73, 0.93] | 24037ms | 77209ms | 20 | 0 | 1 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `not_supported` | `claude-sonnet-5-5` | 24 | 19 | 0.79 [0.67, 0.88] | 7657ms | 11367ms | 19 | 5 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1950ms | 2502ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1569ms | 1751ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1653ms | 2610ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `certified` | `claude-sonnet-5-5` | 15 | 15 | 1.00 [0.90, 1.00] | 35132ms | 89447ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 4/4 | `certified` | `claude-sonnet-5-5` | 12 | 12 | 1.00 [0.88, 1.00] | 27163ms | 44952ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1982ms | 2244ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1045ms | 2204ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1238ms | 4595ms | 9 | 0 | 0 | 0 |

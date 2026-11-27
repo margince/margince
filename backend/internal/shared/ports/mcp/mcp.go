@@ -69,7 +69,7 @@ type ToolSpec struct {
 	// a run a refused step.
 	Instead      string
 	InsteadTools []string
-	// NamedTools is every other registered tool the Description or the
+	// NamedTools lists the other registered tools the Description or the
 	// InputSchema names, filled by the registry as InsteadTools is. A surface
 	// offering part of the catalog drops each sentence naming one it does not
 	// offer, for the reason it drops an Instead.

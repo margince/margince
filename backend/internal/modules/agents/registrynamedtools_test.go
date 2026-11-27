@@ -11,8 +11,8 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
-// A listing carries every registered tool a description or an input schema
-// names, so a surface that offers part of the catalog can drop the sentence.
+// A listing carries every registered tool that a description or an input schema
+// names. A surface that offers part of the catalog can then drop the sentence.
 func TestASpecListsTheRegisteredToolsItsTextNames(t *testing.T) {
 	t.Parallel()
 	r := NewRegistry(nil, nil)
