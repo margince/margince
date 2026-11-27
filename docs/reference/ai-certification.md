@@ -37,7 +37,7 @@ from a ready-made setup instead, go to [Can I use this model setup?](#can-i-use-
 
 | Family | Models we tested | Can I trust it? | In plain words | Tries right | Quality scored by |
 |---|---|---|---|---|---|
-| Claude | `claude-haiku-5-5`, `claude-sonnet-5-5` | 🟡 Mostly | Ready in 36 of the 55 places we tested; 3 more work if someone looks over the result; 16 more right every time, on too few tries to grade alone. | 1497 of 1518 | `gemini-3.1-flash-lite`, `gemini-3.8-flash` |
+| Claude | `claude-haiku-5-5`, `claude-sonnet-5-5` | 🟡 Mostly | Ready in 38 of the 55 places we tested; 1 more work if someone looks over the result; 16 more right every time, on too few tries to grade alone. | 1488 of 1506 | `gemini-3.1-flash-lite`, `gemini-3.8-flash` |
 | Gemini | `gemini-3.1-flash-lite`, `gemini-3.8-flash` | 🟡 Mostly | Ready in 39 of the 55 places we tested; 4 more work if someone looks over the result; 12 more right every time, on too few tries to grade alone. | 1550 of 1557 | `claude-sonnet-5-5` |
 | GPT | `gpt-6-luna`, `gpt-6-sol`, `gpt-oss-120b` | 🟡 Mostly | Ready in 22 of the 46 places we tested; 4 more work if someone looks over the result; 6 not reliable yet; 14 more right every time, on too few tries to grade alone. | 1067 of 1110 | `claude-sonnet-4-6`, `claude-sonnet-5-5` |
 | Mistral | `ministral-14b-2512`, `ministral-8b-2512`, `mistral-medium-3-5` | 🔴 Not yet | Ready in 15 of the 41 places we tested; 6 more work if someone looks over the result; 9 not reliable yet; 11 more right every time, on too few tries to grade alone. | 648 of 708 | `claude-sonnet-4-6`, `claude-sonnet-5-5` |
@@ -62,7 +62,7 @@ are waiting to be re-checked; each is marked below.
 |---|---|---:|---:|---:|---:|---|
 | [Google Gemini](#google-gemini) | global cloud | 27 | 10 | 0 | 1 | 27 of 38 features ready (1 re-check pending) |
 | [Google Gemini in the EU, through Vertex AI](#google-gemini-in-the-eu-through-vertex-ai) | EU-hosted cloud | 27 | 10 | 0 | 1 | 27 of 38 features ready (1 re-check pending) |
-| [Anthropic Claude](#anthropic-claude) | global cloud | 33 | 4 | 0 | 1 | 33 of 38 features ready |
+| [Anthropic Claude](#anthropic-claude) | global cloud | 34 | 3 | 0 | 1 | 34 of 38 features ready |
 | [OpenAI GPT-6, through OpenRouter](#openai-gpt-6-through-openrouter) | global cloud | 19 | 3 | 3 | 13 | 19 of 38 features ready (re-check pending) |
 | [Open models from OpenAI and Mistral, through OpenRouter](#open-models-from-openai-and-mistral-through-openrouter) | global cloud | 12 | 12 | 7 | 7 | 12 of 38 features ready (re-check pending) |
 | [Gemma 4 you could run yourself, through OpenRouter](#gemma-4-you-could-run-yourself-through-openrouter) | global cloud | 1 | 0 | 4 | 33 | 1 of 38 features ready (re-check pending) |
@@ -303,11 +303,11 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 
 ### Anthropic Claude
 
-Your data goes to: global cloud. 33 of 38 features ready. Preset file: [`anthropic_cloud.yaml`](../../config/presets/anthropic_cloud.yaml).
+Your data goes to: global cloud. 34 of 38 features ready. Preset file: [`anthropic_cloud.yaml`](../../config/presets/anthropic_cloud.yaml).
 
 | Feature | Can I use it? | In plain words |
 |---|---|---|
-| Agent reasoning loop <sub>`agent_loop`</sub> | ⚠️ Usable with care<br><sub>claude-sonnet-5-5 · premium → claude-haiku-5-5, ⚠️ Usable with care</sub> | Right in 35 of 42 tries (at least 74%); scored by `gemini-3.1-flash-lite` |
+| Agent reasoning loop <sub>`agent_loop`</sub> | ✅ Ready<br><sub>claude-sonnet-5-5 · premium → claude-haiku-5-5, ⚠️ Usable with care</sub> | Right in 30 of 33 tries (at least 82%); scored by `gemini-3.1-flash-lite` |
 | Assessing a sales report <sub>`report_interpret`</sub> | ✅ Ready<br><sub>claude-sonnet-5-5 · premium → claude-haiku-5-5, ✅ Ready</sub> | Right every time (12 of 12, at least 87%); scored by `gemini-3.1-flash-lite` |
 | Buying-role reading <sub>`propose_roles`</sub> | ✅ Ready<br><sub>claude-haiku-5-5 · cheap_cloud → claude-sonnet-5-5, ✅ Ready</sub> | Right every time (18 of 18, at least 91%); scored by `gemini-3.1-flash-lite` |
 | Certification judging <sub>`cert_judge`</sub> | ✅ Ready<br><sub>claude-sonnet-5-5 · premium → claude-haiku-5-5, ✅ Ready</sub> | Right every time (12 of 12, at least 87%); tested on one model call of it |
@@ -362,7 +362,7 @@ binds; this is the rung and the model it lands on, and the record behind its gra
 | Task | Served on | Model | Grade | Measurement |
 |---|---|---|---|---|
 | `account_scan` | `cheap_cloud` | `claude-haiku-5-5` | ✅ Ready | current |
-| `agent_loop` | `premium` | `claude-sonnet-5-5` | ⚠️ Usable with care | current |
+| `agent_loop` | `premium` | `claude-sonnet-5-5` | ✅ Ready | current |
 | `brief_ranking` | `premium` | `claude-sonnet-5-5` | ✅ Ready | current |
 | `capture_classify` | `local_small` | `claude-haiku-5-5` | ✅ Ready | current |
 | `capture_confidentiality_verdict` | `local_small` | `claude-haiku-5-5` | ✅ Ready | current |
@@ -1122,12 +1122,12 @@ under [Certification by provider and model](#certification-by-provider-and-model
 
 ### Claude
 
-🟡 Mostly: Ready in 36 of the 55 places we tested; 3 more work if someone looks over the result; 16 more right every time, on too few tries to grade alone.
+🟡 Mostly: Ready in 38 of the 55 places we tested; 1 more work if someone looks over the result; 16 more right every time, on too few tries to grade alone.
 
 | Model | Where it ran | Places tested | ✅ | ⚠️ | ❌ | Tries right |
 |---|---|---:|---:|---:|---:|---|
-| `claude-haiku-5-5` | `cloud_frontier` | 48 | 28 | 8 | 1 | 0.98 [0.98, 0.99] |
-| `claude-sonnet-5-5` | `cloud_frontier` | 45 | 25 | 5 | 0 | 0.97 [0.97, 0.98] |
+| `claude-haiku-5-5` | `cloud_frontier` | 48 | 29 | 7 | 1 | 0.98 [0.98, 0.99] |
+| `claude-sonnet-5-5` | `cloud_frontier` | 45 | 26 | 4 | 0 | 0.98 [0.97, 0.98] |
 
 <details>
 <summary>Best model for each place</summary>
@@ -1135,8 +1135,8 @@ under [Certification by provider and model](#certification-by-provider-and-model
 | Place | Best model in the family | Grade | Right in | Quality scored by |
 |---|---|---|---|---|
 | [`account_scan/company_scan`](#account_scancompany_scan) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ✅ Ready | Right every time (18 of 18, at least 91%) | `gemini-3.1-flash-lite` |
-| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `anthropic · claude-haiku-5-5 · cloud_frontier` | ⚠️ Usable with care | Right in 29 of 30 tries (at least 89%) | `gemini-3.1-flash-lite` |
-| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ⚠️ Usable with care | Right in 18 of 21 tries (at least 73%) | `gemini-3.1-flash-lite` |
+| [`agent_loop/morning_brief`](#agent_loopmorning_brief) | `anthropic · claude-haiku-5-5 · cloud_frontier` | ✅ Ready | Right every time (24 of 24, at least 93%) | `gemini-3.1-flash-lite` |
+| [`agent_loop/overnight_at_risk_sweep`](#agent_loopovernight_at_risk_sweep) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ✅ Ready | Right in 14 of 15 tries (at least 80%) | `gemini-3.1-flash-lite` |
 | [`brief_ranking/rank`](#brief_rankingrank) | `anthropic · claude-sonnet-5-5 · cloud_frontier` | ✅ Ready | Right every time (12 of 12, at least 87%) | checked mechanically |
 | [`capture_classify/classify`](#capture_classifyclassify) | `anthropic · claude-haiku-5-5 · cloud_frontier` | ✅ Ready | Right every time (30 of 30, at least 94%) | `gemini-3.1-flash-lite` |
 | [`capture_classify/deal_topic`](#capture_classifydeal_topic) | `anthropic · claude-haiku-5-5 · cloud_frontier` | 🔹 Right every time, too few tries to grade alone | Right every time (9 of 9, at least 84%) | `gemini-3.1-flash-lite` |
@@ -1591,15 +1591,15 @@ record's own p50 and p95 are in the site tables.
 
 | Provider | Model | Env | Sites | `current` | `partial` | `stale` | Runs | Passed | Reliability | Slowest p95 | `certified` | `too_few_runs` | `supported_degraded` | `not_supported` |
 |---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `anthropic` | `claude-haiku-5-5` | `cloud_frontier` | 55 | 53 | 0 | 2 | 1371 | 1339 | 0.98 [0.97, 0.98] | 45240ms | 30 | 14 | 10 | 1 |
-| `anthropic` | `claude-sonnet-5-5` | `cloud_frontier` | 52 | 52 | 0 | 0 | 1005 | 980 | 0.98 [0.97, 0.98] | 77209ms | 28 | 18 | 6 | 0 |
-| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 58 | 53 | 0 | 5 | 1686 | 1631 | 0.97 [0.96, 0.97] | 11367ms | 24 | 9 | 19 | 6 |
+| `anthropic` | `claude-haiku-5-5` | `cloud_frontier` | 55 | 53 | 0 | 2 | 1365 | 1335 | 0.98 [0.97, 0.98] | 43325ms | 31 | 14 | 9 | 1 |
+| `anthropic` | `claude-sonnet-5-5` | `cloud_frontier` | 52 | 52 | 0 | 0 | 996 | 975 | 0.98 [0.97, 0.98] | 43729ms | 29 | 18 | 5 | 0 |
+| `gemini` | `gemini-3.1-flash-lite` | `cloud_frontier` | 58 | 53 | 0 | 5 | 1686 | 1629 | 0.97 [0.96, 0.97] | 11951ms | 24 | 9 | 19 | 6 |
 | `gemini` | `gemini-3.1-pro-preview` | `cloud_frontier` | 6 | 0 | 0 | 6 | 216 | 207 | 0.96 [0.94, 0.97] | 14416ms | 2 | 3 | 1 | 0 |
 | `gemini` | `gemini-3.5-flash` | `cloud_frontier` | 40 | 0 | 0 | 40 | 468 | 468 | 1.00 [1.00, 1.00] | 16000ms | 19 | 19 | 1 | 1 |
 | `gemini` | `gemini-3.5-flash-lite` | `cloud_frontier` | 57 | 0 | 0 | 57 | 1407 | 1336 | 0.95 [0.94, 0.96] | 4842ms | 20 | 17 | 8 | 12 |
 | `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 9 | 0 | 0 | 9 | 201 | 201 | 1.00 [0.99, 1.00] | 10554ms | 5 | 4 | 0 | 0 |
 | `gemini` | `gemini-3.6-flash` | `cloud_frontier` | 41 | 0 | 0 | 41 | 699 | 696 | 1.00 [0.99, 1.00] | 10104ms | 17 | 18 | 5 | 1 |
-| `gemini` | `gemini-3.8-flash` | `cloud_frontier` | 52 | 50 | 0 | 2 | 960 | 956 | 1.00 [0.99, 1.00] | 44952ms | 33 | 16 | 3 | 0 |
+| `gemini` | `gemini-3.8-flash` | `cloud_frontier` | 52 | 50 | 0 | 2 | 960 | 956 | 1.00 [0.99, 1.00] | 41097ms | 33 | 16 | 3 | 0 |
 | `openai_compatible` | `google/gemma-4-26b-a4b-it` | `cloud_frontier` | 6 | 0 | 0 | 6 | 189 | 166 | 0.88 [0.84, 0.91] | 15788ms | 1 | 0 | 1 | 4 |
 | `openai_compatible` | `google/gemma-4-31b-it` | `cloud_frontier` | 53 | 0 | 0 | 53 | 1398 | 1373 | 0.98 [0.98, 0.99] | 28492ms | 28 | 18 | 5 | 2 |
 | `openai_compatible` | `mistralai/ministral-14b-2512` | `eu_hosted` | 41 | 0 | 0 | 41 | 615 | 488 | 0.79 [0.77, 0.81] | 83052ms | 7 | 8 | 6 | 20 |
@@ -2281,13 +2281,13 @@ Records (15):
 
 | Binding | State | Scenarios | Band | Judge | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `anthropic · claude-haiku-5-5 · cloud_frontier` | `current` | 4/4 | `supported_degraded` | `gemini-3.1-flash-lite` | 30 | 29 | 0.97 [0.89, 0.99] | 18836ms | 45240ms | 30 | 0 | 0 | 0 |
-| `anthropic · claude-sonnet-5-5 · cloud_frontier` | `current` | 4/4 | `supported_degraded` | `gemini-3.1-flash-lite` | 21 | 17 | 0.81 [0.68, 0.90] | 24037ms | 77209ms | 21 | 0 | 0 | 0 |
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `not_supported` | `claude-sonnet-5-5` | 27 | 25 | 0.93 [0.83, 0.97] | 7657ms | 11367ms | 25 | 2 | 0 | 0 |
+| `anthropic · claude-haiku-5-5 · cloud_frontier` | `current` | 4/4 | `certified` | `gemini-3.1-flash-lite` | 24 | 24 | 1.00 [0.94, 1.00] | 18442ms | 43325ms | 24 | 0 | 0 | 0 |
+| `anthropic · claude-sonnet-5-5 · cloud_frontier` | `current` | 4/4 | `supported_degraded` | `gemini-3.1-flash-lite` | 18 | 16 | 0.89 [0.76, 0.95] | 25038ms | 43729ms | 18 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `not_supported` | `claude-sonnet-5-5` | 30 | 27 | 0.90 [0.81, 0.95] | 7674ms | 11951ms | 27 | 3 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1950ms | 2502ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1569ms | 1751ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1653ms | 2610ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 4/4 | `certified` | `claude-sonnet-5-5` | 12 | 12 | 1.00 [0.88, 1.00] | 27163ms | 44952ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 4/4 | `certified` | `claude-sonnet-5-5` | 12 | 12 | 1.00 [0.88, 1.00] | 20991ms | 41097ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1982ms | 2244ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1045ms | 2204ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1238ms | 4595ms | 9 | 0 | 0 | 0 |
@@ -2319,13 +2319,13 @@ Records (15):
 
 | Binding | State | Scenarios | Band | Judge | Runs | Passed | Reliability | Record p50 | Record p95 | `accepted` | `wrong_answer` | `invalid` | `abstained` |
 |---|---|---|---|---|---:|---:|---:|---:|---:|---:|---:|---:|---:|
-| `anthropic · claude-haiku-5-5 · cloud_frontier` | `current` | 4/4 | `supported_degraded` | `gemini-3.1-flash-lite` | 30 | 23 | 0.77 [0.66, 0.85] | 18836ms | 45240ms | 23 | 7 | 0 | 0 |
-| `anthropic · claude-sonnet-5-5 · cloud_frontier` | `current` | 4/4 | `supported_degraded` | `gemini-3.1-flash-lite` | 21 | 18 | 0.86 [0.73, 0.93] | 24037ms | 77209ms | 20 | 0 | 1 | 0 |
-| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `not_supported` | `claude-sonnet-5-5` | 24 | 19 | 0.79 [0.67, 0.88] | 7657ms | 11367ms | 19 | 5 | 0 | 0 |
+| `anthropic · claude-haiku-5-5 · cloud_frontier` | `current` | 4/4 | `supported_degraded` | `gemini-3.1-flash-lite` | 30 | 24 | 0.80 [0.69, 0.88] | 18442ms | 43325ms | 24 | 6 | 0 | 0 |
+| `anthropic · claude-sonnet-5-5 · cloud_frontier` | `current` | 4/4 | `certified` | `gemini-3.1-flash-lite` | 15 | 14 | 0.93 [0.80, 0.98] | 25038ms | 43729ms | 15 | 0 | 0 | 0 |
+| `gemini · gemini-3.1-flash-lite · cloud_frontier` | `current` | 4/4 | `not_supported` | `claude-sonnet-5-5` | 21 | 15 | 0.71 [0.58, 0.82] | 7674ms | 11951ms | 15 | 6 | 0 | 0 |
 | `gemini · gemini-3.5-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1950ms | 2502ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.5-flash-lite · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1569ms | 1751ms | 9 | 0 | 0 | 0 |
 | `gemini · gemini-3.6-flash · cloud_frontier · thinking low` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1653ms | 2610ms | 9 | 0 | 0 | 0 |
-| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 4/4 | `certified` | `claude-sonnet-5-5` | 12 | 12 | 1.00 [0.88, 1.00] | 27163ms | 44952ms | 12 | 0 | 0 | 0 |
+| `gemini · gemini-3.8-flash · cloud_frontier · thinking low` | `current` | 4/4 | `certified` | `claude-sonnet-5-5` | 12 | 12 | 1.00 [0.88, 1.00] | 20991ms | 41097ms | 12 | 0 | 0 | 0 |
 | `openai_compatible · google/gemma-4-31b-it · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1982ms | 2244ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/ministral-14b-2512 · eu_hosted` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1045ms | 2204ms | 9 | 0 | 0 | 0 |
 | `openai_compatible · mistralai/mistral-medium-3-5 · cloud_frontier` | `stale` | 0/4 | `too_few_runs` | checked mechanically | 9 | 9 | 1.00 [0.85, 1.00] | 1238ms | 4595ms | 9 | 0 | 0 | 0 |
