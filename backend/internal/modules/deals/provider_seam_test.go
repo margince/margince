@@ -105,18 +105,6 @@ func TestAnOfferListNeedsItsDealAndNoText(t *testing.T) {
 	}
 }
 
-func TestACatalogOrOfferListRefusesAnOffset(t *testing.T) {
-	p, skip := seamProvider(), 1
-	for _, typ := range []datasource.EntityType{
-		datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer,
-	} {
-		_, _, _, err := p.SearchEntity(context.Background(), typ, nil, 10, nil, &skip, nil)
-		if field, code := refusedOn(t, err); field != "offset" || code != "offset_unsupported" {
-			t.Errorf("a %s list at an offset was refused on %s=%s (%v), want offset=offset_unsupported", typ, field, code, err)
-		}
-	}
-}
-
 func TestACatalogOrOfferListRefusesAFilterItCannotApply(t *testing.T) {
 	p := seamProvider()
 	for _, typ := range []datasource.EntityType{

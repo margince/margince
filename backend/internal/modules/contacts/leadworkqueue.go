@@ -119,12 +119,6 @@ func readLeadWorkQueue(ctx context.Context, tx pgx.Tx, in ListLeadsInput, active
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
-	total, err := storekit.CountList(ctx, leadEntity, leadEntity, func(arg func(any) int) ([]string, error) {
-		return leadListWhere(ctx, in, active, policy, arg)
-	})
-	if err != nil {
-		return nil, storekit.Page{}, err
-	}
 	rank := leadQueueRank(policy, arg, asOf)
 	if cursor != nil {
 		where = append(where, storekit.SQLf("("+rank+", -score, created_at, id) > ($%d, $%d, $%d, $%d)",
@@ -137,8 +131,14 @@ func readLeadWorkQueue(ctx context.Context, tx pgx.Tx, in ListLeadsInput, active
 	query := `SELECT ` + columns + storekit.SelectSuffix(active) + `, ` + rank +
 		` FROM lead WHERE ` + strings.Join(where, " AND ") +
 		` ORDER BY ` + rank + `, score DESC, created_at, id` + storekit.PageWindow(limit, offset)
-	at := leadQueuePage{limit: limit, offset: offset, counted: cursor == nil, total: total}
-	return readLeadQueuePage(ctx, tx, query, *args, active, asOf, policy, at)
+	return readLeadQueuePage(ctx, tx, leadQueueRead{
+		sql: query, args: *args, active: active, asOf: asOf,
+		total: storekit.PageCount{Cursor: in.Cursor, Offset: offset, Limit: limit, Count: func() (storekit.ListCount, error) {
+			return storekit.CountList(ctx, leadEntity, leadEntity, func(arg func(any) int) ([]string, error) {
+				return leadListWhere(ctx, in, active, policy, arg)
+			})
+		}},
+	}, policy)
 }
 
 func leadQueueWhere(ctx context.Context, in ListLeadsInput, active []fieldcatalog.Column, policy leadSLAPolicy) ([]string, *[]any, func(any) int, error) {
@@ -185,26 +185,29 @@ func leadQueueRank(policy leadSLAPolicy, arg func(any) int, asOf time.Time) stri
 		deadline, arg(risk), arg(asOf), leadQueueRankAtRisk, leadQueueRankWithinTarget)
 }
 
-// leadQueuePage is where one queue page sits in the queue, and the count behind its total.
-type leadQueuePage struct {
-	limit, offset int
-	counted       bool
-	total         storekit.ListCount
+// leadQueueRead is one queue page's statement, the instant it judges the SLA
+// at, and the count behind its total.
+type leadQueueRead struct {
+	sql    string
+	args   []any
+	active []fieldcatalog.Column
+	asOf   time.Time
+	total  storekit.PageCount
 }
 
-func readLeadQueuePage(ctx context.Context, tx pgx.Tx, query string, args []any, active []fieldcatalog.Column, asOf time.Time, policy leadSLAPolicy, at leadQueuePage) ([]crmcontracts.Lead, storekit.Page, error) {
-	limit := at.limit
+func readLeadQueuePage(ctx context.Context, tx pgx.Tx, read leadQueueRead, policy leadSLAPolicy) ([]crmcontracts.Lead, storekit.Page, error) {
+	limit, asOf := read.total.Limit, read.asOf
 	var leads []crmcontracts.Lead
 	var ranks []int
 
-	rows, err := tx.Query(ctx, query, args...)
+	rows, err := tx.Query(ctx, read.sql, read.args...)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
 	defer rows.Close()
 	for rows.Next() {
 		var rank int
-		lead, err := scanLead(rows, active, policy, asOf, systemtext.Locale(ctx), &rank)
+		lead, err := scanLead(rows, read.active, policy, asOf, systemtext.Locale(ctx), &rank)
 		if err != nil {
 			return nil, storekit.Page{}, err
 		}
@@ -214,13 +217,9 @@ func readLeadQueuePage(ctx context.Context, tx pgx.Tx, query string, args []any,
 	if err := rows.Err(); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	var matching *int
-	if at.counted {
-		n, err := storekit.PageTotal(ctx, tx, at.total, at.offset, len(leads), limit)
-		if err != nil {
-			return nil, storekit.Page{}, fmt.Errorf("count lead: %w", err)
-		}
-		matching = &n
+	matching, err := read.total.Total(ctx, tx, len(leads))
+	if err != nil {
+		return nil, storekit.Page{}, fmt.Errorf("count lead: %w", err)
 	}
 	// This page path must stamp writability before offering edits to colleagues’ rows.
 	if err := attachLeadRows(ctx, tx, leads); err != nil {

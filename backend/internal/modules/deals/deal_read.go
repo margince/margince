@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -270,6 +271,10 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, active CustomColumns) ([]crmcontracts.Deal, storekit.Page, error) {
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
+	}
+	// The composite reads page by cursor alone; an offset here is refused rather than dropped.
+	if in.Offset != nil {
+		return nil, storekit.Page{}, &datasource.OffsetUnsupportedError{Type: datasource.EntityDeal}
 	}
 	pre, where, _, err := s.dealListQuery(ctx, tx, in, active.cols)
 	if err != nil {

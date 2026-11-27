@@ -59,9 +59,6 @@ func (p *ListPrelude) CollectPositions(into *[]string) { p.positions = into }
 // A caller appends its own record-specific terms to the returned slice.
 func (p *ListPrelude) Where() []string { return p.where }
 
-// Sorted is the validated sort the page is ordered by.
-func (p *ListPrelude) Sorted() *ListSort { return p.sorted }
-
 // Skip opens the page offset rows into the list, or refuses the offset as
 // ListOffset does.
 func (p *ListPrelude) Skip(offset *int) error {
@@ -77,25 +74,24 @@ func (p *ListPrelude) Count(terms func(arg func(any) int) ([]string, error)) { p
 // total is the page's total, nil when the read does not count. fetched counts
 // the probe row past the page.
 func (p *ListPrelude) total(ctx context.Context, tx pgx.Tx, table string, fetched int) (*int, error) {
-	if p.count == nil || (p.cursor != nil && *p.cursor != "") {
+	if p.count == nil {
 		return nil, nil //nolint:nilnil // a nil total is a read that does not count, as Page.Total says
 	}
-	count, err := CountList(ctx, p.object, table, func(arg func(any) int) ([]string, error) {
-		where, err := CustomFilterClauses(p.active, p.customFilters, arg)
-		if err != nil {
-			return nil, err
-		}
-		own, err := p.count(arg)
-		return append(where, own...), err
-	})
-	if err != nil {
-		return nil, err
-	}
-	n, err := PageTotal(ctx, tx, count, p.offset, fetched, p.limit)
+	page := PageCount{Cursor: p.cursor, Offset: p.offset, Limit: p.limit, Count: func() (ListCount, error) {
+		return CountList(ctx, p.object, table, func(arg func(any) int) ([]string, error) {
+			where, err := CustomFilterClauses(p.active, p.customFilters, arg)
+			if err != nil {
+				return nil, err
+			}
+			own, err := p.count(arg)
+			return append(where, own...), err
+		})
+	}}
+	n, err := page.Total(ctx, tx, fetched)
 	if err != nil {
 		return nil, fmt.Errorf("count %s: %w", table, err)
 	}
-	return &n, nil
+	return n, nil
 }
 
 // Arg registers one query argument and answers its placeholder number, so a

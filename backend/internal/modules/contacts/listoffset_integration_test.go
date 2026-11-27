@@ -155,3 +155,44 @@ func TestAnOffsetIsRefusedBesideACursorAndPastTheCap(t *testing.T) {
 		})
 	}
 }
+
+// An offset page runs the COUNT, so the count carries the reader's scope. A
+// capture-private contact counts for its owner and for no other reader.
+func TestAnOffsetPageCountsOnlyTheRowsTheReaderMaySee(t *testing.T) {
+	e := setupCapturePrivacy(t)
+	owner := e.as(e.owner, principal.RowScopeAll)
+	for i := range 5 {
+		createTotalRecord(owner, t, e.store, "contact", i)
+	}
+	e.captureContact(t, "owner")
+
+	for name, c := range map[string]struct {
+		reader context.Context
+		want   int
+	}{
+		"the capturing owner": {owner, 6},
+		"another reader":      {e.as(e.admin, principal.RowScopeAll), 5},
+	} {
+		walked := 0
+		for ask := (pageAsk{limit: 2}); ; {
+			rows, page, err := readPage(c.reader, e.store, "contact", ask)
+			if err != nil {
+				t.Fatal(err)
+			}
+			walked += len(rows)
+			if !page.HasMore {
+				break
+			}
+			ask.cursor = &page.NextCursor
+		}
+		for _, offset := range []int{1, 9} {
+			_, page, err := readPage(c.reader, e.store, "contact", pageAsk{limit: 2, offset: new(offset)})
+			if err != nil {
+				t.Fatal(err)
+			}
+			if page.Total == nil || *page.Total != walked || walked != c.want {
+				t.Errorf("%s at offset %d: total %v over %d rows walked, want both %d", name, offset, page.Total, walked, c.want)
+			}
+		}
+	}
+}

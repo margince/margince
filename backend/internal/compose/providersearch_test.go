@@ -39,20 +39,6 @@ func TestSearchRefusesATypeNoModuleSearches(t *testing.T) {
 	}
 }
 
-// These lists page by cursor alone, so an offset on one is refused rather than dropped.
-func TestSearchRefusesAnOffsetOnAListThatPagesByCursorAlone(t *testing.T) {
-	skip := 1
-	for _, et := range []datasource.EntityType{
-		datasource.EntityCommission, datasource.EntityDealRoom, datasource.EntityDealRoomThread,
-		datasource.EntityDealRoomDocument, datasource.EntityDealRoomParticipant, datasource.EntityActivity,
-	} {
-		_, err := (&Provider{}).Search(context.Background(), datasource.SearchQuery{EntityTypes: []datasource.EntityType{et}, Offset: &skip})
-		if _, ok := errors.AsType[*datasource.OffsetUnsupportedError](err); !ok {
-			t.Errorf("a %s list at an offset answered %v, want the offset refusal", et, err)
-		}
-	}
-}
-
 // A cursor carries the type it was minted for. Presented with another type it
 // would resume a keyset from a different table, so it is refused rather than
 // read.

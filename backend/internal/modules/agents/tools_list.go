@@ -242,6 +242,7 @@ func (t listRecords) Handle(ctx context.Context, in json.RawMessage) (json.RawMe
 	if err := t.refuseUnaskableFilters(args.RecordType, args.Filters); err != nil {
 		return nil, err
 	}
+	// Checked before the seam, whose cursor decode and per-type refusal would otherwise answer first.
 	if _, err := storekit.ListOffset(args.Offset, &args.Cursor); err != nil {
 		return nil, err
 	}

@@ -16,6 +16,8 @@ package integration
 
 import (
 	"encoding/json"
+	"errors"
+	"fmt"
 	"net/http"
 	"slices"
 	"strings"
@@ -23,8 +25,11 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
 func TestListRecordsNarrowsRatherThanAnsweringEveryRow(t *testing.T) {
@@ -140,5 +145,66 @@ func TestListRecordsAtAnOffsetAnswersTheRowsTheHTTPListAnswersThere(t *testing.T
 	if !ok || fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 ||
 		fault.Fields[0].Field != "offset" || fault.Fields[0].Code != "offset_unsupported" {
 		t.Errorf("a partner list at an offset answered %v, want 422 field=offset code=offset_unsupported", err)
+	}
+}
+
+// Every type outside compose.OffsetListTypes is refused an offset before a
+// module is asked, and every type inside it opens its list at one.
+func TestSearchRefusesAnOffsetOnEveryOtherType(t *testing.T) {
+	for _, et := range datasource.EntityTypes() {
+		if slices.Contains(compose.OffsetListTypes(), et) {
+			continue
+		}
+		_, err := (&compose.Provider{}).Search(t.Context(), datasource.SearchQuery{EntityTypes: []datasource.EntityType{et}, Offset: new(1)})
+		if _, ok := errors.AsType[*datasource.OffsetUnsupportedError](err); !ok {
+			t.Errorf("a %s list at an offset answered %v, want the offset refusal", et, err)
+		}
+	}
+}
+
+func TestEveryOffsetListTypePagesByOffset(t *testing.T) {
+	e := Setup(t)
+	pipeline, open, _ := DealFixture(t, e)
+	company := e.SeedCompany(t, "Offset customer", &e.Rep1)
+	seed := map[datasource.EntityType]func(i int){
+		datasource.EntityContact: func(i int) { e.SeedContact(t, fmt.Sprintf("Offset contact %d", i), &e.Rep1) },
+		datasource.EntityCompany: func(i int) { e.SeedCompany(t, fmt.Sprintf("Offset company %d", i), &e.Rep1) },
+		datasource.EntityLead: func(i int) {
+			name, email := fmt.Sprintf("Offset lead %d", i), fmt.Sprintf("offset%d@lead.test", i)
+			if _, _, err := e.Contacts.CreateLead(e.Admin(), contacts.CreateLeadInput{
+				FullName: &name, Email: &email, Source: provenance.RecordSourceManual,
+			}); err != nil {
+				t.Fatal(err)
+			}
+		},
+		datasource.EntityDeal:    func(i int) { e.SeedDeal(t, fmt.Sprintf("Offset deal %d", i), pipeline, open, &e.Rep1) },
+		datasource.EntityProject: func(i int) { seedProject(e.Admin(), t, e, fmt.Sprintf("Offset project %d", i), company, &e.Rep1) },
+	}
+	provider := compose.NewProvider(e.Pool)
+	for _, et := range compose.OffsetListTypes() {
+		create, known := seed[et]
+		if !known {
+			t.Errorf("%s pages by offset and this test cannot seed it: add its seeder", et)
+			continue
+		}
+		for i := range 3 {
+			create(i)
+		}
+		read := func(offset *int, limit int) []ids.UUID {
+			t.Helper()
+			res, err := provider.Search(e.Admin(), datasource.SearchQuery{EntityTypes: []datasource.EntityType{et}, Offset: offset, Limit: limit})
+			if err != nil {
+				t.Fatalf("listing %s at offset %v: %v", et, offset, err)
+			}
+			out := make([]ids.UUID, 0, len(res.Records))
+			for _, record := range res.Records {
+				out = append(out, record.Ref.ID)
+			}
+			return out
+		}
+		whole := read(nil, 50)
+		if got := read(new(1), 1); len(whole) < 3 || !slices.Equal(got, whole[1:2]) {
+			t.Errorf("%s at offset 1 read %v, want the second row of %v", et, got, whole)
+		}
 	}
 }

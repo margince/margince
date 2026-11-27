@@ -13,6 +13,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
+// dealTerms renders a deal list's own where terms on the counter it is handed.
+type dealTerms = func(arg func(any) int) ([]string, error)
+
 // dealListQuery is what both deal list entry points share: the sort refusal,
 // the shared prelude and the deal's own filters. A page total renders those
 // filters again. The valuation is read in the list's own transaction, and only
@@ -47,9 +50,6 @@ func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput,
 	return pre, append(pre.Where(), own...), terms, nil
 }
 
-// dealTerms renders a deal list's own where terms on the counter it is handed.
-type dealTerms = func(arg func(any) int) ([]string, error)
-
 // dealFilterTerms is the deal's own filters, the win chance and at-risk dials
 // included, judged at now.
 func (s *Store) dealFilterTerms(ctx context.Context, tx pgx.Tx, in ListDealsInput, now time.Time, arg func(any) int) ([]string, error) {
@@ -60,7 +60,7 @@ func (s *Store) dealFilterTerms(ctx context.Context, tx pgx.Tx, in ListDealsInpu
 		}
 		in.winChance = chance
 	}
-	s.bindMembershipChance(ctx, tx, &in)
+	s.bindMembershipChance(ctx, tx, &in, now)
 	where, err := appendDealFilters(ctx, nil, in, arg)
 	if err != nil {
 		return nil, err

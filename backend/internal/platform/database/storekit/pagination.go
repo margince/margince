@@ -27,10 +27,10 @@ type Page struct {
 }
 
 // Cursor is the opaque keyset token: the last row's (created_at, id) under the
-// default -created_at,id sort. An offset page answers one too (CAP-PAGE). A
-// non-default sort (listquery.go) adds the sort field, its direction and the
-// last row's key as Postgres text, nil in the NULL tail. So a token can only
-// continue the ordering it was minted under.
+// default -created_at,id sort. An offset page mints one when HasMore, so reading
+// on walks the keyset. A non-default sort (listquery.go) adds the sort field, its
+// direction and the last row's key as Postgres text, nil in the NULL tail. So a
+// token can only continue the ordering it was minted under.
 type Cursor struct {
 	// Scope names the list that minted the token, so a token from another
 	// list is refused instead of continuing an unrelated keyset.

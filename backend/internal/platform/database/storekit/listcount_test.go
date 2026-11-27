@@ -37,16 +37,30 @@ func TestAListOffsetIsRefusedBesideACursorAndOutsideItsRange(t *testing.T) {
 	}
 }
 
-// The total a page states without a COUNT: nil tx, so a case that reached the
-// database would panic.
+// The total a page states without a COUNT. The COUNT is not even built: its
+// builder fails the test, and the nil tx would panic on a query.
 func TestAPageThatEndsTheListIsItsOwnTotal(t *testing.T) {
 	for _, c := range []struct {
 		offset, fetched, want int
 	}{{0, 0, 0}, {0, 3, 3}, {10, 1, 11}, {10, 3, 13}} {
-		got, err := PageTotal(context.Background(), nil, ListCount{}, c.offset, c.fetched, 3)
-		if err != nil || got != c.want {
-			t.Errorf("offset %d, %d fetched: total = %d, %v; want %d", c.offset, c.fetched, got, err, c.want)
+		page := PageCount{Offset: c.offset, Limit: 3, Count: func() (ListCount, error) {
+			t.Errorf("offset %d, %d fetched: the COUNT was built for a page that ends the list", c.offset, c.fetched)
+			return ListCount{}, nil
+		}}
+		got, err := page.Total(context.Background(), nil, c.fetched)
+		if err != nil || got == nil || *got != c.want {
+			t.Errorf("offset %d, %d fetched: total = %v, %v; want %d", c.offset, c.fetched, got, err, c.want)
 		}
+	}
+}
+
+func TestAPageReadThroughACursorSendsNoTotal(t *testing.T) {
+	page := PageCount{Cursor: new("token"), Limit: 3, Count: func() (ListCount, error) {
+		t.Error("the COUNT was built for a page read through a cursor")
+		return ListCount{}, nil
+	}}
+	if got, err := page.Total(context.Background(), nil, 4); got != nil || err != nil {
+		t.Errorf("a cursor page's total = %v, %v; want none", got, err)
 	}
 }
 

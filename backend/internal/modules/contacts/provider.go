@@ -134,14 +134,8 @@ func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource
 	}
 }
 
-// SearchEntity lists one of this module's entity types under the shared
-// search contract (text query, structured filters, CAP-PAGE limit, per-entity
-// keyset cursor or offset).
-//
-// A filter this type has no binding for is an ERROR rather than a dropped
-// clause — see listfilters.go. It is unreachable while the composition root
-// publishes only what ListFilters names, which is what makes it a safe
-// assertion instead of a silent widening.
+// SearchEntity lists one of this module's entity types under the shared search
+// contract. A filter the type cannot bind is an error, never a dropped clause.
 func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, text *string, limit int, cursor *string,
 	offset *int, filters map[string]string,
 ) ([]datasource.Record, string, bool, error) {
@@ -193,9 +187,6 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		// which would answer an unfiltered page and read as "no matches".
 		if text != nil && *text != "" {
 			return nil, "", false, errors.New("contacts: partner has no text index; narrow by partner_role or cert_status, or search company instead")
-		}
-		if offset != nil {
-			return nil, "", false, &datasource.OffsetUnsupportedError{Type: t}
 		}
 		in := ListPartnersInput{Limit: &limit}
 		if cursor != nil {

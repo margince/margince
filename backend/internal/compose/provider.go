@@ -182,6 +182,9 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 	if cursor != "" {
 		inner = &cursor
 	}
+	if offset != nil && !offsetListTypes[t] {
+		return nil, "", &datasource.OffsetUnsupportedError{Type: t}
+	}
 	var (
 		records []datasource.Record
 		next    string
@@ -194,31 +197,35 @@ func (p *Provider) searchOneType(ctx context.Context, t datasource.EntityType, t
 	case datasource.EntityDeal, datasource.EntityProduct, datasource.EntityOfferTemplate, datasource.EntityOffer:
 		records, next, _, err = p.deals.SearchEntity(ctx, t, text, limit, inner, offset, filters)
 	case datasource.EntityCommission:
-		records, next, _, err = withoutOffset(offset, p.commissions.SearchEntity)(ctx, t, text, limit, inner, filters)
+		records, next, _, err = p.commissions.SearchEntity(ctx, t, text, limit, inner, filters)
 	case datasource.EntityDealRoom, datasource.EntityDealRoomThread, datasource.EntityDealRoomComment, datasource.EntityDealRoomDocument, datasource.EntityDealRoomParticipant:
-		records, next, _, err = withoutOffset(offset, p.dealRooms.SearchEntity)(ctx, t, text, limit, inner, filters)
+		records, next, _, err = p.dealRooms.SearchEntity(ctx, t, text, limit, inner, filters)
 	case datasource.EntityProject:
 		records, next, _, err = p.projects.SearchEntity(ctx, t, text, limit, inner, offset, filters)
 	case datasource.EntityActivity:
-		records, next, _, err = withoutOffset(offset, p.activities.SearchEntity)(ctx, t, text, limit, inner, filters)
+		records, next, _, err = p.activities.SearchEntity(ctx, t, text, limit, inner, filters)
 	default:
 		return nil, "", &datasource.UnsupportedEntityError{Type: string(t)}
 	}
 	return records, next, err
 }
 
-// cursorSeam is a module's list seam that pages by cursor alone.
-type cursorSeam func(ctx context.Context, t datasource.EntityType, text *string, limit int, cursor *string,
-	filters map[string]string) ([]datasource.Record, string, bool, error)
+// offsetListTypes are the record types whose list pages by offset as well as
+// cursor. Every other type's offset is refused here, before its module is asked.
+var offsetListTypes = map[datasource.EntityType]bool{
+	datasource.EntityContact: true, datasource.EntityCompany: true, datasource.EntityLead: true,
+	datasource.EntityDeal: true, datasource.EntityProject: true,
+}
 
-// withoutOffset is seam, or a refusal of the offset when one was asked for.
-func withoutOffset(offset *int, seam cursorSeam) cursorSeam {
-	if offset == nil {
-		return seam
+// OffsetListTypes are the record types Search pages by offset.
+func OffsetListTypes() []datasource.EntityType {
+	out := make([]datasource.EntityType, 0, len(offsetListTypes))
+	for _, t := range datasource.EntityTypes() {
+		if offsetListTypes[t] {
+			out = append(out, t)
+		}
 	}
-	return func(_ context.Context, t datasource.EntityType, _ *string, _ int, _ *string, _ map[string]string) ([]datasource.Record, string, bool, error) {
-		return nil, "", false, &datasource.OffsetUnsupportedError{Type: t}
-	}
+	return out
 }
 
 func (p *Provider) Create(ctx context.Context, in datasource.CreateInput) (datasource.EntityRef, error) {

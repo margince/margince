@@ -67,14 +67,12 @@ func CountList(ctx context.Context, object, table string, terms func(arg func(an
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
 	where := []string{ListWhereSeed}
-	if object != "" {
-		scope, err := auth.ScopeClauseFor(ctx, object, "", arg)
-		if err != nil {
-			return ListCount{}, err
-		}
-		if scope != "" {
-			where = append(where, scope)
-		}
+	scope, err := auth.ScopeClauseFor(ctx, object, "", arg)
+	if err != nil {
+		return ListCount{}, err
+	}
+	if scope != "" {
+		where = append(where, scope)
 	}
 	own, err := terms(arg)
 	if err != nil {
@@ -84,13 +82,31 @@ func CountList(ctx context.Context, object, table string, terms func(arg func(an
 	return ListCount{sql: "SELECT count(*) FROM " + table + " WHERE " + strings.Join(where, " AND "), args: args}, nil
 }
 
-// PageTotal is how many rows match a page read without a cursor; fetched counts the probe row.
-// A page that ends the list needs no COUNT, unless it is empty past an offset.
-func PageTotal(ctx context.Context, tx pgx.Tx, count ListCount, offset, fetched, limit int) (int, error) {
-	if fetched <= limit && (fetched > 0 || offset == 0) {
-		return offset + fetched, nil
+// PageCount is what one page's total needs: where the page starts, and the
+// COUNT to build when its rows cannot say.
+type PageCount struct {
+	Cursor        *string
+	Offset, Limit int
+	Count         func() (ListCount, error)
+}
+
+// Total is how many rows match, nil on a page read through a cursor; fetched
+// counts the probe row. Only a full page, or an empty one past an offset, runs the COUNT.
+func (c PageCount) Total(ctx context.Context, tx pgx.Tx, fetched int) (*int, error) {
+	if c.Cursor != nil && *c.Cursor != "" {
+		return nil, nil //nolint:nilnil // a nil total is a read that does not count, as Page.Total says
+	}
+	if fetched <= c.Limit && (fetched > 0 || c.Offset == 0) {
+		n := c.Offset + fetched
+		return &n, nil
+	}
+	count, err := c.Count()
+	if err != nil {
+		return nil, err
 	}
 	var matching int
-	err := tx.QueryRow(ctx, count.sql, count.args...).Scan(&matching)
-	return matching, err
+	if err := tx.QueryRow(ctx, count.sql, count.args...).Scan(&matching); err != nil {
+		return nil, err
+	}
+	return &matching, nil
 }
