@@ -50,6 +50,7 @@ type ListCompaniesInput struct {
 	// IncludeAnchor admits the installation's own company (ADR-0082/A127).
 	IncludeAnchor bool
 	Cursor        *string
+	Offset        *int
 	Limit         *int
 	Query         *string
 	OwnerID       *ids.UserID
@@ -192,7 +193,6 @@ func companyCommonFilters(in ListCompaniesInput) listFilters {
 		OwnerTeamID:     in.OwnerTeamID,
 		Unassigned:      in.Unassigned,
 		Query:           in.Query,
-		Cursor:          in.Cursor,
 		CustomFilters:   in.CustomFilters,
 		nameColumn:      companyNameColumn,
 		identifier:      storekit.CompanyDomains,
@@ -231,8 +231,9 @@ func companyListSpec(in ListCompaniesInput, now time.Time) listPageSpec[crmcontr
 	// transaction before the filters render.
 	var ladder dormancy.Ladder
 	return listPageSpec[crmcontracts.Company]{
-		entity:    companyEntity,
-		firstPage: in.Cursor == nil || *in.Cursor == "",
+		entity: companyEntity,
+		cursor: in.Cursor,
+		offset: in.Offset,
 		prepare: func(ctx context.Context, tx pgx.Tx) (context.Context, error) {
 			if in.Dormancy == nil {
 				return ctx, nil
@@ -243,8 +244,8 @@ func companyListSpec(in ListCompaniesInput, now time.Time) listPageSpec[crmcontr
 		},
 		columns: func(context.Context, func(any) int) (string, error) { return companyColumns, nil },
 		fields:  companyListFields,
-		filters: func(ctx context.Context, active []fieldcatalog.Column, sorted *storekit.ListSort, arg func(any) int) ([]string, error) {
-			where, err := shared.clauses(ctx, active, sorted, arg)
+		filters: func(ctx context.Context, active []fieldcatalog.Column, arg func(any) int) ([]string, error) {
+			where, err := shared.clauses(active, arg)
 			if err != nil {
 				return nil, err
 			}

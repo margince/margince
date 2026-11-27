@@ -12,6 +12,7 @@ package storekit
 
 import (
 	"context"
+	"fmt"
 	"strings"
 	"time"
 
@@ -33,12 +34,18 @@ const ListWhereSeed = "1=1"
 // short of placeholders.
 type ListPrelude struct {
 	// scope is the list's cursor scope: the cursors it mints and reads name it.
-	scope  string
-	sorted *ListSort
-	limit  int
-	where  []string
-	args   []any
-	arg    func(any) int
+	scope         string
+	object        string
+	sorted        *ListSort
+	limit         int
+	offset        int
+	cursor        *string
+	active        []fieldcatalog.Column
+	customFilters map[string]string
+	where         []string
+	args          []any
+	arg           func(any) int
+	count         func(arg func(any) int) ([]string, error)
 	// positions, when set, receives each row's resume cursor (CollectPositions).
 	positions *[]string
 }
@@ -51,6 +58,45 @@ func (p *ListPrelude) CollectPositions(into *[]string) { p.positions = into }
 // Where is the scope-bounded, cursor-bounded WHERE the prelude has assembled.
 // A caller appends its own record-specific terms to the returned slice.
 func (p *ListPrelude) Where() []string { return p.where }
+
+// Sorted is the validated sort the page is ordered by.
+func (p *ListPrelude) Sorted() *ListSort { return p.sorted }
+
+// Skip opens the page offset rows into the list, or refuses the offset as
+// ListOffset does.
+func (p *ListPrelude) Skip(offset *int) error {
+	n, err := ListOffset(offset, p.cursor)
+	p.offset = n
+	return err
+}
+
+// Count makes a page read without a cursor answer its total. terms renders the caller's own
+// where terms again on the count's counter; the prelude adds row scope and custom-field filters.
+func (p *ListPrelude) Count(terms func(arg func(any) int) ([]string, error)) { p.count = terms }
+
+// total is the page's total, nil when the read does not count. fetched counts
+// the probe row past the page.
+func (p *ListPrelude) total(ctx context.Context, tx pgx.Tx, table string, fetched int) (*int, error) {
+	if p.count == nil || (p.cursor != nil && *p.cursor != "") {
+		return nil, nil //nolint:nilnil // a nil total is a read that does not count, as Page.Total says
+	}
+	count, err := CountList(ctx, p.object, table, func(arg func(any) int) ([]string, error) {
+		where, err := CustomFilterClauses(p.active, p.customFilters, arg)
+		if err != nil {
+			return nil, err
+		}
+		own, err := p.count(arg)
+		return append(where, own...), err
+	})
+	if err != nil {
+		return nil, err
+	}
+	n, err := PageTotal(ctx, tx, count, p.offset, fetched, p.limit)
+	if err != nil {
+		return nil, fmt.Errorf("count %s: %w", table, err)
+	}
+	return &n, nil
+}
 
 // Arg registers one query argument and answers its placeholder number, so a
 // caller never hand-numbers a $N. The prelude owns the argument slice because
@@ -71,7 +117,10 @@ func BuildListPrelude(
 	cursor *string,
 	customFilters map[string]string,
 ) (*ListPrelude, error) {
-	p := &ListPrelude{scope: scope, limit: ClampLimit(limit), where: []string{ListWhereSeed}}
+	p := &ListPrelude{
+		scope: scope, object: object, limit: ClampLimit(limit), cursor: cursor,
+		active: active, customFilters: customFilters, where: []string{ListWhereSeed},
+	}
 	p.arg = func(v any) int { p.args = append(p.args, v); return len(p.args) }
 
 	// The sort first, because a reference sort binds parameters of its own and
@@ -164,13 +213,17 @@ func RunListPageTx[T any](
 	rows, err := tx.Query(ctx,
 		`SELECT `+columns+SelectSuffix(active)+pre.sorted.CursorKeySuffix()+
 			` FROM `+table+` WHERE `+strings.Join(where, " AND ")+
-			pre.sorted.OrderBy()+SQLf(` LIMIT %d`, pre.limit+1),
+			pre.sorted.OrderBy()+PageWindow(pre.limit, pre.offset),
 		pre.args...)
 	if err != nil {
 		return nil, Page{}, err
 	}
 	defer rows.Close()
 	out, cursorKeys, err := scan(rows, active, pre.sorted)
+	if err != nil {
+		return nil, Page{}, err
+	}
+	total, err := pre.total(ctx, tx, table, len(out))
 	if err != nil {
 		return nil, Page{}, err
 	}
@@ -192,6 +245,7 @@ func RunListPageTx[T any](
 			return nil, Page{}, err
 		}
 	}
+	page.Total = total
 	for _, f := range finish {
 		if err := f(tx, out); err != nil {
 			return nil, Page{}, err
