@@ -5,7 +5,7 @@
     "sites_best_partial": 0,
     "sites_best_stale": 2,
     "sites_absent": 2,
-    "scenarios": 348,
+    "scenarios": 350,
     "records": 463,
     "bindings": 20,
     "self_judged_records": 0
@@ -350,7 +350,7 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "band": "supported_degraded",
+          "band": "not_supported",
           "state": "current",
           "fallback": {
             "tier": "premium",
@@ -365,8 +365,8 @@
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 36,
-          "passed": 35,
+          "runs": 15,
+          "passed": 15,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 2,
           "scope": "full_invocation",
@@ -1132,8 +1132,8 @@
       ],
       "bands": {
         "certified": 27,
-        "supported_degraded": 10,
-        "not_supported": 0,
+        "supported_degraded": 9,
+        "not_supported": 1,
         "too_few_runs": 0
       },
       "untested": 1,
@@ -1581,7 +1581,7 @@
             "model": "gemini-3.1-flash-lite",
             "env": "eu_hosted"
           },
-          "band": "supported_degraded",
+          "band": "not_supported",
           "state": "current",
           "fallback": {
             "tier": "premium",
@@ -1602,8 +1602,8 @@
             }
           },
           "abandoned": 0,
-          "runs": 36,
-          "passed": 35,
+          "runs": 15,
+          "passed": 15,
           "cases_failing_often": 0,
           "cases_below_quality_bar": 2,
           "measured_on": {
@@ -2635,8 +2635,8 @@
       ],
       "bands": {
         "certified": 27,
-        "supported_degraded": 10,
-        "not_supported": 0,
+        "supported_degraded": 9,
+        "not_supported": 1,
         "too_few_runs": 0
       },
       "untested": 1,
@@ -2983,7 +2983,7 @@
               "env": "cloud_frontier"
             },
             "same_model": false,
-            "band": "supported_degraded",
+            "band": "certified",
             "state": "current"
           },
           "abandoned": 0,
@@ -10781,17 +10781,17 @@
           "sites_current": 43,
           "sites_partial": 0,
           "sites_stale": 2,
-          "runs": 897,
-          "passed": 879,
-          "reliability": 0.979933110367893,
+          "runs": 900,
+          "passed": 883,
+          "reliability": 0.9811111111111112,
           "reliability_interval": {
-            "lower": 0.972997,
-            "upper": 0.985115
+            "lower": 0.974359,
+            "upper": 0.986111
           },
           "slowest_p95_ms": 67218,
           "bands": {
-            "certified": 27,
-            "supported_degraded": 3,
+            "certified": 28,
+            "supported_degraded": 2,
             "not_supported": 0,
             "too_few_runs": 15
           }
@@ -11641,18 +11641,18 @@
           "sites_current": 44,
           "sites_partial": 0,
           "sites_stale": 4,
-          "runs": 1392,
-          "passed": 1359,
-          "reliability": 0.9762931034482759,
+          "runs": 1371,
+          "passed": 1339,
+          "reliability": 0.9766593727206418,
           "reliability_interval": {
-            "lower": 0.970479,
-            "upper": 0.980985
+            "lower": 0.970835,
+            "upper": 0.981343
           },
           "slowest_p95_ms": 10760,
           "bands": {
             "certified": 21,
-            "supported_degraded": 17,
-            "not_supported": 3,
+            "supported_degraded": 16,
+            "not_supported": 4,
             "too_few_runs": 7
           }
         },
@@ -11667,12 +11667,12 @@
           "sites_current": 41,
           "sites_partial": 0,
           "sites_stale": 4,
-          "runs": 870,
-          "passed": 866,
-          "reliability": 0.9954022988505747,
+          "runs": 873,
+          "passed": 870,
+          "reliability": 0.9965635738831615,
           "reliability_interval": {
-            "lower": 0.991387,
-            "upper": 0.99755
+            "lower": 0.992929,
+            "upper": 0.998333
           },
           "slowest_p95_ms": 89447,
           "bands": {
@@ -11937,8 +11937,8 @@
           },
           "band": "certified",
           "state": "current",
-          "runs": 15,
-          "passed": 14,
+          "runs": 18,
+          "passed": 18,
           "records": 2,
           "judge": "claude-sonnet-5-5"
         },
@@ -14180,17 +14180,17 @@
       "sites_current": 50,
       "sites_partial": 0,
       "sites_stale": 2,
-      "runs": 990,
-      "passed": 971,
-      "reliability": 0.9808080808080808,
+      "runs": 993,
+      "passed": 975,
+      "reliability": 0.9818731117824774,
       "reliability_interval": {
-        "lower": 0.974371,
-        "upper": 0.985652
+        "lower": 0.975598,
+        "upper": 0.986557
       },
       "slowest_p95_ms": 67218,
       "bands": {
-        "certified": 30,
-        "supported_degraded": 4,
+        "certified": 31,
+        "supported_degraded": 3,
         "not_supported": 0,
         "too_few_runs": 18
       }
@@ -14205,18 +14205,18 @@
       "sites_current": 51,
       "sites_partial": 0,
       "sites_stale": 7,
-      "runs": 1674,
-      "passed": 1624,
-      "reliability": 0.970131421744325,
+      "runs": 1653,
+      "passed": 1604,
+      "reliability": 0.970356926799758,
       "reliability_interval": {
-        "lower": 0.964321,
-        "upper": 0.97502
+        "lower": 0.964526,
+        "upper": 0.975254
       },
       "slowest_p95_ms": 10760,
       "bands": {
         "certified": 24,
-        "supported_degraded": 20,
-        "not_supported": 5,
+        "supported_degraded": 19,
+        "not_supported": 6,
         "too_few_runs": 9
       }
     },
@@ -14358,12 +14358,12 @@
       "sites_current": 48,
       "sites_partial": 0,
       "sites_stale": 4,
-      "runs": 963,
-      "passed": 959,
-      "reliability": 0.995846313603323,
+      "runs": 966,
+      "passed": 963,
+      "reliability": 0.9968944099378882,
       "reliability_interval": {
-        "lower": 0.992217,
-        "upper": 0.997787
+        "lower": 0.993608,
+        "upper": 0.998494
       },
       "slowest_p95_ms": 89447,
       "bands": {
@@ -23168,21 +23168,34 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "anthropic",
-          "model": "claude-haiku-5-5",
-          "env": "cloud_frontier"
+          "provider": "gemini",
+          "model": "gemini-3.8-flash",
+          "env": "cloud_frontier",
+          "thinking_level": "low"
         },
         "band": "certified",
         "runs": 18,
-        "passed": 17,
-        "reliability": 0.9444444444444444,
+        "passed": 18,
+        "reliability": 1,
         "reliability_interval": {
-          "lower": 0.831329,
-          "upper": 0.983232
+          "lower": 0.91638,
+          "upper": 1
         },
         "state": "current"
       },
       "scenarios": [
+        {
+          "name": "deal_status_a_current_request_is_the_blocker",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/deal_health/deal_status_current_request_is_the_blocker_01.yaml"
+        },
+        {
+          "name": "deal_status_an_old_request_under_review_is_no_blocker",
+          "expects": "accepted",
+          "graded_by": "judge",
+          "file": "backend/internal/compose/aicert/corpus/deal_health/deal_status_old_request_under_review_is_no_blocker_01.yaml"
+        },
         {
           "name": "deal_status_an_overdue_task_is_not_done_work",
           "expects": "accepted",
@@ -23212,8 +23225,8 @@
           "state": "current",
           "band": "certified",
           "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 3,
-          "scenarios_total": 3,
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
           "runs": 18,
           "passed": 17,
           "reliability": 0.9444444444444444,
@@ -23221,8 +23234,8 @@
             "lower": 0.831329,
             "upper": 0.983232
           },
-          "latency_p50_ms": 9758,
-          "latency_p95_ms": 14286,
+          "latency_p50_ms": 9255,
+          "latency_p95_ms": 12070,
           "reported": {
             "accepted": 17,
             "wrong_answer": 0,
@@ -23238,23 +23251,23 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "certified",
           "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 3,
-          "scenarios_total": 3,
-          "runs": 15,
-          "passed": 13,
-          "reliability": 0.8666666666666667,
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 18,
+          "passed": 17,
+          "reliability": 0.9444444444444444,
           "reliability_interval": {
-            "lower": 0.717723,
-            "upper": 0.943236
+            "lower": 0.831329,
+            "upper": 0.983232
           },
-          "latency_p50_ms": 3967,
-          "latency_p95_ms": 11345,
+          "latency_p50_ms": 4210,
+          "latency_p95_ms": 12545,
           "reported": {
-            "accepted": 13,
+            "accepted": 17,
             "wrong_answer": 0,
-            "invalid": 2,
+            "invalid": 1,
             "abstained": 0
           },
           "stale_reason": ""
@@ -23266,23 +23279,23 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "supported_degraded",
+          "band": "not_supported",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 3,
-          "scenarios_total": 3,
-          "runs": 36,
-          "passed": 35,
-          "reliability": 0.9722222222222222,
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 15,
+          "passed": 15,
+          "reliability": 1,
           "reliability_interval": {
-            "lower": 0.91158,
-            "upper": 0.991654
+            "lower": 0.901307,
+            "upper": 1
           },
-          "latency_p50_ms": 1867,
-          "latency_p95_ms": 8824,
+          "latency_p50_ms": 1788,
+          "latency_p95_ms": 2169,
           "reported": {
-            "accepted": 35,
+            "accepted": 15,
             "wrong_answer": 0,
-            "invalid": 1,
+            "invalid": 0,
             "abstained": 0
           },
           "stale_reason": ""
@@ -23298,7 +23311,7 @@
           "band": "too_few_runs",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 5,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -23342,7 +23355,7 @@
           "band": "not_supported",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 5,
           "runs": 9,
           "passed": 9,
           "reliability": 1,
@@ -23383,7 +23396,7 @@
           "band": "supported_degraded",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 5,
           "runs": 27,
           "passed": 27,
           "reliability": 1,
@@ -23423,21 +23436,21 @@
           "state": "current",
           "band": "certified",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 3,
-          "scenarios_total": 3,
-          "runs": 15,
-          "passed": 14,
-          "reliability": 0.9333333333333333,
+          "scenarios_measured": 5,
+          "scenarios_total": 5,
+          "runs": 18,
+          "passed": 18,
+          "reliability": 1,
           "reliability_interval": {
-            "lower": 0.801292,
-            "upper": 0.979841
+            "lower": 0.91638,
+            "upper": 1
           },
-          "latency_p50_ms": 4142,
-          "latency_p95_ms": 7752,
+          "latency_p50_ms": 3846,
+          "latency_p95_ms": 6238,
           "reported": {
-            "accepted": 14,
+            "accepted": 18,
             "wrong_answer": 0,
-            "invalid": 1,
+            "invalid": 0,
             "abstained": 0
           },
           "stale_reason": ""
@@ -23452,7 +23465,7 @@
           "band": "certified",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
           "reliability": 1,
@@ -23492,7 +23505,7 @@
           "band": "supported_degraded",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 5,
           "runs": 24,
           "passed": 24,
           "reliability": 1,
@@ -23536,7 +23549,7 @@
           "band": "supported_degraded",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
           "reliability": 1,
@@ -23580,7 +23593,7 @@
           "band": "supported_degraded",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 5,
           "runs": 21,
           "passed": 21,
           "reliability": 1,
@@ -23624,7 +23637,7 @@
           "band": "certified",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 5,
           "runs": 15,
           "passed": 15,
           "reliability": 1,
@@ -23668,7 +23681,7 @@
           "band": "certified",
           "judge": "claude-sonnet-4-6",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 5,
           "runs": 12,
           "passed": 12,
           "reliability": 1,
@@ -23712,7 +23725,7 @@
           "band": "supported_degraded",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 5,
           "runs": 27,
           "passed": 25,
           "reliability": 0.9259259259259259,
@@ -23752,7 +23765,7 @@
           "band": "too_few_runs",
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 0,
-          "scenarios_total": 3,
+          "scenarios_total": 5,
           "runs": 9,
           "passed": 9,
           "reliability": 1,

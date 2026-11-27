@@ -33,7 +33,6 @@ var certifiedAttemptTimeouts = map[Task]certifiedLimit{
 	"deal_health": {limit: 108 * time.Second, measured: []boundModel{
 		{provider: "anthropic", model: "claude-haiku-5-5"},
 		{provider: "anthropic", model: "claude-sonnet-5-5"},
-		{provider: "gemini", model: "gemini-3.1-flash-lite"},
 		{provider: "gemini", model: "gemini-3.5-flash"},
 		{provider: "gemini", model: "gemini-3.6-flash"},
 		{provider: "gemini", model: "gemini-3.8-flash"},
