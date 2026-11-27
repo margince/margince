@@ -937,3 +937,7 @@
   min-block-size: var(--space-8);
   align-items: center;
 }
+/* After the day's cards, the decisions keep the cards' own interval. */
+.brief-first > .brief-triage {
+  margin-block-start: calc(var(--space-3) - var(--space-4));
+}
