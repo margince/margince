@@ -3619,7 +3619,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scrollSentinel.more": "Còn thêm mục.",
   "list.viewAll": "Tất cả",
   "list.viewHot": "Lead nóng",
-  "table.range": "{first}–{last} trong số {count} {unit}",
+  "table.range": "{first} đến {last} trong số {count} {unit}",
   "table.pagination": "Phân trang",
   "table.rowActions": "Thao tác cho {name}",
   "table.page": "Trang {number}",
@@ -3976,7 +3976,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "section.help": "Về mục này",
   "record.details.ownership": "Phụ trách",
   "co.aside.size": "Quy mô công ty",
-  "co.aside.wayIn": "Đầu mối",
+  "co.aside.wayIn": "Người liên hệ",
   "record.details.visibleTo": "Quyền xem",
   "co.aside.visibleEveryone": "Mọi thành viên",
   "co.aside.visibleOnlyYou": "Chỉ bạn",
@@ -6025,7 +6025,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lead.rail.project.change": "Đổi dự án",
   "lead.terminalReadOnly": "Lead này đã đóng và không thể thay đổi.",
   "lead.notYoursToChange":
-    "Bạn không có quyền sửa lead này. Hãy nhờ người phụ trách chia sẻ, hoặc nhờ quản trị viên cấp quyền sửa.",
+    "Bạn không có quyền sửa lead này. Hãy đề nghị người phụ trách chia sẻ, hoặc liên hệ quản trị viên để được cấp quyền sửa.",
   "lead.boardCountsUnavailable":
     "Không thể tải số lượng Đủ điều kiện và Đã loại.",
   "lead.boardCountsNoSearch":
@@ -10959,6 +10959,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "“{value}” không phải mã bản ghi. Hãy xuất danh sách để lấy mã, hoặc để trống cột để nhập hàng này làm bản ghi mới.",
   "import.reason.id_record_not_visible":
     "Không có bản ghi nào bạn nhìn thấy có mã “{value}”. Có thể nó đã được lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
+  "import.reason.not_your_record":
+    "Hàng này khớp với một bản ghi do thành viên khác phụ trách. Lần nhập của bạn chỉ thay đổi bản ghi bạn phụ trách nên hàng này không được áp dụng.",
   "import.reason.ref_taken_by_another_record":
     "Tham chiếu “{ref}” đã đại diện cho một bản ghi khác từ lần nhập trước nên hàng này không được áp dụng. Hãy dùng tham chiếu mới cho hàng này hoặc sửa cột mã.",
   "import.reason.id_not_visible":
@@ -15913,7 +15915,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.voice.readOnly":
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi Voice DNA.",
   "settings.voice.emptyBody":
-    "Thêm văn mẫu để tạo Voice DNA. Chỉ mình bạn có thể xem Voice DNA và hệ thống chỉ học từ các mẫu bạn cung cấp. Lần tạo đầu tiên mất khoảng 1 phút.",
+    "Thêm văn mẫu để tạo Voice DNA. Chỉ bạn có thể xem Voice DNA và hệ thống chỉ học từ các mẫu bạn cung cấp. Lần tạo đầu tiên mất khoảng 1 phút.",
   "settings.voice.privacy": "Chỉ bạn xem được Voice DNA này.",
   "settings.voice.status.collecting": "Đang thu thập",
   "settings.voice.status.stale": "Cần dựng lại",
@@ -16783,7 +16785,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "template.readOnly":
     "Chỉ đọc. Vai trò hiện tại không có quyền thay đổi mẫu báo giá.",
   "template.settingsSub":
-    "Mẫu xuất file PDF chuẩn nhận diện thương hiệu cho báo giá tiếng Đức và tiếng Anh.",
+    "Mẫu xuất tệp PDF chuẩn nhận diện thương hiệu cho báo giá tiếng Đức và tiếng Anh.",
   "template.new": "Mẫu mới",
   "template.edit": "Sửa mẫu",
   "template.archive": "Chuyển mẫu vào kho lưu trữ",
@@ -18282,7 +18284,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "captureReading.wall.refusal": "Nhập số giây là số nguyên từ 30 đến 600.",
   "captureReview.passCap.label": "Số chuỗi email tạm giữ được rà soát mỗi lượt",
   "captureReview.passCap.help":
-    "Số chuỗi email tạm giữ được rà soát bảo mật mỗi lượt (1–200), phần còn lại chờ lượt sau. Tăng mức này khi email mới bị ẩn với đồng nghiệp lâu hơn lịch chạy (do Tình trạng hệ thống thiết lập). Mặc định: 40.",
+    "Số chuỗi email tạm giữ được rà soát bảo mật mỗi lượt (từ 1 đến 200), phần còn lại chờ lượt sau. Tăng mức này khi email mới bị ẩn với đồng nghiệp lâu hơn lịch chạy (do Tình trạng hệ thống thiết lập). Mặc định: 40.",
   "captureReview.passCap.refusal":
     "Nhập số chuỗi thư là số nguyên từ 1 đến 200.",
   "captureReview.verdictCap.label": "Số bên gửi được xét mỗi lượt",
@@ -18297,7 +18299,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Nhập số thư là số nguyên từ 1 đến 2500.",
   "captureReview.owedCap.label": "Số email kiểm tra phản hồi mỗi lượt",
   "captureReview.owedCap.help":
-    "Số email mới được rà soát phản hồi mỗi lượt (1–2.500), phần còn lại chờ lượt sau. Tăng mức này khi email chờ bạn trả lời hiển thị muộn. Mặc định: 500.",
+    "Số email mới được rà soát phản hồi mỗi lượt (từ 1 đến 2.500), phần còn lại chờ lượt sau. Tăng mức này khi email chờ bạn trả lời hiển thị muộn. Mặc định: 500.",
   "captureReview.owedCap.refusal": "Nhập số thư là số nguyên từ 1 đến 2500.",
   "agentConnections.title": "Kết nối agent",
   "agentConnections.sub":
@@ -21215,7 +21217,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Dự án này không tồn tại, hoặc bạn không có quyền xem.",
   "project.page.backToProjects": "Quay lại danh sách dự án",
   "project.notYoursToChange":
-    "Bạn không có quyền sửa dự án này. Hãy nhờ người phụ trách chia sẻ, hoặc nhờ quản trị viên cấp quyền sửa.",
+    "Bạn không có quyền sửa dự án này. Hãy đề nghị người phụ trách chia sẻ, hoặc liên hệ quản trị viên để được cấp quyền sửa.",
   "project.phaseLabel": "Giai đoạn dự án",
   "project.filterPhaseAll": "Mọi giai đoạn",
   "project.viewDelivering": "Đang triển khai",
@@ -23317,7 +23319,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "scheduling.connectCalendar": "Kết nối lịch",
   "scheduling.setup.step2": "Kiểm tra khung giờ tại mục Thời gian rảnh",
   "scheduling.setup.step2Help":
-    "Khách mặc định được chọn khung 09:00–17:00 từ thứ Hai đến thứ Sáu cho đến khi bạn thiết lập giờ riêng.",
+    "Khách mặc định được chọn khung 09:00 đến 17:00 từ thứ Hai đến thứ Sáu cho đến khi bạn thiết lập giờ riêng.",
   "scheduling.setup.step2Done": "Giờ của bạn đã được lưu.",
   "scheduling.setup.step3": "Bật đặt lịch và chia sẻ liên kết",
   "scheduling.setup.step3Help":

@@ -18,6 +18,7 @@ const (
 	ReasonIDNotARecordID          ReasonCode = "id_not_a_record_id"
 	ReasonIDRecordNotVisible      ReasonCode = "id_record_not_visible"
 	ReasonRefTakenByAnotherRecord ReasonCode = "ref_taken_by_another_record"
+	ReasonNotYourRecord           ReasonCode = "not_your_record"
 )
 
 // withRecordIDReasons adds the record id reasons to the catalog and answers it.
@@ -27,6 +28,11 @@ func withRecordIDReasons(catalog map[ReasonCode]reasonEntry) map[ReasonCode]reas
 }
 
 var recordIDReasons = map[ReasonCode]reasonEntry{
+	ReasonNotYourRecord: {text: map[textlang.Lang]string{
+		textlang.English:    "This row matches a record another member owns. Your import changes only records you own, so the row is not applied.",
+		textlang.German:     "Diese Zeile passt zu einem Datensatz, der einem anderen Mitglied gehört. Ihr Import ändert nur Ihre eigenen Datensätze, daher wird die Zeile nicht übernommen.",
+		textlang.Vietnamese: "Hàng này khớp với một bản ghi do thành viên khác phụ trách. Lần nhập của bạn chỉ thay đổi bản ghi bạn phụ trách nên hàng này không được áp dụng.",
+	}},
 	ReasonIDNotARecordID: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is not a record id. Export the list to get the ids, or leave the column empty to import this row as a new record.",
 		textlang.German:     "{value:q} ist keine Datensatz-ID. Exportieren Sie die Liste, um die IDs zu erhalten, oder lassen Sie die Spalte leer, um die Zeile als neuen Datensatz zu importieren.",

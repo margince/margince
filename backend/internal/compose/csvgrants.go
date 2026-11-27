@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -143,10 +144,12 @@ func checkGrants(
 // as a new record's owner, asked in one read transaction.
 func refusedOwners(ctx context.Context, pool *pgxpool.Pool, owners *ownerResolver) ([]string, error) {
 	var refused []string
+	self := migration.OwnSeat(ctx)
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		for _, email := range slices.Sorted(maps.Keys(owners.seats)) {
 			err := auth.EnsureNewRecordOwner(ctx, tx, owners.seats[email])
-			if _, notAllowed := errors.AsType[*auth.AssigneeNotAllowedError](err); notAllowed || errors.Is(err, apperrors.ErrPermissionDenied) {
+			notSelf := self != nil && self.UUID != owners.seats[email]
+			if _, notAllowed := errors.AsType[*auth.AssigneeNotAllowedError](err); notAllowed || notSelf || errors.Is(err, apperrors.ErrPermissionDenied) {
 				refused = append(refused, email)
 				continue
 			}
@@ -182,13 +185,13 @@ func withGrantProblems(
 ) migration.Report {
 	first := ""
 	for _, part := range parts {
-		report = withWarnings(report, part.Object, missingGrants(ctx, grantsFor([]migration.PartMapping{part}, tagGrants{})))
+		report = importwire.WithWarnings(report, part.Object, missingGrants(ctx, grantsFor([]migration.PartMapping{part}, tagGrants{})))
 		if first == "" || slices.Index(migration.ImportOrder, part.Object) < slices.Index(migration.ImportOrder, first) {
 			first = part.Object
 		}
 	}
 	tags := slices.ContainsFunc(parts, func(p migration.PartMapping) bool { return columnFor(p.Fields, csvTargetTags) != "" })
-	return withWarnings(report, first, append(missingGrants(ctx, grantsFor(nil, tagGrants{applies: tags})), late...))
+	return importwire.WithWarnings(report, first, append(missingGrants(ctx, grantsFor(nil, tagGrants{applies: tags})), late...))
 }
 
 // createRefusal is the skip of a row whose type the importer may not create.

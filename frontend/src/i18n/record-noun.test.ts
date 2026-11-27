@@ -869,6 +869,7 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     // A human being on the committee, or who owns or sets something, not the record type.
     "co.overview.noEconomicBuyer",
     "co.aside.visibleOnlyOwner",
+    "co.aside.wayIn",
     "co.aside.visibleTheOwnerAndShared_one",
     "co.aside.visibleTheOwnerAndShared_other",
     "deal.committee.missing.champion",

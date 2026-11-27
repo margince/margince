@@ -11234,6 +11234,8 @@ export const en = {
     "“{value}” is not a record id. Export the list to get the ids, or leave the column empty to import this row as a new record.",
   "import.reason.id_record_not_visible":
     "No record you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
+  "import.reason.not_your_record":
+    "This row matches a record another member owns. Your import changes only records you own, so the row is not applied.",
   "import.reason.ref_taken_by_another_record":
     "The reference “{ref}” already stands for another record from an earlier import, so this row is not applied. Use a new reference for this row or fix the id column.",
   "import.reason.id_not_visible":

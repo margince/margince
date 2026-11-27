@@ -69,6 +69,11 @@ describe("the vi copy checks, over planted catalogs", () => {
     expect(check(findings({ "a.b": value }), name)).toHaveLength(1);
   });
 
+  it("keeps Thất bại as a lost deal's outcome", () => {
+    expect(findings({ "deals.statusLost": "Thất bại" })).toEqual([]);
+    expect(findings({ "a.b": "{lost} thất bại" })).toEqual([]);
+  });
+
   it("keeps the ordinary compound of a retired word", () => {
     expect(findings({ "a.b": "Sửa bản ghi DNS" })).toEqual([]);
   });

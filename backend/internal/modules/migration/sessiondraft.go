@@ -51,10 +51,10 @@ func (s *RunStore) CreateDraftRun(ctx context.Context, in CreateDraftRunInput) (
 	err = s.tx(ctx, func(tx pgx.Tx) error {
 		var id RunID
 		err := tx.QueryRow(ctx, `
-			INSERT INTO import_run (connector, status, mapping, source_ref, source, captured_by, profile)
-			VALUES ($1, $2, $3, $4, $5, $6, $7)
+			INSERT INTO import_run (connector, status, mapping, source_ref, source, captured_by, profile, own_seat)
+			VALUES ($1, $2, $3, $4, $5, $6, $7, $8)
 			RETURNING id`,
-			ConnectorCSV, StatusPending, encoded, in.SourceRef, in.Source, capturedBy, in.Profile).Scan(&id)
+			ConnectorCSV, StatusPending, encoded, in.SourceRef, in.Source, capturedBy, in.Profile, ownSeatArg(ctx)).Scan(&id)
 		if storekit.IsUniqueViolation(err) {
 			return fmt.Errorf("the upload already has an import run: %w", apperrors.ErrConflict)
 		}

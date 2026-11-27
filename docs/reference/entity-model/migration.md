@@ -40,7 +40,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 
 ## import_run
 
-35 columns · primary key `(id)` · referenced by 1 foreign key
+36 columns · primary key `(id)` · referenced by 1 foreign key
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -60,6 +60,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 | `job_attempt` | `integer`, default `0` | yes |  |
 | `job_status` | `text` |  |  |
 | `mapping` | `jsonb`, default `'{}'::jsonb` | yes |  |
+| `own_seat` | `uuid` |  |  |
 | `phase` | `text` |  | One of `reading`, `checking`, `creating_tags`, `importing`, `linking`, `undoing` and 1 more. |
 | `phase_object` | `text` |  | The object the run is working on in `phase`, when it is working on one. |
 | `profile` | `jsonb` |  | What the upload read of the file. |
@@ -90,7 +91,7 @@ The 2 tables owned by `migration`, as the migrations build them. [Back to the en
 **Indexes**
 
 - `idx_import_run_status`: `btree (status)`
-- `import_run_one_active_per_source_name`: `unique, btree (source_name) WHERE ((connector = 'csv') AND (source_name <> '') AND (status = ANY (ARRAY['validating', 'awaiting_approval', 'running', 'undoing'])))`
+- `import_run_one_active_per_source_name`: `unique, btree (source_name, own_seat) NULLS NOT DISTINCT WHERE ((connector = 'csv') AND (source_name <> '') AND (status = ANY (ARRAY['validating', 'awaiting_approval', 'running', 'undoing'])))`
 - `import_run_one_live_per_source_ref`: `unique, btree (source_ref) WHERE ((connector = 'csv') AND (source_released_at IS NULL))`
 - `import_run_one_test_per_agent`: `unique, btree (((actor ->> 'id'))) WHERE ((status = 'validating') AND ((actor ->> 'type') = 'agent'))`
 - `import_run_pkey`: `unique, btree (id)`

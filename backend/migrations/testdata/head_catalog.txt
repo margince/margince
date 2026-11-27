@@ -7278,6 +7278,7 @@ public.import_run.import_run_status_check CHECK ((status = ANY (ARRAY['pending':
 public.import_run.job_attempt integer NOT NULL gen=- def=0
 public.import_run.job_status text gen=- def=-
 public.import_run.mapping jsonb NOT NULL gen=- def='{}'::jsonb
+public.import_run.own_seat uuid gen=- def=-
 public.import_run.phase text gen=- def=-
 public.import_run.phase_object text gen=- def=-
 public.import_run.profile jsonb gen=- def=-
@@ -7297,7 +7298,7 @@ public.import_run.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDAT
 public.import_run.undo_report jsonb gen=- def=-
 public.import_run.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.import_run.version integer NOT NULL gen=- def=1
-public.import_run_one_active_per_source_name CREATE UNIQUE INDEX import_run_one_active_per_source_name ON public.import_run USING btree (source_name) WHERE ((connector = 'csv'::text) AND (source_name <> ''::text) AND (status = ANY (ARRAY['validating'::text, 'awaiting_approval'::text, 'running'::text, 'undoing'::text])))
+public.import_run_one_active_per_source_name CREATE UNIQUE INDEX import_run_one_active_per_source_name ON public.import_run USING btree (source_name, own_seat) NULLS NOT DISTINCT WHERE ((connector = 'csv'::text) AND (source_name <> ''::text) AND (status = ANY (ARRAY['validating'::text, 'awaiting_approval'::text, 'running'::text, 'undoing'::text])))
 public.import_run_one_live_per_source_ref CREATE UNIQUE INDEX import_run_one_live_per_source_ref ON public.import_run USING btree (source_ref) WHERE ((connector = 'csv'::text) AND (source_released_at IS NULL))
 public.import_run_one_test_per_agent CREATE UNIQUE INDEX import_run_one_test_per_agent ON public.import_run USING btree (((actor ->> 'id'::text))) WHERE ((status = 'validating'::text) AND ((actor ->> 'type'::text) = 'agent'::text))
 public.import_run_pkey CREATE UNIQUE INDEX import_run_pkey ON public.import_run USING btree (id)
