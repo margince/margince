@@ -9216,7 +9216,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.close_month": "Tháng chốt",
   "analytics.field.days_since_activity": "Số ngày kể từ hoạt động gần nhất",
   "analytics.field.meeting_ahead": "Có cuộc họp sắp tới",
-  "analytics.field.company_days_since_activity": "Số ngày kể từ hoạt động gần nhất của công ty",
+  "analytics.field.company_days_since_activity":
+    "Số ngày kể từ hoạt động gần nhất của công ty",
   "analytics.field.owner_id": "Người chịu trách nhiệm",
   "analytics.field.partner_company_id": "Công ty đối tác",
   "analytics.field.partner_sourced": "Do đối tác mang về",

@@ -9427,7 +9427,8 @@ export const en = {
   "analytics.field.close_month": "Close month",
   "analytics.field.days_since_activity": "Days since last activity",
   "analytics.field.meeting_ahead": "Meeting ahead",
-  "analytics.field.company_days_since_activity": "Days since the company’s last activity",
+  "analytics.field.company_days_since_activity":
+    "Days since the company’s last activity",
   "analytics.field.owner_id": "Owner",
   "analytics.field.partner_company_id": "Partner company",
   "analytics.field.partner_sourced": "Partner-sourced",

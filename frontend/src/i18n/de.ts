@@ -9479,7 +9479,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "analytics.field.close_month": "Abschlussmonat",
   "analytics.field.days_since_activity": "Tage seit der letzten Aktivität",
   "analytics.field.meeting_ahead": "Termin geplant",
-  "analytics.field.company_days_since_activity": "Tage seit der letzten Aktivität des Unternehmens",
+  "analytics.field.company_days_since_activity":
+    "Tage seit der letzten Aktivität des Unternehmens",
   "analytics.field.owner_id": "Verantwortlich",
   "analytics.field.partner_company_id": "Partnerunternehmen",
   "analytics.field.partner_sourced": "Von Partnern vermittelt",

@@ -22,8 +22,8 @@ import {
   useListRefusal,
 } from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
-import { CONTACTS_INITIAL_SORT } from "../../lib/listopenings";
 import { salutationFilter } from "../../lib/contactsalutation";
+import { CONTACTS_INITIAL_SORT } from "../../lib/listopenings";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useActionRefusal } from "../../lib/writerefusal";
