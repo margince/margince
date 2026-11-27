@@ -56,8 +56,8 @@ const linkPhaseHistorySQL = `
 	  FROM page ORDER BY page.id`
 
 // LinkPhaseHistoryTx links one page of unlinked history rows, after the given
-// id. It writes only audit_log_id; changed_by, reason and occurred_at stay as
-// the writer left them.
+// id. It writes only audit_log_id; reason and occurred_at stay as the writer
+// left them.
 func LinkPhaseHistoryTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int) (PhaseHistoryLinkPage, error) {
 	if err := auth.RequireSystem(ctx); err != nil {
 		return PhaseHistoryLinkPage{}, err

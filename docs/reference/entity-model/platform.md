@@ -446,12 +446,11 @@ The 15 tables owned by `platform`, as the migrations build them. [Back to the en
 
 ## vault_secret
 
-4 columns · primary key `(ref)` · referenced by 0 foreign keys
+3 columns · primary key `(ref)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `ciphertext` | `bytea` | yes |  |
-| `key_version` | `integer` | yes |  |
 | `ref` | `text` | yes |  |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 

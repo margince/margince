@@ -425,16 +425,14 @@ jobs:
         uses: ./.github/actions/go-build-cache
         with:
           flavor: plain
-      # Only packages with code of their own. A test-only package (backend/gates
-      # today) covers code whose own tests already cover it: 307 of 254k
-      # statements, for the longest package run of the lane. It still runs,
-      # uncovered, in deterministic-gates.
+      # Test-only packages exercise production code and belong in this pass.
+      # The expensive gates package runs in deterministic-gates, with the full history its tests read.
       - name: Unit tests with binary coverage
         run: |
           mkdir -p "$RUNNER_TEMP/covdata-unit"
-          pkgs=$(go list -f '{{if .GoFiles}}{{.ImportPath}}{{end}}' ./...)
-          [ -n "$pkgs" ] || { echo "go list found no package with code; refusing an empty coverage pass" >&2; exit 1; }
-          echo "skipped as test-only: $(go list -f '{{if not .GoFiles}}{{.ImportPath}}{{end}}' ./... | xargs)"
+          gates=$(go list ./gates)
+          pkgs=$(go list ./... | grep -Fxv "$gates")
+          [ -n "$pkgs" ] || { echo "go list found no coverage package; refusing an empty coverage pass" >&2; exit 1; }
           # shellcheck disable=SC2086 # one argument per package
           echo "test order: -shuffle=$TEST_SHUFFLE_SEED; replay one package with: go test -shuffle=$TEST_SHUFFLE_SEED <package>"
           go test $pkgs -shuffle="$TEST_SHUFFLE_SEED" -cover -coverpkg=./... -covermode=atomic -args -test.gocoverdir="$RUNNER_TEMP/covdata-unit"

@@ -309,7 +309,7 @@ func TestEveryInvitedMemberCanBeSentANewInvitation(t *testing.T) {
 			var newest bool
 			if err := e.owner.QueryRow(context.Background(),
 				`SELECT count(*), bool_and(token_hash = $2) FROM auth_token
-				  WHERE user_id = $1 AND purpose = 'password_reset' AND used_at IS NULL AND expires_at > now()`,
+				  WHERE user_id = $1 AND used_at IS NULL AND expires_at > now()`,
 				member.id, hashToken(link[1])).Scan(&live, &newest); err != nil {
 				t.Fatal(err)
 			}

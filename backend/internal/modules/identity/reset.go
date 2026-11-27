@@ -218,12 +218,12 @@ func (s *Service) CreatePasswordReset(ctx context.Context, email string) (string
 		// earlier unredeemed token.
 		if _, err := tx.Exec(ctx,
 			`UPDATE auth_token SET used_at = now()
-			 WHERE user_id = $1 AND purpose = 'password_reset' AND used_at IS NULL`, userID); err != nil {
+			 WHERE user_id = $1 AND used_at IS NULL`, userID); err != nil {
 			return err
 		}
 		if _, err := tx.Exec(ctx,
-			`INSERT INTO auth_token (user_id, purpose, token_hash, expires_at)
-			 VALUES ($1, 'password_reset', $2, now() + $3::interval)`,
+			`INSERT INTO auth_token (user_id, token_hash, expires_at)
+			 VALUES ($1, $2, now() + $3::interval)`,
 			userID, tokenHash, resetTokenTTL.String()); err != nil {
 			return err
 		}
@@ -254,7 +254,7 @@ func (s *Service) RedeemPasswordReset(ctx context.Context, rawToken, newPassword
 		var userID ids.UserID
 		lookupErr := tx.QueryRow(ctx,
 			`SELECT id, user_id FROM auth_token
-			 WHERE token_hash = $1 AND purpose = 'password_reset'
+			 WHERE token_hash = $1
 			   AND used_at IS NULL AND now() < expires_at
 			 FOR UPDATE`,
 			hashToken(rawToken)).Scan(&tokenID, &userID)

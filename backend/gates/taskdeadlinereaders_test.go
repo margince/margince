@@ -23,8 +23,10 @@ var rawTaskDateReads = gatekit.Waive(map[string]string{
 })
 
 var (
-	activityDeadlineAlias = regexp.MustCompile(`(?i)\b(?:FROM|JOIN)\s+activity\s+(?:AS\s+)?("?[a-z_][a-z0-9_]*"?)`)
-	unqualifiedDeadline   = regexp.MustCompile(`(?i)(?:\bSELECT\s+|\bWHERE\s+|\bAND\s+|\bOR\s+|\bORDER\s+BY\s+)due_at\b`)
+	activityDeadlineAlias  = regexp.MustCompile(`(?i)\b(?:FROM|JOIN)\s+activity\s+(?:AS\s+)?("?[a-z_][a-z0-9_]*"?)`)
+	unqualifiedDeadline    = regexp.MustCompile(`(?i)(?:\bSELECT\s+|\bWHERE\s+|\bAND\s+|\bOR\s+|\bORDER\s+BY\s+)due_at\b`)
+	activityTableNamed     = gatekit.TableReadPattern("activity")
+	tableQualifiedDeadline = regexp.MustCompile(`(?i)\bactivity\s*\.\s*due_at\b`)
 )
 
 func rawActivityDeadlines(sql string) bool {
@@ -42,21 +44,30 @@ func rawActivityDeadlines(sql string) bool {
 			}
 		}
 	}
-	if len(aliases) == 0 && gatekit.TableReadPattern("activity").MatchString(sql) && unqualifiedDeadline.MatchString(sql) {
+	if len(aliases) == 0 && activityTableNamed.MatchString(sql) && unqualifiedDeadline.MatchString(sql) {
 		return true
 	}
-	return regexp.MustCompile(`(?i)\bactivity\s*\.\s*due_at\b`).MatchString(sql)
+	return tableQualifiedDeadline.MatchString(sql)
 }
 
+// A reader of an activity's deadline asks storekit.TaskDueSQL, never the stored
+// due_at, so every screen and job agrees on when a task is due.
 func TestActivityDeadlineReadersUseTheTaskPolicy(t *testing.T) {
 	t.Parallel()
 	defer rawTaskDateReads.AssertAllMatched(t)
+	// Many subjects share a package, so each package's helpers are gathered once.
+	fragmentsByDir := map[string]map[string]fragment{}
 	for _, source := range activityReaderScope.Files(t) {
-		files := map[string]*ast.File{}
-		for _, file := range parsePackageFiles(t, path.Dir(source.Path)) {
-			files[gatekit.SourceFileSet().Position(file.Pos()).Filename] = file
+		dir := path.Dir(source.Path)
+		fragments, gathered := fragmentsByDir[dir]
+		if !gathered {
+			files := map[string]*ast.File{}
+			for _, file := range parsePackageFiles(t, dir) {
+				files[gatekit.SourceFileSet().Position(file.Pos()).Filename] = file
+			}
+			fragments = packageFragments(files)
+			fragmentsByDir[dir] = fragments
 		}
-		fragments := packageFragments(files)
 		for _, decl := range source.File.Decls {
 			for _, sql := range answerWalkStatements(decl, fragments) {
 				if !rawActivityDeadlines(sql) {

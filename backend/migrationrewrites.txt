@@ -305,8 +305,10 @@
 1795657801_the_google_docs_source_checks_are_validated.down.sql | * | the down migration is a single SELECT 1 that changes nothing
 1795672271_the_partner_text_limits_follow_its_columns.up.sql | * | re-creates partner's two text_bound triggers without the dropped column's key; it changes no existing row
 1795672271_the_partner_text_limits_follow_its_columns.down.sql | * | re-creates partner's two text_bound triggers as they were; it changes no existing row
-1795691200_a_task_explanation_is_cached_per_reader.up.sql | * | creates an empty cache table; the procedural marker is the two text-bound trigger definitions on it
-1795691201_a_record_keeps_a_status_line_from_its_latest_activity.up.sql | * | creates an empty table of derived status lines; the procedural marker is the two text-bound trigger definitions on it
+1795748379_a_task_explanation_is_cached_per_reader.up.sql | * | creates an empty cache table; the procedural marker is the two text-bound trigger definitions on it
+1795748380_a_record_keeps_a_status_line_from_its_latest_activity.up.sql | * | creates an empty table of derived status lines; the procedural marker is the two text-bound trigger definitions on it
 1795657803_a_source_id_is_bounded.up.sql | * | replaces the two text-length guards on knowledge_document with ones that also name external_id; it creates triggers and reads or rewrites no row
 1795657803_a_source_id_is_bounded.down.sql | * | runs only on a rollback; restores the earlier guards without external_id and changes no row
+1795698649_the_text_limits_follow_the_unread_identity_and_never_set_columns.up.sql | * | replaces the two text-bound triggers on five tables; they act on later writes only, and no existing row is changed
+1795698649_the_text_limits_follow_the_unread_identity_and_never_set_columns.down.sql | * | restores the two text-bound triggers on five tables as they stood before; no existing row is changed
 1795675792_the_token_count_floors_are_validated.up.sql | ai_usage | ai_usage holds one row per day, task and tier a call was metered on, with no retention, so it grows by at most tasks times tiers rows a day; the correction scans it once, as the VALIDATE that follows must anyway, and changes only rows a negative count lowered below zero

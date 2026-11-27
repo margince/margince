@@ -61707,7 +61707,10 @@ type PassportSummary struct {
 	Connection *PassportConnection `json:"connection,omitempty"`
 	CreatedAt  time.Time           `json:"created_at"`
 	ExpiresAt  *time.Time          `json:"expires_at,omitempty"`
-	Id         openapi_types.UUID  `json:"id"`
+
+	// GrantedBy The member who granted the passport its authority. A server built before this field omits it.
+	GrantedBy *openapi_types.UUID `json:"granted_by,omitempty"`
+	Id        openapi_types.UUID  `json:"id"`
 
 	// Label Human-given name for the passport (e.g. "Marcus's Claude").
 	Label      string     `json:"label"`
@@ -76952,6 +76955,9 @@ type PermissionDenied = Problem
 
 // RetentionHeld RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RetentionHeld = Problem
+
+// Retired RFC 7807 problem+json with a stable machine `code` and structured `details`.
+type Retired = Problem
 
 // RoleCannotCapture RFC 7807 problem+json with a stable machine `code` and structured `details`.
 type RoleCannotCapture = Problem

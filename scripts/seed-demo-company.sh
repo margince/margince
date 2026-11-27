@@ -208,7 +208,7 @@ ensure_activity demo-gf-task "$(jq -n --arg o "$company_id" '{
 # does not hold. What it connects is the finance-demo unit, so the INVOICES are
 # not written here — the real sync produces them, at the real write shape.
 echo "== the accounting source =="
-live="$(psql_one "SELECT id || ' ' || provider FROM finance_connection WHERE archived_at IS NULL AND status <> 'disconnected' LIMIT 1")"
+live="$(psql_one "SELECT id || ' ' || provider FROM finance_connection WHERE status <> 'disconnected' LIMIT 1")"
 conn_id="${live%% *}"
 # The demo links name finance-demo's customers, which no other source holds.
 if [[ -n "$live" && "${live#* }" != "offline_demo" ]]; then
