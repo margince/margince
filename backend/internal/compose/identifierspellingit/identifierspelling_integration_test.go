@@ -64,8 +64,10 @@ func TestANameThatReversesItsOrderIsRefused(t *testing.T) {
 	e := apptest.SetupApp(t)
 	apptest.BootstrapWorkspaceSession(t, e, "Names", "admin@names.test", "Admin")
 	var refusal map[string]any
-	status := e.Call(t, "POST", "/v1/contacts", body{"source": "manual", "linkedin_url": apptest.ContactProfile(),
-		"full_name": "Invoice \u202egnp.exe"}, nil, &refusal)
+	status := e.Call(t, "POST", "/v1/contacts", body{
+		"source": "manual", "linkedin_url": apptest.ContactProfile(),
+		"full_name": "Invoice \u202egnp.exe",
+	}, nil, &refusal)
 	if status != http.StatusUnprocessableEntity || !strings.Contains(fmt.Sprint(refusal), "invalid_characters") {
 		t.Errorf("a contact name with a direction override → %d %v, want 422 invalid_characters", status, refusal)
 	}
