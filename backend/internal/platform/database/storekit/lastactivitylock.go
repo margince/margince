@@ -18,14 +18,9 @@ type LastActivityTargets struct {
 	Contacts, Deals, Companies, Projects []ids.UUID
 }
 
-// LockLastActivityTargets takes FOR UPDATE on everything targets reach — the
-// named records, the contacts' current employers and the deals' companies — in
-// the one (kind, id) order every writer shares (migration 1790739626).
-//
-// It must run BEFORE the write's attach probes and inserts. A probe's FOR SHARE
-// that a trigger later upgrades is a deadlock between any two writers naming
-// the same record, and a lock reached through a contact or a deal is taken out
-// of order unless the whole set is held first.
+// LockLastActivityTargets locks the enumerated reach before probes or writes.
+// Non-key locks admit foreign-key shares; relationships added concurrently
+// still require retrying the transaction with RetryLockCycles.
 func LockLastActivityTargets(ctx context.Context, tx pgx.Tx, targets LastActivityTargets) error {
 	if len(targets.Contacts)+len(targets.Deals)+len(targets.Companies)+len(targets.Projects) == 0 {
 		return nil

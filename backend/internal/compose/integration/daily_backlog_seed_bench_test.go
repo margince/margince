@@ -68,7 +68,7 @@ func (s dailySeeder) backlogActivities() {
 	      CROSS JOIN LATERAL (VALUES (b.rep, NULL::uuid, NULL::text, 'to'), (NULL::uuid, NULL::uuid, u.email, 'to'),
 	                                 (NULL::uuid, b.contact_id, b.email, 'from')) AS x(user_id, contact_id, address, role)
 	      WHERE b.kind = 'waiting'`)
-	s.execDeferringTriggers("backlog link", "activity_link", []string{"activity_link_last_activity", settlementEvidenceTrigger}, `INSERT INTO activity_link (activity_id, entity_type, contact_id, company_id, deal_id)
+	s.execDeferringTriggers("backlog link", "activity_link", []string{"activity_link_last_activity_added", settlementEvidenceTrigger}, `INSERT INTO activity_link (activity_id, entity_type, contact_id, company_id, deal_id)
 	      SELECT b.id, 'contact', b.contact_id, NULL::uuid, NULL::uuid FROM backlog_row b WHERE b.kind <> 'deal'
 	      UNION ALL
 	      SELECT b.id, 'company', NULL, b.company_id, NULL FROM backlog_row b WHERE b.kind <> 'deal'`)
