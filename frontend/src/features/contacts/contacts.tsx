@@ -22,6 +22,7 @@ import {
   useListRefusal,
 } from "../../design-system/listtable";
 import { useLocale, useT } from "../../i18n";
+import { CONTACTS_INITIAL_SORT } from "../../lib/listopenings";
 import { useViewerId } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { useActionRefusal } from "../../lib/writerefusal";
@@ -36,11 +37,7 @@ import {
   useSavedViewTabs,
 } from "../lists/savedviews";
 import { ContactCreateActions } from "./contactcreate";
-import {
-  CONTACTS_INITIAL_SORT,
-  CONTACTS_LIST_KEY,
-  fetchContactsPage,
-} from "./contacts.queries";
+import { CONTACTS_LIST_KEY, fetchContactsPage } from "./contacts.queries";
 
 // Contacts list + contact 360 (B-EP09.10a/b). Every row carries its
 // provenance chip (captured_by is server truth); the 360 renders the

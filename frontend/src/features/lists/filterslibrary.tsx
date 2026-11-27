@@ -15,13 +15,9 @@ import {
   PendingBody,
   SearchField,
 } from "../../design-system/atoms";
-import { ErrorLine } from "../../design-system/errorline";
 import { type FilterPill, FilterPills } from "../../design-system/filterpills";
-import { Panel, PanelBody } from "../../design-system/panel";
 import { Popover } from "../../design-system/popover";
-import { formatNumber } from "../../format/format";
-import { useLocale, useT } from "../../i18n";
-import type { MessageKey } from "../../i18n/en";
+import { useT } from "../../i18n";
 import {
   type CoreLibraryType,
   type LibraryAnchor,
@@ -38,7 +34,6 @@ import { useFoldedViewport } from "../../lib/viewport";
 import {
   ARCHIVED_PARAM,
   cutOf,
-  type LibraryReads,
   SEARCH_PARAM,
   TYPE_PARAM,
   useCaptions,
@@ -60,11 +55,8 @@ import {
 import "../voice-knowledge/library.css";
 import { labelFor } from "../../lib/labelfor";
 import { useListsAvailable } from "../../lib/lists.queries";
-import {
-  LibraryTable,
-  type LibraryTableGroup,
-  NewShortlistAction,
-} from "./listlibrary";
+import { LibraryGroupPanel } from "./filterslibrary.group";
+import { NewShortlistAction } from "./listlibrary";
 
 export function FiltersLibrary({
   anchor,
@@ -359,97 +351,6 @@ function NoHits({ cut }: Readonly<{ cut: LibraryCut }>) {
         {t(searched ? "filters.library.clearSearch" : "list.showAll")}
       </Button>
     </EmptyState>
-  );
-}
-
-const GROUP_TITLE: Record<LibraryTableGroup, MessageKey> = {
-  mine: "filters.library.mine",
-  shared: "filters.library.shared",
-  views: "filters.library.views",
-};
-
-/**
- * One group: its rows, and what its reads have not answered yet. A deleted
- * view hands focus to the group holding every saved view.
- */
-function LibraryGroupPanel({
-  group,
-  rows,
-  reads,
-  narrowed,
-  captionOf,
-  folded,
-  returnFocusTo,
-}: Readonly<{
-  group: LibraryTableGroup;
-  rows: readonly LibraryItem[];
-  reads: LibraryReads;
-  narrowed: boolean;
-  captionOf: (item: LibraryItem) => string;
-  folded: boolean;
-  returnFocusTo: () => HTMLElement | null;
-}>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const title = t(GROUP_TITLE[group]);
-  const viewsHere = group !== "shared";
-  const listsHere = group !== "views";
-  const pending =
-    (viewsHere && reads.viewsPending) || (listsHere && reads.listsPending);
-  const settled =
-    !pending &&
-    !(viewsHere && reads.viewsFailed) &&
-    !(listsHere && reads.listsFailed);
-  const counted =
-    settled && !reads.truncated && !(listsHere && reads.listsHeld) ? (
-      <span className="t-num">{formatNumber(rows.length, locale)}</span>
-    ) : undefined;
-  return (
-    <Panel title={title} titleAction={counted}>
-      <PanelBody>
-        {viewsHere && reads.viewsFailed && (
-          <ErrorLine actions={<RetryButton onRetry={reads.retryViews} />}>
-            {t("filters.library.viewsFailed")}
-          </ErrorLine>
-        )}
-        {listsHere && reads.listsFailed && (
-          <ErrorLine actions={<RetryButton onRetry={reads.retryLists} />}>
-            {t("filters.library.listsFailed")}
-          </ErrorLine>
-        )}
-        {rows.length > 0 && (
-          <LibraryTable
-            label={title}
-            items={rows}
-            group={group}
-            captionOf={captionOf}
-            folded={folded}
-            returnFocusTo={returnFocusTo}
-          />
-        )}
-        {pending && (
-          <PendingBody label={t("filters.library.loading")} lines={6} />
-        )}
-        {settled && rows.length === 0 && !narrowed && (
-          <EmptyState>
-            {t(
-              group === "shared"
-                ? "filters.library.sharedEmpty"
-                : "filters.library.mineEmpty",
-            )}
-          </EmptyState>
-        )}
-      </PanelBody>
-    </Panel>
-  );
-}
-
-function RetryButton({ onRetry }: Readonly<{ onRetry: () => void }>) {
-  const t = useT();
-  return (
-    <Button variant="link" onClick={onRetry}>
-      {t("common.retry")}
-    </Button>
   );
 }
 

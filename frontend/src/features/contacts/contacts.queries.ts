@@ -14,6 +14,7 @@ import {
   listFetchLimit,
   listQueryFromParams,
 } from "../../components/listqueryparams";
+import { CONTACTS_INITIAL_SORT } from "../../lib/listopenings";
 import { unwrap } from "../../lib/problem";
 import { listQueryParams } from "../../lib/tagfilter";
 import { NO_URL_PARAMS } from "../../lib/urlstate";
@@ -21,9 +22,6 @@ import { NO_URL_PARAMS } from "../../lib/urlstate";
 type Contact = components["schemas"]["Contact"];
 
 export const CONTACTS_LIST_KEY = "contacts";
-
-/** The order the Contacts list opens on before a reader picks one. */
-export const CONTACTS_INITIAL_SORT = "-created_at";
 
 export async function fetchContactsPage(
   query: ListQuery,

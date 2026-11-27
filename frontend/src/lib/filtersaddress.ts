@@ -10,6 +10,7 @@ import { type PluralBase, type Translator, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { type ExtensionEntityKind, isExtensionEntityKind } from "./entity";
 import { recordKindLabel, useRecordKindDirectory } from "./recordkinds";
+import { routeHash } from "./router";
 
 type FilterResource = components["schemas"]["FilterResource"];
 
@@ -295,6 +296,11 @@ export function filtersAddressOf({
     return { kind: "library", anchor: id };
   }
   return { kind: "library" };
+}
+
+/** The address of a saved view's page, which `filtersAddressOf` reads back. */
+export function viewPageHref(tab: ObjectTab, viewId: string): string {
+  return routeHash({ screen: "filters", id: tab, id2: viewId });
 }
 
 /**

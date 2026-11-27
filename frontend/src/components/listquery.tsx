@@ -124,6 +124,7 @@ export type SavedViewTab = Readonly<{
   includeArchived: boolean;
   perPage?: number;
   version: number;
+  link?: ListView["link"];
 }>;
 
 /**

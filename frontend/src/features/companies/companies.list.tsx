@@ -41,6 +41,7 @@ import { useToast } from "../../design-system/toast";
 import { useLocale, useT } from "../../i18n";
 import { useCan } from "../../lib/capability";
 import { labelFor } from "../../lib/labelfor";
+import { COMPANIES_INITIAL_SORT } from "../../lib/listopenings";
 import {
   KIND_LABELS,
   MEANING_LABELS,
@@ -114,7 +115,7 @@ export function CompaniesScreen({
   const cf = useObjectCustomFields("company", "create");
   const state = useListQuery<Company>({
     key: "companies",
-    initialSort: "-created_at",
+    initialSort: COMPANIES_INITIAL_SORT,
     fetchPage: fetchCompaniesPage,
     readsAtOffset: { rowKey: (company) => company.id },
   });

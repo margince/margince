@@ -141,6 +141,57 @@ export const ViewTabsFadePhone: Story = {
   },
 };
 
+// A tab that opens another page instead of narrowing the list trails an arrow,
+// never lights, and says where it goes in its name.
+const LINKED_VIEWS: readonly ListView[] = [
+  { label: "Alle" },
+  { label: "Meine" },
+  {
+    id: "v-vip",
+    label: "VIP in Berlin",
+    link: {
+      href: "#/filters/contacts/v-vip",
+      name: "VIP in Berlin, öffnet in Filter und Ansichten",
+    },
+  },
+];
+
+function LinkTabSurface() {
+  const [active, setActive] = useState(0);
+  return (
+    <ListSurface
+      title="Kontakte"
+      views={LINKED_VIEWS}
+      activeView={active}
+      onViewChange={setActive}
+      count={<CountLine first={1} last={25} total={86} />}
+    >
+      <p>Zeilen</p>
+    </ListSurface>
+  );
+}
+
+const linkTabNamed = async (canvasElement: HTMLElement) => {
+  const link = await within(canvasElement).findByRole("link", {
+    name: "VIP in Berlin, öffnet in Filter und Ansichten",
+  });
+  await expect(link).toHaveClass("lt-vtab");
+  await expect(link).not.toHaveAttribute("aria-pressed");
+};
+
+export const LinkTab: Story = {
+  name: "View tab that opens another page",
+  render: () => <LinkTabSurface />,
+  play: async ({ canvasElement }) => linkTabNamed(canvasElement),
+};
+
+export const LinkTabDark: Story = {
+  name: "View tab that opens another page, dark",
+  globals: { theme: "dark" },
+  render: () => <LinkTabSurface />,
+  play: async ({ canvasElement }) => linkTabNamed(canvasElement),
+};
+
 // The verbs and the tab rail lie inside the card: neither is clipped or pushed
 // past its edge to keep the sentence on the first line. Below 1100px the verbs
 // are one overflow menu and a rail with more tabs than room scrolls sideways.

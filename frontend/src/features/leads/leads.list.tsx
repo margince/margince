@@ -38,6 +38,8 @@ import {
   originPickOptions,
   useLeadOrigins,
 } from "../../lib/leadorigins";
+import { leadsOpeningFilters, leadsOpenOnAll } from "../../lib/leads.address";
+import { LEADS_INITIAL_SORT } from "../../lib/listopenings";
 import { unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { readStored, STORAGE_KEYS, writeStored } from "../../lib/storage";
@@ -134,12 +136,8 @@ export function LeadsScreen({
         {(session) => (
           <LeadsWorkbench
             viewerId={session.user.id}
-            // The opening filter, not a permission. An absent row scope opens
-            // on "mine", never on every lead.
-            opensOnAll={
-              session.authorization?.row_scope === "team" ||
-              session.authorization?.row_scope === "all"
-            }
+            opensOnAll={leadsOpenOnAll(session)}
+            openingFilters={leadsOpeningFilters(session)}
             startCreating={startCreating}
           />
         )}
@@ -157,10 +155,12 @@ const LEAD_SCREEN_DIALS: readonly string[] = [LEAD_VIEW_PARAM];
 function LeadsWorkbench({
   viewerId,
   opensOnAll,
+  openingFilters,
   startCreating,
 }: Readonly<{
   viewerId: string;
   opensOnAll: boolean;
+  openingFilters: Readonly<Record<string, string>>;
   startCreating: boolean;
 }>) {
   const ownerChips = useOwnerTagChips();
@@ -180,8 +180,8 @@ function LeadsWorkbench({
   const withheld = useWithheldLeadDials();
   const listQuery = useListQuery<Lead>({
     key: "leads",
-    initialSort: "",
-    initialFilters: opensOnAll ? {} : { owner_id: viewerId },
+    initialSort: LEADS_INITIAL_SORT,
+    initialFilters: openingFilters,
     fetchPage: fetchLeadsPage,
     readsAtOffset: { rowKey: (lead) => lead.id },
     // A refused dial the list can name is not asked for; it is named instead.
