@@ -3,22 +3,44 @@
 
 package provenance
 
-import "unicode/utf8"
+import (
+	"fmt"
+	"unicode/utf8"
+)
 
-// SourceIDMax bounds source_system and source_id, in runes. It is the cap
-// capture_trace.source_system carries and the length CHECK on every source_id
-// column.
+// SourceIDMax bounds source, source_system and source_id, in runes. It is the
+// cap capture_trace.source_system carries and the length CHECK on every
+// source_id column.
 const SourceIDMax = 128
 
-// SourceIDError refuses the outside-identity pair on a wire, naming the field
-// it arrived on. It is caller-fixable, so every surface answers it as a 422.
-type SourceIDError struct{ Field, Code, Message string }
+// SourceIDError refuses a provenance field on a wire, naming the field it
+// arrived on. It is caller-fixable, so every surface answers it as a 422.
+type SourceIDError struct {
+	Field, Code, Message string
+	// Max is the limit a too_long refusal names; zero states none.
+	Max int
+}
 
 func (e *SourceIDError) Error() string { return e.Message }
 
 // FieldFault states the refusal for the HTTP mapper and the tool surface alike.
 func (e *SourceIDError) FieldFault() (field, code, message string) {
 	return e.Field, e.Code, e.Message
+}
+
+// FieldMax is the limit the refusal names.
+func (e *SourceIDError) FieldMax() int { return e.Max }
+
+// RefuseSource guards the `source` a create wire carries: at most SourceIDMax
+// characters, and outside the reserved namespace.
+func RefuseSource(source string) error {
+	if length := utf8.RuneCountInString(source); length > SourceIDMax {
+		return &SourceIDError{
+			Field: "source", Code: "too_long", Max: SourceIDMax,
+			Message: fmt.Sprintf("source holds at most %d characters; this one has %d", SourceIDMax, length),
+		}
+	}
+	return Refuse("source", source)
 }
 
 // CheckSourceValues refuses a value no record can hold: a source_system past the

@@ -8,6 +8,7 @@ import (
 	"strings"
 	"testing"
 
+	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -37,6 +38,10 @@ func TestEveryShippedLanguageWritesItsOwnDuplicateLeadSummary(t *testing.T) {
 			}
 		})
 	}
+}
+
+func TestTheSummariesFollowTheEnglishAndVietnameseStylePages(t *testing.T) {
+	langcopytest.StyleByLanguage(t, summaryByLang)
 }
 
 // An unshipped language answers English rather than an empty set, because the

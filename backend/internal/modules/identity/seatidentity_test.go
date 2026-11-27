@@ -29,7 +29,7 @@ func seatRefusalOf(t *testing.T, email string) seatFieldError {
 	t.Helper()
 	rec := httptest.NewRecorder()
 	req := httptest.NewRequest(http.MethodPost, "/users", nil)
-	if _, _, ok := seatIdentity(rec, req, email, "Ada"); ok {
+	if _, _, ok := seatIdentity(rec, req, email, "Ada", values.ParseEmail); ok {
 		t.Fatalf("an invite to %q was accepted", email)
 	}
 	var body seatRefusal

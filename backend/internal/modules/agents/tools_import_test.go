@@ -224,7 +224,7 @@ func TestTheApprovalSaysWhatTheImportWillDo(t *testing.T) {
 		},
 		Issues: []crmcontracts.ImportRowIssue{{}, {}},
 	})
-	for _, want := range []string{"453", "412", "38", "company", "2 row(s) could not be used"} {
+	for _, want := range []string{"453", "412", "38", "company", "Rows that could not be used: 2"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("the summary %q does not carry %q", got, want)
 		}

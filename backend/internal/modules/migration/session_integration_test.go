@@ -32,8 +32,8 @@ func seedRunIn(ctx context.Context, t *testing.T, db *database.DB, status string
 	var id RunID
 	if err := db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
-			INSERT INTO import_run (connector, status, source_ref, source, captured_by, approved_at)
-			VALUES ($1, $2, $3, 'test', 'human:fixture', now()) RETURNING id`,
+			INSERT INTO import_run (connector, status, source_ref, captured_by, approved_at)
+			VALUES ($1, $2, $3, 'human:fixture', now()) RETURNING id`,
 			ConnectorCSV, status, "ws/import/"+ids.NewV7().String()).Scan(&id)
 	}); err != nil {
 		t.Fatalf("seeding a %s run: %v", status, err)
@@ -44,7 +44,7 @@ func seedRunIn(ctx context.Context, t *testing.T, db *database.DB, status string
 func newDraft(ctx context.Context, t *testing.T, s *RunStore, sourceName string) Run {
 	t.Helper()
 	run, err := s.CreateDraftRun(ctx, CreateDraftRunInput{
-		SourceRef: "ws/import/" + ids.NewV7().String(), Source: "import_api", FileName: "leads.csv",
+		SourceRef: "ws/import/" + ids.NewV7().String(), FileName: "leads.csv",
 		Profile: []byte(`{"files":[{"name":"leads.csv","row_count":3}]}`),
 		Mapping: RunMapping{
 			Object: ObjectLead, Fields: map[string]string{"Email": "email"}, SourceKey: "Email",
@@ -229,7 +229,7 @@ func TestATestFillsTheDraftsDefaultsWithoutSpendingAVersion(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	draft, err := s.CreateDraftRun(ctx, CreateDraftRunInput{
-		SourceRef: "ws/import/" + ids.NewV7().String(), Source: "import_api", FileName: "leads.csv",
+		SourceRef: "ws/import/" + ids.NewV7().String(), FileName: "leads.csv",
 		Mapping: RunMapping{Object: ObjectLead, Fields: map[string]string{"Email": "email"}, OnBrokenLink: "drop_link"},
 	})
 	if err != nil {
@@ -418,8 +418,8 @@ func TestReleasingASourceRecordsItForTheReaper(t *testing.T) {
 		t.Fatalf("RecordImportSourceIntent: %v", err)
 	}
 	draft, err := s.CreateDraftRun(ctx, CreateDraftRunInput{
-		SourceRef: key, Source: "import_api",
-		Profile: []byte(`{"files":[]}`),
+		SourceRef: key,
+		Profile:   []byte(`{"files":[]}`),
 	})
 	if err != nil {
 		t.Fatalf("CreateDraftRun: %v", err)
@@ -462,7 +462,7 @@ func TestAListedDraftCarriesTheRowsItsUploadCounted(t *testing.T) {
 	ctx, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)
 	counted, err := s.CreateDraftRun(ctx, CreateDraftRunInput{
-		SourceRef: "ws/import/" + ids.NewV7().String(), Source: "import_api", FileName: "contacts.csv",
+		SourceRef: "ws/import/" + ids.NewV7().String(), FileName: "contacts.csv",
 		Profile: []byte(`{"row_count":7,"columns":[]}`),
 	})
 	if err != nil {

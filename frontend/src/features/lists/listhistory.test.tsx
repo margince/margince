@@ -11,6 +11,7 @@ import { formatDateTimeAbbrev } from "../../format/format";
 import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import type { ListHistoryEntry } from "../../lib/lists.queries";
+import { ViewerZoneProvider } from "../../lib/viewerzone";
 import {
   listsMe,
   liveHistory,
@@ -40,7 +41,9 @@ function panel(rows: readonly ListHistoryEntry[]) {
   });
   render(
     <StoryProviders>
-      <ListHistoryPanel list={liveList} />
+      <ViewerZoneProvider zone="UTC">
+        <ListHistoryPanel list={liveList} />
+      </ViewerZoneProvider>
     </StoryProviders>,
   );
 }

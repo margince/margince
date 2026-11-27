@@ -50,7 +50,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `companyindustry_test.go` | H3 | The industry list lives in the contract, the vocabulary owner in the contacts module and its wording in the frontend. |
 | `companylifecycleengaged_test.go` | H3 | Every company lifecycle the contract publishes is judged engaged or not engaged, once. |
 | `companyprofilevocabulary_test.go` | H3 | The company-profile vocabulary is spelled in eight places, and widening seven of them without the eighth fails here. |
-| `companytextlimits_test.go` | H2 | A company text field the contract bounds and the column the database guard bounds must name one limit. |
+| `companytextlimits_test.go` | H2 | Company text fields publish the limit their writer applies. |
 | `composedfrontendbuilders_test.go` | H3 | Two builders compile the composed SPA (the make lane and the release image), and each of them must install the composed workspace before it does. |
 | `configgenerated_test.go` | H3 | The configuration files written from the settings registry are the ones its generator writes now. |
 | `configpresets_test.go` | H3 | Every preset under config/presets/ is a binding the parser accepts. |
@@ -391,6 +391,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `jobregistration_test.go` | H2 | The unexported marker can be implemented only in compose, including its tests. |
 | `jobrole_test.go` | H2 | Every River job declares its role, and the declaration is the contract: a job either does tenant work for one workspace (jobs.WorkspaceScoped, method WorkspaceID) or only scans and enqueues (jobs.FleetWide). |
 | `laneinputscope_test.go` | H3 | A path-filtered lane runs on a change to the scripts it executes. |
+| `langcopylanguagetables_test.go` | H2 | Every copy table keyed by language is read by a test that holds it to the style pages. |
 | `languagecolumns_test.go` | H2 | Every language or locale column has a foreign key to the language table or the locale shape check. |
 | `leadcontactlockorder_test.go` | H2 | One lock order over the lead and the contact it was promoted into. |
 | `leadoriginwriters_test.go` | H2 | Every statement that inserts a lead says where the lead came from. |
@@ -721,6 +722,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `stagemoveorigin_test.go` | H2 | A stage reader names the moves another system made through the stagemove kernel, so a new provenance value reaches every reader at once. |
 | `standingexceptionwriter_test.go` | H2 | No door records a new standing exception. |
 | `storedoriginal_test.go` | H2 | An activity is correlated to its stored original in one place. |
+| `stringliteralnfc_test.go` | H2 | Every string literal the product ships is NFC. |
 | `subjectphotobytes_test.go` | H2 | A subject's photo may not be stored until erasure can destroy the bytes. |
 | `sweepreachnamed_test.go` | H1 | TestNoCoreCodeWritesADeclaredColumnByName fails when code outside a table's owner writes a column the owner declared for the merge or the erasure to reach (sweepreach). |
 | `systemprovenance_test.go` | H2 | A scheduled pass binds its provenance through one helper. |

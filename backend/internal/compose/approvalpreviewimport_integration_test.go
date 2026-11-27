@@ -29,7 +29,7 @@ func TestImportApprovalCannotAuthorizeForecastCountsAsExactChanges(t *testing.T)
 	perms.Objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	ctx := e.As(e.AdminUser, nil, perms)
 	store := migration.NewRunStore(e.DB())
-	run, err := store.CreateDraftRun(ctx, migration.CreateDraftRunInput{SourceRef: "ws/import/" + ids.NewV7().String(), Source: "import_api", FileName: "leads.csv", Profile: json.RawMessage(`{"files":[{"name":"leads.csv","row_count":3}]}`), Mapping: migration.RunMapping{Object: migration.ObjectLead, Fields: map[string]string{"Email": "email"}, SourceKey: "Email"}})
+	run, err := store.CreateDraftRun(ctx, migration.CreateDraftRunInput{SourceRef: "ws/import/" + ids.NewV7().String(), FileName: "leads.csv", Profile: json.RawMessage(`{"files":[{"name":"leads.csv","row_count":3}]}`), Mapping: migration.RunMapping{Object: migration.ObjectLead, Fields: map[string]string{"Email": "email"}, SourceKey: "Email"}})
 	if err != nil {
 		t.Fatal(err)
 	}

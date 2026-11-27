@@ -474,7 +474,7 @@ func TestAStagedSummaryNamesEveryArgumentItReleases(t *testing.T) {
 		got := describeBooking(summaryByLang[textlang.English], cmd, []RecordLink{
 			{EntityType: "deal", EntityID: deal}, {EntityType: "company", EntityID: company},
 		})
-		for _, want := range []string{host.String(), "2 record(s)", `“Review”`} {
+		for _, want := range []string{host.String(), "records it is attached to: 2", `“Review”`} {
 			if !strings.Contains(got, want) {
 				t.Errorf("summary %q does not name %q", got, want)
 			}

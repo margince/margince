@@ -51,3 +51,19 @@ func TestASourceIDRefusalReadsAsItsMessage(t *testing.T) {
 		t.Fatalf("an empty source_id = %v, want a refusal that states itself", err)
 	}
 }
+
+func TestASourcePastTheCapIsRefusedWithItsLimit(t *testing.T) {
+	if err := RefuseSource(strings.Repeat("é", SourceIDMax)); err != nil {
+		t.Fatalf("a source at the cap = %v, want admitted", err)
+	}
+	fault, ok := RefuseSource(strings.Repeat("é", SourceIDMax+1)).(*SourceIDError)
+	if !ok {
+		t.Fatal("a source past the cap was admitted, want a *SourceIDError")
+	}
+	if field, code, _ := fault.FieldFault(); field != "source" || code != "too_long" || fault.FieldMax() != SourceIDMax {
+		t.Errorf("refused as %s/%s max %d, want source/too_long max %d", field, code, fault.FieldMax(), SourceIDMax)
+	}
+	if _, reserved := RefuseSource(ReservedSourceSystemPrefix + "crm").(*ReservedError); !reserved {
+		t.Error("a short source in the reserved namespace must still be refused as reserved")
+	}
+}
