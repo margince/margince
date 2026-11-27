@@ -94,7 +94,7 @@ func TestSourceJournalTransfersEachPendingChangeWithoutRepeatingTheWholeDocument
 	company := o.e.SeedCompany(t, "Unrelated journal audit", nil)
 	ctx := systemCtx(o.e)
 	transferred := 0
-	if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 		if err := auth.HoldWritableLive(ctx, tx, "company", company); err != nil {
 			return err
 		}

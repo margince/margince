@@ -36,7 +36,7 @@ func TestSourceJournalWriteCosts(t *testing.T) {
  FROM generate_series(1,500) AS n`, o.pipeline, o.stage)
 	system := systemCtx(o.e)
 	measureSourceWrite(t, "full correction page", 1, func(_ int) {
-		err := database.WithWorkspaceTx(system, o.e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(system, o.e.Pool, func(tx pgx.Tx) error {
 			moved, err := deals.CorrectDealSourcesTx(system, tx, ids.Nil, 500, ids.NewV7())
 			if err == nil && len(moved) != 500 {
 				t.Fatalf("corrected %d rows, want500", len(moved))
