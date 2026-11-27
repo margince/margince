@@ -37357,9 +37357,9 @@ paths:
               schema: { $ref: '#/components/schemas/RecoveryCodes' }
         '401':
           description: >
-            No session, or a refusal the caller can act on. The machine `code` separates them:
-            `current_password_invalid` (the password is wrong), `account_locked` (the lockout is
-            in force, and waiting is the remedy), and `unauthorized` for a wrong authenticator code.
+            A refused password carries its own machine `code`: `current_password_invalid` (the
+            password is wrong) or `account_locked` (the lockout is in force, and waiting is the
+            remedy). A missing session and a wrong authenticator code both answer `unauthorized`.
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }

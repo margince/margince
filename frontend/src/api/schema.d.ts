@@ -105239,7 +105239,7 @@ export interface operations {
                     "application/json": components["schemas"]["RecoveryCodes"];
                 };
             };
-            /** @description No session, or a refusal the caller can act on. The machine `code` separates them: `current_password_invalid` (the password is wrong), `account_locked` (the lockout is in force, and waiting is the remedy), and `unauthorized` for a wrong authenticator code. */
+            /** @description A refused password carries its own machine `code`: `current_password_invalid` (the password is wrong) or `account_locked` (the lockout is in force, and waiting is the remedy). A missing session and a wrong authenticator code both answer `unauthorized`. */
             401: {
                 headers: {
                     [name: string]: unknown;
