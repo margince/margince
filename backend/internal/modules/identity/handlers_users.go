@@ -25,12 +25,17 @@ import (
 // actor.hasRole("admin")); the handler resolves the acting Identity the
 // middleware bound and returns the resulting member row.
 
-// The shared decoder does not validate names or address syntax. Both seat
-// routes check them before the service admits a new or existing address.
+// Seat routes share name validation. The caller selects current write checks
+// or parsing for a stored address before the service decides what to create.
 func seatIdentity(
 	w http.ResponseWriter, r *http.Request, rawEmail, rawName string,
+	parseEmail func(string) (values.Email, error),
 ) (values.Email, string, bool) {
-	email, perr := values.ParseEmailReference(rawEmail)
+	email, perr := parseEmail(rawEmail)
+	if limited, ok := errors.AsType[*values.ParseError](perr); ok && limited.Max > 0 {
+		httperr.Write(w, r, perr)
+		return values.Email{}, "", false
+	}
 	if perr != nil {
 		httperr.Write(w, r, httperr.Validation("email", "invalid_email", "a valid email address is required"))
 		return values.Email{}, "", false
@@ -53,7 +58,7 @@ func (h Handlers) InviteUser(w http.ResponseWriter, r *http.Request, _ crmcontra
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	email, name, ok := seatIdentity(w, r, string(req.Email), req.DisplayName)
+	email, name, ok := seatIdentity(w, r, string(req.Email), req.DisplayName, values.ParseEmail)
 	if !ok {
 		return
 	}
@@ -427,7 +432,7 @@ func (h Handlers) CreateFormerMember(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	email, name, ok := seatIdentity(w, r, string(req.Email), req.DisplayName)
+	email, name, ok := seatIdentity(w, r, string(req.Email), req.DisplayName, values.ParseEmailReference)
 	if !ok {
 		return
 	}

@@ -17,7 +17,7 @@ import (
 func TestPromotionRefusesAnEmailPastTheAddressLimit(t *testing.T) {
 	e := setupDedupe(t)
 	ctx := e.as()
-	address := strings.Repeat("x", values.EmailMaxCharacters) + "@legacy.test"
+	address := strings.Repeat("x", values.MaxEmailLength) + "@legacy.test"
 	id := seedHistoricalLeadWithEmail(ctx, t, e.store, CreateLeadInput{
 		FullName: new("Legacy address"), Source: "manual",
 	}, address)
@@ -29,8 +29,8 @@ func TestPromotionRefusesAnEmailPastTheAddressLimit(t *testing.T) {
 
 	_, _, err = e.store.PromoteLead(ctx, id, PromoteLeadInput{Trigger: "human_qualify"})
 	fault, ok := errors.AsType[*values.ParseError](err)
-	if !ok || fault.Field != "email" || fault.Code != "too_long" || fault.Max != values.EmailMaxCharacters {
-		t.Fatalf("promotion = %v, want email/too_long with max %d", err, values.EmailMaxCharacters)
+	if !ok || fault.Field != "email" || fault.Code != "too_long" || fault.Max != values.MaxEmailLength {
+		t.Fatalf("promotion = %v, want email/too_long with max %d", err, values.MaxEmailLength)
 	}
 	if after := writeShapeRows(ctx, t, e); after != rows {
 		t.Errorf("refused promotion changed contact, audit and event rows from %v to %v", rows, after)

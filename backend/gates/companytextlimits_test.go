@@ -76,7 +76,7 @@ func TestEveryCompanyTextFieldPublishesItsColumnsLimit(t *testing.T) {
 				continue
 			}
 			if field["format"] == "email" {
-				limit = min(limit, values.EmailMaxCharacters)
+				limit = min(limit, values.MaxEmailLength)
 			}
 			switch {
 			case !bounded:

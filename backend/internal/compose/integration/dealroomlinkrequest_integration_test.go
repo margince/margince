@@ -49,7 +49,7 @@ func TestABuyerCanRequestALinkForALegacyLongAddress(t *testing.T) {
 	e.BootstrapWorkspace(t)
 	room := openRoomWithABuyer(t, e)
 	participant := participantOf(t, e, room)
-	address := strings.Repeat("a", values.EmailMaxCharacters) + "@legacy.test"
+	address := strings.Repeat("a", values.MaxEmailLength) + "@legacy.test"
 	if _, err := e.Pool.Exec(context.Background(),
 		`UPDATE deal_room_participant SET email = @email WHERE id = @participant`,
 		pgx.StrictNamedArgs{"email": address, "participant": participant}); err != nil {

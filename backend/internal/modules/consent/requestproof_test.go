@@ -39,7 +39,7 @@ func TestAProofIsKeptThreeYearsPastTheEndOfTheYearItWasAnsweredIn(t *testing.T) 
 
 func TestTheRequesterAddressComesFromTheOfficerThenTheLinkThenTheReference(t *testing.T) {
 	stated, mailed := "Officer@Stated.test", "link@mailed.test"
-	legacy := strings.Repeat("a", values.EmailMaxCharacters) + "@legacy.test"
+	legacy := strings.Repeat("a", values.MaxEmailLength) + "@legacy.test"
 	cases := []struct {
 		name             string
 		stated, mailedTo *string

@@ -108,7 +108,7 @@ var sourceBodies = []string{
 }
 
 // emailPaths are the addresses whose writer parses them with values.ParseEmail,
-// which refuses one past EmailMaxCharacters.
+// which refuses one past MaxEmailLength.
 var emailPaths = [][]string{
 	schemaProperty("ContactEmailInput", "email"), schemaProperty("QuickCaptureContactRequest", "email"),
 	schemaProperty("CreateLeadRequest", "email"), schemaProperty("UpdateLeadRequest", "email"),
@@ -124,7 +124,7 @@ func sharedCapLimits() []textLimit {
 		limits = append(limits, textLimit{"internal/shared/kernel/provenance/sourceid.go", "SourceIDMax", schemaProperty(body, "source")})
 	}
 	for _, path := range emailPaths {
-		limits = append(limits, textLimit{"internal/shared/kernel/values/email.go", "EmailMaxCharacters", path})
+		limits = append(limits, textLimit{"internal/shared/kernel/values/email.go", "MaxEmailLength", path})
 	}
 	return limits
 }

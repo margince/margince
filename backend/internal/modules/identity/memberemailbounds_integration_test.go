@@ -21,7 +21,7 @@ import (
 
 func TestAMemberEditKeepsAnUnchangedLegacyEmail(t *testing.T) {
 	e := setupRevocationEnv(t, "legacy-member-email")
-	address := strings.Repeat("a", values.EmailMaxCharacters) + "@legacy.test"
+	address := strings.Repeat("a", values.MaxEmailLength) + "@legacy.test"
 	seedHistoricalMemberEmail(t, e, e.member.UserID, address)
 	if _, _, err := e.svc.Login(e.wsOnlyCtx(), address, memberPassword, noDevice); err != nil {
 		t.Fatal(err)
@@ -65,10 +65,10 @@ func TestAChangedMemberEmailMustMeetTheAddressBound(t *testing.T) {
 		t.Fatal(err)
 	}
 	err = e.svc.UpdateMember(ctx, e.admin, member, MemberEdit{
-		Name: "Must Roll Back", Email: strings.Repeat("b", values.EmailMaxCharacters) + "@legacy.test", ExpectedUpdatedAt: row.UpdatedAt,
+		Name: "Must Roll Back", Email: strings.Repeat("b", values.MaxEmailLength) + "@legacy.test", ExpectedUpdatedAt: row.UpdatedAt,
 	})
 	fault, ok := errors.AsType[*values.ParseError](err)
-	if !ok || fault.Field != "email" || fault.Code != "too_long" || fault.Max != values.EmailMaxCharacters {
+	if !ok || fault.Field != "email" || fault.Code != "too_long" || fault.Max != values.MaxEmailLength {
 		t.Fatalf("email edit = %v, want email/too_long", err)
 	}
 	saved, err := e.svc.GetUser(ctx, e.admin, member)
@@ -82,7 +82,7 @@ func TestAChangedMemberEmailMustMeetTheAddressBound(t *testing.T) {
 
 func TestPasswordResetFindsALegacyEmailPastTheWriteBound(t *testing.T) {
 	e := setupRevocationEnv(t, "legacy-reset-email")
-	address := strings.Repeat("a", values.EmailMaxCharacters) + "@legacy.test"
+	address := strings.Repeat("a", values.MaxEmailLength) + "@legacy.test"
 	seedHistoricalMemberEmail(t, e, e.member.UserID, address)
 	mail := &capturedMail{}
 	h := NewHandlers(e.svc).WithPasswordReset(mail).WithPasswordLinkBase("https://crm.example.test")
@@ -108,7 +108,7 @@ func TestNewMembersCannotBypassTheAddressBound(t *testing.T) {
 		t.Run(tc.name, func(t *testing.T) {
 			e := setupRevocationEnv(t, "bounded-new-member")
 			ctx := e.wsCtx(e.admin)
-			address := strings.Repeat("a", values.EmailMaxCharacters) + "@legacy.test"
+			address := strings.Repeat("a", values.MaxEmailLength) + "@legacy.test"
 			var err error
 			if tc.invite {
 				_, _, err = e.svc.InviteUser(ctx, e.admin, InviteUserInput{Email: address, DisplayName: "New member", Role: "rep"})
@@ -116,7 +116,7 @@ func TestNewMembersCannotBypassTheAddressBound(t *testing.T) {
 				_, err = e.svc.CreateFormerMember(ctx, e.admin, FormerMemberInput{Email: address, DisplayName: "Former member"})
 			}
 			fault, ok := errors.AsType[*values.ParseError](err)
-			if !ok || fault.Field != "email" || fault.Code != "too_long" || fault.Max != values.EmailMaxCharacters {
+			if !ok || fault.Field != "email" || fault.Code != "too_long" || fault.Max != values.MaxEmailLength {
 				t.Fatalf("new member = %v, want email/too_long", err)
 			}
 		})
@@ -125,7 +125,7 @@ func TestNewMembersCannotBypassTheAddressBound(t *testing.T) {
 
 func TestAFormerMemberLookupKeepsALegacyMergedAddress(t *testing.T) {
 	e := setupRevocationEnv(t, "legacy-former-email")
-	address := strings.Repeat("a", values.EmailMaxCharacters) + "@legacy.test"
+	address := strings.Repeat("a", values.MaxEmailLength) + "@legacy.test"
 	seedHistoricalMemberEmail(t, e, e.member.UserID, address)
 	if _, err := e.owner.Exec(e.wsOnlyCtx(),
 		`UPDATE app_user SET merged_into_user_id = @survivor, removed_at = now(), status = 'deactivated' WHERE id = @member`,

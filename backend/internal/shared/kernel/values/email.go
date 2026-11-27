@@ -19,8 +19,6 @@ const emailField = "email"
 // (RFC 5321 §4.5.3.1.3 less the angle brackets), so a longer one cannot be delivered.
 const MaxEmailLength = 254
 
-const EmailMaxCharacters = MaxEmailLength
-
 // Email keeps the lowercase spelling the schema's address checks require,
 // so dedupe and identity locks agree on the address.
 type Email struct{ s string }

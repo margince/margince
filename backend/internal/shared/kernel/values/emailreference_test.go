@@ -9,12 +9,13 @@ import (
 )
 
 func TestAnEmailReferenceKeepsLegacyLengthsAndAddressValidation(t *testing.T) {
-	legacy := strings.Repeat("a", EmailMaxCharacters) + "@legacy.test"
+	legacy := strings.Repeat("a", MaxEmailLength) + "@legacy.test"
 	for _, tc := range []struct {
 		input, want, code string
 	}{
 		{"  " + strings.ToUpper(legacy) + "  ", legacy, ""},
 		{"Ada@Example.test", "ada@example.test", ""},
+		{"  Ada@localhost  ", "ada@localhost", ""},
 		{"", "", "email_empty"},
 		{"not-an-email", "", "email_malformed"},
 		{"Ada <ada@example.test>", "", "email_malformed"},
