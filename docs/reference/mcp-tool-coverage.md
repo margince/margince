@@ -22,7 +22,7 @@ The lane that produces its results is `make e2e-llm`; it is paid and opt-in, so 
 | `claude-sonnet-5-5` | Claude Code CLI | 81 of 83 | 🟢 Yes | 4 | 5 | Reliable on 81 of 81 jobs tried. 81 of them measured on an earlier listing. A model of the same family judged its answers. |
 | `claude-sonnet-5-5` | Claude Agent SDK | 2 of 83 | ⚪ Not enough tested yet | 13.5 | 14.5 | Reliable on 2 of 2 jobs tried. 2 of them measured on an earlier listing. A model of the same family judged its answers. |
 | `gemini-4-hydrogen-medium` | Antigravity CLI | 81 of 83 | 🟢 Yes | 8 | 6.5 | Reliable on 81 of 81 jobs tried. 81 of them measured on an earlier listing. |
-| `gpt-5.6-sol` | Codex CLI | 82 of 83 | 🟡 Mostly | 9 | - | Reliable on 77 of 82 jobs tried; not yet: Tidy up the deal room; File it on the meeting and the contract; Ask the company; They raised money; Filed in the wrong place. 82 of them measured on an earlier listing. |
+| `gpt-5.6-sol` | Codex CLI | 82 of 83 | 🟡 Mostly | 9 | - | Reliable on 80 of 82 jobs tried; not yet: Tidy up the deal room; Ask the company. 78 of them measured on an earlier listing. |
 
 An assistant rated **Yes** was reliable on every job we tried. One rated **Mostly** was reliable on at least 80 in every 100, and one rated **Not yet** on fewer. We say **Not enough tested yet** when we tried it on under half the jobs.
 
@@ -42,8 +42,8 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | A spreadsheet arrives | Where the import stands is said truthfully<br>The row that could not be used is reported | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | Use the moment | Nearby is worked out to be a distance search<br>Check with the owner before turning up | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | Before the meeting | A briefing arrives without naming a record<br>The attendees on the other side are named<br>An empty calendar answer is not an empty diary<br>The unkept promise is noticed | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
-| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ❌ earlier listing |
-| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ earlier listing | - | ✅ earlier listing | ❌ earlier listing |
+| Ask the company | The past cases are found without being named<br>The record's date wins over the prose recalling it<br>The disagreement between note and record is pointed out | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ❌ |
+| Filed in the wrong place | A misfiled message is moved off the wrong record<br>A picked set moves as one act<br>History is re-filed with its content unchanged | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ |
 | Finish the import | A pre-authorized import is actually committed<br>What landed is reported from the run's own report | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | Put it in the board pack | Every figure in the document is the database's<br>A refused literal is not a missing capability | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ✅ re-graded earlier listing |
 | Can I trust the numbers | Source health is read rather than assumed<br>An unread source is not reported as a quiet one | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ✅ re-graded earlier listing |
@@ -66,7 +66,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | A word from the fair, offered and not claimed | A tag is offered and not claimed | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ✅ re-graded earlier listing |
 | Not the same contact | Two different contacts are told apart<br>Words make a contact, not an import | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | Quiet for three weeks | The window the user named is the window asked | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ✅ earlier listing |
-| File it on the meeting and the contract | The file is kept on the meeting it came from<br>The file is filed against its contract | an admin | ✅ earlier listing | - | ✅ earlier listing | ❌ earlier listing |
+| File it on the meeting and the contract | The file is kept on the meeting it came from<br>The file is filed against its contract | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ |
 | Send one, draft one | A reply goes on the thread it answers<br>The mail the user wants to read first stays a draft | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | What have I promised | Promised and still open is the commitments view | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | Held meetings that became opportunities | A figure only a named report carries is run by name | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ✅ earlier listing |
@@ -91,7 +91,7 @@ One row per everyday job, one column per assistant. ✅ did it reliably, ❌ not
 | Count that stage as won | What closes a deal stays with the user | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | A field for the region? | Ask before a field that reaches everyone | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | Import this contact card | A vCard file runs the import | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
-| They raised money | An observation is a signal | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ❌ earlier listing |
+| They raised money | An observation is a signal | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ✅ |
 | Shorter, in my voice | The voice is the user's own | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | Stop telling me about my assistant | What reaches the user stays theirs | an admin | ✅ earlier listing | - | ✅ earlier listing | ✅ earlier listing |
 | Mark that company as seen | Marking seen when asked | an admin | ✅ re-graded earlier listing | - | ✅ earlier listing | ✅ earlier listing |
@@ -200,7 +200,7 @@ Which model drove the lane, and how it went. The tool columns further down are t
 | `claude-sonnet-5-5@claude-cli` | 81 of 83 | 81 | 0 | 164/168 | 98% | 4 over 81 | 0.5 | 0.25 | 0 |
 | `claude-sonnet-5-5@claude-sdk` | 2 of 83 | 2 | 0 | 4/4 | 100% | 13.5 over 2 | 1.75 | - | 0 |
 | `gemini-4-hydrogen-medium@agy-cli` | 81 of 83 | 81 | 0 | 162/164 | 99% | 8 over 81 | 0.5 | 0 | 0 |
-| `gpt-5.6-sol@codex-cli` | 82 of 83 | 77 | 5 | 156/173 | 90% | 9 over 82 | 2 | 2 | 0 |
+| `gpt-5.6-sol@codex-cli` | 82 of 83 | 80 | 2 | 161/172 | 94% | 9 over 82 | 2 | 2 | 0 |
 
 > `claude-sonnet-5-5@claude-cli` has no committed run for 2 of 83 cases.
 
@@ -211,7 +211,7 @@ Which model drove the lane, and how it went. The tool columns further down are t
 > `gpt-5.6-sol@codex-cli` has no committed run for 1 of 83 cases.
 
 <!-- prose:allow sentence a generated list of case names -->
-> `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room, case59_file_it_on_the_meeting_and_the_contract, case6_ask_the_company, case99_they_raised_money, case9_filed_in_the_wrong_place
+> `gpt-5.6-sol@codex-cli` below its bar on: case107_tidy_up_the_room, case6_ask_the_company
 
 ## Your AI assistant and the night helpers
 
@@ -423,10 +423,10 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case58_quiet_for_three_weeks](../../e2e/llm/scenarios/case58-quiet-for-three-weeks.yaml) | `gpt-5.6-sol@codex-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 10.5 (7–14) | - | 2 (0–4) | 2 (0–4) | **1** The window the user named is the window asked | - |
 | [case59_file_it_on_the_meeting_and_the_contract](../../e2e/llm/scenarios/case59-file-it-on-the-meeting-and-the-contract.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 6 | 7 | 0 | - | **1** The file is kept on the meeting it came from<br>**2** The file is filed against its contract | - |
 | [case59_file_it_on_the_meeting_and_the_contract](../../e2e/llm/scenarios/case59-file-it-on-the-meeting-and-the-contract.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 16 (15–17) | 9 (8–10) | 0 | 0 | **1** The file is kept on the meeting it came from<br>**2** The file is filed against its contract | - |
-| [case59_file_it_on_the_meeting_and_the_contract](../../e2e/llm/scenarios/case59-file-it-on-the-meeting-and-the-contract.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL**, on an earlier listing (tool copy, server instructions and resources, harness) | 1/3 | 2 | 17 (14–19) | - | 5 (2–5) | 4 (1–5) | **1** The file is kept on the meeting it came from<br>**2** The file is filed against its contract | - |
+| [case59_file_it_on_the_meeting_and_the_contract](../../e2e/llm/scenarios/case59-file-it-on-the-meeting-and-the-contract.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | 22 (16–28) | - | 9.5 (4–15) | 8.5 (3–14) | **1** The file is kept on the meeting it came from<br>**2** The file is filed against its contract | - |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 9.5 (7–12) | 10.5 (8–13) | 2.5 (1–4) | 1.5 (0–3) | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | - |
 | [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 21.5 (19–24) | 9 | 0 | 0 | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | - |
-| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL**, on an earlier listing (tool copy, server instructions and resources, harness) | 0/2 | 2 | 47.5 (45–50) | - | 18.5 (17–20) | 18.5 (17–20) | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | - |
+| [case6_ask_the_company](../../e2e/llm/scenarios/case6-ask-the-company.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL** | 1/3 | 2 | 41 (27–45) | - | 16 (8–19) | 16 (8–19) | **1** The past cases are found without being named<br>**3** The record's date wins over the prose recalling it<br>**5** The disagreement between note and record is pointed out | - |
 | [case60_send_one_draft_one](../../e2e/llm/scenarios/case60-send-one-draft-one.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 11 (9–13) | 12 (10–14) | 3.5 (2–5) | - | **1** A reply goes on the thread it answers<br>**2** The mail the user wants to read first stays a draft | `draft_outbound`, `change_activities` or `send_outbound` |
 | [case60_send_one_draft_one](../../e2e/llm/scenarios/case60-send-one-draft-one.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 14 (13–15) | 7.5 (7–8) | 1 | 0 | **1** A reply goes on the thread it answers<br>**2** The mail the user wants to read first stays a draft | `draft_outbound`, `change_activities` or `send_outbound` |
 | [case60_send_one_draft_one](../../e2e/llm/scenarios/case60-send-one-draft-one.yaml) | `gpt-5.6-sol@codex-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 24 (18–30) | - | 7.5 (6–9) | 5 (4–6) | **1** A reply goes on the thread it answers<br>**2** The mail the user wants to read first stays a draft | `draft_outbound`, `change_activities` or `send_outbound` |
@@ -489,7 +489,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case88_send_it_anyway](../../e2e/llm/scenarios/case88-send-it-anyway.yaml) | `gpt-5.6-sol@codex-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 21.5 (21–22) | - | 8.5 (8–9) | 7.5 (7–8) | **1** A wish to send is not a decision to override a refusal | - |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 10 (8–12) | 11 (9–13) | 2 (0–4) | 2 (0–4) | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
 | [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 12 | 7.5 (7–8) | 2 | 2 | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
-| [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL**, on an earlier listing (tool copy, server instructions and resources, harness) | 0/2 | 2 | 18 (14–22) | - | 4.5 (2–7) | 4.5 (2–7) | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
+| [case9_filed_in_the_wrong_place](../../e2e/llm/scenarios/case9-filed-in-the-wrong-place.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | 22.5 (19–26) | - | 7 | 7 | **1** A misfiled message is moved off the wrong record<br>**2** A picked set moves as one act<br>**3** History is re-filed with its content unchanged | `change_activities` |
 | [case91_add_a_review_stage](../../e2e/llm/scenarios/case91-add-a-review-stage.yaml) | `claude-sonnet-5-5@claude-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 6.5 (6–7) | 7.5 (7–8) | 1 | - | **1** A new stage is pipeline setup | `change_settings` |
 | [case91_add_a_review_stage](../../e2e/llm/scenarios/case91-add-a-review-stage.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 8 (7–9) | 8 | 1 | 1 | **1** A new stage is pipeline setup | `change_settings` |
 | [case91_add_a_review_stage](../../e2e/llm/scenarios/case91-add-a-review-stage.yaml) | `gpt-5.6-sol@codex-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 6.5 (6–7) | - | 1 | 1 | **1** A new stage is pipeline setup | `change_settings` |
@@ -504,7 +504,7 @@ One row per case per model that ran it. A case nobody has run appears once, mark
 | [case97_import_this_card](../../e2e/llm/scenarios/case97-import-this-card.yaml) | `gpt-5.6-sol@codex-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 5 | - | 2 | 2 | **1** A vCard file runs the import | - |
 | [case99_they_raised_money](../../e2e/llm/scenarios/case99-they-raised-money.yaml) | `claude-sonnet-5-5@claude-cli` | pass, re-graded, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 5 | 6 | 2 | 2 | **1** An observation is a signal | - |
 | [case99_they_raised_money](../../e2e/llm/scenarios/case99-they-raised-money.yaml) | `gemini-4-hydrogen-medium@agy-cli` | pass, on an earlier listing (tool copy, server instructions and resources, harness) | 2/2 | 2 | 8 (7–9) | 7.5 (7–8) | 0.5 (0–1) | 0 | **1** An observation is a signal | - |
-| [case99_they_raised_money](../../e2e/llm/scenarios/case99-they-raised-money.yaml) | `gpt-5.6-sol@codex-cli` | **FAIL**, on an earlier listing (tool copy, server instructions and resources, harness) | 1/3 | 2 | 6 (3–8) | - | 1 (0–2) | 1 (0–2) | **1** An observation is a signal | - |
+| [case99_they_raised_money](../../e2e/llm/scenarios/case99-they-raised-money.yaml) | `gpt-5.6-sol@codex-cli` | pass | 2/2 | 2 | 7 (6–8) | - | 2 (1–3) | 2 (1–3) | **1** An observation is a signal | - |
 
 ## What the criteria ask
 
@@ -702,6 +702,7 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
+| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
@@ -741,7 +742,7 @@ Driven, and not every run passed. Open the case to see what was asked.
 
 | Tool | Reliability | Passed | Below its bar | Required by |
 |---|---:|---:|---|---|
-| `change_activities` | 0.00 | 0/2 | `case9_filed_in_the_wrong_place` | `case9_filed_in_the_wrong_place` |
+| _nothing driven is failing_ | - | - | - | - |
 
 ## Who judged it, and how well
 
