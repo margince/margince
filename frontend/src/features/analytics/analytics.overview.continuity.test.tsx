@@ -16,7 +16,6 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { forgetSeat } from "../../lib/storage";
-import { openView, openViewStep } from "../../testing/listview.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { reportingFixtureFrames } from "../../testing/reporting.fixtures";
 import { jsonResponse } from "../../testing/story-utils";
@@ -96,19 +95,16 @@ function dialsOfLink(link: HTMLElement): Record<string, string> {
 
 const view = (name: string) => screen.findByRole("button", { name });
 
-// Sales review keeps the pipeline and close window under View.
-async function chooseInView(
-  user: ReturnType<typeof userEvent.setup>,
-  step: string,
-  choice: string,
-) {
-  const choices = await openViewStep(user, step);
-  await user.click(within(choices).getByRole("radio", { name: choice }));
-  await user.keyboard("{Escape}");
-}
-
 async function chooseAllPipelines(user: ReturnType<typeof userEvent.setup>) {
-  await chooseInView(user, "Pipeline", "All pipelines");
+  // Sales review keeps the pipeline behind Filters.
+  const filters = screen.queryByRole("button", { name: "Filters" });
+  if (filters?.getAttribute("aria-expanded") === "false")
+    await user.click(filters);
+  await pickOption(
+    user,
+    await screen.findByRole("combobox", { name: "Pipeline" }),
+    "All pipelines",
+  );
   await waitFor(() => expect(window.location.hash).toContain("pipeline=all"));
 }
 
@@ -127,10 +123,7 @@ describe("each Overview view keeps its own question", () => {
 
     await waitFor(() => expect(window.location.hash).toContain("pipeline=all"));
     await readings();
-    const panel = await openView(user);
-    expect(
-      within(panel).getByRole("button", { name: "Pipeline, All pipelines" }),
-    ).toBeVisible();
+    expect(screen.getByText(/Pipeline: All pipelines/)).toBeVisible();
     expect(lastSales(asked).has("pipeline_id")).toBe(false);
   });
 
@@ -499,15 +492,18 @@ describe("Save view", () => {
     }) as typeof fetch;
     await readings();
     await chooseAllPipelines(user);
-    await chooseInView(user, "Expected close window", "Fiscal quarter");
+    await pickOption(
+      user,
+      screen.getByRole("combobox", { name: "Expected close window" }),
+      "Fiscal quarter",
+    );
     await waitFor(() =>
       expect(window.location.hash).toContain("close=fiscal_quarter"),
     );
     await readings();
 
-    await user.click(
-      within(await openView(user)).getByRole("button", { name: "Save view" }),
-    );
+    await user.click(screen.getByRole("button", { name: "More" }));
+    await user.click(screen.getByRole("button", { name: "Save view" }));
     expect(
       await screen.findByText(
         "Saving adds a report under Reports. Overview stays as it is.",
@@ -590,7 +586,8 @@ describe("doors to setup and templates", () => {
     open("#/analytics", answer, TWO);
     await readings();
     const user = userEvent.setup({ delay: null });
-    const templates = within(await openView(user)).getByRole("link", {
+    await user.click(screen.getByRole("button", { name: "More" }));
+    const templates = await screen.findByRole("link", {
       name: "Report templates",
     });
     expect(dialsOfLink(templates)).toEqual({ scope: `team:${TEAM.id}` });

@@ -80,7 +80,7 @@ Two sections appear only for some seats. **My outcomes** is for a seat that sees
 
 ## Overview
 
-Analytics opens on **Overview**. The opening view follows your work and the view you last chose. Its views sit beside the page name, with the record scope and **Date range** at the far end. **View**, at the end of the tab row, holds the rest. On Sales review that is the pipeline, the **Expected close window** and **Filters**, each with what it holds now. Under them are **Save view**, **Report templates** and **Export CSV**.
+Analytics opens on **Overview**. The opening view follows your work and the view you last chose.
 
 **Sales review** opens with one card of readings: sales won first and largest, then the applicable forecast, the modelled range and pipeline due this quarter. Each reading has one short line under it, such as the target or how far the forecast falls short of it. The small **i** beside a reading opens what it rests on. Sales won carries its goal when a matching target or published sales goals are available, with a link to **Progress**. When its basis is recorded, the forecast’s label names it, such as **Manager’s call**, **Won + Likely deals** or **Won + weighted open deals**. A manager call shows its date.
 
@@ -94,17 +94,17 @@ With **Show individual performance** off, the checks of a team or the company ca
 
 The open pipeline by stage follows these words and decisions, with **All open pipeline** and its count of deals in its heading. Sales won by team member follows, in name order. Two colleagues who share a name show their email after it. With **Show individual performance** off, the team member chart shows no names. **Since the last capture** shows how the open pipeline moved and needs two captures before it can compare.
 
-**My prospecting** counts **Accepted handoffs** this week when an SDR hands prospects on, and **Leads qualified** when nobody does. When Margince cannot read which applies, it says so and offers **Retry**. Beside the figure, your last six weeks show one column each, empty where a week has no reading, and **Monthly targets** below names its month.
-
-The readings below separate leads still waiting for a reply from those that came in during the selected period. They include **Meetings held**, **First response time** with the leads still waiting, and **Booked meetings** for 14 days. A qualification counts whether it joins an existing deal or opens a new one.
+**My prospecting** counts **Accepted handoffs** this week when an SDR hands prospects on, and **Leads qualified** when nobody does. When Margince cannot read which applies, it says so and offers **Retry**. Beside the figure, your last six weeks show one column each, empty where a week has no reading, and **Monthly targets** below names its month. The readings below separate leads still waiting for a reply from those that came in during the selected period. They include **Meetings held**, **First response time** with the leads still waiting, and **Booked meetings** for 14 days. A qualification counts whether it joins an existing deal or opens a new one.
 
 A zero, a hidden figure, a failed one and a day that cannot be read each say so in their own words. **Do next** sits beside your results and shows lead follow-ups, replies and meetings to prepare. Each item opens its record, where you complete it. **Handoffs waiting on others** names each recipient, how long the handoff has waited since it was last sent, and whether the recipient can still act. A handoff sent back to you shows the reason given; without SDR handoffs, **Meetings to prepare** lists your booked meetings instead.
 
 Under details, **How your outcomes developed** shows more weekly history, and **What happened to your handoffs** follows the ones you sent in the period. **Save view** keeps the view as a report under **Reports** without changing Overview, and **Report templates** opens prepared reports such as **My prospecting progress**.
 
-**Team prospecting** has the record scope, a **Date range** of this week or month or the last completed week, month, quarter or year, and **View**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. The readings and **Members** fill the page; the **Team prospecting outlook** and **Where the team stands** sit beside them. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
+**Team prospecting** has the record scope, a **Date range** of this week or month or the last completed week, month, quarter or year, and **More**. Its readings lead with accepted handoffs where the company uses SDR handoffs, and with first qualifications where it does not. The readings and **Members** fill the page; the **Team prospecting outlook** and **Where the team stands** sit beside them. **Where the team stands** says how the rounds handed on in the period ended so far. Qualification totals count first qualifications in the selected period. A handoff share shows only when enough rounds are behind it.
 
-Under it come what holds the team up: waiting handoffs, handoffs sent back or turned down, and leads waiting for a reply. Each opens its own list, and the reasons count the decisions made in the period. **Members** has one row per colleague you may measure, in name order, with the columns of the company’s way of working. With qualified leads as the main outcome, a row shows qualified leads, meetings held, leads waiting for a reply and the member’s own monthly target.
+Under it come what holds the team up: waiting handoffs, handoffs sent back or turned down, and leads waiting for a reply. Each opens its own list, and the reasons count the decisions made in the period.
+
+**Members** has one row per colleague you may measure, in name order, with the columns of the company’s way of working. With qualified leads as the main outcome, a row shows qualified leads, meetings held, leads waiting for a reply and the member’s own monthly target.
 
 Qualification credit stays with the owner at the first qualification, and each lead counts once in the period when that happened. Qualifications whose earlier owner was not recorded count in the whole-company total. Owner and team readings show the attributed part with a partial-history notice. Existing targets for leads that came in keep their own label and meaning. The Leads report still follows the period when they came in.
 
@@ -121,7 +121,9 @@ Every Analytics reading covers a set of records, and the screen always says whic
 Every seat is offered **Whole company**, every live team and its own records.
 Totals for won, pipeline, forecast and meetings are the same for everyone. A seat whose scope is its teams also gets **My teams** first. Archived teams are never offered. A rep still opens on their own records.
 
-A total counts the whole scope you picked. An owner chart, ranking or list shows only the owners you may measure, and the answer says so. A scope with no deals says so instead of showing zeros, and points you to **Whole company** if you own none. The scope picker rules Performance, Forecast, Pipeline and Custom reports, so these sections count the same records. Delivery does not follow the picker: it covers every project you can read, and says so on the page.
+A total counts the whole scope you picked. An owner chart, ranking or list shows only the owners you may measure, and the answer says so. A scope with no deals says so instead of showing zeros, and points you to **Whole company** if you own none.
+
+The scope picker rules Performance, Forecast, Pipeline and Custom reports, so these sections count the same records. Delivery does not follow the picker: it covers every project you can read, and says so on the page.
 
 A report that counts every record still checks a named owner. Filtering one to
 somebody you may not measure is refused. Grouping one by owner counts only

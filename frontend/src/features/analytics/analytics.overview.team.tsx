@@ -8,6 +8,8 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Field, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
+import { FilterBar } from "../../design-system/filterbar";
+import { OverflowMenu } from "../../design-system/overflowmenu";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
 import { StatStrip } from "../../design-system/statstrip";
@@ -22,7 +24,6 @@ import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import type { HandoffScope } from "./analytics.outcomes.handoffpages";
 import { TEAM_PERIODS } from "./analytics.overview.context";
-import { OverviewHead } from "./analytics.overview.head";
 import { useOverviewNavigation } from "./analytics.overview.navigation";
 import { QualificationWorkflow } from "./analytics.overview.prospecting";
 import { teamPeriod, teamQuestion } from "./analytics.overview.questions";
@@ -34,7 +35,6 @@ import {
   TeamStanding,
   useTeamSummary,
 } from "./analytics.overview.team.standing";
-import { OverviewViewMenu } from "./analytics.overview.viewmenu";
 import { AssessmentPanel, MemberTable } from "./analytics.overview.work";
 import { periodCaption } from "./analytics.period";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
@@ -136,41 +136,37 @@ export function TeamProspecting({
       (review.data?.workflow === "handoff" ? "sdr" : undefined)) === "sdr";
   return (
     <>
-      <OverviewHead
-        switcher={switcher}
-        dials={
-          <>
-            {scopeControl}
-            <Field label={t("reporting.period")}>
-              {(field) => (
-                <Select
-                  {...field}
-                  value={period}
-                  options={TEAM_PERIODS.map((value) => ({
-                    value,
-                    label: t(`reporting.${value}`),
-                  }))}
-                  onChange={(next) => replaceDial("period", teamPeriod(next))}
-                />
-              )}
-            </Field>
-          </>
-        }
+      <FilterBar
+        label={t("analytics.filters")}
+        quiet
+        labels="inside"
         caption={periodCaption(query.data, locale, t)}
-      />
-      <OverviewViewMenu
-        footer={
-          <>
-            <OverviewSaveActions
-              selection={
-                query.data ? { ...query.data.selection, blocks } : undefined
-              }
-              scope={scopeKey(scope)}
+      >
+        {switcher}
+        {scopeControl}
+        <Field label={t("reporting.period")}>
+          {(field) => (
+            <Select
+              {...field}
+              value={period}
+              options={TEAM_PERIODS.map((value) => ({
+                value,
+                label: t(`reporting.${value}`),
+              }))}
+              onChange={(next) => replaceDial("period", teamPeriod(next))}
             />
-            {query.data && <ReportingExportButton evaluation={query.data} />}
-          </>
-        }
-      />
+          )}
+        </Field>
+        <OverflowMenu label={t("analytics.overview.more")}>
+          <OverviewSaveActions
+            selection={
+              query.data ? { ...query.data.selection, blocks } : undefined
+            }
+            scope={scopeKey(scope)}
+          />
+          {query.data && <ReportingExportButton evaluation={query.data} />}
+        </OverflowMenu>
+      </FilterBar>
       {team ? (
         <TeamBody
           query={query}

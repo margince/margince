@@ -3,11 +3,10 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, waitFor, within } from "@testing-library/react";
+import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { forgetSeat } from "../../lib/storage";
-import { openView } from "../../testing/listview.testkit";
 import {
   isSetup,
   OVERVIEW_SCENARIOS,
@@ -92,9 +91,8 @@ describe("Sales review's export", () => {
     await readings();
     await screen.findByRole("heading", { name: "Open pipeline by stage" });
 
-    await user.click(
-      within(await openView(user)).getByRole("button", { name: "Export CSV" }),
-    );
+    await user.click(screen.getByRole("button", { name: "More" }));
+    await user.click(await screen.findByRole("button", { name: "Export CSV" }));
 
     await waitFor(() => expect(saved.files).toHaveLength(1));
     const rows = (saved.files[0] ?? "").trim().split("\n");

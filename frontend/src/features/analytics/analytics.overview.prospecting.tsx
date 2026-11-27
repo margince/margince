@@ -9,6 +9,7 @@ import { AppLink } from "../../design-system/applink";
 import { EmptyState, PendingBody } from "../../design-system/atoms";
 import { Disclosure } from "../../design-system/disclosure";
 import { ErrorLine } from "../../design-system/errorline";
+import { FilterBar } from "../../design-system/filterbar";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
 import { SurfaceState } from "../../design-system/surfacestate";
@@ -22,7 +23,6 @@ import { scopeKey } from "./analytics.context";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import { useSdrSummary, WaitingOnOthers } from "./analytics.outcomes.sdr";
 import { DoNext } from "./analytics.overview.donext";
-import { OverviewHead } from "./analytics.overview.head";
 import { MonthlyTargets } from "./analytics.overview.monthly";
 import { useOverviewNavigation } from "./analytics.overview.navigation";
 import {
@@ -40,7 +40,6 @@ import {
   prospectingTemplate,
 } from "./analytics.overview.questions";
 import { OverviewSaveActions } from "./analytics.overview.readings";
-import { OverviewViewMenu } from "./analytics.overview.viewmenu";
 import {
   AssessmentPanel,
   HandoffCohort,
@@ -155,33 +154,11 @@ export function MyProspecting({
   };
   return (
     <>
-      <OverviewHead
-        switcher={switcher}
-        dials={
-          <ReportingFilters
-            selection={selection}
-            showScope={false}
-            showPipeline={false}
-            showTargets={false}
-            showCloseWindow={false}
-            dates={{
-              from: filters.start,
-              through: filters.end,
-              onChange: (from, through) => {
-                filters.setStart(from);
-                filters.setEnd(through);
-              },
-            }}
-            onChange={(next) => {
-              if (next.period !== filters.period)
-                filters.setPeriod(next.period);
-            }}
-          />
-        }
-        caption={validDates ? periodCaption(query.data, locale, t) : undefined}
-      />
-      <OverviewViewMenu
-        footer={
+      <FilterBar
+        label={t("analytics.filters")}
+        quiet
+        labels="inside"
+        actions={
           <OverviewSaveActions
             selection={
               query.data
@@ -191,7 +168,28 @@ export function MyProspecting({
             scope={scopeKey(self)}
           />
         }
-      />
+        caption={validDates ? periodCaption(query.data, locale, t) : undefined}
+      >
+        {switcher}
+        <ReportingFilters
+          selection={selection}
+          showScope={false}
+          showPipeline={false}
+          showTargets={false}
+          showCloseWindow={false}
+          dates={{
+            from: filters.start,
+            through: filters.end,
+            onChange: (from, through) => {
+              filters.setStart(from);
+              filters.setEnd(through);
+            },
+          }}
+          onChange={(next) => {
+            if (next.period !== filters.period) filters.setPeriod(next.period);
+          }}
+        />
+      </FilterBar>
       {problemCodeOf(query.error) === "reporting_interval_invalid" && (
         <ErrorLine error={query.error} />
       )}

@@ -1,5 +1,5 @@
 import { useQuery } from "@tanstack/react-query";
-import { type ReactNode, Suspense, useState } from "react";
+import { type ReactNode, Suspense } from "react";
 import type { components } from "../../api/schema";
 import { Button, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
@@ -47,7 +47,7 @@ import {
   SharedForecastView,
 } from "./analytics.sections";
 import { useAnalyticsSections } from "./analytics.tabs";
-import { AnalyticsViewSlot, TabVerbs } from "./analytics.tabverbs";
+import { TabVerbs } from "./analytics.tabverbs";
 import { stagesOfEveryPipeline } from "./pipelinestages";
 import { VIEW_SHAPE, viewOfSection } from "./reporting.views";
 import "./analytics.css";
@@ -81,7 +81,6 @@ export function AnalyticsScreen({
     // Only report cards name stages, so the other sections never wait on this.
     enabled: !holding && SECTION_REPORTS[section].length > 0,
   });
-  const [viewSlot, setViewSlot] = useState<HTMLElement | null>(null);
   const scopeControl =
     selection && context.data ? (
       <div className="analytics-scope-control">
@@ -142,48 +141,39 @@ export function AnalyticsScreen({
           }}
           label={t("analytics.sections")}
           trailing={
-            <TabVerbs
-              library={library}
-              setup={setup}
-              section={section}
-              viewSlot={setViewSlot}
-            />
+            <TabVerbs library={library} setup={setup} section={section} />
           }
         />
-        <AnalyticsViewSlot.Provider value={viewSlot}>
-          <div className="analytics-body page-pane">
-            <ReviewActionsContext
-              value={reviewActions ?? inheritedReviewActions}
-            >
-              {holding ? (
-                <PendingBody label={t("analytics.sections")} />
-              ) : refusedScope && context.data ? (
-                <ScopeRefused
-                  fallback={context.data.default_scope}
-                  allowed={context.data.allowed_scopes}
+        <div className="analytics-body page-pane">
+          <ReviewActionsContext value={reviewActions ?? inheritedReviewActions}>
+            {holding ? (
+              <PendingBody label={t("analytics.sections")} />
+            ) : refusedScope && context.data ? (
+              <ScopeRefused
+                fallback={context.data.default_scope}
+                allowed={context.data.allowed_scopes}
+              />
+            ) : (
+              <Suspense
+                fallback={<PendingBody label={t("analytics.sections")} />}
+              >
+                <SectionBody
+                  section={section}
+                  locale={locale}
+                  context={context.data}
+                  contextQuery={context}
+                  selection={selection}
+                  onSelectScope={selectScope}
+                  scopeControl={scopeControl}
+                  stages={stagesOfEveryPipeline(
+                    pipelinesQuery.data ?? [],
+                    (name) => t("analytics.retiredPipeline", { name }),
+                  )}
                 />
-              ) : (
-                <Suspense
-                  fallback={<PendingBody label={t("analytics.sections")} />}
-                >
-                  <SectionBody
-                    section={section}
-                    locale={locale}
-                    context={context.data}
-                    contextQuery={context}
-                    selection={selection}
-                    onSelectScope={selectScope}
-                    scopeControl={scopeControl}
-                    stages={stagesOfEveryPipeline(
-                      pipelinesQuery.data ?? [],
-                      (name) => t("analytics.retiredPipeline", { name }),
-                    )}
-                  />
-                </Suspense>
-              )}
-            </ReviewActionsContext>
-          </div>
-        </AnalyticsViewSlot.Provider>
+              </Suspense>
+            )}
+          </ReviewActionsContext>
+        </div>
       </OverviewNavigation>
     </div>
   );

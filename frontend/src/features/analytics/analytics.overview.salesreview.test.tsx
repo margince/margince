@@ -7,7 +7,6 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { forgetSeat } from "../../lib/storage";
-import { openView } from "../../testing/listview.testkit";
 import { reportingFixtureFrames } from "../../testing/reporting.fixtures";
 import { backlogList } from "./analytics.overview.scenariodata";
 import {
@@ -50,36 +49,34 @@ const hero = () =>
   within(screen.getByRole("region", { name: "Opening readings" }));
 
 describe("the controls", () => {
-  it("keeps the pipeline, close window and filters under View, each showing what it holds", async () => {
+  it("keeps the pipeline and close window behind Filters, with what they hold always shown", async () => {
     openScenario("populated");
     await readings();
     expect(screen.getByRole("combobox", { name: "Date range" })).toBeVisible();
-    expect(screen.queryByRole("button", { name: /^Pipeline,/ })).toBeNull();
+    expect(screen.queryByRole("combobox", { name: "Pipeline" })).toBeNull();
+    expect(screen.getByText(/Pipeline: Sales/)).toBeVisible();
+    expect(screen.getByText(/Closing: /)).toBeVisible();
     const user = userEvent.setup({ delay: null });
-    const panel = await openView(user);
+    const filters = screen.getByRole("button", { name: "Filters" });
+    expect(filters).toHaveAttribute("aria-expanded", "false");
+    await user.click(filters);
+    expect(filters).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByRole("combobox", { name: "Pipeline" })).toBeVisible();
     expect(
-      within(panel).getByRole("button", { name: "Pipeline, Sales" }),
-    ).toBeVisible();
-    expect(
-      within(panel).getByRole("button", { name: /^Expected close window, / }),
-    ).toBeVisible();
-    expect(
-      within(panel).getByRole("button", { name: /^Filters, / }),
+      screen.getByRole("combobox", { name: "Expected close window" }),
     ).toBeVisible();
   });
 
-  it("puts the templates and the export under View", async () => {
+  it("puts Save view, the templates and the export behind More", async () => {
     openScenario("populated");
     await readings();
     expect(screen.queryByRole("link", { name: "Report templates" })).toBeNull();
     const user = userEvent.setup({ delay: null });
-    const panel = await openView(user);
+    await user.click(screen.getByRole("button", { name: "More" }));
     expect(
-      within(panel).getByRole("link", { name: "Report templates" }),
+      await screen.findByRole("link", { name: "Report templates" }),
     ).toBeVisible();
-    expect(
-      within(panel).getByRole("button", { name: "Export CSV" }),
-    ).toBeVisible();
+    expect(screen.getByRole("button", { name: "Export CSV" })).toBeVisible();
   });
 });
 
