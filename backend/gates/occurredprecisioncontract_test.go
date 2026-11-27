@@ -26,8 +26,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -286,7 +284,7 @@ func wireTimesIn(t *testing.T, spec string, raw []byte) []wireTime {
 			Schemas map[string]any `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("%s: %v", spec, err)
 	}
 	if len(doc.Components.Schemas) == 0 {

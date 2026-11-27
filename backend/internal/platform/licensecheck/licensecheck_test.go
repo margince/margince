@@ -230,9 +230,9 @@ func TestSeats(t *testing.T) {
 // as {"license":…, "grants":…} and every seat count silently disappeared. This
 // fixture is the tripwire that was missing.
 const moduleOutput = `{"license":{"id":"01890a5d-ac96-774b-bcce-b302099a8057","subject":"acme-prod",` +
-	`"company":"Acme GmbH","name":"Ada Lovelace","email":"ada@acme.example","key_id":"Ujmh",` +
+	`"org":"Acme GmbH","name":"Ada Lovelace","email":"ada@acme.example","key_id":"Ujmh",` +
 	`"issued_at":"2026-08-15T09:00:00Z","not_before":"2026-08-15T09:00:00Z",` +
-	`"expiry":"2027-08-15T09:00:00Z","in_grace":false},` +
+	`"expiry":"2027-08-15T09:00:00Z","grace_until":"2027-11-13T09:00:00Z","in_grace":false},` +
 	`"grants":{"seats":10,"feature":true,"something_new":7}}`
 
 // The grant map is carried whole. A build that projected it into known fields
@@ -266,6 +266,9 @@ func TestDecodeResultCarriesTheLicenseItVerified(t *testing.T) {
 	}
 	if result.License.ID == "" || result.License.Expiry.IsZero() {
 		t.Errorf("id/expiry = %q/%s, want both set", result.License.ID, result.License.Expiry)
+	}
+	if want := time.Date(2027, time.November, 13, 9, 0, 0, 0, time.UTC); !result.License.GraceUntil.Equal(want) {
+		t.Errorf("grace end = %s, want %s", result.License.GraceUntil, want)
 	}
 	if result.License.InGrace {
 		t.Error("a license inside its validity reports in_grace")

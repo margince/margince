@@ -223,7 +223,7 @@ func TestMergeCompany_partnerExtensionMovesIntoVacancy(t *testing.T) {
 	}
 	srcID, tgtID := companyIDOf(ids.UUID(source.Id)), companyIDOf(ids.UUID(target.Id))
 	// The source carries the partner program; the target has none.
-	e.WsExec(t, `INSERT INTO partner (company_id, relationship_stage, source, captured_by) VALUES ($1, 'research', 'manual', 'human:test')`, srcID)
+	e.WsExec(t, `INSERT INTO partner (company_id, relationship_stage, captured_by) VALUES ($1, 'research', 'human:test')`, srcID)
 	e.WsExec(t, `INSERT INTO company_relationship_type (company_id, relationship_type, source, captured_by)
 		VALUES ($1, 'partner', 'manual', 'human:test')`, srcID)
 

@@ -133,7 +133,7 @@ func liveEnvVars(t *testing.T) map[string]string {
 			}
 		})
 	}
-	images, err := filepath.Glob("../Dockerfile*")
+	images, err := gatekit.Glob("../Dockerfile*")
 	if err != nil {
 		t.Fatalf("globbing Dockerfiles: %v", err)
 	}

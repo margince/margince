@@ -140,7 +140,7 @@ func TestEveryRouteBelowTheAuthGateIsDeclared(t *testing.T) {
 func routesBelowTheGate(t *testing.T) []string {
 	t.Helper()
 	dir := filepath.Join(repoRoot, "backend", routingPackage)
-	paths, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	paths, err := gatekit.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatal(err)
 	}

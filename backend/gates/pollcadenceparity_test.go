@@ -123,7 +123,7 @@ func TestEveryPostponingConnectorPostponesByItsOwnDeclaredCadence(t *testing.T) 
 // by directory order: the delay is reconciled against one constant, and which file
 // that constant lives in stops being obvious the moment there are two candidates.
 func postponingUnits() (map[string]string, error) {
-	sources, err := filepath.Glob("../extensions/*/*.go")
+	sources, err := gatekit.Glob("../extensions/*/*.go")
 	if err != nil {
 		return nil, err
 	}

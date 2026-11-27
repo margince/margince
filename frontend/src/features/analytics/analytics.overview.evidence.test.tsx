@@ -152,19 +152,42 @@ describe("one evidence interaction on Sales review", () => {
     ).toBeNull();
   });
 
+  it("shows each figure on the chart as its tab, with the chart's own door", async () => {
+    const user = userEvent.setup({ delay: null });
+    openScenario("populated", "sales");
+    const strip = within(
+      await screen.findByRole("region", { name: "Opening readings" }),
+    );
+    const won = strip.getByRole("button", { description: "Sales won" });
+    const forecast = strip.getByRole("button", {
+      description: "Won + Likely deals",
+    });
+    expect(won).toHaveAttribute("aria-pressed", "true");
+    expect(forecast).toHaveAttribute("aria-pressed", "false");
+
+    await user.click(forecast);
+
+    expect(forecast).toHaveAttribute("aria-pressed", "true");
+    const plot = within(
+      screen.getByRole("region", { name: "Where the quarter can finish" }),
+    );
+    expect(
+      plot.getByRole("link", { name: "Open forecast" }).getAttribute("href"),
+    ).toMatch(/^\/#\/analytics\/forecast/);
+    expect(plot.queryByRole("button", { name: "View records" })).toBeNull();
+  });
+
   it("opens a measured zero as its explanation and an empty permitted population", async () => {
     const user = userEvent.setup({ delay: null });
     const asked = openScenario("trueZero", "sales");
-    const hero = within(
-      await screen.findByRole("region", { name: "Opening readings" }),
-    );
-
-    await user.click(
-      hero.getByRole("button", {
-        name: "View records",
-        description: "Sales won",
+    // Sales won heads the chart, so its records open from the chart's foot.
+    const plot = within(
+      await screen.findByRole("region", {
+        name: "Sales won through the period",
       }),
     );
+
+    await user.click(plot.getByRole("button", { name: "View records" }));
 
     const dialog = within(await screen.findByRole("dialog"));
     expect(
@@ -181,16 +204,14 @@ describe("one evidence interaction on Sales review", () => {
   it("says why a failed figure has no records and offers a retry, asking for none", async () => {
     const user = userEvent.setup({ delay: null });
     const asked = openScenario("sourceUnavailable", "sales");
-    const hero = within(
-      await screen.findByRole("region", { name: "Opening readings" }),
-    );
-
-    await user.click(
-      hero.getByRole("button", {
-        name: "View records",
-        description: "Sales won",
+    // Sales won heads the chart, so its records open from the chart's foot.
+    const plot = within(
+      await screen.findByRole("region", {
+        name: "Sales won through the period",
       }),
     );
+
+    await user.click(plot.getByRole("button", { name: "View records" }));
 
     const dialog = within(await screen.findByRole("dialog"));
     expect(

@@ -18,6 +18,7 @@ import (
 	"io/fs"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"strings"
 	"testing"
 
@@ -29,6 +30,9 @@ var (
 	appUserInsert    = regexp.MustCompile(`(?is)\binsert\s+into\s+app_user\s*\(([^)]*)\)`)
 	timezoneAssigned = regexp.MustCompile(`(?i)(?:^|[\s,(])timezone(?:_chosen)?\s*=`)
 	timezoneColumn   = regexp.MustCompile(`(?i)(?:^|[\s,])timezone(?:_chosen)?\s*(?:,|$)`)
+	// timezoneWords lets the census skip a file no writer can be in, because
+	// assignsTimezone is true only when one of these two patterns matches.
+	timezoneWords = slices.Concat(requiredWords(timezoneAssigned), requiredWords(timezoneColumn))
 )
 
 // assignsTimezone reports whether one SQL literal writes a user's zone.
@@ -59,6 +63,10 @@ func TestOneWriterSetsAUsersTimezone(t *testing.T) {
 	var where []string
 	err := gatekit.WalkDir("internal", func(path string, d fs.DirEntry, err error) error {
 		if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return err
+		}
+		src, err := gatekit.ReadFile(path)
+		if err != nil || !mayHoldFolded(string(src), timezoneWords...) {
 			return err
 		}
 		rel := filepath.ToSlash(path)
@@ -95,6 +103,9 @@ func TestTheTimezoneWriterMatcherSeesEveryShape(t *testing.T) {
 	} {
 		if got := assignsTimezone(sql); got != want {
 			t.Errorf("assignsTimezone(%q) = %v, want %v", sql, got, want)
+		}
+		if want && !mayHoldFolded(sql, timezoneWords...) {
+			t.Errorf("the census skips a file whose only writer is %q", sql)
 		}
 	}
 }

@@ -6,10 +6,9 @@ package contacts
 // Re-normalizing stored LinkedIn company keys (ADR-0078 §2.1b).
 //
 // `linkedin_connection.normalized_company` is a DERIVED column and it is part
-// of the natural dedupe key (uq_linkedin_connection_natural). That pairing has
-// a consequence which is easy to miss and expensive to discover: changing the
-// normalizer changes the key, so the same connection stops matching the row it
-// already has and a re-import inserts a second copy of it.
+// of the natural dedupe key, uq_linkedin_connection_natural_key. Changing the
+// normalizer therefore changes the key. The same connection then stops matching
+// the row it already has, and a re-import inserts a second copy of it.
 //
 // That is not hypothetical — it happened. Cleaning LinkedIn's headline company
 // field ("najahak.io | نجاحك" → "najahak.io") altered the key for every row
@@ -126,8 +125,7 @@ func readGhostKeys(ctx context.Context, tx pgx.Tx, onlyOwner ids.UUID) ([]ghostK
 		       owner_user_id::text || '|' || normalized_name || '|' ||
 		         coalesce(connected_on::text, 'epoch')
 		  FROM linkedin_connection
-		 WHERE provider_member_ref IS NULL
-		   AND ($1::uuid IS NULL OR owner_user_id = $1)`, nullableOwner(onlyOwner))
+		 WHERE $1::uuid IS NULL OR owner_user_id = $1`, nullableOwner(onlyOwner))
 	if err != nil {
 		return nil, fmt.Errorf("contacts: reading LinkedIn keys to re-normalize: %w", err)
 	}
@@ -323,7 +321,6 @@ func foldGhostInto(ctx context.Context, tx pgx.Tx, keep, doomed ids.UUID) error 
 		       profile_url = CASE
 		         WHEN d.profile_url IS NOT NULL AND d.synced_at > k.synced_at
 		           THEN d.profile_url ELSE coalesce(k.profile_url, d.profile_url) END,
-		       provider_member_ref = coalesce(k.provider_member_ref, d.provider_member_ref),
 		       -- The contact travels WITH the winning decision. Coalescing it
 		       -- independently would let the survivor keep its own guess while
 		       -- inheriting the other copy's confirmed status, reporting a

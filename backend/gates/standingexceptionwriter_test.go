@@ -51,7 +51,7 @@ func standingExceptionOps(t *testing.T) map[string]map[string]standingExceptionO
 	var doc struct {
 		Paths map[string]map[string]yaml.Node `yaml:"paths"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	methods := []string{"get", "put", "post", "patch", "delete"}

@@ -101,6 +101,24 @@ func TestWalkDirVisitsWhatFilepathWalkDirVisits(t *testing.T) {
 	}
 }
 
+func TestGlobMatchesWhatFilepathGlobMatches(t *testing.T) {
+	t.Parallel()
+	root := plantTree(t)
+	patterns := []string{"*.go", "../*/tree*.go", "[", "absent/*", "tree.go", "absent.go", "/[eu]s*", "*/[/*"}
+	for _, pattern := range []string{"*", "*/*.go", "a/*/*.go", "?/f*.go", "link/*", "top.go", "absent", "b/[", "*/absent/*"} {
+		patterns = append(patterns, filepath.Join(root, pattern))
+	}
+	for _, pattern := range patterns {
+		want, wantErr := filepath.Glob(pattern)
+		for range 2 {
+			got, err := Glob(pattern)
+			if !slices.Equal(got, want) || (err == nil) != (wantErr == nil) {
+				t.Errorf("Glob(%q) = %q, %v; filepath.Glob answers %q, %v", pattern, got, err, want, wantErr)
+			}
+		}
+	}
+}
+
 func TestWalkDirOverAHeldTreeVisitsWhatTheDiskHolds(t *testing.T) {
 	t.Parallel()
 	every := func(string, fs.DirEntry) error { return nil }

@@ -63,8 +63,8 @@ func (s *VoiceStore) RecordSendOutcomeTx(ctx context.Context, tx pgx.Tx, draftRe
 	}
 
 	outcome, similarity := classifyVoiceSendOutcome(signal.generatedOriginal, finalBody)
-	// final_text stays NULL, and the classification's inputs are dropped
-	// with this function's frame. This row carries no contact, activity, or
+	// The sent text is not stored, and the classification's inputs are
+	// dropped with this function's frame. This row carries no contact, activity, or
 	// subject linkage, so Art. 17 erasure structurally cannot find it —
 	// only the time-based sweep does. Persisting the sent correspondence
 	// here would keep an erased contact's mail alive for up to 180 days.

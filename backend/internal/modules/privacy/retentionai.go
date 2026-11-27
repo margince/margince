@@ -27,16 +27,16 @@ import (
 // policy ladder, so a third sweep here has to move this number with it.
 const aiRetentionStages = 2
 
-// evaluateVoiceSignalRetention erases the draft plaintext of over-age voice
-// learning signals: the counters row survives (the learning statistics stay
-// honest), the generated and final texts do not outlive their window.
+// evaluateVoiceSignalRetention erases the drafted text of over-age voice
+// learning signals. The counters row survives, so the learning statistics
+// still count it.
 func (s *RetentionService) evaluateVoiceSignalRetention(ctx context.Context) error {
 	var due []ids.UUID
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT id FROM voice_learning_signal
 			WHERE retention_until < now() AND content_erased_at IS NULL
-			  AND (generated_original IS NOT NULL OR final_text IS NOT NULL)
+			  AND generated_original IS NOT NULL
 			LIMIT $1`, retentionBatch)
 		if err != nil {
 			return err
@@ -62,7 +62,7 @@ func (s *RetentionService) eraseVoiceSignalContent(ctx context.Context, id ids.U
 		// twice for one erasure.
 		tag, err := tx.Exec(ctx, `
 			UPDATE voice_learning_signal
-			SET generated_original = NULL, final_text = NULL, content_erased_at = now(),
+			SET generated_original = NULL, content_erased_at = now(),
 			    version = version + 1, updated_at = now()
 			WHERE id = $1 AND content_erased_at IS NULL`, id)
 		if err != nil {

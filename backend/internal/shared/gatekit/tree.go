@@ -155,6 +155,72 @@ func WalkDir(root string, visit fs.WalkDirFunc) error {
 	return err
 }
 
+// Glob is filepath.Glob over ReadDir. It answers the same matches in the same
+// order, and ignores an unreadable directory as filepath.Glob does.
+func Glob(pattern string) ([]string, error) {
+	if _, err := filepath.Match(pattern, ""); err != nil {
+		return nil, err
+	}
+	if !hasGlobMeta(pattern) {
+		if _, err := os.Lstat(pattern); err != nil {
+			return nil, nil //nolint:nilerr // a missing literal path is no match, as in filepath.Glob
+		}
+		return []string{pattern}, nil
+	}
+	dir, file := filepath.Split(pattern)
+	dir = globDir(dir)
+	if !hasGlobMeta(dir) {
+		return globIn(dir, file, nil)
+	}
+	if dir == pattern {
+		return nil, filepath.ErrBadPattern
+	}
+	parents, err := Glob(dir)
+	if err != nil {
+		return nil, err
+	}
+	var matches []string
+	for _, parent := range parents {
+		if matches, err = globIn(parent, file, matches); err != nil {
+			return nil, err
+		}
+	}
+	return matches, nil
+}
+
+func hasGlobMeta(path string) bool {
+	return strings.ContainsAny(path, `*?[\`)
+}
+
+// globDir drops the separator filepath.Split leaves on a directory.
+func globDir(dir string) string {
+	switch dir {
+	case "":
+		return "."
+	case string(filepath.Separator):
+		return dir
+	default:
+		return dir[:len(dir)-1]
+	}
+}
+
+func globIn(dir, pattern string, matches []string) ([]string, error) {
+	entries, err := ReadDir(dir)
+	if err != nil {
+		return matches, nil //nolint:nilerr // an unreadable directory holds no match, as in filepath.Glob
+	}
+	for _, entry := range entries {
+		matched, err := filepath.Match(pattern, entry.Name())
+		if err != nil {
+			return matches, err
+		}
+		if matched {
+			matches = append(matches, filepath.Join(dir, entry.Name()))
+		}
+	}
+	return matches, nil
+}
+
 func walkEntry(path string, entry fs.DirEntry, visit fs.WalkDirFunc) error {
 	if err := visit(path, entry, nil); err != nil || !entry.IsDir() {
 		if errors.Is(err, fs.SkipDir) && entry.IsDir() {

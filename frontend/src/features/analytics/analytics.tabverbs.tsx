@@ -3,6 +3,7 @@
 
 import { ChevronDown, FileText } from "lucide-react";
 import { Button, OverflowMenu } from "../../design-system/atoms";
+import { createPortalSlot } from "../../design-system/portalslot";
 import { useT } from "../../i18n";
 import {
   openAnalyticsSection,
@@ -11,20 +12,26 @@ import {
 import { navigate } from "../../lib/router";
 import { SETUP_LABEL, type SetupSection } from "./analytics.tabs";
 
-/** The verbs at the end of the tab row: the saved reports and the Setup menu. */
+/** Where a section's own View menu stands, first among the tab row's verbs. */
+export const AnalyticsViewSlot = createPortalSlot();
+
+/** The verbs at the end of the tab row: the section's View, the saved reports
+ * and the Setup menu. */
 export function TabVerbs({
   library,
   setup,
   section,
+  viewSlot,
 }: Readonly<{
   library: Section | undefined;
   setup: readonly SetupSection[];
   section: Section;
+  viewSlot: (element: HTMLElement | null) => void;
 }>) {
   const t = useT();
-  if (!library && setup.length === 0) return null;
   return (
     <div className="analytics-tab-verbs">
+      <span className="analytics-view-slot" ref={viewSlot} />
       {library && (
         <Button
           variant="ghost"

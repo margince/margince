@@ -528,12 +528,9 @@ func TestVoiceDraftRejectionIsIdempotentAndTerminalSafe(t *testing.T) {
 	}
 }
 
-// Clearing the corpus must erase a qualifying learning signal (edited_sent with
-// human-authored final text) without tripping voice_learning_signal_qualifies_check.
-// The scrub nulls final_text, and the CHECK requires final_text NOT NULL while
-// qualifies_as_source stays true — so the clear has to drop the qualifying flag
-// in the same UPDATE, or the whole erase fails the constraint.
-func TestVoiceClearCorpusScrubsQualifyingLearningSignal(t *testing.T) {
+// Clearing the corpus erases the drafted text a sent learning signal still
+// holds, and archives the signal.
+func TestVoiceClearCorpusScrubsASentLearningSignal(t *testing.T) {
 	e := Setup(t)
 	ownerDB := SchemaPool(t)
 	voice := ai.NewVoiceStore(e.DB())
@@ -543,30 +540,30 @@ func TestVoiceClearCorpusScrubsQualifyingLearningSignal(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	qualHash := sha256.Sum256([]byte("reply:edited-sent-1"))
+	sentHash := sha256.Sum256([]byte("reply:edited-sent-1"))
 	if _, err := ownerDB.Exec(context.Background(), `
 		INSERT INTO voice_learning_signal
-		  (voice_profile_id, draft_ref_hash, outcome, final_text,
-		   final_captured_by, qualifies_as_source, retention_until, captured_by)
-		VALUES ($1, $2, 'edited_sent', 'the human-authored final text',
-		        'human:ada', true, $3, 'system')`,
-		profile.ID, qualHash[:], time.Now().Add(24*time.Hour)); err != nil {
+		  (voice_profile_id, draft_ref_hash, outcome, generated_original,
+		   final_captured_by, retention_until, captured_by)
+		VALUES ($1, $2, 'edited_sent', 'the drafted text',
+		        'human:ada', $3, 'system')`,
+		profile.ID, sentHash[:], time.Now().Add(24*time.Hour)); err != nil {
 		t.Fatal(err)
 	}
 
 	if _, err := voice.ClearCorpus(owner, profile.ID, &profile.Version); err != nil {
-		t.Fatalf("clearing a corpus that has a qualifying learning signal: %v", err)
+		t.Fatalf("clearing a corpus that has a sent learning signal: %v", err)
 	}
 
-	var qualifies bool
-	var finalText *string
+	var drafted *string
+	var erased, archived *time.Time
 	if err := ownerDB.QueryRow(context.Background(), `
-		SELECT qualifies_as_source, final_text FROM voice_learning_signal
+		SELECT generated_original, content_erased_at, archived_at FROM voice_learning_signal
 		WHERE voice_profile_id = $1`,
-		profile.ID).Scan(&qualifies, &finalText); err != nil {
+		profile.ID).Scan(&drafted, &erased, &archived); err != nil {
 		t.Fatal(err)
 	}
-	if qualifies || finalText != nil {
-		t.Fatalf("clear left the signal qualifying/text intact: qualifies=%v final_text=%v", qualifies, finalText)
+	if drafted != nil || erased == nil || archived == nil {
+		t.Fatalf("clear left the signal's text or state intact: text=%v erased=%v archived=%v", drafted, erased, archived)
 	}
 }

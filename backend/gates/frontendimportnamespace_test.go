@@ -147,7 +147,12 @@ func tsImportObjectSet(source string) ([]string, error) {
 // a template, a regexp source or a regexp literal, anchored or not. Each is a
 // predicate on the stamp the declared mirror no longer governs.
 func namespaceCopies(source, prefix string) int {
-	word := regexp.QuoteMeta(strings.TrimSuffix(prefix, ":"))
+	bare := strings.TrimSuffix(prefix, ":")
+	// Every copy spells the word verbatim, and stripping comments cannot join one.
+	if !strings.Contains(source, bare) {
+		return 0
+	}
+	word := regexp.QuoteMeta(bare)
 	copyOf := regexp.MustCompile("[\"'`/]\\^?" + word + "(?:" + regexp.QuoteMeta(":") + "|[\"'`/])")
 	return len(copyOf.FindAllStringIndex(tsComment.ReplaceAllString(source, " "), -1))
 }

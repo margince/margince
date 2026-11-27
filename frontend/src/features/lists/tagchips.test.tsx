@@ -29,13 +29,15 @@ afterEach(() => {
 });
 
 describe("the tag filter dial", () => {
-  it("offers the workspace's words", async () => {
+  it("offers the workspace's words under a name that reads before one of them", async () => {
     const { result } = chips({
       data: [{ id: "t-1", workspace_id: "w", name: "Key Account" }],
       page: { has_more: false, next_cursor: null },
     });
     await waitFor(() => expect(result.current).toHaveLength(1));
     expect(result.current[0].options[0].label).toBe("Key Account");
+    // The applied row reads "Tag is Key Account".
+    expect(result.current[0].label).toBe("Tag");
   });
 
   it("draws no dial when there is nothing to filter by", async () => {

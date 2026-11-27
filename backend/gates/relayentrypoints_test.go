@@ -29,7 +29,7 @@ func TestEveryRelayEntryPointRemainsVisibleToTheCensus(t *testing.T) {
 		if !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
 			continue
 		}
-		file, err := parser.ParseFile(token.NewFileSet(), filepath.Join(directory, entry.Name()), nil, 0)
+		file, err := gatekit.ParseFile(filepath.Join(directory, entry.Name()), 0)
 		if err != nil {
 			t.Fatal(err)
 		}

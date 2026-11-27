@@ -14,8 +14,6 @@ package gates
 import (
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/statedreason"
 )
@@ -35,7 +33,7 @@ func TestTheStatedReasonBoundIsTheContractsMaxLength(t *testing.T) {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(raw, &contract); err != nil {
+	if err := unmarshalYAML(raw, &contract); err != nil {
 		t.Fatalf("decoding the contract: %v", err)
 	}
 	reason, found := contract.Components.Schemas["RetentionOverrideRequest"].Properties["reason"]

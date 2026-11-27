@@ -41,7 +41,7 @@ var inviteMailState = `CASE WHEN $1::boolean AND app_user.status = 'invited' THE
 	               WHEN t.mail_queued_at > now() - interval '` + strconv.Itoa(int(inviteMailSendingWindow.Seconds())) + ` seconds' THEN '` + inviteMailSending + `'
 	          END
 	     FROM auth_token t
-	    WHERE t.user_id = app_user.id AND t.purpose = 'password_reset'
+	    WHERE t.user_id = app_user.id
 	      AND t.used_at IS NULL AND t.expires_at > now()
 	    ORDER BY t.created_at DESC LIMIT 1)
 	  ELSE NULL::text END`
@@ -88,7 +88,7 @@ func (s *Service) RecordInviteMailOutcome(ctx context.Context, actor Identity, r
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`UPDATE auth_token SET `+column+` = now()
-			  WHERE token_hash = $1 AND purpose = 'password_reset' AND used_at IS NULL`,
+			  WHERE token_hash = $1 AND used_at IS NULL`,
 			hashToken(rawToken))
 		return err
 	})
@@ -108,7 +108,7 @@ func (s *Service) InviteMailRecipient(ctx context.Context, actor Identity, rawTo
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT u.email FROM auth_token t JOIN app_user u ON u.id = t.user_id
-			  WHERE t.token_hash = $1 AND t.purpose = 'password_reset'
+			  WHERE t.token_hash = $1
 			    AND t.used_at IS NULL AND t.expires_at > now()
 			    AND u.status = '`+userStatusInvited+`' AND NOT u.is_agent AND u.archived_at IS NULL`,
 			hashToken(rawToken)).Scan(&email)

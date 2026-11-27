@@ -57,7 +57,7 @@ func TestEveryContainerJobRunsItsStepsInBash(t *testing.T) {
 			t.Fatalf("reading %s: %v", path, err)
 		}
 		var wf containerWorkflow
-		if err := yaml.Unmarshal(raw, &wf); err != nil {
+		if err := unmarshalYAML(raw, &wf); err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
 		for name, job := range wf.Jobs {

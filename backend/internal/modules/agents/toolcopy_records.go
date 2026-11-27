@@ -14,7 +14,7 @@ var searchRecordsCopy = toolCopy{
 		"leads and projects, and products, offer templates or activity when you name them.",
 	Limits: "It needs words in q. It searches the timeline (message bodies, call notes, meetings) " +
 		"only when you name activity. When nothing matches, near_matches may list up to five " +
-		"records whose names are spelt close to q; they are suggestions, not matches.",
+		"records whose names are spelled close to q; they are suggestions, not matches.",
 	Instead: "Use list_records to list records without words or by a condition, read_record when " +
 		"you already hold the record's id, and run_report when the question is a count, a total " +
 		"or a breakdown rather than a set of records.",
@@ -54,8 +54,8 @@ var changeRecordPartsCopy = toolCopy{
 }
 
 var readRecordCopy = toolCopy{
-	Purpose: "Read one record's own stored fields — the values a reader would see on its detail " +
-		"page, a company's profile fields and facts included — when you already know which record you mean.",
+	Purpose: "Read one record's own stored fields (the values a reader would see on its detail " +
+		"page, a company's profile fields and facts included) when you already know which record you mean.",
 	Limits: "It returns that record and nothing around it: no timeline, no related contacts, no " +
 		"deals on the company.",
 	Instead: "Use catch_me_up_on when the goal is what has been happening on the record rather " +
@@ -73,7 +73,7 @@ var createRecordCopy = toolCopy{
 		"duplicates included, and its counts are what the user weighs.",
 	Limits: "Creating a deal requires a pipeline_id and a stage_id, and " + pipelinesSource + " is " +
 		"what yields them for a deal that does not exist yet. Only the fields the chosen record_type " +
-		"actually stores are accepted, and a field belonging to a neighbouring type is refused " +
+		"actually stores are accepted, and a field belonging to a neighboring type is refused " +
 		"rather than dropped. A CONTACT created here is visible to everyone in the workspace, " +
 		"the same as one a human types in." + pastDayNeedsATime + meetingStatusRule,
 	Instead: "Record a signed contract with change_offers action record_contract, never as a deal. " +
@@ -95,12 +95,12 @@ var createRecordCopy = toolCopy{
 }
 
 var updateRecordCopy = toolCopy{
-	Purpose: "Change stored field values on a record that already exists — a corrected title, an " +
+	Purpose: "Change stored field values on a record that already exists: a corrected title, an " +
 		"amount, an expected close date.",
 	Limits: "Only the fields you send change, and only the fields the record type stores (a " +
 		"contact's email addresses are not among them). The whole patch applies in this call, " +
 		"and the result names each change so a human can Undo it. It names the record by id; when a name matches " +
-		"two records, a human picks. owner_id is NOT neutral — ownership decides visibility, so " +
+		"two records, a human picks. owner_id is NOT neutral: ownership decides visibility, so " +
 		"reassigning moves the record onto someone else's book and can take it off the owner's. " +
 		"An activity moved to another day keeps its time of day unless the user names one; " +
 		`moving a date-only one, send occurred_precision "day" again, or it reads as a time.` +
@@ -125,7 +125,7 @@ var updateRecordCopy = toolCopy{
 // which is read after the call has already been shaped.
 var logActivityCopy = toolCopy{
 	// The links field says which records to name, so the purpose does not repeat it.
-	Purpose: "Record something that happened — a call, a meeting, a note, a message — on every " +
+	Purpose: "Record something that happened (a call, a meeting, a note, a message) on every " +
 		"record it was about.",
 	Limits: "It can add a follow_up_task to a meeting, call or note in one " +
 		"transaction; the task inherits source links and audience, and its assignee must be able to " +
@@ -135,7 +135,7 @@ var logActivityCopy = toolCopy{
 		pastDayNeedsATime,
 	Instead: "Use progress_deal when the event also moves a deal; create_task for something " +
 		"still owed; attach_document for a file, whose text never goes into a note.",
-	Retain: "Keep the activity id — draft_outbound and send_outbound identify a conversation " +
+	Retain: "Keep the activity id: draft_outbound and send_outbound identify a conversation " +
 		"by it.",
 }
 
@@ -169,7 +169,7 @@ var confirmMeetingReadyCopy = toolCopy{
 }
 
 var undoMeetingReadyCopy = toolCopy{
-	Purpose: "Take back the user's \"I'm ready\" for a meeting.",
+	Purpose: "Take back the user's confirmation that they are ready for a meeting.",
 	Limits: "Removes the confirmation only while it is the one given at the revision you send, " +
 		"so a newer confirmation stays.",
 	Instead: "confirm_meeting_ready records readiness.",
@@ -198,7 +198,7 @@ var bulkUpdateRecordsCopy = toolCopy{
 	Purpose: "Hand up to 500 contacts, companies, deals or leads to one owner, archive them, add " +
 		"them to or take them off a Shortlist, put a tag on or take it off, or file one task under " +
 		"each, in one change; move up to 500 deals to one open stage (verb move_stage); or mark up to 500 of the user's Worklist tasks done " +
-		"(record_type worklist_item, verb complete) — or undo such a change.",
+		"(record_type worklist_item, verb complete). It can also undo such a change.",
 	Limits: "Call mode preview first and show the user what it says: how many records change, " +
 		"which are left alone and why, and the sample rows. Execute only after they agree. Each " +
 		"record is changed only if it still has the version you sent and you may change it. To " +
@@ -212,13 +212,13 @@ var bulkUpdateRecordsCopy = toolCopy{
 }
 
 var archiveRecordCopy = toolCopy{
-	Purpose: "Retire a record that should no longer be worked — a duplicate, a dead company, a " +
+	Purpose: "Retire a record that should no longer be worked: a duplicate, a dead company, a " +
 		"project that ended.",
 	Limits: "Archiving hides the record from day-to-day work; it does not delete it and does not " +
 		"move anything attached to it, so an archived duplicate still holds the activities and " +
 		"deals that were logged against it.",
 	Instead: "Use resolve_duplicates when a duplicate's history should end up on the record that " +
-		"survives, and disqualify_lead to close out a lead going nowhere — a lead's own transition " +
+		"survives, and disqualify_lead to close out a lead going nowhere: a lead's own transition " +
 		"records the reason where archiving would not.",
 	Retain: "By default the record is archived when this call answers; where an installation " +
 		"has raised this verb to confirm first, the answer is a staged approval and you must not " +
@@ -234,13 +234,13 @@ var mergeRecordsCopy = toolCopy{
 		"this again the other way round.",
 	Instead: "Use archive_record when the extra record has nothing worth keeping, rather than " +
 		"merging to make it disappear.",
-	Retain: "target_id is the record that survives and source_id the one merged away — read both " +
+	Retain: "target_id is the record that survives and source_id the one merged away. Read both " +
 		"records before choosing: the fold cannot be called back, and by default nothing holds it.",
 }
 
 var advanceDealCopy = toolCopy{
 	Purpose: "Move a deal to a different stage of its pipeline.",
-	Limits: "The stage is named by id from " + pipelinesSource + " — call it first; a deal you read " +
+	Limits: "The stage is named by id from " + pipelinesSource + ". Call it first; a deal you read " +
 		"carries only its current stage. Moving onto or off a won or lost stage closes or reopens " +
 		"the deal, which is the user's decision: unless they named this deal and stage, name " +
 		"them and get their yes first. A losing stage needs a lost_reason_code from the loss " +
@@ -256,14 +256,14 @@ var advanceDealCopy = toolCopy{
 var progressDealCopy = toolCopy{
 	Purpose: "Move a deal to a different stage of its pipeline, optionally leaving a note on its " +
 		"timeline saying why, in one call.",
-	Limits: "The stage is named by id from " + pipelinesSource + " — call it first; a deal you read " +
+	Limits: "The stage is named by id from " + pipelinesSource + ". Call it first; a deal you read " +
 		"carries only its current stage. Moving onto or off a won or lost stage closes or reopens " +
 		"the deal, which is the user's decision: unless they named this deal and stage, name " +
 		"them and get their yes first. A losing stage needs a lost_reason_code from the loss " +
 		"reasons view. A lost_reason note explains it; a note alone is recorded as an unmapped " +
 		"loss. Read the target " +
 		"stage's semantic rather than guessing from its name. The move commits first and the " +
-		"note follows it, so a note that fails to write does not put the deal back — the answer " +
+		"note follows it, so a note that fails to write does not put the deal back: the answer " +
 		"says so, and the note is then log_activity's to retry.",
 	Instead: "Use log_activity when something happened but the deal did not move.",
 	Retain: "Send if_version with the version you read of the deal. When the answer is staged, " +
@@ -271,8 +271,8 @@ var progressDealCopy = toolCopy{
 }
 
 var qualifyLeadCopy = toolCopy{
-	Purpose: "Fill in what a lead's own data already implies — today the company name, from the " +
-		"domain of its email address — and report which qualification fields are still empty.",
+	Purpose: "Fill in what a lead's own data already implies (today the company name, from the " +
+		"domain of its email address) and report which qualification fields are still empty.",
 	Limits: "It fills only a field that is currently EMPTY and derivable from the lead itself. It " +
 		"never overwrites a value, never invents one, and reaches nothing outside the record, so " +
 		"a lead with nothing to derive from comes back unchanged with its gaps named.",
@@ -285,7 +285,7 @@ var qualifyLeadCopy = toolCopy{
 var promoteLeadCopy = toolCopy{
 	Purpose: "Turn a lead who has genuinely engaged into a contact record, carrying their history " +
 		"across. Optionally seat the contact on an open, writable existing deal of its employer, or open a new deal in the same transaction.",
-	Limits: "It requires a trigger naming the engagement that justifies it — a reply, a booked " +
+	Limits: "It requires a trigger naming the engagement that justifies it: a reply, a booked " +
 		"or held meeting, or a human's decision. Cold outreach that nobody answered is not a " +
 		"promotion, and there is no trigger for it. existing_deal_id and deal are mutually exclusive.",
 	Instead: "Use qualify_lead when the lead is merely incomplete rather than ready, and " +
@@ -312,39 +312,39 @@ var demoteLeadCopy = toolCopy{
 	Purpose: "Reverse a promotion that should not have happened, putting the lead back on the " +
 		"open ladder.",
 	Limits: "It blocks rather than orphans: a promotion whose contact now owns a deal is refused, " +
-		"and activities captured since the promotion stay on the contact's timeline — they are real " +
-		"history. A promotion that merged into an existing contact leaves that contact untouched and " +
+		"and activities captured since the promotion stay on the contact's timeline (they are real " +
+		"history). A promotion that merged into an existing contact leaves that contact untouched and " +
 		"only clears the lineage.",
 	Instead: "Use disqualify_lead when the lead is real but going nowhere; demotion says the " +
 		"promotion itself was wrong.",
 	Retain: "The lead is demoted when this call answers. Where an installation has raised this " +
-		"verb to confirm first, the answer is a staged approval instead — keep its id, and do not " +
+		"verb to confirm first, the answer is a staged approval instead. Keep its id, and do not " +
 		"report the demotion until the retry carrying it has answered.",
 }
 
 var advanceProjectPhaseCopy = toolCopy{
-	Purpose: "Move a project to another phase — initiative, pursuing, delivering, closed.",
+	Purpose: "Move a project to another phase: initiative, pursuing, delivering, closed.",
 	Limits: "The four names are fixed but the order is not enforced: a project may go back a " +
 		"phase, and a closed one may be reopened. Closing requires a reason, which is recorded on " +
 		"the phase history either way. Closing does not complete, cancel or hide anything open " +
 		"on the project: its tasks and commitments stay open on their own records. When the " +
-		"user has asked for the close, report what is still open and close — an open " +
+		"user has asked for the close, report what is still open and close: an open " +
 		"commitment is something to tell them, not a reason to hold back a close they asked for.",
 	Instead: "Use progress_deal for a deal's pipeline stages; a project's phases are a different " +
 		"vocabulary on a different record.",
 	Retain: "Send if_version with the version you read. By default the phase moves when this " +
 		"call answers. Where an installation has raised this verb to confirm first, the answer " +
-		"is a staged approval and the phase has NOT moved — keep its id and do not report the " +
+		"is a staged approval and the phase has NOT moved. Keep its id and do not report the " +
 		"project as advanced until the retry that carries the approval has answered.",
 }
 
 var listPipelinesCopy = toolCopy{
-	Purpose: "List every pipeline this workspace has with its live stages — the configuration " +
+	Purpose: "List every pipeline this workspace has with its live stages: the configuration " +
 		"the deal-shaped writes are named against.",
 	Limits: "It is where the id of a stage a deal could move TO comes from, so a deal cannot be " +
-		"created, or moved anywhere new, without calling this first — a deal you have already " +
-		"read carries only the stage it is in. Each stage carries a semantic — open, won or lost " +
-		"— and that, not its name, is what decides whether moving onto it closes the deal " +
+		"created, or moved anywhere new, without calling this first: a deal you have already " +
+		"read carries only the stage it is in. Each stage carries a semantic (open, won or lost), " +
+		"and that, not its name, is what decides whether moving onto it closes the deal " +
 		"or reopens it, which is the user's call; a stage called \"Closed\" may be either.",
 	Retain: "Keep the pipeline_id and the stage_id of the stage you mean: create_record for a " +
 		"deal requires both, and progress_deal takes that stage_id as its " +
