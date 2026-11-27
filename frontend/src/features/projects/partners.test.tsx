@@ -130,7 +130,7 @@ describe("PartnerTab — not yet a partner", () => {
   it("names the initial candidate stage and refuses Active until activation", async () => {
     stubFetch(async (url) =>
       url.includes("/partner")
-        ? jsonResponse({}, 404)
+        ? new Response(null, { status: 204 })
         : jsonResponse({ data: [], page: { has_more: false } }),
     );
     const user = userEvent.setup();
@@ -744,7 +744,9 @@ it("ends only the partner program with its displayed version", async () => {
         ended = true;
         return new Response(null, { status: 204 });
       }
-      return ended ? jsonResponse({}, 404) : jsonResponse(partner);
+      return ended
+        ? new Response(null, { status: 204 })
+        : jsonResponse(partner);
     }
     return jsonResponse({ data: [], page: { has_more: false } });
   });
