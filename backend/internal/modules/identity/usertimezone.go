@@ -90,7 +90,7 @@ func (s *Service) SaveMyTimezone(ctx context.Context, zone string, source Timezo
 // A browser guess over a stored zone, or the value already stored, writes
 // nothing.
 //
-// Held by: TestOneWriterSetsAUsersTimezone (backend/gates/usertimezonewriters_test.go)
+// Held by: TestEachFactHasOneWriter (backend/gates/onewriters_test.go)
 func writeTimezoneTx(ctx context.Context, tx pgx.Tx, user ids.UserID, zone string, source TimezoneSource) (Seat, error) {
 	seat := Seat{UserID: user}
 	var locale, before, setByBefore *string

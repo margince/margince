@@ -46,11 +46,6 @@ const frontendAudienceReasons = "../frontend/src/features/lists/audiencemembers.
 // break.
 var tsReasonEntry = regexp.MustCompile(`["']?([a-z_]+)["']?:\s*["']([a-zA-Z.]+)["']`)
 
-// tsComment strips comments before the entries are read, so a line inside the
-// literal MENTIONING a token does not keep this gate green after the real entry
-// is deleted.
-var tsReasonComment = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
-
 func TestTheBrowserNamesEveryAudienceReason(t *testing.T) {
 	t.Parallel()
 	source, err := gatekit.ReadFile(frontendAudienceReasons)
@@ -69,7 +64,7 @@ func TestTheBrowserNamesEveryAudienceReason(t *testing.T) {
 		body = body[:end]
 	}
 	named := map[string]string{}
-	for _, pair := range tsReasonEntry.FindAllStringSubmatch(tsReasonComment.ReplaceAllString(body, ""), -1) {
+	for _, pair := range tsReasonEntry.FindAllStringSubmatch(gatekit.TSWithoutComments(body), -1) {
 		named[pair[1]] = pair[2]
 	}
 	// The floor. A literal the parser reads as empty would otherwise pass every

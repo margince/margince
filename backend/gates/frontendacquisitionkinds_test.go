@@ -26,8 +26,6 @@ import (
 
 var frontendAcquisitionKinds = filepath.Join(repoRoot, "frontend", "src", "lib", "acquisitionkinds.ts")
 
-var tsCommentInAcquisitionKinds = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
-
 // Any quote style counts, so an entry spelled another way is still read.
 var tsQuotedEntry = regexp.MustCompile("\"([^\"]*)\"|'([^']*)'|`([^`]*)`")
 
@@ -122,7 +120,7 @@ func tsAcquisitionKinds(t *testing.T) map[string]bool {
 	if end < 0 {
 		t.Fatalf("%s: ACQUISITION_KINDS is not closed by `] as const`", frontendAcquisitionKinds)
 	}
-	body = tsCommentInAcquisitionKinds.ReplaceAllString(body[:end], " ")
+	body = gatekit.TSWithoutComments(body[:end])
 	kinds := map[string]bool{}
 	for _, match := range tsQuotedEntry.FindAllStringSubmatch(body, -1) {
 		kinds[match[1]+match[2]+match[3]] = true

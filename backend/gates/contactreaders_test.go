@@ -28,10 +28,8 @@ package gates
 // were.
 
 import (
-	"go/ast"
 	"maps"
 	"os"
-	"path"
 	"path/filepath"
 	"testing"
 
@@ -291,9 +289,6 @@ var ruledContactReads = gatekit.Waive(map[string]string{
 // the issue that will close it.
 var deferredContactReads = gatekit.Waive(map[string]string{})
 
-// notTheContactTable: the read pattern matched something that is not the table.
-// Empty for : unlike , the word is not a SQL keyword, and the
-// pattern's delimiter set already keeps contact_room and contact_stage_history out.
 // notTheContactTable: the read pattern matched something that is not this table.
 //
 // Empty for `contact`, and the emptiness is a finding rather than an omission:
@@ -311,65 +306,10 @@ var contactVerdicts = []namedVerdict{
 	{"deferred", deferredContactReads},
 }
 
-// wantMinimumGatedContactSites is the floor below the count of sites that
-// satisfy the gate today. It exists for the reason every floor in this
-// directory does: an extractor that stops recognising SQL finds no sites and
-// reports nothing, which is indistinguishable from a clean tree.
-const wantMinimumGatedContactSites = 22
-
-var contactReaderScope = gatekit.Scope{
-	Roots:   []string{"internal"},
-	Subject: readsContactTable,
-	Exempt:  gatekit.Waive(map[string]string{}),
-}
-
-func readsContactTable(filePath string, file *ast.File) bool {
-	return gatekit.FileReadsTable(filePath, file, contactGate.literal)
-}
-
-func TestEveryReaderOfTheContactTableCarriesTheObjectGateOrAVerdict(t *testing.T) {
-	t.Parallel()
-	files := contactReaderScope.Files(t)
-	walk := contactGate.walkPackages(t, files)
-	consts := constantTable{}
-
-	var satisfied int
-	for _, parsed := range files {
-		pkg := path.Dir(parsed.Path)
-		for _, site := range contactGate.readSites(parsed, consts.of(t, pkg)) {
-			subject := site.subject(parsed.Path)
-			carriesGate := walk.carries(t, contactGate, parsed, site, consts.of(t, pkg))
-			verdict := verdictIn(t, subject, contactVerdicts)
-
-			switch {
-			case carriesGate && verdict != "":
-				t.Errorf("%s carries the contact object gate AND a %s verdict — remove the verdict, it "+
-					"now describes code that is gated", subject, verdict)
-			case carriesGate:
-				satisfied++
-			case verdict == "":
-				t.Errorf("%s reads the contact table without the object gate and without a verdict.\n"+
-					"  Reading a contact discloses a named human being — their name, title, "+
-					"address and employer — which is what the contact grant governs.\n"+
-					"  Either ask auth.Require(ctx, \"contact\", …) — or auth.ReadGranted where the "+
-					"read must degrade rather than refuse — or declare it in "+
-					"predicateContactReads / lifecycleContactReads / calleeGatedContactReads / "+
-					"ruledContactReads with the reason it needs no gate.\n"+
-					"  Left alone it is indistinguishable from a read nobody considered.\n"+
-					"  The read: %s", subject, site.sql)
-			}
-		}
-	}
-
-	if satisfied < wantMinimumGatedContactSites {
-		t.Errorf("only %d contact reads satisfy the object gate, want at least %d — a literal extractor "+
-			"that stopped recognising this tree's SQL would report exactly this, and it reads the "+
-			"same as a clean tree", satisfied, wantMinimumGatedContactSites)
-	}
-	t.Logf("contact reads: %d gated, %d predicate, %d lifecycle, %d callee-gated, %d ruled, %d DEFERRED (still disclosing)",
-		satisfied, len(predicateContactReads.Subjects()), len(lifecycleContactReads.Subjects()),
-		len(calleeGatedContactReads.Subjects()), len(ruledContactReads.Subjects()), len(deferredContactReads.Subjects()))
-
+// sweepContactVerdicts fails a verdict no read matched any more. The
+// gate census asks for each sweep by name, so the list is written out.
+func sweepContactVerdicts(t *testing.T) {
+	t.Helper()
 	predicateContactReads.AssertAllMatched(t)
 	lifecycleContactReads.AssertAllMatched(t)
 	calleeGatedContactReads.AssertAllMatched(t)
@@ -377,6 +317,11 @@ func TestEveryReaderOfTheContactTableCarriesTheObjectGateOrAVerdict(t *testing.T
 	ruledContactReads.AssertAllMatched(t)
 	deferredContactReads.AssertAllMatched(t)
 }
+
+// wantMinimumGatedContactSites is the floor below the count of sites that
+// satisfy the gate today. An extractor that stops recognising SQL finds no sites
+// and reports nothing, which reads the same as a clean tree.
+const wantMinimumGatedContactSites = 22
 
 // spentGateFixture holds readers that gate only themselves: a contact read
 // whose call chain reaches one, and a read handed a statement the walk cannot see.

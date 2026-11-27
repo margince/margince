@@ -22,7 +22,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/token"
 	"os"
 	"path/filepath"
 	"regexp"
@@ -65,7 +64,7 @@ func TestEveryInteractionCountReadsTheSharedUnit(t *testing.T) {
 	for _, pkg := range goPackagesUnder(t, ".") {
 		consts := relstrengthConsts(t, pkg, group)
 		for _, file := range pkg.files {
-			for _, stmt := range sqlStatementsWith(t, file, consts) {
+			for _, stmt := range gatekit.SQLStatementsWithConstants(file.ast, consts) {
 				if !strings.Contains(strings.ToLower(stmt), "count(") {
 					continue
 				}
@@ -240,32 +239,6 @@ func relstrengthConsts(t *testing.T, pkg goPackage, group string) map[string]str
 }
 
 const relstrengthImport = "github.com/margince/margince/backend/internal/shared/kernel/relstrength"
-
-// sqlStatementsWith is gatekit.SQLStatementsOf with the package's relstrength
-// names resolved — one entry per statement, flattened across the `+` chains the
-// folds are written as.
-func sqlStatementsWith(t *testing.T, file goFile, consts map[string]string) []string {
-	t.Helper()
-	var out []string
-	ast.Inspect(file.ast, func(node ast.Node) bool {
-		switch typed := node.(type) {
-		case *ast.BinaryExpr:
-			if typed.Op != token.ADD {
-				return true
-			}
-			if text, isString := gatekit.StringExpr(typed, consts, gatekit.FoldTotal); isString {
-				out = append(out, text)
-				return false
-			}
-		case *ast.BasicLit:
-			if text, isString := gatekit.LiteralText(typed); isString {
-				out = append(out, text)
-			}
-		}
-		return true
-	})
-	return out
-}
 
 type goFile struct {
 	relPath string

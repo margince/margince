@@ -112,16 +112,11 @@ func TestOnlyIdentityMintsAPassportAndOnlyForTheSessionUser(t *testing.T) {
 			if strings.HasSuffix(path, "_test.go") || strings.Contains(path, "/integration/") {
 				return nil
 			}
-			body, readErr := gatekit.ReadFile(path)
-			if readErr != nil {
-				return readErr
+			parsed, parseErr := gatekit.ParseFile(path, 0)
+			if parseErr != nil {
+				return parseErr
 			}
-			// Statements, not lines: a mint spelled across a multi-line raw
-			// string is exactly the shape a line scan would miss.
-			for _, stmt := range sqlStringsIn(t, path, body) {
-				if !strings.Contains(strings.ToUpper(stmt), "INSERT INTO PASSPORT") {
-					continue
-				}
+			for _, stmt := range passportInserts(parsed) {
 				inserts = append(inserts, path)
 				if !strings.HasPrefix(filepath.ToSlash(path), passportOwner) {
 					t.Errorf("%s mints a passport, but only %s may — a second mint "+
@@ -239,23 +234,35 @@ func splitTopLevel(s string) []string {
 	return append(out, strings.TrimSpace(s[start:]))
 }
 
-// sqlStringsIn returns every string literal in the file, so the scan reads
-// whole statements rather than lines.
-func sqlStringsIn(t *testing.T, path string, body []byte) []string {
-	t.Helper()
-	parsed, err := parser.ParseFile(gatekit.SourceFileSet(), path, body, parser.SkipObjectResolution)
-	if err != nil {
-		t.Fatalf("parsing %s: %v", path, err)
-	}
-	var out []string
-	ast.Inspect(parsed, func(n ast.Node) bool {
-		lit, ok := n.(*ast.BasicLit)
-		if ok && lit.Kind == token.STRING {
-			out = append(out, gatekit.TextOf(lit))
+// passportInserts lists the statements in the file that insert a passport.
+// Statements, not lines or literals: a mint spelled across a multi-line raw
+// string, or split with `+`, is the shape a narrower scan would miss.
+func passportInserts(file *ast.File) []string {
+	var inserts []string
+	for _, stmt := range gatekit.SQLStatementsOf(file) {
+		if strings.Contains(strings.ToUpper(stmt), "INSERT INTO PASSPORT") {
+			inserts = append(inserts, stmt)
 		}
-		return true
-	})
-	return out
+	}
+	return inserts
+}
+
+// The mint census, read on a second mint path spelled the way a long line
+// gets split. Each half alone holds no `INSERT INTO passport`.
+func TestTheMintCensusReadsAnInsertSplitAcrossAConcatenation(t *testing.T) {
+	t.Parallel()
+	const source = "package p\nconst mint = \"INSERT INTO \" + \"passport (on_behalf_of, granted_by) VALUES ($1, $2)\"\n"
+	parsed, err := parser.ParseFile(token.NewFileSet(), "planted.go", source, 0)
+	if err != nil {
+		t.Fatalf("parsing the planted mint: %v", err)
+	}
+	inserts := passportInserts(parsed)
+	if len(inserts) != 1 {
+		t.Fatalf("read %d passport insert(s) in the planted mint, want 1", len(inserts))
+	}
+	if mintsForOneUser(inserts[0]) {
+		t.Errorf("the planted mint binds two placeholders and was read as minting for one user: %s", inserts[0])
+	}
 }
 
 // mintNames is every function that mints a passport, by name, with the
