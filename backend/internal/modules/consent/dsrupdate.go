@@ -82,8 +82,10 @@ func placeholderAnswer(current dsrRow, in UpdateDSRInput) *ValidationError {
 		sameAnswer(current.Resolution, in.Resolution) {
 		return nil
 	}
-	return &ValidationError{Field: fieldResolution,
-		Reason: "on a case an erasure retired, this word stands for the answer the erasure removed; write the answer in other words"}
+	return &ValidationError{
+		Field:  fieldResolution,
+		Reason: "on a case an erasure retired, this word stands for the answer the erasure removed; write the answer in other words",
+	}
 }
 
 // resolutionChanged is what the audit row claims about the answer. A write that
