@@ -93,7 +93,7 @@ func (d CompanyDoor) admit(ctx context.Context, company ids.CompanyID, cols cont
 	if err := cols.Check(values); err != nil {
 		return fmt.Errorf("%w: %s", extension.ErrInvalid, err)
 	}
-	if err := d.Store.LockCompanyTx(ctx, d.Tx, company); err != nil {
+	if _, err := d.Store.LockCompanyForBulkTx(ctx, d.Tx, company); err != nil {
 		return d.Refuse(err)
 	}
 	return nil
