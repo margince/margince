@@ -137,7 +137,7 @@ func TestANewTaskVersionStartsWithNoActionLeftOpen(t *testing.T) {
 func rerunAudit(ctx context.Context, t *testing.T, pool *pgxpool.Pool) string {
 	t.Helper()
 	var kept string
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT jsonb_build_object('scanned', detail->'scanned', 'changed', detail->'changed',
  'action_reason', detail->'action_reason', 'action_count', detail->'action_count')::text
  FROM system_log WHERE action = 'data_task.retry'`).Scan(&kept)
@@ -150,7 +150,7 @@ func rerunAudit(ctx context.Context, t *testing.T, pool *pgxpool.Pool) string {
 func TestAReviewedStepWithActionNeededIsNotRerunUnderItsOldReview(t *testing.T) {
 	ctx, pool, e, _ := executorFixture(t)
 	p := progressFor(ctx, t, e)
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE data_task_run SET status = 'done', activation = '{"operator": "user:reviewer"}',
  action_needed = '{"reason": "privacy_reviewer_missing", "count": 1, "records": []}' WHERE task_id = @task`, pgx.NamedArgs{paramTask: p.TaskID})
 		return err

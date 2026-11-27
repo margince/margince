@@ -26,7 +26,7 @@ import (
 func seatMailboxes(t *testing.T, e *integration.Env, seats ...ids.UUID) map[ids.UUID]string {
 	t.Helper()
 	addresses := map[ids.UUID]string{}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, seat := range seats {
 			var address string
 			if err := tx.QueryRow(context.Background(), `SELECT email FROM app_user WHERE id=$1`, seat).Scan(&address); err != nil {

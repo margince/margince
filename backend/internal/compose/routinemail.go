@@ -47,7 +47,7 @@ func mailUser(ctx context.Context) ids.UUID {
 
 func currentMailReview(ctx context.Context, pool *pgxpool.Pool, engine *weekly.Engine, now time.Time) (weekly.Review, error) {
 	var week time.Time
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		week, err = weekly.WeekStartOf(ctx, tx, now)
 		return err

@@ -59,7 +59,7 @@ func TestIdentityHolderPlansReadOnlyTheRequestedMailboxes(t *testing.T) {
 			for _, tc := range cases {
 				t.Run(tc.email, func(t *testing.T) {
 					keys := storekit.IdentityKeys{Emails: []string{tc.email, tc.email}}
-					err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+					err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 						if _, err := tx.Exec(ctx, `SELECT set_config('plan_cache_mode', @mode, true)`, pgx.NamedArgs{"mode": mode}); err != nil {
 							return err
 						}

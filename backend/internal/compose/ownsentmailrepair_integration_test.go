@@ -180,7 +180,7 @@ func TestTheOwnSentMailRepairReplaysWithoutASecondClaim(t *testing.T) {
 	row := capture.StoredOwnSentMail{Activity: ids.From[ids.ActivityKind](id), Seat: e.AdminUser, Sender: repairFormerSelf}
 	raw := repairMessage(repairFormerSelf, repairBuyer, "replayed@previous-employer.example", false)
 	var verdict string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		verdict, err = capture.ReclaimStoredOwnSentMailTx(ctx, tx, activities.ClaimOwnSentMailTx, ownSentMailParties, row, raw)
 		return err

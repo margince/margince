@@ -64,7 +64,7 @@ func retentionAdminCtx(ws ids.UUID, grant principal.ObjectGrant) context.Context
 // validation — the raw INSERT a migration or a psql session would make. This is
 // the only way to ask the DATABASE whether it refuses a duplicate scope.
 func insertPolicyDirectly(e *Env, objectType string, category *string, retainDays int, action string) error {
-	return database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	return database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO retention_policy (object_type, category, retain_days, action)
 			VALUES ($1, $2, $3, $4)`,
@@ -79,7 +79,7 @@ func insertPolicyDirectly(e *Env, objectType string, category *string, retainDay
 func retentionPolicyAudits(t *testing.T, e *Env) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM audit_log WHERE entity_type = 'retention_policy'`).Scan(&n)
 	}); err != nil {
@@ -204,7 +204,7 @@ func TestRetainOnlyPostureSuppressesDestructionButNotArchival(t *testing.T) {
 
 	// The posture is seeded the way bootstrap seeds it from margince.yaml, so
 	// the pass reads exactly what a `default_policy: retain_only` install has.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := config.SeedTx(context.Background(), tx, nil, privacy.RetainOnly, true)
 		return err
 	}); err != nil {
@@ -220,7 +220,7 @@ func TestRetainOnlyPostureSuppressesDestructionButNotArchival(t *testing.T) {
 	var leadName string
 	var transcriptBody *string
 	var dealArchived bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `SELECT full_name FROM lead WHERE id = $1`, staleLead).Scan(&leadName); err != nil {
 			return err
@@ -250,7 +250,7 @@ func TestRetainOnlyPostureSuppressesDestructionButNotArchival(t *testing.T) {
 	}
 
 	// Lifting the posture resumes enforcement on rows nobody re-authored.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`DELETE FROM setting WHERE key = $1`, privacy.RetainOnly.Key())
 		return err
@@ -261,7 +261,7 @@ func TestRetainOnlyPostureSuppressesDestructionButNotArchival(t *testing.T) {
 	if err := svc.EvaluateInstallation(RetentionPassCtx(e.WS)); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT full_name FROM lead WHERE id = $1`, staleLead).Scan(&leadName)
 	}); err != nil {
@@ -433,7 +433,7 @@ func TestRetainOnlyPostureDoesNotDestroyContentThroughTheEmbedCascade(t *testing
 	bare := seedEmbedCall(t, e, 91)
 	withContent := seedEmbedCallWithPayload(t, e, 91, "Marek Janetzke, Q3 renewal terms")
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := config.SeedTx(context.Background(), tx, nil, privacy.RetainOnly, true)
 		return err
 	}); err != nil {
@@ -463,7 +463,7 @@ func TestRetainOnlyPostureDoesNotDestroyContentThroughTheEmbedCascade(t *testing
 
 	// With the posture lifted, the payload-bearing row ages out like any other:
 	// the narrowing is the posture's, not a new permanent exemption.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`DELETE FROM setting WHERE key = $1`, privacy.RetainOnly.Key())
 		return err
@@ -512,7 +512,7 @@ func TestAPolicyWithNoExecutorCannotBeAuthoredAndCannotStopThePass(t *testing.T)
 	if err := insertPolicyDirectly(e, "activity", nil, 1, "anonymize"); err != nil {
 		// The seeded ('activity', NULL) row holds that scope, so replace it:
 		// one row per scope is the database's rule and this test does not break it.
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(),
 				`UPDATE retention_policy SET action = 'anonymize', retain_days = 1
 				 WHERE object_type = 'activity' AND category IS NULL`)
@@ -532,7 +532,7 @@ func TestAPolicyWithNoExecutorCannotBeAuthoredAndCannotStopThePass(t *testing.T)
 	// The later policies ran, which is the property the abort destroyed.
 	var leadName string
 	var dealArchived bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `SELECT full_name FROM lead WHERE id = $1`, staleLead).Scan(&leadName); err != nil {
 			return err
@@ -586,7 +586,7 @@ func TestRetentionAnonymizesAnUnattachedContactAndArchivesAnAgedNote(t *testing.
 
 	var contactName string
 	var emails, noteArchived int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `SELECT full_name FROM contact WHERE id = $1`, contactID).Scan(&contactName); err != nil {
 			return err

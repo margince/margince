@@ -37,7 +37,7 @@ func markBodyRead(t *testing.T, e *loadEnv, mail ids.UUID, completeness string) 
 	}
 	system := principal.WithActor(principal.WithWorkspaceID(t.Context(), e.ws),
 		principal.Principal{Type: principal.PrincipalSystem, ID: "system:mail_body_completeness"})
-	err := database.WithWorkspaceTx(system, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(system, e.pool, func(tx pgx.Tx) error {
 		changed, err := AssessMailBodiesTx(system, tx, []MailBodyAssessment{{Activity: mail, Completeness: completeness, Body: body}})
 		if err == nil && changed != 1 {
 			t.Fatalf("assessed %d mails, want 1", changed)
@@ -54,7 +54,7 @@ func markBodyRead(t *testing.T, e *loadEnv, mail ids.UUID, completeness string) 
 func reviewAsAsksUs(t *testing.T, e *loadEnv, mail ids.UUID) {
 	t.Helper()
 	reviewer := e.asSeat(e.rep)
-	err := database.WithWorkspaceTx(reviewer, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(reviewer, e.pool, func(tx pgx.Tx) error {
 		expected, err := OwedReviewTx(reviewer, tx, mail, 4000, 4000)
 		if err != nil {
 			return err
@@ -298,7 +298,7 @@ func citedSettled(t *testing.T, e *loadEnv, mail ids.UUID, at time.Time) bool {
 	t.Helper()
 	reader := e.asSeat(e.rep)
 	var settled map[ids.UUID]bool
-	err := database.WithWorkspaceTx(reader, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(reader, e.pool, func(tx pgx.Tx) error {
 		var err error
 		settled, err = SettledCitations(reader, tx, []ids.UUID{mail}, nil, at)
 		return err

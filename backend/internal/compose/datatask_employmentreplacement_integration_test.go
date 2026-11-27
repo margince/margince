@@ -32,7 +32,7 @@ func unresolvedNewerEmployment(t *testing.T, e *integration.Env, name string) id
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{Kind: "employment", ContactID: &contact, CompanyID: &companyID, Role: new("Older role"), Source: "manual"}); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var run string
 		if err := tx.QueryRow(e.Admin(), `INSERT INTO provider_run(subject_kind,contact_id,provider,trigger,state,input_fingerprint,external_correlation_id,connection_version,connection_epoch,configuration_snapshot,requested_categories,completed_at) VALUES('contact',@contact,'surfe','manual','completed','repair-fixture',gen_random_uuid(),1,1,'{}',ARRAY['job_history'],now()) RETURNING id::text`, pgx.NamedArgs{"contact": contact}).Scan(&run); err != nil {
 			return err
@@ -61,7 +61,7 @@ func TestUndatedEmploymentRepairIsBoundedAtomicAndReplaySafe(t *testing.T) {
 	ctx := datatask.Acting(e.Admin(), task.ID)
 	rollback := errors.New("roll back the completed batch")
 	before := e.WsCount(t, `SELECT count(*) FROM audit_log`)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 1, RunID: ids.NewV7()})
 		if err != nil {
 			return err
@@ -92,7 +92,7 @@ func TestUndatedEmploymentRepairIsBoundedAtomicAndReplaySafe(t *testing.T) {
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log`); n != before {
 		t.Fatal("replay wrote new audit rows")
 	}
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 1, Cursor: []byte(`"invalid"`)})
 		return err
 	})

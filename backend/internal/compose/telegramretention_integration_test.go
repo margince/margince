@@ -98,7 +98,7 @@ func captureOneTelegramMessage(t *testing.T, e *integration.Env) ids.UUID {
 func TestTheRawCaptureStageAgesOutAChannelMessagesOriginal(t *testing.T) {
 	e := integration.Setup(t)
 	activity := captureOneTelegramMessage(t, e)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO retention_policy (object_type, category, retain_days, action)
@@ -130,7 +130,7 @@ func TestTheRawCaptureStageAgesOutAChannelMessagesOriginal(t *testing.T) {
 func theCapturedChannelActivity(t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
 	var ids []ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT id FROM activity WHERE source_system = 'telegram'`)
 		if err != nil {
@@ -162,7 +162,7 @@ func scanUUIDs(rows pgx.Rows, out *[]ids.UUID) error {
 func storedOriginalOf(t *testing.T, e *integration.Env, activity ids.UUID) ids.UUID {
 	t.Helper()
 	var raw *ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT raw_capture_id FROM activity WHERE id = $1`, activity).Scan(&raw)
 	}); err != nil {
@@ -177,7 +177,7 @@ func storedOriginalOf(t *testing.T, e *integration.Env, activity ids.UUID) ids.U
 func activityBodyOf(t *testing.T, e *integration.Env, activity ids.UUID) *string {
 	t.Helper()
 	var body *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT body FROM activity WHERE id = $1`, activity).Scan(&body)
 	}); err != nil {
@@ -189,7 +189,7 @@ func activityBodyOf(t *testing.T, e *integration.Env, activity ids.UUID) *string
 func rawCaptureRowsLeft(t *testing.T, e *integration.Env) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT count(*) FROM raw_capture`).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting the provider originals: %v", err)
@@ -205,7 +205,7 @@ func rawCaptureRowsLeft(t *testing.T, e *integration.Env) int {
 // anything else this fixture happened to leave behind.
 func ageOutAndSweep(t *testing.T, e *integration.Env, activity ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO retention_policy (object_type, category, retain_days, action)

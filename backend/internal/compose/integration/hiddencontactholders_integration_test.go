@@ -170,7 +170,7 @@ func TestAnAgentIsNotToldAboutARestrictedContactOrItsHolder(t *testing.T) {
 			t.Errorf("%s: hidden_contact_holders = %v, want %v", label, h, holders)
 		}
 		var hidden storekit.HiddenRows
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
 			hidden, err = contacts.HiddenCompanyContactsTx(ctx, tx, companyIDOf(company))
 			return err
 		}); err != nil {

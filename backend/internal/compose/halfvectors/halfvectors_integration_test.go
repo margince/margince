@@ -57,7 +57,7 @@ func TestTheTaskMovesEveryVectorToHalfPrecisionAndReplaysAsANoOp(t *testing.T) {
 		WHERE embedding_half::vector = '[0.25,-0.5,0.75]'::vector`); n != 5 {
 		t.Errorf("%d of 5 vectors kept their value across the move", n)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := DataTask().Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100})
 		if err == nil && (out.Changed != 0 || !out.Done) {
 			t.Errorf("a replay changed %d vector(s), done %v, want none and done", out.Changed, out.Done)
@@ -79,7 +79,7 @@ func TestBatchesOfTwoReachEveryVector(t *testing.T) {
 	in := datatask.BatchIn{Limit: 2}
 	for batches := 1; ; batches++ {
 		var out datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
 			out, err = DataTask().Steps[0].Batch(ctx, tx, in)
 			return err
 		}); err != nil {
@@ -125,7 +125,7 @@ func TestTheTaskRollsBackWithItsBatchAndRefusesAMalformedCursor(t *testing.T) {
 	if n := atFullPrecision(t, e); n != 1 {
 		t.Errorf("the rolled-back batch left %d vector(s) at full precision, want 1", n)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := move(ctx, tx, datatask.BatchIn{Cursor: []byte(`"bad cursor"`), Limit: 2})
 		return err
 	}); err == nil {

@@ -180,7 +180,7 @@ func (w *notificationDigestWorker) morningFor(
 	ctx context.Context, now time.Time,
 ) (digestPass, error) {
 	var pass digestPass
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var err error
 		// Candidate routing includes notices up to this tick; each recipient gets their own cutoff.
 		pass.window, err = notificationWindow(ctx, tx, occurredday.Combined, ids.UUID{}, now)
@@ -230,7 +230,7 @@ func (w *notificationDigestWorker) digestFor(
 	if err != nil {
 		return err
 	}
-	if err := database.WithWorkspaceTx(seatCtx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(seatCtx, w.pool, func(tx pgx.Tx) error {
 		var err error
 		window, err = notificationWindow(seatCtx, tx, occurredday.Personal, seat.UUID, personal.Open)
 		return err

@@ -41,7 +41,7 @@ func holdInHumanTx(t *testing.T, e *integration.SearchEnv, w dealWorld, fn func(
 	t.Helper()
 	pid, done := make(chan uint32, 1), make(chan error, 1)
 	go func() {
-		done <- database.WithWorkspaceTx(w.ctx, e.Pool, func(tx pgx.Tx) error {
+		done <- database.WithTx(w.ctx, e.Pool, func(tx pgx.Tx) error {
 			var backend uint32
 			if err := tx.QueryRow(context.Background(), `SELECT pg_backend_pid()`).Scan(&backend); err != nil {
 				return err
@@ -163,7 +163,7 @@ func TestTheThreadRungReadsOneWholeConversation(t *testing.T) {
 	file := func(sourceID string, deal ids.UUID) {
 		t.Helper()
 		mail := ids.From[ids.ActivityKind](activityOf(t, e, sourceID))
-		if err := database.WithWorkspaceTx(w.ctx, e.Pool, func(tx pgx.Tx) error { return relinkInTx(w, tx, mail, deal, true) }); err != nil {
+		if err := database.WithTx(w.ctx, e.Pool, func(tx pgx.Tx) error { return relinkInTx(w, tx, mail, deal, true) }); err != nil {
 			t.Fatalf("filing %s: %v", sourceID, err)
 		}
 	}
@@ -279,7 +279,7 @@ func TestTheRepairReportsARefusedTargetAndAnnouncesItsChange(t *testing.T) {
 	closing := w.dealOnProject(t, "Acme reporting", reporting.ID)
 	relinkAsColleague(t, e, w, activityOf(t, e, "ref1@acme.example"), "project", reporting.ID)
 	var lost ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `INSERT INTO stage (pipeline_id, name, position, semantic, win_probability)
 			VALUES ($1, 'Lost', 9, 'lost', 0) RETURNING id`, w.pipelineID).Scan(&lost)
 	}); err != nil {
@@ -357,12 +357,12 @@ func TestMailWithAnEmptyThreadKeyFollowsNoConversation(t *testing.T) {
 	first := w.deal(t, "Acme operations")
 	w.deal(t, "Acme reporting")
 	ours := ids.From[ids.ActivityKind](activityOf(t, e, "empty1@myco.example"))
-	if err := database.WithWorkspaceTx(w.ctx, e.Pool, func(tx pgx.Tx) error { return relinkInTx(w, tx, ours, first, false) }); err != nil {
+	if err := database.WithTx(w.ctx, e.Pool, func(tx pgx.Tx) error { return relinkInTx(w, tx, ours, first, false) }); err != nil {
 		t.Fatal(err)
 	}
 	// A row stored with an empty key, as an import or an older writer may
 	// leave one; no live writer is asked to produce it.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity SET thread_key = '' WHERE source_id IN ('empty1@myco.example', 'empty2@acme.example')`)
 		return err
 	}); err != nil {
@@ -387,7 +387,7 @@ func TestTheOperatorPreviewRefusesALimitOutOfBounds(t *testing.T) {
 	if rec := r.operatorPreview(`{"limit":1}`); rec.Code != http.StatusOK {
 		t.Errorf("a preview of one mail answered %d, want 200", rec.Code)
 	}
-	if err := database.WithWorkspaceTx(r.system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(r.system, e.Pool, func(tx pgx.Tx) error {
 		_, err := r.repair.PreviewTx(r.system, tx, ids.Nil, 0)
 		return err
 	}); !errors.Is(err, apperrors.ErrInvalidArgument) {
@@ -416,7 +416,7 @@ func (q *readingQueue) EnqueueTx(_ context.Context, _ pgx.Tx, args river.JobArgs
 func repairRelinkEnvelope(t *testing.T, e *integration.SearchEnv, mail, deal ids.UUID) kevents.Envelope {
 	t.Helper()
 	var raw []byte
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT envelope FROM event_outbox
 			 WHERE envelope->>'type' = 'activity.updated' AND envelope->'entity'->>'id' = $1
 			   AND envelope->'payload'->'changed_fields'->'relinked'->>'entity_id' = $2`, mail.String(), deal.String()).Scan(&raw)

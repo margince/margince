@@ -38,7 +38,7 @@ import (
 func seedAccountAtStage(t *testing.T, e *integration.Env, stage string) ids.UUID {
 	t.Helper()
 	company := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO company (id, display_name, status, source, captured_by, owner_id)
 			VALUES ($1, 'ScaleCommerce', $2, 'gmail:seed', 'connector:gmail', $3)`, company, stage, e.AdminUser)
@@ -79,7 +79,7 @@ func seedScopedContractEndedAt(t *testing.T, e *integration.Env, company ids.UUI
 		named = workstream[0]
 	}
 	fingerprint := ids.NewV7().String()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
 			Kind: signalKindContractEnded, CompanyID: company, Summary: "The source reports an ending.", Severity: "warn", Fingerprint: fingerprint,
 			Evidence: []signals.DerivedEvidence{{ActivityID: ids.UUID(source.Id), Snippet: "Termination reported", SourceQuote: &proof, LifecycleScope: scope, Workstream: named}},
@@ -111,7 +111,7 @@ func proposePass(t *testing.T, e *integration.Env) int {
 func stagedOffer(t *testing.T, e *integration.Env, company ids.UUID) ids.UUID {
 	t.Helper()
 	var approvalID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM approval WHERE kind = 'lifecycle_change' AND target_entity_id = $1 AND status = 'pending'`,
 			company).Scan(&approvalID)
@@ -125,7 +125,7 @@ func stagedOffer(t *testing.T, e *integration.Env, company ids.UUID) ids.UUID {
 func accountStage(t *testing.T, e *integration.Env, company ids.UUID) string {
 	t.Helper()
 	var stage string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status FROM company WHERE id = $1`, company).Scan(&stage)
 	}); err != nil {
@@ -138,7 +138,7 @@ func accountStage(t *testing.T, e *integration.Env, company ids.UUID) string {
 func signalStatus(t *testing.T, e *integration.Env, signal ids.UUID) string {
 	t.Helper()
 	var status string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status FROM signal WHERE id = $1`, signal).Scan(&status)
 	}); err != nil {
@@ -304,7 +304,7 @@ func TestAnAcceptOverACorrectedRecordIsRefused(t *testing.T) {
 	approvalID := stagedOffer(t, e, company)
 
 	// Someone reads the same mail and files the account as disqualified.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE company SET status = 'disqualified' WHERE id = $1`, company)
 		return err
@@ -425,7 +425,7 @@ func seedCapturePrivateContactOf(t *testing.T, e *integration.Env, owner ids.UUI
 func seedOpenContractEndedOnContact(t *testing.T, e *integration.Env, company, contact ids.UUID) ids.UUID {
 	t.Helper()
 	signal := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO signal (id, kind, source_channel, entity_type, entity_id,
 			                    resolved_company_id, resolution_state, severity, summary, status,

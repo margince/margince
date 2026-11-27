@@ -138,7 +138,7 @@ func currentLeadScore(t *testing.T, e *SearchEnv, leadID ids.UUID) int {
 func assertRecomputeRanExactlyOnce(t *testing.T, e *SearchEnv) {
 	t.Helper()
 	var runs, audits int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM workflow_run WHERE handler = 'recompute_lead_score'`).Scan(&runs); err != nil {
 			return err

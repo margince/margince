@@ -39,7 +39,7 @@ func RoutingWithArrival(db *database.DB, handler workflow.Handler, arrival func(
 func (w websiteLeadRouting) Apply(ctx context.Context, ev workflow.Event, eff workflow.Effect, token *workflow.ApprovalToken) (workflow.RunResult, error) {
 	var out workflow.RunResult
 	var declined error
-	err := database.WithWorkspaceWriteTx(ctx, w.db.Pool(), func(bound context.Context) error {
+	err := database.WithWriteTx(ctx, w.db.Pool(), func(bound context.Context) error {
 		var err error
 		out, err = w.Handler.Apply(bound, ev, eff, token)
 		if _, ok := errors.AsType[*workflow.DeclinedError](err); ok {

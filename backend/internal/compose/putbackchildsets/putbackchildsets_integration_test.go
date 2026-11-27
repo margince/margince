@@ -34,7 +34,7 @@ func seamFor(e *integration.Env) compose.RestoreSeam {
 func latestUpdate(t *testing.T, e *integration.Env, entityType string, id ids.UUID) (entry ids.UUID, version int64) {
 	t.Helper()
 	admin := e.Admin()
-	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(admin, `SELECT id FROM audit_log WHERE entity_type = $1 AND entity_id = $2 AND action = 'update'
 			ORDER BY occurred_at DESC, id DESC LIMIT 1`, entityType, id).Scan(&entry); err != nil {
 			return err
@@ -100,7 +100,7 @@ func setDomains(t *testing.T, e *integration.Env, id ids.UUID, names ...string) 
 func seedMail(t *testing.T, e *integration.Env, address, body string) (contact, activity ids.UUID) {
 	t.Helper()
 	contact, activity = ids.NewV7(), ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		for _, statement := range []struct {
 			sql  string
@@ -180,7 +180,7 @@ func scenarios() []scenario {
 		}, func(t *testing.T, e *integration.Env, id ids.UUID) {
 			companyID := ids.From[ids.CompanyKind](id)
 			domain := "adopted-" + id.String()[:8] + ".test"
-			err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				_, err := tx.Exec(context.Background(), `INSERT INTO company_domain_disposition (domain, status, last_evidence_at)
 					VALUES ($1, 'pending', now())`, domain)
 				return err
@@ -219,7 +219,7 @@ func scenarios() []scenario {
 		}, func(t *testing.T, e *integration.Env, id ids.UUID) {
 			claim := provider.Claim{Key: provider.ClaimProfessionalEmails, Value: []byte(`[{"value":"bought-` + id.String()[:8] + `@example.test"}]`)}
 			run := ids.NewV7()
-			err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				if _, err := tx.Exec(context.Background(), `INSERT INTO provider_run (id, subject_kind, contact_id, provider, trigger, state,
 					input_fingerprint, external_correlation_id, connection_version, connection_epoch, configuration_snapshot, requested_categories)
 					VALUES ($1, 'contact', $2, 'surfe', 'manual', 'completed', 'fp', $3, 1, 1, '{}', '{}')`, run, id, ids.NewV7()); err != nil {
@@ -238,7 +238,7 @@ func scenarios() []scenario {
 			return id
 		}, func(t *testing.T, e *integration.Env, id ids.UUID) {
 			var activity ids.UUID
-			err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(), `SELECT activity_id FROM activity_link WHERE contact_id = $1`, id).Scan(&activity)
 			})
 			if err != nil {
@@ -340,7 +340,7 @@ func previousUpdate(t *testing.T, e *integration.Env, entityType string, id ids.
 	t.Helper()
 	admin := e.Admin()
 	var entry ids.UUID
-	err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(admin, `SELECT id FROM audit_log WHERE entity_type = $1 AND entity_id = $2 AND action = 'update'
 			ORDER BY occurred_at DESC, id DESC OFFSET 1 LIMIT 1`, entityType, id).Scan(&entry)
 	})

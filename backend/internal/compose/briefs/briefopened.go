@@ -51,7 +51,7 @@ func (e *BriefEngine) RecordShown(ctx context.Context, run BriefRun) {
 // recordOpened writes the open in a transaction of its own, so the read that
 // showed the brief writes nothing.
 func (e *BriefEngine) recordOpened(ctx context.Context, run BriefRun) error {
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		return emitBriefOpened(ctx, tx, run)
 	})
 }

@@ -30730,8 +30730,7 @@ paths:
       description: |
         Grants `read` or `write` on a single record to a user or team otherwise out of their own/team/all
         scope. Enforced by the application visibility WHERE clause: the grant arm is rendered into the
-        row-scope predicate and into the write-authority arm, and the tenant predicate is bound by the
-        `WithWorkspaceTx` GUC contract. There is no row-level-security backstop — core RLS was retired
+        row-scope predicate and into the write-authority arm. There is no row-level-security backstop — core RLS was retired
         and `record_grant` carries no policy — so the application predicate is the whole of the
         enforcement. Idempotent on `(record_type, record_id, subject_type, subject_id)` —
         a re-assert RESTATES the grant rather than amending it: `access`, `expires_at`, `reason` and

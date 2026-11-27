@@ -79,7 +79,7 @@ func losses(reader context.Context, t *testing.T, e *integration.Env, by string,
 	t.Helper()
 	var answer compose.AnalyticsAnswer
 	query := analyticsquery.Query{Entity: "loss-events", GroupBy: []string{by}, Filters: filters, Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "n"}}}
-	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		answer, err = compose.RunAnalyticsQuery(reader, tx, query, analyticsquery.Floor(1))
 		return err
@@ -235,7 +235,7 @@ func closingMonths(t *testing.T, e *integration.Env) map[string]any {
 	reader := readerOf(e)
 	var answer compose.AnalyticsAnswer
 	query := analyticsquery.Query{Entity: "win-loss", GroupBy: []string{"period_month"}, Measures: []analyticsquery.Measure{{Fn: analyticsquery.CountAll, As: "n"}}}
-	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		answer, err = compose.RunAnalyticsQuery(reader, tx, query, analyticsquery.Floor(1))
 		return err

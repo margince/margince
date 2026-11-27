@@ -49,7 +49,7 @@ func ForecastEvaluationDataset(
 	}
 	ctx, cancel := context.WithTimeout(ctx, bounds.Runtime)
 	defer cancel()
-	workspaces, err := enumerateWorkspaces(ctx, pool)
+	workspaces, err := database.LiveWorkspaces(ctx, pool)
 	if err != nil {
 		return forecasting.EvaluationDataset{}, err
 	}

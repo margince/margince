@@ -45,7 +45,7 @@ type answeredRow struct {
 func answeredRows(t *testing.T, e *integration.SearchEnv, meeting ids.UUID) map[string][]answeredRow {
 	t.Helper()
 	out := map[string][]answeredRow{}
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT coalesce(ap.address, u.email), ap.user_id, ap.contact_id, ap.response, ap.past_party_cap
 			  FROM activity_participant ap LEFT JOIN app_user u ON u.id = ap.user_id

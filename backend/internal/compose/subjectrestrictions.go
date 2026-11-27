@@ -25,7 +25,7 @@ type subjectRestrictions struct{ pool *pgxpool.Pool }
 
 func (s subjectRestrictions) AnyRestricted(ctx context.Context, subjects model.Subjects) (bool, error) {
 	restricted := false
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		restricted, err = storekit.SubjectsRestricted(ctx, tx, subjects)
 		return err

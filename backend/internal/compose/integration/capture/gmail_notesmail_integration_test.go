@@ -149,7 +149,7 @@ func TestAGeminiNotesMailLandsAsTheTranscriptOfItsMeeting(t *testing.T) {
 		t.Fatal(err)
 	}
 	outsider := readerCtx(e, e.Rep3)
-	err := database.WithWorkspaceTx(outsider, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(outsider, e.Pool, func(tx pgx.Tx) error {
 		return auth.EnsureActivityContentVisible(outsider, tx, mail)
 	})
 	if !errors.Is(err, apperrors.ErrNotFound) {

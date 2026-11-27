@@ -182,7 +182,7 @@ func (s *Service) AssembleScoped(ctx context.Context, contactID ids.ContactID, o
 	if opts.activityColumns, err = s.activityColumns(ctx); err != nil {
 		return crmcontracts.Contact360{}, err
 	}
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		contact, err := s.contacts.GetContactTx(ctx, tx, contactID, storekit.LiveOnly, active)
 		if err != nil {
 			return err

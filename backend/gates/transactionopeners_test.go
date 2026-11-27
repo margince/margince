@@ -28,10 +28,9 @@ import (
 const databasePackage = "internal/platform/database"
 
 // transactionOpener names the function in that package permitted to call
-// pool.Begin. Every seam the package publishes — WithWorkspaceTx, WithInfraTx,
-// DB.Tx, DB.TxIsolated — routes through it, which is what makes "a domain row
-// commits with its audit row and its outbox row" a property held in a single
-// place.
+// pool.Begin. Every seam the package publishes routes through it: WithTx,
+// WithInfraTx, DB.Tx and DB.TxIsolated. That makes "a domain row commits with
+// its audit row and its outbox row" a property held in a single place.
 //
 // runTx is NOT a second opener: it supplies the default options and calls this,
 // so the rollback discipline still lives in exactly one function. What made a

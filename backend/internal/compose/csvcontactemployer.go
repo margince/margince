@@ -46,7 +46,7 @@ func (w *csvWriters) recordCreatedEmployer(ctx context.Context, tx pgx.Tx, emplo
 func employerImportKey(id string) string { return "contact-employer:" + id }
 
 func (w *csvWriters) resolveImportedEmployer(ctx context.Context, id ids.UUID, choice contacts.EmployerChoice) (migration.AssocResult, error) {
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		employer, err := w.contacts.ResolveContactEmployerTx(ctx, tx, ids.From[ids.ContactKind](id), choice)
 		if err != nil {
 			return err

@@ -250,10 +250,9 @@ func (r *callRuntime) scoped(ctx context.Context) (context.Context, error) {
 	}
 	ws, ok := principal.WorkspaceID(r.callCtx)
 	if !ok {
-		// The same refusal WithWorkspaceTx would give, raised against the
-		// invocation rather than the handler's context — an unpinned
-		// invocation is a core wiring fault, and no ctx a handler builds
-		// should be able to supply the missing tenant.
+		// Raised against the invocation rather than the handler's context.
+		// An unpinned invocation is a core wiring fault, and no ctx a handler
+		// builds may supply the missing tenant.
 		return nil, database.ErrNoWorkspace
 	}
 	ctx = principal.WithWorkspaceID(ctx, ws)

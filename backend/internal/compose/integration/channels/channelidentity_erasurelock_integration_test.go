@@ -79,7 +79,7 @@ func eraseWhileAccountIsLocked(t *testing.T, e *integration.Env, contact ids.UUI
 	admin := e.Admin()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	var eraseErr error
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := storekit.LockChannelIdentities(ctx, tx, []storekit.ChannelIdentityKey{
 			{Provider: telegramProvider, ChannelUserID: lockedAccount},
 		}); err != nil {
@@ -165,7 +165,7 @@ func eraseWhileAddressIsLocked(t *testing.T, e *integration.Env, contact ids.UUI
 	admin := e.Admin()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	var eraseErr error
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := storekit.LockSubjectKeys(ctx, tx, nil, []string{lockedEmail}); err != nil {
 			return err
 		}

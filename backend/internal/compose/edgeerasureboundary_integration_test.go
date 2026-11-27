@@ -153,7 +153,7 @@ func roleOf(t *testing.T, e *integration.Env, edge ids.UUID) string {
 	t.Helper()
 	admin := e.Admin()
 	var role *string
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(admin, `SELECT role FROM relationship WHERE id = $1`, edge).Scan(&role)
 	}); err != nil {
 		t.Fatalf("read link %s's role: %v", edge, err)

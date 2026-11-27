@@ -54,7 +54,7 @@ func (s *privateThreadStripper) StripWorkspace(ctx context.Context, windows capt
 		Type: principal.PrincipalSystem, ID: "system:private-thread-strip",
 	})
 	var due []capture.PrivateThreadMessage
-	if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		floor, _, err := purgeFloorTx(ctx, tx)
 		if err != nil {
 			return err
@@ -67,7 +67,7 @@ func (s *privateThreadStripper) StripWorkspace(ctx context.Context, windows capt
 	stripped := 0
 	for _, message := range due {
 		withheld := false
-		if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 			floor, _, err := purgeFloorTx(ctx, tx)
 			if err != nil {
 				return err

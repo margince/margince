@@ -28,8 +28,8 @@ func (s *Service) CurrentMoves(ctx context.Context, dealIDs []ids.UUID) (map[ids
 	if _, err := actingUser(ctx); err != nil {
 		return nil, err
 	}
-	err := database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 			current, err := s.currentMoveFacts(ctx, tx, dealIDs)
 			if err != nil {
 				return err

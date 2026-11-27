@@ -53,7 +53,7 @@ func TestLaterPassCannotReplaceANewerRenewalWithOlderEvidence(t *testing.T) {
 	dispatch := func() CommitmentOutcome {
 		t.Helper()
 		var outcome CommitmentOutcome
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			outcome, _, err = dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 			return err
@@ -126,7 +126,7 @@ func TestConcurrentOlderRenewalCannotOverwriteCommittedNewerWork(t *testing.T) {
 	release := make(chan struct{})
 	winner := make(chan error, 1)
 	go func() {
-		winner <- database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+		winner <- database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 			outcome, _, err := dispatcher.DispatchTx(ctx, tx, newer, ids.NewV7())
 			if err != nil {
 				return err
@@ -153,7 +153,7 @@ func TestConcurrentOlderRenewalCannotOverwriteCommittedNewerWork(t *testing.T) {
 	loser := make(chan error, 1)
 	go func() {
 		defer close(done)
-		loser <- database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+		loser <- database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 			outcome, _, err := dispatcher.DispatchTx(ctx, tx, older, ids.NewV7())
 			if err == nil && outcome != CommitmentRemembered {
 				return fmt.Errorf("stale renewal = %s", outcome)
@@ -213,7 +213,7 @@ func TestErasingOldRenewalWaitsForTheTaskAndRechecksItsEvidence(t *testing.T) {
 	done, erased := make(chan struct{}), make(chan error, 1)
 	observer := integration.OwnerConn(t)
 	dispatcher := NewCommitmentDispatcher(f.e.Pool, approvals.NewService(f.e.DB()))
-	err = database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		if _, err := storekit.LockRow(ctx, tx, "activity", f.work, storekit.IncludeArchived); err != nil {
 			return err
 		}

@@ -20,7 +20,7 @@ import (
 
 func restoreLegacyRecipientThroughEngine(classifier context.Context, t *testing.T, e *integration.Env, activity ids.UUID, address string, at time.Time) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(classifier, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(classifier, e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `DELETE FROM activity_participant WHERE activity_id=$1 AND address=$2`, activity, address); err != nil {
 			return err
 		}
@@ -60,7 +60,7 @@ func restoreLegacyRecipientThroughEngine(classifier context.Context, t *testing.
 	}); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(classifier, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(classifier, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(classifier, `DELETE FROM activity_participant WHERE activity_id=$1 AND address=$2`, activity, address)
 		return err
 	}); err != nil {

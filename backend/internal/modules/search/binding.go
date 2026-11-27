@@ -46,7 +46,7 @@ var ErrNoLiveWorkspace = errors.New("search: the installation has no live worksp
 // restarts idempotent — the marker is written once, ever, outside a
 // completed reindex.
 func (s *Store) SeedBinding(ctx context.Context, configuredIdentity string) error {
-	// rls-exempt: deployment metadata, no workspace_id (embed_store_binding, migration 0114) — this write must not ride a per-workspace GUC tx.
+	// pool-exempt: deployment metadata (embed_store_binding) with no audit or outbox row; this write commits on its own.
 	_, err := s.db.Pool().Exec(ctx, `
 		INSERT INTO embed_store_binding (singleton, populated_identity, status)
 		VALUES (true, $1, 'idle')
@@ -67,7 +67,7 @@ func (s *Store) SeedBinding(ctx context.Context, configuredIdentity string) erro
 // It never joins the live entity scan — that cost belongs to the ops
 // status endpoint, not the readiness probe.
 func (s *Store) PopulatedIdentity(ctx context.Context) (identity string, status string, updatedAt time.Time, err error) {
-	// rls-exempt: deployment metadata, no workspace_id
+	// pool-exempt: deployment metadata, no workspace_id
 	err = s.db.Pool().QueryRow(ctx, `SELECT populated_identity, status, updated_at FROM embed_store_binding WHERE singleton`).
 		Scan(&identity, &status, &updatedAt)
 	if err != nil {
@@ -167,10 +167,9 @@ type ReembedClaim struct {
 // dispatcher completes in milliseconds once it has fanned out, so "is some job
 // still active" would stop answering the question long before the run is over.
 func (s *Store) ClaimAndEnqueueReembedding(ctx context.Context, claim ReembedClaim, enqueue func(tx pgx.Tx) error) error {
-	// rls-exempt: deployment metadata, no workspace_id — the CAS and the
-	// job enqueue share one non-tenant transaction so a rolled-back enqueue
-	// always undoes the claim; WithInfraTx is the platform's cross-tenant
-	// tx shape (no GUC to bind, there is no tenant here).
+	// pool-exempt: deployment metadata. The CAS and the job enqueue share one
+	// transaction, so a rolled-back enqueue undoes the claim. WithInfraTx is the
+	// transaction shape for work that names no workspace.
 	return database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		tag, err := tx.Exec(ctx, `
 			UPDATE embed_store_binding
@@ -194,7 +193,7 @@ func (s *Store) ClaimAndEnqueueReembedding(ctx context.Context, claim ReembedCla
 // code to each, so the two must not collapse into one error.
 func refusedClaimReason(ctx context.Context, tx pgx.Tx) error {
 	var seeded bool
-	// rls-exempt: deployment metadata, no workspace_id
+	// pool-exempt: deployment metadata, no workspace_id
 	err := tx.QueryRow(ctx, `SELECT true FROM embed_store_binding WHERE singleton`).Scan(&seeded)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrBindingNotSeeded
@@ -227,7 +226,7 @@ const ReembedProgressStaleness = 5 * time.Minute
 // working. Fenced on the run, like every other write here: a straggler must not
 // keep the marker of the run that replaced it looking alive.
 func (s *Store) noteReembedProgress(ctx context.Context, run ids.UUID) error {
-	// rls-exempt: deployment metadata, no workspace_id
+	// pool-exempt: deployment metadata, no workspace_id
 	_, err := s.db.Pool().Exec(ctx, `
 		UPDATE embed_store_binding SET updated_at = now() WHERE reembedding_run = $1`, run)
 	if err != nil {
@@ -243,7 +242,7 @@ func (s *Store) noteReembedProgress(ctx context.Context, run ids.UUID) error {
 // ended is the error the run stopped on. A run cut short by ErrIdentityDrift
 // keeps populated_identity, because no role serves its target any more.
 func (s *Store) ReleaseReembedding(ctx context.Context, run ids.UUID, ended error) error {
-	// rls-exempt: deployment metadata, no workspace_id
+	// pool-exempt: deployment metadata, no workspace_id
 	return database.WithInfraTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		return releaseReembeddingTx(ctx, tx, run, !errors.Is(ended, ErrIdentityDrift))
 	})
@@ -299,11 +298,10 @@ func systemWorkspaceContext(ctx context.Context, wsID ids.UUID) context.Context 
 // per-workspace rollup loop from.
 // anyWorkspace resolves a workspace to BIND a pass to, not to scope one.
 //
-// Since ADR-0091 §8 phase D no embeddable table carries a tenant, so a rebuild
-// reads and writes the same rows whichever workspace the handle names — but the
-// statements still run through a bound handle and WithWorkspaceTx still wants
-// the GUC set. The oldest live workspace is taken for determinism rather than
-// for meaning; §5 removes the need for one at all.
+// No embeddable table carries a tenant, so a rebuild reads and writes the same
+// rows whichever workspace the handle names. The statements still run through
+// a bound handle, so one workspace has to be bound. The oldest live workspace
+// is taken for determinism rather than for meaning.
 func (s *Store) anyWorkspace(ctx context.Context) (ids.WorkspaceID, error) {
 	workspaces, err := s.fleetWorkspaceIDs(ctx)
 	if err != nil {
@@ -316,14 +314,13 @@ func (s *Store) anyWorkspace(ctx context.Context) (ids.WorkspaceID, error) {
 }
 
 func (s *Store) fleetWorkspaceIDs(ctx context.Context) ([]ids.WorkspaceID, error) {
-	// rls-exempt: fleet enumeration — the workspace table lists every tenant before the per-workspace tx each caller opens next (compose/dispatch.go enumerateWorkspaces is the sanctioned spelling; backend/gates/jobfleetscan_test.go ratifies this site as a read).
-	rows, err := s.db.Pool().Query(ctx, `SELECT id FROM workspace WHERE archived_at IS NULL ORDER BY created_at`)
+	live, err := database.LiveWorkspaces(ctx, s.db.Pool())
 	if err != nil {
-		return nil, fmt.Errorf("search: enumerating workspaces: %w", err)
+		return nil, err
 	}
-	workspaces, err := pgx.CollectRows(rows, pgx.RowTo[ids.WorkspaceID])
-	if err != nil {
-		return nil, fmt.Errorf("search: collecting workspaces: %w", err)
+	workspaces := make([]ids.WorkspaceID, len(live))
+	for i, id := range live {
+		workspaces[i] = ids.From[ids.WorkspaceKind](id)
 	}
 	return workspaces, nil
 }

@@ -35,7 +35,7 @@ func TestParticipantEvidenceCorrectionRollsBackReplaysAndRepairsLegacyGaps(t *te
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
 	readiness := func(want bool) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			got, err := storekit.ParticipantEvidenceReady(ctx, tx)
 			if err != nil {
 				return err
@@ -67,7 +67,7 @@ func TestParticipantEvidenceCorrectionRollsBackReplaysAndRepairsLegacyGaps(t *te
 	task := participantEvidenceDataTask()
 	task.Steps[0].Limit = 1
 	task.Steps[0].MinLimit = 1
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		sp, err := tx.Begin(ctx)
 		if err != nil {
 			return err
@@ -94,7 +94,7 @@ func TestParticipantEvidenceCorrectionRollsBackReplaysAndRepairsLegacyGaps(t *te
 		t.Fatal(err)
 	}
 	readiness(true)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		replay, err := activities.RepairParticipantEvidenceTx(ctx, tx, 500)
 		if err != nil {
 			return err

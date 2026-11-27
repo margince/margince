@@ -150,10 +150,14 @@ func (w *ExportWriter) WriteBundle(ctx context.Context, dst io.Writer) (BundleSu
 	if !ok {
 		return BundleSummary{}, errors.New("compose: no actor bound to export context")
 	}
+	wsID, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return BundleSummary{}, database.ErrNoWorkspace
+	}
 	summary := BundleSummary{RowCounts: make(map[string]int, len(exportMembers))}
 
 	var collected []memberData
-	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		for _, m := range exportMembers {
 			if m.objectGate != "" {
 				action := principal.ActionRead
@@ -181,7 +185,6 @@ func (w *ExportWriter) WriteBundle(ctx context.Context, dst io.Writer) (BundleSu
 		return BundleSummary{}, err
 	}
 
-	wsID, _ := principal.WorkspaceID(ctx)
 	if err := writeZip(dst, actor, wsID, collected, summary); err != nil {
 		return BundleSummary{}, err
 	}
@@ -201,7 +204,7 @@ func auditExport(ctx context.Context, pool *pgxpool.Pool, summary BundleSummary)
 	if !ok {
 		return errors.New("compose: no workspace bound to export context")
 	}
-	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		_, err := storekit.Audit(ctx, tx, "export", objectWorkspace, wsID, nil, map[string]any{
 			auditFieldFormat: exportFormat, "row_counts": summary.RowCounts, "omitted": summary.Omitted,
 		})

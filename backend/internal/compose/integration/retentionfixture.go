@@ -19,7 +19,7 @@ import (
 // jurisdiction policy, so a reader test cannot change other tests' retention rules.
 func HoldUnderStatutoryFloor(t *testing.T, e *Env, activity ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_retention_evidence
 			       (activity_id, basis, qualified_at, decided_by_name, reason)

@@ -132,7 +132,7 @@ func TestAMeetingBeforeAnAddressChangedHandsIsNotEvidenceAboutItsNewHolder(t *te
 	ctx, pool := meetingTenureEnv(t)
 
 	var met bool
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		// The former holder's meeting, then the hand-over: the address is
 		// retired AFTER that meeting, so the meeting is not the new holder's.
 		if err := seedMeetingWith(ctx, tx, recycledAddress, 60*24*time.Hour); err != nil {
@@ -158,7 +158,7 @@ func TestAMeetingAfterAnAddressChangedHandsIsEvidence(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
 
 	var met bool
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if err := archiveAddressAt(ctx, tx, recycledAddress, 60*24*time.Hour); err != nil {
 			return err
 		}
@@ -185,7 +185,7 @@ func TestAMeetingWithAnAddressThatNeverChangedHandsIsStillEvidence(t *testing.T)
 	ctx, pool := meetingTenureEnv(t)
 
 	var met bool
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if err := seedMeetingWith(ctx, tx, "steady@company.example", 30*24*time.Hour); err != nil {
 			return err
 		}
@@ -216,7 +216,7 @@ func TestAMeetingStillInTheDiaryIsNotEvidenceUntilItsTimePasses(t *testing.T) {
 		"held an hour ago":     {"behind@company.example", time.Hour, true},
 	} {
 		var met bool
-		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			if err := seedMeetingWith(ctx, tx, tc.address, tc.ago); err != nil {
 				return err
 			}
@@ -246,7 +246,7 @@ func TestADayMeetingDatedTodayIsNotEvidenceUntilItsDateEnds(t *testing.T) {
 		"dated yesterday": {"yesterday@company.example", 1, true},
 	} {
 		var met bool
-		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			if err := seedDayMeetingWith(ctx, tx, tc.address, tc.daysAgo); err != nil {
 				return err
 			}
@@ -276,7 +276,7 @@ func TestARelinkedGuestIsNoEvidenceOfMeetingTheContactItNowNames(t *testing.T) {
 		run := ids.NewV7().String()
 		guest, judged := "guest-"+name+"-"+run+"@partner.example", "judged-"+name+"-"+run+"@chosen.example"
 		var met bool
-		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			if err := seedMeetingWith(ctx, tx, guest, 30*24*time.Hour); err != nil {
 				return err
 			}

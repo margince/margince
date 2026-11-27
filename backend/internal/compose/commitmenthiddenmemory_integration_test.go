@@ -56,7 +56,7 @@ func TestHiddenReassignedTaskIsNotRecreatedWhenAttributionIsLost(t *testing.T) {
 			}
 			dispatcher := NewCommitmentDispatcher(e.Pool, e.svc)
 			for _, ctx := range []context.Context{e.Admin(), principal.SystemActing(e.Admin(), "commitment-replay")} {
-				if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+				if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 					_, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 					return err
 				}); err != nil {

@@ -69,7 +69,7 @@ store writes, which step 3 needs: [explanation/write-backbone.md](../explanation
    Add the method that matches the generated signature to that module's `Handlers`
    (`backend/internal/modules/<name>/`).
    Do the work through the module's `*Store` or `*Service`, and follow the store shape.
-   That means `WithWorkspaceTx`, the `auth` gate at the start, and `storekit.Audit` and `Emit` for any change.
+   That means `WithTx`, the `auth` gate at the start, and `storekit.Audit` and `Emit` for any change.
    See how a store reads and writes in [explanation/backend-onboarding.md](../explanation/backend-onboarding.md#how-a-store-reads-and-writes-the-shape).
 
    `compose.Server` holds each module's handler set one level down.

@@ -33,7 +33,7 @@ func TestAColleagueWorkFactMarginceWroteIsNamedInTheReportsLanguage(t *testing.T
 	}
 	facts := []reporting.Fact{{SourceID: ids.UUID(meeting.Id)}, {SourceID: ids.NewV7()}}
 	facts[0].Row.Label, facts[1].Row.Label = subject, "Kickoff"
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return NameSystemWritten(e.Admin(), tx, facts, textlang.German)
 	}); err != nil {
 		t.Fatal(err)

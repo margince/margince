@@ -159,7 +159,7 @@ func TestAMeetingWithAPrivateSenderMakesNoContact(t *testing.T) {
 
 	// A meeting counts once it has taken place, and only if it is dated after
 	// the withdrawal. The withdrawal is moved back so such a meeting can exist.
-	if err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE contact_email SET archived_at = now() - interval '2 days'
 			WHERE email = $1 AND archived_at IS NOT NULL`, privateCorrespondent)
 		return err
@@ -282,7 +282,7 @@ func TestAPersonalVerdictDoesNotOverwriteTheSeatsOwnDecision(t *testing.T) {
 		t.Fatalf("recording the seat's decision: %v", err)
 	}
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return capturemod.RecordPersonalStandingTx(e.Admin(), tx, e.Rep1, privateCorrespondent)
 	}); err != nil {
 		t.Fatalf("recording the verdict's standing: %v", err)
@@ -315,7 +315,7 @@ func TestACorrespondedNoiseSenderStillBecomesAContact(t *testing.T) {
 func TestThePrivateStandingBackfillCoversVerdictsFromBeforeItWasRecorded(t *testing.T) {
 	env := mintedThenJudgedPersonal(t)
 	e := env.e
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `DELETE FROM capture_sender_override WHERE address = $1`, privateCorrespondent)
 		return err
 	}); err != nil {
@@ -324,7 +324,7 @@ func TestThePrivateStandingBackfillCoversVerdictsFromBeforeItWasRecorded(t *test
 
 	for pass, want := range []int{1, 0} {
 		var written int
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			var err error
 			_, written, err = capturemod.BackfillPersonalStandingsTx(principal.SystemActing(e.Admin(), "private-standing-backfill"), tx, ids.Nil, 50)
 			return err
@@ -380,7 +380,7 @@ func TestAPrivateVerdictTriggeredByTheSeatsOwnMailLeavesAStanding(t *testing.T) 
 func TestTheBackfillWritesOnlyForVerdictsThatMayStand(t *testing.T) {
 	env := judgedPersonal(t, captureNow, func(raw []byte) []byte { return raw })
 	e := env.e
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity SET inbound_sender_authenticated = true
 			WHERE counterparty_email = $1 AND direction = 'inbound'`, privateCorrespondent)
 		return err
@@ -389,7 +389,7 @@ func TestTheBackfillWritesOnlyForVerdictsThatMayStand(t *testing.T) {
 	}
 	backfill := func() int {
 		var written int
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			var err error
 			_, written, err = capturemod.BackfillPersonalStandingsTx(principal.SystemActing(e.Admin(), "private-standing-backfill"), tx, ids.Nil, 50)
 			return err
@@ -401,7 +401,7 @@ func TestTheBackfillWritesOnlyForVerdictsThatMayStand(t *testing.T) {
 	if got := backfill(); got != 1 {
 		t.Fatalf("the backfill wrote %d standings for an authenticated verdict, want 1", got)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `DELETE FROM capture_sender_override WHERE address = $1`, privateCorrespondent); err != nil {
 			return err
 		}
@@ -461,14 +461,14 @@ func TestWithdrawingABusinessAnswerRestoresThePrivateStanding(t *testing.T) {
 func TestAStandingIsKeyedOnTheIdentityLayersSpelling(t *testing.T) {
 	env := newCaptureEnv(t)
 	e := env.e
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return capturemod.RecordPersonalStandingTx(principal.SystemActing(e.Admin(), "private-standing"), tx, e.Rep1, "Keller@Bücher.Example")
 	}); err != nil {
 		t.Fatalf("recording the standing: %v", err)
 	}
 	read := func(address string) bool {
 		var standing bool
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			var err error
 			standing, err = capturemod.PersonalStandingTx(context.Background(), tx, e.Rep1, address)
 			return err
@@ -492,7 +492,7 @@ func TestAStandingIsKeyedOnTheIdentityLayersSpelling(t *testing.T) {
 func reconnectLaneRows(t *testing.T, e *integration.SearchEnv) int {
 	t.Helper()
 	var shown int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT count(*) FROM contact_email e
 			WHERE e.email = $1 AND e.archived_at IS NULL AND `+capturemod.PrivateSenderClause("e", "$2"),
 			privateCorrespondent, e.Rep1).Scan(&shown)

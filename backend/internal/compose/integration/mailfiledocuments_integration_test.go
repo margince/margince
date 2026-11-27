@@ -42,7 +42,7 @@ func captureMailFile(t *testing.T, e *Env, mail ids.UUID, name, contentType stri
 		t.Fatalf("stage %s: %v", name, err)
 	}
 	record := func() {
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return store.RecordCapturedFiles(ctx, tx, ids.From[ids.ActivityKind](mail),
 				activities.CapturedFileSource{System: "imap", MessageID: "m-" + mail.String(), CapturedBy: "connector:imap", Category: "email_attachment"}, staged)
 		}); err != nil {
@@ -72,7 +72,7 @@ func withholdMailFile(t *testing.T, e *Env, mail ids.UUID, name string) ids.UUID
 		},
 	})
 	store := activities.NewStore(e.DB())
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return store.RecordWithheldFiles(ctx, tx, ids.From[ids.ActivityKind](mail),
 			activities.CapturedFileSource{System: "imap", MessageID: "w-" + mail.String(), CapturedBy: "connector:imap", Category: "email_attachment"},
 			[]activities.WithheldFile{{PartID: name, Filename: name, ContentType: "application/pdf", ByteSize: 500000}})

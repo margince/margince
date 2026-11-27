@@ -51,8 +51,8 @@ type summaryContext struct {
 func readSummaryContext(ctx context.Context, pool *pgxpool.Pool, link chatlinks.Link, record chatRecord, before time.Time) (summaryContext, error) {
 	var out summaryContext
 	// One snapshot, so every group of readers judges the same company and edges.
-	err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithSnapshot(ctx, pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			owner, err := liveOwner(ctx, tx, record)
 			if err != nil {
 				return err

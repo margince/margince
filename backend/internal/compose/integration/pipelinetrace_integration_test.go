@@ -131,7 +131,7 @@ func traceIDFor(t *testing.T, e *Env, sourceID string) ids.UUID {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT id FROM capture_trace
 			 WHERE source_id = $1

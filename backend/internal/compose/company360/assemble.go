@@ -141,8 +141,8 @@ func (s *Service) AssembleScoped(ctx context.Context, companyID ids.CompanyID, o
 		return crmcontracts.Company360{}, err
 	}
 	// One repeatable-read snapshot, so every section reads the same state.
-	err = database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 			company, err := s.contacts.GetCompanyTx(ctx, tx, companyID, storekit.LiveOnly, active)
 			if err != nil {
 				return err

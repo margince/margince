@@ -73,7 +73,7 @@ func TestOtherCaptureLabelsSurvivePagingRollbackAndReplay(t *testing.T) {
 	if got := e.WsScalar(t, `SELECT capture_label FROM activity WHERE id = $1`, restricted); got != "noise" {
 		t.Error("restricted label changed")
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := original(ctx, tx, datatask.BatchIn{Limit: 100})
 		if err != nil {
 			return err

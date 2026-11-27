@@ -42,7 +42,7 @@ func TestTheAuditExceptionRefusesAChangeToWhatTheRowSaysHappened(t *testing.T) {
 	} {
 		t.Run(change.name, func(t *testing.T) {
 			ws := principal.WithWorkspaceID(context.Background(), e.WS)
-			err := database.WithWorkspaceTx(ws, e.Pool, func(tx pgx.Tx) error {
+			err := database.WithTx(ws, e.Pool, func(tx pgx.Tx) error {
 				if _, err := tx.Exec(ws,
 					`SELECT set_config('margince.audit_credential_mask', 'on', true)`); err != nil {
 					return err
@@ -233,7 +233,7 @@ func TestTheAuditExceptionRefusesAnImageThatIsNotMasked(t *testing.T) {
 	for _, c := range cases {
 		t.Run(c.name, func(t *testing.T) {
 			ws := principal.WithWorkspaceID(context.Background(), e.WS)
-			err := database.WithWorkspaceTx(ws, e.Pool, func(tx pgx.Tx) error {
+			err := database.WithTx(ws, e.Pool, func(tx pgx.Tx) error {
 				switch c.setting {
 				case "local":
 					if _, err := tx.Exec(ws, `SELECT set_config('margince.audit_credential_mask', 'on', true)`); err != nil {

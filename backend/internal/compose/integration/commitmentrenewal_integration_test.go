@@ -36,7 +36,7 @@ func TestARenewedOldPromiseUsesItsCurrentDeadlineWithoutDuplicatingWork(t *testi
 				for i := range 28 {
 					captureCommitmentMessage(t, e, buyer, "renewed-pricing", "Re: Pricing", "Status update.", "inbound", originalAt.Add(time.Duration(i+1)*time.Hour))
 				}
-				if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 					_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
 						Kind: "commitment_made", CompanyID: company, Summary: "Send pricing", Severity: "info", Fingerprint: "renewal-" + original.String(),
 						Evidence: []signals.DerivedEvidence{{Snippet: originalQuote, ActivityID: original}},
@@ -289,7 +289,7 @@ func TestLegacySignalRefusalPreservesInvalidReadingsForRetry(t *testing.T) {
 			renewed := captureCommitmentMessage(t, e, buyer, "legacy-refused-renewal", "Re: Pricing", renewedQuote, "outbound", extractClock.Add(-24*time.Hour))
 			party(t, renewed, "from", &e.Rep2, nil)
 			party(t, renewed, "to", nil, &buyer)
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
 					Kind: "commitment_made", CompanyID: company, Summary: "Pricing promised.",
 					Severity: "info", Fingerprint: "legacy-" + original.String(),

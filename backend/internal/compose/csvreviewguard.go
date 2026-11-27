@@ -30,7 +30,7 @@ func (w *csvWriters) Ensure(ctx context.Context, object string, row migration.Ro
 	}
 	if w.reviewRows != nil {
 		var landed migration.EnsureResult
-		err := database.WithWorkspaceSnapshot(ctx, w.pool, func(ctx context.Context) error {
+		err := database.WithSnapshot(ctx, w.pool, func(ctx context.Context) error {
 			replayed, err := w.lockReviewedTarget(ctx, row)
 			if err != nil {
 				return err
@@ -75,7 +75,7 @@ func (w *csvWriters) lockReviewedTarget(ctx context.Context, row migration.Row) 
 	}
 	// The ambient row transaction also holds tag and relationship writes.
 	replayed := false
-	err = database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		table, err := w.lockReviewedImportRow(ctx, tx, id)
 		if err != nil {
 			return err

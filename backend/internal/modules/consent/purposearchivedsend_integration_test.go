@@ -66,7 +66,7 @@ func TestADeliveryWaitingOnAnArchiveCannotUseTheRetiredPurpose(t *testing.T) {
 	finish := make(chan struct{})
 	archiveResult := make(chan error, 1)
 	go func() {
-		archiveResult <- database.WithWorkspaceWriteTx(ctx, e.store.db.Pool(), func(joined context.Context) error {
+		archiveResult <- database.WithWriteTx(ctx, e.store.db.Pool(), func(joined context.Context) error {
 			if err := e.store.ArchivePurpose(joined, purpose.ID); err != nil {
 				return err
 			}

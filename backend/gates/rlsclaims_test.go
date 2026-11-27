@@ -19,10 +19,10 @@ package gates
 // half of that gate: it cannot tell whether a query is scoped, but it can stop
 // the tree from claiming a retired mechanism scopes it.
 //
-// It bans the CLAIM, not the word. Three spellings stay legal because they
-// name something real: the `// rls-exempt:` waiver marker that
-// scripts/check-rls-store-path.sh reads, the BYPASSRLS/NOBYPASSRLS role
-// attributes (a live cluster property AssertRuntimeRole still refuses), and
+// It bans the claim, not the word. Three spellings stay legal because they
+// name something real. One is the `// pool-exempt:` waiver marker that
+// scripts/check-rls-store-path.sh reads. One is the BYPASSRLS/NOBYPASSRLS role
+// attributes, a live cluster property AssertRuntimeRole still refuses. One is
 // prose that names the retirement itself.
 
 import (
@@ -81,7 +81,7 @@ func TestTheRLSClaimPatternCatchesTheSpellingsThisTreeGrew(t *testing.T) {
 		}
 	}
 	mustNotMatch := []string{
-		"\t// rls-exempt: fleet enumeration — the workspace table is not workspace-scoped",
+		"\t// pool-exempt: fleet enumeration — the workspace table is not workspace-scoped",
 		"// the fixture owner role holds neither rolsuper nor rolbypassrls",
 		"// margince_owner is NOSUPERUSER NOBYPASSRLS in db-bootstrap.sql",
 		"// core 0217 (ADR-0091) retired every tenant-isolation policy",

@@ -136,7 +136,7 @@ func Verify(ctx context.Context, pool *pgxpool.Pool, exts []extension.Extension,
 	if err != nil || !bootstrapped {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, ledger.Lock, "extension-privacy"); err != nil {
 			return fmt.Errorf("compose: serializing the privacy observation: %w", err)
 		}

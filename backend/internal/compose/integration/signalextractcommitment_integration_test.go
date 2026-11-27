@@ -84,7 +84,7 @@ func TestACustomersEmailedPromiseIsWatchedNotTasked(t *testing.T) {
 	// The company page counts it, for a reader whose scope reaches everything.
 	var open int
 	var complete bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		open, complete, err = e.Contacts.CountAccountCommitments(e.Admin(), tx, company)
 		return err
@@ -289,7 +289,7 @@ func TestAnOldSignalWhoseMessageIsGoneIsSettledEmpty(t *testing.T) {
 	ines := employeeOf(t, e, company, "Ines Huber")
 	cited := captureCommitmentMessage(t, e, ines, "thread-gone", "Pricing", "Hi Ines, "+pricingPromise, "outbound",
 		extractClock.Add(-72*time.Hour))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
 			Kind: "commitment_made", CompanyID: company, Summary: "They promised pricing.",
 			Severity: "info", Fingerprint: "legacy-" + cited.String(),
@@ -343,7 +343,7 @@ func TestAnOldCommitmentSignalIsReadThroughTheRuleOnce(t *testing.T) {
 				}
 			}
 			var signal ids.UUID
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				if _, err := signals.RecordDerived(e.Admin(), tx, signals.DerivedSignal{
 					Kind: "commitment_made", CompanyID: company, Summary: "They promised pricing.",
 					Severity: "info", Fingerprint: "legacy-" + cited.String(),

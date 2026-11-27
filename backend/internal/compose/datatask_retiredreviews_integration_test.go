@@ -60,7 +60,7 @@ func TestTheRetiredReviewTaskClosesOnlyOpenReviewsAndReplaysSafely(t *testing.T)
 	f := seedRetiredReviews(t, e)
 	task := retiredReviewsDataTask(e.Pool)
 	var estimated int64
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		estimated, _, err = task.Steps[0].Estimate(ctx, tx, 1000)
 		return err
@@ -104,7 +104,7 @@ func TestTheRetiredReviewBatchRollsBackWithItsTransaction(t *testing.T) {
 	f := seedRetiredReviews(t, e)
 
 	rollback := errors.New("rolled back")
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := retiredReviewsDataTask(e.Pool).Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
 		if err != nil || out.Changed != 1 {
 			t.Errorf("batch changed %d, err %v, want 1", out.Changed, err)
@@ -138,7 +138,7 @@ func TestAnEditDuringTheBatchDoesNotAbortTheTaskCompletion(t *testing.T) {
 
 	completed := make(chan error, 1)
 	go func() {
-		completed <- database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		completed <- database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			_, err := activities.NewStore(InstallationDB(e.Pool)).CompleteSystemTasksTx(ctx, tx, []ids.UUID{f.systemTask})
 			return err
 		})
@@ -172,7 +172,7 @@ func TestTheRetiredReviewTaskLeavesATaskOtherFindingsStillNeed(t *testing.T) {
 		t.Fatalf("filing the close_past finding under the review's task: applied=%v err=%v", applied, err)
 	}
 
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := retiredReviewsDataTask(e.Pool).Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
 		return err
 	})

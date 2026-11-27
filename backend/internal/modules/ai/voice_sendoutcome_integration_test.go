@@ -231,7 +231,7 @@ func (e *sendOutcomeEnv) record(ctx context.Context, t *testing.T, draftRef, fin
 	t.Helper()
 	store := e.storeIn(workspaceOf(ctx, t))
 	var recorded bool
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		recorded, err = store.RecordSendOutcomeTx(ctx, tx, draftRef, finalBody)
 		return err
@@ -554,7 +554,7 @@ func (e *sendOutcomeEnv) recordUnderLockTimeout(ctx context.Context, t *testing.
 	t.Helper()
 	store := e.storeIn(workspaceOf(ctx, t))
 	var recorded bool
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `SET LOCAL lock_timeout = '2s'`); err != nil {
 			return err
 		}

@@ -188,7 +188,7 @@ func declareOwnAddress(t *testing.T, env captureEnv, seat ids.UUID, address stri
 func activityBySource(t *testing.T, env captureEnv, msgID string) ids.ActivityID {
 	t.Helper()
 	var id ids.ActivityID
-	if err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity WHERE source_id = $1`, msgID).Scan(&id)
 	}); err != nil {
@@ -200,7 +200,7 @@ func activityBySource(t *testing.T, env captureEnv, msgID string) ids.ActivityID
 func importRowsFor(t *testing.T, env captureEnv, id ids.ActivityID, seat ids.UUID) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM capture_import WHERE activity_id = $1 AND user_id = $2`,
 			id, seat).Scan(&n)
@@ -213,7 +213,7 @@ func importRowsFor(t *testing.T, env captureEnv, id ids.ActivityID, seat ids.UUI
 func verdictStatusOf(t *testing.T, env captureEnv, id ids.ActivityID, seat ids.UUID) string {
 	t.Helper()
 	var status string
-	if err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT COALESCE(verdict_status, '') FROM capture_import
 			  WHERE activity_id = $1 AND user_id = $2`, id, seat).Scan(&status)
@@ -226,7 +226,7 @@ func verdictStatusOf(t *testing.T, env captureEnv, id ids.ActivityID, seat ids.U
 func threadHasAQuestion(t *testing.T, env captureEnv, id ids.ActivityID) bool {
 	t.Helper()
 	var open bool
-	if err := database.WithWorkspaceTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(env.e.Admin(), env.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT EXISTS (
 			  SELECT 1 FROM capture_thread_verdict v

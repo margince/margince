@@ -97,7 +97,7 @@ func captureThrough(t *testing.T, e *integration.Env, adapter string, owner ids.
 func liveActivitiesFor(t *testing.T, e *integration.Env, messageID string) []ids.UUID {
 	t.Helper()
 	var out []ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT id FROM activity WHERE source_id = $1 AND archived_at IS NULL ORDER BY id`, messageID)
 		if err != nil {
@@ -121,7 +121,7 @@ func liveActivitiesFor(t *testing.T, e *integration.Env, messageID string) []ids
 func scalar[T any](t *testing.T, e *integration.Env, query string, args ...any) T {
 	t.Helper()
 	var got T
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(&got)
 	}); err != nil {
 		t.Fatalf("reading %q: %v", query, err)

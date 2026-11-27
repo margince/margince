@@ -58,7 +58,7 @@ type projectStampRow struct {
 func readProjectStamp(t *testing.T, e *Env, activity ids.UUID) projectStampRow {
 	t.Helper()
 	var got projectStampRow
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx,
 			`SELECT retention_class, retention_class_at::text FROM activity WHERE id = $1`,
@@ -197,7 +197,7 @@ func TestAnActivityCanQualifyThroughBothADealAndAProject(t *testing.T) {
 	}
 
 	var bases []string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT basis FROM activity_retention_evidence WHERE activity_id = $1 ORDER BY basis`, f.email)
 		if err != nil {
@@ -320,7 +320,7 @@ func TestTheProjectEvidenceColumnsAreFrozenAtTheDatabase(t *testing.T) {
 			[]any{f.email, other},
 		},
 	} {
-		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, execErr := tx.Exec(context.Background(), c.update, c.args...)
 			return execErr
 		})

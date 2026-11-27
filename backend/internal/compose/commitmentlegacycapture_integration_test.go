@@ -34,7 +34,7 @@ func TestLegacyCapturedMailUsesItsOriginalDateInsteadOfArrival(t *testing.T) {
 		AsOf:    asOf, SourceActivityID: source, ReadMessages: []ids.UUID{source}, Extractor: signalScanActor,
 		Locator: commitmentLocator(source, claimKindOurs, e.Rep1.String(), "Send pricing"), Seat: &e.Rep1, Summary: "Send pricing", Confidence: 0.95,
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 		if err == nil && outcome != CommitmentOutcome(activities.CommitmentHistorical) {
 			t.Errorf("legacy source outcome=%s, want historical", outcome)

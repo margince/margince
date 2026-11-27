@@ -44,7 +44,7 @@ func TestErasurePhysicallyClearsRecheckedDuplicateEvidence(t *testing.T) {
 	}
 	var pair ids.UUID
 	var audits []ids.UUID
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(e.Admin(), `SELECT id FROM dedupe_candidate
  WHERE left_contact_id=ANY(@contacts) AND right_contact_id=ANY(@contacts)`,
 			pgx.StrictNamedArgs{"contacts": []ids.UUID{other.UUID, subject.UUID}}).Scan(&pair); err != nil {

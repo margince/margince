@@ -42,7 +42,7 @@ func (s *Service) LiveLists(ctx context.Context, id ids.UUID) (crmcontracts.Cust
 		return none, err
 	}
 	var object, column string
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT object, column_name FROM custom_field WHERE id = $1`, id).Scan(&object, &column)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {

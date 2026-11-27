@@ -41,7 +41,7 @@ func TestTheProviderOriginalAgesOutOnItsOwnClock(t *testing.T) {
 	e := Setup(t)
 	aged, recent, shielded := ids.NewV7(), ids.NewV7(), ids.NewV7()
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		// A raw_capture policy and NO activity policy. The independence is the
 		// property: an installation keeps its correspondence for years and its
@@ -102,7 +102,7 @@ func TestTheProviderOriginalAgesOutOnItsOwnClock(t *testing.T) {
 	originals := map[string]int{}
 	var keptKey bool
 	var body *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		rows, err := tx.Query(ctx, `
 			SELECT source_id, count(*) FROM raw_capture GROUP BY source_id`)

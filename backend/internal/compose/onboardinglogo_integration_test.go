@@ -189,7 +189,7 @@ func parkedMark(t *testing.T, e *integration.Env, readID ids.UUID, slot contacts
 	if slot == contacts.LogoIcon {
 		columns = "logo_icon_object_key, logo_icon_source"
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT `+columns+` FROM site_read WHERE id = $1`, readID).Scan(&key, &origin)
 	}); err != nil {
@@ -255,7 +255,7 @@ func TestOnboardingReadResolvesTheLogoTheConfirmedAnchorWears(t *testing.T) {
 	// written once, and a machine mark filed under a contact would make the
 	// human-precedence guard refuse every later resolve.
 	var capturedBy string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT captured_by FROM field_provenance
 			WHERE object_type = 'company' AND object_id = $1 AND field_name = 'logo'
 			ORDER BY captured_at DESC, id DESC LIMIT 1`, company.CompanyID).Scan(&capturedBy)
@@ -358,7 +358,7 @@ func TestAdoptingTheParkedMarkLeavesTheCompanyItsOnlyReference(t *testing.T) {
 // adopted mark publishes.
 func publishedSeq(t *testing.T, e *integration.Env, companyID ids.CompanyID) (created, mark int64) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `SELECT seq FROM event_outbox
 			WHERE envelope->>'type' = 'company.created'
 			  AND envelope->'entity'->>'id' = $1`, companyID.String()).Scan(&created); err != nil {

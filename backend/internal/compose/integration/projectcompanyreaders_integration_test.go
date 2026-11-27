@@ -136,7 +136,7 @@ func TestAnExportedProjectNamesItsReadableFirstCustomer(t *testing.T) {
 	exported := func(ctx context.Context) any {
 		t.Helper()
 		rows := [][]any{{[16]byte(f.project.UUID), [16]byte(f.old.UUID)}}
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			return projectexport.WriteCustomers(ctx, tx, "project", []string{"id", "company_id"}, rows)
 		}); err != nil {
 			t.Fatal(err)
@@ -158,7 +158,7 @@ func TestDeliveryContinuityCountsOnlyTheCompaniesOnAProject(t *testing.T) {
 	active := func(ctx context.Context, company ids.CompanyID) bool {
 		t.Helper()
 		var delivering bool
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			delivering, _, err = projects.CompanyDeliveryTx(ctx, tx, company, false)
 			return err
@@ -248,7 +248,7 @@ func TestALockedDeliveryReadHoldsTheAccountsEdges(t *testing.T) {
 	}
 	locked, release, done := make(chan struct{}), make(chan struct{}), make(chan error, 1)
 	go func() {
-		done <- database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		done <- database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 			if _, err := contacts.LockCompanyTx(admin, tx, f.partner); err != nil {
 				return err
 			}

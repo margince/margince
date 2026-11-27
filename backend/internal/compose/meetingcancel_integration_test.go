@@ -99,7 +99,7 @@ var meetingKey = connector.NaturalKey{SourceSystem: calendarSystem, SourceID: ca
 func readMeetingStatus(t *testing.T, e *integration.Env, id ids.UUID) (string, bool) {
 	t.Helper()
 	var status *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT meeting_status FROM activity WHERE id = $1`, id).Scan(&status)
 	}); err != nil {
@@ -147,7 +147,7 @@ func TestACancellationRecordsItsTransition(t *testing.T) {
 	var status string
 	var scheduledStart time.Time
 	var sourceSystem, sourceID *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT status, scheduled_start, source_system, source_id
 			  FROM activity_meeting_history WHERE activity_id = $1`, id).
@@ -184,7 +184,7 @@ func TestCancellingTwiceWritesOnce(t *testing.T) {
 	}
 
 	var transitions, updates int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx,
 			`SELECT count(*) FROM activity_meeting_history WHERE activity_id = $1`, id).
@@ -222,7 +222,7 @@ func TestCancellingAMeetingNobodyCapturedIsNotAFault(t *testing.T) {
 func TestAnArchivedMeetingIsNotReopenedByASync(t *testing.T) {
 	e := integration.Setup(t)
 	id := captureMeeting(t, e, e.AdminUser)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET archived_at = now() WHERE id = $1`, id)
 		return err
@@ -254,14 +254,14 @@ func TestAnAnsweredMeetingKeepsItsOutcome(t *testing.T) {
 			t.Cleanup(func() {
 				// The natural key is one per workspace, so each arm clears the
 				// row it captured rather than colliding with the next.
-				if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 					_, err := tx.Exec(context.Background(), `DELETE FROM activity WHERE id = $1`, id)
 					return err
 				}); err != nil {
 					t.Fatalf("clearing the seeded meeting: %v", err)
 				}
 			})
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				_, err := tx.Exec(context.Background(),
 					`UPDATE activity SET meeting_status = $2 WHERE id = $1`, id, answered)
 				return err

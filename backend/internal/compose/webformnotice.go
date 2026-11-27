@@ -34,7 +34,7 @@ func tellWebsiteLeadOwner(ctx context.Context, db *database.DB, formID, source i
 	if !form.NotifyOwner {
 		return nil
 	}
-	return database.WithWorkspaceWriteTx(ctx, db.Pool(), func(bound context.Context) error {
+	return database.WithWriteTx(ctx, db.Pool(), func(bound context.Context) error {
 		owner, err := websiteNoticeOwner(bound, db, target)
 		if err != nil || owner == nil {
 			return err

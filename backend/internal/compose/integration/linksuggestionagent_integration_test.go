@@ -60,7 +60,7 @@ func TestAnAgentReadsAndAnswersOnlyItsOwnColleaguesDealQuestion(t *testing.T) {
 	})
 	ws := apptest.InstallationWorkspaceUUID(t.Context(), t, d.e.Owner)
 	system := principal.SystemActing(principal.WithWorkspaceID(t.Context(), ws), "system:capture-which-deal")
-	if err := database.WithWorkspaceTx(system, d.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, d.e.Pool, func(tx pgx.Tx) error {
 		return activities.AskWhichDealTx(system, tx, activities.WhichDealQuestion{
 			Mail: ids.From[ids.ActivityKind](ids.MustParse(mail)), Seat: ids.MustParse(askedID),
 			Deals: []ids.UUID{ids.MustParse(deal)}, Reason: "Which deal is this about?",

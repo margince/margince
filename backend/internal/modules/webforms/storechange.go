@@ -384,7 +384,7 @@ func (s *Store) retireForm(ctx context.Context, id ids.UUID) (Form, error) {
 		return Form{}, err
 	}
 	var out Form
-	err := database.WithWorkspaceWriteTx(ctx, s.db.Pool(), func(bound context.Context) error {
+	err := database.WithWriteTx(ctx, s.db.Pool(), func(bound context.Context) error {
 		err := s.db.Tx(bound, func(tx pgx.Tx) error {
 			var err error
 			out, err = scanForm(tx.QueryRow(bound,

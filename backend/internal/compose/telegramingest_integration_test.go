@@ -37,7 +37,7 @@ func telegramIngestFixture(t *testing.T, e *integration.Env) (connID, rawID ids.
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	connID = ids.NewV7()
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO channel_connection
 				(id, provider, channel_id, channel_label, credential_ref, status, connected_by)
@@ -92,7 +92,7 @@ func TestIngestWorkerReestablishesWorkspaceContextFromArgs(t *testing.T) {
 	// resolved the wrong tenant (or none), this activity would not be here.
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	var id ids.UUID
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT id FROM activity WHERE source_system = 'telegram'`).Scan(&id)
 	})
 	if err != nil {

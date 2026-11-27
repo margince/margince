@@ -106,7 +106,7 @@ func TestTheGuardPassesOnAnAbsentRowAndRefusesOnAnUnreadableOne(t *testing.T) {
 	// called directly. Going through ArchiveCompany would pass on the
 	// visibility gate's refusal and prove nothing about this line.
 	var absent error
-	if err := database.WithWorkspaceTx(env.ctx, env.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(env.ctx, env.pool, func(tx pgx.Tx) error {
 		absent = refuseIfAnchor(env.ctx, tx, missing, "id", "it cannot be archived")
 		return nil
 	}); err != nil {
@@ -120,7 +120,7 @@ func TestTheGuardPassesOnAnAbsentRowAndRefusesOnAnUnreadableOne(t *testing.T) {
 	// guard must surface that, because returning nil here would PERMIT the
 	// archive or merge it exists to refuse.
 	var guardErr error
-	if err := database.WithWorkspaceTx(env.ctx, env.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(env.ctx, env.pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(env.ctx, `SELECT 1 / 0`); err == nil {
 			t.Fatal("the poison statement succeeded — the transaction is not aborted, so this proves nothing")
 		}
@@ -183,7 +183,7 @@ func TestNothingCanBeMergedIntoTheAnchor(t *testing.T) {
 func TestTheSchemaRefusesToRetireTheAnchor(t *testing.T) {
 	env := newAnchorEnv(t)
 
-	err := database.WithWorkspaceTx(env.ctx, env.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.ctx, env.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(env.ctx,
 			`UPDATE company SET archived_at = now() WHERE id = $1`, env.anchorID)
 		return err
@@ -287,7 +287,7 @@ func (e *anchorEnv) assertCompanyStillReadable(t *testing.T) {
 		t.Fatalf("the company read must survive a refused operation, got %v — a workspace whose anchor is gone reads as one that was never set up", err)
 	}
 	var intact bool
-	if err := database.WithWorkspaceTx(e.ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.ctx, e.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.ctx, `
 			SELECT is_anchor AND archived_at IS NULL AND merged_into_id IS NULL
 			  FROM company WHERE id = $1`, e.anchorID).Scan(&intact)
@@ -307,7 +307,7 @@ func TestTheSchemaRefusesAMergeIntoTheAnchor(t *testing.T) {
 	env := newAnchorEnv(t)
 	other := env.newCompany(t)
 
-	err := database.WithWorkspaceTx(env.ctx, env.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.ctx, env.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(env.ctx,
 			`UPDATE company SET merged_into_id = $1 WHERE id = $2`, env.anchorID, other)
 		return err
@@ -331,7 +331,7 @@ func TestTheSchemaRefusesAMergeIntoTheAnchor(t *testing.T) {
 func TestTheSchemaRefusesDemotingTheAnchor(t *testing.T) {
 	env := newAnchorEnv(t)
 
-	err := database.WithWorkspaceTx(env.ctx, env.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.ctx, env.pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(env.ctx,
 			`UPDATE company SET is_anchor = false, archived_at = now() WHERE id = $1`, env.anchorID)
 		return err

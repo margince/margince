@@ -46,7 +46,7 @@ import (
 // company question recorded and unanswered, owned by a real human.
 func openQuestion(t *testing.T, e *integration.Env, domain string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO company_domain_disposition (domain, status, owner_id)
 			VALUES ($1, 'pending', $2)`, domain, e.Rep1)
@@ -350,7 +350,7 @@ func TestAutoEnrichRefundSurvivesACancelledCaptureContext(t *testing.T) {
 func dispositionOf(t *testing.T, e *integration.Env, domain string) string {
 	t.Helper()
 	var status string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(max(status), '') FROM company_domain_disposition WHERE domain = $1`,
 			domain).Scan(&status)
@@ -364,7 +364,7 @@ func dispositionOf(t *testing.T, e *integration.Env, domain string) string {
 // which is the state a site that never loads leaves behind.
 func spendTriageAttempts(t *testing.T, e *integration.Env, domain string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE company_domain_disposition
 			   SET attempts = $2, next_attempt_at = now() - interval '1 day'
@@ -435,7 +435,7 @@ func TestTriageSweepLeavesADomainThatStillHasAttempts(t *testing.T) {
 func pendingReasonOf(t *testing.T, e *integration.Env, domain string) string {
 	t.Helper()
 	var reason string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT COALESCE(pending_reason, '') FROM company_domain_disposition
 			WHERE domain = $1`, domain).Scan(&reason)
@@ -455,7 +455,7 @@ func TestReservedDomainTriageIsRecoverableMaintenance(t *testing.T) {
 		t.Fatal(err)
 	}
 	var reason string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT pending_reason FROM company_domain_disposition WHERE domain = $1`, domain).Scan(&reason)
 	}); err != nil {
 		t.Fatal(err)

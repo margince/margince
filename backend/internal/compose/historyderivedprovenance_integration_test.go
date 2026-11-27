@@ -31,7 +31,7 @@ import (
 func latestDerivedEvent(t *testing.T, e *integration.Env, kind string, id ids.UUID, field string) events.Envelope {
 	t.Helper()
 	var encoded []byte
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT envelope FROM event_outbox
  WHERE envelope->>'type'=@kind AND envelope->'entity'->>'id'=@id
  AND (@field::text='' OR envelope->'payload'->'changed_fields' ? @field::text)
@@ -107,7 +107,7 @@ func TestAHistoryMintedContactDoesNotTurnItsLiveMailIntoHistory(t *testing.T) {
 		if events.IsImported(env) {
 			t.Fatal("a cohort repair changed the existing bulk-import side-effect policy")
 		}
-		if err := database.WithWorkspaceTx(system, b.env.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(system, b.env.Pool, func(tx pgx.Tx) error {
 			origin, err := graphHistoryForEventTx(system, tx, env)
 			if err != nil {
 				return err

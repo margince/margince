@@ -73,7 +73,7 @@ func failAfterTheFirstCreate(t *testing.T, e *apptest.AppEnv, runID, sourceName,
 		t.Fatal(err)
 	}
 	system := provenance.ReservedSourceSystemPrefix + migration.ConnectorCSV + ":" + sourceName
-	if err := database.WithWorkspaceTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
 		if err := migration.NewRunStore(e.DB()).RecordIdentityTx(ctx, tx, migration.RunID(run),
 			system, migration.ObjectCompany, ref, native, migration.OriginCreated); err != nil {
 			return err

@@ -33,7 +33,7 @@ func readMixedThread(t *testing.T, e *requestEnv, reason string, heldBy *ids.UUI
 	second, asker := e.capture(t, company, "We need a platform. Please send a quotation.", mail{role: "from", authenticated: true, thread: "mixed", reason: reason})
 	if heldBy != nil {
 		holder := e.As(*heldBy, nil, integration.AdminPerms)
-		if err := database.WithWorkspaceTx(holder, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(holder, e.Pool, func(tx pgx.Tx) error {
 			return capture.NewThreadVerdictStore(compose.InstallationDB(e.Pool)).DecideAsOwner(holder, tx, "mixed", false)
 		}); err != nil {
 			t.Fatalf("holding the thread: %v", err)

@@ -98,7 +98,7 @@ func (r *callRuntime) ingestOtherKind(ctx context.Context, on extension.UserID, 
 // feed's service member holds no settings grant, and the posture must bind it.
 func (r *callRuntime) overwritesEditedFields(ctx context.Context) (bool, error) {
 	var perUnit map[string]bool
-	err := database.WithWorkspaceTx(ctx, r.deps.pool, func(tx pgx.Tx) (err error) {
+	err := database.WithTx(ctx, r.deps.pool, func(tx pgx.Tx) (err error) {
 		perUnit, err = settings.ApplyTx(ctx, tx, identity.ExtensionOverwritesEditedFields)
 		return err
 	})

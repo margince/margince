@@ -637,7 +637,7 @@ func (b *voicedDraftBrain) Complete(ctx context.Context, req model.Request) (mod
 func seedReplyActivity(t *testing.T, env *voiceBuildEnv) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(env.owner, env.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(env.owner, env.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, source_system, source_id, source, captured_by)
 			VALUES ($1, 'email', 'the plan', 'Can you confirm the plan?', 'gmail', $2, 'gmail:'||$2, 'connector:gmail')`,

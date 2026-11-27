@@ -87,7 +87,7 @@ func seedGrantedPassport(t *testing.T, e *Env, human ids.UUID, clientName string
 	clientID := "client-" + ids.NewV7().String()
 	grantID, passportID := ids.NewV7(), ids.NewV7()
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO oauth_client (client_id, client_name, redirect_uris)
 			 VALUES ($1, $2, ARRAY['https://example.test/cb'])`, clientID, clientName); err != nil {
@@ -117,7 +117,7 @@ func seedUngrantedPassport(t *testing.T, e *Env, human ids.UUID) ids.UUID {
 	t.Helper()
 	passportID := ids.NewV7()
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO passport (id, on_behalf_of, granted_by, label, scopes, token_hash, expires_at)
 			 VALUES ($1, $2, $2, 'My laptop', ARRAY['read'], $3, now() + interval '1 day')`,
@@ -135,7 +135,7 @@ func seedUngrantedPassport(t *testing.T, e *Env, human ids.UUID) ids.UUID {
 func seedDelegatedAuditRow(t *testing.T, e *Env, contact, human, passport ids.UUID, at time.Time) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO audit_log (id, actor_type, actor_id, on_behalf_of, passport_id,
 			                        action, entity_type, entity_id, occurred_at)

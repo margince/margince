@@ -36,7 +36,7 @@ func aiHealthWrite(t *testing.T, e *Env, id ids.ProjectID, now time.Time) (proje
 	store := projects.NewStore(e.DB()).SetClock(func() time.Time { return now })
 	judged := false
 	var result projects.AIHealthResult
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		result, err = store.RecordAIHealthTx(ctx, tx, id,
 			func(context.Context, pgx.Tx, projects.AIHealthEvidence) (projects.AIHealthJudgement, error) {
@@ -92,7 +92,7 @@ func TestAnOwnerChangedWhileTheJobWaitsIsTheOneTold(t *testing.T) {
 	var holder int32
 	go func() {
 		defer close(written)
-		writer <- database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+		writer <- database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 			if _, err := projects.TransferProjectOwnershipTx(admin, tx, projects.TransferProjectOwnershipInput{
 				FromOwnerID: ids.From[ids.UserKind](e.Rep1), ToOwnerID: ids.From[ids.UserKind](e.Rep2),
 			}); err != nil {

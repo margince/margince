@@ -152,7 +152,7 @@ func (e *requestEnv) request(t *testing.T, company ids.UUID, kind, budget string
 func (e *requestEnv) openScouted(t *testing.T) int {
 	t.Helper()
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), "system:deal-scout")
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := compose.RunDealScout(ctx, tx, e.now)
 		return err
 	}); err != nil {
@@ -188,7 +188,7 @@ func (e *requestEnv) openedCorrection(t *testing.T, company ids.UUID) deals.Deal
 		t.Fatalf("no deal_open correction on the company: %v", err)
 	}
 	var correction deals.DealCorrection
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		correction, err = e.Deals.CorrectionForAudit(e.Admin(), tx, auditID)
 		return err
 	}); err != nil {

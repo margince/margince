@@ -40,7 +40,7 @@ type lockWatchingBlob struct {
 
 func (b *lockWatchingBlob) Put(ctx context.Context, key string, r io.Reader, size int64, contentType string) error {
 	var held int
-	err := database.WithWorkspaceTx(b.e.Admin(), b.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(b.e.Admin(), b.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM pg_locks
 			 WHERE locktype = 'advisory' AND granted

@@ -24,7 +24,7 @@
 // Two rules shape everything here.
 //
 // One transaction, one instant. Every section reads inside a single
-// database.WithWorkspaceTx and the response carries the as_of stamp of
+// database.WithTx and the response carries the as_of stamp of
 // that read. The isolation level is Read Committed (the platform's
 // posture), so a concurrent commit can land between two sections; the
 // stamp is what keeps that honest instead of hidden. No section opens a

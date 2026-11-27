@@ -136,7 +136,7 @@ type contradiction struct {
 func (p *SignalProposer) RunWorkspace(ctx context.Context) (int, error) {
 	var found []contradiction
 	var said approvalSummaryCopy
-	if err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		var err error
 		if found, err = readContradictions(ctx, tx, p.now()); err != nil {
 			return err

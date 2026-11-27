@@ -44,7 +44,7 @@ func (s Reader) DealToCoach(ctx context.Context, id ids.UUID) (notices.CoachDeal
 		return notices.CoachDeal{}, err
 	}
 	var unplanned map[ids.UUID]bool
-	if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		unplanned, err = stillowed.DealsWithoutNextStepTx(ctx, tx, []ids.UUID{id}, s.now())
 		return err
 	}); err != nil {

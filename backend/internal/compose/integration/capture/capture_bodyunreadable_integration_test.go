@@ -51,7 +51,7 @@ func TestAMailWhoseTextCouldNotBeReadSaysSo(t *testing.T) {
 	activityID := oneActivityID(t, e)
 
 	var stored string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT body_completeness FROM activity WHERE id = $1`, activityID).Scan(&stored)
 	}); err != nil {

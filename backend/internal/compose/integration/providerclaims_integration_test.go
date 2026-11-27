@@ -59,7 +59,7 @@ func seedRun(t *testing.T, e *Env, contactID ids.UUID, state, fingerprint string
 		completed = "now()"
 	}
 	seedCtx := e.Admin()
-	err := database.WithWorkspaceTx(seedCtx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(seedCtx, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO provider_run
 			  (subject_kind, contact_id, provider, trigger, state, input_fingerprint,
@@ -91,7 +91,7 @@ func seedRun(t *testing.T, e *Env, contactID ids.UUID, state, fingerprint string
 // index at its original fingerprint.
 func runState(t *testing.T, e *Env, runID string) (state, fingerprint string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT state, input_fingerprint FROM provider_run WHERE id = $1`,
 			runID).Scan(&state, &fingerprint)
@@ -106,7 +106,7 @@ func runState(t *testing.T, e *Env, runID string) (state, fingerprint string) {
 func seedMergeSubject(t *testing.T, e *Env, name string) ids.UUID {
 	t.Helper()
 	contactID := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact (id, full_name, source, captured_by)
@@ -129,7 +129,7 @@ func seedMergeSubject(t *testing.T, e *Env, name string) ids.UUID {
 // whether the run still names them.
 func claimAndRunState(t *testing.T, e *Env, contactID ids.UUID, runID string) (claims int, stillNamed bool, kind string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM contact_provider_claim WHERE contact_id = $1`, contactID).Scan(&claims); err != nil {
 			return err
@@ -172,7 +172,7 @@ func TestErasureRemovesProviderClaimsAndDetachesTheRunsThatBoughtThem(t *testing
 	// The spend survives, detached. An erasure removes the subject, not the
 	// accounting (PI-AC-8) — which is what keeps a spend history stable.
 	var runs int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM provider_run WHERE id = $1`, runID).Scan(&runs)
 	}); err != nil {
@@ -196,7 +196,7 @@ func TestErasureReachesAnArchivedDuplicatesPurchasedClaims(t *testing.T) {
 	// The archived duplicate, carrying the SAME address. Legitimate:
 	// uq_contact_email_dedupe is partial on archived_at IS NULL.
 	archived := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact (id, full_name, source, captured_by, archived_at)
@@ -236,7 +236,7 @@ func TestRetentionAnonymizeAlsoRemovesProviderClaims(t *testing.T) {
 	runID := seedPurchase(t, e, contactID)
 
 	// Age the contact past every policy window so the sweep acts on them.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE contact SET created_at = now() - interval '4000 days',
 			                  updated_at = now() - interval '4000 days'
@@ -253,7 +253,7 @@ func TestRetentionAnonymizeAlsoRemovesProviderClaims(t *testing.T) {
 	}
 
 	var anonymized bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT first_name IS NULL AND last_name IS NULL FROM contact WHERE id = $1`,
 			contactID).Scan(&anonymized)
@@ -321,7 +321,7 @@ func TestMergeKeepsBothSidesPurchasedClaims(t *testing.T) {
 	}
 
 	var onSurvivor int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM contact_provider_claim WHERE contact_id = $1`, survivor).Scan(&onSurvivor)
 	}); err != nil {
@@ -367,7 +367,7 @@ func TestMergeKeepsBothLiveRunsWhenEitherMayHaveBeenPaid(t *testing.T) {
 	}
 	// Both runs still name a subject, and it is the survivor.
 	var onSurvivor int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM provider_run WHERE contact_id = $1`, survivor).Scan(&onSurvivor)
 	}); err != nil {

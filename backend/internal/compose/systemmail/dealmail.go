@@ -106,7 +106,7 @@ const dealMailQuery = `
 func ReadDeal(ctx context.Context, pool *pgxpool.Pool, deal ids.UUID, q Query) (extension.Page[extension.MailSummary], error) {
 	after, limit, archived := q.after, q.limit, q.archived
 	var page extension.Page[extension.MailSummary]
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var exists bool
 		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM deal WHERE id = $1)`, deal).Scan(&exists); err != nil {
 			return err

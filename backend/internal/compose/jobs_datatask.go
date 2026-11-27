@@ -130,7 +130,7 @@ func (w *dataTaskReconcileWorker) Work(ctx context.Context, _ *river.Job[DataTas
 	}
 	changed := 0
 	err = storekit.RetryLockCycles(ctx, func() error {
-		return database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+		return database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 			var err error
 			changed, err = activities.RepairParticipantEvidenceTx(ctx, tx, evidenceBatch)
 			return err

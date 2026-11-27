@@ -33,7 +33,7 @@ func leadFilingPass(ctx context.Context, t *testing.T, l *leadMailEnv, rollback 
 	t.Helper()
 	undo := errors.New("rolled back")
 	step := leadMailDataTask(l.e.Pool).Steps[0]
-	err := database.WithWorkspaceTx(ctx, l.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, l.e.Pool, func(tx pgx.Tx) error {
 		in := datatask.BatchIn{Limit: 1, RunID: ids.NewV7()}
 		for {
 			out, err := step.Batch(ctx, tx, in)
@@ -59,7 +59,7 @@ func leadFilingPass(ctx context.Context, t *testing.T, l *leadMailEnv, rollback 
 
 func runLeadMailBatch(ctx context.Context, l *leadMailEnv, in datatask.BatchIn) (datatask.BatchOut, error) {
 	var out datatask.BatchOut
-	err := database.WithWorkspaceTx(ctx, l.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, l.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = leadMailDataTask(l.e.Pool).Steps[0].Batch(ctx, tx, in)
 		return err
@@ -69,7 +69,7 @@ func runLeadMailBatch(ctx context.Context, l *leadMailEnv, in datatask.BatchIn) 
 
 func estimateLeadFiling(ctx context.Context, t *testing.T, l *leadMailEnv, maximum int64) (estimated int64, more bool) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(ctx, l.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, l.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		estimated, more, err = capture.EstimateLeadFiling(ctx, tx, maximum)
 		return err
@@ -82,7 +82,7 @@ func estimateLeadFiling(ctx context.Context, t *testing.T, l *leadMailEnv, maxim
 func historicalImportedLead(t *testing.T, l *leadMailEnv, address string) ids.LeadID {
 	t.Helper()
 	lead := l.importedLead(t, ids.NewV7().String()+"@fixture.example")
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE lead SET email = lower($2), owner_id = $3 WHERE id = $1`, lead, address, l.owner)
 		return err
 	}); err != nil {

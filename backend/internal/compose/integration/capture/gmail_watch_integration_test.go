@@ -201,7 +201,7 @@ func awaitWatchKindCompleted(ctx context.Context, t *testing.T, sub <-chan *rive
 func readCursor(t *testing.T, e *integration.SearchEnv, connID ids.UUID) []byte {
 	t.Helper()
 	var cursor []byte
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT sync_cursor FROM capture_connection WHERE id = $1`, connID).Scan(&cursor)
 	})
@@ -214,7 +214,7 @@ func readCursor(t *testing.T, e *integration.SearchEnv, connID ids.UUID) []byte 
 func readWatchExpiry(t *testing.T, e *integration.SearchEnv, connID ids.UUID) *time.Time {
 	t.Helper()
 	var exp *time.Time
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT watch_expires_at FROM capture_connection WHERE id = $1`, connID).Scan(&exp)
 	})

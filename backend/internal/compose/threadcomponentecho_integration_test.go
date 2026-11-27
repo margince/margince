@@ -66,7 +66,7 @@ func TestReceiptReconciliationWaitsForAnUncommittedCapturedEcho(t *testing.T) {
 	}
 	store := comms.NewStore(o.e.DB(), func() time.Time { return o.now }, o.e.Activities)
 	var delivery ids.UUID
-	if err := database.WithWorkspaceTx(actor, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(actor, o.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		delivery, err = store.StageTx(actor, tx, comms.StageInput{ActivityID: ids.From[ids.ActivityKind](ids.UUID(row.Id)), Provider: "gmail", MessageID: staged, Recipients: []string{recipient}, ThreadKey: staged})
 		return err
@@ -115,7 +115,7 @@ func TestReceiptReconciliationWaitsForAnUncommittedCapturedEcho(t *testing.T) {
 		sent <- store.RecordSent(worker, delivery, connector.SendReceipt{ProviderMessageID: "accepted-provider-id", RFC822MessageID: stamped})
 	}()
 	t.Cleanup(func() { release(); <-sendDone })
-	if err := database.WithWorkspaceTx(actor, o.e.Pool, func(tx pgx.Tx) error { waitForBackendBlockedBy(t, tx, echoPID, sent); return nil }); err != nil {
+	if err := database.WithTx(actor, o.e.Pool, func(tx pgx.Tx) error { waitForBackendBlockedBy(t, tx, echoPID, sent); return nil }); err != nil {
 		t.Fatal(err)
 	}
 	if state := o.e.WsCount(t, `SELECT count(*) FROM comms_outbound WHERE id=$1 AND status='sent' AND provider_message_id='accepted-provider-id'`, delivery); state != 1 {

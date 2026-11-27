@@ -278,7 +278,7 @@ func TestAMailboxWithoutAuthorityOverTheActivityFilesNothing(t *testing.T) {
 	mailbox := mailboxContext(e, principal.RowScopeOwn)
 
 	var landed bool
-	err := database.WithWorkspaceTx(mailbox, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(mailbox, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		landed, err = activities.FileOnProjectTx(mailbox, tx, ids.From[ids.ActivityKind](activity), project, nil)
 		return err

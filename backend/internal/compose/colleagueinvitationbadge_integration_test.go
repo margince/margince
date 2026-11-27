@@ -76,7 +76,7 @@ func TestWhoseMoveReadsOurDomainsForAReaderWithoutTheActivityGrant(t *testing.T)
 	delete(perms.Objects, "activity")
 	reader := o.e.As(o.owner, nil, perms)
 	var moves map[ids.UUID]crmcontracts.EmailSummaryMove
-	if err := database.WithWorkspaceTx(reader, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, o.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		moves, err = activities.MailMovesFor(reader, tx, []ids.UUID{colleague, customer}, o.now)
 		return err

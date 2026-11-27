@@ -45,7 +45,7 @@ func envelopeFor(ws ids.UUID, eventType, entityType string, entity ids.UUID) kev
 func seedExchange(t *testing.T, e *integration.Env, contact ids.UUID) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO activity (kind, subject, direction, occurred_at, source, captured_by)
@@ -71,7 +71,7 @@ func seedExchange(t *testing.T, e *integration.Env, contact ids.UUID) ids.UUID {
 func edgeCount(t *testing.T, e *integration.Env, contact ids.UUID) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM graph_interaction_edge WHERE contact_id = $1`, contact).Scan(&n)
 	}); err != nil {
@@ -136,7 +136,7 @@ func TestRetentionAppliedReachesTheConsumer(t *testing.T) {
 	// verb. That branch exists because the consumer previously listened only
 	// for names retention never uses, and a projection that silently stops
 	// updating is the worst failure this thing has.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET archived_at = now() WHERE id = $1`, activityID)
 		return err
@@ -155,7 +155,7 @@ func TestTheAgentSeamsAnswerThroughTheSameGates(t *testing.T) {
 	e := integration.Setup(t)
 	contact := seedGraphContact(t, e, "Agent Contact")
 	activityID := seedExchange(t, e, contact)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(e.Admin(), tx, []ids.UUID{activityID})
 	}); err != nil {
 		t.Fatalf("folding: %v", err)
@@ -192,14 +192,14 @@ func TestCoverageNamesItsColleaguesForTheAgent(t *testing.T) {
 	e := integration.Setup(t)
 	contact := seedGraphContact(t, e, "Coverage Contact")
 	activityID := seedExchange(t, e, contact)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(e.Admin(), tx, []ids.UUID{activityID})
 	}); err != nil {
 		t.Fatalf("folding: %v", err)
 	}
 
 	var dealID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		// The harness seeds no pipeline, so this test brings its own.
 		var pipelineID, stageID ids.UUID
@@ -268,7 +268,7 @@ func TestAContactAddedLaterMeetsTheGhostThatWasWaiting(t *testing.T) {
 	ctx := e.As(e.Rep1, nil, integration.AdminPerms)
 
 	// The export lands first, on a workspace that knows nobody.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO linkedin_connection
 			  (owner_user_id, full_name, normalized_name, email, source)
@@ -303,7 +303,7 @@ func TestAContactAddedLaterMeetsTheGhostThatWasWaiting(t *testing.T) {
 
 	var status string
 	var matched *ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT match_status, matched_contact_id FROM linkedin_connection
 			  WHERE normalized_name = 'dana buyer'`).Scan(&status, &matched)
@@ -338,7 +338,7 @@ func TestTheSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T) {
 	grantReadContactsRole(t, e, e.Rep3, "own")
 
 	// Rep3's ghost. Rep3 sits in Team2, alone.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO linkedin_connection
 			  (owner_user_id, full_name, normalized_name, email, source)
@@ -370,7 +370,7 @@ func TestTheSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.T) {
 
 	var status string
 	var matched *ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT match_status, matched_contact_id FROM linkedin_connection
 			  WHERE normalized_name = 'dana buyer'`).Scan(&status, &matched)
@@ -399,7 +399,7 @@ func TestThePerContactSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.
 
 	// Rep3: narrow (own) scope, holds the attacker's guessed-address ghost.
 	grantReadContactsRole(t, e, e.Rep3, "own")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO linkedin_connection
 			  (owner_user_id, full_name, normalized_name, email, source)
@@ -414,7 +414,7 @@ func TestThePerContactSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.
 	// enough to put Rep2 in forEachGhostOwner's enumeration, the way a real
 	// admin or ops member with their own pending import would be.
 	grantReadContactsRole(t, e, e.Rep2, "all")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO linkedin_connection
 			  (owner_user_id, full_name, normalized_name, source)
@@ -448,7 +448,7 @@ func TestThePerContactSweepNeverMatchesOutsideTheGhostOwnersRowScope(t *testing.
 
 	var status string
 	var matched *ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT match_status, matched_contact_id FROM linkedin_connection
 			  WHERE normalized_name = 'dana buyer'`).Scan(&status, &matched)
@@ -482,7 +482,7 @@ func grantEditContactsRole(t *testing.T, e *integration.Env, user ids.UUID, rowS
 func grantContactsRole(t *testing.T, e *integration.Env, user ids.UUID, rowScope, contactGrant string) {
 	t.Helper()
 	ctx := context.Background()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var roleID ids.UUID
 		// The key carries the grant too: the same row scope with read-only and
 		// with read-write are two different roles, and keying on scope alone
@@ -522,7 +522,7 @@ func TestAnArrivalHiddenFromTheWorkspaceFoldsWhenItOpens(t *testing.T) {
 	edgeOf := func() edge {
 		t.Helper()
 		var out edge
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(ctx, `SELECT count_total, xmin::text FROM graph_interaction_edge WHERE contact_id = $1`, contact).Scan(&out.total, &out.xmin)
 		}); err != nil {
 			t.Fatal(err)
@@ -531,7 +531,7 @@ func TestAnArrivalHiddenFromTheWorkspaceFoldsWhenItOpens(t *testing.T) {
 	}
 	setAudience := func(activity ids.UUID, audience string) {
 		t.Helper()
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, `UPDATE activity SET audience = $2, occurred_at = now() - interval '3 days' WHERE id = $1`, activity, audience)
 			return err
 		}); err != nil {
@@ -550,7 +550,7 @@ func TestAnArrivalHiddenFromTheWorkspaceFoldsWhenItOpens(t *testing.T) {
 	}
 
 	ahead := seedExchange(t, e, contact)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE activity SET occurred_at = now() + interval '1 day' WHERE id = $1`, ahead)
 		return err
 	}); err != nil {

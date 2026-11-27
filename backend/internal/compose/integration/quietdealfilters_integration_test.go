@@ -107,7 +107,7 @@ func (q *quietEnv) pipelineAmount(ctx context.Context, t *testing.T, filters ...
 func (q *quietEnv) sum(ctx context.Context, t *testing.T, query analyticsquery.Query) (int64, error) {
 	t.Helper()
 	var answer compose.AnalyticsAnswer
-	err := database.WithWorkspaceTx(ctx, q.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, q.Pool, func(tx pgx.Tx) error {
 		var err error
 		answer, err = compose.RunAnalyticsQuery(ctx, tx, query, analyticsquery.Floor(1))
 		return err

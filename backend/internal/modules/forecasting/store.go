@@ -151,7 +151,7 @@ func (s *Store) RecordCall(ctx context.Context, in NewCall) (Call, error) {
 	}
 
 	var out Call
-	err = database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		out, err = s.writeCallTx(ctx, tx, in, note, author)
 		return err
 	})
@@ -193,7 +193,7 @@ func (s *Store) InTx(ctx context.Context, fn func(context.Context, pgx.Tx) error
 	if err := auth.Require(ctx, "forecast", principal.ActionRead); err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		return fn(ctx, tx)
 	})
 }
@@ -318,7 +318,7 @@ func (s *Store) CurrentCall(ctx context.Context, period Period, scope Scope) (Ca
 		return Call{}, err
 	}
 	var out Call
-	err := database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		var note *string
 		err := tx.QueryRow(ctx, `
 			SELECT id, period_start, period_end, scope_kind, scope_id,

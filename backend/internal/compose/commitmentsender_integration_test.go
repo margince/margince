@@ -167,7 +167,7 @@ func (m senderMail) seat(user ids.UUID) context.Context {
 // store's own read path.
 func (m senderMail) opens(t *testing.T, user, activity ids.UUID) bool {
 	t.Helper()
-	err := database.WithWorkspaceTx(m.seat(user), m.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(m.seat(user), m.e.Pool, func(tx pgx.Tx) error {
 		return auth.EnsureActivityContentVisibleLive(m.seat(user), tx, activity)
 	})
 	if err != nil && !errors.Is(err, apperrors.ErrNotFound) {
@@ -365,7 +365,7 @@ func TestTheSenderCheckTurnsBackAStampAtADomainThatIsNotOurs(t *testing.T) {
 
 	step := colleagueSenderDataTask().Steps[0]
 	ctx := principal.SystemActing(e.Admin(), "system:datatask-test")
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 10, RunID: ids.NewV7()})
 		if err == nil && out.Changed != 0 {
 			t.Errorf("a second run changed %d row(s)", out.Changed)
@@ -378,7 +378,7 @@ func TestTheSenderCheckTurnsBackAStampAtADomainThatIsNotOurs(t *testing.T) {
 
 func contactVisibleTo(t *testing.T, m senderMail, user, contact ids.UUID) bool {
 	t.Helper()
-	err := database.WithWorkspaceTx(m.seat(user), m.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(m.seat(user), m.e.Pool, func(tx pgx.Tx) error {
 		return auth.EnsureVisible(m.seat(user), tx, "contact", contact)
 	})
 	if err != nil && !errors.Is(err, apperrors.ErrNotFound) {

@@ -188,7 +188,7 @@ func TestLeadRoutingLeavesHumanAssignmentsAlone(t *testing.T) {
 	}
 	// The run is claimed (redelivery-safe) but records no applied action.
 	var runs int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM workflow_run WHERE handler = 'assign_lead_owner'`).Scan(&runs)
 	})

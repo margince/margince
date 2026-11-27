@@ -136,7 +136,7 @@ func (e *BriefEngine) gather(ctx context.Context, now time.Time, userID ids.UUID
 		lineage:      map[ids.UUID]dealLineage{},
 		revenueNorm:  int64(briefRevenueNormFallbackMinor),
 	}
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		// The rep's last brief view: the previous run's data cutoff. No
 		// previous run → the overnight window is all-time.
 		lastView, err := briefLastView(ctx, tx, userID)

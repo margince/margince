@@ -52,7 +52,7 @@ func (c systemCompanies) Get(ctx context.Context, actAs extension.UserID, compan
 		got    crmcontracts.Company
 		source map[ids.UUID]outsideID
 	)
-	err = database.WithWorkspaceTx(seatCtx, c.rt.deps.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(seatCtx, c.rt.deps.pool, func(tx pgx.Tx) error {
 		var err error
 		got, err = c.store().GetCompanyTx(seatCtx, tx, id, storekit.IncludeArchived, contacts.CustomColumns{})
 		if err != nil {
@@ -84,7 +84,7 @@ func (c systemCompanies) List(ctx context.Context, actAs extension.UserID, q ext
 		next   storekit.Page
 		source map[ids.UUID]outsideID
 	)
-	err = database.WithWorkspaceTx(seatCtx, c.rt.deps.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(seatCtx, c.rt.deps.pool, func(tx pgx.Tx) error {
 		var err error
 		rows, next, err = c.store().ListCompaniesTx(seatCtx, tx, contacts.ListCompaniesInput{
 			Cursor: optional(q.Cursor), Limit: &limit, IncludeArchived: q.IncludeArchived,

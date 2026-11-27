@@ -92,7 +92,7 @@ func TestRefoldingAContactRestoresItsEdgesAndDroppingRemovesThem(t *testing.T) {
 
 func (v edgeEnv) inTx(t *testing.T, fn func(pgx.Tx) error) error {
 	t.Helper()
-	return database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, fn)
+	return database.WithTx(v.e.Admin(), v.e.Pool, fn)
 }
 
 // A write the database refuses must surface, whichever table it fails on, so

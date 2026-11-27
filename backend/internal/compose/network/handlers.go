@@ -88,7 +88,7 @@ func (h Reads) GetContactNetwork(w http.ResponseWriter, r *http.Request, id crmc
 	out.CaptureGaps = []crmcontracts.ContactCaptureGap{}
 
 	ctx := r.Context()
-	err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		// EdgesForContact carries both gates: the contact grant, and the row
 		// probe that 404s a contact this caller cannot read. Capture privacy
 		// rides that probe, so an unpromoted contact discloses neither its
@@ -154,7 +154,7 @@ func (h Reads) GetDealCoverage(w http.ResponseWriter, r *http.Request, id crmcon
 	out.DealId = id
 
 	ctx := r.Context()
-	err := database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		// The deal gate first: a coverage payload names the deal's contacts, so
 		// a caller who cannot read the deal must not learn who sits on it.
 		if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {

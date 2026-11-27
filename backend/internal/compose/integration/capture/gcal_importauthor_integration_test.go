@@ -189,7 +189,7 @@ func TestTheImportedCopiesTaskFoldsOnlyTheAuthorsCalendarCopy(t *testing.T) {
 // reads the importer's grants from the database and not from the import's context.
 func grantImporterRole(t *testing.T, e *integration.SearchEnv, seat ids.UUID, scope principal.RowScope) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			WITH importer AS (
 			  INSERT INTO role (key, name, permissions)

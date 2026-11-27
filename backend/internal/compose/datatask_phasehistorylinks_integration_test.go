@@ -90,7 +90,7 @@ func TestThePhaseHistoryLinkTaskLinksOnlyWhatOneAuditRowProves(t *testing.T) {
 	}
 
 	var replay datatask.BatchOut
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		replay, err = task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 		return err
@@ -110,7 +110,7 @@ func TestThePhaseHistoryLinkTaskEstimateIsBoundedAndPagesPastUnmatchedRows(t *te
 	}
 	e.WsExec(t, `UPDATE project_phase_history SET audit_log_id = NULL`)
 	step := phaseHistoryLinksDataTask().Steps[0]
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		count, more, err := step.Estimate(ctx, tx, 2)
 		if err != nil || count != 2 || !more {
 			t.Errorf("estimate with a cap of 2 = %d, more=%v, err=%v; want 2 and more", count, more, err)

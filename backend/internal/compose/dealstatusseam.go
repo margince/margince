@@ -65,7 +65,7 @@ func dealSeatReader(pool *pgxpool.Pool) dealstatus.SeatReader {
 	contactsStore := contacts.NewStore(InstallationDB(pool))
 	return func(ctx context.Context, dealID ids.DealID, now time.Time) ([]dealstatus.Seat, error) {
 		var seats []dealstatus.Seat
-		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			coverage, err := network.CoverageFor(ctx, tx, dealID, now)
 			if err != nil {
 				return err

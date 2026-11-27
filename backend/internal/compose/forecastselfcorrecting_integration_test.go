@@ -179,7 +179,7 @@ func TestRecordedOutcomesMoveTheChanceAndImportedSyncedOrLegacyMovesDoNot(t *tes
 		t.Fatalf("weighted = %d, want 60%% of 1,000,000", row.WeightedMinor)
 	}
 	var stages forecasting.StageChances
-	if err := database.WithWorkspaceTx(f.forecastReader(), f.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.forecastReader(), f.env.Pool, func(tx pgx.Tx) error {
 		var err error
 		stages, err = chances.StageChances(f.forecastReader(), tx, today)
 		return err
@@ -384,7 +384,7 @@ func TestARiskEffectIsLearnedFromSettledFrozenForecasts(t *testing.T) {
 	f.lose(t, lateLoss)
 
 	var effects map[string]float64
-	if err := database.WithWorkspaceTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
 		var err error
 		effects, err = winchance.RiskEffects(f.writer, tx, cutoff)
 		return err
@@ -449,7 +449,7 @@ func TestStageEvidenceReadsHowADealStoodAtTheCutoff(t *testing.T) {
 	}
 
 	var evidence map[string]forecasting.StageEvidence
-	if err := database.WithWorkspaceTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
 		var err error
 		evidence, err = winchance.StageEvidence(f.writer, tx, cutoff)
 		return err
@@ -488,7 +488,7 @@ func TestTheStuckPaceReadsRecordedStintsAndKeepsArchivedWins(t *testing.T) {
 				f.forgetProvenance(t, won[0], &s0)
 			}
 			var pace map[string]time.Duration
-			if err := database.WithWorkspaceTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(f.writer, f.env.Pool, func(tx pgx.Tx) error {
 				var err error
 				pace, err = deals.StuckAfter(f.writer, tx, f.env.pipeline, analyticsquery.PercentileSampleFloor)
 				return err

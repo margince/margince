@@ -205,7 +205,7 @@ func TestTheDeliveryReportTaskStepsAnEngagedLeadBackAndKeepsEverythingElse(t *te
 
 	step := deliveryReportsDataTask(f.e.Pool, func() time.Time { return clocktest.Now(t) }).Steps[0]
 	ctx := principal.SystemActing(f.e.Admin(), "system:datatask-test")
-	if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 50, RunID: ids.NewV7()})
 		if err == nil && out.Changed != 0 {
 			t.Errorf("a second run changed %d row(s)", out.Changed)
@@ -274,7 +274,7 @@ func TestTheDeliveryReportTaskPagesOverRowsItKeepsAndRollsBackWithItsBatch(t *te
 	ctx := principal.SystemActing(f.e.Admin(), "system:datatask-test")
 
 	rollback := errors.New("roll back after the write")
-	err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 2, RunID: ids.NewV7()})
 		if err != nil {
 			return err
@@ -296,7 +296,7 @@ func TestTheDeliveryReportTaskPagesOverRowsItKeepsAndRollsBackWithItsBatch(t *te
 
 	var cursor []byte
 	for range 3 {
-		if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 			out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 1, Cursor: cursor, RunID: ids.NewV7()})
 			cursor = out.Cursor
 			return err

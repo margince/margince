@@ -25,7 +25,7 @@ func TestPreparedMailboxProofUsesOneReadAndStaysInItsTransaction(t *testing.T) {
  VALUES(@seat,'address','alias@example.test','user','human:fixture')`, pgx.NamedArgs{"seat": e.Rep2})
 	var prepared context.Context
 	ctx, meter := database.WithStatementMeter(e.Admin())
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		before := meter.Cost().Statements
 		var err error
 		prepared, err = storekit.WithMailSeatIdentitySnapshot(ctx, tx)
@@ -66,7 +66,7 @@ func TestPreparedMailboxProofUsesOneReadAndStaysInItsTransaction(t *testing.T) {
 		t.Fatal(err)
 	}
 	e.WsExec(t, `UPDATE capture_connection SET status='disconnected' WHERE user_id=@seat AND provider='gmail'`, pgx.NamedArgs{"seat": e.Rep1})
-	if err := database.WithWorkspaceTx(prepared, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(prepared, e.Pool, func(tx pgx.Tx) error {
 		labels, err := storekit.ProvedMailboxLabels(prepared, tx)
 		if err == nil && len(labels) != 0 {
 			t.Fatalf("another transaction reused withdrawn proof: %v", labels)

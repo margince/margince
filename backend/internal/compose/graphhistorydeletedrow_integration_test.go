@@ -123,7 +123,7 @@ func holdGraphRecompute(ctx context.Context, t *testing.T, pool *pgxpool.Pool, a
 	var workErr error
 	go func() {
 		defer close(done)
-		workErr = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		workErr = database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			if err := search.RecomputeEdgesForActivities(ctx, tx, activityIDs); err != nil {
 				return err
 			}

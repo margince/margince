@@ -158,7 +158,7 @@ func (p *TranscriptProposer) finishUnderLock(
 	activityID ids.ActivityID,
 	produce func(tx pgx.Tx) (activities.TranscriptReadOutcome, error),
 ) error {
-	return database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		if err := storekit.LockTranscriptBody(ctx, tx, []ids.UUID{activityID.UUID}); err != nil {
 			return err
 		}

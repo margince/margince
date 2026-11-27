@@ -131,7 +131,7 @@ func TestTheNightlyRebuildDropsANewslettersEdgeCount(t *testing.T) {
 		t.Fatalf("reconcile pass: %v", err)
 	}
 	var edge int
-	if err := database.WithWorkspaceTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.e.Admin(), f.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT coalesce(max(count_90d), 0) FROM graph_interaction_edge
 			 WHERE user_id = $1 AND contact_id = $2`, f.seat, f.contact).Scan(&edge)
 	}); err != nil {

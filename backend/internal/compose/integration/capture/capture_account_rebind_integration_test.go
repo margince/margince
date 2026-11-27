@@ -99,7 +99,7 @@ func TestAReauthOfTheSameAccountLetsAnInFlightPageCommit(t *testing.T) {
 // it is up to.
 func readConnectionAccount(t *testing.T, e *integration.SearchEnv, connID ids.UUID) (label *string, cursor []byte) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `
 			SELECT account_label, sync_cursor FROM capture_connection WHERE id = $1`, connID).
 			Scan(&label, &cursor)
@@ -175,7 +175,7 @@ func TestReconnectingTheSameAccountKeepsItsSignatureAnswer(t *testing.T) {
 func readSignatureAnswer(t *testing.T, e *integration.SearchEnv, connID ids.UUID) *bool {
 	t.Helper()
 	var answer *bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT signature_enrich_enabled FROM capture_connection WHERE id = $1`, connID).Scan(&answer)
 	}); err != nil {

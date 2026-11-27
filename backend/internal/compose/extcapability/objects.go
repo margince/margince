@@ -207,7 +207,7 @@ func Gone(ever []string, composed []extension.Extension) []string {
 // a delete that failed, is made good by the next boot.
 func SweepGone(ctx context.Context, pool *pgxpool.Pool, store blobstore.Store, observeAction, installation string, composed []extension.Extension) error {
 	var ever []string
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT DISTINCT unit->>'name'
 			  FROM system_log, jsonb_array_elements(detail->'extensions') AS unit

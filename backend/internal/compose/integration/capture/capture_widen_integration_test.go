@@ -274,7 +274,7 @@ func shareHistory(t *testing.T, e *integration.SearchEnv, seat ids.UUID) int {
 func importReasons(t *testing.T, e *integration.SearchEnv, activityID, seat ids.UUID) []string {
 	t.Helper()
 	var reasons []string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT verdict_reasons FROM capture_import WHERE activity_id = $1 AND user_id = $2`,
 			activityID, seat).Scan(&reasons)
@@ -288,7 +288,7 @@ func importReasons(t *testing.T, e *integration.SearchEnv, activityID, seat ids.
 // verdict_reasons existed: the deciding reason, and nothing about the rest.
 func forgetImportReasons(t *testing.T, e *integration.SearchEnv, activityID ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_import SET verdict_reasons = NULL WHERE activity_id = $1`, activityID)
 		return err
@@ -303,7 +303,7 @@ func forgetImportReasons(t *testing.T, e *integration.SearchEnv, activityID ids.
 // scenario needs is the ledger state, not that surface's own gate.
 func holdThreadByOwner(t *testing.T, e *integration.SearchEnv, seat, activityID ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_thread_verdict (thread_key, user_id, status, seen_addresses)
 			SELECT a.thread_key, $2, 'held_by_owner', ARRAY[]::text[]
@@ -321,7 +321,7 @@ func holdThreadByOwner(t *testing.T, e *integration.SearchEnv, seat, activityID 
 // the ledger — the state under which an opening verdict actually applies.
 func clearThreadForSender(t *testing.T, e *integration.SearchEnv, seat, activityID ids.UUID, from string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_thread_verdict (thread_key, user_id, status, seen_addresses)
 			SELECT a.thread_key, $2, 'cleared', ARRAY[$3]::text[]
@@ -340,7 +340,7 @@ func clearThreadForSender(t *testing.T, e *integration.SearchEnv, seat, activity
 func newestActivityID(t *testing.T, e *integration.SearchEnv) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity ORDER BY created_at DESC, id DESC LIMIT 1`).Scan(&id)
 	}); err != nil {

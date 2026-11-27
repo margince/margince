@@ -44,7 +44,7 @@ func TestConnectPersistsTheProviderGrantedScopes(t *testing.T) {
 	}
 
 	var provider []string
-	if err := database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT provider_scopes FROM capture_connection WHERE id = $1`, connID).Scan(&provider)
 	}); err != nil {
@@ -79,7 +79,7 @@ func TestAConnectorThatCannotReportItsGrantRecordsNoClaim(t *testing.T) {
 		t.Fatal(err)
 	}
 	var provider []string
-	if err := database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT provider_scopes FROM capture_connection WHERE id = $1`, connID).Scan(&provider)
 	}); err != nil {

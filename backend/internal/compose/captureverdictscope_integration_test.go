@@ -95,7 +95,7 @@ func TestAnAddressThatAnsweredUsIsTheWorkspacesContact(t *testing.T) {
 func seedThreadedMail(t *testing.T, e *integration.Env, counterparty, subject, direction, threadKey string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, raw, direction, source_system, source_id,
 			                      source, captured_by, counterparty_email, thread_key,
@@ -173,7 +173,7 @@ func TestASenderOnAClearedThreadIsTheWorkspacesContact(t *testing.T) {
 // seedThreadHold records one thread's confidentiality verdict.
 func seedThreadHold(t *testing.T, e *integration.Env, threadKey, status string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_thread_verdict (thread_key, user_id, status)
 			VALUES ($1, $2, $3)`, threadKey, e.Rep1, status)
@@ -198,7 +198,7 @@ func TestARestrictedMessageDoesNotAnnounceItsCounterparty(t *testing.T) {
 	// The whole shape a restriction takes. The database refuses a partial one:
 	// a hold with no evidence of what qualified it is a hold nobody can answer
 	// for, which is the point of the trigger.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_retention_evidence
 			       (activity_id, basis, qualified_at, decided_by_name, reason)
@@ -250,7 +250,7 @@ func TestAMessageHeldWithoutAThreadVerdictStillWithholdsItsCounterparty(t *testi
 	// from a message merely waiting for its own verdict — and no thread verdict
 	// row is seeded, which is the whole point: this is the state the previous
 	// reader could not see.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET audience = 'participants',
 			                     audience_reason = 'explicitly_confidential'
@@ -344,7 +344,7 @@ func TestAnUnattestedOutboundRowMakesNoClaimAboutWhoWrote(t *testing.T) {
 	const email = "stranger@forged.example"
 	// Outbound by the header, with no provider attestation behind it.
 	activity := seedThreadedMail(t, e, email, "Re: your enquiry", "outbound", "thr-forged")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET counterparty_outbound_attested = false WHERE id = $1`, activity)
 		return err
@@ -416,7 +416,7 @@ func TestAMessageWaitingForItsOwnVerdictIsNotAHold(t *testing.T) {
 	e := integration.Setup(t)
 	const email = "buyer@waiting.example"
 	activity := seedThreadedMail(t, e, email, "Your proposal", "inbound", "thr-waiting")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET audience = 'participants',
 			                     audience_reason = 'pending_verdict'

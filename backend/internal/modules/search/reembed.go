@@ -96,9 +96,8 @@ func (s *Store) Reembed(ctx context.Context, pass ReembedPass, embedder Embedder
 	// (embedgen.go:51-56) and pendingStats.
 	//
 	// A workspace is still bound because the statements run through a bound
-	// handle and the GUC has to be set for them; WHICH one no longer selects
-	// anything, since ADR-0091 §8 phase D left no embeddable table carrying a
-	// tenant. That binding goes with §5, along with WithWorkspaceTx itself.
+	// handle. Which one no longer selects anything, because no embeddable table
+	// carries a tenant.
 	wsID, err := s.anyWorkspace(ctx)
 	if err != nil {
 		return err

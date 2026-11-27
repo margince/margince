@@ -102,7 +102,7 @@ func shareRequests(t *testing.T, e *integration.Env, held ids.ContactID, status 
 func openShareRequest(t *testing.T, e *integration.Env, held ids.ContactID) ids.ApprovalID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT id FROM approval
 			WHERE kind = 'contact_share' AND target_entity_id = $1 AND status = 'pending'`, held).Scan(&id)
 	}); err != nil {

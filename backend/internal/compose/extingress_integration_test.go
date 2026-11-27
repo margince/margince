@@ -714,7 +714,7 @@ func singleConnectionPool(t *testing.T) *pgxpool.Pool {
 func (e *ingressEnv) readAsWorkspace(t *testing.T, read func(context.Context, pgx.Tx) error) {
 	t.Helper()
 	ctx := e.callCtx(e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error { return read(ctx, tx) }); err != nil {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error { return read(ctx, tx) }); err != nil {
 		t.Fatalf("reading back what the ingest wrote: %v", err)
 	}
 }

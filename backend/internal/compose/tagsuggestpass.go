@@ -88,7 +88,7 @@ type tagSuggestBacklog struct {
 // bound, the phrase pass runs instead.
 func (s *TagSuggester) RunWorkspace(ctx context.Context, now time.Time) (scoutTally, error) {
 	var pass scoutTally
-	if err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		pass.Superseded, err = collections.SupersedeStaleTagSuggestionsTx(ctx, tx)
 		return err
@@ -160,7 +160,7 @@ func tagSuggestBatches(candidates []tagSuggestCandidate) [][]tagSuggestCandidate
 // phrasePass runs the phrase scout in its own transaction, adding to so far.
 func (s *TagSuggester) phrasePass(ctx context.Context, now time.Time, soFar scoutTally) (scoutTally, error) {
 	var phrase TagScoutPass
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		phrase, err = RunTagScout(ctx, tx, now)
 		return err
@@ -176,7 +176,7 @@ func (s *TagSuggester) phrasePass(ctx context.Context, now time.Time, soFar scou
 // one short transaction. No suggestible tag means nothing to read.
 func (s *TagSuggester) readBacklog(ctx context.Context, now time.Time) (tagSuggestBacklog, error) {
 	var backlog tagSuggestBacklog
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		tags, err := collections.SuggestibleTagsTx(ctx, tx)
 		if err != nil || len(tags) == 0 {
 			return err
@@ -224,7 +224,7 @@ func (s *TagSuggester) readBacklog(ctx context.Context, now time.Time) (tagSugge
 // suggestibility are read here, so a pair refused or unlinked earlier is raised
 // once it stands.
 func (s *TagSuggester) raiseFromAnswers(ctx context.Context, now time.Time, vocabulary string) (considered, raised int, err error) {
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) string {
 			args = append(args, v)
@@ -327,7 +327,7 @@ func (s *TagSuggester) storeTagSuggestAnswers(ctx context.Context, vocabulary st
 			stored[i].TagIDs = append(stored[i].TagIDs, tagID)
 		}
 	}
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		return collections.RecordTagInterestAnswersTx(ctx, tx, vocabulary, tagSuggestContentDigestSQL, stored)
 	})
 }

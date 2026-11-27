@@ -238,7 +238,7 @@ func (s *Store) requireLeadOf(ctx context.Context, owner ids.UUID) error {
 // planForOwner reads one owner's plan for the week containing now.
 func (s *Store) planForOwner(ctx context.Context, owner ids.UUID, now time.Time) (Plan, error) {
 	var plan Plan
-	err := database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		week, err := s.weekStart(ctx, tx, now)
 		if err != nil {
 			return err

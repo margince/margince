@@ -39,7 +39,7 @@ func ghostedPass(t *testing.T, e *Env, now time.Time) compose.GhostedPass {
 	// captured_by from the bound actor, so a bare context writes no signal at
 	// all — which is what a producer running without a principal deserves.
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		pass, err = compose.WriteGhostedSignals(ctx, tx, now)
 		return err
@@ -64,7 +64,7 @@ func openSignalKinds(t *testing.T, e *Env, company ids.UUID) []string {
 	t.Helper()
 	var kinds []string
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
 			`SELECT kind FROM signal WHERE resolved_company_id = $1 AND status = 'open'`, company)
 		if err != nil {
@@ -176,7 +176,7 @@ func openSignalKindsAs(t *testing.T, e *Env, user ids.UUID, company ids.UUID) []
 		clause = "true"
 	}
 	var kinds []string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, fmt.Sprintf(
 			`SELECT s.kind FROM signal s
 			  WHERE s.resolved_company_id = $%d AND s.status = 'open'

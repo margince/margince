@@ -24,7 +24,7 @@ func vanishedRowsTx(t *testing.T, body func(ctx context.Context, tx pgx.Tx)) {
 	t.Helper()
 	ctx, pool := meetingTenureEnv(t)
 	settled := errors.New("rolled back by the spec")
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		body(ctx, tx)
 		return settled
 	})

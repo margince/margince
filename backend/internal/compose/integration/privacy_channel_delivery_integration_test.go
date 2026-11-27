@@ -48,7 +48,7 @@ type channelDelivery struct {
 func seedChannelSubject(t *testing.T, e *Env) ids.UUID {
 	t.Helper()
 	contactID := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact (id, full_name, source, captured_by)
@@ -75,7 +75,7 @@ func seedChannelSubject(t *testing.T, e *Env) ids.UUID {
 func seedChannelDelivery(t *testing.T, e *Env, age, body, status string, contact ids.UUID) channelDelivery {
 	t.Helper()
 	out := channelDelivery{contact: contact, activity: ids.NewV7(), delivery: ids.NewV7()}
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO activity (id, kind, channel_provider, body, direction, occurred_at, source, captured_by, source_system, source_id)
@@ -124,7 +124,7 @@ type channelDeliveryRow struct {
 func readChannelDelivery(t *testing.T, e *Env, id ids.UUID) channelDeliveryRow {
 	t.Helper()
 	var row channelDeliveryRow
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT channel_user_id, body, status, reason, provider_message_id
 			FROM comms_outbound WHERE id = $1`, id).
@@ -180,7 +180,7 @@ func TestErasureRedactsAChannelDeliveryWithoutBreakingItsShape(t *testing.T) {
 
 	// The rows still satisfy comms_outbound_shape — proven by the database
 	// accepting one more write to each, which a violated CHECK would refuse.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE comms_outbound SET attempts = attempts WHERE id = ANY($1)`,
 			[]ids.UUID{sent.delivery, pending.delivery})

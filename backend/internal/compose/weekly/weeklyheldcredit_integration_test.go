@@ -33,7 +33,7 @@ func TestAColleagueKeepsAHeldMeetingInItsWeekWhenTheirGuestRowIsLost(t *testing.
 	}
 	count := func() int {
 		var got int
-		if err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			got, _, err = countWeekMeetings(e.repCtx, tx, e.Rep2, week, week.AddDate(0, 0, 7))
 			return err

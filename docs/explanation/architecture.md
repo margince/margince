@@ -31,9 +31,8 @@ What each directory owns, and the rule that goes with it:
     directory is the list of every seam. Read it before you add one, because a second seam for a
     question already answered is how drift starts.
 - `internal/platform/`: technical base code that owns no domain.
-  - `database` holds the `pg` pool and the `WithWorkspaceTx` contract for workspace transactions. It is a
-    transaction boundary with a check, failing closed, that a workspace is on the context. It binds no
-    database GUC, and no table has a `workspace_id` column or a policy per row.
+  - `database` holds the `pg` pool and the `WithTx` contract. A module statement runs inside this one transaction,
+    so its row, audit row and outbox row commit together. It binds no database GUC, and no table has a `workspace_id` column or a policy per row.
   - `database/storekit` is the one spelling of the audit and outbox write shape, the keyset cursor, and
     version patches.
   - `auth` is the one admission point: `Admit` (scope ∧ tier) + object RBAC + the row scope clauses, which

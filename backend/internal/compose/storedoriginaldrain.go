@@ -96,7 +96,7 @@ func drainStoredOriginals[C storedOriginalCandidate](
 	// take the whole batch down with it and re-select the same rows forever.
 	ctx = principal.WithCorrelationID(ctx, ids.NewV7())
 	var settled int
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		candidates, err := pass.offer(ctx, tx, limit)
 		if err != nil {
 			return err

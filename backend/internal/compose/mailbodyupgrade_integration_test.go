@@ -34,7 +34,7 @@ import (
 // is unassessed, and holds the body the older parser stored when lostText is set.
 func (o *owedEnv) asLegacy(t *testing.T, message ids.UUID, lostText string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity
 			SET body_completeness = 'unassessed', body = coalesce(NULLIF($2, ''), body)
 			WHERE id = $1 AND raw_capture_id IS NOT NULL`, message, lostText)
@@ -58,7 +58,7 @@ func (o *owedEnv) promiseOutcome(t *testing.T, source ids.UUID, promise string) 
 	ctx := o.judge()
 	dispatcher := NewCommitmentDispatcher(o.e.Pool, approvals.NewService(o.e.DB()))
 	var outcome CommitmentOutcome
-	if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		outcome, _, err = dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 		return err
@@ -212,7 +212,7 @@ func assertMailBodyReplayChangesNothing(t *testing.T, o *owedEnv, task datatask.
 		in := datatask.BatchIn{Limit: 2, RunID: ids.NewV7()}
 		for {
 			var out datatask.BatchOut
-			if err := database.WithWorkspaceTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, o.e.Pool, func(tx pgx.Tx) error {
 				var err error
 				out, err = step.Batch(ctx, tx, in)
 				return err
@@ -237,7 +237,7 @@ func TestMailWithoutAReadableOriginalIsUnverifiable(t *testing.T) {
 	o := setupOwed(t)
 	o.now = clocktest.Now(t)
 	var captured, undecodable, logged ids.UUID
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		insert := `INSERT INTO activity (kind, subject, body, direction, occurred_at, source, captured_by, body_completeness)
 			VALUES ('email', 'hi', 'From: a@x.test\nTo: b@y.test', 'inbound', $1, $2, $3, 'unassessed') RETURNING id`
 		if err := tx.QueryRow(context.Background(), insert, o.now, "gmail:seed", "connector:gmail").Scan(&captured); err != nil {
@@ -276,7 +276,7 @@ func TestTheCompletenessWriterRefusesAStaleBodyAndAMember(t *testing.T) {
 	o.asLegacy(t, message, "")
 	system := principal.SystemActing(o.e.Admin(), "system:datatask-test")
 	stale := []activities.MailBodyAssessment{{Activity: message, Completeness: "complete", Body: "an older body"}}
-	if err := database.WithWorkspaceTx(system, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, o.e.Pool, func(tx pgx.Tx) error {
 		changed, err := activities.AssessMailBodiesTx(system, tx, stale)
 		if err == nil && changed != 0 {
 			t.Errorf("an assessment of a body that changed since was written (%d rows)", changed)
@@ -286,7 +286,7 @@ func TestTheCompletenessWriterRefusesAStaleBodyAndAMember(t *testing.T) {
 		t.Fatal(err)
 	}
 	member := o.e.Admin()
-	if err := database.WithWorkspaceTx(member, o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(member, o.e.Pool, func(tx pgx.Tx) error {
 		_, err := assessMailBodiesBatch(member, tx, datatask.BatchIn{Limit: 2, RunID: ids.NewV7()})
 		return err
 	}); !errors.Is(err, apperrors.ErrPermissionDenied) {

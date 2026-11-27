@@ -221,7 +221,7 @@ func TestAWorkspacePurgeLeavesNoClaimOnTheMailItDestroyed(t *testing.T) {
 func participantRows(t *testing.T, e *integration.Env, activityID ids.UUID) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM activity_participant WHERE activity_id = $1`, activityID).Scan(&n)
 	}); err != nil {
@@ -257,7 +257,7 @@ func TestAColleagueOnTheCcLineIsNotTheCounterpartyARuleIsAbout(t *testing.T) {
 // StampFurtherParticipants does when the provider attests our own side.
 func addColleagueParticipant(t *testing.T, e *integration.Env, activityID ids.UUID, address string, seat ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_participant (activity_id, user_id, address, role)
 			VALUES ($1, $3, $2, 'cc') ON CONFLICT DO NOTHING`, activityID, address, seat)
@@ -344,7 +344,7 @@ func runPurgeAs(ctx context.Context, t *testing.T, e *integration.Env, rule ids.
 // StampFurtherParticipants records a Cc line at capture.
 func addParticipantAddress(t *testing.T, e *integration.Env, activityID ids.UUID, address string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_participant (activity_id, address, role)
 			VALUES ($1, $2, 'cc') ON CONFLICT DO NOTHING`, activityID, address)
@@ -359,7 +359,7 @@ func addParticipantAddress(t *testing.T, e *integration.Env, activityID ids.UUID
 func seedHandLoggedMail(t *testing.T, e *integration.Env, from, subject string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, source, captured_by,
 			                      counterparty_email, audience)

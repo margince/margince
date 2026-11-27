@@ -746,7 +746,7 @@ func assertAContinuedRunIsNotLeftWithoutAJob(t *testing.T, b *backfillWireEnv, w
 
 func setRunStatus(t *testing.T, b *backfillWireEnv, runID ids.UUID, status string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(b.env.Admin(), b.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(b.env.Admin(), b.env.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE capture_backfill SET status = $2 WHERE id = $1`, runID, status)
 		return err
 	}); err != nil {

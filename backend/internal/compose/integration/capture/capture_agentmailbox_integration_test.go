@@ -70,7 +70,7 @@ func TestAnAgentSetsAndDisconnectsItsUsersMailbox(t *testing.T) {
 		t.Fatalf("disconnecting: %v", err)
 	}
 	var status string
-	if err := database.WithWorkspaceTx(agent, env.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(agent, env.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(agent, `SELECT status FROM capture_connection WHERE id = $1`, views[0].ID).Scan(&status)
 	}); err != nil {
 		t.Fatalf("reading the connection: %v", err)
@@ -101,7 +101,7 @@ func TestAnAgentListsItsUsersConnectionsAndNoCredential(t *testing.T) {
 		t.Errorf("the agent was listed\n%s\nand its user\n%s", agentJSON, humanJSON)
 	}
 	var reference, token string
-	if err := database.WithWorkspaceTx(seat, env.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(seat, env.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(seat, `SELECT coalesce(credential_ref, ''), coalesce(encode(auth, 'base64'), '')
 			FROM capture_connection WHERE id = $1`, human[0].ID).Scan(&reference, &token)
 	}); err != nil {

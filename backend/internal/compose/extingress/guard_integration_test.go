@@ -25,7 +25,7 @@ func TestTheMemberGuardRefusesAWithdrawnCredentialAndAMissingMember(t *testing.T
 	e := integration.Setup(t)
 	answer := func(consented bool, member ids.UUID) error {
 		guard := extingress.MemberGuard("unit", func(context.Context, pgx.Tx, string, ids.UUID) (bool, error) { return consented, nil })
-		return database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error { return guard(e.Admin(), tx, member) })
+		return database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error { return guard(e.Admin(), tx, member) })
 	}
 	if err := answer(true, e.Rep1); err != nil {
 		t.Fatalf("a live member with a credential was refused: %v", err)

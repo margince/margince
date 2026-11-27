@@ -79,7 +79,7 @@ func insertQuietExchange(t *testing.T, owner *pgx.Conn, sender, copied, contact 
 func foldQuietExchanges(t *testing.T, e *integration.Env, folded []ids.UUID) {
 	t.Helper()
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, folded)
 	}); err != nil {
 		t.Fatalf("folding the exchange into the projection: %v", err)
@@ -362,7 +362,7 @@ func TestAFutureMeetingIsNotATouch(t *testing.T) {
 		}
 	}
 	wsCtx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(wsCtx, e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(wsCtx, tx, []ids.UUID{meeting})
 	}); err != nil {
 		t.Fatal(err)

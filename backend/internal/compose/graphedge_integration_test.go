@@ -52,7 +52,7 @@ type edgeEnv struct{ e *integration.Env }
 func (v edgeEnv) interaction(t *testing.T, user ids.UUID, contact ids.ContactID, at time.Time, direction, contactRole string) ids.UUID {
 	t.Helper()
 	var activityID ids.UUID
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO activity (kind, subject, direction, occurred_at, source, captured_by)
@@ -85,7 +85,7 @@ func (v edgeEnv) interaction(t *testing.T, user ids.UUID, contact ids.ContactID,
 func (v edgeEnv) contact(t *testing.T, name string) ids.ContactID {
 	t.Helper()
 	id := ids.New[ids.ContactKind]()
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, full_name, owner_id, source, captured_by, visibility)
 			VALUES ($1, $2, $3, 'manual', 'human:test', 'workspace')`,
@@ -101,7 +101,7 @@ func (v edgeEnv) contact(t *testing.T, name string) ids.ContactID {
 // someone else's mail.
 func (v edgeEnv) copyColleague(t *testing.T, activityID, user ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_participant (activity_id, user_id, role) VALUES ($1, $2, 'cc')`,
 			activityID, user)
@@ -114,7 +114,7 @@ func (v edgeEnv) copyColleague(t *testing.T, activityID, user ids.UUID) {
 // recompute folds the named activities, as the consumer does.
 func (v edgeEnv) recompute(t *testing.T, activityIDs ...ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(v.e.Admin(), tx, activityIDs)
 	}); err != nil {
 		t.Fatalf("recomputing edges: %v", err)
@@ -125,7 +125,7 @@ func (v edgeEnv) recompute(t *testing.T, activityIDs ...ids.UUID) {
 func (v edgeEnv) edgesFor(t *testing.T, contact ids.ContactID) []search.InteractionEdge {
 	t.Helper()
 	var out []search.InteractionEdge
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = search.EdgesForContact(v.e.Admin(), tx, contact.UUID, 50)
 		return err
@@ -140,7 +140,7 @@ func (v edgeEnv) edgesFor(t *testing.T, contact ids.ContactID) []search.Interact
 func (v edgeEnv) snapshot(t *testing.T) map[string][5]int {
 	t.Helper()
 	out := map[string][5]int{}
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT user_id, contact_id, count_90d, in_count_90d, out_count_90d, sent_count_90d, count_total
 			  FROM graph_interaction_edge ORDER BY user_id, contact_id`)
@@ -280,7 +280,7 @@ func TestAnEdgeThatLostItsEvidenceIsDeleted(t *testing.T) {
 	// Archiving the only interaction removes the basis for the edge. Leaving
 	// it would recommend a colleague for an introduction the evidence no
 	// longer supports.
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE activity SET archived_at = now() WHERE id = $1`, a1)
 		return err
 	}); err != nil {
@@ -314,7 +314,7 @@ func TestARelinkDropsTheEdgeToTheContactTheActivityLeft(t *testing.T) {
 	// The relink itself: the participant row is repointed, and the event that
 	// follows names only the activity. Nothing anywhere still says the message
 	// was ever about the first contact.
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity_participant SET contact_id = $3 WHERE activity_id = $1 AND contact_id = $2`,
 			a1, was, corrected)
@@ -355,7 +355,7 @@ func TestTheNightlyRebuildAgreesWithTheIncrementalPath(t *testing.T) {
 	// The nightly pass throws the table away and refolds from the base tables.
 	// If the two disagree, one of them has been quietly wrong — and since the
 	// rebuild only runs daily, it would be wrong for up to a day at a time.
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		return search.RebuildEdges(v.e.Admin(), tx)
 	}); err != nil {
 		t.Fatalf("rebuilding: %v", err)
@@ -402,7 +402,7 @@ func TestArchivingOneOfTwoInteractionsCorrectsTheCountsRatherThanNothing(t *test
 	// This is the case a delete-only invalidation misses entirely: it drops
 	// pairs that lost ALL their evidence and silently leaves every surviving
 	// pair asserting the interaction that was just removed.
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET archived_at = now() WHERE id = $1`, newer)
 		return err
@@ -441,7 +441,7 @@ func TestOneMessageCountsOnceHoweverManyRolesItNames(t *testing.T) {
 	// is both is common — and it produces two participant rows for one
 	// conversation.
 	activityID := v.interaction(t, v.e.Rep1, contact, now.AddDate(0, 0, -1), "outbound", "to")
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_participant (activity_id, contact_id, role)
 			VALUES ($1, $2, 'cc')`,
@@ -555,7 +555,7 @@ func TestAReaderWithoutActivityReadGetsNoSentCount(t *testing.T) {
 		Objects:  map[string]principal.ObjectGrant{"contact": {Read: true}},
 		RowScope: principal.RowScopeAll,
 	})
-	if err := database.WithWorkspaceTx(contactOnly, v.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(contactOnly, v.e.Pool, func(tx pgx.Tx) error {
 		one, err := search.EdgesForContact(contactOnly, tx, contact.UUID, 50)
 		if err != nil {
 			return err

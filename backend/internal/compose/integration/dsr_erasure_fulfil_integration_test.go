@@ -158,7 +158,7 @@ func TestAnErasureThatOpensADisputeKeepsTheRequestHistory(t *testing.T) {
 		t.Fatalf("fulfilling while opening a dispute must succeed, got %d: %s", w.Code, w.Body)
 	}
 	var kept bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(e.Admin(), `SELECT after IS NOT NULL FROM audit_log
 		 WHERE entity_type='data_subject_request' AND entity_id=$1 AND action='create'`, id).Scan(&kept)
 	}); err != nil {
@@ -223,21 +223,21 @@ func (g *gatedEraser) EraseContactCounted(ctx context.Context, contactID ids.UUI
 	return g.inner.EraseContactCounted(ctx, contactID, reason)
 }
 
-// errLockHeld marks the one expected failure of the probe below — the row is
-// locked by the in-flight fulfilment (55P03). Returning it (rather than nil)
-// keeps WithWorkspaceTx on its rollback path: a FOR UPDATE NOWAIT that trips
-// 55P03 leaves the transaction aborted, and committing an aborted tx would
-// surface pgx.ErrTxCommitRollback instead of the clean signal we want.
+// errLockHeld marks the one expected failure of the probe below: the row is
+// locked by the in-flight fulfilment (55P03). Returning it, not nil, keeps
+// WithTx on its rollback path. A `FOR UPDATE NOWAIT` that trips 55P03 aborts the
+// transaction, and committing it would surface pgx.ErrTxCommitRollback instead
+// of the clean signal.
 var errLockHeld = errors.New("request row lock held")
 
 // dsrRowLockHeld probes whether the request row is currently locked by another
-// transaction, WITHOUT blocking: FOR UPDATE NOWAIT turns a contended lock into
+// transaction, without blocking. `FOR UPDATE NOWAIT` turns a contended lock into
 // an immediate 55P03 rather than a wait, so the assertion is deterministic (no
-// sleep, no racing timeout). It runs through database.WithWorkspaceTx like every
-// other module statement, never over a raw pool connection.
+// sleep, no racing timeout). It runs through database.WithTx like every other
+// module statement, never over a raw pool connection.
 func dsrRowLockHeld(t *testing.T, e *Env, id ids.UUID) bool {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var got ids.UUID
 		scanErr := tx.QueryRow(context.Background(),
 			`SELECT id FROM data_subject_request WHERE id = $1 FOR UPDATE NOWAIT`, id).Scan(&got)

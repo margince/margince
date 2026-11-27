@@ -218,7 +218,7 @@ func TestArchivedLeadsAndProjectsOfferNoEdit(t *testing.T) {
 		t.Fatal(err)
 	}
 	requireWritable(t, gotProject.Writable, false)
-	err = database.WithWorkspaceTx(owner, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(owner, e.Pool, func(tx pgx.Tx) error {
 		rows := []crmcontracts.Lead{gotLead}
 		raw, err := auth.StampWritable(owner, tx, objLead, rows,
 			func(l crmcontracts.Lead) ids.UUID { return ids.UUID(l.Id) },
@@ -259,7 +259,7 @@ func TestRecordAffordanceStampsReadAuthorityOnce(t *testing.T) {
 	}
 	for _, tc := range cases {
 		ctx := asTeam1Member(e, e.Rep1, recordAffordancePerms(tc.grants))
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			dealPage := []crmcontracts.Deal{{Id: openapi_types.UUID(own)}, {Id: openapi_types.UUID(shared.deal.UUID)}}
 			metered, meter := database.WithStatementMeter(ctx)
 			if _, err := auth.StampRecordAffordances(metered, tx, auth.DealArchive, dealPage,

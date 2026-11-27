@@ -54,7 +54,7 @@ func newSilentDealWorld(t *testing.T) dealEvidenceWorld {
 func (w dealEvidenceWorld) viabilityReasons(t *testing.T) []viability.Reason {
 	t.Helper()
 	var subjects []assurance.Subject
-	if err := database.WithWorkspaceTx(w.e.Admin(), w.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(w.e.Admin(), w.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		subjects, err = compose.AssuranceSubjects(context.Background(), tx, w.now, []assurance.SourceCoverage{
 			{Source: "mail", State: assurance.CoverageChecked, CheckedThrough: &w.now},

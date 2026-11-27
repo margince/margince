@@ -225,15 +225,14 @@ func seedCompanyForTierFloor(as context.Context, t *testing.T, p *Provider) ids.
 
 // liveProjectsNamed counts the projects the call did or did not create.
 //
-// Bound through WithWorkspaceTx, not read off the pool directly. Env.Pool is the
-// workspace-bound app role, so an unbound `SELECT count(*) FROM project` resolves the
-// policy expression against a NULL workspace and answers zero for every row that
-// exists — an absence-assertion that passes whether or not the write happened,
-// which is the one thing this test may not do.
+// Counts through WithTx, not off the pool directly, so the read runs in the
+// same transaction seam as the code under test. An absence assertion that
+// passes whether or not the write happened proves nothing, and this test may
+// not do that.
 func liveProjectsNamed(as context.Context, t *testing.T, e *integration.Env, name string) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(as, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(as, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(as, `SELECT count(*) FROM project WHERE name = $1`, name).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting the projects: %v", err)

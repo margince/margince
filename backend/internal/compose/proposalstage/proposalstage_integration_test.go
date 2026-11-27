@@ -145,7 +145,7 @@ type proposalCard struct {
 func (p *proposalEnv) cards(t *testing.T) []proposalCard {
 	t.Helper()
 	var out []proposalCard
-	if err := database.WithWorkspaceTx(p.Admin(), p.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(p.Admin(), p.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT id, proposed_change, status, requested_decider_id FROM approval
 			 WHERE kind = $1 AND target_entity_id = $2 ORDER BY created_at, id`, deals.ProposalStageKind, p.deal)
@@ -307,7 +307,7 @@ func TestAnUnansweredQuestionExpiresAfterFourteenDays(t *testing.T) {
 func (p *proposalEnv) outboundMail(t *testing.T, body string, files ...string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(p.Admin(), p.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(p.Admin(), p.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO activity (kind, direction, subject, body, occurred_at, source, captured_by)
@@ -568,7 +568,7 @@ func TestAStageMoveInFlightDecidesBeforeAQuestionIsRaised(t *testing.T) {
 	release := make(chan struct{})
 	moved := make(chan error, 1)
 	go func() {
-		moved <- database.WithWorkspaceTx(p.Admin(), p.Pool, func(tx pgx.Tx) error {
+		moved <- database.WithTx(p.Admin(), p.Pool, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(context.Background(), `UPDATE deal SET stage_id = $2 WHERE id = $1`, p.deal, p.stages[4]); err != nil {
 				return err
 			}
@@ -611,7 +611,7 @@ func TestASuggestionWaitsForTheDealsLockBeforeScanningForOpenQuestions(t *testin
 	release := make(chan struct{})
 	held := make(chan error, 1)
 	go func() {
-		held <- database.WithWorkspaceTx(p.Admin(), p.Pool, func(tx pgx.Tx) error {
+		held <- database.WithTx(p.Admin(), p.Pool, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(context.Background(), proposalstage.LockSQL, p.deal); err != nil {
 				return err
 			}

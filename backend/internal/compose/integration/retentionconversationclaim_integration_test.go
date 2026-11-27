@@ -43,7 +43,7 @@ func TestTheRetentionSweepDestroysTheClaimsQuotingTheMessage(t *testing.T) {
 	contact := e.SeedContact(t, "Ute Sommer", nil)
 	activity := ids.NewV7()
 
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		inner := context.Background()
 		if _, err := tx.Exec(inner, `
 			INSERT INTO retention_policy (object_type, category, retain_days, action)
@@ -86,7 +86,7 @@ func TestTheRetentionSweepDestroysTheClaimsQuotingTheMessage(t *testing.T) {
 	}
 
 	var body *string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT body FROM activity WHERE id = $1`, activity).Scan(&body)
 	}); err != nil {
@@ -107,7 +107,7 @@ func TestTheRetentionSweepDestroysTheClaimsQuotingTheMessage(t *testing.T) {
 func claimsQuoting(t *testing.T, e *Env, activity ids.UUID) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM conversation_claim WHERE source_activity_id = $1`, activity).Scan(&n)
 	}); err != nil {

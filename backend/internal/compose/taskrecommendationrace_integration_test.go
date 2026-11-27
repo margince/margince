@@ -100,8 +100,8 @@ func TestSuggestedTaskRefusesAWeakBorrowedTransaction(t *testing.T) {
 	in := suggestedTaskInput(t, card.Next)
 	store := activities.NewStore(e.DB()).WithTaskRecommendation(taskRecommendationFrom(cards))
 	before := e.WsCount(t, "SELECT count(*) FROM activity")
-	err = database.WithWorkspaceSnapshot(reader, e.Pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithSnapshot(reader, e.Pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			_, _, err := store.LogActivityTx(ctx, tx, in)
 			return err
 		})

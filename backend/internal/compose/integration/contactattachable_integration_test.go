@@ -114,7 +114,7 @@ func TestContactAttachableFlagMatchesTheAttachGate(t *testing.T) {
 			if blocked == tc.want {
 				t.Fatal("the Next bar and the attach flag disagree")
 			}
-			err = database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+			err = database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 				return auth.EnsureAttachTarget(reader, tx, "contact", contact)
 			})
 			if tc.want && err != nil {

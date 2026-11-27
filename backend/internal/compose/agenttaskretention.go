@@ -71,7 +71,7 @@ func (s *AgentTaskRetentionSweeper) Sweep(ctx context.Context) error {
 
 func (s *AgentTaskRetentionSweeper) purgeExpired(ctx context.Context) (int64, error) {
 	var purged int64
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// idx_agent_task_expiry (migration 0201) is what keeps this cheap.
 		//
 		// A row an executor may still be INSIDE is spared, however expired it

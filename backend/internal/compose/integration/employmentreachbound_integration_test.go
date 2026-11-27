@@ -91,7 +91,7 @@ func reaches(t *testing.T, e *Env, activity, company ids.UUID) bool {
 	t.Helper()
 	var predicate, set bool
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity a
 			 WHERE a.id = $2 AND `+activities.CompanyLinkedActivityExists(1)+`)`,
 			company, activity).Scan(&predicate); err != nil {
@@ -152,7 +152,7 @@ func TestAStartDateAUserSuppliedWinsOverTheFirstObservation(t *testing.T) {
 
 	var edge ids.UUID
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT id FROM relationship
 			 WHERE kind = 'employment' AND contact_id = $1 AND company_id = $2
 			   AND first_observed_at IS NOT NULL`, ann, newco).Scan(&edge)
@@ -250,7 +250,7 @@ func TestAStartDateBoundsTheSameInEverySessionZone(t *testing.T) {
 		var walked bool
 		var clock *time.Time
 		ctx := e.Admin()
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			if _, err := tx.Exec(ctx, `SELECT set_config('TimeZone', $1, true)`, zone); err != nil {
 				return err
 			}

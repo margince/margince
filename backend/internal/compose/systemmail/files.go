@@ -86,7 +86,7 @@ var errNoStore = errors.New("systemmail: no object store is bound, so no attachm
 // List answers the files of one readable mail and writes its export row.
 func (f Files) List(ctx context.Context, mail ids.UUID) ([]extension.MailAttachment, error) {
 	var out []extension.MailAttachment
-	err := database.WithWorkspaceTx(ctx, f.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, f.Pool, func(tx pgx.Tx) error {
 		if err := ensureReadableMail(ctx, tx, mail); err != nil {
 			return err
 		}
@@ -115,7 +115,7 @@ func (f Files) Open(ctx context.Context, id ids.UUID) (extension.MailAttachmentF
 		file extension.MailAttachment
 		key  string
 	)
-	err := database.WithWorkspaceTx(ctx, f.Pool, func(tx pgx.Tx) (err error) {
+	err := database.WithTx(ctx, f.Pool, func(tx pgx.Tx) (err error) {
 		if err := f.underCap(ctx, tx); err != nil {
 			return err
 		}
@@ -129,7 +129,7 @@ func (f Files) Open(ctx context.Context, id ids.UUID) (extension.MailAttachmentF
 	if err != nil {
 		return extension.MailAttachmentFile{}, err
 	}
-	err = database.WithWorkspaceTx(ctx, f.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, f.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, capLock, f.Unit); err != nil {
 			return err
 		}

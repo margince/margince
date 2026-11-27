@@ -66,7 +66,7 @@ func TestFieldHistoryNamesTheClientOfARotatedPassport(t *testing.T) {
 func revokePassport(t *testing.T, e *Env, passport ids.UUID) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `UPDATE passport SET revoked_at = now() WHERE id = $1`, passport)
 		return err
 	})
@@ -90,7 +90,7 @@ func seedDelegatedDiffRow(t *testing.T, e *Env, contact, human, passport ids.UUI
 		t.Fatalf("encoding the after image: %v", err)
 	}
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO audit_log (id, actor_type, actor_id, on_behalf_of, passport_id,
 			                        action, entity_type, entity_id, before, after, occurred_at)

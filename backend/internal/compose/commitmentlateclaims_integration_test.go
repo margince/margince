@@ -62,7 +62,7 @@ func TestALateProposalsCustomerClaimIsHistoryUntilAccepted(t *testing.T) {
 // and those it says we owe.
 func customerClaims(t *testing.T, e *transcriptEnv, customer ids.ContactID) (history, current int) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		all, err := e.Contacts.ClaimsForContact(e.Admin(), tx, customer, nil, 20)
 		if err != nil {
 			return err

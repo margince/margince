@@ -66,7 +66,7 @@ func (s *Store) EditCommitment(
 	if err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		planID, current, err := ownEditableCommitmentTx(ctx, tx, commitmentID, owner)
 		if err != nil {
 			return err

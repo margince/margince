@@ -147,7 +147,7 @@ func TestTheSignatureWindowTaskTakesBackWhatTheSenderDidNotWrite(t *testing.T) {
 	step := signatureWindowDataTask().Steps[0]
 
 	rollback := errors.New("rolled back")
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 50, RunID: ids.NewV7()}); err != nil {
 			return err
 		}
@@ -186,7 +186,7 @@ func TestTheSignatureWindowTaskTakesBackWhatTheSenderDidNotWrite(t *testing.T) {
 		t.Errorf("%d retraction audit rows, want one per field taken back, at one field per batch", audits)
 	}
 
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := step.Batch(ctx, tx, datatask.BatchIn{Limit: 50, RunID: ids.NewV7()})
 		if err == nil && out.Changed != 0 {
 			t.Errorf("a replay changed %d rows, want none", out.Changed)
@@ -250,7 +250,7 @@ func otherMailOf(t *testing.T, e *integration.Env, contact, besides ids.UUID) id
 func signatureEvidence(t *testing.T, e *integration.Env, contact ids.UUID) []string {
 	t.Helper()
 	var fields []string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT field || ':' || value_key FROM contact_profile_field
 			 WHERE contact_id = $1 ORDER BY 1`, contact)
@@ -269,7 +269,7 @@ func signatureEvidence(t *testing.T, e *integration.Env, contact ids.UUID) []str
 func contactTitle(t *testing.T, e *integration.Env, contact ids.UUID) *string {
 	t.Helper()
 	var title *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT title FROM contact WHERE id = $1`, contact).Scan(&title)
 	}); err != nil {
 		t.Fatal(err)

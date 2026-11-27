@@ -58,7 +58,7 @@ func TestGraphNotificationRoutesToTheConnection(t *testing.T) {
 	// The connector's cursor carries the provider-owned mailbox identity —
 	// exactly what a real graph sync writes — and the pacing clock sits in the
 	// future so only the notification can make the connection due.
-	err = database.WithWorkspaceTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(grantCtx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			UPDATE capture_connection SET sync_cursor = $2 WHERE id = $1`,
 			connID, `{"delta_link":"https://graph/delta?token=d1","email":"`+mailbox+`"}`); err != nil {
@@ -202,7 +202,7 @@ func graphSyncState(ctx context.Context, t *testing.T, e *integration.SearchEnv,
 	t.Helper()
 	var next time.Time
 	var jobRows int
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
 			SELECT next_sync_at FROM capture_sync_state WHERE connection_id = $1`, connID).Scan(&next); err != nil {
 			return err

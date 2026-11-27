@@ -107,7 +107,7 @@ func (f burstFiling) fileIn(conversation, key string, offset time.Duration, body
 func (f burstFiling) burstOf(activity ids.UUID) ids.UUID {
 	f.t.Helper()
 	var burst *ids.UUID
-	if err := database.WithWorkspaceTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT burst_id FROM capture_import WHERE activity_id = $1`, activity).Scan(&burst)
 	}); err != nil {
 		f.t.Fatalf("reading the burst of a message: %v", err)
@@ -123,7 +123,7 @@ func (f burstFiling) burstOf(activity ids.UUID) ids.UUID {
 func (f burstFiling) ledgerRows(activities ...ids.UUID) int {
 	f.t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM capture_thread_verdict WHERE first_activity_id = ANY($1)`, activities).Scan(&n)
 	}); err != nil {
@@ -254,7 +254,7 @@ func TestABurstStillBeingWrittenToWaitsForItsPause(t *testing.T) {
 	}
 	f.wantReaders("a burst still being written to", one, 1)
 	var attempts int
-	if err := database.WithWorkspaceTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT attempts FROM capture_thread_verdict WHERE first_activity_id = $1`, one).Scan(&attempts)
 	}); err != nil || attempts != 0 {
@@ -304,7 +304,7 @@ func TestAMessageTheVerdictDidNotReadMovesToItsOwnBurst(t *testing.T) {
 	row.BurstMembers = row.BurstMembers[:1]
 
 	var moved []ids.UUID
-	if err := database.WithWorkspaceTx(principal.SystemActing(f.fx.e.Admin(), "agent:capture_confidentiality_verdict"), f.fx.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(principal.SystemActing(f.fx.e.Admin(), "agent:capture_confidentiality_verdict"), f.fx.e.Pool, func(tx pgx.Tx) error {
 		out, err := store.RecordOutcomeOnRowTx(context.Background(), tx, row, capturemod.VerdictCleared, "ordinary", nil)
 		moved = out.Moved
 		return err
@@ -327,7 +327,7 @@ func TestAMessageTheVerdictDidNotReadMovesToItsOwnBurst(t *testing.T) {
 func (f burstFiling) liveIdentities(channelUser string) int {
 	f.t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM contact_channel_identity i JOIN contact c ON c.id = i.contact_id
 			 WHERE i.channel_user_id = $1 AND i.archived_at IS NULL AND c.archived_at IS NULL`, channelUser).Scan(&n)
@@ -349,7 +349,7 @@ func TestAPersonalBurstRetractsAChatOnlyContactAndALaterBurstDoesNotMakeItAgain(
 	if got := f.liveIdentities(stranger); got != 0 {
 		var status, kind string
 		var links, owners int
-		if err := database.WithWorkspaceTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
 			if err := tx.QueryRow(context.Background(), `SELECT status, coalesce(kind, '') FROM capture_thread_verdict WHERE first_activity_id = $1`, first).Scan(&status, &kind); err != nil {
 				return err
 			}
@@ -380,7 +380,7 @@ func TestAMailThreadRootedAtABurstIdLeavesTheBurstVerdictAlone(t *testing.T) {
 	f.fx.env.sync(t, email("stranger@elsewhere.example", "Stranger", captureOwner, "root-collision@elsewhere.example", f.burstOf(one).String()))
 	f.wantReaders("the burst after a mail rooted at its id arrived", one, 2)
 	var status string
-	if err := database.WithWorkspaceTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.fx.e.Admin(), f.fx.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status FROM capture_thread_verdict WHERE first_activity_id = $1`, one).Scan(&status)
 	}); err != nil || status != capturemod.VerdictCleared {

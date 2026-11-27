@@ -115,7 +115,7 @@ func TestVoicesByIDNameTheReaderAsTheAuthorOfTheirOwnNote(t *testing.T) {
 		t.Fatalf("log the note: %v", err)
 	}
 	var voices map[ids.UUID]*crmcontracts.ActivityVoice
-	if err := database.WithWorkspaceTx(rep, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(rep, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		voices, err = activities.VoicesByIDBatch(rep, tx, []ids.UUID{ids.UUID(note.Id)}, roomFixedNow)
 		return err

@@ -338,7 +338,7 @@ func failAfterTheCompanyRow(t *testing.T, e *apptest.AppEnv, runID, named string
 		t.Fatal(err)
 	}
 	system := provenance.ReservedSourceSystemPrefix + migration.ConnectorCSV + ":n"
-	if err := database.WithWorkspaceTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.DB().Pool(), func(tx pgx.Tx) error {
 		run, err := ids.Parse(runID)
 		if err != nil {
 			return err

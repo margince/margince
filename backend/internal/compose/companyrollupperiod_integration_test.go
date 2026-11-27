@@ -24,7 +24,7 @@ func resolveInTx(t *testing.T, e *integration.Env, period CompanyRollupPeriod, a
 	t.Helper()
 	var won RollupWonPeriod
 	var current map[string]string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		if current, err = rollupCurrentPeriods(e.Admin(), tx, asOf, zone, fiscalStart); err != nil {
 			return err

@@ -201,7 +201,7 @@ func (w *accessWorld) everyone(t *testing.T, caller ids.UUID, table string, id i
 func (w *accessWorld) liveMembers(t *testing.T) []ids.UUID {
 	t.Helper()
 	var out []ids.UUID
-	if err := database.WithWorkspaceTx(w.e.Admin(), w.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(w.e.Admin(), w.e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `SELECT id FROM app_user WHERE `+identity.LiveMemberSQL(""))
 		if err != nil {
 			return err

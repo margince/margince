@@ -37,7 +37,7 @@ func TestAGuessedSeatSetsNoLastSpokeBaseline(t *testing.T) {
 				t.Fatal(err)
 			}
 			var changed time.Time
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(e.Admin(), `SELECT changed_at FROM deal_stage_history WHERE deal_id = $1`, deal.Id).Scan(&changed)
 			}); err != nil {
 				t.Fatal(err)

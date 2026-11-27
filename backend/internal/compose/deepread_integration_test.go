@@ -227,7 +227,7 @@ func TestDeepReadApplyFailureLeavesTheApprovedProposalUnconsumed(t *testing.T) {
 	broken := []byte(`{"company_id":"` + company.String() + `","source_url":"` + seedURL + `","site_read_id":"` + read.ID.String() + `","fields":[],"facts":[{"category":"unknown","field":"service","value":"X","value_key":"x","evidence_snippet":"X","source_url":"` + seedURL + `","confidence":0.9}]}`)
 	digest := sha256.Sum256(broken)
 	hash := hex.EncodeToString(digest[:])
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE approval
 			SET proposed_change = $2, diff_hash = $3 WHERE id = $1`, proposal, broken, hash)
 		return err
@@ -240,7 +240,7 @@ func TestDeepReadApplyFailureLeavesTheApprovedProposalUnconsumed(t *testing.T) {
 	}
 	var status string
 	var consumed bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT status, consumed_at IS NOT NULL
 			FROM approval WHERE id = $1`, proposal).Scan(&status, &consumed)
 	}); err != nil {
@@ -498,7 +498,7 @@ func TestDeepReadStartQueuesOnceAndAReClickJoinsWithoutASecondInsert(t *testing.
 func seedHousekeepingSiteDeepRead(t *testing.T, e *integration.Env, company ids.UUID, seedURL string) ids.UUID {
 	t.Helper()
 	readID := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO site_read (id, company_id, target_kind, seed_url, requested_by)
 			VALUES ($1, $2, $3, $4, $5)`,
@@ -528,7 +528,7 @@ func seedHousekeepingSiteDeepRead(t *testing.T, e *integration.Env, company ids.
 func riverJobPriority(t *testing.T, e *integration.Env, readID ids.UUID) int {
 	t.Helper()
 	var priority int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT priority FROM river_job WHERE kind = $1 AND args ->> 'site_read_id' = $2`,
 			SiteDeepReadArgs{}.Kind(), readID.String(),

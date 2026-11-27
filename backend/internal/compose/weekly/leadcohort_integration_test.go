@@ -59,7 +59,7 @@ func TestTheWeeksLeadsAreOneCohortAndItsSizeIsFrozen(t *testing.T) {
 	// is the input under test, so it is set directly.
 	e.WsExec(t, `UPDATE lead SET archived_at = $2 WHERE id = $1`, archived.UUID, arrivedAt.Add(time.Hour))
 
-	err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 		routed, answered, breached, err := countWeekLeads(e.repCtx, tx, e.Rep1, start, end)
 		if err != nil {
 			return err
@@ -142,7 +142,7 @@ func TestATeamWeekHoldingALateAnswerFreezes(t *testing.T) {
 	// The lead arrives an hour into the reviewed week. Its breach and late answer
 	// then fall in that week, however close to the week's end the test runs.
 	var week time.Time
-	if err := database.WithWorkspaceTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.repCtx, e.Pool, func(tx pgx.Tx) error {
 		week, err = WeekStartOf(e.repCtx, tx, clocktest.Now(t))
 		return err
 	}); err != nil {

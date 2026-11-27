@@ -47,7 +47,7 @@ func fieldsSentButNotHeld(t *testing.T, e *integration.Env, entityType string, i
 		t.Fatalf("marshal the sent patch: %v", err)
 	}
 	var missed []string
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(e.Admin(), `
 			SELECT k.key
 			FROM jsonb_each($2::jsonb) AS k(key, value)
@@ -181,7 +181,7 @@ func latestAuditRowID(t *testing.T, e *integration.Env, entityType string, id id
 	t.Helper()
 	admin := e.Admin()
 	var auditID ids.UUID
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(admin, `
 			SELECT id FROM audit_log
 			WHERE entity_type = $1 AND entity_id = $2 AND action = $3
@@ -199,7 +199,7 @@ func currentVersion(t *testing.T, e *integration.Env, entityType string, id ids.
 	t.Helper()
 	admin := e.Admin()
 	var version int64
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(admin, `SELECT version FROM `+pgx.Identifier{entityType}.Sanitize()+
 			` WHERE id = $1`, id).Scan(&version)
 	}); err != nil {
