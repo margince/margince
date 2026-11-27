@@ -59,6 +59,7 @@ var carriesNoColleagueFigure = gatekit.Waive(map[string]string{
 	"describeAnalyticsVocabulary":     "describes the populations and fields a question is written in, with no figure",
 	"getAnalyticsSchema":              "lists the fields a question may group or measure by; a query naming an owner is refused when it runs",
 	"listReportRuns":                  "lists the reader's own saved questions by their shape alone, with no answer and no figure",
+	"startForecastAssuranceRun":       "queues an installation-wide check run and answers its id, with no figure",
 	"resolveInputCheck":               "records a reader's answer to one deal's check and returns no figure",
 	"getForecastAssuranceEnforcement": "retired: the route answers 501 and serves no data at all",
 	"setForecastAssuranceEnforcement": "retired: the route answers 501 and changes nothing",

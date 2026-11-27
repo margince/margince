@@ -1,5 +1,0 @@
-package runner
-
-import "context"
-
-func Run(ctx context.Context, name string, fn func(ctx context.Context, name string)) {}

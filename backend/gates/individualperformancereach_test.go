@@ -12,10 +12,14 @@ package gates
 import (
 	"fmt"
 	"go/ast"
+	"go/build"
 	"go/constant"
 	"go/token"
 	"go/types"
+	"maps"
+	"path/filepath"
 	"slices"
+	"strconv"
 	"strings"
 	"testing"
 
@@ -131,22 +135,21 @@ type paramSlot struct {
 }
 
 // switchGraph is the code the walk reads. converted holds each concrete type
-// some expression turns into an interface value, and concrete lists them once
-// each by name. stored holds what each func-typed variable or field is ever
-// given. reassigned holds each variable an assignment gives a new value.
-// walked holds the packages read.
+// some expression turns into an interface value; stored holds what each
+// func-typed variable or field is ever given. spelled holds the declared
+// type of each variable whose type a stand-in import leaves invalid.
+// reassigned holds each variable an assignment gives a new value.
 type switchGraph struct {
 	fset        *token.FileSet
-	walked      map[string]bool
 	decls       map[*types.Func]*ast.FuncDecl
 	pkgOf       map[*types.Func]string
 	infos       map[*types.Func]*types.Info
 	converted   map[types.Type]bool
-	concrete    []types.Type
 	stored      map[*types.Var][]valueSite
 	calls       map[*types.Func][]invocation
 	paramOf     map[*types.Var]paramSlot
 	writers     map[*types.Var]bool
+	spelled     map[*types.Var]string
 	inits       map[*types.Var]valueSite
 	reassigned  map[*types.Var]bool
 	outside     map[string]bool
@@ -161,51 +164,77 @@ type switchGraph struct {
 	caches      fieldCaches
 }
 
-// loadSwitchGraph reads the packages under dirs from the typed module, so a
-// call into any other package resolves to its real declaration. A file the
-// default build leaves out is not read.
+// loadSwitchGraph type-checks the packages under dirs, each after the ones it
+// imports, so a call across them resolves to its real declaration. A file
+// the default build leaves out is not read.
 func loadSwitchGraph(t *testing.T, config walkConfig, dirs ...string) *switchGraph {
 	t.Helper()
-	var walked []typedPackage
-	for _, pkg := range typedModule(t) {
-		if slices.ContainsFunc(dirs, func(dir string) bool { return onPath(pkg.path, modulePath+"/"+dir) }) {
-			walked = append(walked, pkg)
+	fset := gatekit.SourceFileSet()
+	byPackage := map[string][]*ast.File{}
+	for _, dir := range dirs {
+		_, files := parseGoFilesUnder(t, dir)
+		for _, file := range files {
+			name := fset.Position(file.Pos()).Filename
+			if built, err := build.Default.MatchFile(filepath.Dir(name), filepath.Base(name)); err != nil || !built {
+				continue
+			}
+			pkgDir := filepath.ToSlash(filepath.Dir(name))
+			byPackage[modulePath+"/"+pkgDir] = append(byPackage[modulePath+"/"+pkgDir], file)
 		}
 	}
-	g, err := newSwitchGraph(gatekit.SourceFileSet(), walked, config)
+	g, err := newSwitchGraph(fset, byPackage, config)
 	if err != nil {
 		t.Fatal(err)
 	}
 	return g
 }
 
-// newSwitchGraph reads the walked packages and resolves config against them.
-// It fails on a declared name it cannot find.
-func newSwitchGraph(fset *token.FileSet, walked []typedPackage, config walkConfig) (*switchGraph, error) {
+// newSwitchGraph reads byPackage and resolves config against it. It fails on
+// a type error no stand-in import explains, since the walk would read that
+// code wrong. It fails on a declared name it cannot find.
+func newSwitchGraph(fset *token.FileSet, byPackage map[string][]*ast.File, config walkConfig) (*switchGraph, error) {
 	g := &switchGraph{
-		fset: fset, walked: map[string]bool{}, decls: map[*types.Func]*ast.FuncDecl{}, pkgOf: map[*types.Func]string{},
+		fset: fset, decls: map[*types.Func]*ast.FuncDecl{}, pkgOf: map[*types.Func]string{},
 		infos: map[*types.Func]*types.Info{}, converted: map[types.Type]bool{},
 		stored: map[*types.Var][]valueSite{}, writers: map[*types.Var]bool{},
 		calls: map[*types.Func][]invocation{}, paramOf: map[*types.Var]paramSlot{},
-		inits: map[*types.Var]valueSite{}, reassigned: map[*types.Var]bool{},
+		spelled: map[*types.Var]string{}, inits: map[*types.Var]valueSite{}, reassigned: map[*types.Var]bool{},
 		outside: map[string]bool{}, config: config, sentinels: map[*types.Var]bool{}, refusing: map[*types.Func]bool{},
 		caches: newFieldCaches(),
 	}
-	for _, pkg := range walked {
-		g.walked[pkg.path] = true
-	}
-	for _, pkg := range walked {
-		for _, file := range pkg.files {
-			g.index(file, pkg.info)
+	checked := switchImports{}
+	var unexplained []string
+	for _, path := range importOrder(byPackage) {
+		files := byPackage[path]
+		info := &types.Info{
+			Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{},
+			Types: map[ast.Expr]types.TypeAndValue{}, Selections: map[*ast.SelectorExpr]*types.Selection{},
+		}
+		var errs []types.Error
+		conf := types.Config{Importer: checked, Error: func(err error) {
+			if typeErr, ok := err.(types.Error); ok {
+				errs = append(errs, typeErr)
+			}
+		}}
+		pkg, err := conf.Check(path, fset, files, info)
+		if pkg == nil {
+			return nil, fmt.Errorf("type-checking %s: %w", path, err)
+		}
+		checked[path] = pkg
+		unexplained = append(unexplained, unexplainedTypeErrors(errs, files, info, checked)...)
+		for _, file := range files {
+			g.index(file, info)
+		}
+		for _, file := range files {
+			g.census(file, info)
+			g.censusCaches(file, info)
 		}
 	}
-	for _, pkg := range walked {
-		for _, file := range pkg.files {
-			g.census(file, pkg.info)
-			g.censusCaches(file, pkg.info)
-		}
+	if len(unexplained) > 0 {
+		return nil, fmt.Errorf("type-checking the walked packages found %d errors no stand-in import explains, "+
+			"so the walk would read that code wrong. Fix the code, or teach the gate's importer:\n\t%s",
+			len(unexplained), strings.Join(unexplained[:min(len(unexplained), 20)], "\n\t"))
 	}
-	g.concrete = distinctTypes(g.converted)
 	return g, g.resolveConfig()
 }
 
@@ -249,6 +278,33 @@ func boolSet(named map[*types.Func]int) map[*types.Func]bool {
 	return out
 }
 
+// importOrder lists the packages so that each follows every package of the
+// set it imports.
+func importOrder(byPackage map[string][]*ast.File) []string {
+	var order []string
+	done := map[string]bool{}
+	var visit func(path string)
+	visit = func(path string) {
+		if done[path] {
+			return
+		}
+		done[path] = true
+		for _, file := range byPackage[path] {
+			for _, spec := range file.Imports {
+				imported, err := strconv.Unquote(spec.Path.Value)
+				if _, ours := byPackage[imported]; err == nil && ours {
+					visit(imported)
+				}
+			}
+		}
+		order = append(order, path)
+	}
+	for _, path := range slices.Sorted(maps.Keys(byPackage)) {
+		visit(path)
+	}
+	return order
+}
+
 func (g *switchGraph) index(file *ast.File, info *types.Info) {
 	for _, decl := range file.Decls {
 		fn, ok := decl.(*ast.FuncDecl)
@@ -265,8 +321,13 @@ func (g *switchGraph) index(file *ast.File, info *types.Info) {
 		}
 	}
 	ast.Inspect(file, func(n ast.Node) bool {
-		if ft, ok := n.(*ast.FuncType); ok {
-			g.indexWriters(ft, info)
+		switch node := n.(type) {
+		case *ast.FuncType:
+			g.indexWriters(node, info)
+		case *ast.Field:
+			g.spell(node.Names, node.Type, info)
+		case *ast.ValueSpec:
+			g.spell(node.Names, node.Type, info)
 		}
 		return true
 	})
@@ -292,22 +353,20 @@ func (g *switchGraph) indexInits(gen *ast.GenDecl, info *types.Info) {
 	}
 }
 
-// indexWriters records each parameter of type http.ResponseWriter.
+// indexWriters records each parameter spelled as an http.ResponseWriter. The
+// stand-in import gives it no type, so the spelling is what is read.
 func (g *switchGraph) indexWriters(ft *ast.FuncType, info *types.Info) {
 	for _, field := range ft.Params.List {
+		sel, ok := field.Type.(*ast.SelectorExpr)
+		if !ok || sel.Sel.Name != "ResponseWriter" {
+			continue
+		}
 		for _, name := range field.Names {
-			if v, ok := info.Defs[name].(*types.Var); ok && isResponseWriter(v.Type()) {
+			if v, ok := info.Defs[name].(*types.Var); ok {
 				g.writers[v] = true
 			}
 		}
 	}
-}
-
-// isResponseWriter reports net/http's ResponseWriter itself, the type a
-// handler answers through.
-func isResponseWriter(t types.Type) bool {
-	named, ok := types.Unalias(t).(*types.Named)
-	return ok && named.Obj().Pkg() != nil && named.Obj().Pkg().Path() == "net/http" && named.Obj().Name() == "ResponseWriter"
 }
 
 // census records each conversion of a concrete type to an interface in file.
@@ -317,6 +376,7 @@ func (g *switchGraph) census(file *ast.File, info *types.Info) {
 		switch node := n.(type) {
 		case *ast.AssignStmt:
 			g.censusReassigned(node, info)
+			g.spellFromCall(node, info)
 			if len(node.Lhs) == len(node.Rhs) {
 				for i, lhs := range node.Lhs {
 					g.flow(info.TypeOf(lhs), node.Rhs[i], info)
@@ -477,10 +537,11 @@ func isFuncTyped(v *types.Var) bool {
 
 // implementations are the declared methods that answer a call of method on
 // iface. There is one for each type the code converts to an interface that
-// has the method. ok is false when there is none, or one has no body here.
+// has the method. A type a stand-in leaves unresolved has no method, so it is
+// not one. ok is false when there is none, or one has no body here.
 func (g *switchGraph) implementations(iface *types.Interface, method *types.Func) (found []*types.Func, ok bool) {
 	ok = true
-	for _, concrete := range g.concrete {
+	for _, concrete := range slices.SortedFunc(maps.Keys(g.converted), byTypeName) {
 		if !types.Implements(concrete, iface) {
 			continue
 		}
@@ -498,26 +559,8 @@ func (g *switchGraph) implementations(iface *types.Interface, method *types.Func
 	return found, ok && len(found) > 0
 }
 
-// distinctTypes sorts set by name and drops a type identical to the one
-// before it. The checker builds a pointer type anew at each use, so one type
-// enters the set once per use.
-func distinctTypes(set map[types.Type]bool) []types.Type {
-	type named struct {
-		name string
-		t    types.Type
-	}
-	sorted := make([]named, 0, len(set))
-	for t := range set {
-		sorted = append(sorted, named{t.String(), t})
-	}
-	slices.SortFunc(sorted, func(a, b named) int { return strings.Compare(a.name, b.name) })
-	out := make([]types.Type, 0, len(sorted))
-	for i, entry := range sorted {
-		if i == 0 || entry.name != sorted[i-1].name || !types.Identical(entry.t, sorted[i-1].t) {
-			out = append(out, entry.t)
-		}
-	}
-	return out
+func byTypeName(a, b types.Type) int {
+	return strings.Compare(a.String(), b.String())
 }
 
 func (g *switchGraph) resolveNamed(named []switchReader) (map[*types.Func]int, error) {
@@ -550,19 +593,21 @@ func (g *switchGraph) httpHandlers(operationID string) []*types.Func {
 	name := handlerName(operationID)
 	var found []*types.Func
 	for fn, decl := range g.decls {
-		if decl.Recv == nil || fn.Name() != name || !writesAResponse(fn) {
-			continue
-		}
-		if !strings.HasSuffix(g.fset.Position(decl.Pos()).Filename, "_gen.go") {
+		generated := strings.HasSuffix(g.fset.Position(decl.Pos()).Filename, "_gen.go")
+		if decl.Recv != nil && fn.Name() == name && !generated && writesAResponse(decl) {
 			found = append(found, fn)
 		}
 	}
 	return slices.SortedFunc(slices.Values(found), g.byPosition)
 }
 
-func writesAResponse(fn *types.Func) bool {
-	sig, ok := fn.Type().(*types.Signature)
-	return ok && sig.Params().Len() > 0 && isResponseWriter(sig.Params().At(0).Type())
+func writesAResponse(decl *ast.FuncDecl) bool {
+	params := decl.Type.Params.List
+	if len(params) == 0 {
+		return false
+	}
+	sel, ok := params[0].Type.(*ast.SelectorExpr)
+	return ok && sel.Sel.Name == "ResponseWriter"
 }
 
 // toolHandlers are the Handle methods of the tool types whose Spec names

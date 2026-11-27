@@ -32,9 +32,9 @@ var purePackages = map[string]bool{
 }
 
 // pureMethods are the methods that only read or reformat their receiver, as
-// a request answers its context or a time its UTC form. They are known by name
-// on a covered receiver. A context's Value is none of them: middleware may
-// have put anything there.
+// a request answers its context or a time its UTC form. A method a stand-in
+// left untyped is known by its name alone. A context's Value is none of
+// them: middleware may have put anything there.
 var pureMethods = map[string]bool{
 	"Before": true, "After": true, "Bytes": true, "Context": true, "Encode": true, "Equal": true,
 	"Format": true, "Get": true, "IsZero": true, "Len": true, "Query": true, "String": true,
@@ -150,7 +150,7 @@ func (w *pathWalk) callCovered(call *ast.CallExpr, s pathState) bool {
 func (w *pathWalk) pureCall(call *ast.CallExpr, callee *types.Func, s pathState) bool {
 	sel, isSel := ast.Unparen(call.Fun).(*ast.SelectorExpr)
 	method := isSel && !qualified(sel, w.frame.info)
-	pure := refusalWriters[importedCallee(call, w.frame.info)] || purePackages[calleePackage(callee)]
+	pure := refusalWriters[importedCallee(call, w.frame.info)] || purePackages[calleePackage(call, callee, w.frame.info)]
 	if method {
 		pure = pureMethods[sel.Sel.Name]
 	}
@@ -168,10 +168,16 @@ func (w *pathWalk) pureCall(call *ast.CallExpr, callee *types.Func, s pathState)
 	return true
 }
 
-// calleePackage is the import path of the package callee is declared in.
-func calleePackage(callee *types.Func) string {
+// calleePackage is the import path of the package call's function is
+// declared in, read off the import where a stand-in left the callee untyped.
+func calleePackage(call *ast.CallExpr, callee *types.Func, info *types.Info) string {
 	if callee != nil && callee.Pkg() != nil {
 		return callee.Pkg().Path()
+	}
+	if sel, ok := ast.Unparen(call.Fun).(*ast.SelectorExpr); ok && qualified(sel, info) {
+		if pkg, ok := info.Uses[ast.Unparen(sel.X).(*ast.Ident)].(*types.PkgName); ok {
+			return pkg.Imported().Path()
+		}
 	}
 	return ""
 }
@@ -340,7 +346,8 @@ func (w *pathWalk) uncoverAssigned(lit *ast.FuncLit, s pathState) pathState {
 }
 
 // qualified reports a name another package declares, as http.StatusOK. Any
-// other selector reads a field or method of its operand.
+// other selector reads a field or method of its operand, whose type a stand-in
+// import may leave unread.
 func qualified(sel *ast.SelectorExpr, info *types.Info) bool {
 	ident, ok := ast.Unparen(sel.X).(*ast.Ident)
 	if !ok {
@@ -426,7 +433,7 @@ func (w *pathWalk) storedInto(target ast.Expr, keeps bool, s pathState) pathStat
 // isReference reports a type through which a callee can change what its
 // caller holds. An address taken with & is read apart from this.
 func isReference(t types.Type) bool {
-	if t == nil {
+	if t == nil || !validType(t) {
 		return false
 	}
 	switch t.Underlying().(type) {

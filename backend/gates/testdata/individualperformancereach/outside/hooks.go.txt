@@ -1,9 +1,0 @@
-package hooks
-
-import "context"
-
-func OnReady(fn func(ctx context.Context) error) error { return nil }
-
-type Check interface {
-	Run(ctx context.Context) error
-}

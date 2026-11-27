@@ -50,19 +50,3 @@ func (h *Handlers) GetAfterAnIterator(w http.ResponseWriter, r *http.Request) {
 	}
 	httperr.WriteJSON(w, http.StatusOK, rows)
 }
-
-type requireCheck struct{}
-
-func (requireCheck) Run(ctx context.Context) error { return auth.Require(ctx) }
-
-var check hooks.Check = requireCheck{}
-
-// Another package may convert its own hooks.Check that asks nothing, out of
-// this package's sight, so the one wired here vouches for no call.
-func (h *Handlers) GetThroughAnOutsideInterface(w http.ResponseWriter, r *http.Request) {
-	if err := check.Run(r.Context()); err != nil {
-		httperr.Write(w, r, err)
-		return
-	}
-	httperr.WriteJSON(w, http.StatusOK, []int{1})
-}
