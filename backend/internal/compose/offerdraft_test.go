@@ -83,7 +83,6 @@ func candidate(desc, snippet string) offerLineCandidate {
 	return offerLineCandidate{
 		Description:     desc,
 		Quantity:        "1",
-		TaxRate:         "19.00",
 		EvidenceSnippet: snippet,
 		SourceID:        "activity:1",
 	}
@@ -254,10 +253,8 @@ func TestGroundOfferLinesDropsFiguresTheStoreWouldRefuse(t *testing.T) {
 
 	overPrecise := candidate("Four places", "wants a workshop")
 	overPrecise.Quantity = "1.2345"
-	overTax := candidate("Tax past its column", "wants a workshop")
-	overTax.TaxRate = "1000"
 
-	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{overPrecise, overTax}, dealContext, "EUR", "en")
+	lines, err := d.groundOfferLines(context.Background(), []offerLineCandidate{overPrecise}, dealContext, "EUR", "en")
 	if err != nil {
 		t.Fatalf("groundOfferLines: %v", err)
 	}
@@ -325,5 +322,23 @@ func TestOfferDraftRequestHoldsTheModelToTheShapeTheParserReads(t *testing.T) {
 	}
 	if err := schema.ValidateJSON(req.ResponseSchema, draftReply(kickoffLine(`"conversation_price_minor":"20000"`, `"product_id":null`))); err == nil {
 		t.Error("the schema accepts a price written as text")
+	}
+}
+
+// A tax rate the model states anyway is not read. The staged line carries none,
+// and the store takes it from the sheet.
+func TestAModelsTaxRateIsNotReadIntoAStagedLine(t *testing.T) {
+	d := offerDrafter{}
+	dealContext := []dealContextItem{{SourceID: "activity:1", Snippet: "Client wants a workshop."}}
+	candidates, err := parseOfferDraftLines(`{"lines":[{"description":"Workshop","quantity":"1","tax_rate":"19.00","evidence_snippet":"wants a workshop","source_id":"activity:1"}]}`)
+	if err != nil {
+		t.Fatalf("parseOfferDraftLines: %v", err)
+	}
+	lines, err := d.groundOfferLines(context.Background(), candidates, dealContext, "EUR", "en")
+	if err != nil {
+		t.Fatalf("groundOfferLines: %v", err)
+	}
+	if len(lines) != 1 || lines[0].TaxRate != "" {
+		t.Fatalf("staged lines = %+v, want one line with no tax rate", lines)
 	}
 }

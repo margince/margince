@@ -33,6 +33,9 @@ const lineIDKey = "line_id"
 // exemptCategory is the category with no row on the sheet: it is taxed at 0.
 const exemptCategory = "exempt"
 
+// standardCategory is the category a drafted line takes when nothing classifies it.
+const standardCategory = "standard"
+
 // TaxRateMissingError refuses a line or a send whose category has no rate on
 // the sheet for the offer's country and day.
 type TaxRateMissingError struct {
@@ -149,20 +152,27 @@ func checkLineTaxCategory(asked, typedRate *string) error {
 }
 
 // stagedLineTax gives a drafted line grounded on a classified product that
-// product's category and the sheet's rate. A line on no product, or on an
-// unclassified one, keeps the rate the drafter proposed.
+// product's category and the sheet's rate. A line nothing classifies that
+// arrives with no rate takes the sheet's standard category, so a rate is never a
+// model's guess. A line that arrives with its own rate keeps it.
 func stagedLineTax(ctx context.Context, tx pgx.Tx, basis lazyTaxBasis, in *StagedOfferLineInput) error {
-	if in.ProductID == nil {
-		return nil
-	}
 	var category *string
-	err := tx.QueryRow(ctx,
-		`SELECT tax_category FROM product WHERE id = $1 AND archived_at IS NULL`, *in.ProductID).Scan(&category)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return auth.NameMissingReference("product_id", apperrors.ErrNotFound)
+	if in.ProductID != nil {
+		err := tx.QueryRow(ctx,
+			`SELECT tax_category FROM product WHERE id = $1 AND archived_at IS NULL`, *in.ProductID).Scan(&category)
+		if errors.Is(err, pgx.ErrNoRows) {
+			return auth.NameMissingReference("product_id", apperrors.ErrNotFound)
+		}
+		if err != nil {
+			return err
+		}
 	}
-	if err != nil || category == nil {
-		return err
+	if category == nil {
+		if in.TaxRate != "" {
+			return nil
+		}
+		standard := standardCategory
+		category = &standard
 	}
 	rate, err := sheetTaxRate(ctx, tx, basis, *category)
 	if err != nil {

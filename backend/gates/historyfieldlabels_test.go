@@ -414,7 +414,7 @@ func fieldHistoryProjection(t *testing.T) (actions, entities map[string]bool) {
 	t.Helper()
 	fset := gatekit.SourceFileSet()
 	files := parsePackageDir(t, fset, "internal/modules/privacy")
-	consts := stringConsts(t, fset, files)
+	consts := gatekit.StringConstantsOf(t, files)
 	return projectionSetKeys(t, files, consts, "fieldHistoryProjectedActions"),
 		projectionSetKeys(t, files, consts, "fieldHistoryEntityTypes")
 }
@@ -460,7 +460,7 @@ func readProjectionKeys(t *testing.T, expr ast.Expr, consts map[string]string, w
 		if !isPair {
 			t.Fatalf("%s holds an entry with no key", where)
 		}
-		key, resolved := resolveString(pair.Key, consts)
+		key, resolved := gatekit.StringExpr(pair.Key, consts, gatekit.FoldStrict)
 		if !resolved {
 			t.Fatalf("%s holds a key this gate cannot resolve to a string, so the set it decides is read short", where)
 		}
@@ -470,7 +470,7 @@ func readProjectionKeys(t *testing.T, expr ast.Expr, consts map[string]string, w
 
 // tsLabelEntry reads one `["key", "message.key"]` pair out of a TypeScript Map,
 // in either quote style, so an entry written the other way cannot vanish from a
-// census. Comments are stripped first (tsWithoutComments): a line MENTIONING a
+// census. Comments are stripped first (gatekit.TSWithoutComments): a line MENTIONING a
 // key would otherwise keep a gate green after the real entry was deleted.
 var tsLabelEntry = regexp.MustCompile(`\[\s*["']([a-z0-9_]+)["']\s*,`)
 
@@ -497,7 +497,7 @@ func tsMapKeys(t *testing.T, path, source, marker string) map[string]bool {
 		t.Fatalf("%s's %s literal is unterminated", path, marker)
 	}
 	keys := map[string]bool{}
-	for _, match := range tsLabelEntry.FindAllStringSubmatch(tsWithoutComments(source[start:start+end]), -1) {
+	for _, match := range tsLabelEntry.FindAllStringSubmatch(gatekit.TSWithoutComments(source[start:start+end]), -1) {
 		keys[match[1]] = true
 	}
 	if len(keys) == 0 {

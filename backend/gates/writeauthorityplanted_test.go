@@ -57,7 +57,7 @@ func judgePlantedWrite(t *testing.T, source string) (written, guarded map[string
 
 	tables := shareableTables(t)
 	vocab := writeAuthorityVocabulary(t)
-	consts := packageStringConsts(src)
+	consts := gatekit.StringConstantsOf(t, []*ast.File{src.File})
 
 	byReceiver := map[string]map[string]*writeAuthorityFn{}
 	for _, decl := range parsed.Decls {

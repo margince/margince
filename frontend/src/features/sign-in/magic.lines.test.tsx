@@ -367,10 +367,11 @@ describe("a line names its record once", () => {
     renderMagic();
     const item = await onlyLine("Waiting on you");
     expect(occurrences(item.textContent ?? "", "Ines Kraft")).toBe(1);
-    expect(rowOf(item).sentence).toBe(
+    // A decision is a task card: its sentence is the title, its record a chip.
+    expect(item.querySelector(".brief-task-title")?.textContent).toBe(
       "Someone new wrote to you. Keep as a contact?",
     );
-    expect(item.querySelector(".magic-line-sep")).not.toBeNull();
+    expect(within(item).getByText("Ines Kraft")).toBeTruthy();
   });
 });
 
