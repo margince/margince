@@ -49,18 +49,27 @@ LANGUAGE plpgsql AS $$BEGIN
 END;
 $$;
 
--- Recomputes every clock the named records reach, each once, in (kind, id) order.
-CREATE FUNCTION refresh_last_activity_for_links(cids uuid[], dids uuid[], oids uuid[]) RETURNS void
+-- Strength dates can lock contacts whose clock inputs did not change.
+-- Their locks share the clock's (kind, id) order before any project is reached.
+CREATE FUNCTION refresh_last_activity_for_links(cids uuid[], dids uuid[], oids uuid[], strength_cids uuid[] DEFAULT NULL) RETURNS void
 LANGUAGE plpgsql AS $$
 DECLARE
   reached record;
 BEGIN
   FOR reached IN
-     SELECT reach.kind, reach.id
-       FROM last_activity_reach(cids, dids, oids) reach
-      ORDER BY reach.kind, reach.id
+     SELECT r.kind, r.id, bool_or(r.move_clock) AS move_clock
+       FROM (
+         SELECT reach.kind, reach.id, true AS move_clock FROM last_activity_reach(cids, dids, oids) reach
+         UNION ALL
+         SELECT 'contact', cid, false FROM unnest(strength_cids) cid WHERE cid IS NOT NULL
+       ) r
+      GROUP BY r.kind, r.id ORDER BY r.kind, r.id
   LOOP
-    PERFORM move_last_activity(reached.kind::regclass, reached.id);
+    IF reached.move_clock THEN
+      PERFORM move_last_activity(reached.kind::regclass, reached.id);
+    ELSE
+      PERFORM 1 FROM contact WHERE id = reached.id FOR UPDATE;
+    END IF;
   END LOOP;
 END;
 $$;
@@ -72,14 +81,50 @@ END;
 $$;
 
 CREATE OR REPLACE FUNCTION trg_activity_last_activity() RETURNS trigger
-LANGUAGE plpgsql AS $$BEGIN
-  PERFORM refresh_last_activity_for_links(
-    ARRAY(SELECT contact_id FROM activity_link WHERE activity_id = NEW.id AND contact_id IS NOT NULL),
-    ARRAY(SELECT deal_id FROM activity_link WHERE activity_id = NEW.id AND deal_id IS NOT NULL),
-    ARRAY(SELECT company_id FROM activity_link WHERE activity_id = NEW.id AND company_id IS NOT NULL));
+LANGUAGE plpgsql AS $$
+DECLARE
+  cids uuid[];
+  dids uuid[];
+  oids uuid[];
+  pids uuid[];
+  pid uuid;
+BEGIN
+  -- Transition tables require the changed-field guard inside the trigger function.
+  WITH changed AS (
+    SELECT n.id,
+           ROW(o.occurred_at, o.archived_at, o.audience, o.origin, o.kind, o.meeting_status,
+               o.occurred_precision, o.call_outcome, o.bulk_mail_attested)
+           IS DISTINCT FROM
+           ROW(n.occurred_at, n.archived_at, n.audience, n.origin, n.kind, n.meeting_status,
+               n.occurred_precision, n.call_outcome, n.bulk_mail_attested) AS clock_changed,
+           ROW(o.audience_reason, o.thread_key)
+           IS DISTINCT FROM ROW(n.audience_reason, n.thread_key) AS scope_changed
+      FROM clock_before o JOIN clock_after n ON n.id = o.id
+  )
+  SELECT array_agg(l.contact_id) FILTER (WHERE l.contact_id IS NOT NULL),
+         array_agg(l.deal_id) FILTER (WHERE l.deal_id IS NOT NULL),
+         array_agg(l.company_id) FILTER (WHERE l.company_id IS NOT NULL),
+         array_agg(l.project_id) FILTER (WHERE c.clock_changed AND l.project_id IS NOT NULL)
+    INTO cids, dids, oids, pids
+    FROM changed c JOIN activity_link l ON l.activity_id = c.id
+   WHERE c.clock_changed OR c.scope_changed;
+  IF cids IS NULL AND dids IS NULL AND oids IS NULL AND pids IS NULL THEN RETURN NULL; END IF;
+  PERFORM refresh_last_activity_for_links(cids, dids, oids,
+    ARRAY(SELECT l.contact_id FROM clock_after n JOIN activity_link l ON l.activity_id = n.id
+           WHERE l.contact_id IS NOT NULL));
+  FOR pid IN SELECT DISTINCT p.id FROM unnest(pids) p(id) WHERE p.id IS NOT NULL ORDER BY p.id LOOP
+    PERFORM move_project_last_activity(pid);
+  END LOOP;
   RETURN NULL;
 END;
 $$;
+
+DROP TRIGGER activity_last_activity ON activity;
+DROP TRIGGER activity_project_last_activity ON activity;
+DROP FUNCTION trg_activity_project_last_activity();
+CREATE TRIGGER activity_last_activity
+  AFTER UPDATE ON activity REFERENCING OLD TABLE AS clock_before NEW TABLE AS clock_after
+  FOR EACH STATEMENT EXECUTE FUNCTION trg_activity_last_activity();
 
 CREATE FUNCTION trg_activity_link_last_activity_added() RETURNS trigger
 LANGUAGE plpgsql AS $$

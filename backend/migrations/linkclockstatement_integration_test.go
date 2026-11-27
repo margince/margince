@@ -254,6 +254,106 @@ func TestActivityAndLinkChangesRefreshTheirWholeReachInTheSameOrder(t *testing.T
 	assertClockWriteOrder(t, tx, want)
 }
 
+func TestAnActivityStatementLocksItsProjectsInIDOrder(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	headSchema(t, conn)
+	ctx := context.Background()
+	early := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
+	f := seedLinkClockFixture(t, conn, early, early.AddDate(0, 0, 7), early.AddDate(0, 0, 14))
+	if f.projectP > f.projectQ {
+		f.projectP, f.projectQ = f.projectQ, f.projectP
+	}
+	if _, err := conn.Exec(ctx, `INSERT INTO activity_link (activity_id, entity_type, project_id)
+		VALUES (@early, 'project', @high), (@late, 'project', @low)`,
+		pgx.NamedArgs{"early": f.early, "late": f.late, "high": f.projectQ, "low": f.projectP}); err != nil {
+		t.Fatal(err)
+	}
+	tx := recordClockUpdates(t, conn)
+	// A heap scan visits the earlier activity first, opposite to project ID order.
+	if _, err := tx.Exec(ctx, `SET LOCAL enable_indexscan = off; SET LOCAL enable_bitmapscan = off`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE activity SET occurred_at = occurred_at + interval '1 day'
+		WHERE id = ANY (@activities::uuid[])`, pgx.NamedArgs{"activities": []string{f.early, f.late}}); err != nil {
+		t.Fatal(err)
+	}
+	assertClockWriteOrder(t, tx, []string{"project/" + f.projectP, "project/" + f.projectQ})
+	late := early.AddDate(0, 0, 8)
+	next := early.AddDate(0, 0, 1)
+	assertLinkClocks(t, conn, "bulk activity update", []clockWant{
+		{"project", "lower project", f.projectP, &late},
+		{"project", "higher project", f.projectQ, &next},
+	})
+}
+
+func TestAnActivityStatementRefreshesItsWholeReachInOneOrder(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	headSchema(t, conn)
+	ctx := context.Background()
+	early := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
+	f := seedLinkClockFixture(t, conn, early, early.AddDate(0, 0, 7), early.AddDate(0, 0, 14))
+	if f.contactA > f.contactB {
+		f.contactA, f.contactB = f.contactB, f.contactA
+	}
+	if f.projectP > f.projectQ {
+		f.projectP, f.projectQ = f.projectQ, f.projectP
+	}
+	if _, err := conn.Exec(ctx, `INSERT INTO activity_link (activity_id, entity_type, contact_id, deal_id, project_id)
+		VALUES (@early, 'contact', @high_contact, NULL, NULL), (@early, 'deal', NULL, @deal, NULL),
+		       (@early, 'project', NULL, NULL, @high_project), (@late, 'contact', @low_contact, NULL, NULL),
+		       (@late, 'project', NULL, NULL, @low_project)`,
+		pgx.NamedArgs{
+			"early": f.early, "late": f.late, "high_contact": f.contactB, "deal": f.deal,
+			"high_project": f.projectQ, "low_contact": f.contactA, "low_project": f.projectP,
+		}); err != nil {
+		t.Fatal(err)
+	}
+	tx := recordClockUpdates(t, conn)
+	if _, err := tx.Exec(ctx, `SET LOCAL enable_indexscan = off; SET LOCAL enable_bitmapscan = off`); err != nil {
+		t.Fatal(err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE activity SET occurred_at = occurred_at + interval '1 day'
+		WHERE id = ANY (@activities::uuid[])`, pgx.NamedArgs{"activities": []string{f.early, f.late}}); err != nil {
+		t.Fatal(err)
+	}
+	assertClockWriteOrder(t, tx, []string{
+		"company/" + f.company, "contact/" + f.contactA, "contact/" + f.contactB,
+		"deal/" + f.deal, "project/" + f.projectP, "project/" + f.projectQ,
+	})
+}
+
+func TestActivityClockRefreshDoesNotRewriteUnchangedValues(t *testing.T) {
+	ownerDSN, _ := dsns(t)
+	conn := connect(t, ownerDSN)
+	headSchema(t, conn)
+	ctx := context.Background()
+	early := time.Date(2026, 3, 2, 9, 0, 0, 0, time.UTC)
+	f := seedLinkClockFixture(t, conn, early, early.AddDate(0, 0, 7), early.AddDate(0, 0, 14))
+	if _, err := conn.Exec(ctx, `INSERT INTO activity_link (activity_id, entity_type, contact_id, project_id)
+		VALUES (@activity, 'contact', @contact, NULL), (@activity, 'project', NULL, @project)`,
+		pgx.NamedArgs{"activity": f.early, "contact": f.contactA, "project": f.projectP}); err != nil {
+		t.Fatal(err)
+	}
+	tx := recordClockUpdates(t, conn)
+	for _, sql := range []string{
+		`UPDATE activity SET subject = 'Revised' WHERE id = @activity`,
+		`UPDATE activity SET occurred_at = occurred_at WHERE id = @activity`,
+		`UPDATE activity SET occurred_at = occurred_at + interval '1 day' WHERE id = @activity AND false`,
+	} {
+		if _, err := tx.Exec(ctx, sql, pgx.NamedArgs{"activity": f.early}); err != nil {
+			t.Fatal(err)
+		}
+		assertClockWriteOrder(t, tx, nil)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE activity SET thread_key = 'clock/thread' WHERE id = @activity`,
+		pgx.NamedArgs{"activity": f.early}); err != nil {
+		t.Fatal(err)
+	}
+	assertClockWriteOrder(t, tx, nil)
+}
+
 func recordClockUpdates(t *testing.T, conn *pgx.Conn) pgx.Tx {
 	t.Helper()
 	ctx := context.Background()

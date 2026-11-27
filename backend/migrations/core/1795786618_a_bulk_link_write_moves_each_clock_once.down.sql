@@ -37,6 +37,8 @@ DROP FUNCTION IF EXISTS trg_activity_link_last_activity_added();
 DROP FUNCTION IF EXISTS trg_activity_link_last_activity_moved();
 DROP FUNCTION IF EXISTS trg_activity_link_last_activity_removed();
 
+DROP TRIGGER IF EXISTS activity_last_activity ON activity;
+
 CREATE OR REPLACE FUNCTION trg_activity_last_activity() RETURNS trigger
     LANGUAGE plpgsql
     AS $$
@@ -54,6 +56,44 @@ BEGIN
 END;
 $$;
 
+CREATE OR REPLACE FUNCTION trg_activity_project_last_activity() RETURNS trigger
+    LANGUAGE plpgsql
+    AS $$
+BEGIN
+  PERFORM move_project_last_activity(l.project_id)
+     FROM activity_link l WHERE l.activity_id = NEW.id AND l.project_id IS NOT NULL;
+  RETURN NULL;
+END;
+$$;
+CREATE TRIGGER activity_last_activity
+	AFTER UPDATE OF occurred_at, archived_at, audience, audience_reason, thread_key, origin, kind, meeting_status, occurred_precision, call_outcome, bulk_mail_attested ON activity
+	FOR EACH ROW
+	WHEN (old.occurred_at IS DISTINCT FROM new.occurred_at
+	   OR old.archived_at IS DISTINCT FROM new.archived_at
+	   OR old.audience IS DISTINCT FROM new.audience
+	   OR old.audience_reason IS DISTINCT FROM new.audience_reason
+	   OR old.thread_key IS DISTINCT FROM new.thread_key
+	   OR old.origin IS DISTINCT FROM new.origin
+	   OR old.kind IS DISTINCT FROM new.kind
+	   OR old.meeting_status IS DISTINCT FROM new.meeting_status
+	   OR old.occurred_precision IS DISTINCT FROM new.occurred_precision
+	   OR old.call_outcome IS DISTINCT FROM new.call_outcome
+	   OR old.bulk_mail_attested IS DISTINCT FROM new.bulk_mail_attested)
+	EXECUTE FUNCTION trg_activity_last_activity();
+CREATE TRIGGER activity_project_last_activity
+	AFTER UPDATE OF occurred_at, archived_at, audience, origin, kind, meeting_status, occurred_precision, call_outcome, bulk_mail_attested ON activity
+	FOR EACH ROW
+	WHEN (old.occurred_at IS DISTINCT FROM new.occurred_at
+	   OR old.archived_at IS DISTINCT FROM new.archived_at
+	   OR old.audience IS DISTINCT FROM new.audience
+	   OR old.origin IS DISTINCT FROM new.origin
+	   OR old.kind IS DISTINCT FROM new.kind
+	   OR old.meeting_status IS DISTINCT FROM new.meeting_status
+	   OR old.occurred_precision IS DISTINCT FROM new.occurred_precision
+	   OR old.call_outcome IS DISTINCT FROM new.call_outcome
+	   OR old.bulk_mail_attested IS DISTINCT FROM new.bulk_mail_attested)
+	EXECUTE FUNCTION trg_activity_project_last_activity();
+
 CREATE OR REPLACE FUNCTION refresh_last_activity_for_link(cid uuid, did uuid, oid uuid) RETURNS void
 LANGUAGE plpgsql AS $$
 DECLARE
@@ -68,7 +108,7 @@ BEGIN
   END LOOP;
 END;
 $$;
-DROP FUNCTION IF EXISTS refresh_last_activity_for_links(uuid[], uuid[], uuid[]);
+DROP FUNCTION IF EXISTS refresh_last_activity_for_links(uuid[], uuid[], uuid[], uuid[]);
 
 CREATE OR REPLACE FUNCTION advance_last_activity(tbl regclass, rid uuid, at timestamptz) RETURNS void
 LANGUAGE plpgsql AS $$BEGIN
