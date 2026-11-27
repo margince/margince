@@ -139,7 +139,7 @@ func Answer(
 	if lane == nil {
 		return deterministic, crmcontracts.WrittenByDeterministic, nil
 	}
-	written, modelErr := answerWithModel(ctx, lane, question, companyID, in, lang)
+	written, modelErr := answerWithModel(ai.WithFloor(ctx), lane, question, companyID, in, lang)
 	if modelErr != nil {
 		// The declared degrade posture, not a swallowed error: a model that is
 		// unavailable, over budget, or answering unparseable JSON must not take

@@ -9,9 +9,10 @@ import { useState } from "react";
 import { Button, Field, Textarea, TextInput } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { useFieldFaults } from "../../design-system/savepage";
+import { useToast } from "../../design-system/toast";
 import { useLocale, useT } from "../../i18n";
 import { type List, useUpdateList } from "../../lib/lists.queries";
-import { blankRequired, problemMessageOf } from "../../lib/problem";
+import { blankRequired, refusalSentences } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { ownedByReader } from "./library";
 import { ListRuleUses, ruleUsesOf } from "./listrules";
@@ -22,7 +23,11 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
   const { locale } = useLocale();
   const [open, setOpen] = useState(false);
   const [faults, faultsRoot] = useFieldFaults<HTMLDivElement>();
+  const toast = useToast();
   const nameLabel = t("lists.name");
+  const purposeLabel = t("lists.purpose");
+  // A refused name or purpose is said on its field, which the sentence names.
+  const labels = { name: nameLabel, purpose: purposeLabel };
   const [name, setName] = useState(list.name);
   const [purpose, setPurpose] = useState(list.purpose ?? "");
   const [audience, setAudience] = useState<ListAudience>(audienceOf(list));
@@ -56,7 +61,7 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
         confirmLabel={t("lists.save")}
         bodyRef={faultsRoot}
         pending={update.isPending}
-        error={update.isError ? problemMessageOf(update.error, t) : null}
+        error={refusalSentences(update.error, t, labels).rest}
         onConfirm={() => {
           if (faults.show(blankRequired(locale, { name: [nameLabel, name] }))) {
             return;
@@ -70,7 +75,14 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
               sharing: sharingChanged ? audience.sharing : undefined,
               teamId: teamChanged ? audience.teamId : undefined,
             },
-            { onSuccess: () => setOpen(false) },
+            {
+              onSuccess: () => {
+                setOpen(false);
+                toast.show(t("lists.settingsSaved"));
+              },
+              onError: (error) =>
+                faults.show(refusalSentences(error, t, labels).byField),
+            },
           );
         }}
       >
@@ -86,12 +98,15 @@ export function ListSettingsAction({ list }: Readonly<{ list: List }>) {
             />
           )}
         </Field>
-        <Field label={t("lists.purpose")}>
+        <Field label={purposeLabel} error={faults.of("purpose")}>
           {(control) => (
             <Textarea
               {...control}
               value={purpose}
-              onChange={(event) => setPurpose(event.target.value)}
+              onChange={(event) => {
+                setPurpose(event.target.value);
+                faults.edited("purpose");
+              }}
             />
           )}
         </Field>

@@ -69,7 +69,7 @@ func TestEveryConfigPathAMakefileNamesExists(t *testing.T) {
 			path := filepath.Join("..", strings.TrimPrefix(match, "../"))
 			checked++
 			if strings.Contains(match, "*") {
-				hits, err := filepath.Glob(path)
+				hits, err := gatekit.Glob(path)
 				if err != nil {
 					t.Errorf("%s names %q, which is not a valid pattern: %v", mk, match, err)
 					continue

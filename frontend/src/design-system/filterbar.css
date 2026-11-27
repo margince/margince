@@ -68,7 +68,7 @@
   padding-inline-start: var(--inputPaddingX);
   min-block-size: var(--inputHeight);
   background: var(--ground);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-control);
   box-shadow: var(--shadow-well);
   transition:
@@ -79,8 +79,8 @@
   box-shadow: none;
 }
 .filter-bar[data-labels="inside"] .field:focus-within {
-  border-color: var(--accent);
-  box-shadow: var(--focus-glow);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 .filter-bar[data-labels="inside"] .field > .t-label {
   margin: 0;
@@ -112,12 +112,25 @@
   background: none;
   box-shadow: none;
 }
-.filter-bar[data-labels="inside"] .field:has([aria-invalid="true"]) {
+/* A disabled chip stays dim even when its value was refused. */
+.filter-bar[data-labels="inside"]
+.field:has([aria-invalid="true"]):not(
+  :has(.input:disabled, .input[aria-disabled="true"])
+) {
   border-color: var(--danger);
 }
 .filter-bar[data-labels="inside"]
-  .field:has([aria-invalid="true"]):focus-within {
-  box-shadow: var(--focus-glow-danger);
+  .field:has([aria-invalid="true"]):not(
+    :has(.input:disabled, .input[aria-disabled="true"])
+  ):focus-within {
+  box-shadow: var(--focus-field-danger);
+}
+/* Read off the chip's own control, not a button beside it. `:where` lets
+   focus win on an aria-disabled control, which keeps its tab stop. */
+.filter-bar[data-labels="inside"]
+.field:where(:has(.input:disabled, .input[aria-disabled="true"])) {
+  background: var(--bgInset);
+  border-color: var(--borderStrong);
 }
 
 /* On a phone the dials own the line: a labelled field spans the bar, so its

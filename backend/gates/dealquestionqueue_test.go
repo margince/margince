@@ -28,6 +28,7 @@ import (
 )
 
 // dealQuestionProducer is the one function allowed to raise the question.
+// Held by: TestTheDealQuestionHasOneProducerAndItIsTheQueue (backend/gates/dealquestionqueue_test.go)
 const dealQuestionProducer = "compose/capturewhichdeal.go:Ask"
 
 // dealQuestionMarks are the spellings only a producer of the question uses.

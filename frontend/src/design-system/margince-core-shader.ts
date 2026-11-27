@@ -6,10 +6,11 @@
  * beside the TypeScript engine (`margince-core-engine.ts`).
  *
  * Two passes. `CORE_POINTS_*` draws four ribbons of glowing points, additively,
- * into an offscreen buffer the size of the canvas. `CORE_FRAG` then reads that
- * buffer through a glass lens, one tap per channel for the chromatic split. It
- * lays that over the ball's body and adds the rim lights. The ball composites
- * with alpha onto whatever hosts it: no page background.
+ * into an offscreen buffer the size of the canvas. The fourth is the gold
+ * cluster, and the buffer's alpha carries its light alone. `CORE_FRAG` reads
+ * the buffer through a lens that bends only near the rim. It keeps the gold's
+ * hue, lays the light over the ball's body, then adds the rim lights and a
+ * fixed sheen. The ball composites with alpha onto whatever hosts it.
  */
 
 /** Fullscreen triangle from the vertex id. No attribute buffers to bind. */
@@ -31,6 +32,7 @@ precision highp int;
 uniform vec2  iResolution;
 uniform ivec2 uGrid;       // points along and across one ribbon
 uniform float uPointPx;    // point diameter in device pixels
+uniform float uSoft;       // 0 = a small orb's grain, 1 = a large orb's
 uniform float uPhase;
 uniform float uForm;
 uniform float uLevel;
@@ -42,6 +44,7 @@ uniform vec3  uWork[5];
 
 out vec3  vColor;
 out float vAlpha;
+out float vGold;
 
 const float TAU = 6.28318531;
 const float LAYERS = 4.0;
@@ -75,6 +78,7 @@ void hide(){
   gl_PointSize = 0.0;
   vColor = vec3(0.0);
   vAlpha = 0.0;
+  vGold = 0.0;
 }
 
 void main(){
@@ -88,13 +92,23 @@ void main(){
 
   float t = uPhase * 0.4;
   /* the grain streams along its ribbon, faster the more energy is in it */
-  float u = fract((float(along) + 0.6 * unit(seed + 1u)) / float(uGrid.x) + 0.16 * uLevel * t);
-  float v = (float(across) + 0.5 * unit(seed + 2u)) / float(uGrid.y) * 2.0 - 1.0;
+  float jit = mix(0.6, 1.0, uSoft);
+  float u = fract((float(along) + jit * unit(seed + 1u)) / float(uGrid.x) + 0.16 * uLevel * t);
+  float v = (float(across) + mix(0.5, 1.0, uSoft) * unit(seed + 2u)) / float(uGrid.y) * 2.0 - 1.0;
 
   /* each ribbon shows most of its loop and fades in and out at the ends */
   float arcLen = 0.76 + 0.05 * sin(0.23 * t + 1.7 * L);
   float arc = fract(u + 0.21 * L - 0.012 * t);
-  if(arc > arcLen){ hide(); return; }
+  /* The last ribbon is the gold cluster: the arc map run backwards over 0.42
+     of its loop packs all its grain there, into one warm crescent. */
+  float gold = step(LAYERS - 1.5, L);
+  if(gold > 0.5){
+    arcLen = 0.42;
+    arc *= arcLen;
+    u = fract(arc - 0.21 * L + 0.012 * t);
+  } else if(arc > arcLen){ hide(); return; }
+  /* For gold this divides the scale back out. Folding it into the gold branch
+     changes rounding by one level, so it stays. */
   float s = arc / arcLen;
   float ends = smoothstep(0.0, 0.08, s) * (1.0 - smoothstep(0.86, 1.0, s));
 
@@ -119,7 +133,7 @@ void main(){
   float tw = phi * (0.7 + 0.6 * twist) + 0.37 * t + 1.17 * L;
   vec3 across3 = up * cos(tw) + radial * sin(tw);
   float width = halfW * (0.72 + 0.28 * sin(1.5 * phi + 0.5 * t + L) * sin(1.5 * phi + 0.5 * t + L))
-              * mix(0.45, 1.0, sqrt(ends));
+              * mix(0.45, 1.0, sqrt(ends)) * (1.0 + 0.35 * gold);
   vec3 p = radial * r + across3 * (v * width);
 
   float lc = L - 0.5 * (LAYERS - 1.0);
@@ -148,7 +162,10 @@ void main(){
   float edge = smoothstep(0.55, 1.0, abs(v));
   float front = clamp(0.78 + 0.5 * p.z, 0.45, 1.25);
   vec3 col = tone(0.32 * u + 0.19 * L + 0.012 * t + 0.08 * p.z);
-  col = mix(col, mix(pow(uWork[4], vec3(2.2)), vec3(1.0), 0.35), 0.6 * edge);
+  /* the token as it is, not decoded: decoded, the tonemap walks amber to
+     peach, and the cluster has to read gold */
+  col = mix(col, uWork[3], 0.9 * gold);
+  col = mix(col, mix(pow(uWork[4], vec3(2.2)), vec3(1.0), 0.35), mix(0.6, 0.1, gold) * edge);
   float luma = dot(col, vec3(0.2126, 0.7152, 0.0722));
   col = mix(vec3(luma), col, mix(0.95, 1.15, uForm));
   /* the warm stop is in the palette, so a stopped state's tint has to all but
@@ -156,6 +173,7 @@ void main(){
   col = mix(col, uTintCol, uTint * 0.92);
   col = mix(col, vec3(1.0), min(0.45 * mote, 0.6));
   vColor = col * front;
+  vGold = gold;
 
   /* light per point falls as the points per pixel rise, so a rail orb and a
      hero carry the same brightness with very different counts */
@@ -166,8 +184,10 @@ void main(){
 
 export const CORE_POINTS_FRAG = `#version 300 es
 precision highp float;
+uniform float uSoft;       // 0 = a hot core in a bloom, 1 = one soft Gaussian
 in vec3  vColor;
 in float vAlpha;
+in float vGold;
 out vec4 outColor;
 
 void main(){
@@ -175,8 +195,11 @@ void main(){
   float r2 = dot(d, d);
   if(r2 > 1.0) discard;
   /* a hot core in a soft bloom */
-  float a = vAlpha * (exp(-4.6 * r2) * 1.9 + exp(-1.4 * r2) * 0.3);
-  outColor = vec4(vColor * a, a);
+  float hot = exp(-4.6 * r2) * 1.9 + exp(-1.4 * r2) * 0.3;
+  float a = vAlpha * mix(hot, 1.55 * exp(-2.5 * r2), uSoft);
+  /* alpha carries the gold ribbon's own light, so the composite can keep its
+     hue where the indigo ribbons add over it */
+  outColor = vec4(vColor * a, a * vGold * dot(vColor, vec3(0.2126, 0.7152, 0.0722)));
 }`;
 
 export const CORE_FRAG = `#version 300 es
@@ -211,9 +234,9 @@ vec3 linear(vec3 c){ return pow(c, vec3(2.2)); }
 /* The lens squeezes the rim, so the buffer is read through its mipmaps, and
    blurrier the deeper the squeeze: point grain read through the three channel
    taps would otherwise speckle in colour instead of fringing. */
-vec3 lightAt(vec2 q, float sr, float bend){
+vec4 lightAt(vec2 q, float sr, float bend){
   float bias = 2.4 * bend - 0.6 * smoothstep(60.0, 200.0, sr * iResolution.y);
-  return texture(uParticles, (q * sr * iResolution.y + 0.5 * iResolution) / iResolution, bias).rgb;
+  return texture(uParticles, (q * sr * iResolution.y + 0.5 * iResolution) / iResolution, bias);
 }
 
 /* a lobe of light on the rim, centred on one direction */
@@ -251,13 +274,15 @@ void main(){
   vec3 col = vec3(0.0);
   float alpha = 0.0;
   if(pd < 1.0 + 2.0 / (sr * iResolution.y)){
-    /* The lens: the deeper toward the rim, the further inward the glass reads
-       the ribbons, which stretches them into radial fibres near the edge. */
-    float bend = pow(min(pd, 1.0), 2.6);
+    /* The lens bends only the outer quarter of the radius, squeezing the
+       ribbons inward there. The middle shows them straight. */
+    float bend = pow(smoothstep(0.75, 1.0, pd), 1.5);
     vec2 q = p - n * 0.70 * bend;
     float split = 0.030 * bend;
-    vec3 mid = lightAt(q, sr, bend);
+    vec4 mid4 = lightAt(q, sr, bend);
+    vec3 mid = mid4.rgb;
     float midL = dot(mid, LUMA);
+    float goldShare = clamp(mid4.a / max(midL, 1e-4), 0.0, 1.0);
     /* The dispersion: where a read a little outward or inward outruns the
        middle one, the excess fringes in the palette's warm or cool tone. Split
        by channel instead, the lens would paint red and green the orb never
@@ -267,8 +292,8 @@ void main(){
     warmT /= max(dot(warmT, LUMA), 1e-3);
     coolT /= max(dot(coolT, LUMA), 1e-3);
     vec3 acc = mid
-      + 0.6 * warmT * max(dot(lightAt(q - n * split, sr, bend), LUMA) - midL, 0.0)
-      + 0.6 * coolT * max(dot(lightAt(q + n * split, sr, bend), LUMA) - midL, 0.0);
+      + 0.6 * warmT * max(dot(lightAt(q - n * split, sr, bend).rgb, LUMA) - midL, 0.0)
+      + 0.6 * coolT * max(dot(lightAt(q + n * split, sr, bend).rgb, LUMA) - midL, 0.0);
 
     /* Working burns at the centre, large, white and steady. Ingest has a
        smaller, cooler heart that breathes in: it tightens as it brightens. The
@@ -285,6 +310,11 @@ void main(){
     /* the toe keeps the gaps between sheets dark, the shoulder lets the
        folds run hot without clipping flat */
     vec3 body = pow(vec3(1.0) - exp(-acc * expo), vec3(1.45));
+    /* the gold cluster keeps its hue at its brightness: the tonemap and the
+       indigo over it would otherwise wash it to cream */
+    vec3 goldCol = mix(uWork[3], uTintCol, uTint);
+    vec3 goldLit = min(goldCol * (dot(body, LUMA) / max(dot(goldCol, LUMA), 1e-3)), vec3(1.0));
+    body = mix(body, goldLit, smoothstep(0.1, 0.55, goldShare) * 0.95);
 
     /* The glass, laid over the light: a thin band of the refraction base on
        the rim, a cool and a warm dispersion lobe, a shade lower right, a key
@@ -316,6 +346,19 @@ void main(){
     /* quieter on dark: a dark page is already dark, and a full body there is a
        hole in it rather than a sphere on it */
     col   = mix(body + ball * DARKBODY, ball + body, uPaper);
+
+    /* Fixed polish: per-channel fresnel, a hairline lip, a broad sheen and a
+       glint. Tinted, since white on a coloured body reads as plastic. */
+    vec3 nrm = vec3(p, ndv);
+    float rim = 1.0 - ndv;
+    vec3 fres = vec3(pow(rim, 3.05), pow(rim, 3.30), pow(rim, 3.62));
+    vec3 glassTint = mix(linear(uWork[4]), uTintCol, uTint);
+    col += glassTint * fres * 0.16;
+    col += mix(vec3(1.0), glassTint, 0.3) * smoothstep(0.988, 1.0, rim) * 0.08;
+    vec3 H = normalize(normalize(vec3(-0.55, 0.72, 0.62)) + vec3(0.0, 0.0, 1.0));
+    float nh = max(dot(nrm, H), 0.0);
+    vec3 sheenTint = mix(vec3(1.0), glassTint, 0.25);
+    col += sheenTint * (pow(nh, 30.0) * 0.38 + pow(nh, 4.0) * 0.09);
     alpha = solid;
   }
 

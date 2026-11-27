@@ -288,7 +288,8 @@ func (h Handlers) ListBuyerRoomThreads(w http.ResponseWriter, r *http.Request, p
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, crmcontracts.BuyerRoomThreadListResponse{
-		Data: list.Threads, HiddenOwnConversations: list.HiddenOwn})
+		Data: list.Threads, HiddenOwnConversations: list.HiddenOwn,
+	})
 }
 
 // OpenBuyerRoomThread opens a thread as the buyer.

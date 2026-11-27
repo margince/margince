@@ -154,12 +154,12 @@ func BaseCurrencyLockWired() bool { return baseCurrencyLockProbe != nil }
 // client is shown the same facts a PATCH is refused on.
 func LockBaseCurrencyWith(probe func(context.Context, pgx.Tx) (currencylock.Lock, bool, error)) {
 	baseCurrencyLockProbe = probe
-	BaseCurrency.WithFreeze(func(ctx context.Context, tx pgx.Tx) (bool, string, error) {
+	BaseCurrency.WithFreezeFacts(func(ctx context.Context, tx pgx.Tx) (bool, settings.Freeze, error) {
 		lock, locked, err := probe(ctx, tx)
 		if err != nil || !locked {
-			return false, "", err
+			return false, settings.Freeze{}, err
 		}
-		return true, lock.Refusal(), nil
+		return true, settings.Freeze{Reason: lock.Refusal(), Params: lock.Params()}, nil
 	})
 }
 

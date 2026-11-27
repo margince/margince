@@ -38,6 +38,12 @@ function hitDials(hit: SettingsHit, t: Translator): UrlParams {
   return params.size ? params : NO_URL_PARAMS;
 }
 
+// The row Enter opens: the active one, else the only one there is. With
+// several rows and none active it opens nothing, so no unread page opens.
+function enterRow(active: number, rows: number): number {
+  return active < 0 && rows === 1 ? 0 : active;
+}
+
 /**
  * Finding a settings page by typing.
  *
@@ -76,9 +82,9 @@ export function SettingsSearchBox({
 }>) {
   const t = useT();
   const [typed, setTyped] = useState("");
-  // -1 is "nothing active", which is where a fresh query starts: the first row
-  // is not chosen until the reader reaches for it, so Enter on an untouched
-  // query does nothing rather than opening a page they never looked at.
+  // -1 is "nothing active", where a fresh query starts. The first row is not
+  // chosen until the reader reaches for it; `enterRow` holds what Enter does
+  // until then.
   const [active, setActive] = useState(-1);
   const inputRef = useRef<HTMLInputElement>(null);
   const activeRef = useRef<HTMLAnchorElement>(null);
@@ -189,9 +195,10 @@ export function SettingsSearchBox({
       setActive((current) => (current <= 0 ? hits.length - 1 : current - 1));
       return;
     }
-    if (event.key === "Enter" && !isImeCommit(event) && active >= 0) {
+    const chosen = enterRow(active, hits.length);
+    if (event.key === "Enter" && !isImeCommit(event) && chosen >= 0) {
       event.preventDefault();
-      go(active);
+      go(chosen);
     }
   }
 

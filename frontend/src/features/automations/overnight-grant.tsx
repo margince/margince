@@ -12,8 +12,7 @@ import { StatusBadge } from "../../design-system/statusbadge";
 import { Switch } from "../../design-system/switch";
 import { useT } from "../../i18n";
 import {
-  type MyAgentGrant,
-  overnightGrants,
+  grantStanding,
   useAgentGrants,
   useSetAgentGrant,
 } from "../../lib/overnight-grant";
@@ -26,24 +25,6 @@ import {
 //
 // Settings writes on flip. Onboarding's switch holds the answer until the step
 // continues, and its description says so in words.
-
-// The rep's one answer as the overnight agents stand on it. It reads as granted
-// only when every agent has the grant. A rep who answered before the sweep was
-// offered sees the question open and can answer it for both. Lapsed and
-// outgrown differ from a decline, because the rep already agreed. Each names its
-// cause, since either degrades the 2am run silently.
-function grantStanding(grants: readonly MyAgentGrant[]) {
-  const own = overnightGrants(grants);
-  const granted = own.every((grant) => grant?.state === "granted");
-  return {
-    granted,
-    lapsed: granted && own.some((grant) => !grant?.credential_usable),
-    outgrown:
-      granted &&
-      own.every((grant) => grant?.credential_usable === true) &&
-      own.some((grant) => !grant?.credential_funds_agent),
-  };
-}
 
 /**
  * The settings card: the same question, answered again later.

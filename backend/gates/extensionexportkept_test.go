@@ -22,9 +22,17 @@ const memberChatIngest = "the member-owned chat ingest; no unit in this tree fil
 // tree that still call the old one.
 const seatBoundRead = "the seat-bound form of a deprecated system read; no unit in this tree makes that read"
 
-// testKit is the reason for the unit test kit. Its callers are units' tests,
+// testKit is the reason for extensiontest, a unit test kit. Its callers are units' tests,
 // which this census does not read; extensions/finance-demo's test calls each.
 const testKit = "the unit test kit; its callers are units' test files, which the census does not read"
+
+// testKitUse is the reason for exttest, a unit test kit. A unit calls it from its own
+// tests, and this census reads no test file.
+const testKitUse = "the unit test kit; units call it from their tests, which this census does not read"
+
+// knowledgeFiling is the reason for the knowledge filing. A unit that syncs an
+// outside document source files into its own corpus. No unit in this tree does yet.
+const knowledgeFiling = "the managed-corpus filing; no unit in this tree files outside documents yet"
 
 // exportWaivers are the exported pkg/extension names with no caller in this
 // tree, each with why it stays.
@@ -32,6 +40,12 @@ var exportWaivers = gatekit.Waive(map[string]string{
 	"extension/extensiontest.Check":                  testKit,
 	"extension/extensiontest.CheckLink":              testKit,
 	"extension/extensiontest.CheckSignal":            testKit,
+	"extension.Knowledge.UpsertDocument":             knowledgeFiling,
+	"extension.KnowledgeCreated":                     knowledgeFiling,
+	"extension.KnowledgeReplaced":                    knowledgeFiling,
+	"extension.KnowledgeUnchanged":                   knowledgeFiling,
+	"extension.Runtime.Knowledge":                    knowledgeFiling,
+	"extension/exttest.Runtime.Knowledge":            knowledgeFiling,
 	"extension.OccurredPrecision":                    memberChatIngest,
 	"extension.PostureClassified":                    memberChatIngest,
 	"extension.PostureHeld":                          memberChatIngest,
@@ -163,4 +177,21 @@ var exportWaivers = gatekit.Waive(map[string]string{
 	"extension.Runtime.MailContent":                  "the door a unit reads a mail's words through; no unit in this tree reads one",
 	"extension/reach.Deal":                           "a unit declares a column holding deal ids so a deal merge moves it; no unit in this tree has one",
 	"extension/messaging.Rules.ResolveCitation":      "a rule pack outside this tree fills a citation through it; Rules.Validate calls it inside the package",
+	"extension/exttest.Core":                         testKitUse,
+	"extension/exttest.Core.LinkSuggestions":         testKitUse,
+	"extension/exttest.Core.Notices":                 testKitUse,
+	"extension/exttest.Core.Signals":                 testKitUse,
+	"extension/exttest.Runtime":                      testKitUse,
+	"extension/exttest.Runtime.Authority":            testKitUse,
+	"extension/exttest.Runtime.Directory":            testKitUse,
+	"extension/exttest.Runtime.IngestBatch":          testKitUse,
+	"extension/exttest.Runtime.IngestMemberBatch":    testKitUse,
+	"extension/exttest.Runtime.IngestPosition":       testKitUse,
+	"extension/exttest.Runtime.MailContent":          testKitUse,
+	"extension/exttest.Runtime.MemberIngestPosition": testKitUse,
+	"extension/exttest.Runtime.OAuthAccessToken":     testKitUse,
+	"extension/exttest.Runtime.OAuthDisconnect":      testKitUse,
+	"extension/exttest.Runtime.SetAside":             testKitUse,
+	"extension/exttest.Runtime.SyncNow":              testKitUse,
+	"extension/exttest.Secrets":                      testKitUse,
 })

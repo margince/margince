@@ -17,6 +17,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -174,8 +175,13 @@ func TestTwoAsksInOneConversationAtOnceAskOnce(t *testing.T) {
 	}
 	go func() { firstDone <- ask(f.message, true) }()
 	<-firstAsked
-	go func() { secondDone <- ask(second, false) }()
-	f.waitForAnAdvisoryLockWaiter(t)
+	secondReturned := make(chan struct{})
+	go func() {
+		err := ask(second, false)
+		close(secondReturned)
+		secondDone <- err
+	}()
+	f.waitForAnAdvisoryLockWaiter(t, secondReturned)
 	close(release)
 	if err := <-firstDone; err != nil {
 		t.Fatalf("the first ask: %v", err)
@@ -195,20 +201,17 @@ func TestTwoAsksInOneConversationAtOnceAskOnce(t *testing.T) {
 
 // waitForAnAdvisoryLockWaiter returns once some transaction waits on an
 // advisory lock, which here is the second ask queued behind the first.
-func (f suggestionFixture) waitForAnAdvisoryLockWaiter(t *testing.T) {
+func (f suggestionFixture) waitForAnAdvisoryLockWaiter(t *testing.T, secondReturned <-chan struct{}) {
 	t.Helper()
-	var waiting bool
-	err := f.e.owner.QueryRow(context.Background(), `
-		WITH RECURSIVE poll(n, seen) AS (
-		    SELECT 0, false
-		    UNION ALL
-		    SELECT n + 1, EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND NOT granted)
-		      FROM poll, LATERAL (SELECT pg_sleep(0.01)) pause
-		     WHERE NOT seen AND n < 1000)
-		SELECT bool_or(seen) FROM poll`).Scan(&waiting)
-	if err != nil || !waiting {
-		t.Fatalf("the second ask never waited for the first: %v", err)
-	}
+	testdb.WaitForContention(t, secondReturned,
+		"the second ask finished without waiting for the first",
+		"the second ask never waited for the first",
+		func(ctx context.Context) (bool, error) {
+			var waiting bool
+			err := f.e.owner.QueryRow(ctx,
+				`SELECT EXISTS (SELECT 1 FROM pg_locks WHERE locktype = 'advisory' AND NOT granted)`).Scan(&waiting)
+			return waiting, err
+		})
 }
 
 // A suggested deal's value reaches the queue only through the reader's field

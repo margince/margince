@@ -16,8 +16,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -33,7 +31,7 @@ func loadContract(t *testing.T) map[string]any {
 		t.Fatalf("reading api/crm.yaml: %v", err)
 	}
 	var doc map[string]any
-	if err := yaml.Unmarshal(src, &doc); err != nil {
+	if err := unmarshalYAML(src, &doc); err != nil {
 		t.Fatalf("parsing api/crm.yaml: %v", err)
 	}
 	return doc

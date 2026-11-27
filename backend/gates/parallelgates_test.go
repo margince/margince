@@ -34,6 +34,8 @@ package gates
 import (
 	"go/ast"
 	"go/build"
+	"go/parser"
+	"go/token"
 	"path/filepath"
 	"slices"
 	"strings"
@@ -42,20 +44,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// parallelExempt names the gates that must NOT take t.Parallel(), with the
-// reason. Keyed by test name rather than by file: the obligation is a property
-// of the function, and a file-keyed exemption would silently cover every gate
-// that later joins that file.
-//
-// The file-rewriting entries name the WRITER, never a reader. Go resumes
-// parallel tests only once every sequential one has finished, so a sequential
-// writer is ordered before every parallel reader there is OR WILL BE. Exempting
-// a reader instead fixes one call site and leaves the next reader somebody adds
-// racing the same write.
-//
-// A gatekit.Waivers rather than a bare map, so the reasons are held to the same
-// standard as every other waiver here and a stale entry is reported by the
-// mechanism that already does that.
+// parallelExempt names, by test, the gates that must not run in parallel. A
+// file-rewriting entry names the writer: a sequential test ends before any parallel
+// reader resumes. A gate sequential only under its -update flag opens with
+// `if !*flag { t.Parallel() }` and calls t.Parallel() no other way.
 var parallelExempt = gatekit.Waive(map[string]string{
 	// t.Setenv panics outright in a parallel test — the environment is
 	// process-wide, so Go refuses the combination rather than letting one
@@ -93,7 +85,7 @@ func TestEveryGateRunsInParallelWithTheOthers(t *testing.T) {
 		defer parallelExempt.AssertAllMatched(t)
 	}
 
-	var serial, exemptButParallel []string
+	var serial, exemptButParallel, unguarded []string
 	seen := 0
 	for _, path := range activeGateSources(t) {
 		source, err := gatekit.ReadFile(path)
@@ -123,10 +115,12 @@ func TestEveryGateRunsInParallelWithTheOthers(t *testing.T) {
 				}
 				continue
 			}
-			if parallelExempt.Waived(t, fn.Name.Name) {
-				continue
+			switch {
+			case !parallelExempt.Waived(t, fn.Name.Name):
+				serial = append(serial, named)
+			case parallelCalls(fn) > 0 && !guardedParallelFirst(fn):
+				unguarded = append(unguarded, named)
 			}
-			serial = append(serial, named)
 		}
 	}
 
@@ -144,6 +138,36 @@ func TestEveryGateRunsInParallelWithTheOthers(t *testing.T) {
 		t.Errorf("%s is named in parallelExempt but opens with t.Parallel(). Something about that "+
 			"gate needs it sequential and the call has taken that away, while the entry still "+
 			"reads as ratifying it: remove one or the other", name)
+	}
+	for _, name := range unguarded {
+		t.Errorf("%s is named in parallelExempt and calls t.Parallel() other than as its first statement "+
+			"`if !*flag { t.Parallel() }`, so it can run in parallel when it must not: guard the call that way", name)
+	}
+}
+
+func TestAnExemptGateRunsInParallelOnlyBehindItsUpdateFlag(t *testing.T) {
+	t.Parallel()
+	accepted := map[string]bool{"Guarded": true, "NeverParallel": true}
+	source := `package p
+func Guarded(t *testing.T) { if !*update { t.Parallel() }; x() }
+func NeverParallel(t *testing.T) { t.Setenv("A", "b") }
+func DroppedGuard(t *testing.T) { x(); t.Parallel() }
+func OtherCondition(t *testing.T) { if ready { t.Parallel() } }
+func GuardWithElse(t *testing.T) { if !*update { t.Parallel() } else { x() } }
+func SecondCall(t *testing.T) { if !*update { t.Parallel() }; t.Parallel() }
+func GuardNotFirst(t *testing.T) { x(); if !*update { t.Parallel() } }`
+	file, err := parser.ParseFile(token.NewFileSet(), "planted_test.go", source, 0)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, decl := range file.Decls {
+		fn, ok := decl.(*ast.FuncDecl)
+		if !ok {
+			continue
+		}
+		if got := parallelCalls(fn) == 0 || guardedParallelFirst(fn); got != accepted[fn.Name.Name] {
+			t.Errorf("%s: the census accepts it as exempt = %v, want %v", fn.Name.Name, got, accepted[fn.Name.Name])
+		}
 	}
 }
 
@@ -185,21 +209,46 @@ func isGateTest(fn *ast.FuncDecl) bool {
 	return fn.Name.Name != "TestMain"
 }
 
-// callsParallelFirst reports whether the function's FIRST statement is
-// t.Parallel() on its own *testing.T.
-//
-// First, not merely present: Go runs a parallel test's body up to the call
-// synchronously, so work above it is serial work that reads as parallel. A gate
-// that walked the tree and then called t.Parallel() would look annotated and
-// buy nothing.
-//
-// The receiver is read from the signature rather than assumed to be `t`, so a
-// gate is judged on what it does and not on what it named its parameter.
+// callsParallelFirst reports whether the first statement is t.Parallel() on the
+// test's own *testing.T, since work above the call runs serially.
 func callsParallelFirst(fn *ast.FuncDecl) bool {
-	if fn.Body == nil || len(fn.Body.List) == 0 {
+	return fn.Body != nil && len(fn.Body.List) > 0 && isParallelCall(fn.Body.List[0], testingParamName(fn))
+}
+
+// guardedParallelFirst reports whether the first statement is
+// `if !*flag { t.Parallel() }` and the function calls t.Parallel() nowhere else.
+func guardedParallelFirst(fn *ast.FuncDecl) bool {
+	if fn.Body == nil || len(fn.Body.List) == 0 || parallelCalls(fn) != 1 {
 		return false
 	}
-	expr, ok := fn.Body.List[0].(*ast.ExprStmt)
+	guard, ok := fn.Body.List[0].(*ast.IfStmt)
+	if !ok || guard.Init != nil || guard.Else != nil || len(guard.Body.List) != 1 {
+		return false
+	}
+	negated, ok := guard.Cond.(*ast.UnaryExpr)
+	if !ok || negated.Op != token.NOT {
+		return false
+	}
+	_, isFlag := negated.X.(*ast.StarExpr)
+	return isFlag && isParallelCall(guard.Body.List[0], testingParamName(fn))
+}
+
+func parallelCalls(fn *ast.FuncDecl) int {
+	calls := 0
+	if fn.Body == nil {
+		return 0
+	}
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		if stmt, ok := n.(ast.Stmt); ok && isParallelCall(stmt, testingParamName(fn)) {
+			calls++
+		}
+		return true
+	})
+	return calls
+}
+
+func isParallelCall(stmt ast.Stmt, receiverName string) bool {
+	expr, ok := stmt.(*ast.ExprStmt)
 	if !ok {
 		return false
 	}
@@ -212,7 +261,7 @@ func callsParallelFirst(fn *ast.FuncDecl) bool {
 		return false
 	}
 	receiver, ok := selector.X.(*ast.Ident)
-	return ok && receiver.Name == testingParamName(fn)
+	return ok && receiver.Name == receiverName
 }
 
 // testingParamName is what a test calls its *testing.T, or "" for a signature

@@ -100,10 +100,8 @@ func (p projectPhaseAdvancer) AdvanceProjectPhase(
 // depth chooses which, exactly as the client's choice of route does on REST, and
 // each side calls the same entry point its handler calls.
 //
-// The engines are read from the server LAZILY, at call time, for the reason
-// rebuildToolRegistry reads the vault lazily: WithScrape and WithDeepRead each
-// install one, and a snapshot taken at registry-construction time would see
-// whichever ran first and silently drop the other.
+// The engines are read from the server at call time, as the vault is. A role
+// can bind one after the registry is built, and the tool must still reach it.
 //
 // An engine still absent when a call arrives means the process role declared no
 // model path or no crawl runner, which the REST route answers as an explicit

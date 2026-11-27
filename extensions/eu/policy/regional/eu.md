@@ -1,14 +1,21 @@
 ---
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: Directive 2002/58/EC
     effective: 2002-07-31
     provision: "Art. 13"
     source-url: https://eur-lex.europa.eu/eli/dir/2002/58/oj
+    text-url: https://publications.europa.eu/resource/cellar/6def8269-d337-4373-83c1-8c57678fc93f.0006.03/DOC_3
+    text-digest: 82ec515ca024e3d8957be8fef1ff496463afa486cdcce67e7c3f855812e2fb41
+    text-fetched: 2026-11-25
   - name: "Regulation (EU) 2016/679 (GDPR)"
     effective: 2018-05-25
     provision: "Art. 6(1)"
     source-url: https://eur-lex.europa.eu/eli/reg/2016/679/oj
+    text-url: https://publications.europa.eu/resource/cellar/5f2552c2-cc45-11e6-ad7c-01aa75ed71a1.0022.03/DOC_1
+    text-digest: c2a3cba38046acebdb9e791da174295fd0cd2ed11b5473682084f47848bd3993
+    text-fetched: 2026-11-25
 reply-window: 8760h
 deal-follow-up-window: 4368h
 marketing-exceptions:

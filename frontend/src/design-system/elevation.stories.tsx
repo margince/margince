@@ -73,7 +73,7 @@ const RUNGS = [
     probe: "1",
     token: "--ladder1",
     edge: "--ladder1Edge",
-    usage: "Level 1: a pane on the page.",
+    usage: "Level 1: a pane on the page, and a dialog.",
   },
   {
     probe: "2",
@@ -88,12 +88,6 @@ const RUNGS = [
     edge: "--ladder4Edge",
     usage: "Level 4 and deeper.",
   },
-  {
-    probe: "overlay",
-    token: "--bgElevated",
-    edge: "--ladder1Edge",
-    usage: "An overlay's own surface.",
-  },
 ] as const;
 
 function Level({ level, children }: { level: string; children?: ReactNode }) {
@@ -106,7 +100,7 @@ function Level({ level, children }: { level: string; children?: ReactNode }) {
 
 /**
  * The ladder as the product draws it: real panels nested on the page. The same
- * panels sit inside an overlay, which counts again from its own surface.
+ * panels sit inside a dialog, which takes level 1 wherever it opens.
  */
 export const Surfaces: Story = {
   render: () => (
@@ -114,8 +108,9 @@ export const Surfaces: Story = {
       <p className={specimenIntro}>
         A pane takes its ground from its depth, not its kind. A pane on the page
         is level 1, a pane inside it level 2, then level 3, then level 4 for
-        anything deeper. An overlay keeps its own surface and counts again: a
-        card in a dialog is level 2. Nest a Panel and it takes the right ground.
+        anything deeper. A dialog takes level 1 wherever it opens, and counts on
+        from there: a card in a dialog is level 2. Nest a Panel and it takes the
+        right ground.
       </p>
       <div style={swatches}>
         {RUNGS.map((rung) => (
@@ -145,7 +140,7 @@ export const Surfaces: Story = {
       </div>
       <div style={ground}>
         <div className="modal" data-ladder="overlay">
-          <Level level="Level 2, in an overlay">
+          <Level level="Level 2, in a dialog">
             <Level level="Level 3" />
           </Level>
         </div>
@@ -173,7 +168,7 @@ export const Surfaces: Story = {
     await expect(panes("page").map(edge)).toEqual(page.map(edge));
     await expect(heads("page").map(seam)).toEqual(page.map(edge));
     const overlay = canvasElement.querySelector('[data-ladder="overlay"]');
-    await expect(paint(overlay)).toBe(paint(probe("overlay")));
+    await expect(paint(overlay)).toBe(paint(probe("1")));
     const inOverlay = ["2", "3"].map(probe);
     await expect(panes("overlay").map(paint)).toEqual(inOverlay.map(paint));
     await expect(panes("overlay").map(edge)).toEqual(inOverlay.map(edge));
@@ -236,15 +231,16 @@ export const OverlaysAndScrim: Story = {
     <div className={specimenColumn} style={wide}>
       <p className={specimenIntro}>
         What is genuinely above the plane takes a scrim behind it and the pop
-        shadow on it. Use this for a modal, a popover, a menu or a drawer, and
-        for nothing at rest.
+        shadow on it: a modal, a popover, a menu or a drawer, and nothing at
+        rest. A popover or a menu takes the elevated surface below; a modal or a
+        drawer takes level 1.
       </p>
       <div style={stage}>
         <div style={scrim} />
         <div style={floating}>
           <Label
             token="--bgElevated"
-            usage="A modal, popover or drawer is an elevated surface under --shadow-pop."
+            usage="A popover or menu is an elevated surface under --shadow-pop."
           />
           <Label
             token="--overlayScrim"

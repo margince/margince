@@ -7,8 +7,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"path/filepath"
 	"regexp"
 	"strings"
@@ -46,7 +44,7 @@ func TestEveryStoredObjectWriterDeclaresItsIntent(t *testing.T) {
 		if strings.HasSuffix(rel, "_test.go") || strings.HasPrefix(rel, "internal/platform/blobstore/") {
 			continue
 		}
-		parsed, err := parser.ParseFile(token.NewFileSet(), file, nil, 0)
+		parsed, err := gatekit.ParseFile(rel, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", rel, err)
 		}

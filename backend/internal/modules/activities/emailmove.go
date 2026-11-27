@@ -241,7 +241,7 @@ const (
 // with no user behind them, such as a system caller, may not.
 func canSendAgainSQL(ctx context.Context, arg func(any) int) (string, error) {
 	if actor, ok := principal.Actor(ctx); !ok || actor.UserID.IsZero() {
-		return "false", nil
+		return sqlFalse, nil
 	}
 	rule, err := mailresend.ForGatedRows(ctx, "delivery", "a", arg)
 	if err != nil {

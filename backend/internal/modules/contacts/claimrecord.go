@@ -71,7 +71,7 @@ func (s *Store) RecordConversationClaimTx(
 		return crmcontracts.ConversationClaim{}, false, err
 	}
 	// Admits a user, their agent, and the product's own passes. An extractor
-	// runs as one of those, for no one or for the person who asked.
+	// runs as one of those, for no one or for the colleague who asked.
 	if err := auth.RequireHumanOrAgentFor(ctx); err != nil {
 		return crmcontracts.ConversationClaim{}, false, err
 	}

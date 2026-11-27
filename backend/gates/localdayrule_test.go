@@ -24,6 +24,10 @@ var localDaySpellings = regexp.MustCompile(
 	`installationZone\(|TaskDue(Before|From|Order)SQL\(|InstallationZoneSQL|CURRENT_DATE|now\(\)::date|AT TIME ZONE|` +
 		`date_trunc\('day'|Truncate\(24 ?\* ?time\.Hour\)|TimezoneAppliedTx|ZoneAppliedTx|TodaySQL\(`)
 
+// localDayWords holds a word of every localDaySpellings match, so a file with
+// none of them is skipped unscanned.
+var localDayWords = requiredWords(localDaySpellings)
+
 // ruleOwned is the code that implements the rule or owns the stored zone.
 var ruleOwned = []string{
 	"internal/compose/dayrule/",
@@ -120,7 +124,7 @@ func TestEveryLocalDayComputationGoesThroughTheRuleOrIsDeclared(t *testing.T) {
 		if strings.HasSuffix(path, "_test.go") || strings.HasPrefix(path, "internal/contracts/") {
 			return
 		}
-		if !localDaySpellings.MatchString(text) {
+		if !mayHoldFolded(text, localDayWords...) || !localDaySpellings.MatchString(text) {
 			return
 		}
 		found++

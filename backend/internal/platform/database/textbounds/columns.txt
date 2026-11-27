@@ -496,26 +496,26 @@ public.company_domain_disposition.evidence exempt carries model reasons and craw
 public.company_domain_disposition.pending_reason note
 public.company_domain_disposition.source document
 public.company_domain_disposition.status document
-public.company_fact.captured_by document
-public.company_fact.category document
-public.company_fact.evidence_snippet document checked: a site passage of about 600 runes or a fixed marker
-public.company_fact.field document
-public.company_fact.source document
-public.company_fact.source_url document checked: a crawled page URL
-public.company_fact.value document checked: must match the cited passage or the page excerpt of 18000 runes
-public.company_fact.value_key document
+public.company_fact_legacy.captured_by document
+public.company_fact_legacy.category document
+public.company_fact_legacy.evidence_snippet document checked: a site passage of about 600 runes or a fixed marker
+public.company_fact_legacy.field document
+public.company_fact_legacy.source document
+public.company_fact_legacy.source_url document checked: a crawled page URL
+public.company_fact_legacy.value document checked: must match the cited passage or the page excerpt of 18000 runes
+public.company_fact_legacy.value_key document
 public.company_geocode_state.input_hash document
 public.company_geocode_state.provider document
 public.company_geocode_state.status document
 public.company_offered_value.field_key document
 public.company_offered_value.offered_value document checked: the extension surface refuses past 500
 public.company_offered_value.source_system document
-public.company_profile_field.captured_by document
-public.company_profile_field.evidence_snippet document checked: site reads and enrichment are cut to it (coldstartprofile.go)
-public.company_profile_field.field document
-public.company_profile_field.source document
-public.company_profile_field.source_url document checked: a crawled page or seed URL
-public.company_profile_field.value document checked: site reads and enrichment are cut to it (coldstartprofile.go); a typed correction is refused past it
+public.company_profile_field_legacy.captured_by document
+public.company_profile_field_legacy.evidence_snippet document checked: site reads and enrichment are cut to it (coldstartprofile.go)
+public.company_profile_field_legacy.field document
+public.company_profile_field_legacy.source document
+public.company_profile_field_legacy.source_url document checked: a crawled page or seed URL
+public.company_profile_field_legacy.value document checked: site reads and enrichment are cut to it (coldstartprofile.go); a typed correction is refused past it
 public.company_relationship_type.captured_by document
 public.company_relationship_type.relationship_type document
 public.company_relationship_type.source document
@@ -629,15 +629,15 @@ public.contact_phone.captured_by document
 public.contact_phone.phone document
 public.contact_phone.phone_type document
 public.contact_phone.source document
-public.contact_profile_field.captured_by document
-public.contact_profile_field.evidence_snippet document checked: cards, signatures and pages are cut to it (machineProfileField); a research quote is refused past it
-public.contact_profile_field.field document
-public.contact_profile_field.source document
-public.contact_profile_field.source_ref document checked: a record reference or a crawled page URL
-public.contact_profile_field.superseded_captured_by document
-public.contact_profile_field.superseded_value document checked: a copy of an earlier contact_profile_field.value or a contact column
-public.contact_profile_field.value document checked: cards, signatures and pages are cut to it (machineProfileField); a research claim is refused past it
-public.contact_profile_field.value_key document
+public.contact_profile_field_legacy.captured_by document
+public.contact_profile_field_legacy.evidence_snippet document checked: cards, signatures and pages are cut to it (machineProfileField); a research quote is refused past it
+public.contact_profile_field_legacy.field document
+public.contact_profile_field_legacy.source document
+public.contact_profile_field_legacy.source_ref document checked: a record reference or a crawled page URL
+public.contact_profile_field_legacy.superseded_captured_by document
+public.contact_profile_field_legacy.superseded_value document checked: a copy of an earlier contact_profile_field.value or a contact column
+public.contact_profile_field_legacy.value document checked: cards, signatures and pages are cut to it (machineProfileField); a research claim is refused past it
+public.contact_profile_field_legacy.value_key document
 public.contact_provider_claim.captured_by document
 public.contact_provider_claim.claim_key document
 public.contact_provider_claim.employment_processing_error document checked: one fixed sentence
@@ -815,9 +815,14 @@ public.field_mask.object document
 public.field_mask.role_key document
 public.field_provenance.captured_by document
 public.field_provenance.evidence_ref document
+public.field_provenance.evidence_snippet document checked: each writer cuts or refuses its quote (machineProfileField, coldstartprofile.go, the site passage of about 600 runes)
 public.field_provenance.field_name label
 public.field_provenance.object_type document
 public.field_provenance.source document
+public.field_provenance.superseded_captured_by document
+public.field_provenance.superseded_value document checked: a copy of an earlier field_provenance.value or a contact column
+public.field_provenance.value document checked: each writer cuts or refuses its value (machineProfileField, coldstartprofile.go, the cited site passage)
+public.field_provenance.value_key document
 public.finance_connection.captured_by document
 public.finance_connection.last_error_code document
 public.finance_connection.provider document
@@ -920,6 +925,7 @@ public.knowledge_corpus.topic_statement document
 public.knowledge_document.captured_by document
 public.knowledge_document.checksum document
 public.knowledge_document.content_type document
+public.knowledge_document.external_id document
 public.knowledge_document.filename document
 public.knowledge_document.ingest_detail document checked: fixed sentences and numbers
 public.knowledge_document.ingest_status document
@@ -1115,7 +1121,6 @@ public.partner.captured_by document
 public.partner.cert_status document
 public.partner.margin_tier document
 public.partner.next_step document
-public.partner.partner_fit_override_reason note
 public.partner.partner_kinds document
 public.partner.relationship_stage document
 public.partner.served_segments document

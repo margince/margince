@@ -103,7 +103,7 @@ const fieldAssignee = "assignee_id"
 
 // A task with no assignee named belongs to the human behind the call: the
 // writer, or the one an agent or connector acts for. Automatic work stays
-// unassigned, the product's own job for a person included: it names its
+// unassigned, the product's own job for a colleague included: it names its
 // assignee, and none named means the work has no holder.
 func taskAssignee(ctx context.Context, in LogActivityInput) *ids.UserID {
 	if in.AssigneeID != nil || in.Kind != string(crmcontracts.ActivityKindTask) {

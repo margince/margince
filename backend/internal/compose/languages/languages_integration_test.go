@@ -78,7 +78,7 @@ func TestTheReportListsAnOldNoticeLanguageAndChangesNothing(t *testing.T) {
 			`INSERT INTO consent_text_version (key, version, body, locale) VALUES ('old-notice', 'v1', 'Body', 'de-DE')`); err != nil {
 			return err
 		}
-		out := runStep(t, ctx, tx, "consent_text_version_locale")
+		out := runStep(ctx, t, tx, "consent_text_version_locale")
 		if out.Action == nil || out.Action.Reason != languages.ReasonNotRegistered || len(out.Action.Records) != 1 {
 			t.Errorf("the report left %+v, want one record under %s", out.Action, languages.ReasonNotRegistered)
 		}
@@ -89,7 +89,7 @@ func TestTheReportListsAnOldNoticeLanguageAndChangesNothing(t *testing.T) {
 		if err := tx.QueryRow(ctx, `SELECT locale FROM consent_text_version WHERE key = 'old-notice'`).Scan(&locale); err != nil || locale != "de-DE" {
 			t.Errorf("the stored locale = %q, %v; the report must not rewrite it", locale, err)
 		}
-		if clean := runStep(t, ctx, tx, "activity_language"); clean.Action != nil {
+		if clean := runStep(ctx, t, tx, "activity_language"); clean.Action != nil {
 			t.Errorf("a column with no bad value reported %+v", clean.Action)
 		}
 		return rollback{}
@@ -103,7 +103,7 @@ type rollback struct{}
 
 func (rollback) Error() string { return "roll the test's rows back" }
 
-func runStep(t *testing.T, ctx context.Context, tx pgx.Tx, name string) datatask.BatchOut {
+func runStep(ctx context.Context, t *testing.T, tx pgx.Tx, name string) datatask.BatchOut {
 	t.Helper()
 	for _, step := range languages.DataTask().Steps {
 		if step.Name == name {

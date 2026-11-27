@@ -28,6 +28,11 @@ import {
   rowFor,
   still,
 } from "./margince-core-motion";
+import {
+  type PixelShift,
+  pixelSnap,
+  watchPlacement,
+} from "./margince-core-snap";
 import { usePrefersReducedMotion } from "./motion";
 import {
   isWindowFocused,
@@ -74,6 +79,8 @@ type Loop = Readonly<{
   setOnScreen: (onScreen: boolean) => void;
   /** Re-sizes the drawing buffer and draws once, whether parked or not. */
   remeasure: () => void;
+  /** Re-lands the canvas on whole device pixels on the next frame, if seen. */
+  resnap: () => void;
   stop: () => void;
 }>;
 
@@ -109,13 +116,21 @@ export function runCoreLoop(
   let onScreen = true;
   let activeAt = performance.now();
   let calm = 1;
+  let shift: PixelShift = [0, 0];
+  let snapHandle = 0;
   const watched = () => onScreen && !document.hidden && isWindowFocused();
+
+  const place = (box: DOMRect) => {
+    shift = pixelSnap(box, canvas.offsetWidth, devicePixelRatio || 1, shift);
+    canvas.style.translate = `${shift[0]}px ${shift[1]}px`;
+  };
 
   const measure = () => {
     // The Core is a ball, so one side serves: whichever the box gives, the
     // square drawing buffer is sized from it.
     const box = canvas.getBoundingClientRect();
     renderer.resize(Math.max(box.width, box.height), devicePixelRatio || 1);
+    place(box);
   };
 
   /** Advances every dial one frame and reports whether anything is still
@@ -210,12 +225,31 @@ export function runCoreLoop(
     renderer.draw(shown());
   };
 
+  // A move needs no draw. Unseen, it waits: the next wake measures anyway.
+  const resnap = () => {
+    if (stopped || snapHandle !== 0 || !watched()) {
+      return;
+    }
+    snapHandle = requestAnimationFrame(() => {
+      snapHandle = 0;
+      if (!stopped) {
+        place(canvas.getBoundingClientRect());
+      }
+    });
+  };
+
   const stop = () => {
     stopped = true;
     if (handle !== 0) {
       cancelAnimationFrame(handle);
       handle = 0;
     }
+    if (snapHandle !== 0) {
+      cancelAnimationFrame(snapHandle);
+      snapHandle = 0;
+    }
+    // A restored context or a remount measures a clean box.
+    canvas.style.translate = "";
     renderer.dispose();
   };
 
@@ -234,7 +268,7 @@ export function runCoreLoop(
     wake();
   };
 
-  return { wake, poke, setOnScreen, remeasure, stop };
+  return { wake, poke, setOnScreen, remeasure, resnap, stop };
 }
 
 /** Wakes the live loop on what says a reader may be looking: a resize, the
@@ -251,6 +285,13 @@ function watchCanvas(
     wake();
   });
   observer.observe(canvas);
+  const unplace = watchPlacement(
+    () => loopRef.current?.resnap(),
+    () => {
+      loopRef.current?.remeasure();
+      wake();
+    },
+  );
   const releaseFocus = subscribeToWindowFocus((focused) => {
     if (focused) {
       poke();
@@ -273,6 +314,7 @@ function watchCanvas(
     host?.removeEventListener("pointerenter", poke);
     host?.removeEventListener("focusin", poke);
     document.removeEventListener("visibilitychange", wake);
+    unplace();
     sight.disconnect();
     releaseFocus();
     observer.disconnect();

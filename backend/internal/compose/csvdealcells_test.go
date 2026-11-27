@@ -47,29 +47,29 @@ func testDealStages() dealStages {
 
 func TestAStageIsFoundByNameInItsOwnPipelineOnly(t *testing.T) {
 	stages := testDealStages()
-	typed, problem := stages.checkCells(map[string]string{dealTargetPipeline: " sales ", dealTargetStage: "QUALIFIED"}, nil)
+	typed, problem := firstOf(stages.checkCells(map[string]string{dealTargetPipeline: " sales ", dealTargetStage: "QUALIFIED"}, nil))
 	if problem != nil || typed[dealTargetStage] != ids.From[ids.StageKind](salesQualified.id) {
 		t.Fatalf("typed = %v, problem = %+v; want Sales' Qualified, whatever its case and spaces", typed, problem)
 	}
-	_, problem = stages.checkCells(map[string]string{dealTargetPipeline: "Sales", dealTargetStage: "Closing"}, nil)
+	_, problem = firstOf(stages.checkCells(map[string]string{dealTargetPipeline: "Sales", dealTargetStage: "Closing"}, nil))
 	if problem == nil || problem.Target != dealTargetStage || !strings.Contains(problem.Message, "“Sales”") {
 		t.Fatalf("problem = %+v, want the stage refused naming the pipeline it is not in", problem)
 	}
-	_, problem = stages.checkCells(map[string]string{dealTargetPipeline: "Upsell", dealTargetStage: "Won"}, nil)
+	_, problem = firstOf(stages.checkCells(map[string]string{dealTargetPipeline: "Upsell", dealTargetStage: "Won"}, nil))
 	if problem == nil || problem.Target != dealTargetPipeline || !strings.Contains(problem.Message, "Renewals") {
 		t.Fatalf("problem = %+v, want an unknown pipeline refused with the pipelines there are", problem)
 	}
 }
 
 func TestADealWithNoPipelineGoesToTheDefaultOne(t *testing.T) {
-	typed, problem := testDealStages().checkCells(map[string]string{dealTargetStage: "won", dealTargetCloseDate: "2026-07-01"}, nil)
+	typed, problem := firstOf(testDealStages().checkCells(map[string]string{dealTargetStage: "won", dealTargetCloseDate: "2026-07-01"}, nil))
 	if problem != nil || typed[dealTargetStage] != ids.From[ids.StageKind](salesWon.id) {
 		t.Fatalf("typed = %v, problem = %+v; want the default pipeline's Won", typed, problem)
 	}
 }
 
 func TestAStageCannotBeCheckedWithoutReadingPipelines(t *testing.T) {
-	_, problem := dealStages{today: importToday}.checkCells(map[string]string{dealTargetStage: "Won"}, nil)
+	_, problem := firstOf(dealStages{today: importToday}.checkCells(map[string]string{dealTargetStage: "Won"}, nil))
 	if problem == nil || problem.Target != dealTargetStage || !strings.Contains(problem.Message, "pipelines") {
 		t.Fatalf("problem = %+v, want the stage refused for want of the pipeline grant", problem)
 	}
@@ -78,19 +78,32 @@ func TestAStageCannotBeCheckedWithoutReadingPipelines(t *testing.T) {
 func TestAnAmountIsReadInItsCurrencysMinorUnits(t *testing.T) {
 	stages := testDealStages()
 	for _, tc := range []struct{ amount, currency string }{{"12000.50", "EUR"}, {"1500000", "vnd"}} {
-		typed, problem := stages.checkCells(map[string]string{dealTargetAmount: tc.amount, dealTargetCurrency: tc.currency}, nil)
+		typed, problem := firstOf(stages.checkCells(map[string]string{dealTargetAmount: tc.amount, dealTargetCurrency: tc.currency}, nil))
 		want := map[string]int64{"EUR": 1200050, "vnd": 1500000}[tc.currency]
 		if problem != nil || typed[dealTargetAmount] != want || typed[dealTargetCurrency] != strings.ToUpper(tc.currency) {
 			t.Errorf("%s %s: typed = %v, problem = %+v; want %d in the code's own spelling", tc.amount, tc.currency, typed, problem, want)
 		}
 	}
 	for _, tc := range []struct{ amount, currency, target, says string }{
-		{"12.5", "JPY", dealTargetAmount, "12000"},
-		{"12.000,50", "EUR", dealTargetAmount, "12000.50"},
-		{"12000", "", dealTargetAmount, "currency"},
+		{"1000.50", "JPY", dealTargetAmount, "has more decimal places than JPY takes. Write it like 12000."},
+		{"10.12345", "EUR", dealTargetAmount, "has more decimal places than EUR takes. Write it like 12000.50."},
+		{"5.5", "KWD", dealTargetAmount, ""},
+		{"-500", "EUR", dealTargetAmount, "“-500” is below zero"},
+		{"1e5", "KWD", dealTargetAmount, "is not an amount in KWD. Write it like 12000.500."},
+		{"12.000,50", "EUR", dealTargetAmount, "is not an amount in EUR. Write it like 12000.50."},
+		{"12000", "", dealTargetAmount, "Fill the currency column"},
 		{"12000", "Euro", dealTargetCurrency, "three letters"},
+		{"100", "XXX", dealTargetCurrency, "“XXX” is the code for no currency or for tests"},
+		{"", "xts", dealTargetCurrency, "“XTS” is the code for no currency or for tests"},
+		{"100", "XAU", dealTargetAmount, ""},
 	} {
-		_, problem := stages.checkCells(map[string]string{dealTargetAmount: tc.amount, dealTargetCurrency: tc.currency}, nil)
+		_, problem := firstOf(stages.checkCells(map[string]string{dealTargetAmount: tc.amount, dealTargetCurrency: tc.currency}, nil))
+		if tc.says == "" {
+			if problem != nil {
+				t.Errorf("%q %q: problem = %+v, want it read", tc.amount, tc.currency, problem)
+			}
+			continue
+		}
 		if problem == nil || problem.Target != tc.target || !strings.Contains(problem.Message, tc.says) {
 			t.Errorf("%q %q: problem = %+v, want one on %s saying %q", tc.amount, tc.currency, problem, tc.target, tc.says)
 		}
@@ -98,11 +111,11 @@ func TestAnAmountIsReadInItsCurrencysMinorUnits(t *testing.T) {
 }
 
 func TestAnOpenDealWithAPastCloseDateIsAProblem(t *testing.T) {
-	_, problem := testDealStages().checkCells(map[string]string{dealTargetStage: "Qualified", dealTargetCloseDate: "2026-07-03"}, nil)
+	_, problem := firstOf(testDealStages().checkCells(map[string]string{dealTargetStage: "Qualified", dealTargetCloseDate: "2026-07-03"}, nil))
 	if problem == nil || problem.Target != dealTargetCloseDate || !strings.Contains(problem.Message, "open deal") {
 		t.Fatalf("problem = %+v, want the past date refused on an open deal", problem)
 	}
-	if _, problem = testDealStages().checkCells(map[string]string{dealTargetStage: "Qualified", dealTargetCloseDate: "03/07/2026"}, nil); problem == nil ||
+	if _, problem = firstOf(testDealStages().checkCells(map[string]string{dealTargetStage: "Qualified", dealTargetCloseDate: "03/07/2026"}, nil)); problem == nil ||
 		!strings.Contains(problem.Message, "YYYY-MM-DD") {
 		t.Fatalf("problem = %+v, want a date in another shape refused with the shape", problem)
 	}
@@ -110,13 +123,13 @@ func TestAnOpenDealWithAPastCloseDateIsAProblem(t *testing.T) {
 
 func TestAClosedDealMayCloseInThePast(t *testing.T) {
 	cells := map[string]string{dealTargetStage: "Lost", dealTargetCloseDate: "2025-06-30", dealTargetLostReason: "Too expensive"}
-	typed, problem := testDealStages().checkCells(cells, nil)
+	typed, problem := firstOf(testDealStages().checkCells(cells, nil))
 	want := openapi_types.Date{Time: time.Date(2025, 6, 30, 0, 0, 0, 0, time.UTC)}
 	if problem != nil || typed[dealTargetCloseDate] != want {
 		t.Fatalf("typed = %v, problem = %+v; want the past date kept on a lost deal", typed, problem)
 	}
 	delete(cells, dealTargetLostReason)
-	if _, problem = testDealStages().checkCells(cells, nil); problem == nil || problem.Target != dealTargetLostReason {
+	if _, problem = firstOf(testDealStages().checkCells(cells, nil)); problem == nil || problem.Target != dealTargetLostReason {
 		t.Fatalf("problem = %+v, want a lost deal without its reason refused on lost_reason", problem)
 	}
 }
@@ -125,17 +138,51 @@ func TestAClosedDealWithACloseDateAfterTodayIsRefusedAndTodayIsNot(t *testing.T)
 	stages := testDealStages()
 	for _, stage := range []string{"Won", "Lost"} {
 		fields := map[string]string{dealTargetPipeline: "Sales", dealTargetStage: stage, dealTargetCloseDate: "2026-07-05", dealTargetLostReason: "price"}
-		_, problem := stages.checkCells(fields, nil)
+		_, problem := firstOf(stages.checkCells(fields, nil))
 		if problem == nil || problem.Why.Code != migration.ReasonCloseDateFuture {
 			t.Errorf("%s with a close date tomorrow: problem = %+v, want close_date_future", stage, problem)
 		}
 		fields[dealTargetCloseDate] = "2026-07-04"
-		if _, problem := stages.checkCells(fields, nil); problem != nil {
+		if _, problem := firstOf(stages.checkCells(fields, nil)); problem != nil {
 			t.Errorf("%s closed today: problem = %+v, want it accepted", stage, problem)
 		}
 	}
 	open := map[string]string{dealTargetPipeline: "Sales", dealTargetStage: "Qualified", dealTargetCloseDate: "2026-07-05"}
-	if _, problem := stages.checkCells(open, nil); problem != nil {
+	if _, problem := firstOf(stages.checkCells(open, nil)); problem != nil {
 		t.Errorf("an open deal's future close date: problem = %+v, want it accepted", problem)
+	}
+}
+
+// A deal row with its amount and its close date both wrong names both cells.
+func TestADealRowNamesEveryCellAtFault(t *testing.T) {
+	fields := map[string]string{dealTargetStage: "Qualified", dealTargetAmount: "1.234,56", dealTargetCurrency: "EUR", dealTargetCloseDate: "31.03.2027"}
+	typed, problems := testDealStages().checkCells(fields, nil)
+	if typed != nil || len(problems) != 2 || problems[0].Target != dealTargetAmount || problems[1].Target != dealTargetCloseDate {
+		t.Fatalf("typed = %v, problems = %+v; want the amount and the close date refused", typed, problems)
+	}
+}
+
+// A close date past the horizon is no refusal, since the row's reader alone
+// knows it is wrong. The row lands and the warning asks them to check it.
+func TestAFarCloseDateLandsWithAWarning(t *testing.T) {
+	stages := testDealStages()
+	horizon := importToday.AddDate(closeDateHorizonYears, 0, 0).Format("2006-01-02")
+	for date, warned := range map[string]bool{"9999-12-31": true, horizon: false, "2027-03-31": false, "31.03.2027": false} {
+		fields := map[string]string{dealTargetStage: "Qualified", dealTargetCloseDate: date}
+		if _, problem := firstOf(stages.checkCells(fields, nil)); date != "31.03.2027" && problem != nil {
+			t.Errorf("%s: problem = %+v, want the row to land", date, problem)
+		}
+		warning := stages.farCloseDate(fields)
+		if (warning != nil) != warned {
+			t.Errorf("%s: warning = %+v, want one: %v", date, warning, warned)
+		}
+		if warning != nil && (warning.Why.Code != migration.ReasonCloseDateFar || !strings.Contains(warning.Message, "more than 50 years away")) {
+			t.Errorf("%s: warning = %+v, want the date called more than 50 years away", date, warning)
+		}
+	}
+	w := &csvWriters{object: migration.ObjectDeal, dealStages: stages, columns: map[string]string{"Close": dealTargetCloseDate}}
+	got := w.farCloseDateWarning(migration.Row{ExternalID: "D-1", Line: 5, Fields: map[string]any{dealTargetCloseDate: "9999-12-31"}})
+	if len(got) != 1 || got[0].Column != "Close" || got[0].Line != 5 || got[0].Kind != "" {
+		t.Errorf("warning = %+v, want one on the file's Close column of line 5, of no skipping kind", got)
 	}
 }

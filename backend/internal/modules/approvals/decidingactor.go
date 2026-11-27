@@ -142,7 +142,7 @@ func agentMayDecide(ctx context.Context, p principal.Principal, a row, approve b
 // decidable() applies to a self-only kind.
 //
 // A row with no passport was made by no credential. attributableStager admits
-// only the server and the product's own job acting for a named person, and
+// only the server and the product's own job acting for a named colleague, and
 // that job does not approve what it staged. A row with no recorded human is a
 // server proposal: the unattended policy apply, bounded by the owner's own
 // authority.
@@ -153,7 +153,7 @@ func agentReleasesOnlyItsHumansProposal(p principal.Principal, a row, own ownRel
 			apperrors.ErrPermissionDenied)
 	}
 	if a.PassportID == nil && p.PassportID == ids.Nil && a.ProposedBy != "" && a.ProposedBy == p.ID {
-		return fmt.Errorf("this job proposed the action, so it does not approve it; the person it acts for "+
+		return fmt.Errorf("this job proposed the action, so it does not approve it; the colleague it acts for "+
 			"answers it: %w", apperrors.ErrPermissionDenied)
 	}
 	if a.PassportID != nil && (own == ownReleaseRefused || a.OnBehalfOf == nil) {

@@ -131,7 +131,7 @@ type SendEmailInput struct {
 	// into a scheduled payload: the draft is gone once the schedule commits.
 	MailDraftID ids.UUID
 	// ResentFrom names the bounced delivery this message repeats, zero on every
-	// other send. It is set by the one caller that resends a bounce, and it
+	// other send. bounceresend.Service sets it when it resends a bounce, and it
 	// reaches the delivery row so a bounce cannot be sent again twice.
 	ResentFrom ids.UUID
 }

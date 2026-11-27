@@ -226,6 +226,7 @@ type Handlers struct {
 	Resend *Service
 }
 
+// SendBouncedMessageAgain sends a bounced email again to its corrected address.
 func (h Handlers) SendBouncedMessageAgain(w http.ResponseWriter, r *http.Request, id crmcontracts.Id) {
 	if h.Resend == nil {
 		httperr.NotImplemented(w, r, "SendBouncedMessageAgain")

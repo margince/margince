@@ -72,8 +72,8 @@ export const MoreThanTheVisibleCards: Story = {
 
 const noop = () => undefined;
 
-// The facts line as the page draws it: the date, the agenda and the badge,
-// with the view dial at its far end.
+// The facts line as the page draws it: the date and when Margince prepared
+// the brief, over the agenda. The view dial stands at its far end.
 export const Briefed: Story = {
   args: {
     ...CompleteAgenda.args,
@@ -83,6 +83,10 @@ export const Briefed: Story = {
   play: ({ canvasElement }) => expectDialPlacement(canvasElement),
 };
 export const BriefedPhone: Story = { ...Briefed, tags: ["uat-phone"] };
+export const BriefedDark: Story = {
+  ...Briefed,
+  globals: { theme: "dark" },
+};
 
 const categories: WorklistItem["category"][] = [
   "customer_waiting",

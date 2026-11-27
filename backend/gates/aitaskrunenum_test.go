@@ -19,13 +19,10 @@ package gates
 // wedged consumer group rather than as a validation error.
 
 import (
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
 	"testing"
-
-	"gopkg.in/yaml.v3"
 
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -107,7 +104,7 @@ func crmYAMLSchemas(t *testing.T) map[string]crmYAMLSchema {
 	if err != nil {
 		t.Fatalf("reading the contract: %v", err)
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	return doc.Components.Schemas
@@ -146,7 +143,7 @@ func aiTaskPayloadEnum(t *testing.T, property string) []string {
 	if err != nil {
 		t.Fatalf("reading the internal payload contract: %v", err)
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing the internal payload contract: %v", err)
 	}
 	schema, ok := doc.Components.Schemas["InternalEventAiTaskStateChanged"]
@@ -169,7 +166,7 @@ func aiTaskPayloadEnum(t *testing.T, property string) []string {
 // for the column.
 func aiTaskRunCheckValues(t *testing.T, column string) []string {
 	t.Helper()
-	matches, err := filepath.Glob("migrations/core/*_ai_task_run.up.sql")
+	matches, err := gatekit.Glob("migrations/core/*_ai_task_run.up.sql")
 	if err != nil || len(matches) != 1 {
 		t.Fatalf("expected exactly one ai_task_run migration, found %v (err %v)", matches, err)
 	}

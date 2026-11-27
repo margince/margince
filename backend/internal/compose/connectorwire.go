@@ -58,5 +58,6 @@ func toContractConnection(v capture.ConnectionView) crmcontracts.CaptureConnecti
 	c.NextSyncDueAt = v.NextSyncDueAt
 	bf := backfillStatusPayload(v.Backfill)
 	c.Backfill = &bf
+	c.UnreadPeriod = capturehealth.UnreadPeriodOf(v.UnreadFrom, v.UnreadTo)
 	return c
 }

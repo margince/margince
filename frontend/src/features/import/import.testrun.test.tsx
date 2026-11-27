@@ -556,6 +556,39 @@ describe("the test run", () => {
     expect(within(row).getByText("Invalid value")).toBeVisible();
   });
 
+  it("counts a row with two invalid cells once and lists both cells", async () => {
+    const user = userEvent.setup();
+    const twoFaults = {
+      ...bundleReportFixture,
+      issues: [
+        ...bundleReportFixture.issues,
+        {
+          line: 3,
+          file: "companies.csv",
+          column: "Employees",
+          kind: "invalid_value",
+          value: "12",
+          reason: "Employees “12” is not one of 1-10, 11-50.",
+        },
+      ],
+    };
+    stubRoutes({ [REPORT]: () => jsonResponse(twoFaults) });
+    await renderAtTestRun(user);
+    expect(
+      await screen.findByText("1 row has invalid values and will be skipped"),
+    ).toBeVisible();
+    expect(
+      within(screen.getByRole("row", { name: /Gold/ })).getByText(
+        "Row 3 · Tier",
+      ),
+    ).toBeVisible();
+    expect(
+      within(screen.getByRole("row", { name: /“12”/ })).getByText(
+        "Row 3 · Employees",
+      ),
+    ).toBeVisible();
+  });
+
   it("notes closed deals imported as history", async () => {
     const user = userEvent.setup();
     stubRoutes({

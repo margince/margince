@@ -291,6 +291,9 @@ func (e *BriefEngine) LatestRun(ctx context.Context, now time.Time) (BriefRun, e
 		}
 		run, err = scanRun(tx.QueryRow(ctx, runSelect+`
 			WHERE user_id = $1 AND local_day = $2`, userID, day))
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return NoBriefYetError{}
+		}
 		if err != nil {
 			return err
 		}

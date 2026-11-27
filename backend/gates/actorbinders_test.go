@@ -13,6 +13,7 @@ package gates
 import (
 	"go/ast"
 	"io/fs"
+	"slices"
 	"strings"
 	"testing"
 
@@ -35,10 +36,8 @@ type binderSet map[string][]actorBinder
 
 // add records b for its function, once, and reports whether it was new.
 func (set binderSet) add(b actorBinder) bool {
-	for _, known := range set[b.name] {
-		if known == b {
-			return false
-		}
+	if slices.Contains(set[b.name], b) {
+		return false
 	}
 	set[b.name] = append(set[b.name], b)
 	return true

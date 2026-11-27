@@ -244,7 +244,7 @@ func readParityContract(t *testing.T) parityContract {
 		} `yaml:"tags"`
 		Paths map[string]map[string]yaml.Node `yaml:"paths"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing %s: %v", contractDocument, err)
 	}
 	contract := parityContract{
@@ -501,7 +501,11 @@ func summarizeParity(scan webScan, ops []parityOperation) parityReport {
 	return report
 }
 
+// Sequential under -update-mcp-parity, which makes it rewrite the parity page.
 func TestTheMCPParityCatalogIsPublished(t *testing.T) {
+	if !*updateMCPParity {
+		t.Parallel()
+	}
 	contract := readParityContract(t)
 	routes := contract.routeMethods()
 	scan, strays, err := scanWebApp(routes)
@@ -948,7 +952,7 @@ func TestAHumanOnlyDeclarationOutranksATool(t *testing.T) {
 	t.Parallel()
 	var op parityContractOp
 	declared := "x-mcp-tool: { verb: read_view, tier: auto_execute, scope: read }\nx-agent-access: human-only\nx-human-only-reason: pending\n"
-	if err := yaml.Unmarshal([]byte(declared), &op); err != nil {
+	if err := unmarshalYAML([]byte(declared), &op); err != nil {
 		t.Fatalf("decoding the planted operation: %v", err)
 	}
 	if got := parityStateOf(op); got != statePending {

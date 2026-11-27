@@ -67,7 +67,7 @@ var preservedResetTables = map[string]bool{
 	// non-tenant-scoped DELETE would hit the activity_kind_fkey and
 	// activity_channel_provider_fkey constraints and abort the whole sweep
 	// transaction outright.
-	"activity_kind": true, "channel_provider": true, "language": true,
+	"activity_kind": true, "channel_provider": true, "language": true, //nolint:goconst // a table name, not the column of the same spelling
 	// The two administered lead vocabularies — sources and disqualification
 	// reasons — are installation configuration on the same footing as
 	// `setting`: the migration seeds the built-ins and an administrator shapes

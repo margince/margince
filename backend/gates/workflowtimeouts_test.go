@@ -31,8 +31,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -74,7 +72,7 @@ func workflowFiles(t *testing.T) []string {
 	t.Helper()
 	var files []string
 	for _, ext := range []string{"*.yml", "*.yaml"} {
-		found, err := filepath.Glob(filepath.Join(workflowDir, ext))
+		found, err := gatekit.Glob(filepath.Join(workflowDir, ext))
 		if err != nil {
 			t.Fatalf("listing %s workflows: %v", ext, err)
 		}
@@ -98,7 +96,7 @@ func readWorkflowJobs(t *testing.T, path string) workflowJobs {
 		t.Fatalf("reading %s: %v", path, err)
 	}
 	var wf workflowJobs
-	if err := yaml.Unmarshal(raw, &wf); err != nil {
+	if err := unmarshalYAML(raw, &wf); err != nil {
 		t.Fatalf("%s: %v", path, err)
 	}
 	if len(wf.Jobs) == 0 {
@@ -341,7 +339,7 @@ func compositeActionFiles(t *testing.T) []string {
 	// GitHub honours either, so reading one would leave a whole class of action
 	// unscanned.
 	for _, name := range []string{"action.yml", "action.yaml"} {
-		matched, err := filepath.Glob(filepath.Join(actionDir, "*", name))
+		matched, err := gatekit.Glob(filepath.Join(actionDir, "*", name))
 		if err != nil {
 			t.Fatalf("listing composite actions: %v", err)
 		}
@@ -364,7 +362,7 @@ func readCompositeSteps(t *testing.T, path string) []workflowStep {
 			Steps []workflowStep `yaml:"steps"`
 		} `yaml:"runs"`
 	}
-	if err := yaml.Unmarshal(raw, &action); err != nil {
+	if err := unmarshalYAML(raw, &action); err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
 	return action.Runs.Steps

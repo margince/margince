@@ -51,13 +51,12 @@ func writeIntroRequest(
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, err
 	}
-	written, err := introFromModel(ctx, lane, facts, teamRules)
-	if err != nil {
-		// Degrading to the floor IS the answer: the reader gets a sendable
-		// message rather than an error about a lane they cannot configure.
-		return wireIntroRequest(floor, crmcontracts.WrittenByDeterministic, facts), nil
+	if written, modelErr := introFromModel(ai.WithFloor(ctx), lane, facts, teamRules); modelErr == nil {
+		return wireIntroRequest(written, crmcontracts.WrittenByModel, facts), nil
 	}
-	return wireIntroRequest(written, crmcontracts.WrittenByModel, facts), nil
+	// A failed model draft degrades to the floor: the reader gets a sendable
+	// message rather than an error about a lane they cannot configure.
+	return wireIntroRequest(floor, crmcontracts.WrittenByDeterministic, facts), nil
 }
 
 // introFromModel writes the ask and checks what came back.

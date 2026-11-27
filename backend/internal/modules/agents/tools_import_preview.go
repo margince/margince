@@ -44,7 +44,7 @@ func (t previewImport) Spec() mcp.ToolSpec {
 			"object":{"type":"string","enum":` + importObjectEnumJSON() + `},
 			"csv":{"type":"string","description":"The file's contents, header row first."},
 			"mapping":{"type":"object","additionalProperties":{"type":"string"},
-			  "description":"Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column — a file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a CONTACT run, map the company column to \"company_name\" to link each contact to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the contact still lands."},
+			  "description":"Source column name → field name. Omit to accept the proposal this call would make, which it will only make if it can place EVERY column. A file whose headers are spelled the way a human would (\"Company\", \"City\") matches no field by name and is refused with the list, so send a mapping for those. Map a column to \"id\" to name the company a row corrects: that row updates it instead of creating one. A row whose \"id\" is empty is a new company, so one file may both correct and add. On a CONTACT run, map the company column to \"company_name\" to link each contact to their employer: the company must already be in the CRM, so import companies first, and a name matching none or matching two links nothing while the contact still lands."},
 			"files":{"type":"array","minItems":1,"maxItems":` + strconv.Itoa(len(importObjectEnum)) + `,
 			  "description":"Several files as one run, in place of object, csv and mapping.",
 			  "items":{"type":"object","required":["name","object","csv"],"properties":{
@@ -57,7 +57,7 @@ func (t previewImport) Spec() mcp.ToolSpec {
 			"on_broken_link":{"type":"string","enum":["` + importOnBrokenLinkSkipRow + `","` + importOnBrokenLinkDropLink + `"],
 			  "description":"A link naming no record: skip_row (default) leaves the row out, drop_link lands it unlinked."},
 			"on_duplicate":{"type":"string","enum":["` + importOnDuplicateCreate + `","` + importOnDuplicateSkip + `"],
-			  "description":"A record already here: create (default) lands a second and files the pair for review; skip leaves the incumbent. For contacts an address already held is refused either way — an email is a real key, a company name is not."}},
+			  "description":"A record already here: create (default) lands a second and files the pair for review; skip leaves the incumbent. For contacts an address already held is refused either way: an email is a real key, a company name is not."}},
 			"additionalProperties":false}`),
 		UnkeyedArguments: map[string]string{
 			"$.mapping":             "the mapping is keyed by the uploaded file's own column headers",
@@ -155,7 +155,7 @@ var busyRunCopy = map[string]string{
 	httperr.SourceBusyCode: "import run %s of this source_name is still writing. read_import that run " +
 		"until its state is complete or failed, then preview again",
 	httperr.AgentBusyCode: "import run %s is this agent's test of another file, still running. read_import that run " +
-		"(view report) until its state is no longer validating (awaiting_approval, pending or cancelled), " +
+		"(view report) until its state is no longer `validating` (`awaiting_approval`, `pending` or `cancelled`), " +
 		"then preview again",
 }
 
