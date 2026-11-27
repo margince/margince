@@ -29,7 +29,6 @@ import (
 	"github.com/margince/margince/backend/internal/compose/claims"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -197,7 +196,7 @@ func (s *GrowthFitService) Get(ctx context.Context, companyID ids.CompanyID, for
 	if err != nil {
 		return zero, err
 	}
-	lang := identity.ReaderLanguageForPrompt(ctx, s.pool)
+	lang := readerLanguage(ctx, s.pool)
 	fingerprint, err := growthFitFingerprint(in, s.routingVersion(), offering, lang)
 	if err != nil {
 		return zero, err

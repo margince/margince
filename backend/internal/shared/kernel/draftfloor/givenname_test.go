@@ -14,6 +14,8 @@ func TestAGreetingUsesTheGivenNameInEitherNameOrder(t *testing.T) {
 		"Sofia Meier":     "Sofia",
 		"Nguyen":          "Nguyen",
 		"Anna Le":         "Anna",
+		"Thai Nguyen":     "Thai",
+		"Thai Jones":      "Thai",
 		"":                "",
 	} {
 		if got := GreetingName("", display); got != want {

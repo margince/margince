@@ -414,7 +414,7 @@ func TestAPlainChangeReadsAsOneAction(t *testing.T) {
 		"done and a due date": {`{"is_done": false, "due_at": null}`, `{"is_done": true, "due_at": "2026-12-01"}`, "magic.action.fields_changed"},
 	} {
 		t.Run(name, func(t *testing.T) {
-			row := auditRow("system:calendar", tc.before, tc.after, `{}`, time.Now())
+			row := auditRow("system:calendar", tc.before, tc.after, `{}`, clocktest.Now(t))
 			row.EntityType = typeActivity
 			line, _, ok := lineOf(unmasked(t), row)
 			if !ok {

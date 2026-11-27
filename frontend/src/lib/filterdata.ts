@@ -304,9 +304,14 @@ export function optionWords(
   option: string,
   t: (key: MessageKey) => string,
 ): string {
+  const word = `${option.charAt(0).toUpperCase()}${option.slice(1)}`;
   for (const noun of OPTION_NOUNS) {
-    const key = `${noun}.${field}.${option}`;
-    if (isMessageKey(key)) return t(key);
+    // The shapes the catalogs use: `lead.status.engaged`, `deals.statusWon`,
+    // and a company's status worded as its lifecycle.
+    const keys = [`${noun}.${field}.${option}`, `${noun}s.${field}${word}`];
+    if (field === "status") keys.push(`${noun}.lifecycle.${option}`);
+    const found = keys.find(isMessageKey);
+    if (found) return t(found);
   }
   return option;
 }

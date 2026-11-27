@@ -40,4 +40,5 @@ it("greets a Vietnamese colleague by the given name, written last", () => {
   expect(greetingNameOf({ display_name: "Đặng Thu Hà" })).toBe("Hà");
   expect(greetingNameOf({ display_name: "Anna Le" })).toBe("Anna");
   expect(greetingNameOf({ display_name: "Nguyen" })).toBe("Nguyen");
+  expect(greetingNameOf({ display_name: "Thai Nguyen" })).toBe("Thai");
 });

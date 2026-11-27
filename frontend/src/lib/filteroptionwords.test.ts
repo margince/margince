@@ -13,5 +13,11 @@ it("words a closed value as the record page does, and leaves an unknown one as i
     translate("vi", "lead.status.engaged"),
   );
   expect(optionWords("status", "engaged", vi)).not.toBe("engaged");
+  expect(optionWords("status", "won", vi)).toBe(
+    translate("vi", "deals.statusWon"),
+  );
+  expect(optionWords("status", "customer", vi)).toBe(
+    translate("vi", "company.lifecycle.customer"),
+  );
   expect(optionWords("status", "no_such_value", vi)).toBe("no_such_value");
 });

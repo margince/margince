@@ -105,6 +105,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendentryslots_test.go` | H3 | A unit's entry names a slot and a glyph, and a panel names a slot, and two sides must agree on each. |
 | `frontendfilterfieldlabels_test.go` | H3 | Every core filter field the engine can name has a word on the builder screen. |
 | `frontendfiscalyear_test.go` | H1 | A fiscal year's label is spelled twice. |
+| `frontendgivenname_test.go` | H3 | The brief's greeting and a drafted message must name a colleague by the same word. |
 | `frontendidlebase_test.go` | H3 | The deal board and the server must measure silence from the same timestamp, or a card ages differently from the list that filed the deal stalled. |
 | `frontendimportmirrors_test.go` | H2 | The import screen checks a source name before the server does, and knows a draft has ended by the run-state code. |
 | `frontendimportnamespace_test.go` | H3 | The browser parses the CSV importer's source stamp to say a record was imported, and from which upload. |

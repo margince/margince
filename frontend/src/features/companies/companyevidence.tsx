@@ -11,7 +11,7 @@ import {
 } from "../../design-system/atoms";
 import { Heading } from "../../design-system/heading";
 import { formatDateTimeAbbrev, formatNumber } from "../../format/format";
-import { type Locale, useLocale, useT } from "../../i18n";
+import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { isEntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
@@ -177,7 +177,11 @@ export function EvidenceModal({
           )}
           {shown.gaps && shown.gaps.length > 0 && (
             <p className="co-evidence-gaps">
-              {t("co.evidence.gaps", { fields: shown.gaps.join(", ") })}
+              {t("co.evidence.gaps", {
+                fields: shown.gaps
+                  .map((field) => evidenceFieldWord(field, t))
+                  .join(", "),
+              })}
             </p>
           )}
         </div>
@@ -294,6 +298,22 @@ function isFollowable(url: string): boolean {
   }
 }
 
+// The identifying fields a receipt names, in the reader's words. A field none
+// of these names reads as the History tab names it.
+const EVIDENCE_FIELD_WORDS: Readonly<Record<string, MessageKey>> = {
+  source_url: "co.evidence.field.source_url",
+  excerpt: "co.evidence.field.excerpt",
+  actor: "co.evidence.field.actor",
+  connector: "co.evidence.field.connector",
+  import: "co.evidence.field.import",
+  produced_by: "co.evidence.field.produced_by",
+};
+
+function evidenceFieldWord(name: string, t: Translator): string {
+  const key = EVIDENCE_FIELD_WORDS[name];
+  return key ? t(key) : historyFieldLabel(name, t);
+}
+
 /** The identifying fields this provenance kind owes, rendered as given. */
 function EvidenceIdentity({
   identity,
@@ -312,7 +332,7 @@ function EvidenceIdentity({
     <dl className="co-evidence-identity">
       {entries.map(([name, value]) => (
         <div key={name}>
-          <dt>{historyFieldLabel(name, t)}</dt>
+          <dt>{evidenceFieldWord(name, t)}</dt>
           <dd>
             {name === "source_url" && isFollowable(String(value)) ? (
               <a href={String(value)} target="_blank" rel="noreferrer">

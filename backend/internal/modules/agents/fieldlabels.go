@@ -287,7 +287,7 @@ var fieldLabelsByLang = map[textlang.Lang]map[string]string{
 		"occurred_precision":           "Độ chính xác của thời gian",
 		"owner_id":                     "Người chịu trách nhiệm",
 		"product_id":                   "Sản phẩm",
-		"greeting_register":            "Cách chào",
+		"greeting_register":            "Cách xưng hô",
 		"relationship_mark":            "Nhãn quan hệ",
 		"parent_company_id":            "Công ty mẹ",
 		"partner_attribution":          "Ghi công đối tác",

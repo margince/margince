@@ -4780,6 +4780,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.evidence.verifiedAt": "Xác nhận thủ công lúc {when}",
   "co.evidence.confidence": "Độ tin cậy của mô hình {percent}%",
   "co.evidence.gaps": "Chưa ghi nhận: {fields}.",
+  "co.evidence.field.source_url": "Nguồn",
+  "co.evidence.field.excerpt": "Trích đoạn",
+  "co.evidence.field.actor": "Người ghi nhận",
+  "co.evidence.field.connector": "Kết nối",
+  "co.evidence.field.import": "Lần nhập",
+  "co.evidence.field.produced_by": "Tạo bởi",
   "co.evidence.kind.site_read": "Đọc từ trang web công ty",
   "co.evidence.kind.connector": "Từ hệ thống đã kết nối",
   "co.evidence.kind.human": "Nhập thủ công",
@@ -6818,7 +6824,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "bulk.ownerPick": "Chọn người phụ trách",
   "bulk.assign": "Giao người phụ trách",
   "bulk.archive": "Lưu trữ",
-  "bulk.titleReassign": "Đổi người chịu trách nhiệm của {unit} đã chọn?",
+  "bulk.titleReassign": "Đổi người phụ trách của {unit} đã chọn?",
   "bulk.titleUndo": "Hoàn tác thay đổi với {unit} này?",
   "bulk.confirmUndo": "Hoàn tác thay đổi",
   "bulk.titleArchive": "Chuyển {unit} đã chọn vào kho lưu trữ?",
@@ -12689,7 +12695,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "overnightGrant.title": "Chuẩn bị qua đêm",
   "overnightGrant.label": "Chuẩn bị sẵn Bản tin sáng trong đêm",
   "overnightGrant.help":
-    "Xếp hạng các deal và email trong ngày rồi soạn ghi chú cho Bản tin sáng của bạn. Margince hành động với tư cách của bạn, chỉ xem được những gì bạn thấy và không bao giờ gửi email.",
+    "Xếp hạng deal và thư hôm nay, rồi ghi chú cho Bản tin sáng của bạn. Margince hành động dưới danh nghĩa bạn, chỉ thấy những gì bạn được thấy và không bao giờ gửi thư.",
   "overnightGrant.dangerTitle": "Trợ lý AI qua đêm sẽ không chạy",
   "overnightGrant.danger":
     "Trợ lý AI không thể đọc hay thêm ghi chú vào Bản tin sáng. Các hồ sơ, Danh sách công việc và tổng kết tuần theo lịch vẫn sử dụng được.",
@@ -13885,7 +13891,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   // provisioning fact (A97, invite-only): what to do when there is no sign-up
   // link.
   "auth.loginSub": "Tài khoản do quản trị viên tạo. Không hỗ trợ tự đăng ký.",
-  "auth.coreGreeting": "Đăng nhập Margince",
+  "auth.coreGreeting": "Đây là Margince.",
   "auth.corePurpose": "Tập trung chốt deal. Những việc còn lại, Margince lo.",
   "auth.coreDevelopment": "AI cho chế độ phát triển",
   "auth.coreModeDevelopment": "Chế độ phát triển ngoại tuyến",
@@ -15027,7 +15033,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.retire.body":
     "Trường sẽ bị ẩn khỏi hồ sơ mới và bộ lọc. Giá trị đã lưu vẫn được giữ. Không thể hoàn tác việc lưu trữ.",
   "cf.retire.lists":
-    "Các danh sách tự cập nhật này lọc theo trường này. Các danh sách này vẫn hoạt động với giá trị đã lưu, và mỗi danh sách sẽ nhắc người phụ trách thay điều kiện lọc:",
+    "Các danh sách tự cập nhật này lọc theo trường này. Các danh sách này vẫn hoạt động với giá trị đã lưu, và mỗi danh sách sẽ nhắc người quản lý thay điều kiện lọc:",
   "cf.retire.unseen_one":
     "{count} danh sách tự cập nhật khác mà bạn không có quyền mở cũng lọc theo trường này.",
   "cf.retire.unseen_other":
@@ -16106,7 +16112,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.voice.worksDocs":
     "Bản đề xuất, bài viết và các tài liệu khác do chính bạn soạn.",
   "settings.voice.worksTranscripts":
-    "Bản ghi lời thoại cuộc gọi hoặc cuộc họp (.vtt, .srt, .json hoặc tệp văn bản xuất ra). Margince sẽ hỏi đâu là tên của bạn để chỉ giữ lại phần lời thoại của bạn.",
+    "Bản chép lời cuộc gọi hoặc cuộc họp (.vtt, .srt, .json hoặc bản xuất văn bản). Margince hỏi bạn là người nói nào và chỉ giữ lượt nói của bạn.",
   "settings.voice.worksNot":
     "Không dùng văn bản do người khác viết hoặc bản nháp do AI tạo, vì chúng sẽ làm lệch phong cách viết của bạn.",
   "settings.voice.floorNote":
@@ -19308,7 +19314,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Có ai đó tạo danh sách tự cập nhật hoặc danh sách chọn tay.",
   "webhooks.event.list.updated.label": "Đã đổi cài đặt danh sách",
   "webhooks.event.list.updated.when":
-    "Tên, mục đích, bộ lọc, chia sẻ, nhóm hoặc người phụ trách của danh sách thay đổi.",
+    "Tên, mục đích, bộ lọc, chia sẻ, nhóm hoặc người quản lý của danh sách thay đổi.",
   "webhooks.event.list.archived.label": "Đã chuyển danh sách vào kho lưu trữ",
   "webhooks.event.list.archived.when":
     "Một danh sách được chuyển vào kho lưu trữ.",
@@ -20689,13 +20695,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chia sẻ danh sách không cho phép ai xem hồ sơ mà họ vốn không có quyền xem.",
   "lists.teamLabel": "Nh\u00f3m n\u00e0o",
   "lists.team.allMine": "Mọi nhóm của tôi",
-  "lists.team.allOwners": "Mọi nhóm của người chịu trách nhiệm",
+  "lists.team.allOwners": "Mọi nhóm của người phụ trách",
   "lists.audience.yourTeams": "Nhóm của bạn",
   "lists.audience.ownerTeams": "Nhóm của người phụ trách",
-  "lists.audience.ownerOnly": "Người chịu trách nhiệm",
-  "lists.audience.stewardOnly": "Người phụ trách",
-  "lists.audience.youAndSteward": "Bạn và người phụ trách",
-  "lists.audience.ownerAndSteward": "Người chịu trách nhiệm và người phụ trách",
+  "lists.audience.ownerOnly": "Người phụ trách",
+  "lists.audience.stewardOnly": "Người quản lý",
+  "lists.audience.youAndSteward": "Bạn và người quản lý",
+  "lists.audience.ownerAndSteward": "Người phụ trách và người quản lý",
   "lists.audience.unknownTeam":
     "M\u1ed9t nh\u00f3m b\u1ea1n kh\u00f4ng xem \u0111\u01b0\u1ee3c",
   "lists.health.unavailable": "Bản ghi không khả dụng",
@@ -20738,7 +20744,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.filterLine": "Bộ lọc: {sentence}",
   "lists.head.exported_one": "{count} lần, lần gần nhất vào {when}",
   "lists.head.exported_other": "{count} lần, lần gần nhất vào {when}",
-  "lists.fact.steward": "Người phụ trách",
+  "lists.fact.steward": "Người quản lý",
   "lists.fact.exported": "Đã xuất",
   "lists.archived.title": "Danh sách này đang trong kho lưu trữ",
   "lists.archived.body":
@@ -20746,21 +20752,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "lists.invalid.title":
     "B\u1ed9 l\u1ecdc n\u00e0y kh\u00f4ng c\u00f2n d\u00f9ng \u0111\u01b0\u1ee3c",
   "lists.invalid.body":
-    "Một trường trong bộ lọc đã thay đổi. Người phụ trách danh sách có thể sửa bộ lọc trong trình tạo bộ lọc.",
+    "Một trường trong bộ lọc đã thay đổi. Người quản lý danh sách có thể sửa bộ lọc trong trình tạo bộ lọc.",
   "lists.unavailable.title": "Các bản ghi này không khả dụng",
   "lists.unavailable.body":
     "Danh sách này chứa bản ghi do một tiện ích mở rộng thêm vào, và tiện ích đó chưa được cài đặt. Danh sách sẽ hoạt động lại khi tiện ích được cài đặt lại.",
   "lists.ownerless.title":
     "Kh\u00f4ng ai ph\u1ee5 tr\u00e1ch danh s\u00e1ch n\u00e0y",
   "lists.ownerless.body":
-    "Người phụ trách danh sách đã rời đi hoặc chưa từng được chỉ định. Thành viên có quyền sửa danh sách nên nhận phụ trách danh sách này.",
+    "Người quản lý danh sách đã rời đi hoặc chưa từng được chỉ định. Thành viên có quyền sửa danh sách nên nhận phụ trách danh sách này.",
   "lists.ownerless.takeOver": "Nh\u1eadn ph\u1ee5 tr\u00e1ch",
   "lists.retiredField.title":
     "B\u1ed9 l\u1ecdc n\u00e0y d\u00f9ng m\u1ed9t tr\u01b0\u1eddng \u0111\u00e3 ng\u1eebng s\u1eed d\u1ee5ng",
   "lists.retiredField.body_one":
-    "{fields} đã ngừng sử dụng. Danh sách vẫn hoạt động với các giá trị đã lưu, và trường đó không còn ghi nhận giá trị mới. Người phụ trách danh sách nên thay điều kiện đó trong trình tạo bộ lọc.",
+    "{fields} đã ngừng sử dụng. Danh sách vẫn hoạt động với các giá trị đã lưu, và trường đó không còn ghi nhận giá trị mới. Người quản lý danh sách nên thay điều kiện đó trong trình tạo bộ lọc.",
   "lists.retiredField.body_other":
-    "{fields} đã ngừng sử dụng. Danh sách vẫn hoạt động với các giá trị đã lưu, và trường đó không còn ghi nhận giá trị mới. Người phụ trách danh sách nên thay điều kiện đó trong trình tạo bộ lọc.",
+    "{fields} đã ngừng sử dụng. Danh sách vẫn hoạt động với các giá trị đã lưu, và trường đó không còn ghi nhận giá trị mới. Người quản lý danh sách nên thay điều kiện đó trong trình tạo bộ lọc.",
   "lists.members.title": "Th\u00e0nh vi\u00ean",
   "lists.members.loading": "\u0110ang t\u1ea3i th\u00e0nh vi\u00ean",
   "lists.members.emptyLive":

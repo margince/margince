@@ -23,7 +23,7 @@ const frontendGreetingName = "../frontend/src/format/greetingname.ts"
 
 var tsFamilyNameList = regexp.MustCompile(`(?s)VIETNAMESE_FAMILY_NAMES[^=]*=\s*new Set\(\[(.*?)\]\)`)
 
-var tsFamilyName = regexp.MustCompile(`"([a-z]+)"`)
+var tsFamilyName = regexp.MustCompile(`"([^"]+)"`)
 
 func TestTheFrontendFamilyNameListMatchesTheGoOne(t *testing.T) {
 	t.Parallel()

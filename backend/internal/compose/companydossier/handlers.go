@@ -14,7 +14,6 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -73,7 +72,7 @@ func (h Handlers) GetClaimEvidence(w http.ResponseWriter, r *http.Request,
 	// is written in, so a receipt opened off a German card answers in German.
 	receipt, err := EvidenceFor(r.Context(), h.svc.facts,
 		ids.From[ids.CompanyKind](ids.UUID(id)), entityType, entityID,
-		identity.ReaderLanguageForPrompt(r.Context(), h.svc.pool))
+		readerLanguage(r.Context(), h.svc.pool))
 	if err != nil {
 		httperr.Write(w, r, err)
 		return

@@ -371,6 +371,8 @@ const HUMAN_SENSE_KEYS: Record<string, readonly string[]> = {
     "worklist.scope.label",
     "progress.whoSetsGoals",
     "forecast.callAuthor",
+    "settings.voice.worksTranscripts",
+    "co.evidence.field.actor",
     // "Người tổ chức" is the meeting's organizer, a person.
     "meetingChange.line.details",
     "worklist.ask.changedInvitation",
