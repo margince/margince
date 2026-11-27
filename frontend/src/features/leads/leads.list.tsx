@@ -14,6 +14,7 @@ import { useRosterHint, useRosterPartial } from "../../components/entityref";
 import {
   type ListPage,
   type ListQuery,
+  type ListReach,
   ListTable,
   listFetchLimit,
   useListQuery,
@@ -92,6 +93,7 @@ export async function fetchLeadsPage(
   query: ListQuery,
   cursor: string | null,
   signal?: AbortSignal,
+  reach?: ListReach,
 ): Promise<ListPage<Lead>> {
   const data = unwrap(
     await api.GET("/leads", {
@@ -100,7 +102,8 @@ export async function fetchLeadsPage(
         query: {
           ...leadsQueryParams(query),
           cursor: cursor || undefined,
-          limit: listFetchLimit(query.perPage),
+          limit: listFetchLimit(query.perPage, reach),
+          offset: reach?.offset,
         },
       },
     }),
@@ -180,6 +183,7 @@ function LeadsWorkbench({
     initialSort: "",
     initialFilters: opensOnAll ? {} : { owner_id: viewerId },
     fetchPage: fetchLeadsPage,
+    readsAtOffset: true,
     // A refused dial the list can name is not asked for; it is named instead.
     enabled: (query) => namedRefusedDials(query, withheld).length === 0,
     // Board or table is this screen's own, so the codec must not read it as a

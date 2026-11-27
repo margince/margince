@@ -33,14 +33,25 @@ const shared = {
 // The server counted the list, so the last page is numbered though only the
 // first two are in hand.
 export const Counted: Story = {
-  args: { ...shared, current: 1, lastPage: 175, hasMore: true, endKnown: true },
+  args: { ...shared, current: 1, lastPage: 137, hasMore: true, endKnown: true },
 };
 
 export const CountedMiddle: Story = {
   args: {
     ...shared,
-    current: 90,
-    lastPage: 175,
+    current: 5,
+    lastPage: 137,
+    hasMore: true,
+    endKnown: true,
+  },
+};
+
+// The last page of a counted list: Next is off.
+export const CountedLast: Story = {
+  args: {
+    ...shared,
+    current: 137,
+    lastPage: 137,
     hasMore: true,
     endKnown: true,
   },
@@ -58,7 +69,7 @@ export const AskedPage: Story = {
   },
 };
 
-// No count: Previous and Next alone, since the pages in hand are not the list.
+// No count: the pages in hand, then a gap, since more follow.
 export const NotCounted: Story = {
   args: { ...shared, current: 2, lastPage: 2, hasMore: true },
 };
@@ -66,4 +77,9 @@ export const NotCounted: Story = {
 // Every row is in hand, so the pages are all there are.
 export const EveryRowInHand: Story = {
   args: { ...shared, current: 4, lastPage: 9, hasMore: false },
+};
+
+// Five pages or fewer: every page, no gap.
+export const ThreePages: Story = {
+  args: { ...shared, current: 2, lastPage: 3, hasMore: false },
 };

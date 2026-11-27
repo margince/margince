@@ -467,6 +467,7 @@ export function ListTable<Row>({
       hideShortChrome={hideShortChrome}
       onLoadMore={state.loadMore}
       total={state.total}
+      jumped={state.jumped}
       // The page size is part of the server query. Changing it re-asks the
       // server, so it lives in the ListQuery the fetchers read their `limit`
       // from, with no second slice on top.

@@ -273,7 +273,7 @@ describe("pagination", () => {
     // Page one is where a reader who has lost their place goes back to.
     // Walking there one Prev at a time is not going back.
     expect(pagerSlots(1, 6)).toEqual(["room", "room", 1, 2, 3, "gap", 6]);
-    expect(pagerSlots(4, 6)).toEqual([1, "gap", 3, 4, 5, "room", 6]);
+    expect(pagerSlots(4, 6)).toEqual([1, "gap", 3, 4, 5, 6, "room"]);
     expect(pagerSlots(6, 6)).toEqual([1, "gap", 4, 5, 6, "room", "room"]);
   });
 
@@ -281,41 +281,68 @@ describe("pagination", () => {
     for (const [current, lastPage] of [
       [1, 1],
       [1, 3],
+      [5, 5],
       [2, 6],
       [4, 6],
       [6, 6],
       [9, 40],
     ]) {
       expect(pagerSlots(current, lastPage)).toHaveLength(7);
+      expect(pagerSlots(current, lastPage, true)).toHaveLength(7);
     }
   });
 
   it("numbers the last page, so the strip says how long the list is", () => {
-    expect(pagerSlots(1, 175)).toEqual(["room", "room", 1, 2, 3, "gap", 175]);
-    expect(pagerSlots(90, 175)).toEqual([1, "gap", 89, 90, 91, "gap", 175]);
-    expect(pagerSlots(175, 175)).toEqual([
+    expect(pagerSlots(1, 137)).toEqual(["room", "room", 1, 2, 3, "gap", 137]);
+    expect(pagerSlots(5, 137)).toEqual([1, "gap", 4, 5, 6, "gap", 137]);
+    expect(pagerSlots(137, 137)).toEqual([
       1,
       "gap",
-      173,
-      174,
-      175,
+      135,
+      136,
+      137,
       "room",
       "room",
     ]);
   });
 
-  it("puts no gap before a last page that follows the window", () => {
-    expect(pagerSlots(1, 4)).toEqual(["room", "room", 1, 2, 3, "room", 4]);
+  it("shows every page of a list five pages long or shorter", () => {
+    for (const current of [1, 3, 5]) {
+      expect(pagerSlots(current, 5)).toEqual(["room", "room", 1, 2, 3, 4, 5]);
+    }
+    expect(pagerSlots(1, 4)).toEqual(["room", "room", 1, 2, 3, 4, "room"]);
     expect(pagerSlots(2, 3)).toEqual(["room", "room", 1, 2, 3, "room", "room"]);
-    expect(pagerSlots(1, 2)).toEqual([
+    expect(pagerSlots(1, 1)).toEqual([
       "room",
       "room",
       1,
-      2,
+      "room",
       "room",
       "room",
       "room",
     ]);
+  });
+
+  it("follows the pages in hand with a gap while the end is not known", () => {
+    expect(pagerSlots(1, 2, true)).toEqual([
+      "room",
+      "room",
+      1,
+      2,
+      "gap",
+      "room",
+      "room",
+    ]);
+    expect(pagerSlots(1, 8, true)).toEqual([
+      "room",
+      "room",
+      1,
+      2,
+      3,
+      "gap",
+      "room",
+    ]);
+    expect(pagerSlots(8, 8, true)).toEqual([1, "gap", 6, 7, 8, "gap", "room"]);
   });
 
   it("reaches page one from the strip rather than by walking Prev", async () => {

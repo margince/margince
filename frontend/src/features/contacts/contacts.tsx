@@ -127,6 +127,7 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
     key: CONTACTS_LIST_KEY,
     initialSort: CONTACTS_INITIAL_SORT,
     fetchPage: fetchContactsPage,
+    readsAtOffset: true,
   });
   const selection = useBulkSelection({
     rows: state.rows,

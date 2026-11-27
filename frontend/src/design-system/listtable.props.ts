@@ -10,6 +10,7 @@ import type {
   SortControl,
   ViewRow,
 } from "./listsurface";
+import type { JumpedRows } from "./listtable.paging";
 
 /** What a screen hands `ListTable`: its rows, its columns and its dials. */
 export type ListTableProps<Row> = Readonly<{
@@ -127,6 +128,11 @@ export type ListTableProps<Row> = Readonly<{
    * against "1-25 of 200 loaded so far". Undefined means not counted, not zero.
    */
   total?: number;
+  /**
+   * Rows read at an offset for a page past `rows`, for a list whose endpoint
+   * reads one. Present while the page is past `rows`; see `JumpedRows`.
+   */
+  jumped?: JumpedRows<Row>;
   /**
    * Rows per rendered page. The caller fetches a whole multiple of it, so pages
    * split where the fetch does. Read only with `onPerPage`.

@@ -90,13 +90,14 @@ export function ListTable<Row>({
   onLoadMore,
   hideShortChrome = false,
   total: serverTotal,
+  jumped,
   perPage: controlledPerPage,
   onPerPage,
   page: controlledPage,
   onPage,
   keepsPage,
   bodyRef,
-  pending = false,
+  pending: rowsPending = false,
   problem,
   widthsKey,
   tools,
@@ -170,8 +171,10 @@ export function ListTable<Row>({
       hasMore,
       onLoadMore,
       total: serverTotal,
+      jumped,
       reachAsked: !bodyOwnsPaging,
       keepsPage,
+      pending: rowsPending,
     },
     {
       search: search?.value,
@@ -183,6 +186,7 @@ export function ListTable<Row>({
     },
     scroller,
   );
+  const { pending } = paging;
   const all = useSelectAll({
     rows,
     pageRows: paging.pageRows,

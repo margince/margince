@@ -53,9 +53,9 @@ describe("the pager's page numbers", () => {
     expect(pageButton(176)).toBeNull();
   });
 
-  // The pages in hand would read as the whole list, so Next speaks alone.
-  it("give way to Previous and Next while the server sends no total", () => {
-    render(
+  // A gap after the pages in hand says more follow, so they do not read as the list.
+  it("end in a gap while the server sends no total and more rows exist", () => {
+    const { container } = render(
       <ListTable
         rows={testRows(50)}
         columns={columns}
@@ -64,9 +64,13 @@ describe("the pager's page numbers", () => {
         hasMore
       />,
     );
-    expect(pageButton(1)).toBeNull();
-    expect(pageButton(2)).toBeNull();
-    expect(screen.getByRole("button", { name: "Previous" })).toBeTruthy();
+    expect(pageButton(1)).toBeTruthy();
+    expect(pageButton(2)).toBeTruthy();
+    expect(pageButton(3)).toBeNull();
+    const gaps = [...container.querySelectorAll(".lt-gap")].map(
+      (slot) => slot.textContent,
+    );
+    expect(gaps).toContain("…");
     expect(screen.getByRole("button", { name: "Next" })).toHaveProperty(
       "disabled",
       false,

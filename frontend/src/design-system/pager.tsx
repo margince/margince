@@ -15,8 +15,8 @@ import { Select } from "./select";
  * pages them in memory, the way a list's own footer does.
  *
  * The pager: the pages as numbers, prev/next either side, and the page size on
- * the right. While the end is not known it draws Prev and Next alone. The
- * pages in hand would read as the whole list, and Next fetches the next one.
+ * the right. A known end is numbered as the last page, and Next stops there.
+ * While the end is not known a gap follows the pages in hand, and Next goes on.
  */
 export function Pager({
   current,
@@ -31,7 +31,7 @@ export function Pager({
   current: number;
   lastPage: number;
   hasMore: boolean;
-  /** `lastPage` is the list's real end, so the pages are numbered. Default: no more rows. */
+  /** `lastPage` is the list's real end, so it is numbered. Default: no more rows. */
   endKnown?: boolean;
   /** The page being fetched; its number shows as busy until it is drawn. */
   asked?: number;
@@ -42,7 +42,7 @@ export function Pager({
   const t = useT();
   const { locale } = useLocale();
   return (
-    <div className={`lt-foot${lastPage === 1 && !hasMore ? " single" : ""}`}>
+    <div className={`lt-foot${lastPage === 1 && endKnown ? " single" : ""}`}>
       {/* A landmark, because this is navigation and a reader who jumps by region
           should find it as one. The numbers carry "Page 3" rather than a bare
           "3": out of the row's context a digit names nothing, and the row's
@@ -55,7 +55,7 @@ export function Pager({
         >
           {t("table.prev")}
         </button>
-        {(endKnown ? pagerSlots(current, lastPage) : []).map((slot, index) =>
+        {pagerSlots(current, lastPage, !endKnown).map((slot, index) =>
           typeof slot === "number" ? (
             <button
               type="button"
@@ -85,7 +85,7 @@ export function Pager({
         )}
         <button
           type="button"
-          disabled={current === lastPage && !hasMore}
+          disabled={endKnown && current >= lastPage}
           onClick={() => onGoto(current + 1)}
         >
           {t("table.next")}

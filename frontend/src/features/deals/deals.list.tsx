@@ -124,7 +124,7 @@ export function DealsScreen({
   });
   // A refused dial the list can name is named, and no wider list is asked for.
   const roleRefusal = nameRefusal(refusedDials);
-  const { dealsQuery, stageColumns, stageTotalsQuery, readError, listRead } =
+  const { dealsQuery, stageColumns, stageTotalsQuery, readError, tableRead } =
     useSurfaceReads(
       dealFilters,
       stages,
@@ -168,14 +168,7 @@ export function DealsScreen({
     rows: loadedDeals,
     query,
     setQuery,
-    isPending: listRead.isPending,
-    isError: listRead.isError,
-    error: listRead.error,
-    refetch: () => listRead.refetch(),
-    hasMore: dealsQuery.hasNextPage,
-    loadMore: () => {
-      dealsQuery.fetchNextPage();
-    },
+    ...tableRead,
   };
 
   // Open-stage targets only: a deal is born open (INV-CLOSE-PAST twin rule);
@@ -243,6 +236,7 @@ export function DealsScreen({
         isPending: false,
         isError: false,
         hasMore: false,
+        total: undefined,
       }
     : dealsListState;
   const tagChips = useTagChips();

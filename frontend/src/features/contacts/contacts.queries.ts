@@ -10,6 +10,7 @@ import {
 } from "../../components/listquery.options";
 import {
   type ListQuery,
+  type ListReach,
   listFetchLimit,
   listQueryFromParams,
 } from "../../components/listqueryparams";
@@ -28,6 +29,7 @@ export async function fetchContactsPage(
   query: ListQuery,
   cursor: string | null,
   signal?: AbortSignal,
+  reach?: ListReach,
 ): Promise<ListPage<Contact>> {
   const data = unwrap(
     await api.GET("/contacts", {
@@ -38,7 +40,8 @@ export async function fetchContactsPage(
           sort: query.sort || undefined,
           include_archived: query.includeArchived || undefined,
           cursor: cursor || undefined,
-          limit: listFetchLimit(query.perPage),
+          limit: listFetchLimit(query.perPage, reach),
+          offset: reach?.offset,
           ...listQueryParams(query.filters),
         },
       },

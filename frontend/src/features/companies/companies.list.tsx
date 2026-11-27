@@ -19,6 +19,7 @@ import { useObjectCustomFields } from "../../components/customfields.form";
 import {
   type ListPage,
   type ListQuery,
+  type ListReach,
   ListTable,
   listFetchLimit,
   useListQuery,
@@ -70,6 +71,7 @@ async function fetchCompaniesPage(
   query: ListQuery,
   cursor: string | null,
   signal?: AbortSignal,
+  reach?: ListReach,
 ): Promise<ListPage<Company>> {
   const data = unwrap(
     await api.GET("/companies", {
@@ -80,7 +82,8 @@ async function fetchCompaniesPage(
           sort: query.sort || undefined,
           include_archived: query.includeArchived || undefined,
           cursor: cursor || undefined,
-          limit: listFetchLimit(query.perPage),
+          limit: listFetchLimit(query.perPage, reach),
+          offset: reach?.offset,
           ...listQueryParams(query.filters),
         },
       },
@@ -113,6 +116,7 @@ export function CompaniesScreen({
     key: "companies",
     initialSort: "-created_at",
     fetchPage: fetchCompaniesPage,
+    readsAtOffset: true,
   });
   const selection = useBulkSelection({
     rows: state.rows,

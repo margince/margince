@@ -16,8 +16,9 @@ export type ListQuery = {
   filters: Record<string, string>;
   /**
    * Rows per page, chosen by the reader in the table footer. It is the size of
-   * a rendered page, and a read is larger. One read fetches the page shown and
-   * the next one (see `listFetchLimit`), so the first Next costs no wait.
+   * a rendered page, and a read is larger. One read, by cursor or at an offset,
+   * fetches the page shown and the next one (see `listFetchLimit`), so the
+   * first Next costs no wait.
    */
   perPage: number;
 };
@@ -140,9 +141,8 @@ export function replaceOwn(
  * is a choice about drawing rather than about which rows exist. It is the
  * list's own name, which is why a filter param may not be called `per`.
  */
-// Which rendered page is on screen, under the list's own name. The server is
-// paged by keyset cursor. A page number is a slice of rows already fetched
-// (see listFetchLimit), so the server is never asked for it.
+// Which rendered page is on screen, under the list's own name. A page number
+// is a slice of rows fetched by cursor or at an offset (see listFetchLimit).
 // A stale cursor in an address would 422; a stale page number shows the
 // last page there is.
 const PAGE_PARAM = "page";
@@ -400,6 +400,20 @@ const MAX_ROWS_PER_READ = 200;
 const PAGES_PER_READ = 2;
 
 /**
+ * The furthest row a list reads by offset; the server refuses one past it.
+ * Past it the pager walks the cursor on from there.
+ */
+export const LIST_OFFSET_CAP = 10000;
+
+/** Where a read starts when it is not the cursor's next step. */
+export type ListReach = Readonly<{
+  /** The row a jump starts at. */
+  offset?: number;
+  /** A read at or past `LIST_OFFSET_CAP`, which walks in the widest reads. */
+  pastCap?: boolean;
+}>;
+
+/**
  * How many rows to fetch for a footer page size of `perPage`: the page on
  * screen and the one Next opens. Most readers never leave the first page, and
  * pages further on are read when the reader steps onto them.
@@ -407,7 +421,10 @@ const PAGES_PER_READ = 2;
  * Whole multiples, because a remainder would leave a last page shorter than
  * the size the footer names.
  */
-export function listFetchLimit(perPage: number): number {
+export function listFetchLimit(perPage: number, reach?: ListReach): number {
+  if (reach?.pastCap) {
+    return MAX_ROWS_PER_READ;
+  }
   const pages = Math.min(
     PAGES_PER_READ,
     Math.max(1, Math.floor(MAX_ROWS_PER_READ / perPage)),
