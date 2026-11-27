@@ -107,10 +107,12 @@ const (
 	// owner's connection row, mapped and checked in the unexported connection wire.
 	// Raised by 44 test lines for the contact page reads the plan reuse census
 	// drives through its unexported statement recorder and partial index check.
+	// Raised by 15 production and 14 test lines for the shared forecast's scope
+	// label. It runs through the unexported forecast-scope mapping its case drives.
 	// Raised by 197 test lines for the re-ingest vector reuse cases, which drive
 	// the unexported knowledge ingest worker and its embedder fixture.
-	composeRootProductionLines = 231_231
-	composeRootTestLines       = 362_137
+	composeRootProductionLines = 231_246
+	composeRootTestLines       = 362_151
 )
 
 // A read under these floors stopped early or read the wrong place, and would
