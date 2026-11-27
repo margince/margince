@@ -41741,7 +41741,7 @@
     "lost":
      "lost",
     "lost_reason":
-     "Lý do thất bại",
+     "Lý do thua",
     "low_balance":
      "low balance",
     "machine":
@@ -50777,7 +50777,7 @@
     "merge_profile_field/text/linkedin_url":
      "Liên kết LinkedIn",
     "merge_profile_field/text/lost_reason":
-     "Lý do thất bại",
+     "Lý do thua",
     "merge_profile_field/text/meeting_documents_added":
      "Ghi chú cuộc họp được liên kết từ lịch",
     "merge_profile_field/text/meeting_guests_removed":
@@ -51143,7 +51143,7 @@
     "merge_profile_field/lifecycle/linkedin_url":
      "Liên kết LinkedIn",
     "merge_profile_field/lifecycle/lost_reason":
-     "Lý do thất bại",
+     "Lý do thua",
     "merge_profile_field/lifecycle/meeting_documents_added":
      "Ghi chú cuộc họp được liên kết từ lịch",
     "merge_profile_field/lifecycle/meeting_guests_removed":
@@ -56347,7 +56347,7 @@
     "state/boolean/true":
      "Có",
     "status/text/lost":
-     "Thất bại",
+     "Thua",
     "status/text/open":
      "Đang mở",
     "status/text/won":

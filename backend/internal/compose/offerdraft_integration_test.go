@@ -50,14 +50,25 @@ var offerDraftPerms = principal.Permissions{
 	RowScope: principal.RowScopeAll,
 }
 
-// newOfferDrafterFixture wires an offerDrafter over the harness pool: the
-// search module's retriever (the retrieval seam decision this task made —
-// no bespoke context store) and a fresh, per-test FakeClient, ridden
-// through the router (fakeModelPath) on the same OfferDraft lane
-// production wires (compose.WithOfferDraft(modelPath.OfferDraft, …)) so
-// each test's assertions about what was scripted/recorded stay
-// independent.
+// newOfferDrafterFixture wires an offerDrafter over the harness pool, on the lane
+// production wires, with a standard tax rate on the sheet.
 func newOfferDrafterFixture(t *testing.T, e *integration.Env, brain *ai.FakeClient) offerDrafter {
+	seedStandardTaxRate(t, e, "19", "2020-01-01")
+	return offerDrafterOn(t, e, brain)
+}
+
+// seedStandardTaxRate gives the installation a country and a standard rate. A
+// drafted line takes its tax from that sheet, and a sheet without it refuses.
+func seedStandardTaxRate(t *testing.T, e *integration.Env, rate, from string) {
+	t.Helper()
+	e.WsExec(t, `INSERT INTO setting (key, value, updated_at) VALUES ('installation.country', '"de"'::jsonb, now())
+	             ON CONFLICT (key) DO NOTHING`)
+	e.WsExec(t, `INSERT INTO tax_rate (country, category, rate, valid_from, captured_by)
+	             VALUES ('de', 'standard', $1::numeric, $2::date, 'test')`, rate, from)
+}
+
+// offerDrafterOn builds the drafter without touching the tax sheet.
+func offerDrafterOn(t *testing.T, e *integration.Env, brain *ai.FakeClient) offerDrafter {
 	return offerDrafter{
 		brain:    fakeModelPath(t, brain).OfferDraft,
 		deals:    e.Deals,
@@ -205,10 +216,10 @@ func TestDraftOfferLinesStagesGroundedLinesAndDiscloses(t *testing.T) {
 	fake := ai.NewFakeClient()
 	drafter := newOfferDrafterFixture(t, e, fake)
 	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
-		{"description":"Kickoff workshop","quantity":"1","tax_rate":"19.00",
+		{"description":"Kickoff workshop","quantity":"1",
 		 "evidence_snippet":"agreed to 20000 cents for it","source_id":"`+workshopSource+`",
 		 "conversation_price_minor":20000},
-		{"description":"Follow-up session","quantity":"1","tax_rate":"19.00",
+		{"description":"Follow-up session","quantity":"1",
 		 "evidence_snippet":"we'd want a kickoff workshop","source_id":"`+workshopSource+`",
 		 "conversation_price_minor":20000}
 	]}`))
@@ -272,7 +283,7 @@ func TestDraftOfferLinesDropsUngroundedCandidateAsHonestEmpty(t *testing.T) {
 	fake := ai.NewFakeClient()
 	drafter := newOfferDrafterFixture(t, e, fake)
 	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
-		{"description":"Bespoke consulting package","quantity":"1","tax_rate":"19.00",
+		{"description":"Bespoke consulting package","quantity":"1",
 		 "evidence_snippet":"this text never appears in the deal's context","source_id":"`+source+`",
 		 "conversation_price_minor":50000}
 	]}`))
@@ -312,7 +323,7 @@ func TestDraftOfferLinesGroundsPriceOnTheRateCardWhenNoConversationPrice(t *test
 	fake := ai.NewFakeClient()
 	drafter := newOfferDrafterFixture(t, e, fake)
 	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
-		{"description":"Onboarding support","quantity":"1","tax_rate":"19.00",
+		{"description":"Onboarding support","quantity":"1",
 		 "evidence_snippet":"ongoing onboarding support for their new hires","source_id":"`+source+`",
 		 "product_id":"`+product.Id.String()+`"}
 	]}`))
@@ -357,7 +368,7 @@ func TestDraftOfferLinesNeverGroundsARateCardPriceInAMismatchedCurrency(t *testi
 	fake := ai.NewFakeClient()
 	drafter := newOfferDrafterFixture(t, e, fake)
 	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
-		{"description":"Onboarding support","quantity":"1","tax_rate":"19.00",
+		{"description":"Onboarding support","quantity":"1",
 		 "evidence_snippet":"ongoing onboarding support for their new hires","source_id":"`+source+`",
 		 "product_id":"`+product.Id.String()+`"}
 	]}`))
@@ -405,7 +416,7 @@ func TestGroundOfferLinesPropagatesANonNotFoundProductLookupError(t *testing.T) 
 	drafter := offerDrafter{rateCard: e.Deals}
 	dealContext := []dealContextItem{{SourceID: "activity:1", Snippet: "Client wants the support plan."}}
 	candidates := []offerLineCandidate{{
-		Description: "Support plan", Quantity: "1", TaxRate: "19.00",
+		Description: "Support plan", Quantity: "1",
 		EvidenceSnippet: "wants the support plan", SourceID: "activity:1",
 		ProductID: product.Id.String(),
 	}}
@@ -427,7 +438,7 @@ func TestDraftOfferLinesNeverGuessesAnUngroundedPrice(t *testing.T) {
 	fake := ai.NewFakeClient()
 	drafter := newOfferDrafterFixture(t, e, fake)
 	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
-		{"description":"Custom integration","quantity":"1","tax_rate":"19.00",
+		{"description":"Custom integration","quantity":"1",
 		 "evidence_snippet":"custom integration with their internal tools","source_id":"`+source+`"}
 	]}`))
 
@@ -462,11 +473,11 @@ func TestDraftOfferLinesDropsStoreInvalidQuantityWithoutErroringTheBatch(t *test
 	fake := ai.NewFakeClient()
 	drafter := newOfferDrafterFixture(t, e, fake)
 	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
-		{"description":"Workshop","quantity":"1","tax_rate":"19.00",
+		{"description":"Workshop","quantity":"1",
 		 "evidence_snippet":"wants a workshop","source_id":"`+source+`"},
-		{"description":"Onboarding (scientific notation)","quantity":"1e3","tax_rate":"19.00",
+		{"description":"Onboarding (scientific notation)","quantity":"1e3",
 		 "evidence_snippet":"onboarding session","source_id":"`+source+`"},
-		{"description":"Onboarding (zero quantity)","quantity":"0","tax_rate":"19.00",
+		{"description":"Onboarding (zero quantity)","quantity":"0",
 		 "evidence_snippet":"onboarding session","source_id":"`+source+`"}
 	]}`))
 
@@ -540,7 +551,7 @@ func TestADraftedProductLineTakesTheProductsNameInTheOffersLanguage(t *testing.T
 	fake := ai.NewFakeClient()
 	drafter := newOfferDrafterFixture(t, e, fake)
 	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
-		{"description":"Onboarding support","quantity":"1","tax_rate":"19.00",
+		{"description":"Onboarding support","quantity":"1",
 		 "evidence_snippet":"ongoing onboarding support for their new hires","source_id":"`+source+`",
 		 "product_id":"`+product.Id.String()+`"}
 	]}`))
@@ -552,5 +563,53 @@ func TestADraftedProductLineTakesTheProductsNameInTheOffersLanguage(t *testing.T
 	calls := fake.Calls()
 	if len(calls) == 0 || !strings.Contains(string(calls[0].Payload), "Einarbeitungsbegleitung") {
 		t.Error("the model was shown the rate card's English name, not the offer's German one")
+	}
+}
+
+// The model is not asked for a tax rate. A drafted line carries the sheet's
+// standard rate for the installation's country.
+func TestADraftedLineOnNoProductIsTaxedFromTheSheetsStandardRate(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
+	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "Sheet-taxed deal",
+		`Client said: "we'd want a kickoff workshop" and agreed to 20000 cents for it.`)
+
+	fake := ai.NewFakeClient()
+	drafter := newOfferDrafterFixture(t, e, fake)
+	seedStandardTaxRate(t, e, "7", "2021-01-01") // the later row is the one in force
+	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
+		{"description":"Kickoff workshop","quantity":"1",
+		 "evidence_snippet":"agreed to 20000 cents for it","source_id":"`+source+`",
+		 "conversation_price_minor":20000}
+	]}`))
+	result, err := drafter.DraftOfferLines(ctx, offerID)
+	if err != nil {
+		t.Fatalf("draft offer lines: %v", err)
+	}
+	line := offerLineByDescription(t, result.Offer, "Kickoff workshop")
+	if line.TaxRate != 7 || line.TaxCategory == nil || string(*line.TaxCategory) != "standard" {
+		t.Fatalf("staged line tax_rate/category = %v/%v, want 7/standard from the sheet", line.TaxRate, line.TaxCategory)
+	}
+}
+
+// With no standard rate on the sheet, the draft is refused and stages nothing.
+func TestADraftWithNoStandardRateOnTheSheetIsRefusedAndStagesNothing(t *testing.T) {
+	e := integration.Setup(t)
+	ctx := e.As(e.Rep1, []ids.UUID{e.Team1}, offerDraftPerms)
+	offerID, source := seedDraftOfferWithDealActivity(ctx, t, e, "Unrated deal",
+		`Client said: "we'd want a kickoff workshop" and agreed to 20000 cents for it.`)
+
+	fake := ai.NewFakeClient()
+	drafter := offerDrafterOn(t, e, fake)
+	fake.Script(inOfferDraftRefs(ctx, t, drafter, offerID, `{"lines":[
+		{"description":"Kickoff workshop","quantity":"1",
+		 "evidence_snippet":"agreed to 20000 cents for it","source_id":"`+source+`",
+		 "conversation_price_minor":20000}
+	]}`))
+	if _, err := drafter.DraftOfferLines(ctx, offerID); err == nil || !strings.Contains(err.Error(), "no standard tax rate") {
+		t.Fatalf("draft with no sheet rate answered %v, want an error naming the missing standard rate", err)
+	}
+	if n := e.WsCount(t, `SELECT count(*) FROM offer_line_item WHERE offer_id = $1 AND proposal_state = 'staged'`, offerID.UUID); n != 0 {
+		t.Fatalf("%d staged lines after a refused draft, want 0", n)
 	}
 }

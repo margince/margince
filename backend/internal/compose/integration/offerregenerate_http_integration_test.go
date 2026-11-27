@@ -67,6 +67,20 @@ func setupWithOfferDraft(t *testing.T) (*apptest.AppEnv, *ai.FakeClient) {
 // seedDealContextActivity logs one activity linked to the deal — "the
 // deal's captured context" the offerDrafter reads — and returns the
 // source_id a scripted candidate must cite to ground against it.
+// seedStandardRateForDrafts gives the installation a country and a standard rate:
+// a drafted line takes its tax from that sheet.
+func seedStandardRateForDrafts(t *testing.T, e *apptest.AppEnv) {
+	t.Helper()
+	for _, q := range []string{
+		`INSERT INTO setting (key, value, updated_at) VALUES ('installation.country', '"de"'::jsonb, now()) ON CONFLICT (key) DO NOTHING`,
+		`INSERT INTO tax_rate (country, category, rate, valid_from, captured_by) VALUES ('de', 'standard', 19, '2020-01-01', 'test')`,
+	} {
+		if _, err := e.Owner.Exec(context.Background(), q); err != nil {
+			t.Fatalf("seed the standard rate: %v", err)
+		}
+	}
+}
+
 func seedDealContextActivity(t *testing.T, e *apptest.AppEnv, wsID, dealID, subject string) string {
 	t.Helper()
 	activityID := ids.NewV7()
@@ -135,11 +149,13 @@ func TestOfferRegenerateHTTP_GroundedAIDraftStagesAndDisclosesWithoutMovingTotal
 	apptest.BootstrapWorkspaceSession(t, e, "Offer Regen AI", "offerai@fable.test", "Admin")
 	wsID := apptest.InstallationWorkspaceID(context.Background(), t, e.Owner)
 	dealID := offerFixture(t, e)
+	// A drafted line is taxed from the sheet, so the installation needs a country with a standard rate.
+	seedStandardRateForDrafts(t, e)
 	seedDealContextActivity(t, e, wsID, dealID,
 		`Client said: "we'd want a kickoff workshop" and agreed to 20000 cents for it.`)
 	// The deal context lists the seeded note second, as s2.
 	fake.Script(`{"lines":[
-		{"description":"Kickoff workshop","quantity":"1","tax_rate":"19.00",
+		{"description":"Kickoff workshop","quantity":"1",
 		 "evidence_snippet":"agreed to 20000 cents for it","source_id":"s2",
 		 "conversation_price_minor":20000}
 	]}`)
@@ -190,7 +206,7 @@ func TestOfferRegenerateHTTP_UngroundedCandidateFallsBackToMechanicalCloneOnly(t
 	dealID := offerFixture(t, e)
 	seedDealContextActivity(t, e, wsID, dealID, "Client mentioned they liked our website.")
 	fake.Script(`{"lines":[
-		{"description":"Bespoke consulting package","quantity":"1","tax_rate":"19.00",
+		{"description":"Bespoke consulting package","quantity":"1",
 		 "evidence_snippet":"this text never appears anywhere in the deal's context","source_id":"activity:` + ids.NewV7().String() + `",
 		 "conversation_price_minor":50000}
 	]}`)

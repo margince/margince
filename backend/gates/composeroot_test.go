@@ -104,6 +104,8 @@ const (
 	// extractor and transcript proposer.
 	// Raised by 49 test lines for the gate that keeps an agent's offered text from
 	// naming a tool it is not offered. It drives the unexported scheduled catalog.
+	// Raised by 64 test lines for the offer draft cases that read the tax from the
+	// sheet. They drive the unexported offer drafter and its staged line.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
 	// Raised by 21 test lines when main's root compose cases met develop's in the
@@ -165,7 +167,7 @@ const (
 	// the How it stands job and its page case, and the task explanation's
 	// certification case and its test. The job needs the unexported job
 	// context; the cases drive the contact page.
-	composeRootProductionLines = 232_395
+	composeRootProductionLines = 232_389
 	// Raised by 18 test lines for the link suggestion tool cases.
 	// Raised by 2 test lines for the actor census waivers of the two jobs that
 	// bind their colleague inside a method.
@@ -177,7 +179,9 @@ const (
 	// in the sync.
 	// Raised by 11 test lines for develop's shared-calendar meeting party cases.
 	// Raised by 5 test lines for the full seat a take test now binds.
-	composeRootTestLines = 364_044
+	// Raised by 64 test lines for the offer draft cases that read the tax from the
+	// sheet. They drive the unexported offer drafter and its staged line.
+	composeRootTestLines = 364_117
 )
 
 // A read under these floors stopped early or read the wrong place, and would
