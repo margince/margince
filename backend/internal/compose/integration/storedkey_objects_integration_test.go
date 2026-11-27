@@ -23,11 +23,22 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-func legacyPrefix(e *Env, kind string) string {
-	return blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](e.WS), kind, "")
+// storedKeyOf gives the installation a stored-key id that is not the bound
+// workspace's, as an installation upgraded from an earlier company has. A
+// builder that read the request's id would then write outside the prefix this
+// returns.
+func storedKeyOf(t *testing.T, e *Env) ids.WorkspaceID {
+	t.Helper()
+	stored := ids.NewV7()
+	e.WsExec(t, `UPDATE installation_state SET value = jsonb_build_object('id', $1::text) WHERE key = 'stored_key_workspace'`, stored.String())
+	return ids.From[ids.WorkspaceKind](stored)
 }
 
-func countUnder(t *testing.T, ctx context.Context, blob blobstore.Store, prefix string) int {
+func legacyPrefix(stored ids.WorkspaceID, kind string) string {
+	return blobstore.WorkspaceKey(stored, kind, "")
+}
+
+func countUnder(ctx context.Context, t *testing.T, blob blobstore.Store, prefix string) int {
 	t.Helper()
 	n, err := blob.DeletePrefix(ctx, prefix)
 	if err != nil {
@@ -38,6 +49,7 @@ func countUnder(t *testing.T, ctx context.Context, blob blobstore.Store, prefix 
 
 func TestAnAttachmentUploadLandsUnderTheLegacyPrefix(t *testing.T) {
 	e := Setup(t)
+	stored := storedKeyOf(t, e)
 	blob := blobstore.NewMemory()
 	contact := e.SeedContact(t, "Legacy Prefix", &e.Rep1)
 	_, err := e.Activities.WithBlobstore(blob).UploadAttachment(e.Admin(), activities.AttachmentInput{
@@ -46,13 +58,14 @@ func TestAnAttachmentUploadLandsUnderTheLegacyPrefix(t *testing.T) {
 	if err != nil {
 		t.Fatalf("UploadAttachment: %v", err)
 	}
-	if got := countUnder(t, e.Admin(), blob, legacyPrefix(e, "attachment")); got != 1 {
+	if got := countUnder(e.Admin(), t, blob, legacyPrefix(stored, "attachment")); got != 1 {
 		t.Errorf("%d objects under the legacy attachment prefix, want the one just uploaded", got)
 	}
 }
 
 func TestACapturedFileWhoseBytesAnAttachmentHoldsIsNotStoredAgain(t *testing.T) {
 	e := Setup(t)
+	stored := storedKeyOf(t, e)
 	blob := blobstore.NewMemory()
 	store := e.Activities.WithBlobstore(blob)
 	contact := e.SeedContact(t, "Reused Copy", &e.Rep1)
@@ -67,35 +80,37 @@ func TestACapturedFileWhoseBytesAnAttachmentHoldsIsNotStoredAgain(t *testing.T) 
 	}}); err != nil {
 		t.Fatalf("StageCapturedFiles: %v", err)
 	}
-	if got := countUnder(t, e.Admin(), blob, legacyPrefix(e, "attachment")); got != 1 {
+	if got := countUnder(e.Admin(), t, blob, legacyPrefix(stored, "attachment")); got != 1 {
 		t.Errorf("%d objects under the legacy prefix, want 1: the capture must find the copy stored under the id every earlier object used", got)
 	}
 }
 
 func TestAKnowledgeDocumentLandsUnderTheLegacyPrefix(t *testing.T) {
 	ie := newIngestEnv(t)
+	stored := storedKeyOf(t, ie.env)
 	ie.upload(t, "page.md", "text/markdown", "# Page")
-	if got := countUnder(t, ie.ctx, ie.blob, legacyPrefix(ie.env, "knowledge")); got != 1 {
+	if got := countUnder(ie.ctx, t, ie.blob, legacyPrefix(stored, "knowledge")); got != 1 {
 		t.Errorf("%d objects under the legacy knowledge prefix, want the one just uploaded", got)
 	}
 }
 
 func TestACompanyLogoKeyIsMintedUnderTheLegacyPrefix(t *testing.T) {
 	e := Setup(t)
+	stored := storedKeyOf(t, e)
 	base, err := e.Contacts.NewLogoBase(e.Admin(), "legal-entity/"+ids.NewV7().String())
 	if err != nil {
 		t.Fatalf("NewLogoBase: %v", err)
 	}
-	if !strings.HasPrefix(base, legacyPrefix(e, contacts.LogoKeyKind)+"legal-entity/") {
-		t.Errorf("logo base %q is not under %q", base, legacyPrefix(e, contacts.LogoKeyKind))
+	if !strings.HasPrefix(base, legacyPrefix(stored, contacts.LogoKeyKind)+"legal-entity/") {
+		t.Errorf("logo base %q is not under %q", base, legacyPrefix(stored, contacts.LogoKeyKind))
 	}
 }
 
 func TestAnExtensionObjectStoredUnderTheLegacyPrefixIsStillRead(t *testing.T) {
 	e := Setup(t)
+	ws := storedKeyOf(t, e)
 	blob := blobstore.NewMemory()
 	ctx := e.Admin()
-	ws := ids.From[ids.WorkspaceKind](e.WS)
 	if err := blob.Put(ctx, extcapability.Prefix(ws, "summaries")+"report", strings.NewReader("kept"), 4, "text/plain"); err != nil {
 		t.Fatal(err)
 	}
