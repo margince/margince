@@ -471,7 +471,7 @@ func TestExtractionAcceptDealUpdateAndNotesShareOneTransaction(t *testing.T) {
 			Kind:   string(crmcontracts.ActivityKindNote),
 			Body:   new("should never persist past the rollback"),
 			Links:  []activities.ActivityLinkInput{{EntityType: acceptDealEntityForTest, EntityID: a.deal}},
-			Source: "atomic_tx_probe",
+			Source: "manual",
 		}); err != nil {
 			return err
 		}
@@ -484,7 +484,7 @@ func TestExtractionAcceptDealUpdateAndNotesShareOneTransaction(t *testing.T) {
 	if n := a.WsCount(t, `SELECT count(*) FROM deal WHERE id = $1 AND name = 'Rolled Back Name'`, a.deal); n != 0 {
 		t.Error("the deal update persisted despite the shared transaction rolling back — UpdateDealTx is not honoring the caller's transaction")
 	}
-	if n := a.WsCount(t, `SELECT count(*) FROM activity WHERE source = 'atomic_tx_probe'`); n != 0 {
+	if n := a.WsCount(t, `SELECT count(*) FROM activity WHERE body = 'should never persist past the rollback'`); n != 0 {
 		t.Error("the note persisted despite the shared transaction rolling back — LogActivityTx is not honoring the caller's transaction")
 	}
 }

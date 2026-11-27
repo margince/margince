@@ -36,6 +36,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -242,8 +243,8 @@ func TestAUnitsRecordLandsAsAnActivityWithEvidenceAndTheWriteShape(t *testing.T)
 			   FROM activity WHERE id = $1`, activityID).Scan(&source, &capturedBy, &threadKey, &subject)
 	})
 	switch {
-	case source != ingressProbeSource:
-		t.Errorf("source = %q, want the core-derived %q — a unit does not spell its own provenance", source, ingressProbeSource)
+	case source != provenance.RecordSourceImport:
+		t.Errorf("source = %q, want the import channel a unit's feed arrives by", source)
 	// The CONNECTOR and the member behind it, which is more than the record
 	// carried: the unit hands over `connector:ext:<unit>` — the equality the
 	// sink checks against the acting principal — and the core stamps the
@@ -360,7 +361,7 @@ func TestAUnitsChannelMessageLandsAsARepliableConversation(t *testing.T) {
 	id := ids.MustParse(result.Ref.ID)
 	for column, want := range map[string]string{
 		"kind": extension.ActivityKindMessage, "channel_provider": ingressProbeProvider, "audience": "workspace",
-		"source_system": ingressProbeSource, "source_id": "ws-7:3001", "source": ingressProbeSource,
+		"source_system": ingressProbeSource, "source_id": "ws-7:3001", "source": provenance.RecordSourceImport,
 	} {
 		var got string
 		e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
@@ -408,7 +409,7 @@ func TestAUnitCannotFileAMessageOnACoreConnectorsTransport(t *testing.T) {
 		t.Fatalf("Ingest → %v, want extension.ErrInvalid — a unit may name only a transport it declared", err)
 	}
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM activity WHERE source = $1 AND source_id = $2`, ingressProbeSource, "ws-7:3002"); got != 0 {
+		`SELECT count(*) FROM activity WHERE source_system = $1 AND source_id = $2`, ingressProbeSource, "ws-7:3002"); got != 0 {
 		t.Errorf("activity rows = %d, want none — the refusal must land nothing, not land it and complain", got)
 	}
 }
@@ -440,7 +441,7 @@ func TestASecondIngestOfTheSameRecordLandsNothingNew(t *testing.T) {
 		t.Errorf("the replay named %s, want the record the first landing created (%s)", second.Ref.ID, first.Ref.ID)
 	}
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM activity WHERE source = $1`, ingressProbeSource); got != 1 {
+		`SELECT count(*) FROM activity WHERE source_system = $1`, ingressProbeSource); got != 1 {
 		t.Fatalf("activity rows = %d, want one — the natural key is what makes a replay free", got)
 	}
 	for i, table := range tables {
@@ -541,7 +542,7 @@ func TestAWhollyInternalMessageIsSkippedAsASuccess(t *testing.T) {
 		t.Errorf("ref = %+v, want none — nothing was kept", result.Ref)
 	}
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM activity WHERE source = $1`, ingressProbeSource); got != 0 {
+		`SELECT count(*) FROM activity WHERE source_system = $1`, ingressProbeSource); got != 0 {
 		t.Errorf("activity rows = %d, want none — the message was dropped on purpose", got)
 	}
 }
@@ -595,7 +596,7 @@ func TestAMemberWhoDepositedNothingCannotBeActedFor(t *testing.T) {
 		t.Fatalf("err = %v, want ErrForbidden — depositing a credential IS the consent, and Rep2 deposited none", err)
 	}
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM activity WHERE source = $1`, ingressProbeSource); got != 0 {
+		`SELECT count(*) FROM activity WHERE source_system = $1`, ingressProbeSource); got != 0 {
 		t.Errorf("activity rows = %d, want none — a refused ingest must land nothing", got)
 	}
 }
@@ -773,7 +774,7 @@ func TestARefusedRecordIsCountedAgainstTheUnitThatSentIt(t *testing.T) {
 		}
 	}
 	if got := e.countAsWorkspace(t,
-		`SELECT count(*) FROM activity WHERE source = $1`, ingressProbeSource); got != 0 {
+		`SELECT count(*) FROM activity WHERE source_system = $1`, ingressProbeSource); got != 0 {
 		t.Errorf("activity rows = %d, want none — a record the grammar refuses never reaches capture", got)
 	}
 

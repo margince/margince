@@ -56,18 +56,16 @@ func runCheckInRepair(t *testing.T, owner *pgx.Conn) {
 	}
 }
 
-// seedLegacyReminder writes a reminder the way the starters used to: the
-// handler's own subject wording, the engine's provenance, and NO source_system,
-// which is exactly what makes it invisible to the new hold.
+// seedLegacyReminder writes a reminder the way the starters used to. It has
+// the handler's own subject wording and the engine's provenance. It has no
+// source_system, which makes it invisible to the new hold. Its source is the
+// older word the repair's migration reads, kept from the channel trigger.
 func seedLegacyReminder(t *testing.T, owner *pgx.Conn, subject, capturedBy string, entityType string, entity ids.UUID) ids.UUID {
 	t.Helper()
-	id := ids.NewV7()
-	if _, err := owner.Exec(context.Background(),
+	id := SeedBeforeSourceCheck(t, owner, "activity",
 		`INSERT INTO activity (id, kind, subject, occurred_at, due_at, source, captured_by, is_done)
 		 VALUES ($1, 'task', $2, now() - interval '9 days', now() - interval '9 days', 'system', $3, false)`,
-		id, subject, capturedBy); err != nil {
-		t.Fatalf("seeding the legacy reminder: %v", err)
-	}
+		subject, capturedBy)
 	column := map[string]string{"contact": "contact_id", "company": "company_id", "deal": "deal_id"}[entityType]
 	if column == "" {
 		t.Fatalf("no activity_link column for %q", entityType)
