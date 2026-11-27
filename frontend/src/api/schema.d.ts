@@ -19492,6 +19492,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/consent-purposes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Archive an unused consent purpose.
+         * @description Requires consent_config:update. Any reference to the purpose prevents an archive.
+         */
+        delete: operations["archiveConsentPurpose"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename an unused consent purpose.
+         * @description Requires consent_config:update. Any reference to the purpose prevents a change.
+         */
+        patch: operations["renameConsentPurpose"];
+        trace?: never;
+    };
     "/consent-purposes/send-counts": {
         parameters: {
             query?: never;
@@ -25924,11 +25948,8 @@ export interface paths {
          *     housekeeping: dropping them silently would leave the lead who wrote them believing they
          *     had been read.
          *
-         *     `email` is accepted for `approval_pending` alone, and any other class answers `422`. It
-         *     is the one class a producer stages a message for; the others would record a word the
-         *     product does not keep, and a reader who chose it would stop watching the screen while
-         *     waiting for mail that was never going to arrive. `digest` is how every other class
-         *     reaches a mailbox.
+         *     `email` is accepted for `approval_pending` and `website_lead`. Other classes
+         *     answer `422` and can reach a mailbox through `digest`.
          */
         put: operations["saveNotificationPreference"];
         post?: never;
@@ -28796,6 +28817,8 @@ export interface components {
         };
         /** @description A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored. */
         WebForm: {
+            /** @description Tell the final active owner about accepted posts through their notification preference. Defaults to false. */
+            notify_owner?: boolean;
             /** Format: uuid */
             id: string;
             name: string;
@@ -28884,6 +28907,8 @@ export interface components {
             secrets_available: boolean;
         };
         CreateWebFormRequest: {
+            /** @description Tell the final active owner about accepted posts through their notification preference. Defaults to false. */
+            notify_owner?: boolean;
             name: string;
             sender: components["schemas"]["WebFormSender"];
             /** @description The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow's secret is pasted. Refused for any other sender. */
@@ -28912,6 +28937,8 @@ export interface components {
             success_message?: string | null;
         };
         UpdateWebFormRequest: {
+            /** @description Tell the final active owner about accepted posts through their notification preference. Defaults to false. */
+            notify_owner?: boolean;
             /**
              * Format: uuid
              * @description Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.
@@ -35404,15 +35431,13 @@ export interface components {
          *     raises is placed in one of them.
          * @enum {string}
          */
-        NotificationClass: "automation" | "lead_sla" | "approval_pending" | "capture" | "coach" | "system" | "project_health";
+        NotificationClass: "automation" | "lead_sla" | "approval_pending" | "website_lead" | "capture" | "coach" | "system" | "project_health";
         /**
          * @description Where a class of notification reaches its reader.
          *
          *     `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
-         *     sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
-         *     the only class with a sending leg, and taking the word for any other would record a
-         *     choice the product does not keep; the others answer `422 value_not_allowed` and reach a
-         *     mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+         *     sends a message as each one lands for `approval_pending` and `website_lead`.
+         *     Other classes answer `422 value_not_allowed` and reach a mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
          *     following morning, and is accepted for every class.
          *
          *     `off` records the notice and stops there: no lane, no badge, no message. It does NOT
@@ -36186,8 +36211,14 @@ export interface components {
              */
             retrieved_at: string;
         };
+        /**
+         * @description Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+         * @enum {string|null}
+         */
+        Salutation: "mr" | "ms" | "none" | null;
         /** @description A contact. Mirrors the `contact` table. */
         Contact: {
+            salutation?: components["schemas"]["Salutation"];
             /** @description The live request the contact's acquisition records: they asked for a quote or a meeting, or gave permission in person. A send may rest on it with no age limit until somebody takes it back (`retractAcquisitionRequest`). Served on a read of one contact; absent when there is none or it was taken back, and on lists. */
             readonly acquisition_request?: components["schemas"]["ContactAcquisitionRequest"];
             /**
@@ -36349,6 +36380,7 @@ export interface components {
         };
         /** @description Requires at least one nonblank email, phone or LinkedIn URL (including social.linkedin). Name-only requests return 422 contact_channel_required. CSV import retains and warns about name-only rows. Contact creation also resolves available employer evidence atomically. A business work email requires company:create for shared domain resolution, including when triage is pending. An explicit employer additionally requires the company and relationship authority used by linking. A refusal rolls back the contact instead of silently omitting employment. */
         CreateContactRequest: {
+            salutation?: components["schemas"]["Salutation"];
             full_name: string;
             /**
              * Format: uuid
@@ -36641,6 +36673,7 @@ export interface components {
         };
         /** @description Partial update. Omitted fields are unchanged. */
         UpdateContactRequest: {
+            salutation?: components["schemas"]["Salutation"];
             /**
              * @description Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
              * @enum {string|null}
@@ -38083,6 +38116,7 @@ export interface components {
         };
         /** @description One current employee of the account, as the company view shows them. */
         Company360Contact: {
+            salutation?: components["schemas"]["Salutation"];
             /** Format: uuid */
             contact_id: string;
             full_name: string;
@@ -39207,7 +39241,7 @@ export interface components {
             status: "open" | "done" | "dismissed";
             /** Format: date-time */
             due_at?: string | null;
-            /** @description Contradictory evidence exists for this claim. The surface shows both sources and asks — newest-wins is not a resolution. */
+            /** @description This commitment does not pass the current evidence checks. Show the warning instead of presenting it as a current obligation. */
             needs_review: boolean;
             /**
              * Format: date-time
@@ -48091,6 +48125,7 @@ export interface components {
         };
         /** @description A thin, segregated prospect. Mirrors the `lead` table. */
         Lead: {
+            salutation?: components["schemas"]["Salutation"];
             /** @description True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit. */
             readonly legal_hold?: boolean;
             tags?: components["schemas"]["RowTag"][];
@@ -48284,6 +48319,7 @@ export interface components {
             [key: string]: unknown;
         };
         CreateLeadRequest: {
+            salutation?: components["schemas"]["Salutation"];
             full_name?: string | null;
             /** Format: email */
             email?: string | null;
@@ -48350,6 +48386,7 @@ export interface components {
          *     POST /leads/{id}/promote. Both terminal states are therefore excluded from this enum.
          */
         UpdateLeadRequest: {
+            salutation?: components["schemas"]["Salutation"];
             full_name?: string | null;
             /** Format: email */
             email?: string | null;
@@ -48684,7 +48721,6 @@ export interface components {
             answers: {
                 [key: string]: string;
             };
-            revision: number;
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -51962,12 +51998,6 @@ export interface components {
             id: string;
             /** Format: uuid */
             owner_id: string;
-            /**
-             * @description V1 enforces private.
-             * @default private
-             * @enum {string}
-             */
-            shared_scope: "private" | "team" | "workspace";
             resource: components["schemas"]["SavedViewTarget"];
             name: string;
             /** @description The saved column choice, sort, and filter state, in the list-view vocabulary; persisted and restored verbatim. */
@@ -58442,8 +58472,6 @@ export interface components {
              * @enum {string}
              */
             state: "needs_context" | "needs_repair" | "resolved" | "superseded" | "cancelled";
-            /** @enum {string} */
-            kind: "single";
             /**
              * Format: uuid
              * @description The held message this review can resume. A refused send freezes the message into a held
@@ -68207,6 +68235,8 @@ export interface operations {
     listContacts: {
         parameters: {
             query?: {
+                /** @description Filter by an explicit salutation; unset finds records whose choice is null. */
+                salutation?: "mr" | "ms" | "none" | "unset";
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -81727,6 +81757,8 @@ export interface operations {
     listLeads: {
         parameters: {
             query?: {
+                /** @description Filter by an explicit salutation; unset finds records whose choice is null. */
+                salutation?: "mr" | "ms" | "none" | "unset";
                 /**
                  * @description Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
                  *     effective `sort` of the originating request (field + direction) plus the last row's keyset
@@ -97115,6 +97147,62 @@ export interface operations {
                     "application/json": components["schemas"]["ConsentPurpose"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    archiveConsentPurpose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    renameConsentPurpose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    label: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Renamed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentPurpose"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };

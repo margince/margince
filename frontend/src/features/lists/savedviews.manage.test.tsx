@@ -163,7 +163,6 @@ describe("managing saved views", () => {
     const row: SavedView = {
       ...VIEW,
       resource: "companies",
-      shared_scope: "private",
     };
     const seen = stubServer([row]);
     const user = userEvent.setup();

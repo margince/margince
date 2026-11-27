@@ -260,12 +260,12 @@ describe("RestrictedRecordsCard", () => {
       "GET /retention/restrictions": () =>
         jsonResponse(
           {
-            title: "Bad Gateway",
-            status: 502,
+            title: "Internal Server Error",
+            status: 500,
             code: "internal",
             detail: "the restriction list is unreachable",
           },
-          502,
+          500,
         ),
     });
     render(<RestrictedRecordsCard />);

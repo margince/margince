@@ -48,6 +48,7 @@ The 3 tables owned by `automation`, as the migrations build them. [Back to the e
 **Triggers**
 
 - `automation_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.enabled AND (new.archived_at IS NULL)))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `consent_purpose_keys`: `BEFORE INSERT OR UPDATE OF action, params FOR EACH ROW EXECUTE FUNCTION lock_consent_purpose_keys('json', 'live', 'action,params')`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"key": 20000, "name": 120, "tier": 20000, "paused_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"name":120,"paused_reason":2000,"tier":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"key": 20000, "name": 120, "tier": 20000, "paused_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"key":20000,"name":120,"paused_reason":2000,"tier":20000}')`
 

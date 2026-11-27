@@ -7833,6 +7833,15 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "create.company": "Neues Unternehmen",
   "create.lead": "Neuer Lead",
   "create.deal": "Neuer Deal",
+  "create.salutation": "Anredeform",
+  "salutation.any": "Alle Anredeformen",
+  "salutation.unset": "Nicht festgelegt",
+  "salutation.mr": "Herr",
+  "salutation.ms": "Frau",
+  "salutation.none": "Keine geschlechtsspezifische Anrede",
+  "salutation.hint":
+    "Nur eine mitgeteilte Anrede erfassen. Niemals aus dem Namen ableiten.",
+  "history.field.salutation": "Anredeform",
   "create.fullName": "Vollständiger Name",
   "create.firstName": "Vorname",
   "create.lastName": "Nachname",
@@ -8965,8 +8974,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotConnected":
     "Es ist kein Postfach verbunden. Verbinde eines, um aus Margince zu senden.",
   "compose.mailboxNotConnectedGoto": "Postfach verbinden",
-  "compose.sharedUnsubscribeToken":
-    "Eine Nachricht mit Abmeldelink geht immer nur an eine Adresse, da der Link der Einwilligungsnachweis genau dieser Adresse ist. Sende die Nachricht einzeln an jede Adresse, ohne Cc.",
   "compose.relinkTitle": "Diese Aktivität neu verknüpfen",
   "compose.relinkTarget":
     "Kontakte, Unternehmen, Deals, Leads oder Projekte suchen",
@@ -11979,6 +11986,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.correctionNote": "Begründung (der Kontakt kann nachfragen)",
   "privacy.correctionAccept": "Annehmen und aktualisieren",
   "privacy.correctionReject": "Unverändert lassen",
+  "privacy.purposeRename": "Umbenennen",
+  "privacy.purposeRenameTitle": "{label} umbenennen",
+  "privacy.purposeArchiveTitle": "{label} archivieren",
+  "privacy.purposeInUse":
+    "Für diesen Zweck sind bereits Einwilligungen erfasst. Lege einen neuen Zweck an.",
   "privacy.purposesRegistry": "Registrierte Zwecke",
   "privacy.purposeKeyTaken": "Diesen Schlüssel verwendet bereits {label}.",
   "privacy.purposeKeyTakenUnnamed":
@@ -11992,7 +12004,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeFrequency.quarterly": "Etwa einmal im Quartal",
   "privacy.purposeCreate": "Zweck erstellen",
   "privacy.purposeAppendOnly":
-    "Ein Zweck lässt sich nach dem Erstellen weder umbenennen noch entfernen. Der Katalog kann nur ergänzt werden. Wähle den Schlüssel mit Bedacht.",
+    "Einen ungenutzten Zweck kannst du umbenennen oder archivieren. Sobald eine Einwilligung, ein Hinweis, ein Einwilligungstext oder eine geplante Nachricht darauf verweist, bleibt er unverändert. Lege dann einen neuen Zweck an.",
   "notice.title": "Informationspflichten",
   "notice.sub": "Pflichten nach Frist; Quellenprüfungen nach Erfassungszeit.",
   "notice.facetLabel": "Pflichten anzeigen",
@@ -19288,6 +19300,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Signaturschlüssel, den die Webflow-API einmal zurückgibt, wenn sie den Webhook anlegt. Einen Webhook, den eine OAuth-App anlegt, signiert stattdessen das Client Secret dieser App. Lass das Feld leer, bis du ihn hast: Bis dahin nimmt das Formular nichts an.",
   "webForms.field.senderSecretKeep":
     "Leer lassen, um den gespeicherten Signaturschlüssel zu behalten.",
+  "webForms.field.notifyOwnerHint":
+    "Informiert den Verantwortlichen beim Eingang oder nach der Zuweisung durch den Bearbeitungsplan. Eine spätere Verteilung im Unternehmen löst keine nachträgliche Nachricht aus.",
+  "webForms.field.notifyOwner":
+    "Den Verantwortlichen über jede neue Anfrage informieren",
+  "notifications.class.website_lead.label": "Neue Website-Anfragen",
+  "notifications.class.website_lead.help":
+    "Eine neue Formularanfrage zu einem Lead oder Kontakt in deiner Verantwortung.",
   "webForms.field.consentRequired":
     "Einwilligung verlangen, bevor eine Sendung angenommen wird",
   "webForms.field.consentWording": "Einwilligungstext",

@@ -1178,6 +1178,8 @@
      "Role",
     "rows":
      "rows",
+    "salutation":
+     "Salutation",
     "scheduled_at":
      "Scheduled for",
     "scheduled_tz":
@@ -9680,6 +9682,8 @@
      "Role",
     "merge_profile_field/text/sales_motion":
      "Sales motion",
+    "merge_profile_field/text/salutation":
+     "Salutation",
     "merge_profile_field/text/scope":
      "Scope",
     "merge_profile_field/text/score":
@@ -10046,6 +10050,8 @@
      "Role",
     "merge_profile_field/lifecycle/sales_motion":
      "Sales motion",
+    "merge_profile_field/lifecycle/salutation":
+     "Salutation",
     "merge_profile_field/lifecycle/scope":
      "Scope",
     "merge_profile_field/lifecycle/score":
@@ -14553,6 +14559,26 @@
     "rows/lifecycle/unknown":
      "Unknown",
     "rows/boolean/true":
+     "Yes",
+    "salutation/lifecycle/customer":
+     "Customer",
+    "salutation/lifecycle/disqualified":
+     "Disqualified",
+    "salutation/lifecycle/former_customer":
+     "Former customer",
+    "salutation/lifecycle/live":
+     "Live",
+    "salutation/lifecycle/onboarding":
+     "Onboarding",
+    "salutation/lifecycle/opportunity":
+     "Opportunity",
+    "salutation/lifecycle/prospect":
+     "Prospect",
+    "salutation/lifecycle/target":
+     "Target",
+    "salutation/lifecycle/unknown":
+     "Unknown",
+    "salutation/boolean/true":
      "Yes",
     "scheduled_at/lifecycle/customer":
      "Customer",
@@ -20062,6 +20088,12 @@
      "Not set",
     "rows/execution":
      "Set when applied",
+    "salutation/boolean":
+     "No",
+    "salutation/empty":
+     "Not set",
+    "salutation/execution":
+     "Set when applied",
     "scheduled_at/boolean":
      "No",
     "scheduled_at/empty":
@@ -21784,6 +21816,8 @@
      "Rolle",
     "rows":
      "rows",
+    "salutation":
+     "Anredeform",
     "scheduled_at":
      "Geplant für",
     "scheduled_tz":
@@ -30286,6 +30320,8 @@
      "Rolle",
     "merge_profile_field/text/sales_motion":
      "Vertriebsprozess",
+    "merge_profile_field/text/salutation":
+     "Anredeform",
     "merge_profile_field/text/scope":
      "Umfang",
     "merge_profile_field/text/score":
@@ -30652,6 +30688,8 @@
      "Rolle",
     "merge_profile_field/lifecycle/sales_motion":
      "Vertriebsprozess",
+    "merge_profile_field/lifecycle/salutation":
+     "Anredeform",
     "merge_profile_field/lifecycle/scope":
      "Umfang",
     "merge_profile_field/lifecycle/score":
@@ -35159,6 +35197,26 @@
     "rows/lifecycle/unknown":
      "Unbekannt",
     "rows/boolean/true":
+     "Ja",
+    "salutation/lifecycle/customer":
+     "Kunde",
+    "salutation/lifecycle/disqualified":
+     "Disqualifiziert",
+    "salutation/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "salutation/lifecycle/live":
+     "Live",
+    "salutation/lifecycle/onboarding":
+     "Onboarding",
+    "salutation/lifecycle/opportunity":
+     "Chance",
+    "salutation/lifecycle/prospect":
+     "Interessent",
+    "salutation/lifecycle/target":
+     "Zielunternehmen",
+    "salutation/lifecycle/unknown":
+     "Unbekannt",
+    "salutation/boolean/true":
      "Ja",
     "scheduled_at/lifecycle/customer":
      "Kunde",
@@ -40668,6 +40726,12 @@
      "Nicht gesetzt",
     "rows/execution":
      "Wird beim Anwenden festgelegt",
+    "salutation/boolean":
+     "Nein",
+    "salutation/empty":
+     "Nicht gesetzt",
+    "salutation/execution":
+     "Wird beim Anwenden festgelegt",
     "scheduled_at/boolean":
      "Nein",
     "scheduled_at/empty":
@@ -42390,6 +42454,8 @@
      "Vai trò",
     "rows":
      "rows",
+    "salutation":
+     "Danh xưng",
     "scheduled_at":
      "Lên lịch vào",
     "scheduled_tz":
@@ -50892,6 +50958,8 @@
      "Vai trò",
     "merge_profile_field/text/sales_motion":
      "Cách bán hàng",
+    "merge_profile_field/text/salutation":
+     "Danh xưng",
     "merge_profile_field/text/scope":
      "Phạm vi",
     "merge_profile_field/text/score":
@@ -51258,6 +51326,8 @@
      "Vai trò",
     "merge_profile_field/lifecycle/sales_motion":
      "Cách bán hàng",
+    "merge_profile_field/lifecycle/salutation":
+     "Danh xưng",
     "merge_profile_field/lifecycle/scope":
      "Phạm vi",
     "merge_profile_field/lifecycle/score":
@@ -55765,6 +55835,26 @@
     "rows/lifecycle/unknown":
      "Chưa rõ",
     "rows/boolean/true":
+     "Có",
+    "salutation/lifecycle/customer":
+     "Khách hàng",
+    "salutation/lifecycle/disqualified":
+     "Đã loại",
+    "salutation/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "salutation/lifecycle/live":
+     "Đang vận hành",
+    "salutation/lifecycle/onboarding":
+     "Đang triển khai",
+    "salutation/lifecycle/opportunity":
+     "Cơ hội",
+    "salutation/lifecycle/prospect":
+     "Tiềm năng",
+    "salutation/lifecycle/target":
+     "Mục tiêu",
+    "salutation/lifecycle/unknown":
+     "Chưa rõ",
+    "salutation/boolean/true":
      "Có",
     "scheduled_at/lifecycle/customer":
      "Khách hàng",
@@ -61273,6 +61363,12 @@
     "rows/empty":
      "Chưa đặt",
     "rows/execution":
+     "Được xác định khi áp dụng",
+    "salutation/boolean":
+     "Không",
+    "salutation/empty":
+     "Chưa đặt",
+    "salutation/execution":
      "Được xác định khi áp dụng",
     "scheduled_at/boolean":
      "Không",

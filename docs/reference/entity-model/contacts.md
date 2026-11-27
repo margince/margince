@@ -120,6 +120,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_source_channel`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN ((new.source <> ALL (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) EXECUTE FUNCTION move_party_source_onto_its_channel()`
 - `deleted_company_drops_evidence`: `AFTER DELETE REFERENCING OLD TABLE AS gone_subject FOR EACH STATEMENT EXECUTE FUNCTION deleted_subject_drops_evidence('company')`
 - `home_read_fence_company_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR (old.is_anchor IS DISTINCT FROM new.is_anchor) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
+- `source_change_is_remembered`: `AFTER UPDATE FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "phone": 20000, "source": 20000, "status": 20000, "industry": 2000, "size_band": 20000, "legal_name": 500, "visibility": 20000, "captured_by": 20000, "description": 20000, "logo_source": 20000, "name_source": 20000, "address_city": 20000, "linkedin_url": 20000, "address_line1": 500, "address_line2": 500, "source_system": 128, "address_region": 20000, "geocode_source": 20000, "geocode_status": 20000, "address_country": 20000, "logo_object_key": 20000, "logo_icon_source": 20000, "geocode_input_hash": 20000, "address_postal_code": 20000, "logo_icon_object_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"captured_by":20000,"description":20000,"email":20000,"geocode_input_hash":20000,"geocode_source":20000,"geocode_status":20000,"industry":2000,"legal_name":500,"linkedin_url":20000,"logo_icon_object_key":20000,"logo_icon_source":20000,"logo_object_key":20000,"logo_source":20000,"name_source":20000,"phone":20000,"size_band":20000,"source":20000,"source_system":128,"status":20000,"visibility":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "phone": 20000, "source": 20000, "status": 20000, "industry": 2000, "size_band": 20000, "legal_name": 500, "visibility": 20000, "captured_by": 20000, "description": 20000, "logo_source": 20000, "name_source": 20000, "address_city": 20000, "linkedin_url": 20000, "address_line1": 500, "address_line2": 500, "source_system": 128, "address_region": 20000, "geocode_source": 20000, "geocode_status": 20000, "address_country": 20000, "logo_object_key": 20000, "logo_icon_source": 20000, "geocode_input_hash": 20000, "address_postal_code": 20000, "logo_icon_object_key": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"captured_by":20000,"description":20000,"email":20000,"geocode_input_hash":20000,"geocode_source":20000,"geocode_status":20000,"industry":2000,"legal_name":500,"linkedin_url":20000,"logo_icon_object_key":20000,"logo_icon_source":20000,"logo_object_key":20000,"logo_source":20000,"name_source":20000,"phone":20000,"size_band":20000,"source":20000,"source_system":128,"status":20000,"visibility":20000}')`
 - `trg_company_address_country_stale`: `AFTER UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION company_address_country_goes_stale()`
@@ -578,7 +579,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## contact
 
-49 columns · primary key `(id)` · referenced by 50 foreign keys
+50 columns · primary key `(id)` · referenced by 50 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -610,6 +611,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `quarantined_at` | `timestamp with time zone` |  |  |
 | `relationship_mark` | `text` |  | Set when the workspace's relationship to this contact is not an ordinary one. |
 | `relationship_mark_set_by` | `text` |  |  |
+| `salutation` | `text` |  | One of `mr`, `ms`, `none`. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
 | `source_author_name` | `text` |  |  |
 | `source_id` | `text` |  | At most 128 characters. |
@@ -654,6 +656,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `contact_quarantine_reason_needs_a_verdict`: `CHECK (((quarantine_reason IS NULL) OR (quarantined_at IS NOT NULL)))`
 - `contact_relationship_mark_check`: `CHECK ((relationship_mark = ANY (ARRAY['vendor_marketing'])))`
 - `contact_relationship_mark_set_by_pairs`: `CHECK (((relationship_mark IS NULL) = (relationship_mark_set_by IS NULL)))`
+- `contact_salutation_check`: `CHECK ((salutation = ANY (ARRAY['mr', 'ms', 'none'])))`
 - `contact_source_author_needs_a_source`: `CHECK ((((source_author_id IS NULL) AND (source_author_name IS NULL)) OR (source_system IS NOT NULL)))`
 - `contact_source_check`: `CHECK ((source = ANY (ARRAY['api', 'automation', 'capture', 'import', 'manual', 'webform']))) NOT VALID`
 - `contact_source_id_length`: `CHECK (((source_id IS NULL) OR ((char_length(source_id) >= 1) AND (char_length(source_id) <= 128))))`
@@ -693,6 +696,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `contact_strength_dates_archive`: `BEFORE UPDATE OF archived_at FOR EACH ROW WHEN ((old.archived_at IS DISTINCT FROM new.archived_at)) EXECUTE FUNCTION trg_contact_strength_dates_archive()`
 - `deleted_contact_drops_evidence`: `AFTER DELETE REFERENCING OLD TABLE AS gone_subject FOR EACH STATEMENT EXECUTE FUNCTION deleted_subject_drops_evidence('contact')`
 - `home_read_fence_contact_reach`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR (old.visibility IS DISTINCT FROM new.visibility) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
+- `source_change_is_remembered`: `AFTER UPDATE FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "quarantine_reason": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "quarantine_cleared_by": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"quarantine_cleared_by":20000,"quarantine_reason":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"title": 120, "source": 20000, "visibility": 20000, "captured_by": 20000, "address_city": 20000, "photo_origin": 20000, "address_line1": 500, "address_line2": 500, "source_system": 20000, "address_region": 20000, "address_country": 20000, "narrowing_reason": 2000, "photo_object_key": 20000, "greeting_register": 20000, "quarantine_reason": 20000, "relationship_mark": 20000, "address_postal_code": 20000, "quarantine_cleared_by": 20000, "relationship_mark_set_by": 20000, "anonymized_address_hashes": 20000, "anonymized_address_key_id": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"address_city":20000,"address_country":20000,"address_line1":500,"address_line2":500,"address_postal_code":20000,"address_region":20000,"anonymized_address_hashes":20000,"anonymized_address_key_id":20000,"captured_by":20000,"greeting_register":20000,"narrowing_reason":2000,"photo_object_key":20000,"photo_origin":20000,"quarantine_cleared_by":20000,"quarantine_reason":20000,"relationship_mark":20000,"relationship_mark_set_by":20000,"source":20000,"source_system":20000,"title":120,"visibility":20000}')`
 - `trg_contact_address_country_stale`: `AFTER UPDATE OF address_postal_code, address_city, address_country FOR EACH ROW WHEN (((old.address_postal_code IS DISTINCT FROM new.address_postal_code) OR (old.address_city IS DISTINCT FROM new.address_city) OR (old.address_country IS DISTINCT FROM new.address_country))) EXECUTE FUNCTION contact_address_country_goes_stale()`
@@ -1101,7 +1105,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## conversation_claim
 
-21 columns · primary key `(id)` · referenced by 0 foreign keys
+20 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1113,7 +1117,6 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `due_at` | `timestamp with time zone` |  |  |
 | `evidence_fingerprint` | `text` | yes |  |
 | `kind` | `text` | yes | One of `commitment_ours`, `commitment_theirs`, `open_question`, `decision`, `priority`, `objection` and 2 more. |
-| `needs_review` | `boolean`, default `false` | yes | Contradictory evidence exists for this claim. |
 | `source_activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `source_quote` | `text` | yes | The verbatim excerpt this was read from, never a summary of it, so the reader can check the claim against what was written. |
 | `status` | `text`, default `'open'::text` | yes | `open`: the loop is live. |
@@ -1408,7 +1411,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## lead
 
-50 columns · primary key `(id)` · referenced by 20 foreign keys
+51 columns · primary key `(id)` · referenced by 20 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1443,6 +1446,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `promoted_contact_id` | `uuid` |  | Set on promotion (convenience mirror). |
 | `qualified_deal_id` | `uuid` |  | The deal joined or opened by the qualify call that promoted this lead, when one was asked for. |
 | `routed_at` | `timestamp with time zone` |  | When routing assigned an owner. |
+| `salutation` | `text` |  | One of `mr`, `ms`, `none`. |
 | `score` | `smallint`, default `0` | yes | Lead-local scoring; never reads the contact graph. |
 | `score_computed` | `smallint` |  | Server-derived. |
 | `score_override_reason` | `text` |  | Non-null ⇒ `score` is a human Commercial-Judgement override and recompute is suppressed; the machine value is retained in `score_computed`. |
@@ -1488,6 +1492,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `lead_override_retains_the_computed_score`: `CHECK (((score_override_reason IS NULL) OR (score_computed IS NOT NULL)))`
 - `lead_partner_acceptance_pairing`: `CHECK (((partner_accepted_at IS NULL) = (partner_accepted_by IS NULL)))`
 - `lead_promoted_names_its_contact`: `CHECK (((status <> 'promoted') OR ((promoted_contact_id IS NOT NULL) AND (archived_at IS NOT NULL))))`
+- `lead_salutation_check`: `CHECK ((salutation = ANY (ARRAY['mr', 'ms', 'none'])))`
 - `lead_score_computed_range`: `CHECK (((score_computed IS NULL) OR ((score_computed >= 0) AND (score_computed <= 100))))`
 - `lead_score_override_reason_check`: `CHECK (((score_override_reason IS NULL) OR (length(btrim(score_override_reason)) > 0)))`
 - `lead_score_range`: `CHECK (((score >= 0) AND (score <= 100)))`
@@ -1527,6 +1532,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 - `home_read_fence_lead_owner`: `AFTER UPDATE FOR EACH ROW WHEN (((old.owner_id IS DISTINCT FROM new.owner_id) OR ((old.archived_at IS NULL) AND (new.archived_at IS NOT NULL)))) EXECUTE FUNCTION advance_home_read_fence()`
 - `lead_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
+- `source_change_is_remembered`: `AFTER UPDATE FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()`
 - `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"email": 20000, "phone": 20000, "title": 120, "origin": 20000, "source": 20000, "status": 20000, "industry": 20000, "full_name": 120, "source_id": 20000, "captured_by": 20000, "company_name": 120, "linkedin_url": 20000, "origin_detail": 500, "source_system": 20000, "status_set_by": 20000, "arrival_origin": 20000, "disqualify_note": 2000, "email_domain_folded": 20000, "partner_accepted_by": 20000, "candidate_company_key": 20000, "score_override_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"arrival_origin":20000,"candidate_company_key":20000,"captured_by":20000,"company_name":120,"disqualify_note":2000,"email":20000,"email_domain_folded":20000,"full_name":120,"industry":20000,"linkedin_url":20000,"origin":20000,"origin_detail":500,"partner_accepted_by":20000,"phone":20000,"score_override_reason":2000,"source":20000,"source_id":20000,"source_system":20000,"status":20000,"status_set_by":20000,"title":120}')`
 - `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"email": 20000, "phone": 20000, "title": 120, "origin": 20000, "source": 20000, "status": 20000, "industry": 20000, "full_name": 120, "source_id": 20000, "captured_by": 20000, "company_name": 120, "linkedin_url": 20000, "origin_detail": 500, "source_system": 20000, "status_set_by": 20000, "arrival_origin": 20000, "disqualify_note": 2000, "email_domain_folded": 20000, "partner_accepted_by": 20000, "candidate_company_key": 20000, "score_override_reason": 2000}')) EXECUTE FUNCTION refuse_oversized_text('{"arrival_origin":20000,"candidate_company_key":20000,"captured_by":20000,"company_name":120,"disqualify_note":2000,"email":20000,"email_domain_folded":20000,"full_name":120,"industry":20000,"linkedin_url":20000,"origin":20000,"origin_detail":500,"partner_accepted_by":20000,"phone":20000,"score_override_reason":2000,"source":20000,"source_id":20000,"source_system":20000,"status":20000,"status_set_by":20000,"title":120}')`
 - `trg_lead_updated`: `BEFORE UPDATE FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()`

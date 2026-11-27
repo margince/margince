@@ -172,3 +172,9 @@ To stop a form for a while, choose **Pause form** in the row's **⋯** menu. A p
 
 To stop it for good, choose **Archive**. An archived form's address stops working, and a new form gets a new address. Archiving also turns off the form's handling plan, which stays in **Settings** → **Automations** with its run history. To archive a form with a handling plan, you also need the right to change automations.
 Also called: turn off form, disable form, delete form.
+
+### Can the owner get a notice for each post?
+
+Turn on **Tell the owner about each new post** beside **Owner of new leads**. This starts off. The owner chooses email, in-app notices, the daily digest or off under **New website leads** in their notification settings. A handling plan tells the owner it assigns. An existing lead or contact keeps its own owner. Unassigned records and inactive owners raise no notice.
+
+An existing contact still gets its usual task for the post. This switch adds a notice; it creates no second task. Without a handling plan, the notice goes to the owner the record has when the post lands. A workspace routing rule that assigns an unassigned lead later raises no delayed notice. Use a handling plan when the notice should follow that change of owner.

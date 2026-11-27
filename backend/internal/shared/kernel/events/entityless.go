@@ -52,8 +52,9 @@ var pipelineEventTypes = map[string]struct{}{
 	"legal_entity.updated":      {},
 	"legal_entity.archived":     {},
 	"legal_entity.member_added": {},
-	// A collection-notice declaration is read through the consent_config
-	// grant; a consumer re-reads it there.
+	// Consent purpose configuration is read through consent_config.
+	"consent_purpose.changed": {},
+	// Collection-notice declarations are read through consent_config.
 	"existing_customer_notice.created":   {},
 	"existing_customer_notice.withdrawn": {},
 	"capture.received":                   {},

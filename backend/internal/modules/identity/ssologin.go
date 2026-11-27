@@ -25,6 +25,8 @@ import (
 	"net/url"
 	"time"
 
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -185,7 +187,7 @@ func (h Handlers) StartOidcSignIn(w http.ResponseWriter, r *http.Request, provid
 	// noisy — the 404 below stays the single answer for "no such provider" and
 	// "the admin turned it off" alike.
 	if !h.oidcPerIP.Allow(httpserver.ClientIP(r)) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		httperr.Write(w, r, ratelimit.Refused(h.oidcPerIP))
 		return
 	}
 	// A failed policy read is NOT the 404: reporting an outage as absence would
@@ -285,7 +287,7 @@ func (h Handlers) OidcSignInCallback(w http.ResponseWriter, r *http.Request, pro
 		return
 	}
 	if !h.oidcPerIP.Allow(httpserver.ClientIP(r)) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		httperr.Write(w, r, ratelimit.Refused(h.oidcPerIP))
 		return
 	}
 	var code, state string

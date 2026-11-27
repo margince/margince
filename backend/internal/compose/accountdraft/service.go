@@ -172,12 +172,14 @@ func (s *Service) envelopeFor(ctx context.Context, view crmcontracts.Company360,
 	}
 	// An unreadable roster leaves no register, and the draft reads the thread.
 	var stored greetingregister.Register
+	var salutation string
 	if addressee, err := findContact(view, req.ContactID); err == nil {
 		stored = greetingregister.Of(addressee.GreetingRegister)
+		salutation = draftfloor.SalutationValue(addressee.Salutation)
 	}
 	return s.envelope.Resolve(ctx,
 		draftfloor.Written{
-			Chosen: req.Language, Greeting: stored, Thread: languageEvidence(view, s.envelope.Now(), zone),
+			Chosen: req.Language, Greeting: stored, Salutation: salutation, Thread: languageEvidence(view, s.envelope.Now(), zone),
 			Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject,
 		},
 		ConversationState(view, s.envelope.Now(), zone, logged...)).InZone(zone), nil

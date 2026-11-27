@@ -214,7 +214,7 @@ var sarRawCaptureLink = storekit.StoredOriginalSQL("a", "rc")
 // behind it — what the subject agreed to, and every change of mind on record.
 func sarConsentSections(pkg *SARPackage, contactID ids.ContactID, emails []string, leads []ids.UUID) []sarSection {
 	return []sarSection{
-		{&pkg.Consent, `SELECT cp.key AS purpose, pc.state, pc.lawful_basis, pc.captured_at
+		{&pkg.Consent, `SELECT cp.key AS purpose, pc.state, pc.lawful_basis, pc.captured_at, pc.policy_version
 		   FROM contact_consent pc JOIN consent_purpose cp ON cp.id = pc.purpose_id
 		   WHERE pc.contact_id = $1`, nil},
 		// The proof row in full, not a summary of it.

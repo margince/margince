@@ -506,7 +506,8 @@ type storekitWriterSets struct {
 func storekitWriters(t *testing.T) storekitWriterSets {
 	t.Helper()
 	calls := storekitCalls(t)
-	audit, emit := reachersOf(calls, "insertAuditRows"), reachersOf(calls, "insertEvents")
+	direct := storekitDirectCalls(t)
+	audit, emit := reachersOf(calls, "insertAuditRows"), reachersOf(direct, "insertEvents")
 	sets := storekitWriterSets{audits: map[string]bool{}, emits: map[string]bool{}}
 	for name := range emit {
 		sets.emits[name] = ast.IsExported(name)
@@ -529,7 +530,26 @@ func storekitWriters(t *testing.T) storekitWriterSets {
 
 // storekitCalls maps each storekit function, method and package variable to
 // the names it refers to.
-func storekitCalls(t *testing.T) map[string][]string {
+func storekitCalls(t *testing.T) map[string][]string { return storekitCallGraph(t, referencedNames) }
+
+// Registered callbacks cannot prove the caller emits its own domain change.
+func storekitDirectCalls(t *testing.T) map[string][]string {
+	return storekitCallGraph(t, func(node ast.Node) []string {
+		var names []string
+		ast.Inspect(node, func(n ast.Node) bool {
+			if _, closure := n.(*ast.FuncLit); closure {
+				return false
+			}
+			if ident, ok := n.(*ast.Ident); ok {
+				names = append(names, ident.Name)
+			}
+			return true
+		})
+		return names
+	})
+}
+
+func storekitCallGraph(t *testing.T, references func(ast.Node) []string) map[string][]string {
 	t.Helper()
 	const dir = "internal/platform/database/storekit"
 	entries, err := gatekit.ReadDir(dir)
@@ -552,7 +572,7 @@ func storekitCalls(t *testing.T) map[string][]string {
 				// A method counts under its own name, and a function value
 				// counts as much as a call: either way the writer is reached.
 				if d.Body != nil {
-					calls[d.Name.Name] = append(calls[d.Name.Name], referencedNames(d.Body)...)
+					calls[d.Name.Name] = append(calls[d.Name.Name], references(d.Body)...)
 				}
 			case *ast.GenDecl:
 				// var Writer = Audit makes Writer a writer too.
@@ -560,7 +580,7 @@ func storekitCalls(t *testing.T) map[string][]string {
 					if value, ok := spec.(*ast.ValueSpec); ok {
 						for _, name := range value.Names {
 							for _, expr := range value.Values {
-								calls[name.Name] = append(calls[name.Name], referencedNames(expr)...)
+								calls[name.Name] = append(calls[name.Name], references(expr)...)
 							}
 						}
 					}

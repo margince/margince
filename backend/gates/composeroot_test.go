@@ -33,6 +33,8 @@ const composeRootDir = "internal/compose"
 //
 // The ceilings below hold develop and main together: each side's additions
 // stayed under its own ceilings, and the two sets of additions sum to these.
+// Recovery fixtures use the private tool registry. Owner notices bind the
+// private intake and mail-worker wiring; their tests need those same bindings.
 const (
 	// Raised by 1 for the history-narrowing fleet worker, which binds each
 	// workspace through this package's unexported job helpers. Raised by 1 for
@@ -44,7 +46,7 @@ const (
 	// Raised by 1 for reportexactrange.go, which withholds a report number past the
 	// exact range at every scan that puts report numbers on the wire.
 	// Raised by 1 for the seat-bound deal reads a unit asks as its own user.
-	composeRootProductionFiles = 1390
+	composeRootProductionFiles = 1392
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -66,7 +68,7 @@ const (
 	// jobs, which drive the unexported job and effect wiring.
 	// Raised by 1 test file for the link suggestion tools an agent reads and
 	// answers through, which read the unexported tool registry.
-	composeRootTestFiles = 1934
+	composeRootTestFiles = 1936
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -152,13 +154,13 @@ const (
 	// and its cases, met with develop's in the sync.
 	// Raised by 64 production lines and 1 test line when develop's chat
 	// clarification ask met the sync; develop's own ceiling already covers them.
-	composeRootProductionLines = 232_131
+	composeRootProductionLines = 232_606
 	// Raised by 18 test lines for the link suggestion tool cases.
 	// Raised by 2 test lines for the actor census waivers of the two jobs that
 	// bind their colleague inside a method.
 	// Raised by 48 test lines for main's gate that keeps an agent's offered text
 	// from naming a tool it is not offered.
-	composeRootTestLines = 363_792
+	composeRootTestLines = 364_131
 )
 
 // A read under these floors stopped early or read the wrong place, and would

@@ -28,6 +28,11 @@ const legacyCompanyNameHeader = "Firmenname"
 // Columns is the guide of every core import target, keyed by target or by
 // "object.target" where one object's column means something else.
 var Columns = withLabels(withProjectColumns(withActivityColumns(map[string]Column{
+	"salutation": {Description: langcopy.Phrase{
+		En: "An explicit salutation: mr, ms or none. Leave blank when unknown.",
+		De: "Eine ausdrücklich gewählte Anrede: mr, ms oder none. Leer lassen, wenn unbekannt.",
+		Vi: "Cách xưng hô được chọn rõ ràng: mr, ms hoặc none. Để trống nếu chưa biết.",
+	}, Example: same("mr")},
 	"ref": {Description: langcopy.Phrase{
 		En: "Your own key for this row: the ID from your old CRM, or any text you choose. Upload again with the same ref and source name, and Margince updates the record instead of making a second one. Other files use it to link to this row.",
 		De: "Dein eigener Schlüssel für diese Zeile: die ID aus deinem alten CRM oder ein beliebiger Text. Lädst du mit derselben Ref und demselben Quellnamen erneut hoch, aktualisiert Margince den Datensatz, statt einen zweiten zu erstellen. Andere Dateien verknüpfen über diesen Wert mit dieser Zeile.",

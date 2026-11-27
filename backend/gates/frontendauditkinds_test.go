@@ -38,12 +38,13 @@ const (
 // type from, where the census cannot read the value. A key names a writer and
 // never a type, so the types still come from the Go that owns them.
 var runtimeTypedAuditWriters = map[string]func(t *testing.T) []string{
-	"backend/internal/modules/identity/grants.go:createRecordGrantInTx":   recordTypeNames,
-	"backend/internal/modules/identity/grants.go:RevokeRecordGrant":       recordTypeNames,
-	"backend/internal/modules/identity/grantmerge.go:moveGrant":           recordTypeNames,
-	"backend/internal/modules/identity/grantmerge.go:foldGrant":           recordTypeNames,
-	"backend/internal/modules/identity/grantmerge.go:auditUnshareByMerge": recordTypeNames,
-	"backend/internal/modules/recordlinks/write.go:recordLinkChange":      recordTypeNames,
+	"backend/internal/platform/database/storekit/sourcechanges.go:auditSourceChange": sourceAuditTypes,
+	"backend/internal/modules/identity/grants.go:createRecordGrantInTx":              recordTypeNames,
+	"backend/internal/modules/identity/grants.go:RevokeRecordGrant":                  recordTypeNames,
+	"backend/internal/modules/identity/grantmerge.go:moveGrant":                      recordTypeNames,
+	"backend/internal/modules/identity/grantmerge.go:foldGrant":                      recordTypeNames,
+	"backend/internal/modules/identity/grantmerge.go:auditUnshareByMerge":            recordTypeNames,
+	"backend/internal/modules/recordlinks/write.go:recordLinkChange":                 recordTypeNames,
 	// The claim route's record type comes off the URL; the store refuses any
 	// but a contact, company or lead.
 	"backend/internal/contracts/api_gen.go:ClaimRecord": recordTypeNames,
@@ -327,4 +328,8 @@ func auditKindLabels(t *testing.T, page, kinds, search string) (worded, owned ma
 		}
 	}
 	return worded, owned, problems
+}
+
+func sourceAuditTypes(t *testing.T) []string {
+	return auditPackageMapKeys(t, modulePath+"/internal/platform/database/storekit", "sourceEntities")
 }

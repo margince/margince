@@ -596,11 +596,13 @@ export interface components {
             /** @description The principal that created this revision. */
             captured_by: string;
         };
-        /** @description Payload for offer.updated: a draft offer was edited, its header or its line items. Names what changed and carries no values, so a subscriber reads the offer for them. */
+        /** @description Payload for offer.updated: an offer was edited or its stored source was normalized. Names the changed fields. Source normalization also carries the stored source and may occur after the offer left draft status. */
         PublicEventOfferUpdated: {
+            /** @description The stored source channel when this edit changed it, including a trigger's normalization. */
+            source?: string;
             /**
              * Format: uuid
-             * @description The edited draft offer.
+             * @description The edited offer.
              */
             offer_id: string;
             /**

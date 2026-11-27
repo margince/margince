@@ -1,10 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-// Package httperr is the single sentinel→HTTP choke point
-// (architecture/11 §1): handlers return errs sentinels and this mapper
-// produces the RFC 7807 problem+json body with the contract's stable
-// machine code. No handler hand-writes a status body.
+// Package httperr maps fixed errors to the API problem contract.
 package httperr
 
 import (
@@ -16,6 +13,7 @@ import (
 	"strconv"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
@@ -34,8 +32,6 @@ type problem struct {
 	Details map[string]any `json:"details,omitempty"`
 }
 
-// mapping is the fixed sentinel registry from interfaces.md §0. Adding an
-// entry happens together with the interfaces.md change, never ad hoc.
 var mapping = []struct {
 	sentinel error
 	status   int
@@ -61,7 +57,6 @@ var mapping = []struct {
 	{apperrors.ErrRetentionHold, http.StatusLocked, "locked"},
 }
 
-// versionSkewDetail tells a reader who lost a version race what to do next.
 const versionSkewDetail = "This record changed after you opened it. Reload it to see the change, then make yours again."
 
 // clientInputValidation maps the typed errors that mean "the CALLER got the
@@ -345,6 +340,10 @@ func Classify(err error) (Fault, bool) {
 	for _, m := range mapping {
 		if errors.Is(err, m.sentinel) {
 			f := Fault{Status: m.status, Code: m.code, Detail: err.Error()}
+			var waits retryAfterFault
+			if errors.As(err, &waits) {
+				f.RetryAfterSeconds = waits.RetryAfterSeconds()
+			}
 			// What an outside service said is text a remote party chose: its
 			// vendor, its account, its limits. The caller learns that it gave no
 			// usable answer; the rest stays with whoever reads the log.
@@ -399,6 +398,7 @@ func loggedPath(r *http.Request) string {
 // Write maps err onto the wire. Unknown errors become an opaque 500 — the
 // cause is logged server-side, never leaked to the client.
 func Write(w http.ResponseWriter, r *http.Request, err error) {
+	ratelimit.SetRefusalHeaders(w.Header(), err)
 	fault, ok := Classify(err)
 	if timedOut, late := timedOutFault(r, err, ok); late {
 		fault, ok = timedOut, true

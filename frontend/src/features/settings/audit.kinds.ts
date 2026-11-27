@@ -5,6 +5,7 @@ import type { MessageKey } from "../../i18n/en";
 
 // The words for each record type an audit row names, by its wire value.
 export const AUDIT_KIND_LABEL: Readonly<Record<string, MessageKey>> = {
+  consent_purpose: "settings.purposes",
   activity_retention_evidence: "audit.kind.activity_retention_evidence",
   activity_review_template: "audit.kind.activity_review_template",
   agent_client: "audit.kind.agent_client",

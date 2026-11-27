@@ -49,6 +49,7 @@ type UpdateContactInput struct {
 	// GreetingRegister is how a message to the contact opens; clearing it goes
 	// through Clear.
 	GreetingRegister *greetingregister.Register
+	Salutation       *crmcontracts.Salutation
 	Social           map[string]any
 	// LinkedInURL is the top-level spelling of Social's linkedin key; a
 	// cleared linkedin_url in Clear removes the link.
@@ -385,6 +386,9 @@ func buildContactPatch(current crmcontracts.Contact, in UpdateContactInput, mark
 	}
 	if in.LastName != nil {
 		p.Set("last_name", current.LastName, *in.LastName)
+	}
+	if err := patchSalutation(p, current.Salutation, in.Salutation); err != nil {
+		return nil, err
 	}
 	if in.Title != nil {
 		p.Set("title", current.Title, *in.Title)

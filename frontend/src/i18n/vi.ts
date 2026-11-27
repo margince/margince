@@ -7639,6 +7639,14 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "create.company": "Công ty mới",
   "create.lead": "Lead mới",
   "create.deal": "Deal mới",
+  "create.salutation": "Danh xưng",
+  "salutation.any": "Mọi danh xưng",
+  "salutation.unset": "Chưa đặt",
+  "salutation.mr": "Ông",
+  "salutation.ms": "Bà",
+  "salutation.none": "Không dùng danh xưng theo giới",
+  "salutation.hint": "Chỉ ghi lựa chọn liên hệ đã cung cấp. Không đoán từ tên.",
+  "history.field.salutation": "Danh xưng",
   "create.fullName": "Họ và tên",
   "create.firstName": "Tên",
   "create.lastName": "Họ",
@@ -8726,8 +8734,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "compose.mailboxNotConnected":
     "Chưa kết nối hộp thư nào. Hãy kết nối một hộp thư để gửi từ Margince.",
   "compose.mailboxNotConnectedGoto": "Kết nối hộp thư",
-  "compose.sharedUnsubscribeToken":
-    "Tin nhắn có liên kết hủy đăng ký chỉ gửi cho một người nhận mỗi lần, vì liên kết đó gắn với sự đồng ý của riêng người nhận đó. Gửi riêng cho từng người nhận, không dùng Cc.",
   "compose.relinkTitle": "Liên kết hoạt động với hồ sơ khác",
   "compose.relinkTarget": "Tìm liên hệ, công ty, deal, lead hoặc dự án",
   "compose.relinkNoVersion":
@@ -11651,6 +11657,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.correctionNote": "Lý do (người liên hệ có thể hỏi lại)",
   "privacy.correctionAccept": "Chấp nhận và cập nhật",
   "privacy.correctionReject": "Giữ nguyên",
+  "privacy.purposeRename": "Đổi tên",
+  "privacy.purposeRenameTitle": "Đổi tên {label}",
+  "privacy.purposeArchiveTitle": "Lưu trữ {label}",
+  "privacy.purposeInUse":
+    "Mục đích này đã có hồ sơ đồng ý. Hãy tạo mục đích mới.",
   "privacy.purposesRegistry": "Mục đích đã đăng ký",
   "privacy.purposeKeyTaken": "Khóa này đã dùng cho {label}.",
   "privacy.purposeKeyTakenUnnamed": "Một mục đích khác đã dùng khóa này.",
@@ -11663,7 +11674,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeFrequency.quarterly": "Khoảng mỗi quý một lần",
   "privacy.purposeCreate": "Tạo mục đích",
   "privacy.purposeAppendOnly":
-    "Không thể đổi tên hay gỡ mục đích sau khi tạo; danh mục chỉ cho phép thêm mới. Chọn khóa cẩn thận.",
+    "Bạn có thể đổi tên hoặc lưu trữ mục đích chưa sử dụng. Khi đã có hồ sơ đồng ý, thông báo, nội dung xin đồng ý hoặc thư hẹn giờ liên quan, mục đích được giữ nguyên. Hãy tạo mục đích mới để thay đổi.",
   "notice.title": "Nghĩa vụ thông báo",
   "notice.sub":
     "Nghĩa vụ xếp theo hạn; nguồn cần xem xét xếp theo thời điểm ghi nhận.",
@@ -18764,6 +18775,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.senderSecretHint":
     "Khóa ký API Webflow trả về một lần khi tạo webhook. Webhook do một ứng dụng OAuth tạo thì được ký bằng client secret của ứng dụng đó. Để trống cho đến khi có: trước đó biểu mẫu không nhận bài gửi nào.",
   "webForms.field.senderSecretKeep": "Để trống để giữ khóa đã lưu.",
+  "webForms.field.notifyOwnerHint":
+    "Thông báo khi nhận biểu mẫu hoặc sau bước phân công của kế hoạch xử lý. Phân công sau đó trong công ty không gửi thêm thông báo.",
+  "webForms.field.notifyOwner":
+    "Thông báo cho người phụ trách mỗi lượt gửi mới",
+  "notifications.class.website_lead.label": "Lead mới từ trang web",
+  "notifications.class.website_lead.help":
+    "Lượt gửi biểu mẫu trên trang web cho lead hoặc liên hệ do bạn phụ trách.",
   "webForms.field.consentRequired": "Yêu cầu đồng ý trước khi nhận bài gửi",
   "webForms.field.consentWording": "Nội dung đồng ý",
   "webForms.field.consentWordingHint":

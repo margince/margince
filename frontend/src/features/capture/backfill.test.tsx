@@ -335,9 +335,12 @@ describe("the connect-time backfill payoff", () => {
     const calls = stubApi({
       statuses: [statusNone],
       previewRoute: () =>
-        jsonResponse(
-          { code: "internal", detail: "No answer from Gmail." },
-          502,
+        Response.json(
+          { code: "provider_unreachable", detail: "No answer from Gmail." },
+          {
+            status: 502,
+            headers: { "Content-Type": "application/problem+json" },
+          },
         ),
       onStart: countsStatus("running", { captured: 0 }),
     });

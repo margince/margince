@@ -1526,6 +1526,10 @@ paths:
         tier: auto_execute
         scope: read
       parameters:
+        - name: salutation
+          in: query
+          schema: { type: string, enum: [mr, ms, none, unset] }
+          description: Filter by an explicit salutation; unset finds records whose choice is null.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
@@ -13602,6 +13606,10 @@ paths:
         Explicit sort values retain their documented field ordering.
       x-mcp-tool: { verb: list_records, record_type: lead, tier: auto_execute, scope: read }
       parameters:
+        - name: salutation
+          in: query
+          schema: { type: string, enum: [mr, ms, none, unset] }
+          description: Filter by an explicit salutation; unset finds records whose choice is null.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
         - $ref: '#/components/parameters/ListMembershipFilter'
@@ -28793,6 +28801,52 @@ paths:
               schema: { $ref: '#/components/schemas/ConsentPurpose' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /consent-purposes/{id}:
+    patch:
+      tags: [Compliance]
+      operationId: renameConsentPurpose
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Rename an unused consent purpose.
+      description: Requires consent_config:update. Any reference to the purpose prevents a change.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [label]
+              properties:
+                label: { type: string, minLength: 1, maxLength: 120 }
+      responses:
+        '200':
+          description: Renamed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentPurpose' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Compliance]
+      operationId: archiveConsentPurpose
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Archive an unused consent purpose.
+      description: Requires consent_config:update. Any reference to the purpose prevents an archive.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204': { description: Archived. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /consent-purposes/send-counts:
     get:
       tags: [Compliance]
@@ -37000,7 +37054,7 @@ paths:
   #   /voice-profiles     (E07; now SPECIFIED above, B-E07.4/.5a — corpus sources via /voice-profiles/{id}/sources)
   #   /drafting-assets    (E07/E08; approval flips `approved` — admin/🟡)
   #   /agent-connections  (E10; revoke via POST /agent-connections/{id}/revoke; events read-only)
-  #   /saved-views        (E15; V1 enforces shared_scope=private)
+  #   /saved-views        (owned and read only by the signed-in user)
   #   /webhook-subscriptions (E10/S-E10.6, A51; HTTPS-only target_url, event_types ⊆ the published
   #                       events.md §2 catalog, signing_secret_ref; state active|paused. create/update
   #                       is 🟡 — registers outbound egress; x-mcp-tool create_record tier confirmation_required.
@@ -38002,11 +38056,8 @@ paths:
         housekeeping: dropping them silently would leave the lead who wrote them believing they
         had been read.
 
-        `email` is accepted for `approval_pending` alone, and any other class answers `422`. It
-        is the one class a producer stages a message for; the others would record a word the
-        product does not keep, and a reader who chose it would stop watching the screen while
-        waiting for mail that was never going to arrive. `digest` is how every other class
-        reaches a mailbox.
+        `email` is accepted for `approval_pending` and `website_lead`. Other classes
+        answer `422` and can reach a mailbox through `digest`.
       requestBody:
         required: true
         content:
@@ -42546,6 +42597,7 @@ components:
         No secret is ever returned here; `secret_configured` says one is stored.
       required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at, last_post_at]
       properties:
+        notify_owner: { type: boolean, description: Tell the final active owner about accepted posts through their notification preference. Defaults to false. }
         id: { type: string, format: uuid }
         name: { type: string }
         form_key: { type: string, description: 'The last segment of the intake address. Public; it is an address, not a credential.' }
@@ -42618,6 +42670,7 @@ components:
       type: object
       required: [name, sender]
       properties:
+        notify_owner: { type: boolean, description: Tell the final active owner about accepted posts through their notification preference. Defaults to false. }
         name: { type: string, minLength: 1, maxLength: 120 }
         sender: { $ref: '#/components/schemas/WebFormSender' }
         sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.' }
@@ -42644,6 +42697,7 @@ components:
     UpdateWebFormRequest:
       type: object
       properties:
+        notify_owner: { type: boolean, description: Tell the final active owner about accepted posts through their notification preference. Defaults to false. }
         handling_automation_id:
           type: [string, 'null']
           format: uuid
@@ -50130,7 +50184,7 @@ components:
         than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
         is waiting on your approval", so the choice is made per class and every kind the product
         raises is placed in one of them.
-      enum: [automation, lead_sla, approval_pending, capture, coach, system, project_health]
+      enum: [automation, lead_sla, approval_pending, website_lead, capture, coach, system, project_health]
       x-extensible-enum: true
     NotificationDelivery:
       type: string
@@ -50138,10 +50192,8 @@ components:
         Where a class of notification reaches its reader.
 
         `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
-        sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
-        the only class with a sending leg, and taking the word for any other would record a
-        choice the product does not keep; the others answer `422 value_not_allowed` and reach a
-        mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+        sends a message as each one lands for `approval_pending` and `website_lead`.
+        Other classes answer `422 value_not_allowed` and reach a mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
         following morning, and is accepted for every class.
 
         `off` records the notice and stops there: no lane, no badge, no message. It does NOT
@@ -51121,11 +51173,18 @@ components:
         kind: { type: string, enum: [location, department, seniority], x-extensible-enum: true }
         value: { type: string }
         retrieved_at: { type: string, format: date-time, description: When the run that last reported this value retrieved it. }
+    Salutation:
+      type: [string, 'null']
+      enum: [mr, ms, none, null]
+      x-extensible-enum: true
+      description: Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form.
+
     Contact:
       type: object
       description: A contact. Mirrors the `contact` table.
       required: [id, full_name, source, captured_by, created_at, updated_at]
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         acquisition_request:
           readOnly: true
           allOf: [{ $ref: '#/components/schemas/ContactAcquisitionRequest' }]
@@ -51430,6 +51489,7 @@ components:
       type: object
       required: [full_name, source]
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         full_name: { x-single-line: true, type: string, maxLength: 120 }
         created_from_activity_id:
           type: [string, 'null']
@@ -51791,6 +51851,7 @@ components:
       type: object
       description: Partial update. Omitted fields are unchanged.
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         greeting_register:
           type: [string, 'null']
           enum: [formal, familiar, null]
@@ -53758,6 +53819,7 @@ components:
       description: One current employee of the account, as the company view shows them.
       required: [contact_id, full_name, strength, deal_roles, consent, attachable]
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         contact_id: { type: string, format: uuid }
         full_name: { type: string }
         attachable:
@@ -55202,8 +55264,8 @@ components:
         needs_review:
           type: boolean
           description: >-
-            Contradictory evidence exists for this claim. The surface shows both sources and
-            asks — newest-wins is not a resolution.
+            This commitment does not pass the current evidence checks. Show the warning
+            instead of presenting it as a current obligation.
         corrected_at:
           type: [string, 'null']
           format: date-time
@@ -66065,6 +66127,7 @@ components:
       description: A thin, segregated prospect. Mirrors the `lead` table.
       required: [id, status, score, source, captured_by, created_at, updated_at]
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         legal_hold:
           type: boolean
           readOnly: true
@@ -66246,6 +66309,7 @@ components:
     CreateLeadRequest:
       type: object
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         full_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
         email: { type: [string, 'null'], format: email }
         phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
@@ -66291,6 +66355,7 @@ components:
         "disqualified ⇒ archived" is enforced on that one path); `promoted` is reachable only via
         POST /leads/{id}/promote. Both terminal states are therefore excluded from this enum.
       properties:
+        salutation: { $ref: '#/components/schemas/Salutation' }
         full_name: { x-single-line: true, type: [string, 'null'], maxLength: 120 }
         email: { type: [string, 'null'], format: email }
         phone: { type: [string, 'null'], description: "E.164, as a contact's number is. One number: a lead is one enquiry until it is promoted, and the number carries to the contact it becomes." }
@@ -66599,7 +66664,7 @@ components:
 
     OutcomeReview:
       type: object
-      required: [id, activity_id, deal_id, closing_occurrence_id, outcome, template_key, template_version, questions, answers, revision, created_at, updated_at]
+      required: [id, activity_id, deal_id, closing_occurrence_id, outcome, template_key, template_version, questions, answers, created_at, updated_at]
       properties:
         id: { type: string, format: uuid }
         activity_id: { type: string, format: uuid, description: 'The note this review was written as. It is where the prose, the author and the audience rules live.' }
@@ -66614,7 +66679,6 @@ components:
           description: 'The questions as they were asked, FROZEN at submission. The template they came from is editable, and an edit must not change what this review appears to have asked.'
         choice_answers: { type: object, additionalProperties: { type: array, items: { type: string } }, description: 'Selected options by question key; values must belong to the frozen question vocabulary.' }
         answers: { type: object, additionalProperties: { type: string }, description: 'Keyed by question key. Every key here has a question in `questions`.' }
-        revision: { type: integer }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
 
@@ -70832,7 +70896,6 @@ components:
       properties:
         id: { type: string, format: uuid }
         owner_id: { type: string, format: uuid }
-        shared_scope: { type: string, enum: [private, team, workspace], x-extensible-enum: true, default: private, description: V1 enforces private. }
         resource: { $ref: '#/components/schemas/SavedViewTarget' }
         name: { type: string }
         query:
@@ -79936,7 +79999,7 @@ components:
         What a refused send left behind. A SNAPSHOT of the engine's answer at the moment it was
         given — a reader asking why a message was refused on Tuesday needs Tuesday's answer, not
         what the consent rows say today.
-      required: [id, state, kind, reason_code, refusals]
+      required: [id, state, reason_code, refusals]
       properties:
         assessment_revision:
           type: string
@@ -79951,7 +80014,6 @@ components:
             and stays true whoever is looking at it. `needs_repair` is a refusal no evidence can
             answer — an objection, a dead address — where offering a context form would invite a rep
             to argue with a withdrawal.
-        kind: { type: string, enum: [single], x-extensible-enum: true }
         delivery_intent_id:
           type: [string, 'null']
           format: uuid

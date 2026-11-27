@@ -283,7 +283,7 @@ describe("handing a file to the Settings voice card", () => {
         code: "validation_error",
         title: "Unprocessable",
         detail: "That source is not eligible.",
-        details: { errors: [{ field: "content", code: "brand_new_rule" }] },
+        details: { errors: [{ field: "content", code: "brand_new_rule" }] }, // problem-code:unknown-field proves the fallback for a code from a newer server
       },
     });
     render(<Intake profileId="vp-1" onChanged={() => {}} />);
@@ -462,7 +462,7 @@ describe("handing a file to the Settings voice card", () => {
         code: "validation_error",
         title: "Unprocessable",
         detail: "That source is not eligible.",
-        details: { errors: [{ field: "content", code: "brand_new_rule" }] },
+        details: { errors: [{ field: "content", code: "brand_new_rule" }] }, // problem-code:unknown-field proves the fallback for a code from a newer server
       },
     });
     render(<Intake profileId="vp-1" onChanged={() => {}} />);

@@ -711,8 +711,8 @@ func TestAResetClearsADirectedSendAndKeepsItsAuditRow(t *testing.T) {
 	conn := integration.OwnerConn(t)
 	var review ids.UUID
 	if err := conn.QueryRow(context.Background(), `
-		INSERT INTO communication_review (state, kind, reason_code, refusals, initiated_by)
-		VALUES ('needs_repair', 'single', 'no_marketing_consent',
+		INSERT INTO communication_review (state, reason_code, refusals, initiated_by)
+		VALUES ('needs_repair', 'no_marketing_consent',
 		        '[{"address": "anna@example.test", "reason_code": "no_marketing_consent"}]', $1)
 		RETURNING id`, e.Rep1).Scan(&review); err != nil {
 		t.Fatalf("seeding the refused send: %v", err)

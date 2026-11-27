@@ -213,7 +213,7 @@ func WithWorkspaceTx(ctx context.Context, pool *pgxpool.Pool, fn func(pgx.Tx) er
 	// and every store beneath it lands here; joining that snapshot is what
 	// makes the composition cost one transaction instead of forty.
 	if tx, joined := snapshotOf(ctx); joined {
-		return guardedTransaction(ctx, tx, fn)
+		return guardedTransaction(ctx, &ownedTx{Tx: tx, root: tx}, fn)
 	}
 	return runTx(ctx, pool, fn)
 }
@@ -343,7 +343,7 @@ func runTxWith(ctx context.Context, pool *pgxpool.Pool, opts pgx.TxOptions, fn f
 	defer func() { _ = rollbackDetached(ctx, tx) }()
 	defer openTxMemo(tx)()
 
-	if err := guardedTransaction(ctx, tx, fn); err != nil {
+	if err := guardedTransaction(ctx, &ownedTx{Tx: tx, root: tx}, fn); err != nil {
 		return err
 	}
 	return commitWhileAnswerable(ctx, tx)

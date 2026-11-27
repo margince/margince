@@ -24,7 +24,7 @@ import (
 func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 	owner := ids.NewV7().String()
 	assertEveryFilterNarrows(t, "contact", contactListFilters, withListControls(map[string]string{
-		"owner_id": owner, "tag_id": ids.NewV7().String(), "tag_mode": "all", "company_id": ids.NewV7().String(),
+		"salutation": "mr", "owner_id": owner, "tag_id": ids.NewV7().String(), "tag_mode": "all", "company_id": ids.NewV7().String(),
 		"related_to": ids.NewV7().String(), "relationship_mark": "vendor_marketing", "shared_with_me": "true",
 	}))
 	assertEveryFilterNarrows(t, "company", companyListFilters, withListControls(map[string]string{
@@ -41,7 +41,7 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 		"stage_meaning": "signed", "cert_status": "certified", "sort": "-created_at",
 	})
 	assertEveryFilterNarrows(t, "lead", leadListFilters, withListControls(map[string]string{
-		"min_score": "70", "owner_id": owner, "status": "working",
+		"salutation": "mr", "min_score": "70", "owner_id": owner, "status": "working",
 		"tag_id": ids.NewV7().String(), "tag_mode": "all", "from_contact_id": ids.NewV7().String(),
 		"source": "webinar", "origin": "referral", "sla_state": "breached",
 		"industry": "logistics_transport", "country": "de", "size_band": "51-200",
@@ -65,7 +65,7 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 	}{
 		{datasource.EntityContact, []string{
 			"ai_written", "captured_by_kind", "company_id", "include_archived", "list_id", "owner_id",
-			"owner_team_id", "related_to", "relationship_mark", "shared_with_me", "sort", "tag_id", "tag_mode", "unassigned",
+			"owner_team_id", "related_to", "relationship_mark", "salutation", "shared_with_me", "sort", "tag_id", "tag_mode", "unassigned",
 		}},
 		{datasource.EntityCompany, []string{
 			"ai_written", "captured_by_kind", "domain", "dormancy", "extension_relationship_type", "include_anchor", "include_archived", "industry", "list_id",
@@ -77,7 +77,7 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 		}},
 		{datasource.EntityLead, []string{
 			"ai_written", "captured_by_kind", "country", "from_contact_id", "include_archived", "industry", "list_id",
-			"min_score", "origin", "owner_id", "owner_team_id", "partner_accepted", "partner_company_id", "size_band",
+			"min_score", "origin", "owner_id", "owner_team_id", "partner_accepted", "partner_company_id", "salutation", "size_band",
 			"sla_state", "sort", "source", "status", "tag_id", "tag_mode", "unassigned",
 		}},
 	} {

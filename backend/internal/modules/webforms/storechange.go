@@ -33,6 +33,7 @@ type UpdateInput struct {
 	ProductID            *ids.UUID
 	FieldMap             *map[string]string
 	ConsentRequired      *bool
+	NotifyOwner          *bool
 	ConsentPolicyVersion *string
 	ConsentWording       *string
 	PrivacyNotice        *string
@@ -91,6 +92,9 @@ func (in UpdateInput) merged(f Form) (Form, error) {
 			return Form{}, err
 		}
 		f.AllowedOrigins = origins
+	}
+	if in.NotifyOwner != nil {
+		f.NotifyOwner = *in.NotifyOwner
 	}
 	assign(&f.LeadOrigin, in.LeadOrigin)
 	assign(&f.OwnerID, in.OwnerID)
@@ -288,6 +292,7 @@ func patchFor(current, next Form) *storekit.Patch {
 	p.Set("field_map", current.FieldMap, next.FieldMap)
 	p.Set("consent_required", current.ConsentRequired, next.ConsentRequired)
 	p.Set("state", current.State, next.State)
+	p.Set("notify_owner", current.NotifyOwner, next.NotifyOwner)
 	for column, pair := range map[string][2]*string{
 		colLeadOrigin:           {current.LeadOrigin, next.LeadOrigin},
 		colConsentPolicyVersion: {current.ConsentPolicyVersion, next.ConsentPolicyVersion},

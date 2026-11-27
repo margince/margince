@@ -403,6 +403,7 @@ describe("the details' Edit", () => {
         en["lead.product"],
       ],
       [en["record.reach.label"]]: [
+        en["create.salutation"],
         en["create.email"],
         en["create.phone"],
         en["create.linkedinUrl"],

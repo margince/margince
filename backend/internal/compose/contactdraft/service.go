@@ -174,11 +174,16 @@ func (s *Service) Draft(
 	if err != nil {
 		return crmcontracts.CompanyEmailDraft{}, nil, err
 	}
+	salutation := draftfloor.SalutationValue(view.Contact.Salutation)
+	if len(alsoTo) > 0 {
+		salutation = ""
+	}
 	req.Envelope = s.envelope.Resolve(ctx,
 		draftfloor.Written{
 			Chosen: req.Language, Greeting: groupRegister(view.Contact, alsoTo),
-			Thread:  languageEvidence(view, s.envelope.Now(), zone),
-			Rewrite: req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject,
+			Salutation: salutation,
+			Thread:     languageEvidence(view, s.envelope.Now(), zone),
+			Rewrite:    req.RewriteOf, Purpose: req.Intent, DraftSubject: req.Subject,
 		},
 		ConversationState(view, s.envelope.Now(), zone, logged...)).InZone(zone)
 	in := FromView(view, req)

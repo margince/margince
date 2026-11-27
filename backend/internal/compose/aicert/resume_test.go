@@ -19,6 +19,7 @@ import (
 	"testing"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -292,7 +293,8 @@ func TestAnExpiredRunIsCompactedOutOfTheJournal(t *testing.T) {
 // decides what it should round-trip as.
 func TestAJournaledRunCarriesEveryFieldOfARunOutcome(t *testing.T) {
 	want := runOutcome{
-		Output: "the widget is blue", Outcome: "accepted", LatencyMS: 1234,
+		Recovery: &aitasks.LoopRecoveryMeasure{FirstStepCorrect: true, Completed: true, Refusals: 2, Recovered: true, TerminalRepeated: true},
+		Output:   "the widget is blue", Outcome: "accepted", LatencyMS: 1234,
 		TokensIn: 11, TokensOut: 22, CachedTokens: 33, CacheWriteTokens: 44,
 		Degraded: true, HardPass: true, Score: 87, Ungraded: true, JudgeScores: []int{12, 87, 90},
 		Withheld: "SAFETY", Abandoned: true, Leak: true, AnswerConfidence: &ConfidenceRange{Min: 0.6, Max: 0.9},

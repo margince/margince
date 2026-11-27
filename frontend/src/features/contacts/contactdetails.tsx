@@ -30,6 +30,7 @@ import { linkedinUrl } from "../../format/weburl";
 import { useLocale, useT } from "../../i18n";
 import { ADDRESS_KEYS } from "../../lib/addresscolumns";
 import { useCanWriteRecord } from "../../lib/capability";
+import { salutationLabel } from "../../lib/contactsalutation";
 import {
   currentEmployer,
   useEmploymentZone,
@@ -124,6 +125,11 @@ export function useContactAboutSections(
             />
           ),
         }),
+        field(
+          "salutation",
+          t("create.salutation"),
+          salutationLabel(contact.salutation, t),
+        ),
         field("first_name", t("create.firstName"), contact.first_name),
         field("last_name", t("create.lastName"), contact.last_name),
         ...tagsRows,

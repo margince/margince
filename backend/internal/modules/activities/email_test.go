@@ -332,3 +332,10 @@ func TestTheMailboxResolutionRefusesOnlyWhenNothingCanTransmit(t *testing.T) {
 		t.Fatalf("no transmitting mailbox = %v, want the refusal naming what to fix", err)
 	}
 }
+
+func TestTheNoModelDraftUsesTheExplicitSalutation(t *testing.T) {
+	_, body := DeterministicEmailDraft(DraftContext{Language: "de", Formal: true, Recipient: "Dana", LastName: "Müller", Salutation: "ms"})
+	if !strings.HasPrefix(body, "Sehr geehrte Frau Müller,") {
+		t.Fatalf("fallback greeting: %s", body)
+	}
+}

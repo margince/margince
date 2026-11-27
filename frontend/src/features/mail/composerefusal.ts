@@ -14,7 +14,6 @@ export type Refusal =
   | "consent"
   | "mailbox"
   | "noMailbox"
-  | "sharedUnsubscribe"
   | "legacyFooter"
   | null;
 
@@ -38,9 +37,5 @@ export function refusalOf(error: unknown): Refusal {
     )
   )
     return "legacyFooter";
-  const shared = problemFieldErrorsOf(error).some(
-    ({ field, code }) =>
-      field === "recipients" && code === "shared_unsubscribe_token",
-  );
-  return shared ? "sharedUnsubscribe" : null;
+  return null;
 }

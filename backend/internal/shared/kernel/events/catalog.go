@@ -39,6 +39,7 @@ var catalog = map[string]struct {
 	"contact.archived":                  {contactStreamEntity, 1},
 	"contact.merged":                    {contactStreamEntity, 1},
 	"contact.restored":                  {contactStreamEntity, 1},
+	"consent_purpose.changed":           {identityStreamEntity, 1},
 	"consent.changed":                   {contactStreamEntity, 1},
 	// Somebody recorded that we may not write to a subject. Its own type rather
 	// than a consent.changed, because a suppression is not the absence of

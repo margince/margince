@@ -12,6 +12,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/importrecords"
 	"github.com/margince/margince/backend/internal/compose/recordexport"
+	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
@@ -56,6 +57,8 @@ const fieldDomain = "domain"
 // column of the same contact file, whichever object it is imported as.
 const fieldTitle = "title"
 
+const fieldSalutation = "salutation"
+
 // leadStatusNew is where an imported prospect starts: the unworked state a
 // human moves it out of.
 const leadStatusNew = "new"
@@ -68,7 +71,7 @@ const leadTargetStatus = recordexport.LeadStatus
 // writer can both create and update it. A create-only target would stop
 // honouring the file on the second upload. The caller picks `lead` or `contact` per run.
 var csvTargets = map[string][]string{
-	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, companyNameField, fieldLinkedIn, leadTargetStatus, leadTargetOrigin, leadTargetOriginDetail, csvTargetAuthor, csvTargetOwner, csvTargetTags},
+	migration.ObjectLead: {fieldFullName, fieldEmail, fieldPhone, fieldTitle, fieldSalutation, companyNameField, fieldLinkedIn, leadTargetStatus, leadTargetOrigin, leadTargetOriginDetail, csvTargetAuthor, csvTargetOwner, csvTargetTags},
 	// `domain` is what actually identifies a company. Its absence is why a
 	// spreadsheet's website column had nowhere to go, and why company dedupe
 	// falls back to matching names — which two real companies may legitimately
@@ -77,7 +80,7 @@ var csvTargets = map[string][]string{
 	migration.ObjectCompany: append([]string{fieldDisplayName, fieldLegalName, fieldIndustry, fieldSizeBand, descriptionField, fieldDomain, fieldLinkedIn, fieldPhone, fieldEmail, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
 	// The owner is named by the seat's email (csvowners.go), never by its id.
 	// `author` is a name (csvauthor.go).
-	migration.ObjectContact: append([]string{fieldFullName, fieldFirstName, fieldLastName, fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
+	migration.ObjectContact: append([]string{fieldFullName, fieldFirstName, fieldLastName, fieldEmail, fieldPhone, fieldLinkedIn, fieldTitle, fieldSalutation, csvTargetAuthor, csvTargetOwner, csvTargetTags}, recordAddressTargets...),
 	// A stage change is an advance (dealUpdateFrom); the lost reason is written once.
 	migration.ObjectDeal: {
 		dealTargetName, dealTargetPipeline, dealTargetStage, dealTargetAmount, dealTargetCurrency, dealTargetCloseDate,
@@ -354,6 +357,12 @@ func storedValue(current map[string]json.RawMessage, field string) json.RawMessa
 // forever — every re-import of an unchanged file would rewrite the row, bump
 // its version, and publish an update event for a change nobody made.
 func canonicalFor(field, value string) string {
+	if field == fieldSalutation {
+		if choice := contacts.SubmittedSalutation(value); choice != nil {
+			return string(*choice)
+		}
+		return ""
+	}
 	trimmed := strings.TrimSpace(value)
 	switch field {
 	case fieldIndustry:
@@ -411,6 +420,7 @@ func leadCreateFrom(fields map[string]string, typed map[string]any, sourceSystem
 	in.Phone = checkedString(fields, typed, fieldPhone)
 	in.LinkedInURL = checkedString(fields, typed, fieldLinkedIn)
 	in.Title = importString(fields, fieldTitle)
+	in.Salutation = importSalutation(fields)
 	in.CompanyName = importString(fields, "company_name")
 	in.OriginHint, in.OriginDetail = originFrom(fields)
 	in.CustomFields = customFieldsFrom(fields, typed)
@@ -433,6 +443,7 @@ func leadUpdateFrom(changed map[string]string, typed map[string]any) contacts.Up
 		Phone:        checkedString(changed, typed, fieldPhone),
 		LinkedInURL:  checkedString(changed, typed, fieldLinkedIn),
 		Title:        importString(changed, fieldTitle),
+		Salutation:   importSalutation(changed),
 		CompanyName:  importString(changed, "company_name"),
 		OriginHint:   originHint,
 		OriginDetail: originNote,
@@ -468,4 +479,10 @@ func canonicalIndustry(trimmed string) string {
 		return code
 	}
 	return trimmed
+}
+
+// importSalutation carries an explicit CSV value. The store validates the same
+// closed vocabulary as API writes; it never derives a choice from a name.
+func importSalutation(fields map[string]string) *crmcontracts.Salutation {
+	return contacts.SubmittedSalutation(fields[fieldSalutation])
 }

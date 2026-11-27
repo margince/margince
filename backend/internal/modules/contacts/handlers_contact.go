@@ -69,6 +69,11 @@ func (h Handlers) ListContacts(w http.ResponseWriter, r *http.Request, params cr
 		CustomFilters:   httperr.CustomFieldFilters(r),
 		TagIDs:          uuidArgs(params.TagId),
 	}
+	if params.Salutation != nil {
+		word := string(*params.Salutation)
+		in.Salutation = &word
+	}
+
 	if params.RelationshipMark != nil {
 		mark := string(*params.RelationshipMark)
 		in.RelationshipMark = &mark
