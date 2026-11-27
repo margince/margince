@@ -1328,10 +1328,10 @@ func withdrawFiling(ctx context.Context, rt extension.Runtime, d extension.Deliv
 subscription gets its own consumer group (`cg:ext-<unit>-<subscription>`), started in the worker role. What to
 plan for:
 
-- **A delivery runs as the unit's service member.** When the unit has a live
-  [service member](declare-a-service-member.md) that holds one of its secrets, `rt.Caller()` names it and
+- **A delivery runs as the unit's service member.** Say the unit has a live
+  [service member](declare-a-service-member.md) that holds one of its secrets. Then `rt.Caller()` names it.
   `tx.Core()` is checked against its grants and row scope, so a record it cannot read is `ErrNotFound`. With
-  none, the caller is the zero `Caller` and `tx.Core()` refuses. Your own tables stay open either way. See
+  none, the caller is the zero `Caller` and `tx.Core()` refuses, and your own tables stay open either way. See
   [React to a new company](land-companies-and-deals-from-an-extension.md#react-to-a-new-company).
 - **The bus may deliver an event twice.** The core drops the second delivery when it can see it (the same event to
   the same subscription). But that is a cache, and it cannot cover a crash between your work and the `ack`.

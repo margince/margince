@@ -21,6 +21,7 @@ import (
 
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/extdelivery"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/instrument"
 	kevents "github.com/margince/margince/backend/internal/shared/kernel/events"
@@ -144,7 +145,7 @@ func (c ComposedSubscription) handlerOver(db *database.DB, log *slog.Logger) fun
 		ctx = principal.WithCausationEvent(ctx, env.EventID)
 
 		deps := boundExtensionRuntime()
-		seat, hasSeat, err := deliveryServiceMember(ctx, deps.pool, string(c.Unit))
+		seat, hasSeat, err := extdelivery.ServiceMember(ctx, deps.pool, string(c.Unit), memberConnectedTx, liveMemberPrincipal)
 		if err != nil {
 			return err
 		}

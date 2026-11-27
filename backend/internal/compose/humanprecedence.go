@@ -18,6 +18,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/humanedit"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -64,61 +65,6 @@ func (w humanWrite) moved(entityType, table string) bool {
 	}
 	return table == "" || w.differsFromLive
 }
-
-// liveValueOf renders the record's current value of latest.key, or NULL
-// without a table to read it from.
-func liveValueOf(table string) string {
-	if table == "" {
-		return "NULL::jsonb"
-	}
-	return `(SELECT to_jsonb(t) -> latest.key FROM ` + table + ` t WHERE t.id = $2)`
-}
-
-// unauditedHolder renders the predicate deciding whether an UNAUDITED patch
-// key is human-owned. With a table to read, the answer is "only if the row
-// holds a value there that is not the column's own default" — filling an
-// empty field undoes nobody, and neither does moving a value the database
-// supplied — unless the key is an access field, whose every value is the
-// human's. Without a table, every unaudited key on a human-created record is
-// treated as theirs.
-func unauditedHolder(table string) string {
-	if table == "" {
-		return "true"
-	}
-	return `EXISTS (
-			    SELECT 1 FROM ` + table + ` t
-			    WHERE t.id = $2 AND to_jsonb(t) -> p.key IS NOT NULL
-			      AND to_jsonb(t) -> p.key <> 'null'::jsonb
-			      AND to_jsonb(t) -> p.key <> '""'::jsonb
-			      AND (p.key IN (` + accessFields + `)
-			        OR (to_jsonb(t) ->> p.key) IS DISTINCT FROM (` + constantColumnDefault + `))
-			  )`
-}
-
-// accessFields are the pair platform/auth's row scope reads to decide who
-// sees a record. Moving one off its default hides the record from colleagues.
-const accessFields = `'visibility', 'owner_id'`
-
-// constantColumnDefault reads, as text, the catalog default of column p.key on
-// row t when that column holds text or an enum and its default is a quoted
-// literal; any other reads as NULL, so the tie goes to asking the human.
-const constantColumnDefault = `SELECT ` + literalOfDefault + `
-			      FROM pg_attribute att
-			      JOIN pg_type typ ON typ.oid = att.atttypid
-			      JOIN pg_attrdef def ON def.adrelid = att.attrelid AND def.adnum = att.attnum
-			      CROSS JOIN LATERAL (SELECT pg_get_expr(def.adbin, def.adrelid) AS expr) d
-			      WHERE att.attrelid = t.tableoid AND att.attname = p.key`
-
-// literalOfDefault unquotes a default d.expr shaped like
-// 'unknown'::company_lifecycle on a column of type typ. Only a text or enum
-// default is nobody's choice: a number, boolean, date or jsonb default is a
-// value somebody chose — product.active = true is a decision to sell it — so
-// it reads as NULL, as do now(), an array and a domain.
-const literalOfDefault = `CASE
-			        WHEN (typ.typtype = 'e' OR typ.typname IN ('text', 'varchar', 'bpchar', 'citext'))
-			         AND d.expr ~ '^''.*''::[a-z_][a-z_0-9 (),.]*$'
-			          THEN replace(substring(d.expr FROM '^''(.*)''::'), '''''', '''')
-			      END`
 
 // This is NOT superseded.go's question, and the two must not share a reader.
 // SupersededFields asks whether ANYONE wrote a key after a given audit row;
@@ -210,14 +156,14 @@ func humanOwnedConflictsIn(ctx context.Context, tx pgx.Tx, entityType string, id
 		)
 		SELECT key, true, current_value,
 		       proposed_value IS DISTINCT FROM current_value,
-		       proposed_value IS DISTINCT FROM `+liveValueOf(table)+`
+		       proposed_value IS DISTINCT FROM `+humanedit.LiveValueOf(table)+`
 		FROM latest
 		WHERE actor_type = 'human'
 		UNION ALL
 		SELECT p.key, false, NULL::jsonb, true, true FROM proposed p, human_created h
 		WHERE h.yes
 		  AND NOT EXISTS (SELECT 1 FROM latest l WHERE l.key = p.key)
-		  AND `+unauditedHolder(table)+`
+		  AND `+humanedit.UnauditedHolder(table)+`
 		ORDER BY 1`,
 		auditTypesFor(entityType), id, patch)
 	if err != nil {

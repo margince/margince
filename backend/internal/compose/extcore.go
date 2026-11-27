@@ -22,11 +22,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/extdelivery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 	"github.com/margince/margince/backend/pkg/extension/crm"
@@ -262,4 +264,43 @@ func transcode[T any](src any) (T, error) {
 		return out, err
 	}
 	return out, nil
+}
+
+// SetCustomFields writes the custom values a landed company record would get,
+// on the transaction the unit holds, and names those a user owns.
+func (c extensionCompanies) SetCustomFields(ctx context.Context, id string, values map[string]any) ([]string, error) {
+	if err := c.core.refuseUnattended(); err != nil {
+		return nil, err
+	}
+	ctx, err := c.core.authorised(ctx)
+	if err != nil {
+		return nil, err
+	}
+	tx, unit := c.core.tx, c.core.unit
+	return extdelivery.CompanyDoor{
+		Tx: tx, Catalog: c.core.catalog(), Store: c.store(), Refuse: portRefusal,
+		Overwrites: func(ctx context.Context) (bool, error) { return overwritesEditedFieldsIn(ctx, tx, unit) },
+		Held: func(ctx context.Context, company ids.UUID, patch json.RawMessage) ([]string, error) {
+			return humanOwnedConflictsIn(ctx, tx, string(recordTypeCompany), company, patch)
+		},
+	}.SetCustomFields(ctx, id, values)
+}
+
+type extensionMembers struct{ core extensionCore }
+
+//nolint:ireturn // returning the published repo IS the seam: a unit holds extension.MemberRepo, never a core type.
+func (c extensionCore) Members() extension.MemberRepo { return extensionMembers{core: c} }
+
+// List answers the active members a role holds, to a unit that declared the
+// members need. A tick, or a delivery with no service member, is refused.
+func (m extensionMembers) List(ctx context.Context, q extension.MemberQuery) ([]extension.Member, error) {
+	if err := extdelivery.RequireNeed(ComposedExtensions(), m.core.unit, extension.CapabilityMembers); err != nil {
+		return nil, err
+	}
+	ctx, err := m.core.beginRead(ctx)
+	if err != nil {
+		return nil, err
+	}
+	found, err := extdelivery.Roster(ctx, m.core.tx, q)
+	return found, portRefusal(err)
 }

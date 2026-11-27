@@ -25,6 +25,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/extdelivery"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -234,7 +235,7 @@ func (l crmLanding) fillCompany(ctx context.Context, id ids.UUID, f extension.Co
 	if err != nil {
 		return contacts.UpdateCompanyInput{}, nil, err
 	}
-	custom, heldBack, err := customValuesToWrite(ctx, current.AdditionalProperties, f.CustomFields, l.heldBy(string(recordTypeCompany), id))
+	custom, heldBack, err := extdelivery.ValuesToWrite(ctx, current.AdditionalProperties, f.CustomFields, l.heldBy(string(recordTypeCompany), id))
 	if err != nil {
 		return contacts.UpdateCompanyInput{}, nil, err
 	}
@@ -378,7 +379,7 @@ func (l crmLanding) moveDeal(ctx context.Context, id, stage ids.UUID, f extensio
 	} else {
 		in.AmountMinor, in.Currency = amount, currency
 	}
-	custom, heldBack, err := customValuesToWrite(ctx, current.AdditionalProperties, f.CustomFields, l.heldBy(string(recordTypeDeal), id))
+	custom, heldBack, err := extdelivery.ValuesToWrite(ctx, current.AdditionalProperties, f.CustomFields, l.heldBy(string(recordTypeDeal), id))
 	if err != nil {
 		return nil, err
 	}

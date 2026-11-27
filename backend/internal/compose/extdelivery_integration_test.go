@@ -226,19 +226,3 @@ func TestADeliveryListsTheActiveAdminsAndFilesOneTaskForTheFirst(t *testing.T) {
 		t.Errorf("tasks for the first admin = %d after a redelivery, want one", n)
 	}
 }
-
-func TestMembersAnswerNotDeclaredWithoutTheNeed(t *testing.T) {
-	e := setupCRMIngress(t)
-	e.withServiceMember(t)
-	made := e.mustIngest(t, companyRecord("acct-1", extension.CompanyFields{DisplayName: "Acme"}))
-
-	err := e.deliverCompanyCreated(t, ids.NewV7(), made.Ref.ID, func(ctx context.Context, rt extension.Runtime) error {
-		return rt.Tx(ctx, func(ctx context.Context, tx extension.Tx) error {
-			_, err := tx.Core().Members().List(ctx, extension.MemberQuery{Role: "admin"})
-			return err
-		})
-	})
-	if !errors.Is(err, extension.ErrNotDeclared) {
-		t.Fatalf("err = %v, want ErrNotDeclared", err)
-	}
-}

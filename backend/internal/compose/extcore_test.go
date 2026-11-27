@@ -274,3 +274,43 @@ func TestTheRuntimeBindsTheUnitsAttribution(t *testing.T) {
 		t.Errorf("actor = %v, want the invocation's own", actor)
 	}
 }
+func TestTheRosterRefusesAUnitThatDeclaredNoNeed(t *testing.T) {
+	composeUnit(t, extension.Extension{Name: "plain", Version: "1.0.0"})
+	_, err := extensionCore{unit: "plain"}.Members().List(context.Background(), extension.MemberQuery{Role: "admin"})
+	if !errors.Is(err, extension.ErrNotDeclared) {
+		t.Fatalf("err = %v, want ErrNotDeclared", err)
+	}
+}
+
+func TestTheRosterRefusesATickEvenForAUnitThatDeclaredTheNeed(t *testing.T) {
+	composeUnit(t, extension.Extension{
+		Name: "roster", Version: "1.0.0",
+		Needs: []extension.Need{{Capability: extension.CapabilityMembers, Reason: "Finds an administrator."}},
+	})
+	_, err := extensionCore{unit: "roster", unattended: true}.Members().List(context.Background(), extension.MemberQuery{})
+	if !errors.Is(err, extension.ErrForbidden) {
+		t.Fatalf("err = %v, want ErrForbidden", err)
+	}
+}
+
+func TestAnUnattendedPortOpensOnlyForADeliveryRunningAsAServiceMember(t *testing.T) {
+	if err := (extensionCore{unattended: true}).refuseUnattended(); !errors.Is(err, extension.ErrForbidden) {
+		t.Errorf("unattended with no member: err = %v, want ErrForbidden", err)
+	}
+	if err := (extensionCore{unattended: true, actsAsSeat: true}).refuseUnattended(); err != nil {
+		t.Errorf("a delivery as a service member: err = %v, want the port open", err)
+	}
+}
+
+func TestACallerNamesTheServiceMemberOnlyForADeliveryRunningAsOne(t *testing.T) {
+	member := ids.NewV7()
+	ctx := principal.WithActor(context.Background(), principal.Principal{Type: principal.PrincipalHuman, UserID: member})
+	rt := unattendedRuntimeFor(ctx, "unit", "1.0.0", "subscription/x", extensionRuntimeBinding{})
+	if rt.Caller() != (extension.Caller{}) {
+		t.Errorf("caller = %+v, want nobody for an unattended run", rt.Caller())
+	}
+	rt.actsAsSeat = true
+	if got := rt.Caller(); got.Type != extension.CallerHuman || got.UserID != member.String() {
+		t.Errorf("caller = %+v, want the service member %s", got, member)
+	}
+}

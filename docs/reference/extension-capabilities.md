@@ -2,7 +2,7 @@
 <!-- describes: backend/pkg/extension/members.go backend/internal/compose/extmembers.go backend/pkg/extension/need.go backend/pkg/extension/models.go backend/pkg/extension/objects.go backend/internal/compose/extcapability backend/internal/compose/extruntime.go -->
 # What an extension can use from the core
 
-An extension can use the core's AI models, its file store and its member roster, but only after it says so in its declaration. This page is for the author of an extension and for the admin who installs one. It lists the three capability names, the refusals, and where each limit lives in the code.
+An extension can use the core's AI models, its file store and the list of its members. It must say so in its declaration first. This page is for the author of an extension and for the admin who installs one. It lists the three capability names, the refusals, and where each limit lives in the code.
 
 ## Declare what you need
 
@@ -27,12 +27,12 @@ The declared needs are in `manifest.generated.json` and in the `needs` list that
 
 ## Read who holds a role
 
-`tx.Core().Members().List(ctx, extension.MemberQuery{Role: "admin"})` answers the active members who hold the role: `ID`, `DisplayName` and `IsAgent`. An empty `Role` lists every active member. The list is ordered by display name and ends at `extension.MaxRosterMembers`. A service member is not listed, because nobody signs in as it. The answer carries no email and no roles.
+`tx.Core().Members().List(ctx, extension.MemberQuery{Role: "admin"})` answers the active members who hold the role: `ID`, `DisplayName` and `IsAgent`. An empty `Role` lists every active member. The list is sorted by name and ends at `extension.MaxRosterMembers`. A service member is not listed, because nobody signs in as it. The answer carries no email and no roles.
 
 | Case | Answer |
 |---|---|
 | The unit did not declare `members` | `ErrNotDeclared` |
-| A job tick, or a delivery with no service member | `ErrForbidden` |
+| A scheduled job, or a delivery with no service member | `ErrForbidden` |
 
 ## Use the models
 
