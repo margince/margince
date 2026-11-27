@@ -46,7 +46,7 @@ func (s *Store) RefuseImportCreate(ctx context.Context, tx pgx.Tx, in CreateProj
 	if err := refuseTargetEndBeforeStart(in.StartedAt, in.TargetEndDate, targetEndDateColumn); err != nil {
 		return err
 	}
-	admitted, err := admitProjectCreation(ctx, tx, in, storekit.OwnerOrActor(ctx))
+	admitted, err := s.admitForImport(ctx, tx, in)
 	if err != nil {
 		return err
 	}
@@ -57,6 +57,20 @@ func (s *Store) RefuseImportCreate(ctx context.Context, tx pgx.Tx, in CreateProj
 	}
 	_, err = storekit.CreateFieldValues(cols.cols, in.CustomFields)
 	return err
+}
+
+// admitForImport is admitProjectCreation for a row whose company may be one the
+// upload creates first. That company has the zero id and is not looked up. A deal
+// that names a company already differs from it, as the commit will find.
+func (s *Store) admitForImport(ctx context.Context, tx pgx.Tx, in CreateProjectInput) (CreateProjectInput, error) {
+	if !in.CompanyID.IsZero() {
+		return admitProjectCreation(ctx, tx, in, storekit.OwnerOrActor(ctx))
+	}
+	in, err := admitSourceAndOwner(ctx, tx, in, storekit.OwnerOrActor(ctx))
+	if err != nil {
+		return CreateProjectInput{}, err
+	}
+	return admitRest(ctx, tx, in)
 }
 
 // RefuseUpdate answers the refusals UpdateProject would answer from the stored

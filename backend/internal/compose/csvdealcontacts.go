@@ -78,18 +78,18 @@ func (r *linkResolver) visibleContactByEmail(ctx context.Context, key string) (l
 // linkEdge is one link target of a row, with the resolver that finds the record
 // it names.
 type linkEdge struct {
-	target  string
-	resolve func(context.Context, string) (linkAnswer, error)
+	target, object string
+	resolve        func(context.Context, string) (linkAnswer, error)
 }
 
 // dealEdges are the company a deal is with and the contact who is its stakeholder.
 func (w *csvWriters) dealEdges() []linkEdge {
-	return []linkEdge{{csvTargetCompanyRef, w.links.resolveCompany}, {dealTargetContactRef, w.links.resolveContact}}
+	return []linkEdge{{csvTargetCompanyRef, migration.ObjectCompany, w.links.resolveCompany}, {dealTargetContactRef, migration.ObjectContact, w.links.resolveContact}}
 }
 
 // projectEdges are the company a project belongs to and the deal it comes from.
 func (w *csvWriters) projectEdges() []linkEdge {
-	return []linkEdge{{csvTargetCompanyRef, w.links.resolveCompany}, {importrecords.ProjectDealRef, func(ctx context.Context, ref string) (linkAnswer, error) {
+	return []linkEdge{{csvTargetCompanyRef, migration.ObjectCompany, w.links.resolveCompany}, {importrecords.ProjectDealRef, migration.ObjectDeal, func(ctx context.Context, ref string) (linkAnswer, error) {
 		return w.links.resolveLink(ctx, migration.ObjectDeal, ref)
 	}}}
 }
@@ -123,9 +123,17 @@ func (w *csvWriters) edgeLinkProblemOf(ctx context.Context, row migration.Row, e
 			out.links[edge.target] = answer.ID.String()
 		case answer.Pending:
 			// A record this upload creates first has no id in the test run. A
-			// project's own checks are told it is coming.
+			// project's own checks are told it is coming, unless an earlier run
+			// already bound that ref to a record the upload will update.
 			if importrecords.Is(w.object) {
 				out.links[edge.target] = importrecords.PendingLink
+				bound, err := w.links.bindingOf(ctx, edge.object, ref)
+				if err != nil {
+					return rowLink{}, err
+				}
+				if bound.Found {
+					out.links[edge.target] = bound.ID.String()
+				}
 			}
 		default:
 			broken := w.brokenLink(row, column, ref, answer.Why)

@@ -69,7 +69,7 @@ func (w *csvWriters) Predict(ctx context.Context, row migration.Row) (predictedO
 // Checks run in Ensure's order: create grant, then cells, then a contact's
 // company link under the run's policy. A dropped link rides on the outcome.
 func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predictedOutcome, *migration.SkippedRow, error) {
-	w.predictedWarnings, w.predictedFaults, w.predictedChange = nil, nil, nil
+	w.predictedWarnings, w.predictedFaults, w.predictedChange, w.predictedLinks = nil, nil, nil, nil
 	if refused := w.createRefusal(ctx, row); refused != nil {
 		return predictUnwritable, refused, nil
 	}
@@ -86,6 +86,7 @@ func (w *csvWriters) predictRow(ctx context.Context, row migration.Row) (predict
 	if link.skip {
 		return predictUnwritable, link.problem, nil
 	}
+	w.predictedLinks = link.links
 	outcome, refusal, err := w.predictLanding(ctx, row, link.into(typed))
 	if refusal.Code != "" {
 		why := migration.SkippedRow{ExternalID: row.ExternalID, Line: row.Line}.Because(refusal)

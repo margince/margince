@@ -56,7 +56,7 @@ func (r approvalPreviewReader) importCreationDetails(ctx, execCtx context.Contex
 	case migration.ObjectActivity:
 		return r.importActivityDetails(ctx, execCtx, writer, row, typed)
 	case migration.ObjectProject:
-		in, err := importrecords.ProjectPreview(ctx, ProjectsStoreOver(r.db), writer.cols.records, fields, typed, writer.sourceSystem, actor)
+		in, err := importrecords.ProjectPreview(ctx, ProjectsStoreOver(r.db), writer.cols.records, fields, typed, writer.sourceSystem, &row.ExternalID, actor)
 		if err != nil {
 			return nil, nil, err
 		}

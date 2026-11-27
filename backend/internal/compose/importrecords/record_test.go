@@ -4,7 +4,6 @@
 package importrecords
 
 import (
-	"context"
 	"encoding/json"
 	"errors"
 	"fmt"
@@ -76,14 +75,6 @@ func TestANewProjectNeedsANameAndACompanyTheUploadMayStillCreate(t *testing.T) {
 		if got := (projectRecord{}).RefuseNew(tc.fields, tc.typed).Code; got != tc.want {
 			t.Errorf("%s: refusal = %q, want %q", name, got, tc.want)
 		}
-	}
-}
-
-func TestATestRunDoesNotAskTheStoreAboutAProjectWhoseCompanyIsStillToBeCreated(t *testing.T) {
-	typed := map[string]any{targetCompanyRef: PendingLink}
-	why, err := projectRecord{}.PredictCreate(context.Background(), map[string]string{ProjectName: "Rollout"}, typed)
-	if err != nil || why.Code != "" {
-		t.Fatalf("answer = %v, %v, want no refusal and no store call: the company has no id yet", why, err)
 	}
 }
 
@@ -210,7 +201,7 @@ func TestEveryProjectAndProductTargetReachesTheStoresInput(t *testing.T) {
 		ProjectStartedAt: openapiDay("2026-09-01"), ProjectTargetEndDate: openapiDay("2026-10-01"),
 	}
 	record := projectRecord{}
-	in, up := record.birthOf(fields, typed, "src"), record.updateFrom(fields, typed)
+	in, up := record.birthOf(fields, typed, "src", new("ref")), record.updateFrom(fields, typed)
 	created := map[string]bool{
 		ProjectName: in.Name != "", ProjectPhase: in.Phase != "", targetCompanyRef: !in.CompanyID.IsZero(), ProjectDealRef: in.DealID != nil,
 		targetOwner: in.OwnerID != nil, targetDescribed: in.Description != nil, ProjectStartedAt: in.StartedAt != nil, ProjectTargetEndDate: in.TargetEndDate != nil,
@@ -266,4 +257,16 @@ func TestEveryProjectAndProductTargetReachesTheStoresInput(t *testing.T) {
 func openapiDay(text string) openapi_types.Date {
 	date, _ := day(text)
 	return openapi_types.Date{Time: date}
+}
+
+func TestADealNamedByARefAndByAnIDIsOneClaim(t *testing.T) {
+	deal := ids.NewV7()
+	byID := ProjectDealKey(map[string]string{ProjectDealRef: deal.String()}, map[string]any{ProjectDealRef: deal.String()})
+	byRef := ProjectDealKey(map[string]string{ProjectDealRef: "D-1"}, map[string]any{ProjectDealRef: deal.String()})
+	if byID == "" || byID != byRef {
+		t.Fatalf("claims = %q and %q, want one key for the deal both rows resolve to", byID, byRef)
+	}
+	if got := ProjectDealKey(map[string]string{ProjectDealRef: " D-2 "}, map[string]any{ProjectDealRef: PendingLink}); got != "pending:D-2" {
+		t.Fatalf("a deal the upload creates = %q, want it keyed by the cell that names it", got)
+	}
 }

@@ -34632,13 +34632,13 @@ export interface components {
          *
          *     `company` creates companies.
          *
-         *     `project` creates projects. It takes a single CSV only, never a ZIP. A
+         *     `project` creates projects, after the deals of the same upload. A
          *     row names the company it belongs to, by that company's `ref`, domain,
          *     name or id, and may name the deal it comes from. A project is born in
          *     the `initiative`, `pursuing` or `delivering` phase, never closed. A
          *     corrected export of projects, with its `id` column, updates them.
          *
-         *     `product` creates rate-card products, and takes a single CSV only. A
+         *     `product` creates rate-card products. A
          *     row is known by its `sku`, or by its `ref` when it has none. A price is
          *     written in the major units of its `currency`.
          *

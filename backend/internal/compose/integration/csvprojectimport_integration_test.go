@@ -61,7 +61,7 @@ func wantSameAnswers(t *testing.T, preview, committed importReportDTO) {
 	answers := func(report importReportDTO) []string {
 		var out []string
 		for _, issue := range report.Issues {
-			out = append(out, strings.Join([]string{issue.Kind, issue.ReasonCode, issue.Column, issue.Value}, "|"))
+			out = append(out, strings.Join([]string{issue.Kind, issue.ReasonCode, issue.Column, issue.Value, issue.Reason}, "|"))
 		}
 		return out
 	}
@@ -75,7 +75,7 @@ func importedProjects(t *testing.T, e *apptest.AppEnv) map[string]importedProjec
 	t.Helper()
 	rows, err := e.Owner.Query(context.Background(), `
 		SELECT p.name, p.id::text, p.phase, p.company_id::text, p.description, p.started_at::text,
-		       p.target_end_date::text, p.source_system,
+		       p.target_end_date::text, p.source_system, p.source_id,
 		       (SELECT d.id::text FROM deal d WHERE d.project_id = p.id LIMIT 1)
 		  FROM project p WHERE p.archived_at IS NULL`)
 	if err != nil {
@@ -85,7 +85,7 @@ func importedProjects(t *testing.T, e *apptest.AppEnv) map[string]importedProjec
 	out := map[string]importedProjectRow{}
 	for rows.Next() {
 		var p importedProjectRow
-		if err := rows.Scan(&p.Name, &p.ID, &p.Phase, &p.CompanyID, &p.Description, &p.StartedAt, &p.TargetEnd, &p.SourceSystem, &p.DealID); err != nil {
+		if err := rows.Scan(&p.Name, &p.ID, &p.Phase, &p.CompanyID, &p.Description, &p.StartedAt, &p.TargetEnd, &p.SourceSystem, &p.SourceID, &p.DealID); err != nil {
 			t.Fatalf("reading a project: %v", err)
 		}
 		out[p.Name] = p
@@ -94,9 +94,9 @@ func importedProjects(t *testing.T, e *apptest.AppEnv) map[string]importedProjec
 }
 
 type importedProjectRow struct {
-	Name, ID, Phase, CompanyID                      string
-	Description, StartedAt, TargetEnd, SourceSystem *string
-	DealID                                          *string
+	Name, ID, Phase, CompanyID                                string
+	Description, StartedAt, TargetEnd, SourceSystem, SourceID *string
+	DealID                                                    *string
 }
 
 // projectWorld is a company, a second company and one open deal of each.
@@ -139,7 +139,8 @@ func TestAProjectFileCreatesProjectsOnTheirCompaniesAndDeals(t *testing.T) {
 	rollout, second := projects["Plant rollout"], projects["Second line"]
 	if rollout.CompanyID != w.acme || rollout.Phase != "pursuing" || rollout.DealID == nil || *rollout.DealID != w.acmeDeal ||
 		rollout.Description == nil || *rollout.Description != "First, then second" ||
-		rollout.StartedAt == nil || *rollout.StartedAt != startDay || rollout.TargetEnd == nil || *rollout.TargetEnd != endDay || rollout.SourceSystem == nil {
+		rollout.StartedAt == nil || *rollout.StartedAt != startDay || rollout.TargetEnd == nil || *rollout.TargetEnd != endDay || rollout.SourceSystem == nil ||
+		rollout.SourceID == nil || *rollout.SourceID != "P-1" {
 		t.Fatalf("project = %+v, want it on Acme, pursuing, started from its deal, with its dates and text", rollout)
 	}
 	if second.CompanyID != w.other || second.Phase != "initiative" || second.DealID != nil {
@@ -243,6 +244,10 @@ func TestUndoArchivesImportedProjectsAndKeepsOneAColleagueEdited(t *testing.T) {
 	if left := importedProjects(t, e); len(left) != 1 || left["Edited by a rep"].ID != edited {
 		t.Fatalf("projects = %v, want only the edited one left", left)
 	}
+	again, _ := stageFile(t, e, "project", importProjectHeader+"\nP-1,Edited by a rep,"+w.acme+",,,,,\nP-2,Left alone,"+w.acme+",,,,,\n")
+	if report := commitFile(t, e, again); report.Disposition.Created != 1 {
+		t.Fatalf("the same file after the undo = %+v issues %+v, want the project the undo archived created again", report.Disposition, report.Issues)
+	}
 }
 
 // A project names a company the same upload creates first. The test run has no
@@ -312,4 +317,49 @@ func TestAnAgentImportsAProjectAndItsCompanyFromOneCall(t *testing.T) {
 	if project := importedProjects(t, d.e)["Tool rollout"]; project.CompanyID == "" || project.StartedAt == nil || *project.StartedAt != startDay {
 		t.Fatalf("project = %+v, want it on the company of the same call, with its start day", project)
 	}
+}
+
+// A deal named by its ref in one row and by its id in another is one deal.
+// The test run refuses the second project as the commit does.
+func TestOneDealNamedByRefAndByIDStartsOnlyOneProject(t *testing.T) {
+	e := setupImportApp(t)
+	pipeline, open, _, _ := seededStages(t, e)
+	importDeals(t, e, map[string]string{
+		"companies.csv": "ref,name\nCO-1,Twice GmbH\n",
+		"deals.csv":     "ref,name,pipeline,stage,company_ref\nD-77,Named twice," + pipeline + "," + open + ",CO-1\n",
+	}, append(bundleParts()[1:], dealImportParts("ref,name,pipeline,stage,company_ref")...))
+	named := dealNamed(t, e, "Named twice")
+	dealID, company := named.ID, *named.CompanyID
+	files := map[string]string{"projects.csv": "ref,name,company_ref,deal_ref\n" +
+		"P-1,By ref," + company + ",D-77\nP-2,By id," + company + "," + dealID + "\n"}
+	parts := []AnyMap{{"file": "projects.csv", "object": "project", "mapping": AnyMap{"ref": "ref", "name": "name", "company_ref": "company_ref", "deal_ref": "deal_ref"}}}
+	run := stageBundle(t, e, uploadZip(t, e, "projects.zip", zipBytes(t, files)).SourceRef, "crm", parts)
+	preview := readImportReport(t, e, run.ID)
+	if preview.Disposition.Created != 1 || preview.Disposition.Skipped != 1 {
+		t.Fatalf("test run = %+v issues %+v, want one project created and the second refused", preview.Disposition, preview.Issues)
+	}
+	approveAndRead(t, e, run.ID)
+	wantSameAnswers(t, preview, readImportReport(t, e, run.ID))
+}
+
+// A company the upload creates first never matches a deal that already names
+// another company, in the test run as in the commit.
+func TestAProjectOnAnUploadsNewCompanyIsCheckedAgainstAnExistingDeal(t *testing.T) {
+	e := setupImportApp(t)
+	w := newProjectWorld(t, e)
+	files := map[string]string{
+		"companies.csv": "ref,name\nCO-1,Fresh GmbH\n",
+		"projects.csv":  "ref,name,company_ref,deal_ref\nPR-1,Wrong deal,CO-1," + w.otherDeal + "\nPR-2,No deal,CO-1,\n",
+	}
+	parts := []AnyMap{
+		bundleParts()[1],
+		{"file": "projects.csv", "object": "project", "mapping": AnyMap{"ref": "ref", "name": "name", "company_ref": "company_ref", "deal_ref": "deal_ref"}},
+	}
+	run := stageBundle(t, e, uploadZip(t, e, "crm.zip", zipBytes(t, files)).SourceRef, "crm", parts)
+	preview := readImportReport(t, e, run.ID)
+	if preview.Disposition.Created != 2 || preview.Disposition.Skipped != 1 {
+		t.Fatalf("test run = %+v issues %+v, want the company and one project created, the project on the other company's deal refused", preview.Disposition, preview.Issues)
+	}
+	approveAndRead(t, e, run.ID)
+	wantSameAnswers(t, preview, readImportReport(t, e, run.ID))
 }

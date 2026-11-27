@@ -39,7 +39,7 @@ func (w *csvWriters) keysOf(row migration.Row, typed map[string]any) map[importk
 	case migration.ObjectProduct:
 		keys[importkeys.SKU] = fields[importrecords.ProductSKU]
 	case migration.ObjectProject:
-		keys[importkeys.Deal] = fields[importrecords.ProjectDealRef]
+		keys[importkeys.Deal] = importrecords.ProjectDealKey(fields, typed)
 	}
 	return keys
 }
