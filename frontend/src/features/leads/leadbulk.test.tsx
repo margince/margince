@@ -535,7 +535,7 @@ describe("LeadBulkBar — confirm and busy state", () => {
     expect(
       within(dialog).getByText("Return 2 leads to the unassigned queue?"),
     ).toBeTruthy();
-    await user.click(within(dialog).getByRole("button", { name: "Assign" }));
+    await user.click(within(dialog).getByRole("button", { name: "Return to queue" }));
 
     await waitFor(() => expect(onDone).toHaveBeenCalledTimes(1));
     expect(bodies).toEqual([
