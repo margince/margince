@@ -11022,6 +11022,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.close_date_past":
     "“{value}” đã qua, mà ngày chốt của deal đang mở thì không được ở quá khứ.",
   "import.reason.lost_reason_missing": "Deal đã thua cần có lý do thua.",
+  "import.reason.deal_field_not_for_pipeline":
+    "Trường tùy chỉnh {field} không áp dụng cho deal trong quy trình của deal này nên hàng bị bỏ qua. Hãy để trống ô hoặc nhập deal vào quy trình mà trường áp dụng.",
   "import.reason.deal_pipeline_fixed":
     "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
   "companies.contractMergeBlocked":
@@ -14827,6 +14829,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.activityKindsEvery": "Mọi loại",
   "cf.activityKindsFor": "Các loại hiện “{label}”",
   "cf.activityKindsSaved": "“{label}” giờ hiện ở các loại bạn đã chọn",
+  "cf.pipelines": "Hiện trong",
+  "cf.pipelinesHint": "Để trống để hiện trường này ở deal thuộc mọi quy trình.",
+  "cf.pipelinesEvery": "Mọi quy trình",
+  "cf.pipelinesArchived": "Quy trình đã lưu trữ",
+  "cf.pipelinesFor": "Các quy trình hiện “{label}”",
+  "cf.pipelinesSaved": "“{label}” giờ hiện ở deal thuộc các quy trình đã chọn",
   "cf.col.inCreate": "Trong biểu mẫu tạo mới",
   "cf.showInCreateFor": "Hiện “{label}” trong biểu mẫu tạo mới",
   "cf.shownInCreate": "Đã hiện “{label}” trong biểu mẫu tạo mới",

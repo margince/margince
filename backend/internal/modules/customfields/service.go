@@ -161,7 +161,7 @@ func (e *ColumnTakenError) MessageFault() (code, message string) {
 // in scanCustomField's scan order.
 const catalogColumns = `id, object, slug, label, type, status, archived_at,
 	column_name, currency, options, label_translations, option_translations,
-	show_in_create, reportable, activity_kinds, created_by, created_at, updated_at, version`
+	show_in_create, reportable, activity_kinds, pipeline_ids, created_by, created_at, updated_at, version`
 
 // scanCustomFieldPage scans one row of a sorted page: the catalog columns, and
 // the sort's cursor key where the sort appends one.
@@ -199,12 +199,13 @@ func scanCustomField(row pgx.Row) (crmcontracts.CustomField, error) {
 		currency                     *string
 		optionsRaw                   []byte
 		activityKinds                []string
+		pipelineIDs                  []ids.UUID
 		version                      int64
 		labelTranslations            map[string]string
 		optionTranslations           map[string]map[string]string
 	)
 	err := row.Scan(&id, &object, &out.Slug, &out.Label, &typ, &status, &out.ArchivedAt,
-		&colName, &currency, &optionsRaw, &labelTranslations, &optionTranslations, &out.ShowInCreate, &out.Reportable, &activityKinds, &createdBy, &out.CreatedAt, &out.UpdatedAt, &version)
+		&colName, &currency, &optionsRaw, &labelTranslations, &optionTranslations, &out.ShowInCreate, &out.Reportable, &activityKinds, &pipelineIDs, &createdBy, &out.CreatedAt, &out.UpdatedAt, &version)
 	if err != nil {
 		return crmcontracts.CustomField{}, err
 	}
@@ -231,6 +232,13 @@ func scanCustomField(row pgx.Row) (crmcontracts.CustomField, error) {
 			kinds[i] = crmcontracts.CustomFieldActivityKinds(kind)
 		}
 		out.ActivityKinds = &kinds
+	}
+	if pipelineIDs != nil {
+		wire := make([]openapi_types.UUID, len(pipelineIDs))
+		for i, id := range pipelineIDs {
+			wire[i] = openapi_types.UUID(id)
+		}
+		out.PipelineIds = &wire
 	}
 	return out, nil
 }
