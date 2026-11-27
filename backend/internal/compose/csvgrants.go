@@ -21,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
@@ -144,12 +143,11 @@ func checkGrants(
 // as a new record's owner, asked in one read transaction.
 func refusedOwners(ctx context.Context, pool *pgxpool.Pool, owners *ownerResolver) ([]string, error) {
 	var refused []string
-	self := storekit.OwnerOrActor(ctx)
-	ownOnly := !auth.WorkspaceImporter(ctx)
+	self := migration.OwnSeat(ctx)
 	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
 		for _, email := range slices.Sorted(maps.Keys(owners.seats)) {
 			// A member importing their own records owns every row they import.
-			if ownOnly && (self == nil || self.UUID != owners.seats[email]) {
+			if self != nil && self.UUID != owners.seats[email] {
 				refused = append(refused, email)
 				continue
 			}

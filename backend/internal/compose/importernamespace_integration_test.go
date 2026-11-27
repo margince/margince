@@ -41,8 +41,8 @@ import (
 )
 
 // importerPerms is AdminPerms plus the full import_run grant of a workspace
-// importer. The harness admin does NOT hold import_run, so this addition is
-// what makes the caller one, and its absence is what the refusal cases rely on.
+// importer. The harness admin holds no import_run grant. The refusal cases
+// rely on that.
 func importerPerms() principal.Permissions {
 	perms := integration.AdminPerms
 	objects := make(map[string]principal.ObjectGrant, len(perms.Objects)+1)

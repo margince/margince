@@ -27,7 +27,7 @@ func ImporterObject() string { return importRunObject }
 
 // WorkspaceImporter reports whether the caller imports for the whole
 // workspace rather than only their own records. It is the grant to discard
-// any import run (import_run:delete), which admin and ops hold and a rep, who
+// any import run (import_run:delete). Admin and ops hold it. A rep, who
 // imports only leads and contacts they own, does not. The system principal is
 // one: the import worker acts for whoever started the run.
 func WorkspaceImporter(ctx context.Context) bool {
@@ -35,11 +35,12 @@ func WorkspaceImporter(ctx context.Context) bool {
 }
 
 // DeclaredImporter reports whether the caller may write the importer's
-// source_system namespace: a HUMAN workspace importer (WorkspaceImporter)
-// holding import_run:create, the grant the product's own import surface takes
-// (compose/csvimport.go). A rep's own import never writes that namespace.
+// source_system namespace. That takes a human workspace importer
+// (WorkspaceImporter) who also holds import_run:create, the grant the
+// product's own import surface takes (compose/csvimport.go). A rep's own
+// import never writes that namespace.
 //
-// A GRANT, not a role, so asking for it says what the caller is doing rather
+// A grant, not a role, so asking for it says what the caller is doing rather
 // than who they are.
 //
 // RequireAdmin would be wrong on both halves. It admits PrincipalSystem, and

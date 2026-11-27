@@ -31,9 +31,8 @@ func ownImporter(ctx context.Context, seat ids.UUID, kind principal.PrincipalTyp
 	})
 }
 
-// An agent's stamp names its passport, not its seat, so a run it opens is
-// kept to the seat it acts for: the agent and its human read it, another
-// seat does not, and a workspace importer reads every run.
+// A run an agent opens is kept to the seat it acts for. The agent and its
+// human read it, another seat does not, and a workspace importer reads it.
 func TestAnOwnImportRunIsReadByItsSeatWhoeverOpenedIt(t *testing.T) {
 	admin, db := testWorkspaceCtx(t, adminImportRunGrant())
 	s := NewRunStore(db)

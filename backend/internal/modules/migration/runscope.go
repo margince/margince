@@ -12,8 +12,8 @@ import (
 )
 
 // OwnSeat is the seat a run is kept to when its importer imports only their
-// own records: the human, or the human an agent acts for. A workspace import
-// answers nil, and so does a caller with no seat. The run stores it as
+// own records. That is the human, or the human an agent acts for. A workspace
+// import answers nil, and so does a caller with no seat. The run stores it as
 // own_seat, so scoping never parses a provenance stamp.
 func OwnSeat(ctx context.Context) *ids.UserID {
 	if auth.WorkspaceImporter(ctx) {

@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/importkeys"
 	"github.com/margince/margince/backend/internal/compose/importrecords"
 	"github.com/margince/margince/backend/internal/compose/importtextbounds"
+	"github.com/margince/margince/backend/internal/compose/importwire"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/capture"
@@ -357,7 +358,7 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
-	if why, err := w.notYourRecord(current); err != nil || why.Code != "" {
+	if why, err := importwire.NotYourRecord(current, migration.OwnSeat(ctx)); err != nil || why.Code != "" {
 		return skippedFor(why), err
 	}
 	changed, keptWhy, err := w.landingChanges(ctx, row, current, typed)

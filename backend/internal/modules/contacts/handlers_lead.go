@@ -77,8 +77,8 @@ func (h Handlers) CreateLead(w http.ResponseWriter, r *http.Request, _ crmcontra
 		return
 	}
 
-	// A declared importer — a HUMAN holding import_run:create and :delete — may stamp the
-	// reserved mirror: namespace, which is what gives an import its own replay
+	// A declared importer (auth.DeclaredImporter) may stamp the reserved
+	// mirror: namespace, which is what gives an import its own replay
 	// key. Everyone else gets the client door, an agent carrying that human's
 	// grants included.
 	mapInput := LeadCreationInput
