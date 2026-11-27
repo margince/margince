@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/dealcoverage"
+	"github.com/margince/margince/backend/internal/compose/quietfilters"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -128,8 +129,10 @@ var columnValueShapes = map[string]analyticsquery.ColumnShape{
 	// Predicates rather than columns, and boolean for the same reason: the
 	// expression yields true or false, so `stalled = true` is the question as
 	// anyone would write it.
-	deals.StalledSQL("t"):        analyticsquery.ShapeBoolean,
-	deals.PartnerSourcedSQL("t"): analyticsquery.ShapeBoolean,
+	deals.StalledSQL("t"):             analyticsquery.ShapeBoolean,
+	deals.PartnerSourcedSQL("t"):      analyticsquery.ShapeBoolean,
+	quietfilters.MeetingAheadSQL:      analyticsquery.ShapeBoolean,
+	quietfilters.DaysSinceActivitySQL: analyticsquery.ShapeNumber, quietfilters.CompanyDaysSinceActivitySQL: analyticsquery.ShapeNumber,
 	// Record ids, held by TestEveryIDNamedFieldReadsAnIDShapedColumn.
 	colRowID: analyticsquery.ShapeID, colOwnerID: analyticsquery.ShapeID, colPipelineID: analyticsquery.ShapeID,
 	colStageID: analyticsquery.ShapeID, colCompanyID: analyticsquery.ShapeID, colPartnerCompanyID: analyticsquery.ShapeID,

@@ -93,6 +93,11 @@ func TestEveryActivityReadInsideAReportExpressionIsBounded(t *testing.T) {
 			slices.Collect(maps.Values(spec.measures)), slices.Collect(maps.Values(spec.filters)))
 		for _, expr := range exprs {
 			for _, m := range subqueryOverActivity.FindAllStringSubmatch(expr, -1) {
+				// The stored clock's own fold, which says only whether the newest
+				// entry is a date. Every kind the clock counts feeds it.
+				if m[1] == "clock_row" || m[1] == "la" {
+					continue
+				}
 				if !kindBoundFor(expr, m[1]) {
 					t.Errorf("%s: %q reads activity without bounding %s.kind to %v", name, expr, m[1], reportableActivityKinds)
 				}

@@ -75,7 +75,7 @@ var labels = map[string]langcopy.Phrase{
 	"project.description":     recordDescription,
 	"project.name":            {En: "Project name", De: "Projektname", Vi: "Tên dự án"},
 	"ref":                     {En: "Your own key (ref)", De: "Dein eigener Schlüssel (Ref)", Vi: "Khóa riêng của bạn (ref)"},
-	"salutation":              {En: "Salutation", De: "Anrede", Vi: "Cách xưng hô"},
+	"salutation":              {En: "Salutation", De: "Anredeform", Vi: "Danh xưng"},
 	"size_band":               {En: "Company size", De: "Unternehmensgröße", Vi: "Quy mô công ty"},
 	"sku":                     {En: "SKU", De: "Artikelnummer", Vi: "Mã hàng"},
 	"stage":                   {En: "Stage", De: "Phase", Vi: "Giai đoạn"},

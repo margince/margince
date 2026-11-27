@@ -9181,6 +9181,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "analytics.field.open_deal_unpriced": "Deal đang mở chưa định giá",
   "analytics.field.overdue_commitments": "Việc cần làm quá hạn",
   "analytics.field.close_month": "Tháng chốt",
+  "analytics.field.days_since_activity": "Số ngày kể từ hoạt động gần nhất",
+  "analytics.field.meeting_ahead": "Có cuộc họp sắp tới",
+  "analytics.field.company_days_since_activity": "Số ngày kể từ hoạt động gần nhất của công ty",
   "analytics.field.owner_id": "Người chịu trách nhiệm",
   "analytics.field.partner_company_id": "Công ty đối tác",
   "analytics.field.partner_sourced": "Do đối tác mang về",
@@ -10963,7 +10966,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.reason.id_not_a_record_id":
     "“{value}” không phải mã bản ghi. Hãy xuất danh sách để lấy mã, hoặc để trống cột để nhập hàng này làm bản ghi mới.",
   "import.reason.id_record_not_visible":
-    "Không có bản ghi nào bạn nhìn thấy có mã “{value}”. Có thể nó đã được lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
+    "Không có bản ghi nào bạn nhìn thấy có mã “{value}”. Có thể nó đã được đưa vào kho lưu trữ hoặc gộp, hoặc đến từ một hệ thống khác.",
   "import.reason.not_your_record":
     "Hàng này khớp với một bản ghi do thành viên khác phụ trách. Lần nhập của bạn chỉ thay đổi bản ghi bạn phụ trách nên hàng này không được áp dụng.",
   "import.reason.ref_taken_by_another_record":
