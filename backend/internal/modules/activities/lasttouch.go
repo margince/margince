@@ -33,7 +33,7 @@ import (
 // LastTouchCandidate is one REMINDER-ELIGIBLE linked entity whose most
 // recent GENUINE engagement (across every kind and every link) landed
 // before the caller's cutoff. "Genuine" excludes the automation engine's
-// own output: its own name and captured_by together (systemWordSQL,
+// own output: its own name and captured_by together (systemWorkSQL,
 // systemCapturedBy, followupresolve.go). A planted name must not let a caller
 // hide real engagement or move a record's anchor. "Eligible" is the live-work
 // test each entity type gets in the query (LastTouchBefore).
@@ -59,7 +59,7 @@ func genuineEngagement(alias string, sourcePos, capturedByPos, patternPos int) s
 	return storekit.SQLf(`%[1]s.archived_at IS NULL`+auth.AudienceWorkspaceOnly(alias)+`
 				  AND `+relstrength.WrittenByHumanSQL(alias)+`
 				  AND `+relstrength.HadContactSQL(alias, "now()")+`
-				  AND NOT (`+systemWordSQL(alias, storekit.SQLf("$%d", sourcePos))+`
+				  AND NOT (`+systemWorkSQL(alias, storekit.SQLf("$%d", sourcePos))+`
 				           AND (%[1]s.captured_by = $%[2]d OR %[1]s.captured_by LIKE $%[3]d))`,
 		alias, capturedByPos, patternPos)
 }
@@ -192,7 +192,7 @@ func openChildReminderHoldsAccount() string {
 		         WHERE t.kind = 'task'
 		           AND t.is_done = false AND t.archived_at IS NULL
 		           AND t.source_system = $6
-		           AND ` + systemWordSQL("t", "$1") + `
+		           AND ` + systemWorkSQL("t", "$1") + `
 		           AND (t.captured_by = $4 OR t.captured_by LIKE $5)
 		           AND coalesce(cd.company_id, ce.company_id) = q.entity_id`
 }
@@ -235,7 +235,7 @@ func openReminderHoldsEntityFrom(sourcePredicate string) string {
 		           AND t.kind = 'task'
 		           AND t.is_done = false AND t.archived_at IS NULL
 		           AND ` + sourcePredicate + `
-		           AND ` + systemWordSQL("t", "$1") + `
+		           AND ` + systemWorkSQL("t", "$1") + `
 		           AND (t.captured_by = $4 OR t.captured_by LIKE $5)`
 }
 

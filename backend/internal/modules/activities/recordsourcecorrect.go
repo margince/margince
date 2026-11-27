@@ -15,9 +15,9 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
-// olderActivitySource selects the activities whose source predates the fixed
+// unlistedActivitySource selects the activities whose source predates the fixed
 // list. A restricted row refuses every update, so it is moved when it is lifted.
-var olderActivitySource = `NOT (` + provenance.ListedRecordSourceSQL("source") + `) AND restricted_at IS NULL`
+var unlistedActivitySource = `NOT (` + provenance.ListedRecordSourceSQL("source") + `) AND restricted_at IS NULL`
 
 // CorrectActivitySourcesTx moves one page of older activities onto a channel.
 // The writer an older word named moves into source_system where that column is
@@ -26,7 +26,7 @@ var olderActivitySource = `NOT (` + provenance.ListedRecordSourceSQL("source") +
 func CorrectActivitySourcesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, limit int, runID ids.UUID) ([]ids.UUID, error) {
 	corrected, err := storekit.CorrectRecordSources(ctx, tx, linkEntityActivity,
 		`SELECT id, source, activity_source_channel(source, captured_by) FROM activity
-		  WHERE id > $1 AND `+olderActivitySource+` ORDER BY id LIMIT $2 FOR UPDATE`,
+		  WHERE id > $1 AND `+unlistedActivitySource+` ORDER BY id LIMIT $2 FOR UPDATE`,
 		`UPDATE activity r SET source = moved.source,
 		        source_system = activity_source_system(r.source, r.source_system, r.source_id, r.kind)
 		   FROM unnest($1::uuid[], $2::text[]) AS moved(id, source) WHERE r.id = moved.id`,
@@ -45,7 +45,7 @@ func CorrectActivitySourcesTx(ctx context.Context, tx pgx.Tx, after ids.UUID, li
 // would still move, reading at most maximum+1.
 func CountUnlistedActivitySources(ctx context.Context, q datatask.Querier, maximum int64) (int64, error) {
 	var count int64
-	if err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM activity WHERE `+olderActivitySource+`
+	if err := q.QueryRow(ctx, `SELECT count(*) FROM (SELECT 1 FROM activity WHERE `+unlistedActivitySource+`
 		 LIMIT $1) unlisted`, maximum+1).Scan(&count); err != nil {
 		return 0, fmt.Errorf("activities: counting activities with an unlisted source: %w", err)
 	}

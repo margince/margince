@@ -20,20 +20,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
 )
 
-// systemSource is the word an older row written by the system kept in source.
-// The channel trigger moves such a row to automation and leaves source_system
-// as it was, because a task with none reads as current work (storekit).
+// systemSource is the word older rows the system wrote kept in source. The
+// channel trigger moves them to automation and leaves source_system as it was,
+// because storekit.HumanOrImportedTaskSQL reads a task with none as current work.
 const systemSource = "system"
 
-// systemTaskSources binds the identities systemWordSQL reads.
+// systemTaskSources binds the identities systemWorkSQL reads.
 var systemTaskSources = provenance.SystemTaskSources()
 
-// systemWordSQL tests that the activity at alias is work the system opened
-// under its own name. It holds before the correction task reaches a row too.
+// systemWorkSQL tests that the activity at alias is work the system opened
+// under its own name. Every word the trigger maps to automation is read the
+// same way, so a row answers alike before and after the correction task.
 // pos binds systemTaskSources. Each caller pairs it with captured_by, which no
 // client writes.
-func systemWordSQL(alias, pos string) string {
-	return fmt.Sprintf("(%[1]s.source = '%[2]s' OR (%[1]s.source = '%[3]s' AND (%[1]s.source_system IS NULL OR %[1]s.source_system = ANY(%[4]s))))",
+func systemWorkSQL(alias, pos string) string {
+	return fmt.Sprintf("(%[1]s.source IN ('', '%[2]s', '%[3]s') AND (%[1]s.source_system IS NULL OR %[1]s.source_system = ANY(%[4]s)))",
 		alias, systemSource, provenance.RecordSourceAutomation, pos)
 }
 

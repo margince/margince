@@ -11,6 +11,7 @@ import (
 	"time"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -22,17 +23,14 @@ import (
 // before the channel check, the way a row waits for the correction task.
 func (e *resolveEnv) seedSystemTask(t *testing.T, source string, system *string, older bool) ids.UUID {
 	t.Helper()
+	insert := `INSERT INTO activity (id, kind, subject, occurred_at, due_at, source, source_system, captured_by)
+		VALUES ($1, 'task', 'Follow up with the new lead', now(), now() + interval '1 day', $2, $3, 'system:lead-sla')`
+	var id ids.UUID
 	if older {
-		e.exec(t, `ALTER TABLE activity DROP CONSTRAINT activity_source_check`)
-		e.exec(t, `ALTER TABLE activity DISABLE TRIGGER activity_source_channel`)
-	}
-	id := ids.NewV7()
-	e.exec(t, `INSERT INTO activity (id, kind, subject, occurred_at, due_at, source, source_system, captured_by)
-		VALUES ($1, 'task', 'Follow up with the new lead', now(), now() + interval '1 day', $2, $3, 'system:lead-sla')`,
-		id, source, system)
-	if older {
-		e.exec(t, `ALTER TABLE activity ENABLE TRIGGER activity_source_channel`)
-		e.exec(t, `ALTER TABLE activity ADD CONSTRAINT activity_source_check CHECK (`+provenance.ListedRecordSourceSQL("source")+`) NOT VALID`)
+		id = testdb.SeedBeforeSourceCheck(t, e.owner, "activity", insert, source, system)
+	} else {
+		id = ids.NewV7()
+		e.exec(t, insert, id, source, system)
 	}
 	e.exec(t, `INSERT INTO activity_link (activity_id, entity_type, lead_id) VALUES ($1, 'lead', $2)`, id, e.lead)
 	return id

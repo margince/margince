@@ -196,7 +196,7 @@ func reminderAnchor(alias string, separatorPos int) string {
 // The count is what THIS call completed, which is also why skew is not an
 // error: another firing completing the task is the outcome this one wanted.
 //
-// "System-minted" is decided by the system's own name (systemWordSQL) and by
+// "System-minted" is decided by the system's own name (systemWorkSQL) and by
 // captured_by. captured_by is stamped from the authenticated principal, so a
 // planted name alone hands nothing to this path. It answers a count rather
 // than rows. So nothing about which records exist leaves a call that takes no
@@ -282,7 +282,7 @@ func (s *Store) flipSystemTasks(
 }
 
 // systemCapturedSQL is the stamp half of "system-minted", which is decided by
-// the stamp together with systemWordSQL.
+// the stamp together with systemWorkSQL.
 func systemCapturedSQL(alias, exact, pattern string) string {
 	return storekit.SQLf("(%[1]s.captured_by = %[2]s OR %[1]s.captured_by LIKE %[3]s)", alias, exact, pattern)
 }
@@ -307,7 +307,7 @@ func selectSystemTasks(
 		  AND a.is_done = $%d AND a.archived_at IS NULL
 		ORDER BY a.id FOR UPDATE OF a`,
 		where,
-		arg(string(crmcontracts.ActivityKindTask)), systemWordSQL("a", fmt.Sprintf("$%d", arg(systemTaskSources))),
+		arg(string(crmcontracts.ActivityKindTask)), systemWorkSQL("a", fmt.Sprintf("$%d", arg(systemTaskSources))),
 		systemCapturedSQL("a", fmt.Sprintf("$%d", arg(systemCapturedBy)), fmt.Sprintf("$%d", arg(systemCapturedByPattern))), arg(done))
 	rows, err := tx.Query(ctx, query, (*args)...)
 	if err != nil {
