@@ -27,12 +27,15 @@ import (
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/modules/customfields"
 	"github.com/margince/margince/backend/internal/modules/identity"
+	"github.com/margince/margince/backend/internal/modules/notices"
 	"github.com/margince/margince/backend/internal/modules/webforms"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -52,7 +55,11 @@ func newWebFormHandlers(pool *pgxpool.Pool, log *slog.Logger) webforms.Handlers 
 func newWebFormLander(db *database.DB, pool *pgxpool.Pool, log *slog.Logger) webformlead.Lander {
 	catalog := customfields.NewService(pool, nil)
 	leads := newContactsStore(db).WithFieldCatalog(catalog).WithLeadArrivals(newLeadWorkTasks(db, log))
-	return webformlead.New(leads, activities.NewStore(db), catalog, automation.NewAutomationStore(db), webFormFieldValue)
+	return webformlead.New(leads, activities.NewStore(db), catalog, automation.NewAutomationStore(db), webFormFieldValue).WithTransaction(func(ctx context.Context, run func(context.Context) error) error {
+		return database.WithWorkspaceWriteTx(ctx, db.Pool(), run)
+	}).WithArrival(func(ctx context.Context, form, source ids.UUID, target activities.ActivityLinkInput) error {
+		return tellWebsiteLeadOwner(ctx, db, form, source, notices.Target{Type: target.EntityType, ID: target.EntityID})
+	})
 }
 
 // webFormFieldValue reads a form field as the import reads a cell. The visitor
@@ -124,7 +131,9 @@ func publicForms(forms webforms.Handlers) func(http.Handler) http.Handler {
 type inquiryWork = inquiries.Work
 
 func newInquiryRouting(db *database.DB) inquiries.Routing {
-	return inquiries.NewRouting(db, newWebFormFence(db), NewProviderFor(db))
+	return inquiries.NewRouting(db, newWebFormFence(db), NewProviderFor(db)).WithArrival(func(ctx context.Context, form, source ids.UUID, target datasource.EntityRef) error {
+		return tellWebsiteLeadOwner(ctx, db, form, source, notices.Target{Type: string(target.Type), ID: target.ID})
+	})
 }
 
 func newInquiryAssignment(db *database.DB) inquiries.Assignment {

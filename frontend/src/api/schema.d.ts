@@ -28819,6 +28819,8 @@ export interface components {
         };
         /** @description A website form (`web_form`): a public intake address that turns a submission into a lead. No secret is ever returned here; `secret_configured` says one is stored. */
         WebForm: {
+            /** @description Tell the final active owner about accepted posts through their notification preference. Defaults to false. */
+            notify_owner?: boolean;
             /** Format: uuid */
             id: string;
             name: string;
@@ -28907,6 +28909,8 @@ export interface components {
             secrets_available: boolean;
         };
         CreateWebFormRequest: {
+            /** @description Tell the final active owner about accepted posts through their notification preference. Defaults to false. */
+            notify_owner?: boolean;
             name: string;
             sender: components["schemas"]["WebFormSender"];
             /** @description The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow's secret is pasted. Refused for any other sender. */
@@ -28935,6 +28939,8 @@ export interface components {
             success_message?: string | null;
         };
         UpdateWebFormRequest: {
+            /** @description Tell the final active owner about accepted posts through their notification preference. Defaults to false. */
+            notify_owner?: boolean;
             /**
              * Format: uuid
              * @description Explicit conversion to a reviewed inquiry policy for this form. Clear only through a reviewed return to legacy handling.
@@ -35417,15 +35423,13 @@ export interface components {
          *     raises is placed in one of them.
          * @enum {string}
          */
-        NotificationClass: "automation" | "lead_sla" | "approval_pending" | "capture" | "coach" | "system" | "project_health";
+        NotificationClass: "automation" | "lead_sla" | "approval_pending" | "website_lead" | "capture" | "coach" | "system" | "project_health";
         /**
          * @description Where a class of notification reaches its reader.
          *
          *     `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
-         *     sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
-         *     the only class with a sending leg, and taking the word for any other would record a
-         *     choice the product does not keep; the others answer `422 value_not_allowed` and reach a
-         *     mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+         *     sends a message as each one lands for `approval_pending` and `website_lead`.
+         *     Other classes answer `422 value_not_allowed` and reach a mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
          *     following morning, and is accepted for every class.
          *
          *     `off` records the notice and stops there: no lane, no badge, no message. It does NOT

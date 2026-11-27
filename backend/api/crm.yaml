@@ -38055,11 +38055,8 @@ paths:
         housekeeping: dropping them silently would leave the lead who wrote them believing they
         had been read.
 
-        `email` is accepted for `approval_pending` alone, and any other class answers `422`. It
-        is the one class a producer stages a message for; the others would record a word the
-        product does not keep, and a reader who chose it would stop watching the screen while
-        waiting for mail that was never going to arrive. `digest` is how every other class
-        reaches a mailbox.
+        `email` is accepted for `approval_pending` and `website_lead`. Other classes
+        answer `422` and can reach a mailbox through `digest`.
       requestBody:
         required: true
         content:
@@ -42598,6 +42595,7 @@ components:
         No secret is ever returned here; `secret_configured` says one is stored.
       required: [id, name, form_key, sender, allowed_origins, field_map, consent_required, state, secret_configured, version, created_at, updated_at, last_post_at]
       properties:
+        notify_owner: { type: boolean, description: Tell the final active owner about accepted posts through their notification preference. Defaults to false. }
         id: { type: string, format: uuid }
         name: { type: string }
         form_key: { type: string, description: 'The last segment of the intake address. Public; it is an address, not a credential.' }
@@ -42670,6 +42668,7 @@ components:
       type: object
       required: [name, sender]
       properties:
+        notify_owner: { type: boolean, description: Tell the final active owner about accepted posts through their notification preference. Defaults to false. }
         name: { type: string, minLength: 1, maxLength: 120 }
         sender: { $ref: '#/components/schemas/WebFormSender' }
         sender_secret: { type: string, minLength: 16, maxLength: 512, description: 'The secret a builder signs with. `typeform` and `tally` get a minted one without it; a `webflow` form refuses every post until Webflow''s secret is pasted. Refused for any other sender.' }
@@ -42696,6 +42695,7 @@ components:
     UpdateWebFormRequest:
       type: object
       properties:
+        notify_owner: { type: boolean, description: Tell the final active owner about accepted posts through their notification preference. Defaults to false. }
         handling_automation_id:
           type: [string, 'null']
           format: uuid
@@ -50172,7 +50172,7 @@ components:
         than the notice kinds: a reader who muted "an automation fired" has not muted "somebody
         is waiting on your approval", so the choice is made per class and every kind the product
         raises is placed in one of them.
-      enum: [automation, lead_sla, approval_pending, capture, coach, system, project_health]
+      enum: [automation, lead_sla, approval_pending, website_lead, capture, coach, system, project_health]
       x-extensible-enum: true
     NotificationDelivery:
       type: string
@@ -50180,10 +50180,8 @@ components:
         Where a class of notification reaches its reader.
 
         `in_app` is the notification centre, the Worklist's lane and the unread badge. `email`
-        sends a message as each one lands, and is accepted for `approval_pending` ALONE — it is
-        the only class with a sending leg, and taking the word for any other would record a
-        choice the product does not keep; the others answer `422 value_not_allowed` and reach a
-        mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
+        sends a message as each one lands for `approval_pending` and `website_lead`.
+        Other classes answer `422 value_not_allowed` and reach a mailbox through `digest` instead. `digest` holds a class for one rolled-up send the
         following morning, and is accepted for every class.
 
         `off` records the notice and stops there: no lane, no badge, no message. It does NOT

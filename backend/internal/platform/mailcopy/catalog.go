@@ -215,6 +215,7 @@ func morningLines(line writeLine) {
 // here, and a product that says "du" every morning and "Sie" when a decision is
 // waiting is two voices in one mailbox.
 func notificationLines(line writeLine) {
+	line(func(c *Copy) *string { return &c.WebsiteLeadOpen }, "Open in Margince", "In Margince öffnen", "Mở trong Margince")
 	line(func(c *Copy) *string { return &c.NotificationSubject },
 		"Your decision is needed: ",
 		"Deine Entscheidung ist gefragt: ",
