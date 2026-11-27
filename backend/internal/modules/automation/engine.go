@@ -282,11 +282,10 @@ func (e *WorkflowEngine) liveInstances(ctx context.Context) (map[string][]automa
 	return out, nil
 }
 
-// systemSource is the provenance every deterministic workflow write
-// stamps: an automation acts as the system, never on behalf of the
-// human who authored or enabled it. Named once so ApplyActions'
-// Create/Update calls and applyAssignOwner's (handlers_actions.go)
-// cannot drift into three independent spellings of the same fact.
+// systemSource is the provenance every deterministic workflow update
+// stamps. An automation acts as the system, never on behalf of the human who
+// authored or enabled it. A create names the automation channel instead
+// (effectclaims.go).
 const systemSource = "system"
 
 // systemActor is the principal id every workflow write is attributed to, and

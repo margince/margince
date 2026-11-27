@@ -170,9 +170,8 @@ func TestOneMessageIsOneActivityWhicheverConnectorReadsItFirst(t *testing.T) {
 				t.Errorf("captured_by = %q, want the first reader %q — a replay rewrote provenance", got, first)
 			}
 			if got := scalar[string](t, e,
-				`SELECT source FROM activity WHERE id = $1`, firstID); got != first+":"+messageID {
-				t.Errorf("source = %q, want %q — the transport belongs on source even though the identity is shared",
-					got, first+":"+messageID)
+				`SELECT source FROM activity WHERE id = $1`, firstID); got != "capture" {
+				t.Errorf("source = %q, want capture: the channel, while captured_by names the transport", got)
 			}
 			// The identity itself is transport-independent.
 			if got := scalar[string](t, e,
