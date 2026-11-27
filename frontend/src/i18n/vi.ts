@@ -4910,6 +4910,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "approval.linkedin.useAsTitle": "Dùng làm chức danh",
   "approval.linkedin.useAsEmployer": "Dùng {company} làm nơi làm việc",
   "approval.linkedin.employerNow": "Hiện làm việc tại {company}",
+  "approval.vcard.mergeInto": "Gộp vào {contact} thay vì tạo liên hệ mới",
   "approval.responsibility.requestedFrom": "Người được yêu cầu quyết định",
   "approval.commitment.promiser": "Người cam kết",
   "approval.commitment.effect": "Khi phê duyệt",
@@ -7627,6 +7628,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "vcardImport.field.kept": "Giữ giá trị trong hồ sơ",
   "vcardImport.field.notInCard": "Không có trong thẻ",
   "vcardImport.next": "vCard tiếp theo",
+  "vcardImport.staged_one":
+    "{count} danh thiếp đang chờ phản hồi trong Danh sách công việc. Danh thiếp chưa trả lời sẽ hết hạn sau 30 ngày.",
+  "vcardImport.staged_other":
+    "{count} danh thiếp đang chờ phản hồi trong Danh sách công việc. Danh thiếp chưa trả lời sẽ hết hạn sau 30 ngày.",
+  "vcardImport.staged.open": "Mở Danh sách công việc",
   "vcardImport.forCompany": "Liên hệ tạo từ các thẻ này làm việc tại",
   "vcardImport.companyPhotoTitle": "Ảnh không được gắn vào công ty",
   "vcardImport.companyPhoto":

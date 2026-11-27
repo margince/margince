@@ -2152,6 +2152,7 @@
   "approval.linkedin.useAsTitle": "Use as job title",
   "approval.linkedin.useAsEmployer": "Use {company} as employer",
   "approval.linkedin.employerNow": "Works at {company} now",
+  "approval.vcard.mergeInto": "Merge into {contact} instead of creating a new contact",
   "approval.responsibility.requestedFrom": "Decision requested from",
   "approval.commitment.promiser": "Promised by",
   "approval.commitment.effect": "On approval",
