@@ -16,6 +16,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -41,48 +42,55 @@ func (s *Store) ContactConsentGuard(ctx context.Context, contactID ids.ContactID
 		Entries:   []crmcontracts.ContactConsentGuardEntry{},
 	}
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
-		// Anything that names a record is gated: answering about a contact the
-		// caller cannot read would confirm that contact exists.
-		if err := auth.EnsureVisibleLive(ctx, tx, "contact", contactID.UUID); err != nil {
-			return err
-		}
-		purposes, err := PurposesForGuard(ctx, tx)
-		if err != nil {
-			return err
-		}
-		// The SAME window the send path binds a decision to. A preview that
-		// answered on a different span would tell a rep a send is allowed that
-		// the engine then refuses, which is worse than no preview at all.
-		country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID.String()})
-		if err != nil {
-			return err
-		}
-		w := packRulesFor(country)
-		asOf := s.now()
-		since := asOf.Add(-w.reply)
-		// The same marketing context the send path builds for this caller, so
-		// the advisory answer and the send agree on the existing-customer route.
-		marketing, err := marketingContextTx(ctx, tx, w)
-		if err != nil {
-			return err
-		}
-		for _, purpose := range purposes {
-			verdict, err := GuardVerdictForContact(ctx, tx, contactID.String(), purpose, since, asOf, marketing)
-			if err != nil {
-				return err
-			}
-			entry, err := wireGuardEntry(purpose, verdict)
-			if err != nil {
-				return err
-			}
-			out.Entries = append(out.Entries, entry)
-		}
-		return nil
+		// The row scope makes each statement plan far longer than it runs.
+		return database.ReuseGenericPlansTx(ctx, tx, func() error {
+			return s.fillContactConsentGuard(ctx, tx, contactID, &out)
+		})
 	})
 	if err != nil {
 		return crmcontracts.ContactConsentGuard{}, err
 	}
 	return out, nil
+}
+
+// fillContactConsentGuard appends one entry per configured purpose to out.
+func (s *Store) fillContactConsentGuard(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, out *crmcontracts.ContactConsentGuard) error {
+	// Anything that names a record is gated: answering about a contact the
+	// caller cannot read would confirm that contact exists.
+	if err := auth.EnsureVisibleLive(ctx, tx, "contact", contactID.UUID); err != nil {
+		return err
+	}
+	purposes, err := PurposesForGuard(ctx, tx)
+	if err != nil {
+		return err
+	}
+	// The window is the one the send path binds a decision to. On another span
+	// the preview could allow a send that the engine then refuses.
+	country, err := recipientCountryTx(ctx, tx, ruleSubject{Kind: entityContact, ID: contactID.String()})
+	if err != nil {
+		return err
+	}
+	w := packRulesFor(country)
+	asOf := s.now()
+	since := asOf.Add(-w.reply)
+	// The same marketing context the send path builds for this caller, so
+	// the advisory answer and the send agree on the existing-customer route.
+	marketing, err := marketingContextTx(ctx, tx, w)
+	if err != nil {
+		return err
+	}
+	for _, purpose := range purposes {
+		verdict, err := GuardVerdictForContact(ctx, tx, contactID.String(), purpose, since, asOf, marketing)
+		if err != nil {
+			return err
+		}
+		entry, err := wireGuardEntry(purpose, verdict)
+		if err != nil {
+			return err
+		}
+		out.Entries = append(out.Entries, entry)
+	}
+	return nil
 }
 
 func wireGuardEntry(purpose PurposeRow, verdict Verdict) (crmcontracts.ContactConsentGuardEntry, error) {
