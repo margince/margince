@@ -21,7 +21,6 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
-	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 func TestBootSaysNothingWhenNoCompanyWasArchived(t *testing.T) {
@@ -42,8 +41,7 @@ func TestBootNamesWhatAnArchivedCompanyLeftBehind(t *testing.T) {
 	ctx := context.Background()
 
 	if _, err := OwnerConn(t).Exec(ctx,
-		`INSERT INTO workspace (id, archived_at) VALUES ($1, now())`,
-		ids.NewV7()); err != nil {
+		`INSERT INTO installation_state (key, value) VALUES ('archived_predecessor', '{"archived_companies": 1}')`); err != nil {
 		t.Fatalf("seeding the archived predecessor: %v", err)
 	}
 

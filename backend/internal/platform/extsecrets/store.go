@@ -32,9 +32,9 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
@@ -373,10 +373,9 @@ func (s *store) prepare(ctx context.Context, key string) (ids.WorkspaceID, error
 	if s.prefix == "" && strings.HasPrefix(key, CoreHeldKeyPrefix) {
 		return ids.WorkspaceID{}, fmt.Errorf("extsecrets: %q: %w", key, ErrReservedKey)
 	}
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok {
-		// Refused before a connection is taken from the pool.
-		return ids.WorkspaceID{}, database.ErrNoWorkspace
+	ws, err := storekit.ReadStoredKeyWorkspace(ctx, s.pool)
+	if err != nil {
+		return ids.WorkspaceID{}, fmt.Errorf("extsecrets: reading the installation's stored-key id: %w", err)
 	}
 	return ids.From[ids.WorkspaceKind](ws), nil
 }

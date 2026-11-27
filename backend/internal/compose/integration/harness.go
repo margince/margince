@@ -113,10 +113,7 @@ func Setup(t *testing.T) *Env {
 		AdminUser: ids.NewV7(),
 		Team1:     ids.NewV7(), Team2: ids.NewV7(),
 	}
-	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id) VALUES ($1)`, e.WS); err != nil {
-		t.Fatal(err)
-	}
+	seedCompany(ctx, t, owner, e.WS)
 	seedInstallationIdentity(ctx, t, owner)
 	// The boot seals these in RegisterExtensions, which no test here runs.
 	if err := corereach.Install(nil); err != nil {

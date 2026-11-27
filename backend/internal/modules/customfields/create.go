@@ -64,9 +64,6 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 	if s.schemaPool == nil {
 		return crmcontracts.CustomField{}, ErrSchemaChangesUnavailable
 	}
-	if _, ok := principal.WorkspaceID(ctx); !ok {
-		return crmcontracts.CustomField{}, errors.New("customfields: no workspace bound to context")
-	}
 	creator, err := createdBy(ctx)
 	if err != nil {
 		return crmcontracts.CustomField{}, err

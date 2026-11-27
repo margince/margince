@@ -75,9 +75,7 @@ func SetupSearch(t *testing.T) *SearchEnv {
 		Owner: owner, WS: ids.NewV7(),
 		Rep1: ids.NewV7(), Rep3: ids.NewV7(), Team1: ids.NewV7(), Team2: ids.NewV7(),
 	}
-	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.WS); err != nil {
-		t.Fatal(err)
-	}
+	seedCompany(ctx, t, owner, e.WS)
 	// This harness builds its installation by raw SQL, so bootstrap never wrote
 	// the settings rows — the case seedInstallationIdentity exists for. A report
 	// resolves the basis it reports money in, and the zone it buckets dates by,

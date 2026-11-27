@@ -337,3 +337,5 @@
 1795777013_a_rep_imports_their_own_leads_and_contacts.down.sql | role | one UPDATE of the three fixed system roles rep, manager and management
 1795777900_missing_import_grants_follow_the_seed.up.sql | role | fills missing import_run entries on the six named system roles; existing grants and custom roles are untouched
 1795777900_missing_import_grants_follow_the_seed.down.sql | * | the down migration is a single SELECT 1 that changes nothing
+1795807306_installation_keeps_its_own_identity.up.sql | *, installation_state | copies at most three facts from the one live workspace row into installation_state, which holds a handful of rows; the procedural marker is the check that refuses a second live workspace
+1795807306_installation_keeps_its_own_identity.down.sql | installation_state | one DELETE of the three keys the up migration wrote
