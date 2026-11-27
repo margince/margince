@@ -26287,7 +26287,7 @@
     "participant_seats":
      "Teilnehmende Mitglieder",
     "participant_users":
-     "Teilnehmende Personen",
+     "Teilnehmende Teammitglieder",
     "partner":
      "Partner",
     "partner_accepted_at":
@@ -36939,7 +36939,7 @@
     "merge_profile_field/text/participant_seats":
      "Teilnehmende Mitglieder",
     "merge_profile_field/text/participant_users":
-     "Teilnehmende Personen",
+     "Teilnehmende Teammitglieder",
     "merge_profile_field/text/partner":
      "Partner",
     "merge_profile_field/text/partner_accepted_at":
@@ -37619,7 +37619,7 @@
     "merge_profile_field/lifecycle/participant_seats":
      "Teilnehmende Mitglieder",
     "merge_profile_field/lifecycle/participant_users":
-     "Teilnehmende Personen",
+     "Teilnehmende Teammitglieder",
     "merge_profile_field/lifecycle/partner":
      "Partner",
     "merge_profile_field/lifecycle/partner_accepted_at":

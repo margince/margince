@@ -20,8 +20,8 @@ Also called: which model should I use, best model, recommended model, which LLM,
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
-| Google Gemini | global cloud | 27 | 10 | 0 | 1 |
-| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 27 | 10 | 0 | 1 |
+| Google Gemini | global cloud | 27 | 9 | 1 | 1 |
+| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 27 | 9 | 1 | 1 |
 | Anthropic Claude | global cloud | 34 | 3 | 0 | 1 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 7 | 7 |
@@ -41,8 +41,8 @@ Also called: grade, rating, certified, how reliable is the AI.
 
 | Model setup | Not reliable yet |
 |---|---|
-| Google Gemini | none |
-| Google Gemini in the EU, through Vertex AI | none |
+| Google Gemini | Deal status card |
+| Google Gemini in the EU, through Vertex AI | Deal status card |
 | Anthropic Claude | none |
 | OpenAI GPT-6, through OpenRouter | Thread confidentiality check<br>First-time sender check<br>Meeting follow-up extraction |
 | Open models from OpenAI and Mistral, through OpenRouter | Message classification<br>First-time sender check<br>Buying-role reading<br>Website research<br>Stage evidence extraction<br>Tag suggestions<br>Meeting follow-up extraction |
@@ -71,7 +71,7 @@ Also called: untested assistant, another AI tool, my own agent.
 The job by job results are in [Your AI assistant: test results](mcp-tool-coverage.md).
 
 ### What did you test, and what not?
-For Margince AI we ran 354 test cases. Each one is an example with a known right answer, in one of the 64 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
+For Margince AI we ran 356 test cases. Each one is an example with a known right answer, in one of the 64 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
 Also called: how is the AI tested, test coverage, certification.
 
 ## Where to go next

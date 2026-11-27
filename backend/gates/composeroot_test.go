@@ -196,7 +196,9 @@ const (
 	// transcript read now takes.
 	// Raised by 1 test line for the second staged approval in the site-read
 	// finish case, which checks a repeated id keeps its first place.
-	composeRootTestLines = 363_802
+	// Raised by 21 test lines for the case that reads a timeline entry's request
+	// state into the deal status input, which is unexported.
+	composeRootTestLines = 363_826
 )
 
 // A read under these floors stopped early or read the wrong place, and would
