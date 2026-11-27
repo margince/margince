@@ -17,7 +17,7 @@ import (
 
 const (
 	beforeInstallationIdentity = "1795777900"
-	installationIdentity       = "1795798870"
+	installationIdentity       = "1795807306"
 )
 
 func migrateToBeforeInstallationIdentity(t *testing.T) (context.Context, *pgx.Conn, dbmigrate.Namespace) {
