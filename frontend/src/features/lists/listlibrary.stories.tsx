@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { Panel } from "../../design-system/panel";
 import { en } from "../../i18n/en";
 import type { SavedView } from "../../lib/savedviews.queries";
 import {
@@ -124,13 +125,15 @@ function table(
   });
   return (
     <StoryProviders>
-      <LibraryTable
-        label="Library"
-        items={items}
-        group={group}
-        captionOf={captionOf}
-        folded={folded}
-      />
+      <Panel title="Library">
+        <LibraryTable
+          label="Library"
+          items={items}
+          group={group}
+          captionOf={captionOf}
+          folded={folded}
+        />
+      </Panel>
     </StoryProviders>
   );
 }

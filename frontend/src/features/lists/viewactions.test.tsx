@@ -200,6 +200,40 @@ describe("renaming a view", () => {
   });
 });
 
+describe("renaming a view after a taken name", () => {
+  it("saves a free name typed next, and no longer says the first was taken", async () => {
+    const patches = stubViews(VIEW, [
+      { ...VIEW, id: "v2", name: "Munich contacts", version: 1 },
+    ]);
+    const user = userEvent.setup();
+    render(
+      <ToastProvider>
+        <RenameViewAction view={VIEW} resource="contacts" />
+        <ToastRegion />
+      </ToastProvider>,
+      { wrapper: Providers },
+    );
+    await user.click(screen.getByRole("button", { name: en["views.rename"] }));
+    const name = screen.getByRole("textbox", { name: en["views.name"] });
+    const confirm = within(screen.getByRole("dialog")).getByRole("button", {
+      name: en["views.rename"],
+    });
+    await user.clear(name);
+    await user.type(name, "Munich contacts");
+    await user.click(confirm);
+    expect(await screen.findByText(en["views.nameTaken"])).toBeInTheDocument();
+
+    await user.clear(name);
+    await user.type(name, "Berlin leads");
+    expect(screen.queryByText(en["views.nameTaken"])).toBeNull();
+    await user.click(confirm);
+
+    expect(await screen.findByText(en["views.renamed"])).toBeInTheDocument();
+    expect(screen.queryByText(en["views.nameTaken"])).toBeNull();
+    expect(patches).toEqual([{ ifMatch: "3", body: { name: "Berlin leads" } }]);
+  });
+});
+
 describe("renaming a view before the reader's views are read", () => {
   const MUNICH = { ...VIEW, id: "v2", name: "Munich contacts", version: 1 };
 

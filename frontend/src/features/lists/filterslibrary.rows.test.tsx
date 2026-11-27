@@ -351,14 +351,14 @@ describe("a view saved on a list", () => {
     const row = await rowOf(BY_NAME.name);
     expect(
       within(row).getByRole("link", { name: BY_NAME.name }),
-    ).toHaveAttribute("href", "/#/contacts?sort=name");
+    ).toHaveAttribute("href", "/#/contacts?per=25&sort=name");
     expect(
       within(row).getByText(en["filters.library.savedOn.contacts"]),
     ).toBeInTheDocument();
     const projects = await rowOf("Stalled builds");
     expect(
       within(projects).getByRole("link", { name: "Stalled builds" }),
-    ).toHaveAttribute("href", "/#/projects?status=on_hold");
+    ).toHaveAttribute("href", "/#/projects?per=25&status=on_hold");
     expect(
       within(projects).getByText(en["filters.library.savedOn.projects"]),
     ).toBeInTheDocument();

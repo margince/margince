@@ -183,7 +183,7 @@ To change a saved view in Margince, press its tab and change the search, the fil
 Also called: edit a saved view, update a view, replace a view.
 
 ### How do I open a saved view?
-To open a saved view in Margince, open the list it was saved on. Press its tab in the header row, next to **All** and **Mine**. The list takes the saved filters, search, sort and **Show archived** at once. Every saved view also opens from its name on **Filters and views**. A view saved there has a tab with an arrow on its list, and the tab opens it back on **Filters and views**.
+To open a saved view in Margince, open the list it was saved on. Press its tab in the header row, next to **All** and **Mine**. The list takes the saved filters, search, sort and **Show archived** at once. Every saved view also opens from its name on **Filters and views**. A view with conditions from **Filters and views** has a tab with an arrow on its list, and the tab opens it back there.
 Also called: use my saved list, go back to my filter.
 
 ### How do I rename or delete a saved view?
@@ -192,7 +192,7 @@ To rename or delete a saved view in Margince, open its list and press **View** �
 2. To delete one, choose **Delete** on its row, then **Delete view**. Its tab goes; the records it listed do not change.
 **Manage views** shows once you have saved a view for that list.
 
-You can also press **⋯** on the view's row on **Filters and views**, or next to its name once it is open there. Choose **Rename**, or **Delete view** and then **Delete view** again to confirm. A name that another view of the same list has is refused, as in **Manage views**.
+You can also press **⋯** on the view's row on **Filters and views**. A view built there also has **⋯** next to its name once it is open. Choose **Rename**, or **Delete view** and then **Delete view** again to confirm. A name that another view of the same list has is refused, as in **Manage views**.
 Also called: remove a saved view, edit a view, change a view's name.
 
 ### Can I share a saved view with my team?
@@ -246,7 +246,7 @@ To save a filter built on **Filters and views**, fill at least one condition and
 1. Type a **Name**. Under **Keep it as**, choose **Saved view** (only you can find it) or **Live List** (see [Live Lists and Shortlists](#live-lists-and-shortlists)).
 2. Press **Save view** or **Save list**. A saved view opens as its own page, and a Live List opens the list's page.
 
-To use a saved view again, press its name in the library. It opens and shows its conditions as a sentence. Press **Edit conditions**, change them, then press **Save changes**, or **Save as new view** to keep both. If the view changed somewhere else since you opened it, Margince saves nothing and offers **Reload view**. A view saved here also shows as a tab on its list, with an arrow, and that tab opens it here.
+To use a saved view again, press its name in the library. It opens and shows its conditions as a sentence. Press **Edit conditions**, change them, then press **Save changes**, or **Save as new view** to keep both. If the view changed somewhere else since you opened it, Margince saves nothing and offers **Reload view**. A view with conditions from here shows as a tab on its list, with an arrow, and that tab opens it here.
 
 Also called: save a segment, keep an advanced search.
 

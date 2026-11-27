@@ -2,9 +2,13 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { describe, expect, it } from "vitest";
+import { listOpening } from "../../components/listquery.options";
+import { listQueryFromParams } from "../../components/listqueryparams";
+import { matchesView } from "../../components/listqueryviews";
 import type { List } from "../../lib/lists.queries";
 import type { SavedView } from "../../lib/savedviews.queries";
 import { isGroup } from "../../lib/segmentpredicate";
+import { parseParams } from "../../lib/urlstate";
 import {
   liveList,
   OTHER_OWNER_ID,
@@ -108,7 +112,7 @@ describe("the merged library", () => {
     expect(groupOf(items[0], READER_ID)).toBe("mine");
   });
 
-  it("opens a view holding both a filter and list state in the builder, once", () => {
+  it("opens a view holding both a filter and list state wherever it is pressed: in the builder", () => {
     const both: SavedView = {
       ...view,
       query: { ...view.query, list: { sort: "name" } },
@@ -285,7 +289,7 @@ describe("where a view saved on a list opens", () => {
     item?.kind === "listView" ? listViewHref(item, openingFilters) : "";
 
   it("is that list, with the view's dials as the list writes them", () => {
-    expect(href({})).toBe("#/contacts?sort=name");
+    expect(href({})).toBe("#/contacts?per=25&sort=name");
   });
 
   it("spells out a filter the list opens on and the view leaves off", () => {
@@ -296,7 +300,7 @@ describe("where a view saved on a list opens", () => {
     expect(
       allLeads?.kind === "listView" &&
         listViewHref(allLeads, { owner_id: READER_ID }),
-    ).toBe("#/leads?owner_id=all");
+    ).toBe("#/leads?owner_id=all&per=25");
   });
 
   it("opens a deals view on the table it was saved from", () => {
@@ -309,9 +313,45 @@ describe("where a view saved on a list opens", () => {
       [],
     );
     expect(deals?.kind === "listView" && listViewHref(deals, {})).toBe(
-      "#/deals?pipeline_id=pl&stalled=true&view=table",
+      "#/deals?per=25&pipeline_id=pl&stalled=true&view=table",
     );
   });
+});
+
+describe("a view saved on a list, arriving at that list", () => {
+  // Each list's own opening: its sort, and the leads queue's owner filter.
+  const openings = [
+    { resource: "contacts", sort: "-created_at", filters: {} },
+    { resource: "companies", sort: "-created_at", filters: {} },
+    { resource: "projects", sort: "-last_activity_at", filters: {} },
+    { resource: "leads", sort: "", filters: { owner_id: READER_ID } },
+  ];
+  const stored = [
+    {},
+    { sort: "" },
+    { sort: "name" },
+    { q: "acme", includeArchived: true, perPage: 100 },
+    { filters: { owner_id: READER_ID } },
+  ];
+
+  it.each(openings)(
+    "is read by $resource as the list the view describes, its default order included",
+    ({ resource, sort, filters }) => {
+      for (const list of stored) {
+        const [item] = libraryItems([listView("v", "V", resource, list)], []);
+        if (item?.kind !== "listView") {
+          throw new Error(`no list row for ${resource}`);
+        }
+        const query = listQueryFromParams(
+          parseParams(listViewHref(item, filters)),
+          listOpening(sort, filters),
+          false,
+        );
+        expect(matchesView(item.state, query)).toBe(true);
+        expect(query.perPage).toBe(item.state.perPage ?? 25);
+      }
+    },
+  );
 });
 
 describe("a list address", () => {

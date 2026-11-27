@@ -120,7 +120,6 @@ export type SavedViewTab = Readonly<{
   includeArchived: boolean;
   perPage?: number;
   version: number;
-  /** Set for a view the list cannot apply, whose tab opens its own page. */
   link?: ListView["link"];
 }>;
 

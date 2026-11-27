@@ -142,6 +142,8 @@ export function LibraryTable({
 }>) {
   const t = useT();
   const audienceOf = useListAudienceLabel();
+  const reader = useMe().data;
+  const leadsOpening = reader && leadsOpeningFilters(reader);
   const name: DataTableColumn<LibraryItem> = {
     key: "name",
     header: t("lists.col.name"),
@@ -149,6 +151,7 @@ export function LibraryTable({
     render: (item) => (
       <LibraryName
         item={item}
+        href={hrefOf(item, leadsOpening)}
         caption={captionOf(item)}
         facts={folded ? <LibraryFacts item={item} group={group} /> : null}
       />
@@ -189,34 +192,39 @@ export function LibraryTable({
         more,
       ];
   return (
-    <div className="library-table">
-      <DataTable
-        label={label}
-        rows={[...items]}
-        rowKey={keyOf}
-        columns={columns}
-      />
-    </div>
+    <DataTable
+      label={label}
+      rows={[...items]}
+      rowKey={keyOf}
+      columns={columns}
+      bleed
+    />
   );
 }
 
 function LibraryName({
   item,
+  href,
   caption,
   facts,
-}: Readonly<{ item: LibraryItem; caption: string; facts: ReactNode }>) {
+}: Readonly<{
+  item: LibraryItem;
+  href: string | undefined;
+  caption: string;
+  facts: ReactNode;
+}>) {
   const t = useT();
-  const reader = useMe().data;
   const tip = useTruncationTooltip<HTMLSpanElement>(caption);
   return (
     <span className="library-name-cell">
       <span className="library-name-line">
-        <AppLink
-          className="library-name"
-          href={hrefOf(item, reader ? leadsOpeningFilters(reader) : {})}
-        >
-          {nameOf(item)}
-        </AppLink>
+        {href ? (
+          <AppLink className="library-name" href={href}>
+            {nameOf(item)}
+          </AppLink>
+        ) : (
+          <span className="library-name">{nameOf(item)}</span>
+        )}
         {item.kind === "list" && <ListHealthBadge list={item.list} />}
         {isArchived(item) && <Badge>{t("record.archived")}</Badge>}
       </span>

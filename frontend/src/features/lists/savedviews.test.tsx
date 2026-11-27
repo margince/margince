@@ -22,11 +22,11 @@ import {
 } from "../../testing/listquery.testkit";
 import { meFixture } from "../../testing/mefixture";
 import {
-  listStateOf,
   SavedViewsFailure,
   SaveViewAction,
   useSavedViewTabs,
 } from "./savedviews";
+import { listStateOf } from "./savedviews.state";
 
 afterEach(cleanup);
 
@@ -450,7 +450,7 @@ describe("a view built in Filters and views, on its list's rail", () => {
     },
   ];
 
-  it("is a tab that opens the view there, and a view holding list state too is one list tab", async () => {
+  it("is a tab that opens the view there, and a view holding list state too opens wherever it is pressed: in the builder", async () => {
     vi.stubGlobal(
       "fetch",
       vi.fn(async () =>
@@ -469,7 +469,12 @@ describe("a view built in Filters and views, on its list's rail", () => {
       link.getAttribute("href")?.endsWith("#/filters/contacts/v-vip"),
     ).toBe(true);
     expect(link.hasAttribute("aria-pressed")).toBe(false);
-    expect(screen.getByRole("button", { name: "Both" })).toBeTruthy();
-    expect(screen.queryByRole("link", { name: /^Both/ })).toBeNull();
+    const both = screen.getByRole("link", {
+      name: "Both, opens in Filters and views",
+    });
+    expect(
+      both.getAttribute("href")?.endsWith("#/filters/contacts/v-both"),
+    ).toBe(true);
+    expect(screen.queryByRole("button", { name: "Both" })).toBeNull();
   });
 });

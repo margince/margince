@@ -82,10 +82,7 @@ export type ListView = {
   label: string;
   sort?: string;
   filters?: Readonly<Record<string, string>>;
-  /**
-   * A tab that opens another page instead of narrowing this list: where it
-   * goes, and its accessible name, which says so where its arrow cannot.
-   */
+  /** Opens `href` instead of narrowing this list; `name` says so aloud. */
   link?: Readonly<{ href: string; name: string }>;
 };
 

@@ -54,6 +54,7 @@ export function RenameViewAction({
           rename.reset();
           setNameTaken(false);
           if (siblings.isError) {
+            // refetch resolves with the error in state, which readProblem shows
             void siblings.refetch();
           }
           setOpen(true);

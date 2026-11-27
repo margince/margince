@@ -5,7 +5,7 @@
 // are proved here without a page.
 
 import { listOpening } from "../../components/listquery.options";
-import { paramsFromListQuery } from "../../components/listqueryparams";
+import { arrivalParams } from "../../components/listqueryparams";
 import {
   forReader,
   holdsEveryWord,
@@ -18,20 +18,18 @@ import { isExtensionEntityKind } from "../../lib/entity";
 import type { FilterResource } from "../../lib/filterdata";
 import {
   type CoreLibraryType,
-  LIBRARY_TYPES,
   type LibraryType,
   libraryTypeOfList,
   type ObjectTab,
   resourceOf as resourceOfTab,
-  tabOfViewResource,
   viewPageHref,
 } from "../../lib/filtersaddress";
 import type { List } from "../../lib/lists.queries";
 import { routeHash } from "../../lib/router";
-import { filterTreeOf, type SavedView } from "../../lib/savedviews.queries";
-import { decode, type Node, rootGroup } from "../../lib/segmentpredicate";
+import type { SavedView } from "../../lib/savedviews.queries";
+import { decode, type Node } from "../../lib/segmentpredicate";
 import { hashWithParams } from "../../lib/urlstate";
-import { listStateOf, type SavedListState } from "./savedviews";
+import { type SavedListState, viewOpening } from "./savedviews.state";
 
 /** A view saved on a list screen, which opens on that list. */
 export type ListViewItem = Readonly<{
@@ -57,25 +55,22 @@ export type LibraryCut = Readonly<{
 }>;
 
 /**
- * Saved views and lists as one set of rows. A view with a filter the builder
- * reads opens in the builder, even when it also keeps a list's dials. One
- * with only a list's dials opens on that list. Any other view is left out: a
- * row that opens onto nothing is worse than no row. A stored single clause is
- * wrapped in a group, the shape every editor of it expects.
+ * Saved views and lists as one set of rows. A view opens where `viewOpening`
+ * says. One that opens nowhere is left out: a row that opens onto nothing is
+ * worse than no row.
  */
 export function libraryItems(
   views: readonly SavedView[],
   lists: readonly List[],
 ): LibraryItem[] {
   const fromViews = views.flatMap((view): LibraryItem[] => {
-    const tab = tabOfViewResource(view.resource);
-    const tree = filterTreeOf(view);
-    if (tab && tree) {
-      return [{ kind: "view", view, tree: rootGroup(tree), tab }];
+    const opens = viewOpening(view);
+    if (opens?.kind === "builder") {
+      return [{ kind: "view", view, tree: opens.tree, tab: opens.tab }];
     }
-    const type = LIBRARY_TYPES.find((known) => known === view.resource);
-    const state = listStateOf(view);
-    return type && state ? [{ kind: "listView", view, state, type }] : [];
+    return opens?.kind === "list"
+      ? [{ kind: "listView", view, state: opens.state, type: opens.type }]
+      : [];
   });
   const fromLists = lists.map((list): LibraryItem => ({ kind: "list", list }));
   return [...fromViews, ...fromLists];
@@ -139,25 +134,31 @@ export function treeOf(item: LibraryItem): Node | null {
   }
 }
 
-/** Where a row opens; `leadsOpening` is what the leads queue opens on for this reader. */
+/**
+ * Where a row opens. `leadsOpening` is what the leads queue opens on for this
+ * reader; while it is unknown, a view saved on that queue opens nowhere yet.
+ */
 export function hrefOf(
   item: LibraryItem,
-  leadsOpening: Readonly<Record<string, string>>,
-): string {
+  leadsOpening: Readonly<Record<string, string>> | undefined,
+): string | undefined {
   switch (item.kind) {
     case "view":
       return viewPageHref(item.tab, item.view.id);
     case "listView":
-      return listViewHref(item, item.type === "leads" ? leadsOpening : {});
+      if (item.type !== "leads") {
+        return listViewHref(item, {});
+      }
+      return leadsOpening && listViewHref(item, leadsOpening);
     case "list":
       return routeHash({ screen: "lists", id: item.list.id });
   }
 }
 
 /**
- * Where a view saved on a list opens: that list, its dials in the address the
- * list writes itself. The view's tab then lights there. `openingFilters` are
- * the filters that list opens on for this reader.
+ * Where a view saved on a list opens: that list, with the view's dials in an
+ * address the list reads as the reader's choice. `openingFilters` are the
+ * filters that list opens on for this reader.
  */
 export function listViewHref(
   item: ListViewItem,
@@ -165,7 +166,7 @@ export function listViewHref(
 ): string {
   const opening = listOpening(undefined, openingFilters);
   const dials = new Map(
-    paramsFromListQuery(
+    arrivalParams(
       { ...item.state, perPage: item.state.perPage ?? opening.perPage },
       opening,
     ),

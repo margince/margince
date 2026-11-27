@@ -5,7 +5,7 @@ import { expect, type Page, test } from "@playwright/test";
 import { loadLocale } from "../src/i18n/catalogs";
 import { de } from "../src/i18n/de";
 import { meFixture } from "../src/testing/mefixture";
-import { expectNoAaViolations } from "./a11y";
+import { expectNoAaViolations, settleAnimations } from "./a11y";
 import { copy } from "./copy";
 import { seededViews } from "./mockapi/fixtures";
 import { expectShellRendered } from "./screens";
@@ -607,8 +607,6 @@ test.describe("filters and views", () => {
     await expect(objects).toHaveText("Kontakte");
   });
 
-  // A list's view opens its list from the library. A view built in the library
-  // has a tab on its list, and the tab opens it there.
   test("AC-filters-and-views-9: a list's view opens on its list from the library, and a built view's tab opens it in the library", async ({
     page,
   }) => {
@@ -633,13 +631,14 @@ test.describe("filters and views", () => {
         json: { data: views, page: { next_cursor: null, has_more: false } },
       });
     });
+    await settleAnimations(page);
     await page.goto("/#/filters");
     const row = page.getByRole("row").filter({ hasText: "Nach Name" });
     await expect(
       row.getByText(de["filters.library.savedOn.contacts"]),
     ).toBeVisible();
     await row.getByRole("link", { name: "Nach Name" }).click();
-    await expect(page).toHaveURL(/#\/contacts\?sort=full_name$/);
+    await expect(page).toHaveURL(/#\/contacts\?per=25&sort=full_name$/);
     await expect(
       page.getByRole("button", { name: "Nach Name", exact: true }),
     ).toHaveAttribute("aria-pressed", "true");
