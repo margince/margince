@@ -22,35 +22,20 @@ import (
 )
 
 func TestNoShippedLanguageAnswersInEnglishByAccident(t *testing.T) {
-	english := onboardingCopyByLang[textlang.English]
+	english := langcopytest.Sentences(t, onboardingCopyByLang[textlang.English])
 	for _, lang := range textlang.Shipped {
 		if lang == textlang.English {
 			continue
 		}
 		t.Run(string(lang), func(t *testing.T) {
-			said := onboardingCopyByLang[lang]
-			for _, field := range []struct{ name, got, en string }{
-				{"entityQuestion", said.entityQuestion, english.entityQuestion},
-				{"addressQuestion", said.addressQuestion, english.addressQuestion},
-				{"conflictQuestion", said.conflictQuestion, english.conflictQuestion},
-				{"keepLabel", said.keepLabel, english.keepLabel},
-				{"keepDetail", said.keepDetail, english.keepDetail},
-				{"takeLabel", said.takeLabel, english.takeLabel},
-				{"takeDetail", said.takeDetail, english.takeDetail},
-				{"statusConfirmed", said.statusConfirmed, english.statusConfirmed},
-				{"statusFailed", said.statusFailed, english.statusFailed},
-				{"statusResearching", said.statusResearching, english.statusResearching},
-				{"statusMissing", said.statusMissing, english.statusMissing},
-				{"selectionRecorded", said.selectionRecorded, english.selectionRecorded},
-				{"selectionReason", said.selectionReason, english.selectionReason},
-			} {
-				if field.got == "" {
-					t.Errorf("%s is empty — a blank line of copy reaches the reader as nothing at all", field.name)
+			for name, got := range langcopytest.Sentences(t, onboardingCopyByLang[lang]) {
+				if got == "" {
+					t.Errorf("%s is empty — a blank line of copy reaches the reader as nothing at all", name)
 					continue
 				}
-				if field.got == field.en {
+				if got == english[name] {
 					t.Errorf("%s is the English string verbatim; the entry exists and the reader still "+
-						"gets English", field.name)
+						"gets English", name)
 				}
 			}
 		})
