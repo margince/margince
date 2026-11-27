@@ -18497,8 +18497,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "financeSource.cancel": "Hủy",
 
   "webForms.title": "Biểu mẫu trang web",
-  "webForms.sub":
-    "Biểu mẫu trên trang web. Mỗi yêu cầu thành một lead, hoặc một ghi chú trên lead hay liên hệ có email đó.",
   "webForms.readOnly":
     "Chỉ đọc: chỉ vai trò có quyền tích hợp mới đổi được biểu mẫu trang web.",
   "webForms.new": "Biểu mẫu trang web mới",
@@ -18515,12 +18513,16 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.senderLine.typeform": "Webhook có chữ ký từ Typeform",
   "webForms.senderLine.tally": "Webhook có chữ ký từ Tally",
   "webForms.row.consent": "Cần đồng ý",
-  "webForms.row.lastPost": "Lần gửi gần nhất {when}",
   "webForms.row.intake.throttled": "Bị giới hạn từ {when}, quá nhiều lượt gửi",
   "webForms.row.intake.blocked": "Bị chặn đến {when}",
   "webForms.row.intake.pausedAll":
     "Tạm dừng cho mọi biểu mẫu: lưu lượng quá lớn",
-  "webForms.row.noPost": "Chưa ghi nhận lần gửi nào",
+  "webForms.row.noPost": "Chưa có",
+  "webForms.col.form": "Biểu mẫu",
+  "webForms.col.sender": "Gửi từ",
+  "webForms.col.owner": "Lead mới giao cho",
+  "webForms.col.lastPost": "Lần gửi gần nhất",
+  "webForms.col.state": "Trạng thái",
   "webForms.setup": "Xem cách cài đặt",
   "webForms.edit": "Sửa",
   "webForms.pause": "Tạm dừng biểu mẫu",
@@ -18709,7 +18711,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "webForms.field.ownerNone": "Chưa giao",
   "webForms.field.ownerGone": "{name} (đã nghỉ, lead mới sẽ chưa được giao)",
   "webForms.field.ownerKept": "Thành viên đã lưu (không có trong danh sách)",
-  "webForms.row.owner": "Lead được giao cho",
   "webForms.row.ownerLeft": "{name} đã nghỉ, lead mới sẽ chưa được giao",
   "webForms.field.successMessage": "Thông báo thành công",
   "webForms.field.successMessageHint": "Hiện cho khách sau khi gửi.",

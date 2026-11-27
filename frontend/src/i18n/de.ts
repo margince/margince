@@ -19010,8 +19010,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "financeSource.cancel": "Abbrechen",
 
   "webForms.title": "Website-Formulare",
-  "webForms.sub":
-    "Formulare auf deiner Website. Jede Anfrage wird ein Lead oder eine Notiz am Lead oder Kontakt mit dieser E-Mail.",
   "webForms.readOnly":
     "Nur Lesen: Nur eine Rolle mit der Berechtigung für Integrationen kann Website-Formulare ändern.",
   "webForms.new": "Neues Website-Formular",
@@ -19028,12 +19026,16 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.senderLine.typeform": "Signierter Webhook von Typeform",
   "webForms.senderLine.tally": "Signierter Webhook von Tally",
   "webForms.row.consent": "Einwilligung nötig",
-  "webForms.row.lastPost": "Letzte Sendung {when}",
   "webForms.row.intake.throttled": "Gebremst seit {when}, zu viele Sendungen",
   "webForms.row.intake.blocked": "Gesperrt bis {when}",
   "webForms.row.intake.pausedAll":
     "Für alle Formulare angehalten: zu viel Verkehr",
-  "webForms.row.noPost": "Noch keine Sendung erfasst",
+  "webForms.row.noPost": "Noch keine",
+  "webForms.col.form": "Formular",
+  "webForms.col.sender": "Sendet von",
+  "webForms.col.owner": "Neue Leads gehen an",
+  "webForms.col.lastPost": "Letzte Sendung",
+  "webForms.col.state": "Status",
   "webForms.setup": "Einrichtung zeigen",
   "webForms.edit": "Bearbeiten",
   "webForms.pause": "Formular pausieren",
@@ -19232,7 +19234,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.ownerGone":
     "{name} (ausgeschieden, neue Leads kommen ohne Zuweisung an)",
   "webForms.field.ownerKept": "Gespeichertes Teammitglied (nicht in der Liste)",
-  "webForms.row.owner": "Leads gehen an",
   "webForms.row.ownerLeft":
     "{name} ist ausgeschieden, neue Leads kommen ohne Zuweisung an",
   "webForms.field.successMessage": "Erfolgsmeldung",
