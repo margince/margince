@@ -40,7 +40,7 @@ func withoutSentencesNaming(spec mcp.ToolSpec, offered map[string]bool) mcp.Tool
 	if err := json.Unmarshal(spec.InputSchema, &schema); err != nil {
 		return spec
 	}
-	if !dropFromDescriptions(schema, gone) {
+	if !mcp.RewriteSchemaDescriptions(schema, func(text string) string { return dropSentencesNaming(text, gone) }) {
 		return spec
 	}
 	var buf bytes.Buffer
@@ -51,40 +51,6 @@ func withoutSentencesNaming(spec mcp.ToolSpec, offered map[string]bool) mcp.Tool
 	}
 	spec.InputSchema = json.RawMessage(bytes.TrimSpace(buf.Bytes()))
 	return spec
-}
-
-// dropFromDescriptions rewrites every "description" string under node and
-// reports whether any changed.
-//
-//craft:ignore naked-any a decoded JSON schema is any by construction; this walk reads its maps, slices and strings
-func dropFromDescriptions(node any, gone []string) bool {
-	changed := false
-	switch v := node.(type) {
-	case map[string]any:
-		for key, child := range v {
-			if text, ok := child.(string); ok && key == "description" {
-				if kept := dropSentencesNaming(text, gone); kept != text {
-					changed = true
-					if kept == "" {
-						delete(v, key)
-					} else {
-						v[key] = kept
-					}
-				}
-				continue
-			}
-			if dropFromDescriptions(child, gone) {
-				changed = true
-			}
-		}
-	case []any:
-		for _, child := range v {
-			if dropFromDescriptions(child, gone) {
-				changed = true
-			}
-		}
-	}
-	return changed
 }
 
 // dropSentencesNaming keeps the sentences of text that name none of the tools.

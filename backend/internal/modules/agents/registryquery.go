@@ -144,8 +144,16 @@ func (r *Registry) insteadTools(spec mcp.ToolSpec) []string {
 // schema names, read at listing time for the reason insteadTools is. The
 // caller holds r.mu.
 func (r *Registry) namedTools(spec mcp.ToolSpec) []string {
+	texts := []string{spec.Description}
+	var schema any
+	if json.Unmarshal(spec.InputSchema, &schema) == nil {
+		mcp.RewriteSchemaDescriptions(schema, func(text string) string {
+			texts = append(texts, text)
+			return text
+		})
+	}
 	var named []string
-	for _, text := range []string{spec.Description, string(spec.InputSchema)} {
+	for _, text := range texts {
 		for _, word := range strings.FieldsFunc(text, outsideToolName) {
 			if _, registered := r.specs[word]; registered && word != spec.Name && !slices.Contains(named, word) {
 				named = append(named, word)

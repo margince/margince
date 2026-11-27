@@ -62,3 +62,28 @@ func TestASchemaWithNothingToDropKeepsItsBytes(t *testing.T) {
 		t.Errorf("schema = %s, want it unchanged", got)
 	}
 }
+
+func TestADescriptionInsideSchemaDataIsNotRewritten(t *testing.T) {
+	t.Parallel()
+	schema := `{"description":"Use read_b.","properties":{"payload":{"enum":[{"description":"Use read_b."}]}}}`
+	spec := mcp.ToolSpec{Name: "a", InputSchema: json.RawMessage(schema), NamedTools: []string{"read_b"}}
+	got := string(AsOffered([]mcp.ToolSpec{spec})[0].InputSchema)
+	if !strings.Contains(got, `"enum":[{"description":"Use read_b."}]`) {
+		t.Errorf("a data member under enum was rewritten: %s", got)
+	}
+	if strings.Contains(got, `"description":"Use read_b."}`+`,"properties"`) {
+		t.Errorf("the schema's own description still names the tool: %s", got)
+	}
+}
+
+func TestTheStepSchemaCarriesNoSentenceNamingAToolThatIsNotOffered(t *testing.T) {
+	t.Parallel()
+	spec := mcp.ToolSpec{
+		Name: "list_records", Description: "Lists.", Version: "1",
+		InputSchema: json.RawMessage(`{"type":"object","properties":{"filters":{"type":"string","description":"String operands. describe_list_filters lists the values."}}}`),
+		NamedTools:  []string{"describe_list_filters"},
+	}
+	if got := string(stepSchema([]mcp.ToolSpec{spec})); strings.Contains(got, "describe_list_filters") {
+		t.Errorf("the step schema still names a tool the run is not offered: %s", got)
+	}
+}

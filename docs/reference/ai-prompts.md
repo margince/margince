@@ -376,7 +376,7 @@ Available tools:
               "type": "string"
             },
             "record_name": {
-              "description": "The record named in words, found the way search_records finds the same words. Refused with the candidate ids when the name matches more than one, rather than guessing.",
+              "description": "Refused with the candidate ids when the name matches more than one, rather than guessing.",
               "type": "string"
             },
             "record_type": {
@@ -425,7 +425,7 @@ Available tools:
             },
             "filters": {
               "additionalProperties": false,
-              "description": "String operands. describe_list_filters lists each record_type's filters and values. A pipeline_id or stage_id comes from the workspace's pipeline list; nothing else on this surface yields one.",
+              "description": "String operands. A pipeline_id or stage_id comes from the workspace's pipeline list; nothing else on this surface yields one.",
               "patternProperties": {
                 "^cf_[a-z0-9_]+$": {
                   "type": "string"
@@ -937,7 +937,7 @@ Available tools:
               "type": "string"
             },
             "record_name": {
-              "description": "The record named in words, found the way search_records finds the same words. Refused with the candidate ids when the name matches more than one, rather than guessing.",
+              "description": "Refused with the candidate ids when the name matches more than one, rather than guessing.",
               "type": "string"
             },
             "record_type": {
@@ -986,7 +986,7 @@ Available tools:
             },
             "filters": {
               "additionalProperties": false,
-              "description": "String operands. describe_list_filters lists each record_type's filters and values. A pipeline_id or stage_id comes from the workspace's pipeline list; nothing else on this surface yields one.",
+              "description": "String operands. A pipeline_id or stage_id comes from the workspace's pipeline list; nothing else on this surface yields one.",
               "patternProperties": {
                 "^cf_[a-z0-9_]+$": {
                   "type": "string"
@@ -1297,7 +1297,7 @@ Available tools:
           "additionalProperties": false,
           "patternProperties": {
             "^cf_[a-z0-9_]+$": {
-              "description": "An activity custom field, by its cf_ key: the column_name read_view lists with view custom_fields and object activity. A key no active activity field names is refused."
+              "description": "A key no active activity field names is refused."
             }
           },
           "properties": {
@@ -1447,7 +1447,7 @@ Available tools:
               "type": "string"
             },
             "subject": {
-              "description": "Prose a colleague reads. Write it in whoami's prose_language, whatever language this conversation is in; do not translate names or quoted text.",
+              "description": "Prose a colleague reads.",
               "type": "string"
             }
           },

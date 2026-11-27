@@ -47,11 +47,11 @@
         "read_record"
       ],
       "of_served_tools": 48,
-      "tokens": 4494,
+      "tokens": 4458,
       "listing_tokens": 2071,
-      "step_schema_tokens": 1692,
+      "step_schema_tokens": 1656,
       "percent_of_ceiling": 13,
-      "headroom_tokens": 11890,
+      "headroom_tokens": 11926,
       "dangling_cross_references": [],
       "temptation_weight": 4
     },
@@ -68,11 +68,11 @@
         "whats_slipping_this_week"
       ],
       "of_served_tools": 48,
-      "tokens": 6625,
+      "tokens": 6529,
       "listing_tokens": 3220,
-      "step_schema_tokens": 2674,
-      "percent_of_ceiling": 20,
-      "headroom_tokens": 9759,
+      "step_schema_tokens": 2578,
+      "percent_of_ceiling": 19,
+      "headroom_tokens": 9855,
       "dangling_cross_references": [],
       "temptation_weight": 5
     }

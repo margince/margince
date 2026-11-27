@@ -25,7 +25,7 @@ func TestASpecListsTheRegisteredToolsItsTextNames(t *testing.T) {
 	}
 	register("read_a", "Plain.", `{"type":"object"}`)
 	register("read_b", "Plain.", `{"type":"object"}`)
-	register("read_c", "Use read_a for names; read_c is this tool.", `{"type":"object","properties":{"x":{"description":"read_b lists them."}}}`)
+	register("read_c", "Use read_a for names; read_c is this tool.", `{"type":"object","properties":{"x":{"description":"Options:\nread_b lists them."}}}`)
 	var got []string
 	for _, spec := range r.Specs() {
 		if spec.Name == "read_c" {
