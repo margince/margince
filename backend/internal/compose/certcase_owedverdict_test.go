@@ -23,25 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/aitasks"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/ports/model"
 )
-
-// owedCompleterStub answers from the ids the request actually asks about, which
-// is the only place they exist: Prepare mints them and hands them to nobody. A
-// stub told the ids up front would prove less than a model reading them.
-type owedCompleterStub struct {
-	answer func(requestedIDs []string) string
-	seen   []model.Request
-}
-
-func (s *owedCompleterStub) Complete(_ context.Context, req model.Request) (model.Response, error) {
-	s.seen = append(s.seen, req)
-	requested, err := requestedIDsIn(req)
-	if err != nil {
-		return model.Response{}, err
-	}
-	return model.Response{Text: s.answer(requested)}, nil
-}
 
 // owedReplyText is raw text rather than a marshalled struct, so a malformed
 // reply is as expressible as a well-formed one.
@@ -109,7 +91,7 @@ func runOwedCase(t *testing.T, expected []string, answer func(requested []string
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
-	trace, err := prepared.Run(context.Background(), &owedCompleterStub{answer: answer})
+	trace, err := prepared.Run(context.Background(), &classifyCompleterStub{answer: answer})
 	if err != nil {
 		t.Fatalf("running the case: %v", err)
 	}
@@ -228,7 +210,7 @@ func TestTheOwedRequestSaysWhenAMessageCarriedAnInvitation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
-	stub := &owedCompleterStub{answer: owedAnswer(activities.OwedVerdictInformsUs)}
+	stub := &classifyCompleterStub{answer: owedAnswer(activities.OwedVerdictInformsUs)}
 	if _, err := prepared.Run(context.Background(), stub); err != nil {
 		t.Fatalf("running the case: %v", err)
 	}
@@ -250,7 +232,7 @@ func TestTheOwedRequestSaysWhenAMessageAnswersAnInvitation(t *testing.T) {
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
-	stub := &owedCompleterStub{answer: owedAnswer(activities.OwedVerdictInformsUs)}
+	stub := &classifyCompleterStub{answer: owedAnswer(activities.OwedVerdictInformsUs)}
 	if _, err := prepared.Run(context.Background(), stub); err != nil {
 		t.Fatalf("running the case: %v", err)
 	}
@@ -287,7 +269,7 @@ func TestOwedCaseAsksByRefNeverByActivityID(t *testing.T) {
 	if err != nil {
 		t.Fatalf("preparing the case: %v", err)
 	}
-	stub := &owedCompleterStub{answer: owedAnswer(expected...)}
+	stub := &classifyCompleterStub{answer: owedAnswer(expected...)}
 	if _, err := prepared.Run(context.Background(), stub); err != nil {
 		t.Fatalf("running the case: %v", err)
 	}
