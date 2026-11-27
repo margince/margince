@@ -12,7 +12,7 @@ import {
 } from "../../format/format";
 import { DAY_MS, dayInZone } from "../../format/timezone";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
-import { drawableTrend, metricOf } from "./analytics.overview.readings";
+import { metricOf } from "./analytics.overview.readings";
 import { lastInstant } from "./analytics.period";
 import {
   type ReportingChart,
@@ -31,12 +31,10 @@ type Window = Readonly<{ start_at: string; end_at: string }>;
 export function QuarterTrajectory({
   evaluation,
   charts,
-  emphasis,
   onEvidence,
 }: Readonly<{
   evaluation: ReportingEvaluation;
   charts: ReportingEvaluation | undefined;
-  emphasis?: TrajectoryChartProps["emphasis"];
   // The drawer reads the point off the chart read it came from.
   onEvidence: (
     reference: ReportingEvidenceRef,
@@ -45,8 +43,8 @@ export function QuarterTrajectory({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  const trend = charts && drawableTrend(charts);
-  if (!trend) return null;
+  const trend = charts?.charts.find((chart) => chart.kind === "bookings_trend");
+  if (!charts || trend?.coverage.status !== "ok") return null;
   const { interval, horizon, evaluated_at, timezone, currency } =
     evaluation.context;
   const whole = horizon ?? interval;
@@ -80,8 +78,6 @@ export function QuarterTrajectory({
       )}
       ticks={monthTicks(whole, timezone, locale)}
       axisLabel={short}
-      emphasis={emphasis}
-      pace={t("analytics.trajectory.pace")}
       {...outlookMarks(evaluation, running, short, t)}
       onSelect={(key) => {
         const reference = trend.points.find(

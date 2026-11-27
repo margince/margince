@@ -346,7 +346,7 @@ function TeamReadings({
   const { interval, evaluated_at, timezone } = evaluation.context;
   const span = reportingPeriodLabel(interval, timezone, locale);
   return (
-    <StatStrip label={t("analytics.overview.readings")} density="plate" lead>
+    <StatStrip label={t("analytics.overview.readings")} density="plate">
       {readings.map((id) => (
         <MetricReading
           key={id}

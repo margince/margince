@@ -417,23 +417,3 @@
   border-color: var(--accent);
   color: var(--accentText);
 }
-
-/* TABS: a plate whose cells show their reading on the chart under it. The
-   shown cell has a rule under it and full ink (atoms.css), so the row reads
-   as the chart's tabs. */
-.stat-strip[data-density="plate"]:has(.stat-card-open[aria-pressed]) {
-  border-block-end: 1px solid var(--groundEdge);
-}
-.stat-strip[data-density="plate"]:has(.stat-card-open[aria-pressed])
-  > :is(.stat-card, * > .stat-card) {
-  padding-block: var(--space-4);
-}
-.stat-strip[data-density="plate"]
-  > :is(.stat-card, * > .stat-card):has([aria-pressed="true"])::after {
-  content: "";
-  position: absolute;
-  inset-inline: 0;
-  inset-block-end: -1px;
-  block-size: 2px;
-  background: var(--textPrimary);
-}

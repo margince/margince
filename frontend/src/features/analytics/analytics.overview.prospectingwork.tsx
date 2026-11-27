@@ -192,55 +192,51 @@ export function HandoffCohort({
     );
   return (
     <Panel title={title} flatHead>
-      <QueryGate query={review} pendingLabel={title}>
-        {(answer) => {
-          const cohort = answer.handoffs?.cohort;
-          if (!cohort)
-            return (
-              <PanelBody>
+      <PanelBody>
+        <QueryGate query={review} pendingLabel={title}>
+          {(answer) => {
+            const cohort = answer.handoffs?.cohort;
+            if (!cohort)
+              return (
                 <p className="t-caption">{t("analytics.prospect.withheld")}</p>
-              </PanelBody>
+              );
+            const when = reportingPeriodLabel(
+              answer.interval,
+              evaluation.context.timezone,
+              locale,
             );
-          const when = reportingPeriodLabel(
-            answer.interval,
-            evaluation.context.timezone,
-            locale,
-          );
-          // The plate runs edge to edge under the caption, as the waiting
-          // handoffs' plate does beside it.
-          return (
-            <>
-              <PanelBody>
+            return (
+              <>
                 <p className="t-caption">
                   {plural("analytics.prospect.cohortCaption", cohort.rounds, {
                     count: formatAnalyticsNumber(cohort.rounds, locale),
                     period: when,
                   })}
                 </p>
-              </PanelBody>
-              {cohort.rounds > 0 && (
-                <StatStrip label={title} density="plate">
-                  {(
-                    [
-                      ["accepted", cohort.accepted],
-                      ["recycled", cohort.recycled],
-                      ["rejected", cohort.rejected],
-                      ["waiting", cohort.waiting],
-                    ] as const
-                  ).map(([outcome, count]) => (
-                    <StatCard
-                      key={outcome}
-                      narrow="row"
-                      label={t(`analytics.prospect.cohort.${outcome}`)}
-                      value={formatAnalyticsNumber(count, locale)}
-                    />
-                  ))}
-                </StatStrip>
-              )}
-            </>
-          );
-        }}
-      </QueryGate>
+                {cohort.rounds > 0 && (
+                  <StatStrip label={title} density="plate">
+                    {(
+                      [
+                        ["accepted", cohort.accepted],
+                        ["recycled", cohort.recycled],
+                        ["rejected", cohort.rejected],
+                        ["waiting", cohort.waiting],
+                      ] as const
+                    ).map(([outcome, count]) => (
+                      <StatCard
+                        key={outcome}
+                        narrow="row"
+                        label={t(`analytics.prospect.cohort.${outcome}`)}
+                        value={formatAnalyticsNumber(count, locale)}
+                      />
+                    ))}
+                  </StatStrip>
+                )}
+              </>
+            );
+          }}
+        </QueryGate>
+      </PanelBody>
     </Panel>
   );
 }

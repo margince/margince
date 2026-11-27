@@ -53,6 +53,7 @@ export function OutcomeWeeks({
   const metricName = useMetricNames();
   return (
     <GroupedBars
+      size="compact"
       label={t("analytics.prospect.weeksLabel", {
         metric: metricName(chart.metric),
       })}

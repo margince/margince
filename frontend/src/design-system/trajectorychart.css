@@ -1,7 +1,6 @@
 .trajectory-chart-plot {
   position: relative;
-  height: 260px;
-  cursor: crosshair;
+  height: 190px;
 }
 .trajectory-chart-plot svg {
   display: block;
@@ -123,86 +122,8 @@
     animation: trajectory-chart-draw 700ms ease-out forwards;
   }
 }
-.trajectory-chart-line[data-drawn="true"] {
-  stroke-dasharray: none;
-  animation: none;
-}
 @keyframes trajectory-chart-draw {
   to {
     stroke-dashoffset: 0;
   }
-}
-
-/* Where the total would stand on an even pace to the target. */
-.trajectory-chart-pace {
-  stroke: var(--textSecondary);
-  stroke-width: 1.25;
-  stroke-dasharray: 4 4;
-  opacity: 0.7;
-}
-/* The week under the pointer: a rule down the plot and its reading. */
-.trajectory-chart-hair line {
-  stroke: var(--textPrimary);
-  stroke-width: 1;
-  opacity: 0.3;
-}
-.trajectory-chart-hair circle {
-  fill: var(--ground);
-  stroke: var(--accent);
-  stroke-width: 2;
-}
-.trajectory-chart-readout {
-  position: absolute;
-  display: grid;
-  gap: 2px;
-  min-width: 9rem;
-  padding: var(--space-2) var(--space-3);
-  border-radius: var(--r-md);
-  border: 1px solid var(--borderSubtle);
-  box-shadow: var(--shadow-pop);
-  transform: translate(-50%, calc(-100% - 14px));
-  pointer-events: none;
-  z-index: 2;
-}
-.trajectory-chart-readout-label {
-  color: var(--textSecondary);
-  font: var(--fontBodySmall);
-}
-.trajectory-chart-readout-value {
-  color: var(--textPrimary);
-  font: var(--fontHeadingSmall);
-  font-variant-numeric: tabular-nums;
-}
-/* The weekly dots stay for the keyboard; the pointer reads the rule. */
-.trajectory-chart .report-chart-dot {
-  opacity: 0;
-}
-.trajectory-chart .report-chart-point:focus-visible .report-chart-dot {
-  opacity: 1;
-}
-/* One reading at a time: what was read, the committed finish, or the band. */
-.trajectory-chart[data-emphasis="actual"]
-:is(
-  .trajectory-chart-range,
-  .trajectory-chart-range-label,
-  .trajectory-chart-projection,
-  .trajectory-chart-end,
-  .trajectory-chart-end-label,
-  .trajectory-chart-gap,
-  .trajectory-chart-shortfall
-) {
-  display: none;
-}
-.trajectory-chart[data-emphasis="projection"] .trajectory-chart-range {
-  opacity: 0.5;
-}
-.trajectory-chart[data-emphasis="projection"] .trajectory-chart-range-label {
-  display: none;
-}
-.trajectory-chart[data-emphasis="range"] .trajectory-chart-range {
-  fill: color-mix(in srgb, var(--teal) 18%, transparent);
-}
-.trajectory-chart[data-emphasis="range"]
-  :is(.trajectory-chart-projection, .trajectory-chart-end) {
-  opacity: 0.35;
 }

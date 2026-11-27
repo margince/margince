@@ -66,22 +66,6 @@ export const QuarterShortOfTarget: Story = {
   },
 };
 
-// The pace to the goal drawn in, and the projection leading. Hover the plot
-// for the week's readout beside that day's even pace.
-export const PaceAndProjectionLeading: Story = {
-  render: () => (
-    <TrajectoryChart {...quarter} pace="Even pace" emphasis="projection" />
-  ),
-  play: async ({ canvasElement }) => {
-    await expect(
-      canvasElement.querySelector(".trajectory-chart-pace"),
-    ).not.toBeNull();
-    await expect(
-      canvasElement.querySelector("[data-emphasis='projection']"),
-    ).not.toBeNull();
-  },
-};
-
 export const QuarterShortOfTargetDark: Story = {
   ...QuarterShortOfTarget,
   globals: { theme: "dark" },

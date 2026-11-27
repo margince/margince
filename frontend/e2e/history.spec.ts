@@ -257,18 +257,9 @@ test("Back from Forecast returns to Sales review's question, place and focused c
   await page.goto("/#/analytics/overview?overview=sales", {
     waitUntil: "networkidle",
   });
-  // On a quarter the second reading, the forecast, is a tab over the chart.
-  // Its door to the Forecast section is at the chart's foot.
-  await page
-    .getByRole("region", { name: de["analytics.overview.readings"] })
-    .locator("section.stat-card")
-    .nth(1)
-    .getByRole("button", { name: de["stat.chart"], exact: true })
-    .click();
-  const door = page.getByRole("link", {
-    name: de["analytics.hero.openForecast"],
-    exact: true,
-  });
+  const door = page
+    .getByRole("link", { name: de["stat.forecast"], exact: true })
+    .first();
   await door.scrollIntoViewIfNeeded();
   const before = await scrolledBy(door);
   const overview = page.url();

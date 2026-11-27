@@ -118,17 +118,7 @@ export const STAT_CARD_ACTIONS = {
   page: "stat.open",
   records: "stat.records",
   forecast: "stat.forecast",
-  chart: "stat.chart",
 } as const;
-
-// A door that stays on the page carries no arrow: a record list beside it, or
-// a chart above it. One that leaves for another page does.
-const STAT_CARD_LEAVES: Record<keyof typeof STAT_CARD_ACTIONS, boolean> = {
-  page: true,
-  records: false,
-  forecast: true,
-  chart: false,
-};
 
 export function StatCard({
   label,
@@ -144,7 +134,6 @@ export function StatCard({
   narrow,
   peek,
   opens = "page",
-  pressed,
 }: Readonly<{
   label: string;
   value: string;
@@ -193,9 +182,6 @@ export function StatCard({
   // keyboard focus. A tile with a door keeps its press for the door (the tab it
   // opens holds the same rows). A tile without one opens the card on a press.
   peek?: PeekContent;
-  // A card whose door shows it on a chart beside the row: whether it is the
-  // one shown. The row then reads as the chart's tabs.
-  pressed?: boolean;
 }>) {
   const t = useT();
   const action = href && opens === "records" ? "page" : opens;
@@ -285,16 +271,11 @@ export function StatCard({
       {(href || onOpen) && (
         <span className="stat-card-foot">
           {/* The reading remains a description so the destination has its own name. */}
-          <Door
-            href={href}
-            onOpen={onOpen}
-            pressed={pressed}
-            describedBy={labelId}
-          >
+          <Door href={href} onOpen={onOpen} describedBy={labelId}>
             <span className="stat-card-open-word">
               {t(STAT_CARD_ACTIONS[action])}
             </span>
-            {STAT_CARD_LEAVES[action] && (
+            {action !== "records" && (
               <span className="stat-card-arrow" aria-hidden="true">
                 {"\u2192"}
               </span>
@@ -310,13 +291,11 @@ export function StatCard({
 function Door({
   href,
   onOpen,
-  pressed,
   describedBy,
   children,
 }: Readonly<{
   href?: string;
   onOpen?: () => void;
-  pressed?: boolean;
   describedBy: string;
   children: ReactNode;
 }>) {
@@ -336,7 +315,6 @@ function Door({
       type="button"
       className="stat-card-open"
       onClick={onOpen}
-      aria-pressed={pressed}
       aria-describedby={describedBy}
     >
       {children}

@@ -11,7 +11,6 @@ import { lazy } from "../../i18n/lazy";
 import { drawnChart, StockCharts } from "./analytics.overview.board";
 import { HeroAside, heroReceipt } from "./analytics.overview.hero";
 import { SalesOverviewMetrics } from "./analytics.overview.metrics";
-import { drawableTrend } from "./analytics.overview.readings";
 import {
   OpenPipelineLine,
   OpenPipelineMeta,
@@ -27,13 +26,6 @@ import type {
 const QuarterTrajectory = lazy(async () => ({
   default: (await import("./analytics.overview.trajectory")).QuarterTrajectory,
 }));
-
-// What each tab of the quarter's chart leads with.
-const EMPHASIS = {
-  won: "actual",
-  forecast: "projection",
-  range: "range",
-} as const;
 
 // The review's figures on its sheet: the headline readings with the
 // trajectory, then the stock. An address the server refused says why instead.
@@ -82,18 +74,15 @@ export function SalesFigures({
             }
             receipt={heroReceipt(evaluation, chartsRead)}
             trajectory={
-              chartsRead &&
-              drawableTrend(chartsRead) &&
-              ((shown) => (
+              chartsRead && (
                 <Suspense fallback={null}>
                   <QuarterTrajectory
                     evaluation={evaluation}
                     charts={chartsRead}
-                    emphasis={EMPHASIS[shown]}
                     onEvidence={onEvidence}
                   />
                 </Suspense>
-              ))
+              )
             }
           />
           {/* Today's stock by stage, and the permitted chart of sales by

@@ -132,20 +132,13 @@ function SalesReadings({
         />
       }
       receipt={heroReceipt(evaluation, evaluation)}
-      trajectory={(shown) => (
+      trajectory={
         <QuarterTrajectory
           evaluation={evaluation}
           charts={evaluation}
-          emphasis={
-            shown === "won"
-              ? "actual"
-              : shown === "forecast"
-                ? "projection"
-                : "range"
-          }
           onEvidence={() => {}}
         />
-      )}
+      }
     />
   );
 }

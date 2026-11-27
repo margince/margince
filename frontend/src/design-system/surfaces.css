@@ -920,8 +920,7 @@
   .mw-aistat-pop,
   .ddeck-tray:not(.panel-foot > .ddeck-tray),
   .notifbell-loose,
-  .overflow-menu-labelled,
-  .trajectory-chart-readout
+  .overflow-menu-labelled
 ) {
   --ground: var(--bgElevated);
   --groundEdge: var(--ladder1Edge);
@@ -957,8 +956,7 @@
     .mw-aistat-pop,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
     .notifbell-loose,
-    .overflow-menu-labelled,
-    .trajectory-chart-readout
+    .overflow-menu-labelled
   )
   :where(
     .panel:not(.analytics-sheet .panel),
@@ -1077,8 +1075,7 @@
     .mw-aistat-pop,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
     .notifbell-loose,
-    .overflow-menu-labelled,
-    .trajectory-chart-readout
+    .overflow-menu-labelled
   )
   :where(
     .panel:not(.analytics-sheet .panel),
@@ -1280,8 +1277,7 @@
     .mw-aistat-pop,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
     .notifbell-loose,
-    .overflow-menu-labelled,
-    .trajectory-chart-readout
+    .overflow-menu-labelled
   )
   :where(
     .panel:not(.analytics-sheet .panel),

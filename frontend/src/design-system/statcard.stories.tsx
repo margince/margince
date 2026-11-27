@@ -85,45 +85,6 @@ export const ReadingsWithADoor: Story = {
   ),
 };
 
-// A plate of figures as the tabs of the chart under it: each door shows its
-// reading there, and the one shown is pressed.
-export const ReadingsAsChartTabs: Story = {
-  name: "Readings — as the tabs of a chart",
-  render: () => (
-    <StatStrip label="Opening readings" density="plate">
-      <StatCard
-        label="Sales won"
-        value="€420,000"
-        detail="of €800,000 goal"
-        opens="chart"
-        pressed
-        onOpen={() => {}}
-      />
-      <StatCard
-        label="Won + Likely deals"
-        value="€760,000"
-        detail="€40k short of goal"
-        opens="chart"
-        pressed={false}
-        onOpen={() => {}}
-      />
-      <StatCard
-        label="Pipeline due this quarter"
-        value="€1,360,000"
-        detail="18 deals"
-        opens="records"
-        onOpen={() => {}}
-      />
-    </StatStrip>
-  ),
-  play: async ({ canvasElement }) => {
-    const shown = within(canvasElement).getByRole("button", {
-      description: "Sales won",
-    });
-    await expect(shown).toHaveAttribute("aria-pressed", "true");
-  },
-};
-
 // Every shape a reading takes, at the ONE size and in the ONE face they all
 // draw in. A long label wraps whole; only a detail is clamped, to two lines,
 // so a basis that is a paragraph cannot set the row's height.
