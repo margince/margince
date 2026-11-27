@@ -182,6 +182,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `company_domain_domain_one_spelling`: `CHECK (is_identifier_text(domain))`
 - `company_domain_norm`: `CHECK ((domain = lower(domain)))`
 - `company_domain_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
@@ -247,6 +248,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 - `company_domain_disposition_admission_shape`: `CHECK ((((admission IS NULL) AND (admission_reason IS NULL) AND (admission_source IS NULL) AND (admission_at IS NULL)) OR ((admission IS NOT NULL) AND (admission_reason IS NOT NULL) AND (admission_source IS NOT NULL) AND (admission_at IS NOT NULL))))`
 - `company_domain_disposition_admission_source_check`: `CHECK (((admission_source IS NULL) OR (admission_source = ANY (ARRAY['verdict', 'heuristic', 'human', 'agent']))))`
 - `company_domain_disposition_domain_check`: `CHECK (((domain = lower(domain)) AND (domain <> '')))`
+- `company_domain_disposition_domain_one_spelling`: `CHECK (is_identifier_text(domain))`
 - `company_domain_disposition_pending_reason_check`: `CHECK (((pending_reason IS NULL) OR (pending_reason = ANY (ARRAY['unevidenced', 'stale_evidence', 'near_duplicate', 'forwarded_identity', 'vendor_verdict', 'reserved_domain', 'foreign_site']))))`
 - `company_domain_disposition_pending_reason_shape`: `CHECK (((pending_reason IS NULL) OR ((status = 'pending') AND (admission IS DISTINCT FROM 'suppressed'))))`
 - `company_domain_disposition_settled_shape`: `CHECK ((((status = 'pending') AND (source IS NULL)) OR ((status = 'company') AND (source IS NOT NULL) AND (company_id IS NOT NULL)) OR ((status = ANY (ARRAY['personal', 'provider', 'no_site'])) AND (source IS NOT NULL))))`
@@ -848,6 +850,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Rules**
 
+- `contact_email_email_one_spelling`: `CHECK (is_identifier_text(email))`
 - `contact_email_email_type_check`: `CHECK ((email_type = ANY (ARRAY['work', 'personal', 'other'])))`
 - `contact_email_norm`: `CHECK ((email = lower(email)))`
 - `contact_email_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
@@ -1482,6 +1485,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 **Rules**
 
 - `lead_email_norm`: `CHECK (((email IS NULL) OR (email = lower(email))))`
+- `lead_email_one_spelling`: `CHECK (is_identifier_text(email))`
 - `lead_first_response_follows_creation`: `CHECK (((first_response_at IS NULL) OR (first_response_at >= created_at)))`
 - `lead_origin_detail_bounded`: `CHECK (((origin_detail IS NULL) OR (length(origin_detail) <= 500)))`
 - `lead_override_retains_the_computed_score`: `CHECK (((score_override_reason IS NULL) OR (score_computed IS NOT NULL)))`
