@@ -11,27 +11,53 @@ import { ConfirmModal } from "../../design-system/confirmmodal";
 import { NameDialog } from "../../design-system/namedialog";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
+import type { ViewResource } from "../../lib/filtersaddress";
 import { problemMessageOf } from "../../lib/problem";
-import { type SavedView, useSaveView } from "../../lib/savedviews.queries";
+import {
+  type SavedView,
+  useSavedViews,
+  useSaveView,
+  viewNameTaken,
+} from "../../lib/savedviews.queries";
 
-/** "Rename": the view's name, prefilled, against the version it was read at. */
+/**
+ * "Rename": the view's name, prefilled, against the version it was read at.
+ * A name another view of `resource` holds is refused, as Manage views refuses
+ * it, and nothing is saved until those views are read.
+ */
 export function RenameViewAction({
   view,
+  resource,
   onRenamed,
-}: Readonly<{ view: SavedView; onRenamed?: (updated: SavedView) => void }>) {
+}: Readonly<{
+  view: SavedView;
+  resource: ViewResource;
+  onRenamed?: (updated: SavedView) => void;
+}>) {
   const t = useT();
   const toast = useToast();
   const { rename } = useSaveView();
+  const siblings = useSavedViews(resource);
   const [open, setOpen] = useState(false);
+  const [nameTaken, setNameTaken] = useState(false);
   // The view as the dialog opened on it: a refetch while the dialog is open
   // must not lend a stale name a newer If-Match.
   const [read, setRead] = useState(view);
+  const unread = siblings.data === undefined;
+  const readProblem = siblings.isError
+    ? problemMessageOf(siblings.error, t)
+    : null;
   return (
     <>
       <Button
         onClick={() => {
           setRead(view);
           rename.reset();
+          setNameTaken(false);
+          if (siblings.isError) {
+            // refetch resolves with the error in state, which readProblem shows
+            void siblings.refetch();
+          }
           setOpen(true);
         }}
       >
@@ -44,9 +70,21 @@ export function RenameViewAction({
         label={t("views.name")}
         initial={read.name}
         confirmLabel={t("views.rename")}
-        pending={rename.isPending}
-        problem={rename.isError ? problemMessageOf(rename.error, t) : null}
-        onSave={(name) =>
+        pending={rename.isPending || (unread && siblings.isPending)}
+        problem={
+          rename.isError ? problemMessageOf(rename.error, t) : readProblem
+        }
+        nameProblem={nameTaken ? t("views.nameTaken") : null}
+        onSave={(name) => {
+          // Names not read, or read before a failed refetch, would pass any name.
+          if (siblings.data === undefined || siblings.isError) {
+            return;
+          }
+          const taken = viewNameTaken(siblings.data, name, view.id);
+          setNameTaken(taken);
+          if (taken) {
+            return;
+          }
           rename.mutate(
             { id: view.id, name, version: read.version },
             {
@@ -56,8 +94,8 @@ export function RenameViewAction({
                 onRenamed?.(updated);
               },
             },
-          )
-        }
+          );
+        }}
       />
     </>
   );
