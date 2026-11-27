@@ -271,7 +271,7 @@ func AssembleSARWithExtensions(
 		if err != nil {
 			return err
 		}
-		authored, err := reach.activities(ctx, tx, contactID, []string{"from"})
+		authored, err := reach.activities(ctx, tx, contactID, []string{senderRole})
 		if err != nil {
 			return err
 		}
