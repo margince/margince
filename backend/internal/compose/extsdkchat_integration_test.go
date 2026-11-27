@@ -207,7 +207,7 @@ func (e *chatEnv) message(key string) filedMessage {
 func (e *chatEnv) activityOf(t *testing.T, key string) (id ids.UUID, audience string, precision string) {
 	t.Helper()
 	e.readAsWorkspace(t, func(ctx context.Context, tx pgx.Tx) error {
-		return tx.QueryRow(ctx, `SELECT id, audience, occurred_precision FROM activity WHERE source = $1 AND source_id = $2`,
+		return tx.QueryRow(ctx, `SELECT id, audience, occurred_precision FROM activity WHERE source_system = $1 AND source_id = $2`,
 			sdkChatSource, key).Scan(&id, &audience, &precision)
 	})
 	return id, audience, precision
@@ -298,7 +298,7 @@ func TestAChosenSubjectTheMemberCannotSeeIsRefusedAsNotFound(t *testing.T) {
 	if results[0].Disposition != extension.DispositionAccepted {
 		t.Errorf("the record with no subject answered %q, want accepted: a refusal must not stop the batch", results[0].Disposition)
 	}
-	if got := e.countAsWorkspace(t, `SELECT count(*) FROM activity WHERE source = $1 AND source_id IN ('hidden', 'missing')`, sdkChatSource); got != 0 {
+	if got := e.countAsWorkspace(t, `SELECT count(*) FROM activity WHERE source_system = $1 AND source_id IN ('hidden', 'missing')`, sdkChatSource); got != 0 {
 		t.Errorf("%d activities stored for refused subjects, want none", got)
 	}
 }

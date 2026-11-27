@@ -16,7 +16,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/meetingoutcome"
-	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
@@ -245,18 +244,6 @@ func LogActivityInputFrom(req crmcontracts.CreateActivityRequest) (LogActivityIn
 	return logActivityInput(req, provenanceAdmission{})
 }
 
-// The engine and importer each admit only their own reserved identities.
-// Keeping these sets apart prevents either writer from impersonating the other.
-type provenanceAdmission struct{ engineTask, importer bool }
-
-// admits answers whether this writer may spell one reserved source system.
-func (a provenanceAdmission) admits(sourceSystem string) bool {
-	if a.engineTask && provenance.EngineTaskSource(sourceSystem) {
-		return true
-	}
-	return a.importer && provenance.ImporterNamespace(sourceSystem)
-}
-
 // LogActivityInputFromImporter is LogActivityInputFrom for a declared
 // importer: a human holding import_run:create, decided by
 // auth.DeclaredImporter at the HANDLER and nowhere else.
@@ -272,35 +259,6 @@ func LogActivityInputFromImporter(req crmcontracts.CreateActivityRequest) (LogAc
 // The system-only door changes admission, while the ordinary mapper keeps all other checks.
 func logActivityInputAllowingTaskIdentity(req crmcontracts.CreateActivityRequest) (LogActivityInput, error) {
 	return logActivityInput(req, provenanceAdmission{engineTask: true})
-}
-
-// refuseReservedProvenance guards the two provenance fields on a create wire.
-//
-// The importer's namespace is not a client's to write: this store keys its
-// idempotent replay on (source_system, source_id), so a caller who could spell
-// the reserved prefix could pre-plant a row under an incumbent record id and
-// have a later import hand it back as already existing
-// (provenance.ReservedSourceSystemPrefix).
-//
-// The admission is narrow on BOTH sides: the engine may spell its reminder
-// identities and never the importer's namespace, the importer its namespace
-// and never a reminder identity.
-func refuseReservedProvenance(req crmcontracts.CreateActivityRequest, adm provenanceAdmission) error {
-	if req.SourceSystem != nil {
-		if !adm.admits(*req.SourceSystem) {
-			if err := provenance.Refuse("source_system", *req.SourceSystem); err != nil {
-				return err
-			}
-		}
-		// Outside the admission deliberately: `email` is the one identity every
-		// mail transport shares, and no writer — the importer included — may
-		// claim it on this wire.
-		if *req.SourceSystem == connector.EmailSourceSystem {
-			return &ReservedMailIdentityError{}
-		}
-	}
-	// `source` is nobody's to forge, and the admission says nothing about it.
-	return provenance.Refuse("source", req.Source)
 }
 
 func logActivityInput(req crmcontracts.CreateActivityRequest, adm provenanceAdmission) (LogActivityInput, error) {

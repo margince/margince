@@ -45423,7 +45423,7 @@ export interface components {
              */
             readonly reply_channel?: "email" | "call" | "message" | null;
             email_target?: components["schemas"]["ActivityEmailTarget"];
-            /** @description Where the row came from. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. */
+            /** @description The channel the row arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. `manual` is anything typed, by a member or by an assistant working for one, so it never says who typed it: `captured_by` and `recorded_by_agent` do. `source_system` names the connector or the product's own writer when there is one. An older row can show another value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied. */
             readonly captured_by: string;
@@ -45743,7 +45743,11 @@ export interface components {
                 /** Format: uuid */
                 entity_id: string;
             }[];
-            source: string;
+            /**
+             * @description The channel this task arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
         };
         /** @enum {string} */
         ActivityDealFilingRecordType: "contact" | "company";
@@ -45874,7 +45878,11 @@ export interface components {
                 /** Format: uuid */
                 entity_id: string;
             }[];
-            source: string;
+            /**
+             * @description The channel this activity arrived by. A client that wrote it for a member sends `manual`; an integration sends `api`. The other system and the activity's id there go in `source_system` and `source_id`. Any other value is 422 `invalid_source`.
+             * @enum {string}
+             */
+            source: "api" | "automation" | "capture" | "import" | "manual" | "webform";
             /** @description Provenance an importer keeps with the record — the source system's own representation of this activity. Stored verbatim and returned by `getActivity`. It is content: a reader who may not read this activity's subject and body does not receive it either, and the retention and noise-redaction paths destroy it with the rest of the text. */
             raw?: {
                 [key: string]: unknown;

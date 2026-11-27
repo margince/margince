@@ -95,7 +95,7 @@ func TestQuietCustomerListNeedsNoOpenDealAndSharesReminderSuppression(t *testing
 		t.Fatalf("visible customer page=%+v", page)
 	}
 	_, err = activities.NewProvider(e.DB()).Create(principal.SystemActing(e.Admin(), "system:time-scan"), datasource.CreateInput{
-		EntityType: datasource.EntityActivity, Source: "system", Fields: map[string]any{
+		EntityType: datasource.EntityActivity, Source: provenance.RecordSourceAutomation, Fields: map[string]any{
 			"kind": "task", "subject": "Check in", "source_system": provenance.NoActivityReminderSource, "source_id": "selected-customer-reminder",
 			"links": []map[string]any{{"entity_type": "contact", "entity_id": visible}},
 		},
