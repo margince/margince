@@ -17,7 +17,7 @@ func (s *InstallationSettingsStore) readMemberLanguages(ctx context.Context, out
 	return s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT DISTINCT locale FROM app_user
-			 WHERE status = 'active' AND locale IS NOT NULL
+			 WHERE `+LiveMemberSQL("")+` AND NOT is_agent AND locale IS NOT NULL
 			 ORDER BY locale`)
 		if err != nil {
 			return fmt.Errorf("reading the members' languages: %w", err)
