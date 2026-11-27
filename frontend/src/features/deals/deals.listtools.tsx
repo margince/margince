@@ -14,6 +14,7 @@ import {
   listQueryFromParams,
   mergeScreenDials,
   paramsFromListQuery,
+  type SavedViewTab,
   withListPage,
   withoutScreenDials,
 } from "../../components/listquery";
@@ -337,8 +338,24 @@ export function savableDealQuery(
   pipelineId: string,
 ): ListQuery {
   return isNarrowed(query)
-    ? { ...query, filters: { ...query.filters, pipeline_id: pipelineId } }
+    ? { ...query, filters: { ...query.filters, [PIPELINE_PARAM]: pipelineId } }
     : query;
+}
+
+// A saved view as the tab rail matches it against this screen's list.
+//
+// savableDealQuery stores the pipeline among the view's filters, but the list
+// query never holds it: the screen reads it out as a dial of its own. So the
+// view's pipeline is matched against that dial. On the pipeline showing, the
+// view matches on its other dials. On another, it keeps the filter and lights
+// nothing, and pressing it switches the pipeline. A view that names none holds
+// on every pipeline.
+export function railDealView(
+  view: SavedViewTab,
+  pipelineId: string,
+): SavedViewTab {
+  const { [PIPELINE_PARAM]: pipeline, ...rest } = view.filters;
+  return pipeline === pipelineId ? { ...view, filters: rest } : view;
 }
 
 // The refused dials a chip names, with those names. A dial no chip names is
