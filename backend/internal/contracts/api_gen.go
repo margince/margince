@@ -79240,7 +79240,8 @@ type ListCompanyContractsParamsStatus string
 type GetCompanyCoverageParams struct {
 	// DealId The open deal whose buying committee to read, one of `deals`. Absent, the committee
 	// is the most recently changed open deal's. A deal that is not one of this account's
-	// open deals the caller may see answers `404`.
+	// open deals the caller may see answers `404`. A caller without the deal read grant
+	// who names a deal answers `403`, as any refused grant does.
 	DealId *openapi_types.UUID `form:"deal_id,omitempty" json:"deal_id,omitempty"`
 }
 
