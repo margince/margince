@@ -105,7 +105,7 @@ var addsAFoldedColumn = regexp.MustCompile(`ALTER TABLE (\w+) ADD COLUMN IF NOT 
 // so a new one is held here without being listed.
 func foldedColumns(t *testing.T) []foldedColumn {
 	t.Helper()
-	paths, err := filepath.Glob(filepath.Join(gatekit.ModuleRoot(t), "migrations", "core", "*.up.sql"))
+	paths, err := gatekit.Glob(filepath.Join(gatekit.ModuleRoot(t), "migrations", "core", "*.up.sql"))
 	if err != nil || len(paths) == 0 {
 		t.Fatalf("reading the core migrations: %v (found %d)", err, len(paths))
 	}
@@ -142,8 +142,9 @@ func TestEveryWriterOfAFoldedSourceWritesTheFold(t *testing.T) {
 		t.Fatal("no migration adds a *_folded column, so this census reads nothing")
 	}
 	writesASource := func(statement string) bool {
+		targets := sqlWrites(statement)
 		return slices.ContainsFunc(columns, func(column foldedColumn) bool {
-			writes, _ := writesColumn(statement, column)
+			writes, _ := writesColumn(targets, column)
 			return writes
 		})
 	}
@@ -158,8 +159,9 @@ func TestEveryWriterOfAFoldedSourceWritesTheFold(t *testing.T) {
 	}.Files(t)
 	for _, source := range files {
 		for _, statement := range gatekit.SQLStatementsOf(source.File) {
+			targets := sqlWrites(statement)
 			for _, column := range columns {
-				writes, folds := writesColumn(statement, column)
+				writes, folds := writesColumn(targets, column)
 				if !writes {
 					continue
 				}
@@ -184,11 +186,11 @@ func TestEveryWriterOfAFoldedSourceWritesTheFold(t *testing.T) {
 	}
 }
 
-// writesColumn reports whether a statement writes column.source on its table,
-// and whether it writes column.folded too. It reads the statement through
-// sqlWrites, the tree's one reading of a write's table and columns.
-func writesColumn(statement string, column foldedColumn) (writes, folds bool) {
-	for _, target := range sqlWrites(statement) {
+// writesColumn reports whether a statement's writes, as sqlWrites reads them,
+// write column.source on its table, and whether they write column.folded too.
+// sqlWrites is the tree's one reading of a write's table and columns.
+func writesColumn(targets []sqlTarget, column foldedColumn) (writes, folds bool) {
+	for _, target := range targets {
 		if target.table == column.table && slices.Contains(target.cols, column.source) {
 			writes, folds = true, slices.Contains(target.cols, column.folded)
 		}

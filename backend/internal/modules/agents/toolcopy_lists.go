@@ -6,8 +6,8 @@ package agents
 var readListsCopy = toolCopy{
 	Purpose: "Find the team's Live Lists (saved filters whose members join and leave on their own) " +
 		"and Shortlists (records chosen by hand), read one, page through its members, say why a " +
-		"record is or is not on it, read what changed on it — including which records a Live List " +
-		"was seen to gain and lose, and how many since the user last opened it — or preview what a " +
+		"record is or is not on it, read what changed on it (including which records a Live List " +
+		"was seen to gain and lose, and how many since the user last opened it), or preview what a " +
 		"filter would select before a Live List is saved.",
 	Limits: "Every count, member and reason is what the user you act for may see: a list shared " +
 		"with them never shows a member record they cannot read, so two users may see different " +

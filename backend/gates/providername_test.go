@@ -37,8 +37,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 	"github.com/margince/margince/backend/internal/shared/ports/provider"
@@ -96,7 +94,7 @@ func publishedNameRule(t *testing.T, schemaName string) (pattern string, maxLeng
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(document, &contract); err != nil {
+	if err := unmarshalYAML(document, &contract); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	schema, declared := contract.Components.Schemas[schemaName]

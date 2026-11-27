@@ -153,7 +153,7 @@ func concatString(expr *ast.BinaryExpr, consts map[string]string, fold StringFol
 // one would fold a name onto a value the package never gave it.
 func PackageStringConstants(t testing.TB, dir string) map[string]string {
 	t.Helper()
-	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	sources, err := Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s for its string constants: %v", dir, err)
 	}

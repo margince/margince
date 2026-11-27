@@ -17,7 +17,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"strconv"
 	"strings"
@@ -66,7 +65,7 @@ func privacySentinelSource(t *testing.T) string {
 // gate holds the writer to the owner instead of keeping its own copy.
 func consentSentinelConst(t *testing.T, name string) string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), consentSentinelFile, nil, 0)
+	file, err := gatekit.ParseFile(consentSentinelFile, 0)
 	if err != nil {
 		t.Fatalf("parsing consent's request file: %v", err)
 	}

@@ -4,11 +4,16 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { OverflowMenu } from "../../design-system/atoms";
+import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { en } from "../../i18n/en";
 import type { List } from "../../lib/lists.queries";
 import { listsMe, liveList, MEMBER_ID } from "../../testing/lists.fixtures";
-import { installFetchStub, StoryProviders } from "../../testing/story-utils";
+import {
+  installFetchStub,
+  jsonResponse,
+  StoryProviders,
+} from "../../testing/story-utils";
 import { ArchiveListAction } from "./listrules";
 import { ListSettingsAction } from "./listsettings";
 
@@ -91,6 +96,32 @@ export const ArchiveNamesItsAutomations: Story = {
       await body.findByRole("button", { name: en["lists.archive"] }),
     );
     await body.findByRole("dialog");
+  },
+};
+
+// No rule uses the list, so it is archived at once and the message offers Undo.
+export const ArchivedWithUndo: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /me": listsMe(true),
+      [`DELETE /lists/${liveList.id}`]: () =>
+        jsonResponse({ ...liveList, archived_at: "2026-09-30T08:00:00Z" }),
+    });
+    return (
+      <StoryProviders>
+        <ToastProvider>
+          <ListMenu list={liveList} />
+          <ToastRegion />
+        </ToastProvider>
+      </StoryProviders>
+    );
+  },
+  play: async ({ canvasElement }) => {
+    const { user, body } = await openMenu(canvasElement, liveList);
+    await user.click(
+      await body.findByRole("button", { name: en["lists.archive"] }),
+    );
+    await body.findByRole("button", { name: en["common.undo"] });
   },
 };
 

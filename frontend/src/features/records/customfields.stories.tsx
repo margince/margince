@@ -211,7 +211,8 @@ const CARD_ROUTES = {
     { custom_field: ["read", "create", "update"] },
     { roles: ["admin"] },
   ),
-  "GET /custom-fields": () => jsonResponse({ data: dealFields }),
+  "GET /custom-fields": () =>
+    jsonResponse({ page: { has_more: false }, data: dealFields }),
   "GET /audit-log": () => jsonResponse({ data: [] }),
   "GET /users/names": () =>
     jsonResponse({ data: [{ id: "admin-user", display_name: "Anna Weber" }] }),
@@ -292,7 +293,8 @@ export const CardEmpty: Story = {
   render: () => {
     installFetchStub({
       ...CARD_ROUTES,
-      "GET /custom-fields": () => jsonResponse({ data: [] }),
+      "GET /custom-fields": () =>
+        jsonResponse({ page: { has_more: false }, data: [] }),
     });
     return (
       <StoryProviders>
@@ -339,7 +341,8 @@ export const CardReadOnlyEmpty: Story = {
     installFetchStub({
       ...CARD_ROUTES,
       "GET /me": meRoute({ custom_field: ["read"] }),
-      "GET /custom-fields": () => jsonResponse({ data: [] }),
+      "GET /custom-fields": () =>
+        jsonResponse({ page: { has_more: false }, data: [] }),
     });
     return (
       <StoryProviders>

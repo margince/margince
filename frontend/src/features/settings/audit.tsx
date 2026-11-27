@@ -162,7 +162,7 @@ export function ActorTag({
 const NAMED_BY_CHANGE: ReadonlySet<string> = new Set(["custom_field"]);
 
 // The live name when the server resolves one, else the name the change wrote.
-function entryName(entry: AuditLogEntry): string | undefined {
+export function entryName(entry: AuditLogEntry): string | undefined {
   const live = entry.entity_label?.trim();
   if (live) return live;
   if (!NAMED_BY_CHANGE.has(entry.entity_type)) return undefined;
@@ -178,17 +178,37 @@ function entryName(entry: AuditLogEntry): string | undefined {
 export function AuditEntryLine({
   entry,
   meUserId,
-}: Readonly<{ entry: AuditLogEntry; meUserId?: string }>) {
+  changes = [],
+  target,
+}: Readonly<{
+  entry: AuditLogEntry;
+  meUserId?: string;
+  /** What the change did, from a surface that reads more than the verb. */
+  changes?: readonly string[];
+  /** The record by name, from a surface that holds it, for kind and name. */
+  target?: string;
+}>) {
   const t = useT();
   const { locale } = useLocale();
   const readerZone = useViewerZone();
   const name = entryName(entry);
+  const verbs = changes.length > 0 ? changes : [actionLabel(entry.action, t)];
   return (
     <div className="audit-line t-sub">
       <ActorTag entry={entry} meUserId={meUserId} />
-      <Badge tone="accent">{actionLabel(entry.action, t)}</Badge>
-      <span>{entityLabel(entry.entity_type, t)}</span>
-      {name && <span className="audit-target">{name}</span>}
+      {verbs.map((verb) => (
+        <Badge key={verb} tone="accent">
+          {verb}
+        </Badge>
+      ))}
+      {target ? (
+        <span className="audit-target">{target}</span>
+      ) : (
+        <>
+          <span>{entityLabel(entry.entity_type, t)}</span>
+          {name && <span className="audit-target">{name}</span>}
+        </>
+      )}
       {/* An audit entry is a fact in the company's book, like the change
           history beside it, so it reads on the company's clock. On the
           viewer's clock an entry at 18:00Z is 21 August to a reader in Berlin

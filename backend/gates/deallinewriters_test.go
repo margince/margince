@@ -142,7 +142,11 @@ func buildLinePackageFlows(t *testing.T) map[string]*lineLockFlow {
 	for dir, files := range groups {
 		// The patch primitive accepts every table; the obligation binds its callers.
 		if dir != storekitOwned {
-			flows[dir] = lineLocksOf(files)
+			flow := unsettledLineFlow(files)
+			if dir == lineOwner || callsAPatch(files) {
+				flow.settle()
+			}
+			flows[dir] = flow
 		}
 	}
 	return flows

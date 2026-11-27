@@ -135,7 +135,7 @@ describe("the forecast card when records moved after the check", () => {
       "Out of date",
     );
     expect(root.querySelector(".intro")?.textContent).toBe(
-      "Records changed after the last check read them (2 deals), so its verdict, ready, may no longer hold. The check read 14 deals.",
+      "Records changed after the last check read them (2 deals), so its result, ready, may no longer hold. The check read 14 deals.",
     );
   });
 });

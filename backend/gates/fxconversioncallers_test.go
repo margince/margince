@@ -89,10 +89,9 @@ func TestOnlyOnePlaceMultipliesAnAmountByAStoredRate(t *testing.T) {
 		}
 	}
 
-	// A census that reads nothing reports PASS. The tree has hundreds of Go
-	// files under these roots, so a scan that found a handful means the walk
-	// broke rather than the tree shrank.
-	if scanned < 100 {
+	// A census that reads nothing reports PASS. The roots hold about 7,000 Go
+	// files, so a scan well short of that means the walk lost part of the tree.
+	if scanned < 6500 {
 		t.Fatalf("scanned only %d files — the walk is not reaching the tree, and a census that "+
 			"reads a smaller tree agrees with everything in the part it missed", scanned)
 	}

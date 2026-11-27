@@ -8,6 +8,7 @@
 import { useState } from "react";
 import { Button } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { undoAction, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import { type List, useArchiveList } from "../../lib/lists.queries";
 import { problemMessageOf } from "../../lib/problem";
@@ -52,20 +53,40 @@ export function ListRuleUses({
 }
 
 /**
- * Archives the list. With rules depending on it, the reader first sees which
- * rules the archive will pause. It is drawn as a menu item, where danger keeps
- * the red ink without the fill. The menu closes on the press, so a direct
- * archive that fails opens the dialog to say why and offer it again.
+ * Archives the list. With no rule on it, the archive runs at once and offers
+ * Undo, a restore that loses nothing. A restore does not start a paused rule
+ * again, so with rules the reader first sees which ones it pauses, and gets
+ * no Undo.
+ *
+ * It is a menu item, where danger keeps the red ink without the fill. The menu
+ * closes on the press, so a failed direct archive opens the dialog to say why.
  */
 export function ArchiveListAction({ list }: Readonly<{ list: List }>) {
   const t = useT();
+  const toast = useToast();
   const archive = useArchiveList();
   const [open, setOpen] = useState(false);
   const rules = ruleUsesOf(list);
+  // The promise, not the mutate callbacks: the archived list's page drops this
+  // menu, and a callback of an unmounted caller never runs.
+  const restore = () =>
+    archive
+      .mutateAsync({ id: list.id, archive: false })
+      .catch((error: unknown) =>
+        toast.show(problemMessageOf(error, t), { tone: "danger" }),
+      );
   const run = () =>
-    archive.mutate(
-      { id: list.id, archive: true },
-      { onSuccess: () => setOpen(false), onError: () => setOpen(true) },
+    archive.mutateAsync({ id: list.id, archive: true }).then(
+      () => {
+        setOpen(false);
+        toast.show(
+          t("lists.archivedDone"),
+          rules.length > 0
+            ? undefined
+            : { action: undoAction(t("common.undo"), restore) },
+        );
+      },
+      () => setOpen(true),
     );
   return (
     <>

@@ -75,10 +75,12 @@ func TestEveryDeprecatedOperationAnnouncesThePolicyThroughTheGeneratedRouter(t *
 
 func TestAParameterRefusalAlsoAnnouncesDeprecation(t *testing.T) {
 	router := contractRouter(Server{})
-	response := httptest.NewRecorder()
-	router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, "/v1/companies/not-a-uuid/brief", nil))
-	if response.Code != http.StatusUnprocessableEntity || !strings.Contains(response.Header().Get("Link"), "deprecation") {
-		t.Fatalf("refusal status=%d headers=%v", response.Code, response.Header())
+	for _, path := range []string{"/v1/companies/not-a-uuid/brief", "/v1/deals/not-a-uuid/viability"} {
+		response := httptest.NewRecorder()
+		router.ServeHTTP(response, httptest.NewRequest(http.MethodGet, path, nil))
+		if response.Code != http.StatusUnprocessableEntity || !strings.Contains(response.Header().Get("Link"), "deprecation") {
+			t.Fatalf("%s refusal status=%d headers=%v", path, response.Code, response.Header())
+		}
 	}
 }
 

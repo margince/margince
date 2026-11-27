@@ -28,7 +28,7 @@ function TagValues() {
   ) : null;
 }
 
-describe("the Tags filter of a list", () => {
+describe("the Tag filter of a list", () => {
   it("narrows its words with a search box, as Owner and Team do", async () => {
     installFetchStub({
       "GET /tags": () =>
@@ -50,7 +50,7 @@ describe("the Tags filter of a list", () => {
     const box = await screen.findByRole("searchbox", {
       name: en["table.filterValueSearch"].replace(
         "{filter}",
-        en["tags.columnHeader"],
+        en["tags.filterLabel"],
       ),
     });
     expect(screen.getByRole("radio", { name: "Partner" })).toBeInTheDocument();
