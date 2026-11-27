@@ -6010,6 +6010,7 @@ export const en = {
   "lead.bulkOwner": "New owner",
   "lead.bulkOwnerPick": "Choose owner",
   "lead.bulkAssign": "Assign",
+  "lead.bulkReturn": "Return to queue",
   "lead.bulkDisqualify": "Disqualify",
   "lead.bulkDisqualifyTitle_one": "Disqualify this lead?",
   "lead.bulkDisqualifyTitle_other": "Disqualify {count} leads?",

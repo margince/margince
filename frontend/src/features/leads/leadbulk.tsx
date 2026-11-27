@@ -392,7 +392,7 @@ export function LeadBulkBar({
                 owner: ownerName,
               })
         }
-        confirmLabel={t("lead.bulkAssign")}
+        confirmLabel={t(unassigning ? "lead.bulkReturn" : "lead.bulkAssign")}
         onConfirm={assign}
         pending={run.isPending}
       >
