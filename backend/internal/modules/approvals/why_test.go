@@ -9,6 +9,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
@@ -52,5 +53,29 @@ func TestAnAgentsReasonIsShownAsWritten(t *testing.T) {
 func TestAProposalWithNoReasonCarriesNone(t *testing.T) {
 	if got := storedReason(t, StageInput{Summary: "Rename the company"}, textlang.English); got != nil {
 		t.Fatalf("a proposal with no reason reads %+v", got)
+	}
+}
+
+func TestARuleNameIsShownOnlyToAnApproverWhoMayReadAutomations(t *testing.T) {
+	in := StageInput{Why: Grounds{Sentence: systemtext.Sentence("automation.rule_trigger",
+		systemtext.Label("Quarterly review"), systemtext.Text("deal.stage_changed"), systemtext.Text("2026-07-01T09:00:00Z"))}}
+	stored, err := marshalSystemSummary(context.Background(), in)
+	if err != nil {
+		t.Fatal(err)
+	}
+	for _, allowed := range []bool{false, true} {
+		ctx := humanCtx(principal.Permissions{Objects: map[string]principal.ObjectGrant{"automation": {Read: allowed}}})
+		why := readWhy(ctx, stored)
+		if why == nil || strings.Contains(why.Text, "Quarterly review") != allowed || !strings.Contains(why.Text, "deal.stage_changed") {
+			t.Fatalf("automation read=%v: %+v", allowed, why)
+		}
+	}
+}
+
+func TestStructuredReasonsRemoveCharactersThatCanReverseTheirWords(t *testing.T) {
+	got := storedReason(t, StageInput{Why: Grounds{Sentence: systemtext.Sentence("coach.why.no_next_step",
+		systemtext.Label("Depot\u202erollout"), systemtext.Date("2026-11-12"))}}, textlang.English)
+	if got == nil || strings.ContainsRune(got.Text, '\u202e') || !strings.Contains(got.Text, "Depotrollout") {
+		t.Fatalf("unsafe reason: %+v", got)
 	}
 }
