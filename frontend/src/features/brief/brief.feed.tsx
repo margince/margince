@@ -40,6 +40,7 @@ export function BriefFeed({
   onRetry,
   onContext,
   queueToggle,
+  waiting,
 }: Readonly<{
   day: Worklist | undefined;
   state: SectionState;
@@ -49,6 +50,8 @@ export function BriefFeed({
   onContext?: (item: WorklistItem) => void;
   /** The way into the whole queue, under the day's order. */
   queueToggle?: ReactNode;
+  /** The decisions waiting on the reader, as cards after the day's own. */
+  waiting?: ReactNode;
 }>) {
   const readerZone = useViewerZone();
   const t = useT();
@@ -70,7 +73,11 @@ export function BriefFeed({
       scopeWasCut(day),
   );
   const shown =
-    state !== "ready" ? state : rows.length > 0 || partial ? "ready" : "empty";
+    state !== "ready"
+      ? state
+      : rows.length > 0 || partial || waiting
+        ? "ready"
+        : "empty";
   return (
     <section
       id="brief-today"
@@ -135,6 +142,7 @@ export function BriefFeed({
           )}
         </SurfaceState>
       )}
+      {state !== "loading" && waiting}
       <OpenEmailDrawer
         activityId={openEmail}
         zone={readerZone}

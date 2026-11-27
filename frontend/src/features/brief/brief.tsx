@@ -26,7 +26,11 @@ import { useMe } from "../../lib/session";
 import { TASK_PARAM } from "../../lib/taskreminders";
 import { replaceDial, useUrlParams } from "../../lib/urlstate";
 import { readerTask } from "../../lib/worklistcopy";
-import { MagicPanel, WAITING_LANES } from "../sign-in/magic";
+import {
+  MagicPanel,
+  STALLED_LANES,
+  useWaitingApprovals,
+} from "../sign-in/magic";
 import {
   useHandledForYou,
   useHomeDay,
@@ -224,6 +228,14 @@ function PersonalMorning({
     useDealReads();
   const settled =
     handled.isSuccess && dealReads.every((read) => read.isSuccess);
+  // A decision the day's cards already show is answered there.
+  const waiting = useWaitingApprovals(
+    day?.focus?.items
+      .filter(
+        (item) => item.source === "approval" && item.actions.includes("decide"),
+      )
+      .map((item) => item.id),
+  );
   useEffect(() => {
     const marks = homeJourneyMarks({
       state,
@@ -257,6 +269,7 @@ function PersonalMorning({
               refreshFailed={query.isRefetchError}
               onRetry={() => void query.refetch()}
               queueToggle={queueToggle}
+              waiting={waiting}
             />
             {/* What Margince finished stands with the work, where a reader
                 reviews or undoes it, not in the rail beside it. */}
@@ -280,15 +293,8 @@ function PersonalMorning({
                 />
                 <BriefSuggestions />
                 <MagicPanel
-                  lanes={WAITING_LANES}
+                  lanes={STALLED_LANES}
                   heading={waitingHeading(firstDay)}
-                  visibleApprovalIds={day?.focus?.items
-                    .filter(
-                      (item) =>
-                        item.source === "approval" &&
-                        item.actions.includes("decide"),
-                    )
-                    .map((item) => item.id)}
                 />
               </>
             )}

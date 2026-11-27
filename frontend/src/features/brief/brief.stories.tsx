@@ -35,6 +35,7 @@ import {
   expectDialPlacement,
   expectReportFillsPane,
 } from "../../testing/briefheadchecks";
+import { commitmentProposal } from "../../testing/magic.approval.fixtures";
 import {
   installFetchStub,
   jsonResponse,
@@ -201,6 +202,27 @@ type Story = StoryObj<typeof BriefScreen>;
 
 export const DecisionsInToday: Story = {
   render: brief({ approvals: [...singles, ...bundle] }),
+};
+
+// A decision the day's cards do not show joins them as one more card.
+export const WaitingApprovalCard: Story = {
+  render: brief({
+    approvals: [],
+    extra: {
+      "GET /me": meRoute({ deal: ["read"] }),
+      "GET /magic": () =>
+        jsonResponse({
+          ...quietNight,
+          needs_you: [commitmentProposal],
+          totals: { ...quietNight.totals, needs_you: 1 },
+        }),
+    },
+  }),
+};
+
+export const WaitingApprovalCardDark: Story = {
+  ...WaitingApprovalCard,
+  globals: { theme: "dark" },
 };
 
 export const OneDecision: Story = {
