@@ -18,6 +18,11 @@ export const PHONE_MAX_WIDTH = 700;
 // fails a fold block that spells another number.
 export const FOLD_MAX_WIDTH = 720;
 
+// The width from which a list's pager has room for seven slots and the words
+// Previous and Next. Narrower, a tablet as a phone, it draws five and chevrons.
+// No stylesheet reads it: the strip's slots are counted in code.
+export const DESKTOP_MIN_WIDTH = 1024;
+
 // The width at which a LIST HEADER stops fitting its verbs. Below it the row of
 // actions folds into one overflow menu (design-system/listsurface.tsx). It is
 // wider than the phone breakpoint on purpose: nothing about the shell changes

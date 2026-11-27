@@ -1284,6 +1284,16 @@
   }
 }
 
+/* A phone's strip runs edge to edge, each entry an equal share of the row. */
+@media (max-width: 700px) {
+  .lt-pager {
+    justify-self: stretch;
+    display: grid;
+    grid-auto-flow: column;
+    grid-auto-columns: 1fr;
+  }
+}
+
 .lt-pager button {
   /* A page step is a control, so it takes the control height in both axes —
      square until a three-digit page number widens it. It had a rung of its own

@@ -43,6 +43,15 @@ const strip = (container: HTMLElement) =>
   );
 
 describe("the pager on a computer", () => {
+  it.each([1024, 1440])("draws seven slots with words at %ipx", (width) => {
+    stubWindowWidth(width);
+    const { container } = renderPager(5);
+    expect(strip(container)).toHaveLength(9);
+    expect(screen.getByRole("button", { name: "Next" })).toHaveTextContent(
+      "Next",
+    );
+  });
+
   it("leads its row with the range, then the strip with words either side", () => {
     stubWindowWidth(1440);
     const { container } = renderPager(5);
@@ -61,6 +70,28 @@ describe("the pager on a computer", () => {
       "49",
       "Next",
     ]);
+    expect(
+      screen.getByRole("combobox", { name: "Rows per page" }),
+    ).toHaveTextContent("25 per page");
+  });
+});
+
+describe("the pager on a tablet", () => {
+  it.each([768, 900])("draws five slots between chevrons at %ipx", (width) => {
+    stubWindowWidth(width);
+    const { container } = renderPager(5);
+    expect(strip(container)).toEqual([
+      "Previous",
+      "1",
+      "…",
+      "5",
+      "…",
+      "49",
+      "Next",
+    ]);
+    expect(
+      screen.getByRole("button", { name: "Previous" }).querySelector("svg"),
+    ).not.toBeNull();
     expect(
       screen.getByRole("combobox", { name: "Rows per page" }),
     ).toHaveTextContent("25 per page");

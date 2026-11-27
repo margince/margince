@@ -330,9 +330,9 @@ export function usePaging<Row>(
 
 /**
  * The slots of a strip longer than it: page one, a gap, the pages around the
- * current one, a gap, the last. A phone has room for five, a wider screen seven.
+ * current one, a gap, the last. A desktop has room for seven, a narrower screen five.
  */
-export const PAGER_SLOTS = { wide: 7, phone: 5 } as const;
+export const PAGER_SLOTS = { wide: 7, short: 5 } as const;
 
 /** A slot in the pager: a page to jump to, or a gap where pages were skipped. */
 export type PagerSlot = number | "gap";

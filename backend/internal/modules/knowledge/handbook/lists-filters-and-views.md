@@ -154,7 +154,7 @@ Also called: add column, remove column, reorder columns, change table layout.
 
 ### How do I show more rows per page?
 To show more rows on a Margince list, open **Rows per page** at the bottom of the list. Pick **25 per page**, **50 per page** or **100 per page**.
-Use **Previous** and **Next**, or a page number, to move through the pages. The count at the top says which rows show, for example "1-25 of 200", and the same count sits beside or under the page numbers. The page numbers end with the last page, and a phone shows fewer of them, with arrows for **Previous** and **Next**. Where Margince does not have the full count, the count says "loaded" and the page numbers end with "…" until the last page is read.
+Use **Previous** and **Next**, or a page number, to move through the pages. The count at the top says which rows show, for example "1-25 of 200", and the same count sits beside or under the page numbers. The page numbers end with the last page, and a screen narrower than a computer's shows fewer of them, with arrows for **Previous** and **Next**. Where Margince does not have the full count, the count says "loaded" and the page numbers end with "…" until the last page is read.
 
 Also called: page size, see all records, load more.
 

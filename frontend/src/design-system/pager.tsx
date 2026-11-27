@@ -8,7 +8,11 @@ import {
   ordinalNumber,
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import { usePhoneViewport } from "../lib/viewport";
+import {
+  DESKTOP_MIN_WIDTH,
+  usePhoneViewport,
+  useViewportUnder,
+} from "../lib/viewport";
 import { type PageRange, rangeText } from "./listsurface";
 import { PAGE_SIZES, PAGER_SLOTS, pagerSlots } from "./listtable.paging";
 import { Select } from "./select";
@@ -47,7 +51,8 @@ export function Pager({
   const t = useT();
   const { locale } = useLocale();
   const phone = usePhoneViewport();
-  const slots = phone ? PAGER_SLOTS.phone : PAGER_SLOTS.wide;
+  const short = useViewportUnder(DESKTOP_MIN_WIDTH - 1);
+  const slots = short ? PAGER_SLOTS.short : PAGER_SLOTS.wide;
   return (
     <div className={`lt-foot${lastPage === 1 && endKnown ? " single" : ""}`}>
       <div className="lt-footrow">
@@ -61,7 +66,7 @@ export function Pager({
         <nav className="lt-pager" aria-label={t("table.pagination")}>
           <PageStep
             label={t("table.prev")}
-            icon={phone ? ChevronLeft : undefined}
+            icon={short ? ChevronLeft : undefined}
             disabled={current === 1}
             onClick={() => onGoto(current - 1)}
           />
@@ -94,7 +99,7 @@ export function Pager({
           )}
           <PageStep
             label={t("table.next")}
-            icon={phone ? ChevronRight : undefined}
+            icon={short ? ChevronRight : undefined}
             disabled={endKnown && current >= lastPage}
             onClick={() => onGoto(current + 1)}
           />
@@ -117,7 +122,7 @@ export function Pager({
   );
 }
 
-/** Previous or Next: its word, or on a phone its chevron named by the word. */
+/** Previous or Next: its word, or below a desktop its chevron named by the word. */
 function PageStep({
   label,
   icon: Icon,

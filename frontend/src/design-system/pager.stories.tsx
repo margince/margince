@@ -87,8 +87,8 @@ export const ThreePages: Story = {
   args: { ...onPage(2, 70), hasMore: false },
 };
 
-// A phone: five slots and chevrons named Previous and Next. Under the strip sit
-// the range and a page size that shows its number alone.
+// A phone: five slots and chevrons named Previous and Next, edge to edge. Under
+// the strip sit the range and a page size that shows its number alone.
 // `uat-phone` drives the capture gate to 390px.
 export const OnAPhone: Story = {
   name: "phone, five slots and chevrons",
@@ -104,6 +104,30 @@ export const OnAPhone: Story = {
       canvas.getByRole("combobox", { name: "Rows per page" }),
     ).toHaveTextContent(/^25$/);
     await expectStacked(canvasElement);
+    const strip = box(canvasElement, ".lt-pager");
+    const row = box(canvasElement, ".lt-footrow");
+    await expect(Math.abs(strip.width - row.width)).toBeLessThan(1);
+  },
+};
+
+// A tablet: the short strip of a phone, centred, with the full page size.
+// `uat-tablet` drives the capture gate to 768px.
+export const OnATablet: Story = {
+  name: "tablet, five slots and chevrons",
+  globals: { viewport: { value: "tablet" } },
+  tags: ["uat-tablet"],
+  args: { ...onPage(5, COUNTED), hasMore: true, endKnown: true },
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await expect(
+      canvas.getByRole("button", { name: "Next" }).querySelector("svg"),
+    ).not.toBeNull();
+    await expect(canvasElement.querySelectorAll(".lt-pager > *")).toHaveLength(
+      7,
+    );
+    await expect(
+      canvas.getByRole("combobox", { name: "Rows per page" }),
+    ).toHaveTextContent("25 per page");
   },
 };
 
