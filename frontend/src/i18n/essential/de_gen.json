@@ -1679,7 +1679,6 @@
   "locale.name.en": "English",
   "locale.name.de": "Deutsch",
   "locale.name.vi": "Tiếng Việt",
-  "screen.pending": "Diese Ansicht ist noch nicht verfügbar.",
   "ext.notFound": "In dieser Installation ist keine Erweiterung namens „{name}“ aktiviert.",
   "search.kind.contact": "Kontakt",
   "search.kind.deal": "Deal",

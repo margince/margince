@@ -10326,6 +10326,7 @@ public.saved_view.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDAT
 public.saved_view.trg_saved_view_updated CREATE TRIGGER trg_saved_view_updated BEFORE UPDATE ON public.saved_view FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.saved_view.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.saved_view.version bigint NOT NULL gen=- def=1
+public.saved_view_name_once CREATE UNIQUE INDEX saved_view_name_once ON public.saved_view USING btree (owner_id, resource, lower(btrim(name))) WHERE (archived_at IS NULL)
 public.saved_view_pkey CREATE UNIQUE INDEX saved_view_pkey ON public.saved_view USING btree (id)
 public.scheduled_send acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.scheduled_send.activity_id uuid gen=- def=-

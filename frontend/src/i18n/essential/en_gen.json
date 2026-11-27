@@ -1679,7 +1679,6 @@
   "locale.name.en": "English",
   "locale.name.de": "Deutsch",
   "locale.name.vi": "Tiếng Việt",
-  "screen.pending": "This screen is not available yet.",
   "ext.notFound": "No extension named “{name}” is enabled on this installation.",
   "search.kind.contact": "Contact",
   "search.kind.deal": "Deal",

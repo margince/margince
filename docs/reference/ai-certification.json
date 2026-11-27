@@ -1,11 +1,11 @@
 {
   "totals": {
     "sites": 62,
-    "sites_best_current": 55,
+    "sites_best_current": 54,
     "sites_best_partial": 0,
-    "sites_best_stale": 7,
+    "sites_best_stale": 8,
     "sites_absent": 0,
-    "scenarios": 347,
+    "scenarios": 348,
     "records": 463,
     "bindings": 20,
     "self_judged_records": 0
@@ -993,7 +993,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -1003,7 +1003,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 12,
@@ -2443,7 +2443,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -2453,7 +2453,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current",
+            "state": "stale",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.1-flash-lite",
@@ -3590,7 +3590,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
             "model": {
@@ -3600,7 +3600,7 @@
             },
             "same_model": true,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 12,
@@ -10714,7 +10714,7 @@
       "usable_with_care": 3,
       "not_reliable_yet": 0,
       "too_few_runs": 19,
-      "recheck_pending": 15,
+      "recheck_pending": 16,
       "judges": [
         "gemini-3.1-flash-lite"
       ],
@@ -10726,9 +10726,9 @@
             "env": "cloud_frontier"
           },
           "sites": 55,
-          "sites_current": 41,
+          "sites_current": 40,
           "sites_partial": 0,
-          "sites_stale": 14,
+          "sites_stale": 15,
           "runs": 1341,
           "passed": 1313,
           "reliability": 0.9791200596569725,
@@ -11583,7 +11583,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 1
@@ -11704,7 +11704,7 @@
       "usable_with_care": 4,
       "not_reliable_yet": 0,
       "too_few_runs": 15,
-      "recheck_pending": 7,
+      "recheck_pending": 8,
       "judges": [
         "claude-sonnet-5-5"
       ],
@@ -11716,9 +11716,9 @@
             "env": "cloud_frontier"
           },
           "sites": 55,
-          "sites_current": 49,
+          "sites_current": 48,
           "sites_partial": 0,
-          "sites_stale": 6,
+          "sites_stale": 7,
           "runs": 1485,
           "passed": 1449,
           "reliability": 0.9757575757575757,
@@ -12597,7 +12597,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 12,
           "passed": 12,
           "records": 1
@@ -14546,9 +14546,9 @@
         "env": "cloud_frontier"
       },
       "sites": 55,
-      "sites_current": 41,
+      "sites_current": 40,
       "sites_partial": 0,
-      "sites_stale": 14,
+      "sites_stale": 15,
       "runs": 1341,
       "passed": 1313,
       "reliability": 0.9791200596569725,
@@ -14596,9 +14596,9 @@
         "env": "cloud_frontier"
       },
       "sites": 58,
-      "sites_current": 49,
+      "sites_current": 48,
       "sites_partial": 0,
-      "sites_stale": 9,
+      "sites_stale": 10,
       "runs": 1644,
       "passed": 1591,
       "reliability": 0.9677615571776156,
@@ -43820,24 +43820,15 @@
       "key": "tag_suggest/interest",
       "scope": "single_call",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "runs": 12,
-        "passed": 12,
-        "reliability": 1,
-        "reliability_interval": {
-          "lower": 0.879604,
-          "upper": 1
-        },
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
+        {
+          "name": "a_forwarded_customer_request_is_interest_but_our_quoted_offer_is_not",
+          "expects": "accepted",
+          "graded_by": "mechanical",
+          "file": "backend/internal/compose/aicert/corpus/tag_suggest/forward_and_reply_01.yaml"
+        },
         {
           "name": "a_mention_or_our_own_footer_is_not_interest",
           "expects": "accepted",
@@ -43870,10 +43861,10 @@
             "model": "claude-haiku-5-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
+          "scenarios_measured": 0,
+          "scenarios_total": 5,
           "runs": 12,
           "passed": 12,
           "reliability": 1,
@@ -43889,7 +43880,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends): a_mention_or_our_own_footer_is_not_interest, each_item_in_a_batch_gets_its_own_subset_of_two_tags, instructions_inside_a_mail_tag_nothing, interest_in_words_the_description_does_not_use",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_mention_or_our_own_footer_is_not_interest",
+              "each_item_in_a_batch_gets_its_own_subset_of_two_tags",
+              "instructions_inside_a_mail_tag_nothing",
+              "interest_in_words_the_description_does_not_use"
+            ]
+          }
         },
         {
           "binding": {
@@ -43897,10 +43896,10 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
-          "scenarios_measured": 4,
-          "scenarios_total": 4,
+          "scenarios_measured": 0,
+          "scenarios_total": 5,
           "runs": 12,
           "passed": 12,
           "reliability": 1,
@@ -43916,7 +43915,15 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends): a_mention_or_our_own_footer_is_not_interest, each_item_in_a_batch_gets_its_own_subset_of_two_tags, instructions_inside_a_mail_tag_nothing, interest_in_words_the_description_does_not_use",
+          "stale_cause": {
+            "prompt_changed": [
+              "a_mention_or_our_own_footer_is_not_interest",
+              "each_item_in_a_batch_gets_its_own_subset_of_two_tags",
+              "instructions_inside_a_mail_tag_nothing",
+              "interest_in_words_the_description_does_not_use"
+            ]
+          }
         },
         {
           "binding": {
@@ -43927,7 +43934,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 4,
+          "scenarios_total": 5,
           "runs": 24,
           "passed": 23,
           "reliability": 0.9583333333333334,
@@ -43943,8 +43950,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_mention_or_our_own_footer_is_not_interest, each_item_in_a_batch_gets_its_own_subset_of_two_tags, instructions_inside_a_mail_tag_nothing, interest_in_words_the_description_does_not_use; the provider's wire translation changed since the run",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_mention_or_our_own_footer_is_not_interest, each_item_in_a_batch_gets_its_own_subset_of_two_tags, instructions_inside_a_mail_tag_nothing, interest_in_words_the_description_does_not_use; the provider's wire translation changed since the run",
           "stale_cause": {
+            "prompt_changed": [
+              "a_mention_or_our_own_footer_is_not_interest",
+              "each_item_in_a_batch_gets_its_own_subset_of_two_tags",
+              "instructions_inside_a_mail_tag_nothing",
+              "interest_in_words_the_description_does_not_use"
+            ],
             "grader_changed": [
               "a_mention_or_our_own_footer_is_not_interest",
               "each_item_in_a_batch_gets_its_own_subset_of_two_tags",
@@ -43962,7 +43975,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 4,
+          "scenarios_total": 5,
           "runs": 12,
           "passed": 12,
           "reliability": 1,
@@ -43978,8 +43991,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_mention_or_our_own_footer_is_not_interest, each_item_in_a_batch_gets_its_own_subset_of_two_tags, instructions_inside_a_mail_tag_nothing, interest_in_words_the_description_does_not_use",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_mention_or_our_own_footer_is_not_interest, each_item_in_a_batch_gets_its_own_subset_of_two_tags, instructions_inside_a_mail_tag_nothing, interest_in_words_the_description_does_not_use",
           "stale_cause": {
+            "prompt_changed": [
+              "a_mention_or_our_own_footer_is_not_interest",
+              "each_item_in_a_batch_gets_its_own_subset_of_two_tags",
+              "instructions_inside_a_mail_tag_nothing",
+              "interest_in_words_the_description_does_not_use"
+            ],
             "grader_changed": [
               "a_mention_or_our_own_footer_is_not_interest",
               "each_item_in_a_batch_gets_its_own_subset_of_two_tags",
@@ -43997,7 +44016,7 @@
           "state": "stale",
           "band": "not_supported",
           "scenarios_measured": 0,
-          "scenarios_total": 4,
+          "scenarios_total": 5,
           "runs": 12,
           "passed": 9,
           "reliability": 0.75,
@@ -44013,8 +44032,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_mention_or_our_own_footer_is_not_interest, each_item_in_a_batch_gets_its_own_subset_of_two_tags, instructions_inside_a_mail_tag_nothing, interest_in_words_the_description_does_not_use",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_mention_or_our_own_footer_is_not_interest, each_item_in_a_batch_gets_its_own_subset_of_two_tags, instructions_inside_a_mail_tag_nothing, interest_in_words_the_description_does_not_use",
           "stale_cause": {
+            "prompt_changed": [
+              "a_mention_or_our_own_footer_is_not_interest",
+              "each_item_in_a_batch_gets_its_own_subset_of_two_tags",
+              "instructions_inside_a_mail_tag_nothing",
+              "interest_in_words_the_description_does_not_use"
+            ],
             "grader_changed": [
               "a_mention_or_our_own_footer_is_not_interest",
               "each_item_in_a_batch_gets_its_own_subset_of_two_tags",
@@ -44032,7 +44057,7 @@
           "state": "stale",
           "band": "certified",
           "scenarios_measured": 0,
-          "scenarios_total": 4,
+          "scenarios_total": 5,
           "runs": 12,
           "passed": 12,
           "reliability": 1,
@@ -44048,8 +44073,14 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "4 scenarios it scored have changed since (how a run is graded): a_mention_or_our_own_footer_is_not_interest, each_item_in_a_batch_gets_its_own_subset_of_two_tags, instructions_inside_a_mail_tag_nothing, interest_in_words_the_description_does_not_use",
+          "stale_reason": "4 scenarios it scored have changed since (the prompt this build sends and how a run is graded): a_mention_or_our_own_footer_is_not_interest, each_item_in_a_batch_gets_its_own_subset_of_two_tags, instructions_inside_a_mail_tag_nothing, interest_in_words_the_description_does_not_use",
           "stale_cause": {
+            "prompt_changed": [
+              "a_mention_or_our_own_footer_is_not_interest",
+              "each_item_in_a_batch_gets_its_own_subset_of_two_tags",
+              "instructions_inside_a_mail_tag_nothing",
+              "interest_in_words_the_description_does_not_use"
+            ],
             "grader_changed": [
               "a_mention_or_our_own_footer_is_not_interest",
               "each_item_in_a_batch_gets_its_own_subset_of_two_tags",

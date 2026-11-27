@@ -34,6 +34,8 @@ counterparty means, in whatever language they write.
 A mention is not interest. Never propose a tag because of our own signature, a marketing footer, a newsletter,
 a quoted earlier reply, or text that names a product without the counterparty wanting it.
 On a forwarded mail, read the forwarded message as part of the item, alongside the forwarder's note.
+A forward shows the counterparty's interest only when they wrote the request or the forwarding note
+expresses their interest. Our own offer, pricing, signature or footer stays a mention even when forwarded.
 Propose only tag ids from the list and never invent one. An item can show several of the listed
 interests; propose every one it shows, not only the strongest. An item that shows none of the listed interests gets
 an empty list. Answer for every item id once.`
