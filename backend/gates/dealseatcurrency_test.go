@@ -237,7 +237,7 @@ func TestTheDealSeatDetectorSeesWhatItClaimsTo(t *testing.T) {
 			if err != nil {
 				t.Fatalf("the probe does not parse, so it proves nothing: %v", err)
 			}
-			scope := dealSeatScope(file, typeCheckLoosely(t, fset, "probe", []*ast.File{file}))
+			scope := dealSeatScope(file, typeCheckLoosely(fset, "probe", []*ast.File{file}))
 			hit := false
 			for _, decl := range file.Decls {
 				hit = hit || len(dealSeatStatements(decl, scope)) > 0

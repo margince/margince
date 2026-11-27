@@ -281,17 +281,13 @@ func newPackageFuncs(info *types.Info, files []*ast.File) *packageFuncs {
 // typeCheckLoosely checks one planted package with every import standing in
 // as an empty package. The checker moves past each reference into a stand-in,
 // so a probe resolves its own declarations without real imports.
-func typeCheckLoosely(t testing.TB, fset *token.FileSet, dir string, files []*ast.File) *types.Info {
-	t.Helper()
+func typeCheckLoosely(fset *token.FileSet, dir string, files []*ast.File) *types.Info {
 	info := &types.Info{
 		Defs: map[*ast.Ident]types.Object{}, Uses: map[*ast.Ident]types.Object{},
 		Types: map[ast.Expr]types.TypeAndValue{}, Selections: map[*ast.SelectorExpr]*types.Selection{},
 	}
-	untyped := 0
-	conf := types.Config{Importer: standInImports{}, Error: func(error) { untyped++ }}
-	if _, err := conf.Check(dir, fset, files, info); err != nil {
-		t.Logf("%s: %d reference(s) into stand-in imports stay untyped, the first: %v", dir, untyped, err)
-	}
+	conf := types.Config{Importer: standInImports{}, Error: func(error) {}}
+	_, _ = conf.Check(dir, fset, files, info)
 	return info
 }
 
@@ -780,7 +776,7 @@ func plantedWorker(t *testing.T, src string) (*packageFuncs, *ast.FuncDecl) {
 	if err != nil {
 		t.Fatalf("parse the planted worker: %v", err)
 	}
-	pkg := newPackageFuncs(typeCheckLoosely(t, fset, "planted", []*ast.File{file}), []*ast.File{file})
+	pkg := newPackageFuncs(typeCheckLoosely(fset, "planted", []*ast.File{file}), []*ast.File{file})
 	work := pkg.method("worker", "Work")
 	if work == nil {
 		t.Fatal("the planted worker declares no Work method the index can see")
