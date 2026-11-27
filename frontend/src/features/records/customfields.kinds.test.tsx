@@ -186,8 +186,8 @@ it("writes the pipelines a deal field shows in", async () => {
   };
   const queries = client();
   queries.setQueryData(pipelinesOptions.queryKey, [
-    { id: "pipe-a", name: "Sales" },
-    { id: "pipe-b", name: "Partners" },
+    { id: "pipe-a", name: "Sales", is_default: true, position: 0 },
+    { id: "pipe-b", name: "Partners", is_default: false, position: 1 },
   ]);
   render(
     <QueryClientProvider client={queries}>

@@ -395,9 +395,8 @@ const EMPTY_CUSTOM_FIELDS: CustomField[] = [];
 // that exists must stay readable and editable where the record is.
 export type CustomFieldSurface = "create" | "record";
 
-// Which activity kind or deal pipeline a form's fields are for. A field narrowed
-// to other kinds or pipelines stays out. The exception is a value in `held`, the
-// row the form opened on: the form shows that field so the reader can clear it.
+// The activity kind or deal pipeline a form is for. A field held in `held` still
+// shows, so the reader can clear a value the record already has.
 export type RecordNarrowing = Readonly<{
   kind?: string;
   pipelineId?: string;
@@ -412,37 +411,23 @@ export function appliesToKind(field: CustomField, kind: string): boolean {
   );
 }
 
-/**
- * Whether a field applies to a deal in the pipeline `pipelineId`; no pipelines
- * is every pipeline. An archived pipeline stays in the list and matches no
- * deal the server lets one be in, so the list needs no filter here.
- */
-export function appliesToPipeline(
-  field: CustomField,
-  pipelineId: string,
-): boolean {
-  return (
-    !field.pipeline_ids ||
-    field.pipeline_ids.some((applies) => applies === pipelineId)
-  );
+// No pipelines is every pipeline. An archived pipeline stays in the list and
+// matches no deal, because the server keeps deals out of archived pipelines.
+export function appliesToPipeline(field: CustomField, pipelineId: string) {
+  return !field.pipeline_ids || field.pipeline_ids.includes(pipelineId);
 }
 
-/** The narrowing of a deal form to the deal's own pipeline and held values. */
-export function dealNarrowing(
-  deal: Readonly<Record<string, unknown>>,
-): RecordNarrowing | undefined {
+export function dealNarrowing(deal: Readonly<Record<string, unknown>>) {
   const pipelineId = deal.pipeline_id;
   return typeof pipelineId === "string"
-    ? { pipelineId, held: { ...deal } }
+    ? ({ pipelineId, held: { ...deal } } satisfies RecordNarrowing)
     : undefined;
 }
 
-function appliesToRecord(field: CustomField, narrowing: RecordNarrowing) {
-  const { kind, pipelineId, held } = narrowing;
-  const applies =
-    (kind === undefined || appliesToKind(field, kind)) &&
-    (pipelineId === undefined || appliesToPipeline(field, pipelineId));
-  return applies || (held?.[field.column_name] ?? null) !== null;
+function appliesToRecord(field: CustomField, n: RecordNarrowing) {
+  if ((n.held?.[field.column_name] ?? null) !== null) return true;
+  if (n.kind !== undefined && !appliesToKind(field, n.kind)) return false;
+  return n.pipelineId === undefined || appliesToPipeline(field, n.pipelineId);
 }
 
 // The active fields one surface offers. `!== false` rather than a truthy check:
