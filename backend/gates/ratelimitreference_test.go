@@ -1,0 +1,227 @@
+// SPDX-License-Identifier: BUSL-1.1
+// SPDX-FileCopyrightText: 2026 Gradion
+
+//gate:kind parity H3
+
+package gates
+
+import (
+	"bytes"
+	"flag"
+	"fmt"
+	"go/ast"
+	"go/constant"
+	"go/format"
+	"go/parser"
+	"go/token"
+	"io/fs"
+	"os"
+	"path/filepath"
+	"slices"
+	"strings"
+	"testing"
+	"time"
+
+	"github.com/margince/margince/backend/internal/modules/webforms"
+)
+
+var updateRateLimits = flag.Bool("update-rate-limits", false, "rewrite docs/reference/api-rate-limits.md from limiter constructors")
+
+type rateSource struct {
+	path string
+	tree *ast.File
+	set  *token.FileSet
+}
+
+// TestRateLimitReferenceMatchesTheEnforcedConstructors derives the reference
+// from every fixed-window limiter constructor and the configurable form defaults.
+func TestRateLimitReferenceMatchesTheEnforcedConstructors(t *testing.T) {
+	t.Parallel()
+	sources, defs := rateSources(t)
+	var rows []string
+	for _, source := range sources {
+		ast.Inspect(source.tree, func(node ast.Node) bool {
+			call, ok := node.(*ast.CallExpr)
+			if !ok || len(call.Args) < 4 {
+				return true
+			}
+			kind, ok := call.Args[1].(*ast.SelectorExpr)
+			if !ok || (kind.Sel.Name != "FailClosed" && kind.Sel.Name != "FailOpen") {
+				return true
+			}
+			directory := filepath.Dir(source.path)
+			name := rateValue(call.Args[0], directory, defs, map[string]bool{})
+			if name == nil {
+				name = constant.MakeString(rateExpression(call.Args[0]))
+			}
+			ceiling := rateDisplay(call.Args[2], directory, defs, false)
+			span := rateDisplay(call.Args[3], directory, defs, true)
+			if function, ok := call.Fun.(*ast.SelectorExpr); ok && function.Sel.Name == "NewEscalator" {
+				span = "clock minute; configured cooldown"
+			}
+			rows = append(rows, fmt.Sprintf("| `%s` | %s | %s | [%s](../../backend/%s) |", strings.ReplaceAll(constant.StringVal(name), "|", "\\|"), ceiling, span, fmt.Sprintf("%s:%d", source.path, source.set.Position(call.Pos()).Line), source.path))
+			return true
+		})
+	}
+	slices.Sort(rows)
+	rows = slices.Compact(rows)
+	if len(rows) == 0 {
+		t.Fatalf("found only %d limiter constructors", len(rows))
+	}
+	limits := webforms.DefaultThrottleLimits()
+	header := `<!-- prose:plain -->
+# API rate limits
+
+The API and worker roles bind the process rate-limiter registry to Redis. Replicas
+share one counter per named key. Human sessions, agent credentials, public intake
+and extension execution use separate named budgets. Ordinary authenticated REST
+requests have no general requests-per-minute ceiling; the operation-specific
+limits below still apply. An external MCP client keeps its user's authority.
+
+MCP calls count per credential; stream opens count separately. OAuth and pre-authentication traffic have their own buckets.
+Changing credentials never changes the user's permissions or row access.
+
+A limiter refusal returns HTTP 429 with Retry-After, RateLimit-Limit,
+RateLimit-Remaining and RateLimit-Reset. Remaining is zero: this limiter admits no
+more attempts now. Reset is a relative number of seconds to wait, conservatively
+one full window (or a longer form cooldown). It is not a wall-clock timestamp.
+Headers do not expose a key, a user identity or an exact counter reading.
+Deal-room link requests use one opaque refusal and the longest wait for all
+three guards. They omit the ceiling so email request history stays private.
+An unavailable shared store can also refuse a fail-closed limiter. Successful
+responses do not claim a remaining count, and no extra Redis read is made for
+these headers. Budget and concurrency refusals without a timed limiter make no
+claim about when a quota will reset.
+
+The table derives every constructor carrying a FailClosed or FailOpen policy, including
+registry methods, injected factories and escalators. A configured
+expression names an operator setting or an extension manifest value, rather than
+claiming a universal limit. See [configuration](configuration.md) for settings.
+Regenerate with ` + "`cd backend && go test ./gates -run TestRateLimitReferenceMatchesTheEnforcedConstructors -update-rate-limits`" + `.
+
+| Counter / key class | Attempts | Window | Enforced at |
+|---|---:|---|---|
+`
+	body := header + strings.Join(rows, "\n") + "\n\n## Website form defaults\n\nThese may be changed by webforms.throttle settings. A repeated refusal can\nextend the cooldown; Retry-After and RateLimit-Reset carry that longer wait.\n\n| Key | Posts per minute |\n|---|---:|\n" +
+		fmt.Sprintf("| Address across all forms | %d |\n| Address on one form | %d |\n| One form | %d |\n| Workspace | %d |\n| Installation | %d |\n| Preflights per address | %d |\n", limits.PerAddress, limits.PerIP, limits.PerForm, limits.PerWorkspace, limits.PerInstallation, limits.Preflights)
+	path := "../docs/reference/api-rate-limits.md"
+	if *updateRateLimits {
+		if err := os.WriteFile(path, []byte(body), 0o644); err != nil {
+			t.Fatal(err)
+		}
+		return
+	}
+	got, err := os.ReadFile(path)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if string(got) != body {
+		t.Fatal("rate-limit reference differs from constructors; run go test ./gates -run TestRateLimitReferenceMatchesTheEnforcedConstructors -update-rate-limits")
+	}
+}
+
+func rateSources(t *testing.T) ([]rateSource, map[string]ast.Expr) {
+	t.Helper()
+	var sources []rateSource
+	defs := map[string]ast.Expr{}
+	for _, root := range []string{"internal", "pkg"} {
+		err := filepath.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
+			if walkErr != nil {
+				return walkErr
+			}
+			if entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
+				return nil
+			}
+			set := token.NewFileSet()
+			tree, err := parser.ParseFile(set, path, nil, 0)
+			if err != nil {
+				return err
+			}
+			sources = append(sources, rateSource{path: path, tree: tree, set: set})
+			for _, decl := range tree.Decls {
+				group, ok := decl.(*ast.GenDecl)
+				if !ok || group.Tok != token.CONST {
+					continue
+				}
+				for _, spec := range group.Specs {
+					value, ok := spec.(*ast.ValueSpec)
+					if !ok {
+						continue
+					}
+					for i, name := range value.Names {
+						if i < len(value.Values) {
+							defs[filepath.Dir(path)+":"+name.Name] = value.Values[i]
+						}
+					}
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatal(err)
+		}
+	}
+	return sources, defs
+}
+
+func rateExpression(expr ast.Expr) string {
+	var out bytes.Buffer
+	if err := format.Node(&out, token.NewFileSet(), expr); err != nil {
+		return "configured"
+	}
+	return strings.ReplaceAll(strings.Join(strings.Fields(out.String()), " "), "|", "\\|")
+}
+
+func rateDisplay(expr ast.Expr, directory string, defs map[string]ast.Expr, span bool) string {
+	value := rateValue(expr, directory, defs, map[string]bool{})
+	if value == nil {
+		return "configured: `" + rateExpression(expr) + "`"
+	}
+	if span {
+		if n, ok := constant.Int64Val(value); ok {
+			return time.Duration(n).String()
+		}
+	}
+	return value.ExactString()
+}
+
+func rateValue(expr ast.Expr, directory string, defs map[string]ast.Expr, seen map[string]bool) constant.Value {
+	switch value := expr.(type) {
+	case *ast.BasicLit:
+		return constant.MakeFromLiteral(value.Value, value.Kind, 0)
+	case *ast.ParenExpr:
+		return rateValue(value.X, directory, defs, seen)
+	case *ast.Ident:
+		key := directory + ":" + value.Name
+		if seen[key] {
+			return nil
+		}
+		seen[key] = true
+		defer delete(seen, key)
+		if declared, ok := defs[key]; ok {
+			return rateValue(declared, directory, defs, seen)
+		}
+	case *ast.SelectorExpr:
+		if pkg, ok := value.X.(*ast.Ident); ok {
+			if pkg.Name == "time" {
+				switch value.Sel.Name {
+				case "Second":
+					return constant.MakeInt64(int64(time.Second))
+				case "Minute":
+					return constant.MakeInt64(int64(time.Minute))
+				case "Hour":
+					return constant.MakeInt64(int64(time.Hour))
+				}
+			}
+			if pkg.Name == "extension" {
+				return rateValue(ast.NewIdent(value.Sel.Name), "pkg/extension", defs, seen)
+			}
+		}
+	case *ast.BinaryExpr:
+		left, right := rateValue(value.X, directory, defs, seen), rateValue(value.Y, directory, defs, seen)
+		if left != nil && right != nil {
+			return constant.BinaryOp(left, value.Op, right)
+		}
+	}
+	return nil
+}

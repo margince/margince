@@ -64,11 +64,11 @@ func publicConfirm(limits publicConfirmLimiters) func(http.Handler) http.Handler
 				return
 			}
 			if !limits.perIP.Allow(httpserver.ClientIP(r)) {
-				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+				httperr.Write(w, r, ratelimit.Refused(limits.perIP))
 				return
 			}
 			if !limits.perToken.Allow(token) {
-				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+				httperr.Write(w, r, ratelimit.Refused(limits.perToken))
 				return
 			}
 

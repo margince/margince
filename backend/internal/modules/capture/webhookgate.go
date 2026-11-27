@@ -53,6 +53,7 @@ func (g webhookGate) allow(w http.ResponseWriter, r *http.Request) bool {
 		return false
 	}
 	if !g.perPeer.Allow(httpserver.ClientIP(r)) {
+		ratelimit.SetHeaders(w.Header(), g.perPeer.Limit(), g.perPeer.RetryAfterSeconds())
 		httperr.Write(w, r, &httperr.DetailedError{
 			Status: http.StatusTooManyRequests, Code: "rate_limited",
 			RetryAfterSeconds: g.perPeer.RetryAfterSeconds(), Detail: "Too many calls. Send it again after the wait.",

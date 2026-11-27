@@ -28,7 +28,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 )
 
 // The authorization-server paths metered by name. Every other /oauth path falls
@@ -63,21 +63,21 @@ const tokenFormPeek = 8 << 10
 // costs a map lookup instead of a session read.
 func oauthEdge(next http.Handler, lim mcpLimiters) http.Handler {
 	return http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		if !oauthAdmits(r, lim) {
-			httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		if bucket := oauthRefusedBy(r, lim); bucket != nil {
+			httperr.Write(w, r, ratelimit.Refused(bucket))
 			return
 		}
 		next.ServeHTTP(w, r)
 	})
 }
 
-// oauthAdmits meters one authorization-server request against every ceiling
+// oauthRefusedBy meters one authorization-server request against every ceiling
 // that applies to it.
 //
-// Every arm assigns both ceilings to locals before the &&, because both are
-// Allow — they COUNT — and short-circuiting would leave one ceiling unmetered on
-// the requests the other one admitted.
-func oauthAdmits(r *http.Request, lim mcpLimiters) bool {
+// Every paired arm counts both budgets before choosing the refusal, so one
+// guard never lets a request evade the other counter.
+
+func oauthRefusedBy(r *http.Request, lim mcpLimiters) *ratelimit.Limiter {
 	ip := httpserver.ClientIP(r)
 	switch r.URL.Path {
 	case oauthTokenPath:
@@ -103,7 +103,13 @@ func oauthAdmits(r *http.Request, lim mcpLimiters) bool {
 		}
 		perClient := lim.token.Allow(tokenBucketKey(clientID, ip))
 		perPeer := lim.peerCeiling.Allow(peerCeilingKey(peerGroupToken, ip))
-		return perClient && perPeer
+		if !perClient {
+			return lim.token
+		}
+		if !perPeer {
+			return lim.peerCeiling
+		}
+		return nil
 	case oauthAuthorizePath:
 		// Consent is a human flow, so the session a request presents is a key per
 		// real human. Without that key an unauthenticated flood at one request per
@@ -118,7 +124,13 @@ func oauthAdmits(r *http.Request, lim mcpLimiters) bool {
 		// consent requests a minute is far past what one human generates.
 		perHuman := lim.authorize.Allow(presentedKey("session", ip, sessionDigest(r)))
 		perPeer := lim.peerCeiling.Allow(peerCeilingKey(peerGroupAuthorize, ip))
-		return perHuman && perPeer
+		if !perHuman {
+			return lim.authorize
+		}
+		if !perPeer {
+			return lim.peerCeiling
+		}
+		return nil
 	case oauthRevokePath:
 		// Revocation is the kill switch, so it carries ceilings of its OWN
 		// rather than sharing the consent flow's: a flood of consent requests
@@ -128,7 +140,13 @@ func oauthAdmits(r *http.Request, lim mcpLimiters) bool {
 		// request carrying no token is the handler's 400 either way.
 		perToken := lim.revoke.Allow(presentedKey("token", ip, digestOf(peekForm(r).Get("token"))))
 		perPeer := lim.peerCeiling.Allow(peerCeilingKey(peerGroupRevoke, ip))
-		return perToken && perPeer
+		if !perToken {
+			return lim.revoke
+		}
+		if !perPeer {
+			return lim.peerCeiling
+		}
+		return nil
 	case oauthRegisterPath:
 		// Dynamic client registration is anonymous by construction: the
 		// client_id does not exist yet, and every field of the body is
@@ -146,14 +164,20 @@ func oauthAdmits(r *http.Request, lim mcpLimiters) bool {
 		// The count is shared by every replica through Redis. The rows it lets
 		// in are bounded apart from it: mcp.client_registration.unused_limit caps
 		// the clients no consent has used, and the hourly sweep deletes them.
-		return lim.register.Allow(ip)
+		if !lim.register.Allow(ip) {
+			return lim.register
+		}
+		return nil
 	default:
 		// A path this router grows later arrives bounded by the ceiling no
 		// attacker-chosen key escapes — and bounded in its own group, so an
 		// unlisted endpoint's flood spends neither consent's budget nor
 		// revocation's. A tighter key on what that endpoint's callers present is
 		// the job of whoever adds it deliberately.
-		return lim.peerCeiling.Allow(peerCeilingKey(peerGroupOther, ip))
+		if !lim.peerCeiling.Allow(peerCeilingKey(peerGroupOther, ip)) {
+			return lim.peerCeiling
+		}
+		return nil
 	}
 }
 

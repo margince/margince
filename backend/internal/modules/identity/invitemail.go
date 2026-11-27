@@ -173,12 +173,12 @@ func (h Handlers) ResendUserInvite(w http.ResponseWriter, r *http.Request, id cr
 	target := ids.UserID{UUID: ids.UUID(id)}
 	if !h.passwordLinkPerActor.Allow(actor.UserID.String()) {
 		httperr.Write(w, r, tooManyPasswordLinksBy("you have issued too many set-password links in the "+
-			"last hour; wait, or ask another administrator to send this one"))
+			"last hour; wait, or ask another administrator to send this one", h.passwordLinkPerActor))
 		return
 	}
 	if !h.passwordLinkPerTarget.Allow(target.String()) {
 		httperr.Write(w, r, tooManyPasswordLinksBy("too many set-password links have been issued for "+
-			"this user in the last hour; wait before sending another"))
+			"this user in the last hour; wait before sending another", h.passwordLinkPerTarget))
 		return
 	}
 	member, rawToken, err := h.svc.ResendInvite(ctx, actor, target)

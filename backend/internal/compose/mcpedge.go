@@ -354,6 +354,7 @@ const (
 // writeMCPRateLimited answers an MCP edge ceiling with the ceiling named and the
 // wait a client needs, so it does not have to guess a backoff.
 func writeMCPRateLimited(w http.ResponseWriter, r *http.Request, bucket *ratelimit.Limiter, what string) {
+	ratelimit.SetHeaders(w.Header(), bucket.Limit(), bucket.RetryAfterSeconds())
 	wait := bucket.RetryAfterSeconds()
 	// Named as pacing, apart from the window allowances, because waiting the
 	// seconds ends it and it spends none of the allowance.
@@ -362,10 +363,10 @@ func writeMCPRateLimited(w http.ResponseWriter, r *http.Request, bucket *ratelim
 		what, bucket.Limit(), wait, wait))
 }
 
-// writeMCPRefused answers a pre-auth ceiling without claiming a count: those
-// limiters fail closed. An unreachable shared store trips them too. A count the
-// caller never reached would be false.
+// writeMCPRefused answers a fail-closed pre-authentication guard. Remaining
+// means zero admissions now, including an outage; it is not an observed count.
 func writeMCPRefused(w http.ResponseWriter, r *http.Request, bucket *ratelimit.Limiter) {
+	ratelimit.SetHeaders(w.Header(), bucket.Limit(), bucket.RetryAfterSeconds())
 	wait := bucket.RetryAfterSeconds()
 	writeMCPWait(w, r, wait, nil, fmt.Sprintf("requests from this caller are refused for now. Wait %d seconds and send the request again.", wait))
 }

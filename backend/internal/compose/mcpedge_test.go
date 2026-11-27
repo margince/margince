@@ -290,6 +290,12 @@ func TestEveryMCPCeilingAnswersWithItsWait(t *testing.T) {
 			if got := rec.Header().Get("Retry-After"); got != "60" {
 				t.Fatalf("Retry-After = %q, want the 60-second window", got)
 			}
+			if rec.Header().Get("RateLimit-Remaining") != "0" || rec.Header().Get("RateLimit-Reset") != "60" || rec.Header().Get("RateLimit-Limit") == "" {
+				t.Fatalf("missing pacing headers: %v", rec.Header())
+			}
+			if tc.limit != "" && rec.Header().Get("RateLimit-Limit") != tc.limit {
+				t.Fatalf("wrong ceiling: %v", rec.Header())
+			}
 			if body := rec.Body.String(); tc.limit != "" && !strings.Contains(body, "limit is "+tc.limit+" every 60 seconds") {
 				t.Fatalf("body does not name the ceiling (%s): %s", tc.limit, body)
 			}

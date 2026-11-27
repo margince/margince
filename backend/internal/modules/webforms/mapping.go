@@ -8,6 +8,8 @@ import (
 	"fmt"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -125,5 +127,6 @@ func refusal(err error) error {
 }
 
 func writeErr(w http.ResponseWriter, r *http.Request, err error) {
+	ratelimit.SetRefusalHeaders(w.Header(), err)
 	httperr.Write(w, r, refusal(err))
 }
