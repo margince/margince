@@ -42,6 +42,38 @@ const check = (found: readonly string[], name: string) =>
   found.filter((line) => line.startsWith(`${name}: `));
 
 describe("the vi copy checks, over planted catalogs", () => {
+  it("distinguishes archive from retention and storage", () => {
+    const english = {
+      archive: "Archive activity",
+      archived: "This record is archived",
+      retention: "Retention",
+      storage: "File storage",
+      mixed: "Archived records under a legal hold keep their retention period",
+    };
+    expect(
+      findings(
+        {
+          archive: "Chuyển hoạt động vào kho lưu trữ",
+          archived: "Hồ sơ trong kho lưu trữ",
+          retention: "Lưu trữ",
+          storage: "Lưu trữ tệp",
+          mixed:
+            "Mục trong kho lưu trữ giữ thời hạn lưu trữ và lưu trữ pháp lý",
+        },
+        english,
+      ),
+    ).toEqual([]);
+    expect(
+      check(
+        findings(
+          { archive: "Lưu trữ hoạt động", archived: "Hồ sơ đã lưu trữ" },
+          english,
+        ),
+        "uses kho lưu trữ for archive and reserves lưu trữ for retention",
+      ),
+    ).toHaveLength(2);
+  });
+
   it("pass clean copy", () => {
     expect(findings({ "a.b": "Lưu thay đổi" })).toEqual([]);
   });

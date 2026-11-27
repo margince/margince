@@ -23,9 +23,7 @@ import {
   useBuiltinCommands,
 } from "./palette";
 
-// Acceptance for the palette (AC-shell-3..7) and live /search records with
-// see-all (RS-1). What the agent can reach is asserted on the panel that
-// carries it, in frontend/e2e/ac.spec.ts and agentrail.scope.test.tsx.
+// The palette searches visible records and offers their destinations.
 
 afterEach(() => {
   cleanup();

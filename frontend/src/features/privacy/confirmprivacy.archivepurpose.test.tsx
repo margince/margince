@@ -62,7 +62,7 @@ describe("the archive line names the archive's purpose", () => {
     [
       "vi",
       "giải quyết khiếu nại theo hợp đồng cung cấp",
-      "chuyển sang lưu trữ hạn chế truy cập để giải quyết khiếu nại theo hợp đồng cung cấp và bị xóa khi không còn cần cho mục đích này",
+      "chuyển vào kho lưu trữ hạn chế truy cập để giải quyết khiếu nại theo hợp đồng cung cấp và bị xóa khi không còn cần cho mục đích này",
     ],
   ])("in %s, the stated purpose", async (language, purpose, line) => {
     show({

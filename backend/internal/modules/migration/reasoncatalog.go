@@ -198,7 +198,7 @@ var reasonCatalog = withWillDropReasons(withCellReasons(withRecordIDReasons(with
 	ReasonRecordArchived: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "This row’s record was archived, so it is not updated. Restore the record to update it.",
 		textlang.German:     "Der Datensatz dieser Zeile wurde archiviert und wird daher nicht aktualisiert. Stellen Sie ihn wieder her, um ihn zu aktualisieren.",
-		textlang.Vietnamese: "Bản ghi của hàng này đã được lưu trữ nên không được cập nhật. Hãy khôi phục bản ghi để cập nhật.",
+		textlang.Vietnamese: "Bản ghi của hàng này đã được chuyển vào kho lưu trữ nên không được cập nhật. Hãy khôi phục bản ghi để cập nhật.",
 	}},
 	ReasonCannotCreate: {params: []string{paramPlural}, text: map[textlang.Lang]string{
 		textlang.English:    "You cannot create {plural}, so the {plural} file is skipped.",
@@ -283,7 +283,7 @@ var reasonCatalog = withWillDropReasons(withCellReasons(withRecordIDReasons(with
 	ReasonIDNotVisible: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "No company you can see has the id “{value}”. It may have been archived or merged away, or come from a different system.",
 		textlang.German:     "Kein Unternehmen, das Sie sehen können, hat die ID {value:q}. Es kann archiviert oder zusammengeführt worden sein oder aus einem anderen System stammen.",
-		textlang.Vietnamese: "Không có công ty nào bạn nhìn thấy có mã {value:q}. Có thể nó đã được lưu trữ, gộp, hoặc thuộc về một không gian làm việc mà tệp này không đến từ đó.",
+		textlang.Vietnamese: "Không có công ty nào bạn nhìn thấy có mã {value:q}. Có thể nó đã được chuyển vào kho lưu trữ, gộp, hoặc thuộc về một không gian làm việc mà tệp này không đến từ đó.",
 	}},
 	ReasonRefTakenByAnotherCompany: {params: []string{paramRef}, text: map[textlang.Lang]string{
 		textlang.English:    "The reference “{ref}” already stands for another company from an earlier import, so this row is not applied. Use a new reference for this company or fix the id column.",
