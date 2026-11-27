@@ -26,6 +26,17 @@ func ForgetContacts(ctx context.Context, tx pgx.Tx, contacts ...ids.ContactID) e
 	return nil
 }
 
+// ForgetRecords deletes every reader's summaries of these companies and deals.
+// A summary restates what was said on its record, so erasing a speaker ends it.
+func ForgetRecords(ctx context.Context, tx pgx.Tx, companies, deals []ids.UUID) error {
+	if _, err := tx.Exec(ctx,
+		`DELETE FROM generated_summary WHERE company_id = ANY($1) OR deal_id = ANY($2)`,
+		companies, deals); err != nil {
+		return fmt.Errorf("delete the generated summaries of a record: %w", err)
+	}
+	return nil
+}
+
 // CarryCompany moves the summaries of a merged-away company to the survivor.
 //
 // A reader who holds the same kind on both companies keeps the survivor's own.

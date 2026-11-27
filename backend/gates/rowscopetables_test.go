@@ -698,5 +698,9 @@ const (
 	// subject queries of moveLegacyMeetingEvidence and dropProfileFieldSupportTx,
 	// name the companies and contacts whose legacy evidence rows move into
 	// field_provenance. The ids stay inside the move's SQL and reach no caller.
-	modulesTierUnscopedCeiling = 174
+	//
+	// 176: privacy.purgeSummariesWrittenFrom reads the company and deal ids an
+	// erased or anonymized contact spoke on, two references in one statement. They
+	// go to generatedsummary.ForgetRecords, which deletes by them, and to no caller.
+	modulesTierUnscopedCeiling = 176
 )
