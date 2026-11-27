@@ -42,9 +42,8 @@ func rewriteDescriptions(node any, fn func(string) string, names bool) bool {
 	return changed
 }
 
-// rewriteMember handles one member of a schema object: a name under a named
-// schemas keyword, a data value left alone, a description rewritten, or a
-// sub-schema walked.
+// rewriteMember handles one member of a schema object. A name is walked as a
+// schema, a data value is left alone, and a description is rewritten.
 //
 //craft:ignore naked-any a decoded JSON schema is any by construction; the walk reads its maps, slices and strings
 func rewriteMember(object map[string]any, key string, child any, fn func(string) string, names bool) bool {
