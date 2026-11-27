@@ -51,7 +51,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		call func() error
 	}{
 		{"Create", func() error {
-			_, err := s.Create(ctx, CreateRunInput{Connector: connectorSalesforce, SourceRef: "x", Source: "t"})
+			_, err := s.Create(ctx, CreateRunInput{Connector: connectorSalesforce, SourceRef: "x"})
 			return err
 		}},
 		{"Get", func() error { _, err := s.Get(ctx, runID); return err }},
@@ -90,7 +90,7 @@ func TestRunStoreRefusesUngrantedRole(t *testing.T) {
 		{"ResumeStaleAttempts", func() error { _, err := s.ResumeStaleAttempts(ctx, time.Minute, 1, requeueNothing); return err }},
 		{"RequeueLostJobs", func() error { _, err := s.RequeueLostJobs(ctx, time.Minute, requeueNothing); return err }},
 		{"CreateDraftRun", func() error {
-			_, err := s.CreateDraftRun(ctx, CreateDraftRunInput{SourceRef: "x", Source: "t"})
+			_, err := s.CreateDraftRun(ctx, CreateDraftRunInput{SourceRef: "x"})
 			return err
 		}},
 		{"UpdateDraft", func() error { _, err := s.UpdateDraft(ctx, runID, 1, DraftPatch{}); return err }},

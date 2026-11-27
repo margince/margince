@@ -45,7 +45,7 @@ const (
 	// importBlobKind namespaces uploaded sources inside the workspace's blob
 	// prefix, beside attachments and logos.
 	importBlobKind = "import"
-	// importSourceProvenance is the `source` every run row carries: this
+	// importSourceProvenance is the `source` every served run names: this
 	// surface, not the connector, which lives in its own column.
 	importSourceProvenance = "import_api"
 	// importPredictPage bounds one prediction read; the same page size the
