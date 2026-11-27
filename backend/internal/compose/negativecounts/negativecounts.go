@@ -16,9 +16,9 @@ import (
 // has run it, the floors can be validated.
 func DataTask() datatask.Task {
 	return datatask.Task{
-		ID: "core/1795697838_negative_counts", Version: 1,
-		Title:    systemtext.Literal("datatask.title.core.1795697838_negative_counts"),
-		Requires: []string{"core/1795697836", "core/1795697837"},
+		ID: "core/1795744558_negative_counts", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795744558_negative_counts"),
+		Requires: []string{"core/1795744556", "core/1795744557"},
 		Steps: []datatask.Step{{
 			Name: "clear_negative_durations", Limit: 200, MinLimit: 1,
 			Audit:         datatask.AuditPolicy{PerRecord: true},
