@@ -28801,6 +28801,51 @@ paths:
               schema: { $ref: '#/components/schemas/ConsentPurpose' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
+  /consent-purposes/{id}:
+    patch:
+      tags: [Compliance]
+      operationId: renameConsentPurpose
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Rename an unused consent purpose.
+      description: Requires consent_config:update. Any reference to the purpose prevents a change.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [label]
+              properties:
+                label: { type: string, minLength: 1, maxLength: 120 }
+      responses:
+        '200':
+          description: Renamed.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ConsentPurpose' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Compliance]
+      operationId: archiveConsentPurpose
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Archive an unused consent purpose.
+      description: Requires consent_config:update. Any reference to the purpose prevents an archive.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '204': { description: Archived. }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+
   /consent-purposes/send-counts:
     get:
       tags: [Compliance]

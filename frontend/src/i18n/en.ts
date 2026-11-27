@@ -11904,6 +11904,11 @@ export const en = {
   "privacy.correctionNote": "Reason (the contact may ask)",
   "privacy.correctionAccept": "Accept and update",
   "privacy.correctionReject": "Leave as it is",
+  "privacy.purposeRename": "Rename",
+  "privacy.purposeRenameTitle": "Rename {label}",
+  "privacy.purposeArchiveTitle": "Archive {label}",
+  "privacy.purposeInUse":
+    "Consent is already recorded for this purpose. Create a new purpose instead.",
   "privacy.purposesRegistry": "Registered purposes",
   "privacy.purposesReadOnly":
     "Read-only. Adding a purpose needs a permission your role does not have.",
@@ -11918,7 +11923,7 @@ export const en = {
   "privacy.purposeFrequency.quarterly": "About once a quarter",
   "privacy.purposeCreate": "Create purpose",
   "privacy.purposeAppendOnly":
-    "A purpose cannot be renamed or removed once created; the catalog is append-only. Choose the key carefully.",
+    "An unused purpose can be renamed or archived. Any consent, notice, wording or scheduled send fixes the purpose. To change it after use, create a new purpose.",
   "notice.title": "Disclosure duties",
   "notice.sub":
     "Duties sort by deadline; source reviews sort by recorded time.",

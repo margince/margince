@@ -11625,6 +11625,11 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.correctionNote": "Lý do (người liên hệ có thể hỏi lại)",
   "privacy.correctionAccept": "Chấp nhận và cập nhật",
   "privacy.correctionReject": "Giữ nguyên",
+  "privacy.purposeRename": "Đổi tên",
+  "privacy.purposeRenameTitle": "Đổi tên {label}",
+  "privacy.purposeArchiveTitle": "Lưu trữ {label}",
+  "privacy.purposeInUse":
+    "Mục đích này đã có hồ sơ đồng ý. Hãy tạo mục đích mới.",
   "privacy.purposesRegistry": "Mục đích đã đăng ký",
   "privacy.purposeKeyTaken": "Khóa này đã dùng cho {label}.",
   "privacy.purposeKeyTakenUnnamed": "Một mục đích khác đã dùng khóa này.",
@@ -11637,7 +11642,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeFrequency.quarterly": "Khoảng mỗi quý một lần",
   "privacy.purposeCreate": "Tạo mục đích",
   "privacy.purposeAppendOnly":
-    "Không thể đổi tên hay gỡ mục đích sau khi tạo; danh mục chỉ cho phép thêm mới. Chọn khóa cẩn thận.",
+    "Bạn có thể đổi tên hoặc lưu trữ mục đích chưa sử dụng. Khi đã có hồ sơ đồng ý, thông báo, nội dung xin đồng ý hoặc thư hẹn giờ liên quan, mục đích được giữ nguyên. Hãy tạo mục đích mới để thay đổi.",
   "notice.title": "Nghĩa vụ thông báo",
   "notice.sub":
     "Nghĩa vụ xếp theo hạn; nguồn cần xem xét xếp theo thời điểm ghi nhận.",

@@ -11954,6 +11954,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.correctionNote": "Begründung (der Kontakt kann nachfragen)",
   "privacy.correctionAccept": "Annehmen und aktualisieren",
   "privacy.correctionReject": "Unverändert lassen",
+  "privacy.purposeRename": "Umbenennen",
+  "privacy.purposeRenameTitle": "{label} umbenennen",
+  "privacy.purposeArchiveTitle": "{label} archivieren",
+  "privacy.purposeInUse":
+    "Für diesen Zweck sind bereits Einwilligungen erfasst. Lege einen neuen Zweck an.",
   "privacy.purposesRegistry": "Registrierte Zwecke",
   "privacy.purposeKeyTaken": "Diesen Schlüssel verwendet bereits {label}.",
   "privacy.purposeKeyTakenUnnamed":
@@ -11967,7 +11972,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "privacy.purposeFrequency.quarterly": "Etwa einmal im Quartal",
   "privacy.purposeCreate": "Zweck erstellen",
   "privacy.purposeAppendOnly":
-    "Ein Zweck lässt sich nach dem Erstellen weder umbenennen noch entfernen. Der Katalog kann nur ergänzt werden. Wähle den Schlüssel mit Bedacht.",
+    "Einen ungenutzten Zweck kannst du umbenennen oder archivieren. Sobald eine Einwilligung, ein Hinweis, ein Einwilligungstext oder eine geplante Nachricht darauf verweist, bleibt er unverändert. Lege dann einen neuen Zweck an.",
   "notice.title": "Informationspflichten",
   "notice.sub": "Pflichten nach Frist; Quellenprüfungen nach Erfassungszeit.",
   "notice.facetLabel": "Pflichten anzeigen",

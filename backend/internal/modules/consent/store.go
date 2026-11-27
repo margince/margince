@@ -183,10 +183,13 @@ func (s *Store) CreatePurpose(ctx context.Context, key, label string, requiresDO
 			RETURNING id, key, label, requires_double_opt_in, class, frequency, created_at`,
 			key, label, requiresDOI, frequency).
 			Scan(&p.ID, &p.Key, &p.Label, &p.RequiresDoubleOptIn, &p.Class, &p.Frequency, &p.CreatedAt)
-		if !errors.Is(err, pgx.ErrNoRows) {
+		if errors.Is(err, pgx.ErrNoRows) {
+			return purposeKeyTaken(ctx, tx, key)
+		}
+		if err != nil {
 			return err
 		}
-		return purposeKeyTaken(ctx, tx, key)
+		return auditPurposeChange(ctx, tx, p.ID, "created", nil, map[string]any{"key": p.Key, "label": p.Label})
 	})
 	return p, err
 }
