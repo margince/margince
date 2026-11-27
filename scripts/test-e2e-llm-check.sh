@@ -791,6 +791,9 @@ judges case20-put-it-in-the-board-pack.yaml case20 denies-the-capability 1 "Repo
 judges case9-filed-in-the-wrong-place.yaml case9 counts-the-calls-by-name 0 "!forbids" "!the judge says NO"
 judges case9-filed-in-the-wrong-place.yaml case9 counts-as-a-batch-line 0 "!forbids" "!the judge says NO"
 judges case9-filed-in-the-wrong-place.yaml case9 re-creates-instead-of-refiling 1 "I re-created the call entr"
+# Codex reads widely before it writes: the relink is its 16th call, and the
+# judge still sees it, because the evidence keeps the latest answers first.
+judges case9-filed-in-the-wrong-place.yaml case9 moves-the-three-after-many-reads 0 "!the judge says NO" "!forbids"
 
 # CASE 58 — the deals quiet for three weeks. The run that leaves the 45-day deal
 # out, and the run that calls it slipping past the sixty-day line, both say
@@ -807,6 +810,7 @@ c59="case59-file-it-on-the-meeting-and-the-contract.yaml"
 judges "$c59" case59 files-it-on-the-meeting-against-the-contract 0 "!the judge says NO" "!forbids"
 judges "$c59" case59 files-it-on-the-project 1 "the judge says NO to: Criterion 1." "!the judge says NO to: Criterion 2."
 judges "$c59" case59 leaves-the-contract-off 1 "the judge says NO to: Criterion 2." "!the judge says NO to: Criterion 1."
+judges "$c59" case59 files-it-after-many-reads 0 "!the judge says NO" "!forbids"
 
 # AND TWO CLAIMS THAT WERE SIMPLY NOT COVERED — the flat present tense of an act
 # ("Bruno is now a contact") and a queue routed elsewhere with no contact as its
