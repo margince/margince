@@ -312,3 +312,5 @@
 1795698649_the_text_limits_follow_the_unread_identity_and_never_set_columns.up.sql | * | replaces the two text-bound triggers on five tables; they act on later writes only, and no existing row is changed
 1795698649_the_text_limits_follow_the_unread_identity_and_never_set_columns.down.sql | * | restores the two text-bound triggers on five tables as they stood before; no existing row is changed
 1795675792_the_token_count_floors_are_validated.up.sql | ai_usage | ai_usage holds one row per day, task and tier a call was metered on, with no retention, so it grows by at most tasks times tiers rows a day; the correction scans it once, as the VALIDATE that follows must anyway, and changes only rows a negative count lowered below zero
+1795755969_the_group_six_text_limits_follow_their_columns.up.sql | * | re-creates the text_bound triggers of assurance_run, finance_invoice and contact_provider_claim without the dropped columns' keys; it changes no existing row
+1795755969_the_group_six_text_limits_follow_their_columns.down.sql | * | re-creates those six text_bound triggers as they were; it changes no existing row
