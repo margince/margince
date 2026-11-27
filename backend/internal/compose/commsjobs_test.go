@@ -248,13 +248,14 @@ func TestSendEmailJobDeclaresAUsableLadder(t *testing.T) {
 	}
 }
 
-// stubSenders and stubGrants are the capture boundary — a database — and the
-// only thing faked in the two suites below.
+// stubSenders and stubGrants are the capture boundary, the only thing faked below.
 type stubSenders struct {
 	sender  connector.EmailSender
 	granted []string
 	err     error
 }
+
+func (s stubSenders) RecheckSharedReply(context.Context, ids.UserID, ids.UUID) error { return s.err }
 
 func (s stubSenders) SenderFor(context.Context, ids.UserID, capture.Mailbox) (connector.EmailSender, connector.Auth, []string, error) {
 	return s.sender, connector.Auth("cred"), s.granted, s.err

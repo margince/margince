@@ -1,0 +1,14 @@
+{
+  "tool": "read_workspace",
+  "action": "link_types",
+  "verb": "read_link_types",
+  "allowed_for": [
+    "admin",
+    "management",
+    "manager",
+    "ops",
+    "read_only",
+    "rep"
+  ],
+  "refused_for": []
+}

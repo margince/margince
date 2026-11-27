@@ -11,7 +11,6 @@ import (
 	"time"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
@@ -38,7 +37,7 @@ func (said quietCopy) quietReason(facts QuietFacts, names QuietNames, today time
 		case crmcontracts.ActivityKindMeeting:
 			phrase = quietWords.InMeeting
 		}
-		return fmt.Sprintf(said.Say(phrase), quietWho(inbound, names, said.Say(quietWords.Contact)), quietDay(inbound.At, loc), said.quietFor(inbound.At, today, loc))
+		return fmt.Sprintf(said.Say(phrase), quietWho(inbound, names, said.Say(quietWords.Contact)), quietDay(inbound.moment(), loc), said.quietFor(inbound.moment(), today, loc))
 	}
 	if outbound != nil {
 		phrase, unknown := quietWords.OutMessage, quietWords.ContactRecipient
@@ -48,7 +47,7 @@ func (said quietCopy) quietReason(facts QuietFacts, names QuietNames, today time
 		case crmcontracts.ActivityKindMeeting:
 			phrase, unknown = quietWords.OutMeeting, quietWords.ContactObject
 		}
-		return fmt.Sprintf(said.Say(phrase), quietWho(outbound, names, said.Say(unknown)), quietDay(outbound.At, loc), said.quietFor(outbound.At, today, loc))
+		return fmt.Sprintf(said.Say(phrase), quietWho(outbound, names, said.Say(unknown)), quietDay(outbound.moment(), loc), said.quietFor(outbound.moment(), today, loc))
 	}
 	return said.Say(quietWords.NoCorrespondence)
 }
@@ -71,8 +70,10 @@ func quietWho(side *QuietSide, names QuietNames, unknown string) string {
 // the date in the WORKSPACE's zone, the same zone the sweep decides which day a
 // deal is late on. A message at 23:00 local is otherwise reported as the next
 // day, which a reader can check against their own mailbox and find wrong.
-func quietDay(at time.Time, loc *time.Location) string {
-	return at.In(orUTC(loc)).Format(time.DateOnly)
+//
+// A date-only activity names its own date for every reader.
+func quietDay(at occurredday.Moment, loc *time.Location) string {
+	return occurredday.DateIn(at, orUTC(loc)).Format(time.DateOnly)
 }
 
 // orUTC is the zone fallback. A sweep always has one; the guard exists so a
@@ -87,9 +88,8 @@ func orUTC(loc *time.Location) *time.Location {
 // quietFor is the elapsed span, in the unit a contact would say it in. Days up to
 // a fortnight, then weeks: "38 days" makes a reader do arithmetic to learn what
 // "5 weeks" says outright.
-func (said quietCopy) quietFor(since, today time.Time, loc *time.Location) string {
-	zone := orUTC(loc)
-	days := max(elapsed.Days(since, today, zone), 0)
+func (said quietCopy) quietFor(since occurredday.Moment, today time.Time, loc *time.Location) string {
+	days := max(occurredday.DaysSince(since, today, orUTC(loc)), 0)
 	switch {
 	case days == 0:
 		return said.Say(quietWords.Today)

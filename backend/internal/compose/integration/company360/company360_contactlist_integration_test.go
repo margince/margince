@@ -345,7 +345,7 @@ func TestTheIntroDraftIsRefusedWithoutTheContactGrant(t *testing.T) {
 		},
 		RowScope: principal.RowScopeAll,
 	})
-	_, err := svc.IntroRequestDraft(noContacts, nil, ids.CompanyID{UUID: company},
+	_, err := svc.IntroRequestDraft(noContacts, nil, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
 			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),
@@ -381,7 +381,7 @@ func TestTheIntroDraftAdmitsASeatHoldingTheContactGrant(t *testing.T) {
 		},
 		RowScope: principal.RowScopeAll,
 	})
-	_, err := svc.IntroRequestDraft(granted, nil, ids.CompanyID{UUID: company},
+	_, err := svc.IntroRequestDraft(granted, nil, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
 			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),

@@ -33,6 +33,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -351,6 +352,8 @@ type companyHeading struct {
 	// owner and lastActivity feed the dormancy ladder and its follow-up.
 	owner        *ids.UUID
 	lastActivity *time.Time
+	// lastActivityDateOnly says lastActivity names only a date.
+	lastActivityDateOnly bool
 }
 
 // readCompanyHeading takes it from the company row, for the caller
@@ -363,8 +366,9 @@ func readCompanyHeading(
 	var lifecycle *string
 	out := companyHeading{}
 	if err := tx.QueryRow(ctx,
-		`SELECT status, display_name, owner_id, last_activity_at FROM company WHERE id = $1`, companyID,
-	).Scan(&lifecycle, &out.name, &out.owner, &out.lastActivity); err != nil {
+		`SELECT status, display_name, owner_id, last_activity_at, `+contacts.LastActivityDaySQL("company")+
+			` FROM company WHERE id = $1`, companyID,
+	).Scan(&lifecycle, &out.name, &out.owner, &out.lastActivity, &out.lastActivityDateOnly); err != nil {
 		return companyHeading{}, fmt.Errorf("read the account's stage and name: %w", err)
 	}
 	if lifecycle != nil {

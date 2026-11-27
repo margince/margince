@@ -94,7 +94,7 @@ func TestKnowledgeHandlersHTTPRoundTrip(t *testing.T) {
 
 	// List → 200 with the one set.
 	listRec := httptest.NewRecorder()
-	h.handlers.ListCorpora(listRec, httptest.NewRequest(http.MethodGet, "/v1/knowledge/corpora", nil).WithContext(ctx))
+	h.handlers.ListCorpora(listRec, httptest.NewRequest(http.MethodGet, "/v1/knowledge/corpora", nil).WithContext(ctx), crmcontracts.ListCorporaParams{})
 	if listRec.Code != http.StatusOK {
 		t.Fatalf("list: status %d", listRec.Code)
 	}

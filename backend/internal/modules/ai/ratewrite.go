@@ -6,7 +6,6 @@ package ai
 import (
 	"cmp"
 	"context"
-	"errors"
 	"fmt"
 	"strings"
 	"time"
@@ -219,53 +218,6 @@ func unknownLane() error {
 	return rateInvalid("lane", "rate_lane_unknown", "lane must be chat, embeddings or decisions")
 }
 
-// replacedModelRate reads the price this write would overwrite, if any: the
-// second admission check needs insert-vs-overwrite, and an overwrite's audit
-// owes the ledger the prices it displaced. The before image mirrors the after
-// image's shape key for key, so the two diff to exactly the buckets that moved.
-// Called under the model's write-identity lock, so no concurrent writer can
-// insert the row between this read and the upsert that follows.
-func replacedModelRate(ctx context.Context, tx pgx.Tx, p preparedModelRate, effDate time.Time) (before map[string]any, replacing bool, err error) {
-	var (
-		in, out, cacheRead, cacheWrite int64
-		lane                           Lane
-		source                         RateSource
-		band                           scannedBand
-	)
-	err = tx.QueryRow(ctx, `
-		SELECT r.input_per_mtok_microusd, r.output_per_mtok_microusd,
-		       r.cache_read_per_mtok_microusd, r.cache_write_per_mtok_microusd, r.lane, r.source,
-		       `+longContextColumns("r")+`
-		FROM ai_model_rate r
-		WHERE r.provider = $1 AND r.model_id = $2 AND r.effective_date = $3`,
-		p.provider, p.modelID, effDate).Scan(&in, &out, &cacheRead, &cacheWrite, &lane, &source,
-		&band.above, &band.input, &band.output, &band.cacheRead, &band.cacheWrite)
-	if errors.Is(err, pgx.ErrNoRows) {
-		return nil, false, nil
-	}
-	if err != nil {
-		return nil, false, fmt.Errorf("read replaced ai_model_rate: %w", err)
-	}
-	prior := preparedModelRate{
-		provider: p.provider, modelID: p.modelID,
-		input: in, output: out, cacheRead: cacheRead, cacheWrite: cacheWrite,
-		lane: lane, source: source, band: band.band(),
-	}
-	return modelRateImage(prior, effDate), true, nil
-}
-
-// modelRateImage renders one audit image of a price row. Before and after
-// share it, so the pair diffs to exactly the buckets that moved rather than to
-// a difference in how each side was spelled.
-func modelRateImage(r preparedModelRate, effDate time.Time) map[string]any {
-	return bandImage(map[string]any{
-		"provider": r.provider, "model_id": r.modelID,
-		"input_microusd": r.input, "output_microusd": r.output,
-		"cache_read_microusd": r.cacheRead, "cache_write_microusd": r.cacheWrite,
-		"date": effDate, "lane": string(r.lane), rateSourceField: string(r.source),
-	}, r.band)
-}
-
 // writeModelRate does the transactional body in the caller-owned tx. It first
 // resolves and guards the effective day against a clock sampled inside the tx.
 // A write that waited for the pool across midnight is then stored against the
@@ -313,6 +265,11 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 	if err := auth.Require(ctx, "ai_model_rate", action); err != nil {
 		return ModelRateRow{}, err
 	}
+	// The day's price sent again rewrites nothing and leaves no audit entry.
+	after := modelRateImage(p, effDate)
+	if moved, _ := storekit.ChangedColumns(before, after); replacing && len(moved) == 0 {
+		return readModelRateTx(ctx, tx, p.provider, p.modelID, effDate)
+	}
 	id, out, err := upsertModelRate(ctx, tx, p, effDate)
 	if err != nil {
 		return ModelRateRow{}, err
@@ -322,8 +279,7 @@ func (s *RateStore) writeModelRate(ctx context.Context, tx pgx.Tx, p preparedMod
 	// fx_rate sibling). The verb is the SAME word the gate above demanded, so
 	// authorization_rule attributes the grant that actually admitted the write
 	// rather than a plausible-looking one.
-	if _, err := storekit.Audit(ctx, tx, string(action), auditentity.ModelRate, id, before,
-		modelRateImage(p, effDate)); err != nil {
+	if _, err := storekit.Audit(ctx, tx, string(action), auditentity.ModelRate, id, before, after); err != nil {
 		return ModelRateRow{}, fmt.Errorf("audit ai_model_rate %s: %w", action, err)
 	}
 	return out, nil

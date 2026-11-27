@@ -17,11 +17,11 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 	"github.com/riverqueue/river"
 
+	"github.com/margince/margince/backend/internal/compose/chatclarify"
+	"github.com/margince/margince/backend/internal/compose/tracesweep"
 	"github.com/margince/margince/backend/internal/modules/capture"
-	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // traceRetention is the window the sweep enforces, and the same one the read
@@ -44,7 +44,8 @@ func (CaptureTraceSweepArgs) FleetWide() {
 }
 
 type captureTraceSweepWorker struct {
-	pool *pgxpool.Pool
+	pool   *pgxpool.Pool
+	purger *CapturePurger
 }
 
 // Work sweeps EVERY workspace, archived ones included — the enumeration the
@@ -63,35 +64,25 @@ func (w *captureTraceSweepWorker) Work(ctx context.Context, _ *river.Job[Capture
 }
 
 func (w *captureTraceSweepWorker) sweepWorkspace(ctx context.Context, workspace ids.UUID) error {
-	wsCtx := principal.WithWorkspaceID(ctx, workspace)
-	// Bound HERE rather than in a helper, and assigned rather than called: a
-	// queue carries no principal to inherit, and both of these return a new
-	// context and mutate nothing, so an unassigned call reads like a binding and
-	// leaves the store holding a context with no actor in it.
-	//
-	// A SYSTEM principal rather than any member's: expiring a diagnostic trace
-	// is the installation keeping its own retention promise, and there is no
-	// human on whose authority one of these rows should or should not go.
-	wsCtx = principal.SystemActing(wsCtx, traceSweepActorID)
-
-	// workspaceJobDB, NOT InstallationDB: the installation resolver answers
-	// ErrMultipleWorkspaces the moment a database holds more than one live
-	// tenant, so every child would fail, exhaust its attempts, and delete
-	// nothing — while the read kept filtering to 24 hours and the table grew
-	// invisibly behind it. Under the payload posture those rows are addresses
-	// and subject lines, so the retention this feature promises would stop
-	// holding with no symptom at all.
-	// BindTo directly, where the child called workspaceJobDB with its args. The
-	// comment that method carried still applies and is why neither reaches for
-	// InstallationDB: that resolver answers ErrMultipleWorkspaces the moment a
-	// database holds more than one live tenant, so every turn would fail,
-	// exhaust its attempts and delete nothing — while the read kept filtering
-	// to 24 hours and the table grew invisibly behind it. Under the payload
-	// posture those rows are addresses and subject lines.
-	db := database.BindTo(w.pool, ids.From[ids.WorkspaceKind](workspace))
-	_, err := capture.NewTraceStore(db).SweepOlderThan(wsCtx, traceRetention)
-	return err
+	return tracesweep.Workspace(ctx, w.pool, workspace, traceRetention, w.purger)
 }
 
-// traceSweepActorID names the sweep in whatever it touches.
-const traceSweepActorID = "system:capture-trace-sweep"
+// ChatClarificationSweepArgs runs one fleet-wide pass over the forwards colleagues
+// made to company chat accounts without naming an author.
+type ChatClarificationSweepArgs struct{}
+
+// Kind is the stable job identifier River persists in river_job.
+func (ChatClarificationSweepArgs) Kind() string { return "chat_clarification_sweep" }
+
+// FleetWide marks this as answering for the whole installation: it walks the
+// workspaces itself (jobs.FleetWide).
+func (ChatClarificationSweepArgs) FleetWide() {
+	// Intentionally empty: jobs.FleetWide is a marker interface.
+}
+
+type chatClarificationSweepWorker struct{ sweep chatclarify.Sweep }
+
+// Work asks the colleagues of every workspace who wrote what they forwarded.
+func (w *chatClarificationSweepWorker) Work(ctx context.Context, _ *river.Job[ChatClarificationSweepArgs]) error {
+	return jobs.FaultContext(ctx, runPerEveryWorkspace(ctx, w.sweep.Pool, w.sweep.Workspace))
+}

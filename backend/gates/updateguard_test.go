@@ -95,7 +95,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/identity:recordTeamChange":            "the app_user touch runs only for setTeamMemberTx, under lockAuthorization; it writes only updated_at and no domain before-image",
 	"internal/modules/identity:changeUserRoleTx":            "lockAuthorization serializes the role change and the app_user touch in one transaction",
 	"internal/modules/privacy:clearActivityContent":         "terminal erasure empties the activity regardless of concurrent content changes; preserving a competing value would retain the erased content",
-	"internal/modules/activities:decideLinkSuggestion":      "reads the suggestion with FOR UPDATE in the same transaction and writes only after seeing it still pending, so no concurrent decision can slip between the read and the update",
 	"internal/modules/assurance:recordReadThrough": "the pass sets one column on the run row it inserted in the same transaction, " +
 		"under the assurance pass lock, so no other writer can hold that row",
 	"internal/modules/contacts:DisqualifyLead":             "readDisqualifiableLead locks this live lead with storekit.LockRow and checks its optional version pin before the update, in the same leadWrite transaction; the preview shares that reader",
@@ -118,7 +117,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/agents/runner:SaveOutcome":           "the same claimed run as MarkFailed, and the statement's own comment states that a correction of a settled run is a new attempt rather than an edit of this one",
 	"internal/modules/consent:setNoticeCaseOwner":          "lockNoticeCase reads the case FOR UPDATE first, which the file names as what orders two owners arriving together",
 	"internal/modules/consent:ExcuseNoticeCase":            "the excuse path takes the same lockNoticeCase FOR UPDATE before deciding, so the state it validated is the state it writes",
-	"internal/modules/consent:closeOwedCasesTx":            "closes the cases a subject's own reply settles, under the notice case lock the caller took; the statement names the reply as the cause rather than carrying a state it read",
 	"internal/modules/consent:markResolvedTx":              "the submission is held FOR UPDATE by the review that decides it, so the resolution it writes is the one it read",
 	"internal/modules/consent:applyDSRUpdateTx":            "every column coalesces onto the row's own value, so a field this caller did not set keeps what the row holds rather than what this caller last read",
 	"internal/modules/contacts:recordSiteReadConfirmation": "the confirmation rides the company lock the scan took before reading what to confirm",

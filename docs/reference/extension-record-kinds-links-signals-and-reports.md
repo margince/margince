@@ -56,7 +56,7 @@ carry both.
 | `Extension.CompanyTypes` | The unit declares the types and a label for each. The boot refuses a bad name or a duplicate. |
 | `SetExtensionTypes` | The unit sets its own types on a company. It leaves other units' types alone. |
 | `PATCH /v1/companies/{id}` | A user or an agent sets `extension_relationship_types`. A value no unit declares is a 422 with the code `invalid_enum`. |
-| `GET /v1/company-types` | Lists every declared value and its label, for any signed-in user. |
+| `GET /v1/company-types` | Lists every declared value and its label, for any signed-in user. Their agent reads the same list with the `read_workspace` action `company_types`. |
 | `extension_relationship_type` list filter | Takes a declared extension value. The `relationship_type` filter stays core's closed list, because narrowing a published parameter later breaks clients. |
 | Agent tools | The company update shape carries `extension_relationship_types`, the same as the REST body. |
 
@@ -80,10 +80,11 @@ contract and the frontend to that source.
 | `Extension.RecordKinds` | The unit declares each kind: a display name, its own table, fields, a natural key, optional starting grants and a delete policy. The boot and `make gen` refuse a bad declaration. |
 | Registry | The core keeps the declared kinds in memory, filled at boot. Tags, lists and the rights check ask it, so none of them imports a unit. |
 | Rights | Each kind is gated on its own RBAC object, `ext_<unit>_<kind>` with hyphens turned into underscores. A role holds nothing on it until the unit's starting grants or an admin give it. |
-| Row check | A link, a tag or a Shortlist member needs the kind's `read` right and a live row in the unit's table. A caller without the right gets not found, so the id is not disclosed. |
-| Natural key | The unit's table keeps a unique index over the declared fields and no others. The readiness probe fails while a declared table, a column or that index is missing, and while the indexes search and History read are missing (see [Declare a record kind](../how-to/add-an-extension.md#declare-a-record-kind)). |
+| Row check | A link, a tag or a Shortlist member needs the kind's `read` right and a live row in the unit's table, inside the kind's row scope. A caller without the right, or outside the scope, gets not found, so the id is not disclosed. |
+| Row scope | `OwnerColumn` names the `uuid` column that holds a row's owner. Core then reads the kind under the role's own, team or all row scope, as it reads deals, in every reader below: the row check, search, lists, saved views, the record picker, reports, History and the approval inbox. A row with no owner is shown to every reader of the kind. A kind without `OwnerColumn` is all or nothing: the `read` right shows every row. A record grant does not reach an extension kind. `auth.ExtensionScopeClause` renders the scope, and `backend/gates/extensionrowscope_test.go` fails a core function that names the ext schema without it, unless it says why. The privacy engines run as the system and read every row. |
+| Natural key | The unit's table keeps a unique index over the declared fields and no others. The readiness probe fails while a declared table, a column or that index is missing, while the indexes search and History read are missing, and while a declared owner column is not a `uuid` or has no index that starts with it (see [Declare a record kind](../how-to/add-an-extension.md#declare-a-record-kind)). |
 | Delete policy | `archive_only` (the default) keeps the row. `erasable` lets the row be erased through the erasure path. |
-| `GET /v1/record-kinds` | Lists the kinds the signed-in seat may read, with fields, natural key, the `view` the unit declared, delete policy and the actions the seat holds. |
+| `GET /v1/record-kinds` | Lists the kinds the signed-in seat may read, with fields, natural key, the `view` the unit declared, delete policy and the actions the seat holds. The seat's agent reads the same list with the `read_workspace` action `record_kinds`. |
 | Audit | A change to an extension record is written with the `ext:<unit>:<kind>` name as its entity type and the existing actions. No new action is needed. |
 | Frontend | `isExtensionEntityKind` reads the spelling and `useRecordKindDirectory` loads the declared kinds. A core page does not show an extension kind, so `recordRoute` names none. A notice about one opens the unit's screen at the kind's `view`. |
 
@@ -124,7 +125,7 @@ name.
 | Field of a unit's kind | One of the fields the kind declares. |
 | Field of a core population | A custom field of the deal, written `cf_<name>`, or of its company, written `company_cf_<name>`. Only the deal populations take one. |
 | Multi-select fields | Core's own rule keeps a multi-select field out of reports, because a record would fall in several groups and the groups would not add up. A registered breakdown admits one and splits by the sorted combination of values a record holds. One record is in one group and the groups add up to the whole. |
-| Row scope | A unit's kind has no owner, so the kind's `read` right is its whole scope: a seat without it gets nothing and the report is left out. A core population keeps its own row scope. |
+| Row scope | A seat without the kind's `read` right gets nothing and the report is left out. A seat with it counts the rows inside the kind's row scope (see [Extension record kinds and link registry](#extension-record-kinds-and-link-registry)). A core population keeps its own row scope. |
 | Field masks | A mask that reaches the kind or the population takes the rows out of every group. The answer carries how many in `excluded_by_permission`. |
 | Group floor | A group below the analytics group floor is withheld. The floor is the one the analytics questions use, five by default. The smallest remaining group goes with it, and so does the total. A count under the floor is withheld too. |
 | `GET /v1/extension-reports` | Answers every report the seat may read. A report whose custom field this installation does not define is left out. A report that fails to run is listed with `status: unavailable` and no figures, and the others still answer; the cause goes to the server log. |
@@ -261,7 +262,7 @@ flowchart LR
 |---|---|
 | `RecordKindDeclaration.Timeline` | Names the label field, the time column and, per core record, the `uuid` column that references it. The boot and `make gen` refuse a label that is no declared field, a bad column name, no subject or a repeated one. |
 | `GET /v1/extension-history` | Takes `entity_type` (`contact`, `company` or `deal`) and `entity_id`. It answers `record` and `signal` entries, newest first. |
-| Row scope | The core record is probed first, so a record outside the seat's scope is a 404. A kind the seat may not read is left out. Signals go through the signals module's own visible reader, so its row scope applies. |
+| Row scope | The core record is probed first, so a record outside the seat's scope is a 404. A kind the seat may not read is left out, and of a kind it may read it sees the rows inside the kind's row scope. Signals go through the signals module's own visible reader, so its row scope applies. |
 | Limits | At most 50 rows per kind and 50 signals. An archived row and a row with no time are left out. |
 | Signals | Only signals of an extension kind (`ext:<unit>:<kind>`) whose subject is the record. Signals of core's kinds stay in the signal strip. |
 | `useRecordChronology` | Reads the answer for a contact, company or deal under every cut that reads the exchanges, and merges it with the activities. The activities keep their order. While the activity feed has a next page, an entry older than the oldest loaded activity waits for it. |
@@ -301,7 +302,7 @@ flowchart LR
 |---|---|
 | Search branch | One per declared kind, built from the registry on each request. A title holds every word of the query, matched with a `LIKE` on its lower-cased text that the kind's trigram index serves. A `%` or `_` in the query matches itself. A title that starts with the first word ranks above one that only holds it. |
 | Title | The `LabelField` of the kind's `Timeline`, or else the first `NaturalKey` field. A hit has no snippet. |
-| Who sees a hit | The kind's `read` right is the whole scope, because a row has no owner. An archived row is never a hit. |
+| Who sees a hit | A seat with the kind's `read` right, for a row inside the kind's row scope. An archived row is never a hit. |
 | `types` | Takes core's types and `ext:<unit>:<kind>`. A kind no unit declares is a 422 on `types`. Without `types`, `GET /v1/search` also covers every kind the seat may read. |
 | `exclude_ids` | At most 100 record ids of any type, dropped before ranking and before `types_with_more` is counted. Meant for keeping a record's own author out of the matches suggested for it. The agent tool `search_records` takes the same argument. |
 | Contract | `SearchResult.type`, `types_with_more` and the `types` parameter list core's types in `x-extensible-enum` and carry the pattern. A gate holds the list equal to the search module's branch table and the pattern to admitting every core type and an extension kind. |
@@ -327,8 +328,9 @@ What it leaves out:
 ## Suggested-link resolver
 
 An extension can suggest which deal, company, contact or project a message belongs to. A suggestion waits in a review
-queue and attaches nothing. A reader accepts or rejects each one. Core makes no suggestion of its own, so the queue
-holds only what an extension proposed.
+queue and attaches nothing. A reader accepts or rejects each one. Core's only suggestions are its own "Which deal is
+this about?" questions. Each names the one colleague it asks instead of a unit, and the queue shows it to nobody
+else.
 
 ```mermaid
 flowchart LR
@@ -345,8 +347,8 @@ flowchart LR
 | Rights | The caller must be able to update the message and to attach to the target, and must be able to read both. A record the caller cannot see answers `ErrNotFound`. A scheduled job or a bus delivery has no caller and is refused with `ErrForbidden`, as for any core write. |
 | Rate | A unit may propose 120 times a minute. Past that the call answers `ErrRateLimited`. |
 | Queue | `GET /v1/link-suggestions` answers the pending suggestions the caller may decide, oldest first, at most 50: the caller may update messages, may change this one, and may read its target. Deciding runs the same check. A caller who may decide none gets an empty queue. |
-| Decision | `POST /v1/link-suggestions/{id}/accept` files the message through the ordinary relink and closes the suggestion in one transaction. `POST /v1/link-suggestions/{id}/reject` closes it and attaches nothing. Deciding the same way twice is the same success. The opposite decision is a `409`. Both routes are for a signed-in reader, not an agent. |
-| Record | Each proposal and decision writes an audit row on the message and the event `activity.link_suggestion_changed`. The table is `activity_link_suggestion`. It holds the message, the target, the unit, the reason and the score, and nothing about a user. |
+| Decision | `POST /v1/link-suggestions/{id}/accept` files the message through the ordinary relink and closes the suggestion in one transaction. `POST /v1/link-suggestions/{id}/reject` closes it and attaches nothing. Deciding the same way twice is the same success. The opposite decision is a `409`. An agent acting for a colleague reads and decides the queue as that colleague, through the tools `list_link_suggestions`, `accept_link_suggestion` and `reject_link_suggestion`. |
+| Record | Each proposal and decision writes an audit row on the message and the event `activity.link_suggestion_changed`. The table is `activity_link_suggestion`. It holds the message, the target, the unit, the reason and the score. A row core wrote holds no unit and names the one colleague it asks instead. |
 | Frontend | The Worklist draws a **Suggested links** panel when the queue is not empty. |
 
 What it leaves out:

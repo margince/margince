@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { QueryClient, QueryClientProvider } from "@tanstack/react-query";
 import {
+  act,
   cleanup,
   render,
   screen,
@@ -14,12 +15,14 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { UnsavedGuard, useHasUnsavedChanges } from "../../components/unsaved";
+import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { LocaleProvider } from "../../i18n";
 import { allowance, feature, status } from "../../testing/ai-admin.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AiBudgetCard } from "./ai-admin";
 import { AiFeatureTable } from "./ai-feature-table";
 import { openTaskDetails } from "./ai-task-details-testing";
+import { TeamRulesCard } from "./ai-tasks";
 
 afterEach(() => {
   cleanup();
@@ -665,4 +668,153 @@ it("hands focus back to Edit when the editor closes", async () => {
   await user.click(screen.getByRole("button", { name: "Save allowance" }));
   await screen.findByText("Allowance saved");
   expect(screen.getByRole("button", { name: "Edit allowance" })).toHaveFocus();
+});
+
+const savedRules = {
+  text: "Never quote a discount.",
+  updated_at: "2026-11-20T10:00:00Z",
+  updated_by: "Ada Admin",
+};
+
+function mountTeamRules(allow: GrantSpec) {
+  const writes: unknown[] = [];
+  const server = { rules: { ...savedRules }, skew: false };
+  vi.stubGlobal(
+    "fetch",
+    vi.fn(async (input: RequestInfo | URL, init?: RequestInit) => {
+      const req = new Request(input, init);
+      const path = new URL(req.url).pathname;
+      let body: unknown = server.rules;
+      if (path.endsWith("/me")) body = meFixture({ allow });
+      else if (req.method === "PUT") {
+        const sent = (await req.json()) as { text: string };
+        writes.push(sent);
+        if (server.skew)
+          return new Response(
+            JSON.stringify({
+              type: "about:blank",
+              title: "Changed",
+              status: 409,
+              code: "version_skew",
+            }),
+            { status: 409, headers: { "Content-Type": "application/json" } },
+          );
+        body = { ...server.rules, text: sent.text };
+      }
+      return new Response(JSON.stringify(body), {
+        headers: { "Content-Type": "application/json" },
+      });
+    }),
+  );
+  const client = new QueryClient({
+    defaultOptions: { queries: { retry: false }, mutations: { retry: false } },
+  });
+  render(
+    <QueryClientProvider client={client}>
+      <LocaleProvider initial="en">
+        <SavePageProvider>
+          <TeamRulesCard />
+          <PageSaveBar />
+        </SavePageProvider>
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  return { writes, server, client };
+}
+
+it("saves the team rules against the version the editor read", async () => {
+  const user = userEvent.setup();
+  const { writes } = mountTeamRules({ ai_team_rules: ["read", "update"] });
+  const box = await screen.findByRole("textbox", {
+    name: "Rules for every draft",
+  });
+  expect(box).toHaveValue("Never quote a discount.");
+  expect(screen.getByText(/Last saved by Ada Admin/)).toBeInTheDocument();
+  await waitFor(() => expect(box).toBeEnabled());
+  await user.type(box, " Write licence.");
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(writes).toEqual([
+      {
+        text: "Never quote a discount. Write licence.",
+        expected_updated_at: "2026-11-20T10:00:00Z",
+      },
+    ]),
+  );
+});
+
+it("shows the team rules read-only to a seat that cannot update them", async () => {
+  mountTeamRules({ ai_team_rules: ["read"] });
+  expect(
+    await screen.findByRole("textbox", { name: "Rules for every draft" }),
+  ).toBeDisabled();
+});
+
+const theirs = {
+  text: "Their text.",
+  updated_at: "2026-11-21T09:00:00Z",
+  updated_by: "Bo Colleague",
+};
+
+it("shows a conflict when the server changes under a draft, saves against the version the draft started from, and Discard shows the fresh text", async () => {
+  const user = userEvent.setup();
+  const { writes, server, client } = mountTeamRules({
+    ai_team_rules: ["read", "update"],
+  });
+  const box = await screen.findByRole("textbox", {
+    name: "Rules for every draft",
+  });
+  await waitFor(() => expect(box).toBeEnabled());
+  await user.type(box, " Mine.");
+  server.rules = { ...theirs };
+  server.skew = true;
+  act(() => client.setQueryData(["ai-team-rules"], { ...theirs }));
+  expect(
+    await screen.findByText(/A colleague saved the team rules/),
+  ).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(writes).toEqual([
+      {
+        text: "Never quote a discount. Mine.",
+        expected_updated_at: "2026-11-20T10:00:00Z",
+      },
+    ]),
+  );
+  expect(
+    screen.getByText(/A colleague saved the team rules/),
+  ).toBeInTheDocument();
+
+  await user.click(screen.getByRole("button", { name: "Discard" }));
+  await waitFor(() => expect(box).toHaveValue("Their text."));
+  expect(screen.queryByText(/A colleague saved the team rules/)).toBeNull();
+});
+
+it("shows the conflict after a refused save, and Keep my text saves over the fresh version", async () => {
+  const user = userEvent.setup();
+  const { writes, server } = mountTeamRules({
+    ai_team_rules: ["read", "update"],
+  });
+  const box = await screen.findByRole("textbox", {
+    name: "Rules for every draft",
+  });
+  await waitFor(() => expect(box).toBeEnabled());
+  await user.type(box, " Mine.");
+  server.rules = { ...theirs };
+  server.skew = true;
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  expect(
+    await screen.findByText(/A colleague saved the team rules/),
+  ).toBeInTheDocument();
+
+  server.skew = false;
+  await user.click(screen.getByRole("button", { name: "Keep my text" }));
+  await user.click(screen.getByRole("button", { name: "Save" }));
+  await waitFor(() =>
+    expect(writes.at(-1)).toEqual({
+      text: "Never quote a discount. Mine.",
+      expected_updated_at: "2026-11-21T09:00:00Z",
+    }),
+  );
 });

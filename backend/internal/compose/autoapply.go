@@ -140,7 +140,7 @@ func (a autoApplier) applyAs(ownerCtx context.Context, decision autoApplyDecisio
 // ownerNow is how a decided apply acts for its owner in each of its
 // transactions.
 func (a autoApplier) ownerNow(decision autoApplyDecision) ownerPolicy {
-	return ownerPolicy{bind: ownersAgentTx(a.users, decision.owner, autoApplyActorID), decision: decision}
+	return ownerPolicy{bind: agentForTx(a.users, decision.owner, autoApplyActorID), decision: decision}
 }
 
 // ownerPolicy binds the owner's agent as of a transaction. It holds the record,
@@ -276,7 +276,7 @@ func ownerOfTx(ctx context.Context, tx pgx.Tx, entityType string, entityID ids.U
 // where an OnBehalfOf and a scope ceiling would mean nothing. This one must
 // carry both, because what it binds goes on to release a decision.
 func (a autoApplier) asOwnersAgent(ctx context.Context, owner ids.UUID) (context.Context, error) {
-	return ownersAgent(ctx, a.users, owner, autoApplyActorID)
+	return agentFor(ctx, a.users, owner, autoApplyActorID)
 }
 
 // duePending lists pending proposals of the eligible kinds, oldest first.

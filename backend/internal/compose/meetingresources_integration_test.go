@@ -17,14 +17,25 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-func TestLegacyCalendarResourcesAreNotMeetingCounterparties(t *testing.T) {
-	e := integration.Setup(t)
-	resource, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
-		FullName: "A calendar room", Source: "manual", Emails: []contacts.ContactEmailInput{{Email: "room@resource.calendar.google.com", EmailType: "work", IsPrimary: true}},
+// legacyCalendarContact is a contact an older release made from a calendar
+// address. It is created with a stand-in address, then given the real one.
+func legacyCalendarContact(t *testing.T, e *integration.Env, name, address string) ids.UUID {
+	t.Helper()
+	made, err := e.Contacts.CreateContact(e.Admin(), contacts.CreateContactInput{
+		FullName: name, Source: "manual",
+		Emails: []contacts.ContactEmailInput{{Email: "standin-" + ids.NewV7().String() + "@example.com", EmailType: "work", IsPrimary: true}},
 	})
 	if err != nil {
 		t.Fatal(err)
 	}
+	e.WsExec(t, `UPDATE contact_email SET email=$2, email_domain_folded=$3 WHERE contact_id=$1`,
+		ids.UUID(made.Id), address, owndomain.StoredOfAddress(address))
+	return ids.UUID(made.Id)
+}
+
+func TestLegacyCalendarResourcesAreNotMeetingCounterparties(t *testing.T) {
+	e := integration.Setup(t)
+	resource := legacyCalendarContact(t, e, "A calendar room", "room@resource.calendar.google.com")
 	contactID := e.SeedContact(t, "Zora Buyer", nil)
 	host := ids.From[ids.UserKind](e.AdminUser)
 	book := func(links []activities.ActivityLinkInput) ids.UUID {
@@ -37,12 +48,12 @@ func TestLegacyCalendarResourcesAreNotMeetingCounterparties(t *testing.T) {
 		}
 		return ids.UUID(row.Id)
 	}
-	room := activities.ActivityLinkInput{EntityType: "contact", EntityID: ids.UUID(resource.Id)}
+	room := activities.ActivityLinkInput{EntityType: "contact", EntityID: resource}
 	onlyRoom := book([]activities.ActivityLinkInput{room})
 	realMeeting := book([]activities.ActivityLinkInput{room, {EntityType: "contact", EntityID: contactID}})
 	addressRoom := book([]activities.ActivityLinkInput{room})
 	address := "room@resource.calendar.google.com"
-	e.WsExec(t, `UPDATE activity_participant SET address=$3,address_domain_folded=$4 WHERE activity_id=$1 AND contact_id=$2`, addressRoom, ids.UUID(resource.Id), address, owndomain.StoredOfAddress(address))
+	e.WsExec(t, `UPDATE activity_participant SET address=$3,address_domain_folded=$4 WHERE activity_id=$1 AND contact_id=$2`, addressRoom, resource, address, owndomain.StoredOfAddress(address))
 	parties, err := e.Activities.MeetingCounterparties(e.Admin(), []ids.UUID{onlyRoom, realMeeting, addressRoom})
 	if err != nil {
 		t.Fatal(err)

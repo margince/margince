@@ -1,6 +1,7 @@
 name: install-playwright-chromium
 description: >-
-  Install Chromium and its system libraries for Playwright, trying each half
+  Install Playwright browsers (Chromium unless `browsers` says otherwise) and
+  their system libraries, trying each half
   twice, so an unresponsive package mirror does not red a lane whose tests never
   ran.
 
@@ -40,6 +41,11 @@ inputs:
   working-directory:
     description: Directory holding the Playwright install (its package.json).
     default: frontend
+  browsers:
+    description: >-
+      Space-separated Playwright browsers to install, for example
+      `webkit firefox`. Each one pulls its own system libraries.
+    default: chromium
 
 runs:
   using: composite
@@ -69,7 +75,7 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/playwright-apt-archives
-        key: playwright-apt-${{ runner.os }}-${{ steps.version.outputs.image }}-${{ steps.version.outputs.v }}
+        key: playwright-apt-${{ inputs.browsers }}-${{ runner.os }}-${{ steps.version.outputs.image }}-${{ steps.version.outputs.v }}
 
     - name: Point apt at the cached package directory
       shell: bash
@@ -82,12 +88,15 @@ runs:
       uses: actions/cache@55cc8345863c7cc4c66a329aec7e433d2d1c52a9 # v6.1.0
       with:
         path: ~/.cache/ms-playwright
-        key: playwright-chromium-${{ runner.os }}-${{ steps.version.outputs.v }}
+        key: playwright-${{ inputs.browsers }}-${{ runner.os }}-${{ steps.version.outputs.v }}
 
     # The entry holds exactly what install-deps downloaded on this runner image
     # for this Playwright version, so it installs with no mirror at all. An empty
     # entry means the image already had every library. Any dpkg failure falls
-    # through to install-deps below.
+    # through to install-deps below. --auto-deconfigure lets the newer libasound2-data
+    # replace the older one the runner image ships while libasound2t64 is upgraded in
+    # the same call; without it dpkg refuses and leaves libasound2t64 unconfigured,
+    # which also makes the install-deps fallback fail.
     - name: Install the cached system libraries without the mirror
       id: offline
       if: steps.apt-cache.outputs.cache-hit == 'true'
@@ -98,22 +107,24 @@ runs:
         debs=("$HOME"/playwright-apt-archives/*.deb)
         echo "installing ${#debs[@]} cached package(s)"
         if [ "${#debs[@]}" -gt 0 ]; then
-          sudo DEBIAN_FRONTEND=noninteractive timeout --kill-after=30s 2m dpkg -i "${debs[@]}"
+          sudo DEBIAN_FRONTEND=noninteractive timeout --kill-after=30s 2m dpkg -i --auto-deconfigure "${debs[@]}"
         fi
 
-    - name: Install the system libraries Chromium needs
+    - name: Install the system libraries the browsers need
       id: deps
       if: steps.offline.outcome != 'success'
       continue-on-error: true
       working-directory: ${{ inputs.working-directory }}
       shell: bash
+      env:
+        BROWSERS: ${{ inputs.browsers }}
       # The exit code is recorded because the retries below are conditional on it.
       # A healthy install takes under 20 seconds, but a slow mirror moves 26 MB in
       # minutes. Downloaded packages stay cached, so a retry resumes where this stopped.
       # Both attempts are five minutes, which keeps the whole job under its ceiling.
       run: |
         set +e
-        timeout --kill-after=30s 5m pnpm exec playwright install-deps chromium
+        timeout --kill-after=30s 5m pnpm exec playwright install-deps $BROWSERS
         code=$?
         echo "code=$code" >> "$GITHUB_OUTPUT"
         exit $code
@@ -122,11 +133,13 @@ runs:
     # lands mid-transaction and leaves dpkg's lock held, so a second attempt
     # reports "could not get lock" in place of the fault that stopped the install.
     # A fast failure releases the lock and is worth another connection.
-    - name: Install the system libraries Chromium needs (retry)
+    - name: Install the system libraries the browsers need (retry)
       if: steps.deps.outcome == 'failure' && steps.deps.outputs.code != '124' && steps.deps.outputs.code != '137'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: timeout --kill-after=30s 5m pnpm exec playwright install-deps chromium
+      env:
+        BROWSERS: ${{ inputs.browsers }}
+      run: timeout --kill-after=30s 5m pnpm exec playwright install-deps $BROWSERS
 
     # A killed install is retried only once its leftovers are gone: no apt or dpkg
     # process alive and the half-done package state finished. Lock files are never
@@ -150,13 +163,15 @@ runs:
         # sudo drops the environment, so the frontend is named again here.
         sudo DEBIAN_FRONTEND=noninteractive timeout --kill-after=30s 2m dpkg --configure -a
 
-    - name: Install the system libraries Chromium needs (retry after clearing)
+    - name: Install the system libraries the browsers need (retry after clearing)
       if: steps.release.outcome == 'success'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
+      env:
+        BROWSERS: ${{ inputs.browsers }}
       run: |
         set +e
-        timeout --kill-after=30s 5m pnpm exec playwright install-deps chromium
+        timeout --kill-after=30s 5m pnpm exec playwright install-deps $BROWSERS
         code=$?
         if [ "$code" = 124 ] || [ "$code" = 137 ]; then
           echo "::error::the system libraries did not install inside their bound, even after the first hang was cleared" >&2
@@ -169,17 +184,21 @@ runs:
       shell: bash
       run: sudo chown -R "$(id -u):$(id -g)" "$HOME/playwright-apt-archives"
 
-    - name: Download the Chromium build
+    - name: Download the browser builds
       id: browser
       if: steps.cache.outputs.cache-hit != 'true'
       continue-on-error: true
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: timeout --kill-after=30s 2m pnpm exec playwright install chromium
+      env:
+        BROWSERS: ${{ inputs.browsers }}
+      run: timeout --kill-after=30s 2m pnpm exec playwright install $BROWSERS
 
     # The download takes no lock, so its retry is unconditional.
-    - name: Download the Chromium build (retry)
+    - name: Download the browser builds (retry)
       if: steps.browser.outcome == 'failure'
       working-directory: ${{ inputs.working-directory }}
       shell: bash
-      run: timeout --kill-after=30s 2m pnpm exec playwright install chromium
+      env:
+        BROWSERS: ${{ inputs.browsers }}
+      run: timeout --kill-after=30s 2m pnpm exec playwright install $BROWSERS

@@ -244,7 +244,7 @@ func TestTheLeadsSectionListsALeadHoldingAMergedRecordsAddress(t *testing.T) {
 	}
 	var pkg SARPackage
 	listed := map[string]bool{}
-	for _, section := range sarRecordSections(&pkg, subject.contact, leads) {
+	for _, section := range sarRecordSections(&pkg, subject.contact, leads, nil) {
 		if section.dest != &pkg.Leads {
 			continue
 		}

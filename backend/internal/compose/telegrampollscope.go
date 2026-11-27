@@ -125,3 +125,13 @@ func telegramLockKeys(accounts []string) []storekit.ChannelIdentityKey {
 	}
 	return keys
 }
+
+// telegramSubjectKeys is what a stored update records about whose it is, so an
+// erasure finds it by identity and not by its payload.
+func telegramSubjectKeys(accounts []string) []string {
+	keys := make([]string, 0, len(accounts))
+	for _, account := range accounts {
+		keys = append(keys, storekit.ChannelRawSubjectKey(telegram.Provider, "", account))
+	}
+	return keys
+}

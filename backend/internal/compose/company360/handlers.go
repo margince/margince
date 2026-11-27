@@ -11,6 +11,7 @@ package company360
 import (
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
@@ -32,6 +33,9 @@ type Handlers struct {
 	// refusing, because an introduction request is a sentence a template can
 	// write honestly.
 	introLane Completer
+	// introRules reads the team rules the ask follows; a model draft is refused
+	// when it cannot.
+	introRules draftvoice.RulesReader
 }
 
 // NewHandlers binds the transport to a ready service.
@@ -49,8 +53,8 @@ func (h Handlers) WithRoleLane(lane Completer) Handlers {
 }
 
 // WithIntroLane binds the model lane that phrases an introduction request.
-func (h Handlers) WithIntroLane(lane Completer) Handlers {
-	h.introLane = lane
+func (h Handlers) WithIntroLane(lane Completer, rules draftvoice.RulesReader) Handlers {
+	h.introLane, h.introRules = lane, rules
 	return h
 }
 
@@ -65,7 +69,7 @@ func (h Handlers) DraftIntroRequest(w http.ResponseWriter, r *http.Request, id c
 		httperr.Write(w, r, err)
 		return
 	}
-	draft, err := h.svc.IntroRequestDraft(r.Context(), h.introLane,
+	draft, err := h.svc.IntroRequestDraft(r.Context(), h.introLane, h.introRules,
 		ids.From[ids.CompanyKind](ids.UUID(id)), req)
 	if err != nil {
 		modelfailure.Write(w, r, err)

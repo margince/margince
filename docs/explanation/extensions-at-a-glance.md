@@ -185,6 +185,7 @@ Every field of `Extension` that brings something to the core.
 | `Documents` | Compliance documents the unit ships for its jurisdictions. |
 | `Tools` | Governed agent tools the unit contributes: named operations running at a requested risk tier. |
 | `Channels` | Messaging providers this unit supplies TRANSPORT for. |
+| `Languages` | Languages stored data may carry, beside the three core ships. |
 | `CompanyTypes` | Company types this unit adds beside core's own. |
 | `RecordKinds` | Kinds of record this unit adds beside core's own, stored as `ext:<unit>:<kind>`. |
 | `LinkTypes` | Ways this unit says two core records relate, stored as `ext:<unit>:<type>`. |

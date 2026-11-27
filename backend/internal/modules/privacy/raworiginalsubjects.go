@@ -28,6 +28,9 @@ type externalOriginal struct {
 	id     ids.UUID
 	source string
 	ref    originalstore.Reference
+	// namedSubject is true when the row's recorded subjects name the contact's
+	// identities, whatever network stored it.
+	namedSubject bool
 }
 
 type originalMatches struct {
@@ -39,13 +42,19 @@ var errOriginalReferenceChanged = fmt.Errorf("stored original changed during era
 
 func externalOriginalsTx(ctx context.Context, tx pgx.Tx, scope rawSubjectScope, lock bool) ([]externalOriginal, error) {
 	providers, accounts := channelIdentityPairs(scope.channels)
-	args := pgx.NamedArgs{sqlArgEmails: scope.emails, "providers": providers, "accounts": accounts, sqlArgSubject: scope.contact.String()}
+	args := pgx.NamedArgs{
+		sqlArgEmails:      scope.emails,
+		"providers":       providers,
+		"accounts":        accounts,
+		sqlArgSubject:     scope.contact.String(),
+		sqlArgSubjectKeys: subjectKeysOf(scope.channels),
+	}
 	inline := ""
 	if lock {
 		inline = ` OR (payload_object IS NULL AND (` + rawSubjectMatchSQL("payload", "source_system") + `))`
 	}
-	rows, err := tx.Query(ctx, `SELECT id,source_system,payload_object FROM raw_capture WHERE `+
-		externalOriginalCandidateSQL(scope, args)+inline+` ORDER BY id`, args)
+	rows, err := tx.Query(ctx, `SELECT id,source_system,payload_object,`+namedSubjectSQL+` FROM raw_capture WHERE (`+
+		externalOriginalCandidateSQL(scope, args)+`) OR `+namedSubjectSQL+inline+` ORDER BY id`, args)
 	if err != nil {
 		return nil, err
 	}
@@ -55,11 +64,12 @@ func externalOriginalsTx(ctx context.Context, tx pgx.Tx, scope rawSubjectScope, 
 	}
 	var selected []ids.UUID
 	for _, original := range out {
-		if original.ref.Key == "" || originalCouldMatch(original, scope) {
+		if original.ref.Key == "" || original.namedSubject || originalCouldMatch(original, scope) {
 			selected = append(selected, original.id)
 		}
 	}
-	rows, err = tx.Query(ctx, `SELECT id,source_system,payload_object FROM raw_capture WHERE id=ANY(@ids) ORDER BY id FOR UPDATE`, pgx.NamedArgs{"ids": selected})
+	rows, err = tx.Query(ctx, `SELECT id,source_system,payload_object,`+namedSubjectSQL+` FROM raw_capture WHERE id=ANY(@ids) ORDER BY id FOR UPDATE`,
+		pgx.NamedArgs{"ids": selected, sqlArgSubjectKeys: args[sqlArgSubjectKeys]})
 	if err != nil {
 		return nil, err
 	}
@@ -72,7 +82,7 @@ func readOriginalReferences(rows pgx.Rows) ([]externalOriginal, error) {
 	for rows.Next() {
 		var row externalOriginal
 		var metadata []byte
-		if err := rows.Scan(&row.id, &row.source, &metadata); err != nil {
+		if err := rows.Scan(&row.id, &row.source, &metadata, &row.namedSubject); err != nil {
 			return nil, err
 		}
 		if len(metadata) > 0 {
@@ -100,10 +110,10 @@ func matchingExternalOriginalsTx(ctx context.Context, tx pgx.Tx, scope rawSubjec
 	args := pgx.NamedArgs{sqlArgEmails: scope.emails, "providers": providers, "accounts": accounts}
 	for _, original := range originals {
 		out.refs[original.id] = original.ref
-		if !originalCouldMatch(original, scope) {
+		if !original.namedSubject && !originalCouldMatch(original, scope) {
 			continue
 		}
-		matched := slices.Contains(original.ref.MatchedSubjects, scope.contact.String()) || originalChannelMatch(original, scope)
+		matched := original.namedSubject || slices.Contains(original.ref.MatchedSubjects, scope.contact.String()) || originalChannelMatch(original, scope)
 		if !matched {
 			payload, err := originalstore.Read(ctx, original.ref)
 			if errors.Is(err, blobstore.ErrNotFound) && len(original.ref.MatchedSubjects) > 0 {
@@ -142,7 +152,9 @@ func (e *Eraser) prepareOriginalErasure(ctx context.Context, subject ids.Contact
 		}
 		for _, id := range prepared.ids {
 			ref := prepared.refs[id]
-			if slices.Contains(ref.MatchedSubjects, subject.String()) {
+			// An inline original has no stored object to mark, and the erasure
+			// deletes its row by the subjects it recorded.
+			if ref.Key == "" || slices.Contains(ref.MatchedSubjects, subject.String()) {
 				continue
 			}
 			tag, err := tx.Exec(ctx, `UPDATE raw_capture r SET payload_object = jsonb_set(payload_object,

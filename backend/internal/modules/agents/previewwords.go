@@ -277,6 +277,11 @@ var effectSentences = map[string]cardWords{
 		de: "E-Mails und Aktivitäten behalten ihren eigenen Kreis von Lesenden. Bereits geteilte Aktivitäten können mit übertragenen Datensätzen für das neu zuständige Mitglied sichtbar werden.",
 		vi: "Email và hoạt động giữ nguyên phạm vi chia sẻ. Thành viên nhận có thể tìm thấy hoạt động đã chia sẻ với các thành viên có quyền xem hồ sơ được bàn giao.",
 	},
+	"member_sign_in_dropped": {
+		en: "The merged account’s password, linked sign-in providers and second factor are not moved. Its holder signs in with the account you keep.",
+		de: "Passwort, verknüpfte Anmeldeanbieter und zweiter Faktor des zusammengeführten Kontos werden nicht übernommen. Wer das Konto nutzt, meldet sich mit dem Konto an, das bleibt.",
+		vi: "Mật khẩu, nhà cung cấp đăng nhập đã liên kết và yếu tố thứ hai của tài khoản bị gộp không được chuyển. Chủ tài khoản đăng nhập bằng tài khoản được giữ lại.",
+	},
 	"member_source_signed_out": {
 		en: "The removed identity is signed out everywhere.",
 		de: "Das entfernte Konto wird überall abgemeldet.",

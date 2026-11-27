@@ -17,6 +17,8 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/capture/telegram"
+	"github.com/margince/margince/backend/internal/modules/capture/whatsapp"
+	"github.com/margince/margince/backend/internal/modules/capture/zalo"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -65,37 +67,43 @@ func connectedBusinessLinkTx(ctx context.Context, tx pgx.Tx, bot ids.UUID, busin
 	return id, true, nil
 }
 
-// LockLiveBusinessLinkTx reads the account and ownership of the link a stored
+// chatLinkProviders are the providers whose approved account rows file a stored
+// message through a seat.
+const chatLinkProviders = `('` + telegram.BusinessProvider + `', '` + whatsapp.Provider + `', '` + zalo.Provider + `')`
+
+// LockLiveChatLinkTx reads the account and ownership of the connection a stored
 // message was admitted through. It holds the row FOR SHARE until the caller's
-// transaction ends. Every writer that disconnects, disables or archives the link
-// updates the row and waits on that lock. It answers false for a link that is no
-// longer connected or has no seat. A link switched off after admission must not
-// file what it queued.
-func LockLiveBusinessLinkTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) (telegram.BusinessLink, bool, error) {
+// transaction ends. Every writer that disconnects, disables or archives the row
+// updates it and waits on that lock. It answers false for a connection that is
+// archived, switched off or has no seat. Only `connected` and `reauth_required`
+// are live: the second still receives and a reconnect repairs it. A connection
+// switched off after admission must not file what it queued.
+func LockLiveChatLinkTx(ctx context.Context, tx pgx.Tx, linkID ids.UUID) (connector.ChatLink, bool, error) {
 	_, link, err := scanBusinessLink(tx.QueryRow(ctx, `
 		SELECT `+businessLinkColumns+` FROM channel_connection
-		 WHERE id = $1 AND provider = $2 AND parent_connection_id IS NOT NULL
-		   AND status = $3 AND seat_id IS NOT NULL AND archived_at IS NULL FOR SHARE`,
-		linkID, telegram.BusinessProvider, channelStatusConnected))
+		 WHERE id = $1 AND provider IN `+chatLinkProviders+`
+		   AND status IN ($2, $3) AND seat_id IS NOT NULL AND archived_at IS NULL FOR SHARE`,
+		linkID, channelStatusConnected, channelStatusReauthRequired))
 	if errors.Is(err, pgx.ErrNoRows) {
-		return telegram.BusinessLink{}, false, nil
+		return connector.ChatLink{}, false, nil
 	}
 	if err != nil {
-		return telegram.BusinessLink{}, false, fmt.Errorf("capture: reading the business link of a stored message: %w", err)
+		return connector.ChatLink{}, false, fmt.Errorf("capture: reading the chat connection of a stored message: %w", err)
 	}
 	return link, true, nil
 }
 
 const businessLinkColumns = `id, account_id, ownership, owner_user_id, seat_id`
 
-func scanBusinessLink(row pgx.Row) (ids.UUID, telegram.BusinessLink, error) {
+func scanBusinessLink(row pgx.Row) (ids.UUID, connector.ChatLink, error) {
 	var id ids.UUID
-	var link telegram.BusinessLink
+	var link connector.ChatLink
 	var ownership string
 	var owner, seat *ids.UUID
 	if err := row.Scan(&id, &link.AccountID, &ownership, &owner, &seat); err != nil {
-		return ids.Nil, telegram.BusinessLink{}, err
+		return ids.Nil, connector.ChatLink{}, err
 	}
+	link.ConnectionID = id
 	link.Ownership = connector.ChatOwnership(ownership)
 	if owner != nil {
 		link.OwnerUserID = *owner
@@ -106,12 +114,17 @@ func scanBusinessLink(row pgx.Row) (ids.UUID, telegram.BusinessLink, error) {
 	return id, link, nil
 }
 
-// FileThroughLiveBusinessLink runs file while the link a stored message came
-// through is still connected. It holds the link row for the whole call, so a
+// ErrDiscardOriginal is what a file callback returns when the message will not be
+// filed for a privacy reason. The stored original is then destroyed in the same
+// transaction, so no copy of an erased customer's message outlives the refusal.
+var ErrDiscardOriginal = errors.New("capture: the stored original is not filed and must not be kept")
+
+// FileThroughLiveChatLink runs file while the connection a stored message came
+// through is still live. It holds the link row for the whole call, so a
 // disconnect or disable waits for the filing. A link that is no longer live files
 // nothing and the stored original is destroyed. It reports whether file ran.
-func FileThroughLiveBusinessLink(
-	ctx context.Context, pool *pgxpool.Pool, linkID string, rawID ids.UUID, file func(telegram.BusinessLink) error,
+func FileThroughLiveChatLink(
+	ctx context.Context, pool *pgxpool.Pool, linkID string, rawID ids.UUID, file func(connector.ChatLink) error,
 ) (bool, error) {
 	id, err := ids.Parse(linkID)
 	if err != nil {
@@ -119,7 +132,7 @@ func FileThroughLiveBusinessLink(
 	}
 	live := false
 	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
-		link, found, err := LockLiveBusinessLinkTx(ctx, tx, id)
+		link, found, err := LockLiveChatLinkTx(ctx, tx, id)
 		if err != nil {
 			return err
 		}
@@ -127,7 +140,12 @@ func FileThroughLiveBusinessLink(
 			return DeleteRawCaptureTx(ctx, tx, rawID)
 		}
 		live = true
-		return file(link)
+		if err := file(link); errors.Is(err, ErrDiscardOriginal) {
+			return DeleteRawCaptureTx(ctx, tx, rawID)
+		} else if err != nil {
+			return err
+		}
+		return nil
 	})
 	return live, err
 }

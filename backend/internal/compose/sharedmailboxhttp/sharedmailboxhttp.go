@@ -50,6 +50,30 @@ func (h Handlers) List(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// ListReplyable answers the shared mailboxes the signed-in member may reply as.
+func (h Handlers) ListReplyable(w http.ResponseWriter, r *http.Request) {
+	if h.Registry == nil {
+		httperr.NotImplemented(w, r, "ListReplyableSharedMailboxes")
+		return
+	}
+	boxes, err := h.Registry.ReplyableSharedMailboxes(r.Context())
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	out := crmcontracts.ReplyableSharedMailboxList{Items: make([]crmcontracts.ReplyableSharedMailbox, 0, len(boxes))}
+	for _, box := range boxes {
+		address := ""
+		if box.AccountLabel != nil {
+			address = *box.AccountLabel
+		}
+		out.Items = append(out.Items, crmcontracts.ReplyableSharedMailbox{
+			Id: openapi_types.UUID(box.ID), Provider: crmcontracts.ReplyableSharedMailboxProvider(box.Provider), Address: address,
+		})
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 // Connect connects a shared mailbox, or reconnects the stored one.
 func (h Handlers) Connect(w http.ResponseWriter, r *http.Request) {
 	if h.Registry == nil {
@@ -135,7 +159,7 @@ func (h Handlers) Update(w http.ResponseWriter, r *http.Request, id openapi_type
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	change := capture.SharedChange{Confirmed: req.Confirm, ApplyToHistory: req.ApplyToHistory != nil && *req.ApplyToHistory}
+	change := capture.SharedChange{Confirmed: req.Confirm, ApplyToHistory: req.ApplyToHistory != nil && *req.ApplyToHistory, ReplyEnabled: req.ReplyEnabled}
 	if req.ReaderTeamId != nil {
 		team := ids.UUID(*req.ReaderTeamId)
 		change.ReaderTeam = &team
@@ -184,7 +208,7 @@ func sharedMailboxOnWire(v capture.SharedMailboxView) crmcontracts.SharedMailbox
 	out := crmcontracts.SharedMailbox{
 		Id: openapi_types.UUID(v.ID), Provider: crmcontracts.SharedMailboxProvider(v.Provider), Address: v.Address,
 		ReaderTeamId: openapi_types.UUID(v.ReaderTeam), MailVisibility: crmcontracts.SharedMailboxMailVisibility(v.Posture),
-		Status: crmcontracts.SharedMailboxStatus(v.Status), ConnectedAt: v.ConnectedAt,
+		Status: crmcontracts.SharedMailboxStatus(v.Status), ConnectedAt: v.ConnectedAt, ReplyEnabled: v.ReplyEnabled,
 	}
 	if v.ConnectedBy != nil {
 		by := openapi_types.UUID(*v.ConnectedBy)
@@ -195,5 +219,6 @@ func sharedMailboxOnWire(v capture.SharedMailboxView) crmcontracts.SharedMailbox
 		out.BackupOwnerId = &backup
 	}
 	out.UnreadPeriod = capturehealth.UnreadPeriodOf(v.UnreadFrom, v.UnreadTo)
+	out.HistoryNarrowing = capturehealth.HistoryNarrowingOf(v.HistoryNarrowing)
 	return out
 }

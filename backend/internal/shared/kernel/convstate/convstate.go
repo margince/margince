@@ -25,7 +25,7 @@ package convstate
 import (
 	"time"
 
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
 // Band is where a correspondence stands. Closed, because each value is a
@@ -89,26 +89,36 @@ type State struct {
 // Classify folds the two timestamps into the axis.
 //
 // lastIn and lastOut are the most recent inbound and outbound messages, each
-// zero when there is none. The clock is passed rather than read so callers
-// inject their own; this package holds no clock of its own by design (the
-// house pattern - see compose.Dispatcher).
+// with a zero time when there is none. A date-only message counts its silence
+// from its own date, and orders by the start of that date in zone. The clock is
+// passed rather than read, so callers inject their own (the house pattern, see
+// compose.Dispatcher).
 //
 // A timestamp in the future is treated as now rather than as negative silence.
 // Clock skew between a mail host and this one is ordinary, and the honest
 // reading of "the last message is dated tomorrow" is that it just arrived.
-func Classify(now, lastIn, lastOut time.Time, zone *time.Location) State {
+func Classify(now time.Time, lastIn, lastOut occurredday.Moment, zone *time.Location) State {
 	last := lastIn
 	direction := DirectionInbound
-	if last.IsZero() || (!lastOut.IsZero() && lastOut.After(last)) {
+	if last.At.IsZero() || (!lastOut.At.IsZero() && Starts(lastOut, zone).After(Starts(last, zone))) {
 		last = lastOut
 		direction = DirectionOutbound
 	}
-	if last.IsZero() {
+	if last.At.IsZero() {
 		return State{Band: BandNone, SilenceDays: 0, LastDirection: DirectionNone}
 	}
 
-	days := max(elapsed.Days(last, now, zone), 0)
+	days := max(occurredday.DaysSince(last, now, zone), 0)
 	return State{Band: bandForDays(days), SilenceDays: days, LastDirection: direction}
+}
+
+// Starts is when a message begins on the calendar: an instant at its time, a
+// date-only message when its date begins in zone.
+func Starts(m occurredday.Moment, zone *time.Location) time.Time {
+	if m.DateOnly {
+		return occurredday.Begins(m.At, zone)
+	}
+	return m.At
 }
 
 // bandForDays maps a silence to its band. Separate from Classify so the

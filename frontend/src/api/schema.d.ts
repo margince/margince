@@ -2919,7 +2919,9 @@ export interface paths {
          *     the company carries it. `linkCompanyContacts` accepts exactly these contacts.
          *
          *     A candidate with no current employer is also attached by the daily link reconcile,
-         *     so the list's lasting use is contacts who work elsewhere today.
+         *     so the list's lasting use is contacts who work elsewhere today. The reconcile does not
+         *     re-make a link somebody removed: a contact whose job at this company was ended or
+         *     archived stays unlinked until a user links them again.
          *
          *     Ordered by name, then id. At most 50 candidates; `truncated` is true when more exist.
          *     Needs read on companies, contacts and relationships. A caller without
@@ -3420,7 +3422,11 @@ export interface paths {
          */
         put: operations["upsertPartner"];
         post?: never;
-        delete?: never;
+        /**
+         * End the partner program while keeping the company and commission history.
+         * @description Retires the partner extension. Company update authority is required. Existing terms and commission entries stay on record. The partner relationship type is removed in the same transaction; other relationship types stay.
+         */
+        delete: operations["endPartnerProgram"];
         options?: never;
         head?: never;
         patch?: never;
@@ -3453,7 +3459,7 @@ export interface paths {
          *     is its approval.
          *
          *     A company that already has a live partner program answers 409 `partner_row_exists`.
-         *     A program ends only when the company is archived.
+         *     End the program with `endPartnerProgram` while keeping its company and commission history, or archive the company.
          *
          *     A retry with the same `idempotency_key` answers the first call's result. An
          *     `Idempotency-Key` header is taken as that key.
@@ -6244,7 +6250,7 @@ export interface paths {
          *     screen shows for each. Which extensions are installed is a fact of the binary, so the
          *     contract cannot list the values; this operation does.
          *
-         *     Readable by any signed-in seat, because the company list shows these types and filters
+         *     Readable by any signed-in seat and its agent, because the company list shows these types and filters
          *     on them. Each value and label is declared in extension code, never typed by an
          *     administrator. Empty when no installed extension declares a type.
          */
@@ -6629,6 +6635,29 @@ export interface paths {
          * @description Take an inquiry or hand its lead and this task to a colleague in one transaction. Unrelated tasks stay unchanged. Taking a contact inquiry changes only its task; contact ownership requires a separate authorized handover.
          */
         post: operations["assignWebsiteInquiry"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/activities/{id}/take": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take an open task nobody holds.
+         * @description Makes the caller the assignee of an open task that has no assignee. Anyone who can see the task and may change tasks can take it, whether or not they could change this task before: a task nobody holds has no owner to protect. The owner of each record the task is filed under is told, and can give the task to someone else with `PATCH /activities/{id}`. The write is pinned with `If-Match`. A task someone took first, a task that is done, a task that is not a task and a website-inquiry task (which has its own take through `POST /activities/{id}/inquiry-assignment`) answer `409`. A caller who may not change tasks answers `403`, and a task the caller cannot see `404`.
+         */
+        post: operations["takeTask"];
         delete?: never;
         options?: never;
         head?: never;
@@ -7053,10 +7082,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The records an extension suggests messages belong to, waiting for a reader to decide.
+         * The link suggestions waiting for the caller to decide.
          * @description An extension may suggest which deal, company, contact or project a message belongs to. A
-         *     suggestion attaches nothing. It waits here until a reader accepts or rejects it. Core makes
-         *     none of its own: this queue holds only what an extension proposed.
+         *     suggestion attaches nothing. It waits here until a reader accepts or rejects it. Margince
+         *     itself asks one question here: when several open deals fit a captured mail, it suggests each
+         *     of them to the one colleague the mailbox confirms is responsible. Such a suggestion has no
+         *     `unit`, and only that colleague sees and decides it. An agent acting for a colleague sees
+         *     and decides what that colleague would, and never another colleague's question.
          *
          *     Oldest first, at most 50. A decided suggestion leaves the queue, so asking again shows the
          *     next ones. A suggestion is left out when the caller may not read its message or its target,
@@ -7084,7 +7116,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Accept a suggestion, which files the message under the record it names.
+         * Accept a suggestion, filing the message under its record.
          * @description Files the message under the suggested record through the same relink as any other filing,
          *     and closes the suggestion in the same transaction. The caller needs the right to update the
          *     message and to attach to the target. Accepting a suggestion that is already accepted is the
@@ -7114,6 +7146,10 @@ export interface paths {
          * @description Closes the suggestion and attaches nothing. The same target is not proposed for the same
          *     message a second time. Rejecting a suggestion that is already rejected is the same success.
          *     An accepted one answers `409`.
+         *
+         *     Rejecting a deal Margince itself suggested also declines that deal, as `declineActivityDeal`
+         *     does: on the message and on each unfiled message of its conversation, so no automatic pass
+         *     files them there again.
          */
         post: operations["rejectLinkSuggestion"];
         delete?: never;
@@ -7149,9 +7185,10 @@ export interface paths {
          *     as a member's does. `project_kept` says so.
          *
          *     Without `deal_id`, the answer is "none of them" to the open "Which deal is this about?"
-         *     question of the message's conversation. Each deal the question offered is declined on the
-         *     message and on each unfiled message of the conversation, and the question is done. A
-         *     message with no open question answers 422.
+         *     question of the message's conversation: the deals Margince suggested to the caller in the
+         *     link suggestion queue. Each of them is declined on the message and on each unfiled message
+         *     of the conversation, and the suggestions are rejected. A message with no open question for
+         *     the caller answers 422.
          *
          *     Declining a deal already declined is the same success and writes nothing. With `deal_id`,
          *     the caller needs the right to change the deal too, as for `setActivityDealRelevance`.
@@ -8798,7 +8835,7 @@ export interface paths {
         };
         /**
          * The room's conversation as the buyer sees it.
-         * @description Optionally narrowed to one published document. Empty while the room serves no content.
+         * @description Optionally narrowed to one published document. Empty while the room serves no content. `hidden_own_conversations` is true when a thread this buyer wrote in is withheld because its file is no longer shared.
          */
         get: operations["listBuyerRoomThreads"];
         put?: never;
@@ -11695,6 +11732,168 @@ export interface paths {
         patch: operations["updateTelegramBusinessConnectionVisibility"];
         trace?: never;
     };
+    "/channel-connections/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the WhatsApp Business numbers connected to the workspace.
+         * @description Newest first. No secret is returned.
+         */
+        get: operations["listWhatsAppConnections"];
+        put?: never;
+        /**
+         * Connect a WhatsApp Business number to the workspace.
+         * @description Seals the access token and the app secret in the credential store and makes a live
+         *     connection for the phone number. No call to Meta is made. The response carries the
+         *     webhook verify token once; paste it into the Meta app's webhook settings together with
+         *     `<public_base_url>/v1/channel-events/whatsapp`. Margince keeps no copy the admin can read
+         *     again, so a lost verify token means disconnecting the number and connecting it again.
+         *
+         *     One live connection exists per phone number: connecting a number that is already
+         *     connected is a `409`.
+         */
+        post: operations["createWhatsAppConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-connections/whatsapp/{id}/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change who may read a WhatsApp number's messages.
+         * @description Sets the mail visibility of the number's seat, as `PATCH /shared-mailboxes/{id}` does for a
+         *     shared mailbox and the Telegram Business route does for its accounts: the next message
+         *     follows it. `shared` needs `capture.shared_posture_allowed` and `classified` is refused,
+         *     both with `422`. The request must carry `confirm: true`. Admin only, in a signed-in session.
+         */
+        patch: operations["updateWhatsAppConnectionVisibility"];
+        trace?: never;
+    };
+    "/channel-connections/whatsapp/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect a WhatsApp Business number from the workspace.
+         * @description Archives the connection and destroys the sealed secrets. From then on the webhook route
+         *     stores nothing for the number. What its chats already filed stays.
+         */
+        delete: operations["disconnectWhatsAppConnection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-connections/zalo-oa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * List the Zalo Official Accounts connected to the workspace.
+         * @description Newest first. No secret is returned.
+         */
+        get: operations["listZaloOAConnections"];
+        put?: never;
+        /**
+         * Connect a Zalo Official Account to the workspace.
+         * @description Seals the access and refresh tokens, the app secret and the OA secret key in the credential
+         *     store and makes a live connection for the Official Account, with a team seat that the team in
+         *     `readerTeamId` reads. The seat starts `held`. No call to Zalo is made. Set the webhook URL of
+         *     the Zalo app to `<public_base_url>/v1/channel-events/zalo-oa`. A background job replaces the
+         *     token pair before the access token expires.
+         *
+         *     One live connection exists per Official Account: connecting one that is already connected
+         *     is a `409`.
+         */
+        post: operations["createZaloOAConnection"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-connections/zalo-oa/{id}/visibility": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        /**
+         * Change who may read a Zalo Official Account's messages.
+         * @description Sets the mail visibility of the account's seat, as `PATCH /shared-mailboxes/{id}` does for a
+         *     shared mailbox and the WhatsApp route does for its numbers: the next message follows it.
+         *     `shared` needs `capture.shared_posture_allowed` and `classified` is refused, both with `422`.
+         *     The request must carry `confirm: true`. Admin only, in a signed-in session.
+         */
+        patch: operations["updateZaloOAConnectionVisibility"];
+        trace?: never;
+    };
+    "/channel-connections/zalo-oa/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Disconnect a Zalo Official Account from the workspace.
+         * @description Archives the connection and destroys the sealed secrets. From then on the webhook route
+         *     stores nothing for the Official Account. What its chats already filed stays.
+         */
+        delete: operations["disconnectZaloOAConnection"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channel-links/{record_type}/{id}": {
         parameters: {
             query?: never;
@@ -11847,6 +12046,68 @@ export interface paths {
          *     answered `200` `already_taken`, so Dispact stops retrying a notice whose answer it lost.
          */
         post: operations["receiveDispactChannelEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/whatsapp": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Answer Meta's webhook subscription check (anonymous).
+         * @description Meta calls this with `hub.mode=subscribe`, `hub.verify_token` and `hub.challenge` when
+         *     the webhook is saved. The answer is the challenge as plain text when the token is the
+         *     verify token of a connected number, and `403` otherwise, whether or not any number is
+         *     connected.
+         */
+        get: operations["verifyWhatsAppWebhook"];
+        put?: never;
+        /**
+         * Take a signed WhatsApp Business webhook delivery (anonymous).
+         * @description Meta posts a batch of messages, message echoes and delivery statuses, signed in
+         *     `X-Hub-Signature-256` (`sha256=<hex HMAC-SHA256 of the raw body>`) with the app secret.
+         *     The signature is checked against every connected number's app secret before the body is
+         *     read. Only items for a number whose own secret verified are kept: each is stored once
+         *     and queued for filing, in one transaction. An item for a number that is not connected, a
+         *     field this version does not handle and an item that cannot be decoded are skipped, and
+         *     the answer is still `200`, so Meta does not retry them. A redelivered item is stored
+         *     once.
+         */
+        post: operations["receiveWhatsAppWebhook"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/zalo-oa": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Take a signed Zalo Official Account webhook event (anonymous).
+         * @description Zalo posts one event per call, signed in `X-ZEvent-Signature` (`mac=<hex SHA-256 of app_id,
+         *     raw body, timestamp and the OA secret key>`). The signature is checked against every
+         *     connected Official Account's secret key before any field but the two it covers is read.
+         *     A message event for an Official Account whose own secret verified, and that is still live, is
+         *     stored once and queued for filing, in one transaction. Follow, unfollow, seen and reaction events, a message for
+         *     an Official Account that is not connected, and a message of an erased customer are
+         *     acknowledged with `200` and stored nowhere, so Zalo does not retry them. A retried
+         *     delivery is stored once. The call makes no request to Zalo, because Zalo expects the
+         *     answer within two seconds.
+         */
+        post: operations["receiveZaloOAWebhook"];
         delete?: never;
         options?: never;
         head?: never;
@@ -14492,6 +14753,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shared-mailboxes/replyable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The shared mailboxes the signed-in member may reply as.
+         * @description Each is a live shared mailbox with `reply_enabled` whose reader team has the caller as a
+         *     live member. A mailbox the caller may not reply as is absent, so the answer never shows
+         *     that it exists. The `id` is what a send names as `from_connection_id`.
+         *
+         *     Signed-in session only: an agent never names a shared mailbox.
+         */
+        get: operations["listReplyableSharedMailboxes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/shared-mailboxes/{id}": {
         parameters: {
             query?: never;
@@ -14514,7 +14799,9 @@ export interface paths {
          *     brought in, and the old one stops. So the request must carry `confirm: true`. The new team
          *     must have at least one active member. `shared` needs `capture.shared_posture_allowed`;
          *     `classified` is refused. `apply_to_history` also narrows mail already captured when the
-         *     visibility moves to `held`.
+         *     visibility moves to `held`. The answer comes before that mail is narrowed: a background
+         *     job narrows it in batches, `history_narrowing` shows what is left, and mail the job has not
+         *     reached keeps the audience it had.
          *
          *     Admin only, in a signed-in session.
          */
@@ -14770,7 +15057,9 @@ export interface paths {
          *
          *     The posture governs mail captured AFTERWARDS. `apply_to_history` additionally narrows what
          *     this mailbox already brought in, which emits one `activity.updated` per row whose audience
-         *     moved; it never widens, and `selected` rows are left alone. Widening history back is a
+         *     moved; it never widens, and `selected` rows are left alone. The answer comes before that
+         *     mail is narrowed: a background job narrows it in batches, `history_narrowing` on the
+         *     connection shows what is left, and mail the job has not reached keeps the audience it had. Widening history back is a
          *     separate, deliberate call. It decides what the owner's colleagues may read of their
          *     correspondence, so an agent asks its user first.
          */
@@ -15047,6 +15336,53 @@ export interface paths {
         get: operations["getAttention"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attention/bounces/{id}/send-again": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a bounced message again to a corrected address.
+         * @description The `send_again` verb of a bounce row. `{id}` is the bounced delivery's id, which is the
+         *     row's `id`. The same message goes to the new address: the same subject, text, files, cc
+         *     and bcc, filed under the same records, under the consent purpose the first send went out
+         *     with. Nothing is inferred and nothing is chosen for the sender.
+         *
+         *     It is the one send. Authorization refuses before the consent gate answers, the gate is
+         *     asked the same question about the same purpose for the corrected address, and a
+         *     withdrawn consent, a suppression or a missing grant refuses the send exactly as it
+         *     refuses any other.
+         *
+         *     In order:
+         *
+         *     * the bounced address on the contact the message is filed under is replaced by `address`,
+         *       keeping its type, and the replaced address is archived. A caller who may not change the
+         *       contact is refused before anything is sent. A contact already holding `address` is
+         *       not written again;
+         *     * the message goes out to `address` wherever the bounced address stood, in To, cc or bcc.
+         *
+         *     A bounce can be sent again once. A repeat that bounces carries no `send_again`, and a
+         *     second request for the same bounce answers 404, as does a bounce of another user's, a
+         *     soft bounce, one filed under no contact the caller can read, and a message sent before
+         *     its text was recorded. `address` equal to the address that refused answers 422.
+         *
+         *     Humans only: it changes a contact's address and sends a message a user wrote, and an
+         *     agent has the `send_email` tool for its own mail.
+         */
+        post: operations["sendBouncedMessageAgain"];
         delete?: never;
         options?: never;
         head?: never;
@@ -15698,6 +16034,63 @@ export interface paths {
         put?: never;
         post?: never;
         delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/installation/authentication-policy/google-directory": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Whether the Google directory connection is set up, and how its last check went.
+         * @description The group→role map reads a Google member's groups from the Workspace Directory API,
+         *     because Google's ID tokens carry none. This says whether the credential that does it
+         *     is stored and how the last lookup went. The key and the admin address have no read
+         *     path: nothing here returns either.
+         *
+         *     `last_result` and `last_reason` describe the newest check: a sign-in lookup that
+         *     failed, a lookup that ended a run of failures, or the check made when the credential
+         *     was stored. Both are absent before any check. A failed lookup never fails the
+         *     sign-in, so this is where an operator sees that members are signing in without the
+         *     roles their groups map to.
+         *
+         *     Governed by `authentication_policy` read. Human-only.
+         */
+        get: operations["getGoogleDirectory"];
+        /**
+         * Store or replace the Google directory credential.
+         * @description Seals a Google service-account key and the admin address it acts for in the key
+         *     vault, replacing any earlier credential. The old sealed copy is destroyed after the
+         *     new one is in place.
+         *
+         *     The credential is checked before it is sealed: Google must exchange the key for a
+         *     token under domain-wide delegation with the one read-only scope
+         *     `https://www.googleapis.com/auth/admin.directory.group.readonly`, and answer a group
+         *     read for the admin address. A credential that fails is a 422 naming what to fix,
+         *     never echoing the key, and nothing is stored.
+         *
+         *     `service_account_json` and `admin_subject` are write-only. Takes effect on the next
+         *     Google sign-in, without a restart.
+         *
+         *     Requires a key vault; without one the answer is 503. 409 when a boot source sets the
+         *     credential. Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        put: operations["setGoogleDirectory"];
+        post?: never;
+        /**
+         * Remove the Google directory credential.
+         * @description Drops the reference and destroys the sealed credential. Removing one that was never
+         *     stored succeeds, so a retry is safe. Google members then sign in as before the
+         *     connection existed: the map grants them nothing.
+         *
+         *     Audit-only write (no event stream, EVT-NOEVT-3).
+         */
+        delete: operations["deleteGoogleDirectory"];
         options?: never;
         head?: never;
         patch?: never;
@@ -16751,6 +17144,33 @@ export interface paths {
          */
         get: operations["getAiProviderHealth"];
         put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/ai/team-rules": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Read the team rules every AI draft follows (ai_team_rules read).
+         * @description The one text the whole workspace's drafts follow. It outranks the sender's own rules.
+         *     Every seat reads it; admin and ops write it.
+         */
+        get: operations["getAiTeamRules"];
+        /**
+         * Replace the team rules every AI draft follows (ai_team_rules update).
+         * @description `expected_updated_at` is the `updated_at` the editor read, left out when it read no saved
+         *     version. A save over a newer version answers 409. Text longer than 20000 characters is
+         *     refused with 422. Empty text removes the rules.
+         */
+        put: operations["replaceAiTeamRules"];
         post?: never;
         delete?: never;
         options?: never;
@@ -18870,7 +19290,7 @@ export interface paths {
         /**
          * Rename a custom field or change whether create dialogs offer it (not a schema change).
          * @description CUSTOM-FIELDS-WIRE-3. Audited catalog update of `label`, `show_in_create`, `reportable`
-         *     or `activity_kinds`;
+         *     `activity_kinds` or `pipeline_ids`;
          *     `column_name` never moves — the physical column identity is stable across rename.
          *     Merge-PATCH: `column_name`, `object`, and `type` are absent from the request schema
          *     entirely, and a body with neither setting is refused with a 422. A retired field
@@ -20459,6 +20879,60 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/users/{id}/merge-requests": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Ask the holders of two accounts to confirm merging them. Admin-only, human-only.
+         * @description For a source account that has been used. Mails a single-use confirmation link to the
+         *     sign-in address of each side that is not deactivated and has not confirmed yet, and
+         *     supersedes any link still open for that side. The merge itself still goes through
+         *     `mergeMembers`, and refuses until every such side has confirmed. A link confirms and
+         *     signs nobody in. It dies when the account's address changes, its credentials end or it is
+         *     deactivated, and after three days.
+         *
+         *     Refused (409) unless the preview the token names has no blocker other than
+         *     `confirmation_missing`, and when this installation cannot send email. Answers the
+         *     preview as it stands after the request, with a token to merge from once every side has
+         *     confirmed. Shares the set-password link limits per actor and per target. Audited on each
+         *     side's account.
+         */
+        post: operations["requestMemberMerge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/auth/confirm-member-merge": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Confirm that this account may be merged into another, from the mailed link.
+         * @description Spends the single-use token mailed by `requestMemberMerge`. It signs nobody in and changes nothing about the account. An expired, used, unknown or withdrawn token, and one whose account has since left, produce one neutral error. Audited.
+         */
+        post: operations["confirmMemberMerge"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/users/{id}/merge": {
         parameters: {
             query?: never;
@@ -20473,7 +20947,7 @@ export interface paths {
         put?: never;
         /**
          * Merge a duplicate into the selected surviving member.
-         * @description The source must be an unused imported or invited identity. The acting administrator cannot be the survivor.
+         * @description An unused source merges at once. A used source merges only after the holder of each side that is not deactivated has confirmed through `requestMemberMerge`; a deactivated side needs no confirmation, so two deactivated accounts merge on an administrator's say alone. The acting administrator can be neither side.
          */
         post: operations["mergeMembers"];
         delete?: never;
@@ -25704,10 +26178,11 @@ export interface paths {
          * Change the name colleagues greet you by.
          * @description Always the CALLER's own, never anybody else's: there is no id to pass.
          *
-         *     A greeting opens with one name, and the first word of the display name
-         *     is often the wrong one ("Dr. Sofia Meier", "Nguyễn Thị Lan"). This is the
-         *     word a colleague's greeting uses instead. Empty or null clears it, and
-         *     the greeting falls back to the first word of the display name.
+         *     A greeting opens with one name, and the display name does not always say
+         *     which ("Dr. Sofia Meier"). This is the word a colleague's greeting uses
+         *     instead. Empty or null clears it, and the greeting falls back to the
+         *     given name of the display name: the last word after a Vietnamese family
+         *     name ("Nguyễn Thị Lan" is greeted as "Lan"), else the first word.
          *
          *     The first sign-in through a login provider fills it from the provider's
          *     given name, but only while it is empty, so a value saved here is never
@@ -25759,6 +26234,57 @@ export interface paths {
          *     initials from then on.
          */
         delete: operations["deleteMyAvatar"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/chat-identities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your own chat accounts that are confirmed, or waiting for their code.
+         * @description One row per network where you have a confirmed account or an unexpired code. The account
+         *     is shown with all but its last digits hidden. A confirmed account lets the company's chat
+         *     accounts recognise you, so a customer message you forward is filed for that customer and
+         *     never for you.
+         */
+        get: operations["listMyChatIdentities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/chat-identities/{network}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                network: "whatsapp" | "telegram" | "zalo";
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get a code that confirms your account on one chat network.
+         * @description Returns a short code once, valid for ten minutes. Send exactly that code as a message from
+         *     your own account to any connected company account on the same network. A second start
+         *     replaces the first code. The code is stored only as a hash.
+         */
+        post: operations["startMyChatVerification"];
+        /**
+         * Forget your confirmed account and any waiting code on one network.
+         * @description Removing a network where you have nothing is not an error.
+         */
+        delete: operations["removeMyChatIdentity"];
         options?: never;
         head?: never;
         patch?: never;
@@ -27127,6 +27653,31 @@ export interface paths {
         patch: operations["updateCorpus"];
         trace?: never;
     };
+    "/knowledge/corpora/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bring an archived corpus back with everything filed in it.
+         * @description The undo half of `archiveCorpus`. The set, its documents and their passages return in one transaction, and the ask finds the passages again.
+         *     Restoring a set that is not archived succeeds and changes nothing, so a retried call after a lost response answers the same way as the first.
+         *     It does NOT make the set the default again. The default moved elsewhere when the set was archived, and `updateCorpus` says which set the palette asks.
+         */
+        post: operations["restoreCorpus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/knowledge/corpora/{id}/documents": {
         parameters: {
             query?: never;
@@ -27436,6 +27987,33 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {string} */
+        ChatNetwork: "whatsapp" | "telegram" | "zalo";
+        ChatIdentity: {
+            network: components["schemas"]["ChatNetwork"];
+            /** @description The confirmed account with all but its last digits hidden. Absent while only a code waits. */
+            account_hint?: string;
+            /**
+             * Format: date-time
+             * @description When the account was confirmed.
+             */
+            verified_at?: string;
+            /**
+             * Format: date-time
+             * @description When the waiting code stops working.
+             */
+            expires_at?: string;
+        };
+        ChatIdentityList: {
+            data: components["schemas"]["ChatIdentity"][];
+        };
+        ChatVerificationStarted: {
+            network: components["schemas"]["ChatNetwork"];
+            /** @description Shown once. Send it as a message from your own account. */
+            code: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
         DealViability: {
             /** Format: uuid */
             deal_id: string;
@@ -29454,6 +30032,35 @@ export interface components {
                 [key: string]: string;
             };
         };
+        /** @description Whether the Google directory credential is stored and how the newest check went. Carries neither the key nor the admin address. */
+        GoogleDirectoryStatus: {
+            /** @description A credential is stored, or a boot source sets one. */
+            configured: boolean;
+            /**
+             * Format: date-time
+             * @description When the newest check ran. Absent before any check.
+             */
+            last_checked_at?: string;
+            /**
+             * @description How the newest check ended. Absent before any check.
+             * @enum {string}
+             */
+            last_result?: "ok" | "failed";
+            /**
+             * @description Why the newest check failed, present only when `last_result` is `failed`. A closed vocabulary, never Google's own words. `delegation_refused` is the common setup mistake: the service account's client ID has no domain-wide delegation for the read-only group scope, or the admin address is wrong.
+             * @enum {string}
+             */
+            last_reason?: "key_invalid" | "delegation_refused" | "permission_denied" | "member_not_found" | "timeout" | "unavailable" | "bad_answer";
+        };
+        GoogleDirectoryInput: {
+            /** @description The service account's JSON key file, as Google issues it. */
+            service_account_json: string;
+            /**
+             * Format: email
+             * @description The Workspace admin the service account acts for. The Directory API refuses a delegated read that names no admin.
+             */
+            admin_subject: string;
+        };
         /** @description Why the base currency is locked, as facts a client words in its reader's language. Present exactly when `base_currency_locked_reason` is (ADR-0085 §7). */
         BaseCurrencyLock: {
             /**
@@ -30513,6 +31120,7 @@ export interface components {
              * @enum {string}
              */
             readonly mail_posture?: "shared" | "classified" | "held";
+            history_narrowing?: components["schemas"]["MailHistoryNarrowing"];
             context_tag?: components["schemas"]["ConnectorContextTag"];
             history_baseline?: components["schemas"]["MailHistoryBaseline"];
             /** Format: date-time */
@@ -30611,10 +31219,25 @@ export interface components {
              * @description Also narrow the mail this mailbox ALREADY brought in, to match the new posture. Only
              *     narrows: a move towards `shared` leaves history where it is, because opening what was
              *     captured under a stricter answer is a separate decision from what to do next. Rows a
-             *     human set to `selected` are never touched.
+             *     human set to `selected` are never touched. A background job does the narrowing after
+             *     the answer; a narrowing to `held` still pending is never loosened to `classified`.
              * @default false
              */
             apply_to_history: boolean;
+        };
+        /**
+         * @description Earlier mail of this mailbox that a background job is still narrowing, after a change
+         *     asked for `apply_to_history`. Absent when nothing is pending. Mail the job has not reached
+         *     yet keeps the audience it had.
+         */
+        MailHistoryNarrowing: {
+            /**
+             * @description What the earlier mail is narrowed to.
+             * @enum {string}
+             */
+            posture: "classified" | "held";
+            /** @description Messages still to narrow. */
+            remaining: number;
         };
         WorkspaceEmailDomain: {
             /** @description The domain, IDNA-folded and lowercased. Covers its subdomains. */
@@ -30791,10 +31414,11 @@ export interface components {
             /** @description The ledger's own lifecycle for this sender. */
             status?: string;
             /**
-             * @description What YOU decided instead, absent when you have not.
+             * @description What YOU decided instead, absent when you have not. `personal` is the standing decision a
+             *     private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
              * @enum {string}
              */
-            decision?: "business" | "keep_out";
+            decision?: "business" | "keep_out" | "personal";
             /**
              * @description What your decision overruled. Present so the page can say you corrected something,
              *     rather than showing only the answer that now stands.
@@ -31166,6 +31790,12 @@ export interface components {
              * @description When the provider accepted it. Null unless the state is `sent`.
              */
             delivered_at?: string | null;
+            /**
+             * @description True when the reader may send this bounced message again to a corrected address,
+             *     by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+             *     message that bounced hard qualifies, once, and not one an agent wrote.
+             */
+            can_send_again?: boolean;
             /**
              * @description What the message was staged with, as it was at that moment. Empty when it carried
              *     nothing.
@@ -31849,11 +32479,29 @@ export interface components {
              * @description The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.
              */
             backup_owner_id?: string | null;
+            /** @description True when an admin let the reader team reply as this mailbox. A member then names the mailbox id as `from_connection_id` of a send. Always false for an `imap` mailbox, which only captures. */
+            reply_enabled: boolean;
             /** @description A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none. */
             unread_period?: components["schemas"]["CaptureUnreadPeriod"];
+            history_narrowing?: components["schemas"]["MailHistoryNarrowing"];
         };
         SharedMailboxList: {
             items: components["schemas"]["SharedMailbox"][];
+        };
+        /** @description A shared mailbox the signed-in member may reply as. */
+        ReplyableSharedMailbox: {
+            /**
+             * Format: uuid
+             * @description The mailbox id, sent as `from_connection_id`.
+             */
+            id: string;
+            /** @enum {string} */
+            provider: "graph" | "gmail";
+            /** @description The mailbox address, which is the From address of a reply. */
+            address: string;
+        };
+        ReplyableSharedMailboxList: {
+            items: components["schemas"]["ReplyableSharedMailbox"][];
         };
         /**
          * @description The mailbox, its readers, and the provider's credentials. Each provider carries its own
@@ -31915,6 +32563,8 @@ export interface components {
              * @description The backup owner from now on. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Null removes it; absent leaves it as it is.
              */
             backup_owner_id?: string | null;
+            /** @description True lets every live member of the reader team send mail with this mailbox as its From address. The installation's own grant must already allow it: an application permission to send for a Microsoft mailbox, a delegation that includes the send scope for a Google one. False ends it. An `imap` mailbox is refused with `422` `shared_mailbox_cannot_send`. */
+            reply_enabled?: boolean;
             /** @description Must be true when the readers or the visibility change: such a change moves every message the mailbox captured to other readers. */
             confirm: boolean;
         };
@@ -32931,6 +33581,24 @@ export interface components {
             /** Format: int64 */
             company_monthly_tokens: number | null;
         };
+        AiTeamRules: {
+            text: string;
+            /**
+             * Format: date-time
+             * @description When the text was last saved. Left out while none was saved.
+             */
+            updated_at?: string;
+            /** @description Who saved it last. Left out while none was saved. */
+            updated_by?: string;
+        };
+        AiTeamRulesChange: {
+            text: string;
+            /**
+             * Format: date-time
+             * @description The updated_at the editor read. Left out when the editor read no saved version.
+             */
+            expected_updated_at?: string;
+        };
         AiBudgetChange: {
             config: components["schemas"]["AiBudgetConfig"];
             expected_revision: string;
@@ -33138,8 +33806,9 @@ export interface components {
              * @description Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
              */
             switched: number;
-            /** @description The model the provider named most often on those calls; absent when switched is 0. */
+            /** @description The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step's own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read. */
             switched_to?: string;
+            switched_to_certification?: components["schemas"]["AiRouteCertification"];
         };
         AiDeferredWork: {
             carrier: string;
@@ -33464,6 +34133,73 @@ export interface components {
             /** Format: date-time */
             updatedAt?: string;
         };
+        /** @description One Zalo Official Account connected to the workspace. No secret is part of it. */
+        ZaloOAConnection: {
+            /** Format: uuid */
+            id: string;
+            /** @description Zalo's id of the Official Account, the key a webhook event is matched to its connection by. */
+            oaId: string;
+            /** @description The Zalo app that serves the Official Account. */
+            appId: string;
+            displayName: string;
+            /**
+             * @description `reauth_required` when Zalo refused the refresh token, so the Official Account must be disconnected and connected again with fresh tokens.
+             * @enum {string}
+             */
+            status: "connected" | "reauth_required" | "disconnected";
+            /** Format: date-time */
+            connectedAt: string;
+            /**
+             * Format: uuid
+             * @description The seat the account's messages file through.
+             */
+            seatId?: string | null;
+            /**
+             * Format: uuid
+             * @description The team that reads the account's messages.
+             */
+            readerTeamId?: string | null;
+            /**
+             * @description What the seat asks of the account's messages. Changed with `PATCH /channel-connections/zalo-oa/{id}/visibility`.
+             * @enum {string|null}
+             */
+            mailVisibility?: "held" | "shared" | null;
+        };
+        ZaloOAConnectionListResponse: {
+            data: components["schemas"]["ZaloOAConnection"][];
+        };
+        CreateZaloOAConnectionRequest: {
+            /**
+             * Format: uuid
+             * @description The team that reads the account's messages. The account's seat starts `held`: only this team reads them until an admin shares them.
+             */
+            readerTeamId: string;
+            oaId: string;
+            appId: string;
+            displayName: string;
+            /** @description The Zalo app's secret key, used to renew the tokens. Sealed into the credential store on arrival and never echoed back. */
+            appSecret: string;
+            /** @description The OA secret key that signs each webhook event. Sealed into the credential store on arrival and never echoed back. */
+            oaSecretKey: string;
+            /** @description The Official Account's access token. Sealed into the credential store on arrival and never echoed back. */
+            accessToken: string;
+            /** @description The Official Account's refresh token. It is single use; the renewal job replaces it. Sealed into the credential store on arrival and never echoed back. */
+            refreshToken: string;
+        };
+        /** @description One event from Zalo, as the signature covers it. The route reads the raw body and the server decodes it, so only the fields every event carries are named here. */
+        ZaloWebhookEvent: {
+            app_id?: string;
+            /** @description For example `user_send_text` or `oa_send_text`. */
+            event_name: string;
+            /** @description Milliseconds since the epoch, as the text the signature covers. */
+            timestamp: string;
+        };
+        ZaloWebhookReceipt: {
+            /** @description Messages kept and queued for filing. A retried delivery counts again and is stored once. */
+            stored: number;
+            /** @description Events not kept: a follow, unfollow, seen or reaction event, an Official Account that is not connected, an erased customer, or an event that could not be decoded. */
+            skipped: number;
+        };
         /** @description One Telegram Business account the owner linked to the workspace's bot. Nothing from the account is stored until an admin approves it. */
         TelegramBusinessConnection: {
             /** Format: uuid */
@@ -33521,6 +34257,72 @@ export interface components {
         };
         TelegramBusinessConnectionListResponse: {
             data: components["schemas"]["TelegramBusinessConnection"][];
+        };
+        /** @description One WhatsApp Business phone number connected to the workspace. No secret is part of it. */
+        WhatsAppConnection: {
+            /** Format: uuid */
+            id: string;
+            /** @description The WhatsApp Business Account id. */
+            wabaId: string;
+            /** @description Meta's id of the phone number, the key a webhook item is matched to its connection by. */
+            phoneNumberId: string;
+            /** @description The number in the form WhatsApp shows it. Display only. */
+            displayPhoneNumber: string;
+            /** @enum {string} */
+            status: "connected" | "disconnected";
+            /** Format: date-time */
+            connectedAt: string;
+            /**
+             * Format: uuid
+             * @description The seat the number's messages file through.
+             */
+            seatId?: string | null;
+            /**
+             * Format: uuid
+             * @description The team that reads the number's messages.
+             */
+            readerTeamId?: string | null;
+            /**
+             * @description What the seat asks of the number's messages. Changed with `PATCH /channel-connections/whatsapp/{id}/visibility`.
+             * @enum {string|null}
+             */
+            mailVisibility?: "held" | "shared" | null;
+        };
+        WhatsAppConnectionListResponse: {
+            data: components["schemas"]["WhatsAppConnection"][];
+        };
+        CreateWhatsAppConnectionRequest: {
+            /**
+             * Format: uuid
+             * @description The team that reads the number's messages. The number's seat starts `held`: only this team reads them until an admin shares them.
+             */
+            readerTeamId: string;
+            wabaId: string;
+            phoneNumberId: string;
+            displayPhoneNumber: string;
+            /** @description The system-user access token for the WhatsApp Business Account. Sealed into the credential store on arrival and never echoed back. */
+            accessToken: string;
+            /** @description The Meta app's secret, which signs each webhook delivery. Sealed into the credential store on arrival and never echoed back. */
+            appSecret: string;
+        };
+        WhatsAppConnectionCreated: {
+            connection: components["schemas"]["WhatsAppConnection"];
+            /** @description The token Meta sends in the webhook subscription check. Made by the server and shown only in this response. */
+            verifyToken: string;
+        };
+        /** @description One batch of changes from Meta, as the signature covers it. The route reads the raw body, so the items inside `entry` are decoded by the server and not described here. */
+        WhatsAppWebhookDelivery: {
+            /** @description Always `whatsapp_business_account`. */
+            object: string;
+            entry: {
+                [key: string]: unknown;
+            }[];
+        };
+        WhatsAppWebhookReceipt: {
+            /** @description Items kept and queued for filing. A redelivered item counts again and is stored once. */
+            stored: number;
+            /** @description Items not kept: a number that is not connected, a field not handled, or an item that could not be decoded. */
+            skipped: number;
         };
         ChannelConnectionListResponse: {
             data: components["schemas"]["ChannelConnection"][];
@@ -33869,7 +34671,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_link_ambiguous_will_drop" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "amount_needs_currency" | "amount_too_many_decimals" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_far" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_not_found_will_drop" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_not_money" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_not_found_will_drop" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_column_empty_will_drop" | "employer_not_found" | "employer_not_found_dropped" | "employer_not_found_will_drop" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_not_found_will_drop" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_ambiguous_will_drop" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_not_found_will_drop" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_row_skipped_will_drop" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_a_phone" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_link_ambiguous_will_drop" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "amount_needs_currency" | "amount_too_many_decimals" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_far" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_not_found_will_drop" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_not_money" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_field_not_for_pipeline" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_not_found_will_drop" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_column_empty_will_drop" | "employer_not_found" | "employer_not_found_dropped" | "employer_not_found_will_drop" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_not_found_will_drop" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_ambiguous_will_drop" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_not_found_will_drop" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_row_skipped_will_drop" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_a_phone" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -34653,6 +35455,18 @@ export interface components {
             details?: {
                 [key: string]: unknown;
             };
+        };
+        /** @description What the caller's row scope withheld from one list on a record page, so a short list never reads as the whole one. It states how many entries were withheld and which live colleagues own them, so the reader knows whom to ask. A withheld record's name, value and every other field stay withheld. Count 0 with no holders when nothing was withheld. */
+        HiddenRecords: {
+            /** @description How many entries the list would have shown under an unbounded scope and did not. It includes entries owned by a colleague who has left, who is not in `holders`. */
+            count: number;
+            /** @description The live colleagues who own at least one withheld entry, each once, by name. */
+            holders: components["schemas"]["HiddenRecordHolder"][];
+        };
+        HiddenRecordHolder: {
+            /** Format: uuid */
+            user_id: string;
+            display_name: string;
         };
         PageInfo: {
             /** @description Opaque cursor for the next page, or null if none. */
@@ -35581,6 +36395,12 @@ export interface components {
         /** @description One entry per card in the file, in the order the file listed them. */
         VCardImportReport: {
             results: components["schemas"]["VCardImportResult"][];
+            /**
+             * @description How many cards were staged as a review in the approvals inbox, so
+             *     the reader knows how many answers are waiting. An undecided one
+             *     expires after 30 days, and the expiry deletes the card's data.
+             */
+            staged_for_review: number;
         };
         VCardImportResult: {
             /** @description The card's position in the file, from 0. */
@@ -35591,7 +36411,8 @@ export interface components {
              * @description `created` — nobody matched, so the card became a contact, their company and the edge
              *     between them. `updated` — an exact match: what the card states replaces an older value, which
              *     stays in `superseded_value`, and a field a human corrected stands.
-             *     `needs_review` — a resemblance, written nowhere; open the candidate and decide.
+             *     `needs_review` — a resemblance, so nothing was written; the card waits in the approvals
+             *     inbox, where whoever uploaded it merges it into the candidate or keeps it separate.
              *     `proposed` — a card read from a photo that nobody matched, waiting on an approval.
              *     `skipped` — the card states no name or one over 120 characters, carries a sending
              *     system's address, holds a value that is not readable text or cannot be stored, or
@@ -35915,8 +36736,13 @@ export interface components {
             readonly logo_url?: string | null;
             /** @description Deterministic company-level relationship-strength roll-up (features/07 §4). Read-only derived view; NULL until capture has interactions. */
             readonly strength?: components["schemas"]["RelationshipStrength"];
-            /** @description How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied. */
+            /**
+             * @description How many distinct live contacts THE CALLER MAY SEE hold a current job at this account (PO-EXT-10; AC-companies-2/3's Contacts column). Counted under the caller's contact row scope, exactly as the contact list is: a count is a read, and a number that moved when a colleague captured a private contact would disclose that contact. Present, zero included, on `listCompanies` and `getCompany` — the reads that render the column, and ABSENT entirely for a role without `contact:read` OR without `relationship:read` (the object grants come first, as on the contact list) — the number is a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the employment list; write responses (create, update, archive, merge) omit it. Never client-supplied.
+             *     A count of 0 means "no contacts YOU can see", never "no contacts": read it with `hidden_contact_holders`. Say "no contacts you can see" and name those colleagues when the list is not empty.
+             */
             readonly contact_count?: number;
+            /** @description The live colleagues who own at least one current contact at this account that the caller may not see, each once, so the reader knows whom to ask for an introduction ("Dana and Minh have contacts here you can't see"). It names who to ask and nothing else: no contact's name, role or id, and no count per colleague or in total. Empty when nothing is hidden, and a colleague who left or an agent seat is never listed. It reads the same employment set as `contact_count` with the contact scope turned around, so the two never describe different populations. Present exactly when `contact_count` is, and absent entirely on a write response. Never client-supplied. */
+            readonly hidden_contact_holders?: components["schemas"]["HiddenRecordHolder"][];
             /** @description How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE workspace — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it. */
             readonly open_deal_count?: number;
             /** @description The channel this company arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older company can show another value until the background correction reaches it. */
@@ -35945,6 +36771,8 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             partner?: components["schemas"]["Partner"];
+            /** @description An ended partner program has commission and deal history. Omitted without partner read permission. */
+            readonly partner_program_ended?: boolean;
             version?: components["schemas"]["RowVersion"];
             /**
              * Format: date-time
@@ -35952,6 +36780,8 @@ export interface components {
              *     A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date-time */
             created_at: string;
             /** Format: date-time */
@@ -36807,9 +37637,11 @@ export interface components {
             state: components["schemas"]["FinanceSummaryState"];
             /**
              * @description Who to send this customer's invoices to, beside the figures — the one question a reader of this card asks that the accounting mirror cannot answer. Read from the installation's own relationships, NOT from the accounting source: it states who we record as handling the invoices, which the connector neither supplies nor is told.
-             *     Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed, and no count says how many were withheld.
+             *     Absent when the caller lacks the contact or relationship grant, so an empty array means nobody is named rather than nobody may be seen. Contacts outside the caller's row scope are not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them.
              */
             billing_contacts?: components["schemas"]["BillingContact"][];
+            /** @description The billing entries the caller's contact row scope withheld from `billing_contacts`, the same answer the company page gives. Absent exactly when `billing_contacts` is. */
+            billing_contacts_hidden?: components["schemas"]["HiddenRecords"];
             /** @description Which accounting source this came from, by its key ("offline_demo"). A key, not a name for a reader: show `provider_name`. Absent when nothing is connected. */
             provider?: string | null;
             /** @description The accounting source's name for a reader ("Demo accounting"), as the unit that supplies it declares it. Absent when nothing is connected, or when that unit declares no name; a client then names no source rather than show the key. */
@@ -37023,6 +37855,8 @@ export interface components {
              * @description The account's stored last activity the rung is counted from. Null when it has none.
              */
             last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Calendar days from `last_activity_at` to today in the installation zone. 0 when there is no activity. */
             silent_days: number;
             /** @description True when the account has no activity recorded at all, which is why it reads as `stale`. */
@@ -37185,6 +38019,8 @@ export interface components {
             strength_bucket: "strong" | "developing" | "cold";
             /** Format: date-time */
             last_interaction_at?: string | null;
+            /** @description How to read `last_interaction_at`, from the activity it names. Absent when that is null. */
+            readonly last_interaction_precision?: components["schemas"]["OccurredPrecision"];
         };
         /** @description One contact's stakeholder role on one of the account's deals. */
         Company360DealRole: {
@@ -37269,6 +38105,8 @@ export interface components {
             phase: components["schemas"]["Company360ProjectPhase"];
             /** Format: date-time */
             last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** Format: date */
             target_end_date?: string | null;
             /** Format: uuid */
@@ -37653,8 +38491,12 @@ export interface components {
                 data: components["schemas"]["Company360Contact"][];
                 page: components["schemas"]["PageInfo"];
             };
-            /** @description Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`; a contact outside the caller's row scope is simply not listed, and no count states how many were withheld. */
+            /** @description The account's current employees the caller may not see, by the contact row scope or by the employment tie's own read scope. Absent exactly when `contacts` is. */
+            contacts_hidden?: components["schemas"]["HiddenRecords"];
+            /** @description Who handles this account's invoices, ordered by capacity: addressed, approved, paid. Each entry is one edge, so the panel can change or archive a single role without touching the others. Empty means nobody is named — which for a paying customer is a gap worth showing, not a blank. Absent when the caller lacks the contact or relationship grant, named in `sections_omitted` as `billing_contacts`. A contact outside the caller's row scope is not listed; `billing_contacts_hidden` says how many entries were withheld and who owns them. */
             billing_contacts?: components["schemas"]["BillingContact"][];
+            /** @description The billing entries the caller's contact row scope withheld from `billing_contacts`. Absent exactly when `billing_contacts` is. */
+            billing_contacts_hidden?: components["schemas"]["HiddenRecords"];
             deals?: components["schemas"]["Company360Deals"];
             /** @description The company's unarchived projects, work in motion first (delivering, pursuing, initiative, then closed), under the caller's project row scope. Absent when the caller has no project grant, named in `sections_omitted` as `projects`. */
             projects?: components["schemas"]["Company360Project"][];
@@ -38814,6 +39656,8 @@ export interface components {
              * @description The newest `occurred_at` among the activities the edge counts. A client orders edges by it.
              */
             last_at?: string | null;
+            /** @description How to read `last_at`, from the activity it names. Absent when that is null. */
+            readonly last_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The actual messages behind this edge, each individually visibility-checked before it is named. Present on `direct` edges only: pooled counts are disclosable where the correspondence itself is not, so an `account` edge carries the numbers and no rows. */
             receipts?: components["schemas"]["ContactGraphReceipt"][];
         };
@@ -38903,6 +39747,8 @@ export interface components {
             two_way: boolean;
             /** Format: date-time */
             last_at?: string | null;
+            /** @description How to read `last_at`, from the activity it names. Absent when that is null. */
+            readonly last_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Whole days from the last interaction to now, so a client renders "2 days ago" without re-deriving today from a timestamp. */
             days_since_last?: number | null;
         };
@@ -39359,6 +40205,8 @@ export interface components {
             two_way?: boolean;
             /** Format: date-time */
             last_at?: string | null;
+            /** @description How to read `last_at`, from the activity it names. Absent when that is null. */
+            readonly last_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Interactions in the last 90 days where they wrote to this colleague. */
             inbound_90d?: number;
             /** @description Outbound interactions in the last 90 days this colleague was on, as sender or copied. sent_90d counts only what they sent. */
@@ -42113,6 +42961,8 @@ export interface components {
              * @description The newest `occurred_at` at or before now of an activity filed under the deal, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. Drives the deterministic stalled flag. A message limited to its participants counts by its date alone, so a deal worked through private mail does not read as stalled. The deal timeline already lists such a message to every reader of the deal with its time, so its date reveals nothing new; its text and sender stay with its audience, a message limited to a chosen audience does not count, and no contact or company date moves for it.
              */
             last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Derived — no activity past the threshold (absolute duration). A booked workspace-audience meeting ahead keeps the deal off stalled until it starts or is called off. */
             readonly stalled?: boolean;
             /** @description The newest email on this deal that the whole workspace may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: workspace-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant. */
@@ -42754,6 +43604,8 @@ export interface components {
              * @description The newest workspace-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.
              */
             readonly last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The channel this record arrived by, one of the values `CreateProjectRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it. */
             source: string;
             /** @description Server-stamped from the authenticated principal; never client-supplied. */
@@ -43070,6 +43922,8 @@ export interface components {
              * @description The newest WORKSPACE-AUDIENCE activity filed under the project, a task never counting; null when nothing is filed yet. A message limited to its participants does not move it, even for a reader who may read that message.
              */
             last_activity_at: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description Every live activity filed under the project. */
             activity_count: number;
         };
@@ -43864,6 +44718,18 @@ export interface components {
              * @enum {string}
              */
             relevance_source?: "human" | "classifier";
+            filed_by?: components["schemas"]["LinkFiler"];
+        };
+        /** @description On a deal link only, and only when no human or agent chose it: who filed the activity on the deal, read from the latest filing of it there. The actor is `core` for the installation's own rule, or the name of the extension whose hook filed it. Marking the link `unrelated` takes the filing back, and no automatic pass files the activity there again. */
+        LinkFiler: {
+            actor: string;
+            /**
+             * @description Which hook point filed it, for an extension actor. Absent for `core`.
+             * @enum {string}
+             */
+            hook?: "parties" | "deal";
+            /** @description For an extension, a key the extension declared for its hook. Read it together with the actor: the label comes from that extension's own translations. Absent for `core`. */
+            reason?: string;
         };
         /**
          * @description The destination for every writable, non-archived activity of one conversation thread.
@@ -43996,6 +44862,8 @@ export interface components {
          *     `video_app`), so the guest learns nothing about the calendar behind the page.
          */
         PublicSchedulingProfile: {
+            /** @description The installation's privacy page, falling back to its privacy contact. Absent when neither is stated. */
+            readonly privacy_information?: string;
             host_name: string;
             company_name: string;
             /** @description Absolute public logo URL when the public origin is configured; otherwise relative to the API origin. */
@@ -44016,6 +44884,8 @@ export interface components {
             video_app?: "google_meet" | "microsoft_teams";
         };
         SchedulingProfile: {
+            /** @description The installation's privacy page, falling back to its privacy contact. Absent when neither is stated. */
+            readonly privacy_information?: string;
             enabled: boolean;
             /** @enum {string} */
             provider: "" | "gcal" | "graphcal";
@@ -44383,6 +45253,10 @@ export interface components {
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities. */
             readonly can_share_internal?: boolean;
+            /** @description Whether an import brought this in; the per-message audience write refuses it. */
+            readonly mailbox_imported?: boolean;
+            /** @description Whether the thread audience write acts on this row for the caller. */
+            readonly thread_audience_yours?: boolean;
             /** @description Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
             /** @description Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a note, task, call or meeting the caller logged by hand (under their own stamp or through an agent acting for them) that no provider import backs. Sent and captured correspondence, a calendar-synced meeting and a colleague's entry need the delete grant. A meeting a live invitation holds is never archivable. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
@@ -45192,9 +46066,21 @@ export interface components {
             entity_id: string;
             /** @description The name of the suggested record, for the screen. Absent on a decision's answer. */
             entity_name?: string | null;
-            /** @description The extension that proposed it. */
-            unit: string;
-            /** @description One short sentence from the extension on why. */
+            /**
+             * Format: int64
+             * @description For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+             */
+            deal_amount_minor?: number | null;
+            /** @description The currency of `deal_amount_minor`, withheld with it. */
+            deal_currency?: string | null;
+            /**
+             * Format: date
+             * @description For a suggested deal, when it is expected to close. Absent on a decision's answer.
+             */
+            deal_expected_close_date?: string | null;
+            /** @description The extension that proposed it. Null when Margince itself asks which deal a mail is about. */
+            unit: string | null;
+            /** @description One short sentence from the extension on why, or Margince's own question. */
             reason: string;
             score: number;
             /** @enum {string} */
@@ -45260,7 +46146,7 @@ export interface components {
             project_unfiled: boolean;
             /** @description A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project. */
             project_kept: boolean;
-            /** @description The open deal questions of the conversation this call marked done. */
+            /** @description The messages of the conversation whose open deal question this call closed. */
             questions_closed: number;
         };
         SetActivityDispositionRequest: {
@@ -46011,7 +46897,8 @@ export interface components {
              *     `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
              *     conversation arrived in, and a new message from the sender's default mailbox. A mailbox
              *     that is not the sender's, or cannot send, is refused with 422
-             *     `mailbox_not_send_capable`.
+             *     `mailbox_not_send_capable`. A shared mailbox with `reply_enabled` can be named here by
+             *     its id, and only by a member of its reader team.
              */
             from_connection_id?: string | null;
             /** @description The subject line. Blank or only white space is refused with 422 `required`. */
@@ -51024,10 +51911,20 @@ export interface components {
             /** Format: date-time */
             expected_updated_at: string;
         };
+        /** @description One member verb the caller holds the grant for and this member refuses, with why. */
+        MemberUnavailableAction: {
+            /** @enum {string} */
+            action: "merge";
+            /**
+             * @description Why the verb is refused. `sole_admin` is the last active administrator, `self` is the caller's own account and `agent_seat` is an agent. A used account is not refused: see `merge_needs_confirmation`.
+             * @enum {string}
+             */
+            reason: "sole_admin" | "self" | "agent_seat";
+        };
         /** @enum {string} */
-        MemberRetirementBlocker: "approval_decisions" | "automations" | "booking_pages" | "data_requests" | "deal_rooms" | "introductions" | "lists" | "stewarded_lists" | "mail_drafts" | "meeting_invitations" | "meeting_proposals" | "privacy_notices" | "record_responsibilities" | "reports" | "report_schedules" | "saved_views" | "scheduled_mail" | "handoffs" | "voice_profiles" | "web_forms" | "webhooks" | "weekly_plans" | "analytics_shares" | "source_used" | "self_survivor" | "deactivate_first" | "choose_survivor" | "choose_receiver" | "private_tasks" | "work_not_transferable" | "state_changed";
+        MemberRetirementBlocker: "approval_decisions" | "automations" | "booking_pages" | "data_requests" | "deal_rooms" | "introductions" | "lists" | "stewarded_lists" | "mail_drafts" | "meeting_invitations" | "meeting_proposals" | "privacy_notices" | "record_responsibilities" | "reports" | "report_schedules" | "saved_views" | "scheduled_mail" | "handoffs" | "voice_profiles" | "web_forms" | "webhooks" | "weekly_plans" | "analytics_shares" | "confirmation_missing" | "suspended_side" | "self_survivor" | "deactivate_first" | "choose_survivor" | "choose_receiver" | "private_tasks" | "work_not_transferable" | "state_changed";
         /** @enum {string} */
-        MemberRetirementConsequence: "source_signed_out" | "connectors_reconnect" | "survivor_access" | "original_attribution" | "private_alerts_archived" | "crm_private_records_move" | "private_audiences_retained" | "email_reserved" | "survivor_inactive";
+        MemberRetirementConsequence: "source_signed_out" | "connectors_reconnect" | "survivor_access" | "original_attribution" | "private_alerts_archived" | "crm_private_records_move" | "private_audiences_retained" | "email_reserved" | "survivor_inactive" | "sign_in_dropped";
         MemberRetirementPreview: {
             owned: components["schemas"]["HandoverCounts"];
             signal_count: number;
@@ -51045,6 +51942,20 @@ export interface components {
             survivor_name?: string;
             /** Format: email */
             survivor_email?: string;
+            /** @description Present for a merge whose source account has been used: one entry per side, saying whether that side's holder has confirmed. `confirmation_missing` is in `blockers` while any side is `requested` or `not_requested`. */
+            confirmations?: components["schemas"]["MemberMergeConfirmation"][];
+        };
+        MemberMergeConfirmation: {
+            /** Format: uuid */
+            user_id: string;
+            /** @enum {string} */
+            side: "source" | "survivor";
+            display_name: string;
+            /**
+             * @description `confirmed` once the holder used the mailed link; `requested` while a link is out; `not_requested` when none was sent yet; `not_needed` for a deactivated account, whose holder cannot confirm, and for a merge whose source was never used.
+             * @enum {string}
+             */
+            state: "confirmed" | "requested" | "not_requested" | "not_needed";
         };
         /**
          * @description The records that hold one blocker. `total` counts every one of them. `records` lists the
@@ -51099,7 +52010,7 @@ export interface components {
             display_name: string;
             /** @description Where the client fetches this seat's profile picture, absent when the seat has none and the client draws initials. The URL changes whenever the picture does. */
             avatar_url?: string;
-            /** @description The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster. */
+            /** @description The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the given name of `display_name` (the last word after a Vietnamese family name, else the first). Present on the caller's own seat; absent on the roster. */
             greeting_name?: string | null;
             /** @description The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC. */
             timezone?: string;
@@ -51150,6 +52061,10 @@ export interface components {
             merged_from?: components["schemas"]["SeatName"][];
             /** @description The member verbs the CALLER would be admitted to on this user right now, computed by the same checks those endpoints run: the `user_admin` verb each takes, a seat that may write, the ceiling over the target (a non-admin never acts on an admin, and otherwise holds everything the verb reaches), the member's status and kind, the last-admin guard, an archived role still held, the licensed seat ceiling on reactivation, whether this installation can build a set-password link, and whether the member has a confirmed second factor to remove. `hand_over` is `handOverUserWork` on this member. `resend_invite` is `resendUserInvite`, offered for an invited human member when this installation can send mail. Present on `listUsers`'s management view for a human caller only; absent means not computed, and a client offers nothing then. It is an offer, not a promise: every write re-checks under its lock, and `change_role` says a role change is possible at all — which roles, is `listAssignableRoles`'s answer. */
             allowed_actions?: ("change_role" | "issue_password_link" | "resend_invite" | "remove_mfa" | "deactivate" | "reactivate" | "hand_over" | "edit" | "merge" | "remove")[];
+            /** @description True when `merge` is in `allowed_actions` and this account has been used (a password, a sign-in or a linked provider), so merging it waits for the holder of each side that can still sign in to confirm. Absent otherwise, and on the same views as `allowed_actions`. */
+            merge_needs_confirmation?: boolean;
+            /** @description The member verbs the caller holds the `user_admin` grant for and this member refuses, each with the reason, so a client explains the missing button instead of hiding it. An action never appears here and in `allowed_actions`. Present wherever `allowed_actions` is; empty when nothing is refused. */
+            unavailable_actions?: components["schemas"]["MemberUnavailableAction"][];
             /**
              * Format: date-time
              * @description When this member last used the product: the latest request any of their sign-in sessions made, including a session since signed out, revoked or expired. Clearing dead sessions records the latest of their requests on the member first, so the value outlives the sessions. Signing in counts as activity. Work an agent or a connected app did on their behalf does not.
@@ -51219,7 +52134,7 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
-            /** @description The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset. */
+            /** @description The name the member's greetings use, when the given name read off `display_name` is not it. Optional; absent, empty or null leaves it unset. */
             greeting_name?: string | null;
             /** @description A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. A caller who is not an admin may only produce an account whose whole access their own contains — every grant, row scope, team and readable field — because the set-password link goes to an address the caller chooses. `listAssignableRoles` names the roles this caller may hand out. */
             role: string;
@@ -52474,7 +53389,10 @@ export interface components {
         AnalyticsAnswer: {
             /** @description What each value in a row means, in order. */
             columns: string[];
-            /** @description One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own. */
+            /**
+             * @description One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
+             *     A number past ±(2^53−1) is null, and `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the row is answered.
+             */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -52846,7 +53764,7 @@ export interface components {
          *     The SERVER does not derive from it. `identity/internal/policy.coreObjects` is maintained separately (oapi-codegen emits nothing for a top-level standalone string enum, so there are no generated Go constants to derive from), and a typo there is an ordinary runtime value, not a compile error. What keeps the two honest is a merge-blocking parity test, `backend/gates/rbacvocabulary_test.go`, which holds this enum equal to that list. Editing this enum alone changes what clients can express, never what the server enforces — change both, and the gate will say so if you do not.
          * @enum {string}
          */
-        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "data_task" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review" | "legal_entity" | "sales_initiative" | "tax_rate";
+        RbacObject: "contact" | "company" | "deal" | "lead" | "activity" | "pipeline" | "list" | "tag" | "relationship" | "partner" | "automation" | "voice_profile" | "product" | "offer" | "signal" | "saved_view" | "custom_field" | "computed_field" | "offer_template" | "embedding_reindex" | "webhook_subscription" | "fx_rate" | "ai_model_rate" | "capture_settings" | "project" | "channel_connection" | "import_run" | "installation_settings" | "finance" | "integrations" | "retention_policy" | "capture_trace" | "license" | "contract" | "ai_routing" | "ai_budget" | "ai_team_rules" | "commission" | "deal_room" | "knowledge_corpus" | "knowledge_document" | "introduction" | "weekly_plan" | "forecast" | "data_coverage" | "user_admin" | "role_admin" | "team_admin" | "privacy_request" | "audit_log" | "job_health" | "data_task" | "extension_access" | "system_reset" | "ai_diagnostics" | "consent_config" | "communication_exception" | "authentication_policy" | "oauth_application" | "agent_client" | "seat_usage" | "team_oversight" | "team_lead" | "report_definition" | "sales_target" | "reporting_framework" | "report_schedule" | "report_edition" | "reporting_credit" | "legal_review" | "legal_entity" | "sales_initiative" | "tax_rate";
         /**
          * @description The four object-level verbs a grant carries (data-model §2.4). These are RBAC actions, not HTTP methods: the seat ceiling is clamped on the method independently, and the two diverge in both directions — a read-seat GET that the object grants, and a mutating route whose RBAC action is `read`.
          * @enum {string}
@@ -53965,6 +54883,8 @@ export interface components {
             reportable: boolean;
             /** @description The activity kinds an activity field applies to; null means every kind, and every other object's field is null. A logged or edited activity of another kind refuses a value for the field with `422 field_not_valid_for_kind`. A value stored before the field was narrowed stays readable, and sending null clears it. */
             activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[] | null;
+            /** @description The pipelines a deal field applies to; null means every pipeline, and every other object's field is null. A created or edited deal of another pipeline refuses a value for the field with `422 field_not_valid_for_pipeline`. A pipeline that is archived matches nothing. A value stored before the field was narrowed, or on a deal that moved pipeline, stays stored and readable, and sending null clears it. */
+            pipeline_ids?: string[] | null;
             /** Format: uuid */
             created_by: string;
             /** Format: date-time */
@@ -54030,8 +54950,10 @@ export interface components {
             show_in_create: boolean;
             /** @description The activity kinds the field applies to. Only an activity field may name any; omitted or empty means every kind. An unknown kind, or kinds on another object's field, is refused with a 422. */
             activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];
+            /** @description The pipelines the field applies to. Only a deal field may name any; omitted or empty means every pipeline. An id that is not a live pipeline, or ids on another object's field, is refused with a 422. */
+            pipeline_ids?: string[];
         };
-        /** @description Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. */
+        /** @description Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable`, `activity_kinds` and `pipeline_ids`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. `pipeline_ids` does the same for the pipelines a deal field applies to. */
         RenameCustomFieldRequest: {
             label?: string;
             label_translations?: components["schemas"]["LabelTranslations"];
@@ -54039,6 +54961,7 @@ export interface components {
             show_in_create?: boolean;
             reportable?: boolean;
             activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];
+            pipeline_ids?: string[];
         };
         /** @description CUSTOM-FIELDS-PARAM-5. Replaces the picklist's full allowed-option set (ordered); at least one option is required — an empty array is rejected (422). */
         UpdateCustomFieldOptionsRequest: {
@@ -54237,7 +55160,7 @@ export interface components {
                 [key: string]: unknown;
             };
             columns: string[];
-            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. */
+            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. A total past ±(2^53−1) is null, and the row's `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the report is answered. */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -54282,7 +55205,7 @@ export interface components {
             rows: {
                 [key: string]: unknown;
             }[];
-            /** @description The requested aggregates recomputed over exactly these source rows — equals the explained cell. */
+            /** @description The requested aggregates recomputed over exactly these source rows — equals the explained cell. A total past ±(2^53−1) is null and named in `_out_of_range`, as on the report row. */
             aggregates?: {
                 [key: string]: unknown;
             };
@@ -54331,6 +55254,11 @@ export interface components {
             carried_by?: number | null;
             /** @description On a `contact` hit found through `with_employees`: the company it currently works at that the query matched, which is why the hit is here — the contact's own text did not match. When the contact works at several matching companies, the best-matching one. Null on every other hit, a contact the query matched by its own text included. */
             readonly works_at?: components["schemas"]["SearchHitEmployer"] | null;
+            /**
+             * Format: uuid
+             * @description For a `deal_room` hit only: the deal the room belongs to, which is the record a client opens to reach the room. Absent on every other hit type.
+             */
+            readonly deal_id?: string | null;
             /** @description For a `company` hit only: the company's logo, the same URL its record carries as `Company.logo_url`. Absent when it has none, and on every other hit type. */
             readonly logo_url?: string | null;
             /** @description Where a contact, company, deal, lead or project hit stands, read with the page under THIS caller's grants and field masks, so a result list can say it without opening each record. Absent on every other hit type. */
@@ -54370,6 +55298,8 @@ export interface components {
              * @description When the record was last in touch: its newest logged call, mail, meeting or note. Set on a contact, a company and a deal.
              */
             last_activity_at?: string | null;
+            /** @description How to read `last_activity_at`, from the activity it names. Absent when that is null. */
+            readonly last_activity_precision?: components["schemas"]["OccurredPrecision"];
             /** @description The fields above a field mask withheld from this caller, by their wire names. */
             masked_fields?: string[];
         };
@@ -57920,6 +58850,8 @@ export interface components {
             selected_evidence?: components["schemas"]["NoticeSourceEvidenceReference"];
         };
         NoticeSourcePreview: {
+            /** @description The contact's own mail or meeting removes the duty, regardless of the source selected. Does not disclose unreadable activity identifiers. */
+            readonly subject_reached_out?: boolean;
             preview_token: string;
             /** @enum {string} */
             rule: "none" | "art13" | "art14";
@@ -59645,6 +60577,7 @@ export interface components {
             id: string;
             /** Format: uuid */
             room_id: string;
+            visible_to_buyer: boolean;
             /**
              * Format: uuid
              * @description Null for a room-level thread.
@@ -59663,6 +60596,11 @@ export interface components {
         };
         DealRoomThreadListResponse: {
             data: components["schemas"]["DealRoomThread"][];
+        };
+        BuyerRoomThreadListResponse: {
+            data: components["schemas"]["DealRoomThread"][];
+            /** @description True when a conversation this buyer wrote in is withheld because its file is no longer shared. No count and no file. */
+            hidden_own_conversations: boolean;
         };
         OpenDealRoomThreadRequest: {
             /**
@@ -59777,6 +60715,12 @@ export interface components {
             steward_name?: string | null;
             /** @description Omitted while access is `paused` or `expired`, and when nothing has been published yet. */
             room?: components["schemas"]["BuyerRoomContent"];
+            /** @description Present on a seat's first sign-in, and on a seller preview so the seller sees what the buyer will see. Tells the buyer that the seller's company can see the sign-in and the downloads. It has no action. */
+            engagement_notice?: components["schemas"]["BuyerEngagementNotice"];
+        };
+        BuyerEngagementNotice: {
+            /** @description The seller's company, as the invitation mail names it. */
+            company: string;
         };
         /** @description A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like CustomField, this is workspace-authored config, not a captured record; provenance lives in the audit row, not this schema. */
         OfferTemplate: {
@@ -62447,6 +63391,10 @@ export interface components {
              *     domain. Reopening retries identification without settling identity. These verbs route
              *     to `/capture/domain-questions/{domain}/…`.
              *
+             *     `send_again` is offered on a bounced message that may be sent once more. The reader
+             *     types a corrected address and the same message goes out to it, through
+             *     `POST /attention/bounces/{id}/send-again`.
+             *
              *     `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
              *     to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
              *     to `/notices/{id}/read` — the reader has seen it, and it leaves the lane. `set_aside` rather than reusing `snooze`: a task's
@@ -62454,7 +63402,14 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel" | "send_again")[];
+        };
+        BounceSendAgainRequest: {
+            /**
+             * Format: email
+             * @description The corrected address. It replaces the address that refused, and it must differ from it.
+             */
+            address: string;
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -64169,7 +65124,7 @@ export interface components {
              */
             undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel" | "send_again")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -65250,6 +66205,11 @@ export interface components {
             coverage: components["schemas"]["KnowledgeCoverage"];
             /** Format: date-time */
             created_at: string;
+            /**
+             * Format: date-time
+             * @description When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set, and it takes the `knowledge_corpus` delete grant that archives and restores one.
+             */
+            archived_at?: string | null;
         };
         /** @description Every corpus, unpaged. A workspace defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a promise with no producer behind it. */
         KnowledgeCorpusList: {
@@ -69345,7 +70305,7 @@ export interface operations {
                 status_any?: ("unknown" | "target" | "prospect" | "opportunity" | "onboarding" | "live" | "customer" | "former_customer" | "disqualified")[];
                 /** @description Accounts carrying this relationship type. Multi-valued per account, so this selects accounts that are AT LEAST this — a partner that is also a customer matches both. */
                 relationship_type?: "customer" | "partner" | "supplier" | "investor" | "portfolio_company" | "competitor" | "other";
-                /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. */
+                /** @description Accounts carrying this extension type (`ext:<unit>:<type>`, from `extension_relationship_types`). It is a separate parameter so the closed `relationship_type` list stays as it is. A value no installed extension declares answers 422. Both parameters together select accounts that carry both. `listCompanyTypes` lists the values, and an agent reads them with the `read_workspace` action `company_types`. */
                 extension_relationship_type?: string;
                 /**
                  * @description Rows owned by any member of this team. NARROWS the caller's row scope, never widens it:
@@ -70853,6 +71813,40 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    endPartnerProgram: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Partner program ended. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -72593,7 +73587,7 @@ export interface operations {
                 priority?: "low" | "medium" | "high" | "unset";
                 /** @description An acquisition-source key, or `unset` for unclassified deals. A retired key still filters, so history stays reachable after the source leaves the picker. */
                 acquisition_source?: string;
-                /** @description A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. */
+                /** @description A link type, core's or an extension's `ext:<unit>:<type>`. Keeps the deals that hold at least one link of that type to another live deal, from either end. Links to a company or a contact are not read by this filter. `listLinkTypes` lists the values, and an agent reads them with the `read_workspace` action `link_types`. */
                 link_type?: string;
                 /**
                  * @description Narrow to the records carrying these tags. Repeat the parameter for several.
@@ -76653,6 +77647,43 @@ export interface operations {
             423: components["responses"]["RetentionHeld"];
         };
     };
+    takeTask: {
+        parameters: {
+            query?: never;
+            header?: {
+                /**
+                 * @description Optional optimistic-concurrency precondition for a mutating request (PATCH/advance/merge):
+                 *     the last-seen entity `version`. If the row's current `version` differs, the write is
+                 *     rejected with `409 code: version_skew` (ErrVersionSkew) and no change is made — re-read,
+                 *     re-apply, retry. Omitting it is last-write-wins (discouraged for agent/automated writers).
+                 *     Accepted on every native (SoR-mode) mutating endpoint that returns a versioned entity.
+                 */
+                "If-Match"?: components["parameters"]["IfMatch"];
+            };
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The task, now assigned to the caller. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["VersionConflict"];
+            422: components["responses"]["ValidationError"];
+            423: components["responses"]["RetentionHeld"];
+        };
+    };
     setActivityDisposition: {
         parameters: {
             query?: never;
@@ -80061,7 +81092,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DealRoomThreadListResponse"];
+                    "application/json": components["schemas"]["BuyerRoomThreadListResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -83518,7 +84549,7 @@ export interface operations {
     getFilterVocabulary: {
         parameters: {
             query: {
-                /** @description The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. */
+                /** @description The record type whose vocabulary to read, or `ext:<unit>:<kind>` for a kind an extension declared. `listRecordKinds` lists the kinds the caller may read, and an agent reads them with the `read_workspace` action `record_kinds`. */
                 resource: components["schemas"]["FilterResource"];
             };
             header?: never;
@@ -85242,6 +86273,15 @@ export interface operations {
                     "application/json": components["schemas"]["SavedView"];
                 };
             };
+            /** @description `view_name_taken` — another live view of this resource owned by the caller has this name. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -85330,7 +86370,15 @@ export interface operations {
                 };
             };
             404: components["responses"]["NotFound"];
-            409: components["responses"]["Conflict"];
+            /** @description `version_skew` — the view changed since it was read; or `view_name_taken` — another live view of this resource owned by the caller has this name. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             422: components["responses"]["ValidationError"];
         };
     };
@@ -85711,6 +86759,292 @@ export interface operations {
             };
         };
     };
+    listWhatsAppConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description WhatsApp connections. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppConnectionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createWhatsAppConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateWhatsAppConnectionRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection and its verify token. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppConnectionCreated"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal the secrets in (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateWhatsAppConnectionVisibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTelegramBusinessConnectionVisibilityRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnectWhatsAppConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    listZaloOAConnections: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Zalo Official Account connections. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZaloOAConnectionListResponse"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    createZaloOAConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["CreateZaloOAConnectionRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection. */
+            201: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZaloOAConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured to seal the secrets in (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    updateZaloOAConnectionVisibility: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["UpdateTelegramBusinessConnectionVisibilityRequest"];
+            };
+        };
+        responses: {
+            /** @description The connection as it now stands. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZaloOAConnection"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    disconnectZaloOAConnection: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Disconnected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+            /** @description This deployment serves no messaging channels (`code: channel_connections_not_configured`), or has no credential store configured (`code: channel_credentials_not_configured`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
     getChannelLink: {
         parameters: {
             query?: never;
@@ -86081,6 +87415,178 @@ export interface operations {
                 };
             };
             /** @description This deployment takes no chat notices, or could not record the notice id (`code: channel_events_unavailable`); Dispact retries. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    verifyWhatsAppWebhook: {
+        parameters: {
+            query?: {
+                /** @description Always `subscribe`. */
+                "hub.mode"?: string;
+                "hub.verify_token"?: string;
+                "hub.challenge"?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The challenge, echoed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "text/plain": string;
+                };
+            };
+            /** @description The token matches no connected number (`code: channel_event_rejected`). */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This deployment takes no WhatsApp events (`code: channel_events_unavailable`). */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    receiveWhatsAppWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["WhatsAppWebhookDelivery"];
+            };
+        };
+        responses: {
+            /** @description The delivery was taken. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["WhatsAppWebhookReceipt"];
+                };
+            };
+            /** @description The body is signed by no connected number (`code: channel_event_rejected`). The answer is the same for each cause. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The body is larger than a delivery can be (`code: channel_event_too_large`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate-limited; Meta retries. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This deployment takes no WhatsApp events, or could not store the delivery (`code: channel_events_unavailable`); Meta retries. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    receiveZaloOAWebhook: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ZaloWebhookEvent"];
+            };
+        };
+        responses: {
+            /** @description The event was taken. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ZaloWebhookReceipt"];
+                };
+            };
+            /** @description The body is signed by no connected Official Account (`code: channel_event_rejected`). The answer is the same for each cause. */
+            403: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The body is larger than an event can be (`code: channel_event_too_large`). */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Rate-limited; Zalo retries. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description This deployment takes no Zalo events, or could not store the event (`code: channel_events_unavailable`); Zalo retries. */
             503: {
                 headers: {
                     [name: string]: unknown;
@@ -89802,6 +91308,28 @@ export interface operations {
             };
         };
     };
+    listReplyableSharedMailboxes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mailboxes the caller may reply as, ordered by address. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplyableSharedMailboxList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
     updateSharedMailbox: {
         parameters: {
             query?: never;
@@ -90442,6 +91970,38 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    sendBouncedMessageAgain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BounceSendAgainRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted for send (queued); the resulting outbound activity is logged. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["SendRefused"];
+            422: components["responses"]["SendValidationError"];
         };
     };
     getMagic: {
@@ -91165,6 +92725,95 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    getGoogleDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The connection status. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleDirectoryStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    setGoogleDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["GoogleDirectoryInput"];
+            };
+        };
+        responses: {
+            /** @description Sealed. The status, with the check just made. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["GoogleDirectoryStatus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["SettingLocked"];
+            422: components["responses"]["ValidationError"];
+            /** @description This installation has no key vault, so the credential cannot be stored. The remedy is the operator's, the vault root key, and not anything the caller sent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    deleteGoogleDirectory: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed, or there was nothing to remove. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            409: components["responses"]["SettingLocked"];
+            /** @description This installation has no key vault, so there is no sealed credential to remove. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getInstallationSettings: {
@@ -92266,6 +93915,64 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+        };
+    };
+    getAiTeamRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The saved team rules, empty text when none were saved. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTeamRules"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
+    replaceAiTeamRules: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["AiTeamRulesChange"];
+            };
+        };
+        responses: {
+            /** @description The saved team rules. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["AiTeamRules"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            /** @description The team rules changed since the editor read them; reload before saving. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
         };
     };
     getAiBudget: {
@@ -97726,6 +99433,98 @@ export interface operations {
             404: components["responses"]["NotFound"];
             409: components["responses"]["VersionConflict"];
             422: components["responses"]["ValidationError"];
+        };
+    };
+    requestMemberMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MergeMembersRequest"];
+            };
+        };
+        responses: {
+            /** @description The preview after the request. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MemberRetirementPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            /** @description Another change since the preview, a blocker still open, nothing left to confirm, or no way to send email. */
+            409: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    confirmMemberMerge: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Confirmed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description Invalid, used, or expired token (one neutral error for all of them). */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Rate-limited. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     mergeMembers: {
@@ -105735,6 +107534,78 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listMyChatIdentities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Your chat accounts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatIdentityList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    startMyChatVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                network: "whatsapp" | "telegram" | "zalo";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The code and when it stops working. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatVerificationStarted"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    removeMyChatIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                network: "whatsapp" | "telegram" | "zalo";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getMyAiActivity: {
         parameters: {
             query?: {
@@ -107601,7 +109472,10 @@ export interface operations {
     };
     listCorpora: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include soft-deleted (archived) rows. Default false. */
+                include_archived?: components["parameters"]["IncludeArchived"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -107619,6 +109493,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createCorpus: {
@@ -107741,6 +109616,34 @@ export interface operations {
         };
         responses: {
             /** @description The corpus. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeCorpus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NameTakenConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreCorpus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The restored corpus. */
             200: {
                 headers: {
                     [name: string]: unknown;

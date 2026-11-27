@@ -167,6 +167,10 @@ func (stubs) SendMessage(w nethttp.ResponseWriter, r *nethttp.Request, id crmcon
 	httperr.NotImplemented(w, r, "SendMessage")
 }
 
+func (stubs) TakeTask(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.TakeTaskParams) {
+	httperr.NotImplemented(w, r, "TakeTask")
+}
+
 func (stubs) GetTaskExplanation(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "GetTaskExplanation")
 }
@@ -397,6 +401,14 @@ func (stubs) ReplaceAiTaskOverrides(w nethttp.ResponseWriter, r *nethttp.Request
 
 func (stubs) PreviewAiTaskOverrides(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "PreviewAiTaskOverrides")
+}
+
+func (stubs) GetAiTeamRules(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetAiTeamRules")
+}
+
+func (stubs) ReplaceAiTeamRules(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReplaceAiTeamRules")
 }
 
 func (stubs) GetAiUsage(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.GetAiUsageParams) {
@@ -811,6 +823,10 @@ func (stubs) GetAttention(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAttention")
 }
 
+func (stubs) SendBouncedMessageAgain(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SendBouncedMessageAgain")
+}
+
 func (stubs) ListAuditLog(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAuditLogParams) {
 	httperr.NotImplemented(w, r, "ListAuditLog")
 }
@@ -821,6 +837,10 @@ func (stubs) GetAuthCapabilities(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) ChangePassword(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ChangePassword")
+}
+
+func (stubs) ConfirmMemberMerge(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ConfirmMemberMerge")
 }
 
 func (stubs) RequestPasswordReset(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -1139,6 +1159,38 @@ func (stubs) UpdateTelegramBusinessConnectionVisibility(w nethttp.ResponseWriter
 	httperr.NotImplemented(w, r, "UpdateTelegramBusinessConnectionVisibility")
 }
 
+func (stubs) ListWhatsAppConnections(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListWhatsAppConnections")
+}
+
+func (stubs) CreateWhatsAppConnection(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateWhatsAppConnection")
+}
+
+func (stubs) DisconnectWhatsAppConnection(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DisconnectWhatsAppConnection")
+}
+
+func (stubs) UpdateWhatsAppConnectionVisibility(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateWhatsAppConnectionVisibility")
+}
+
+func (stubs) ListZaloOAConnections(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListZaloOAConnections")
+}
+
+func (stubs) CreateZaloOAConnection(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateZaloOAConnection")
+}
+
+func (stubs) DisconnectZaloOAConnection(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DisconnectZaloOAConnection")
+}
+
+func (stubs) UpdateZaloOAConnectionVisibility(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateZaloOAConnectionVisibility")
+}
+
 func (stubs) DisconnectChannel(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DisconnectChannel")
 }
@@ -1149,6 +1201,18 @@ func (stubs) ReplaceChannelToken(w nethttp.ResponseWriter, r *nethttp.Request, i
 
 func (stubs) ReceiveDispactChannelEvent(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ReceiveDispactChannelEvent")
+}
+
+func (stubs) VerifyWhatsAppWebhook(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.VerifyWhatsAppWebhookParams) {
+	httperr.NotImplemented(w, r, "VerifyWhatsAppWebhook")
+}
+
+func (stubs) ReceiveWhatsAppWebhook(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReceiveWhatsAppWebhook")
+}
+
+func (stubs) ReceiveZaloOAWebhook(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ReceiveZaloOAWebhook")
 }
 
 func (stubs) UnlinkChannel(w nethttp.ResponseWriter, r *nethttp.Request, recordType crmcontracts.ChannelLinkRecordType, id crmcontracts.Id) {
@@ -1397,6 +1461,10 @@ func (stubs) MergeCompany(w nethttp.ResponseWriter, r *nethttp.Request, id crmco
 
 func (stubs) ListCompanyOfferedValues(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "ListCompanyOfferedValues")
+}
+
+func (stubs) EndPartnerProgram(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.EndPartnerProgramParams) {
+	httperr.NotImplemented(w, r, "EndPartnerProgram")
 }
 
 func (stubs) GetPartner(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.GetPartnerParams) {
@@ -2587,6 +2655,18 @@ func (stubs) GetAuthenticationPolicy(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "GetAuthenticationPolicy")
 }
 
+func (stubs) DeleteGoogleDirectory(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "DeleteGoogleDirectory")
+}
+
+func (stubs) GetGoogleDirectory(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "GetGoogleDirectory")
+}
+
+func (stubs) SetGoogleDirectory(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "SetGoogleDirectory")
+}
+
 func (stubs) GetInstallationConfiguration(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetInstallationConfiguration")
 }
@@ -2671,7 +2751,7 @@ func (stubs) ReplaceIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "ReplaceIntroRequest")
 }
 
-func (stubs) ListCorpora(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) ListCorpora(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListCorporaParams) {
 	httperr.NotImplemented(w, r, "ListCorpora")
 }
 
@@ -2701,6 +2781,10 @@ func (stubs) ListCorpusDocuments(w nethttp.ResponseWriter, r *nethttp.Request, i
 
 func (stubs) UploadCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "UploadCorpusDocument")
+}
+
+func (stubs) RestoreCorpus(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RestoreCorpus")
 }
 
 func (stubs) DeleteCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -3069,6 +3153,18 @@ func (stubs) GetMyBriefDelivery(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) SaveMyBriefDelivery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyBriefDelivery")
+}
+
+func (stubs) ListMyChatIdentities(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListMyChatIdentities")
+}
+
+func (stubs) RemoveMyChatIdentity(w nethttp.ResponseWriter, r *nethttp.Request, network string) {
+	httperr.NotImplemented(w, r, "RemoveMyChatIdentity")
+}
+
+func (stubs) StartMyChatVerification(w nethttp.ResponseWriter, r *nethttp.Request, network string) {
+	httperr.NotImplemented(w, r, "StartMyChatVerification")
 }
 
 func (stubs) SaveMyDisplayName(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -4019,6 +4115,10 @@ func (stubs) ConnectSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "ConnectSharedMailbox")
 }
 
+func (stubs) ListReplyableSharedMailboxes(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListReplyableSharedMailboxes")
+}
+
 func (stubs) UpdateSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "UpdateSharedMailbox")
 }
@@ -4269,6 +4369,10 @@ func (stubs) HandOverUserWork(w nethttp.ResponseWriter, r *nethttp.Request, id c
 
 func (stubs) MergeMembers(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergeMembersParams) {
 	httperr.NotImplemented(w, r, "MergeMembers")
+}
+
+func (stubs) RequestMemberMerge(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RequestMemberMerge")
 }
 
 func (stubs) RemoveUserMfa(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

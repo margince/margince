@@ -12,32 +12,15 @@ import (
 	"errors"
 	"testing"
 
-	"github.com/jackc/pgx/v5"
-
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
-// retireProgramme archives a company's partner row and its relationship types
-// together, which is the pair companyarchive keeps in lockstep.
-//
-// PLANTED, and worth saying why. No writer in the product reaches this state on
-// a LIVE company today: the only statement that archives a partner row archives
-// the whole company with it, and a merge refuses an archived source. What the
-// merge's verdict must not do is read a row's EXISTENCE as a live programme,
-// and this is the input that asks it.
+// retireProgramme uses the product lifecycle to leave a live company with an ended program.
 func (e *dedupeEnv) retireProgramme(ctx context.Context, t *testing.T, company ids.CompanyID) {
 	t.Helper()
-	if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-		if _, err := tx.Exec(ctx,
-			`UPDATE partner SET archived_at = now() WHERE company_id = $1`, company); err != nil {
-			return err
-		}
-		_, err := tx.Exec(ctx,
-			`UPDATE company_relationship_type SET archived_at = now() WHERE company_id = $1`, company)
-		return err
-	}); err != nil {
-		t.Fatalf("retiring the partner programme: %v", err)
+	if err := e.store.EndPartnerProgram(ctx, company, nil); err != nil {
+		t.Fatal(err)
 	}
 }
 

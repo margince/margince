@@ -12,7 +12,6 @@ import (
 	"errors"
 	"fmt"
 	"net/http"
-	"regexp"
 	"strings"
 	"time"
 
@@ -22,7 +21,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
-	"github.com/margince/margince/backend/internal/platform/langcode"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -36,15 +34,9 @@ const (
 	translationTextLimit    = values.TextDocumentCharacters
 )
 
-var languageShape = regexp.MustCompile(`^[a-z]{2}$`)
-
-// checkLanguage refuses anything but a lower-case ISO 639-1 code that names a
-// language, for a language about to be stored.
-func checkLanguage(language string) error {
-	if !langcode.Known(language) {
-		return languageRefusal()
-	}
-	return nil
+// checkLanguage refuses a code the language table does not hold.
+func checkLanguage(ctx context.Context, tx pgx.Tx, language string) error {
+	return storekit.CheckLanguage(ctx, tx, languageField, language)
 }
 
 // checkLanguageShape takes any code of the stored shape, so a translation
@@ -97,9 +89,6 @@ func (s *Store) PutProductTranslation(ctx context.Context, id ids.ProductID, lan
 	if err := auth.Require(ctx, "product", principal.ActionUpdate); err != nil {
 		return crmcontracts.ProductTranslation{}, err
 	}
-	if err := checkLanguage(language); err != nil {
-		return crmcontracts.ProductTranslation{}, err
-	}
 	name = strings.TrimSpace(name)
 	if description != nil && strings.TrimSpace(*description) == "" {
 		description = nil
@@ -119,6 +108,9 @@ func (s *Store) PutProductTranslation(ctx context.Context, id ids.ProductID, lan
 	var out crmcontracts.ProductTranslation
 	err = s.Tx(ctx, func(tx pgx.Tx) error {
 		if err := lockProductForTranslation(ctx, tx, id); err != nil {
+			return err
+		}
+		if err := checkLanguage(ctx, tx, language); err != nil {
 			return err
 		}
 		before, err := readProductTranslation(ctx, tx, id, language)

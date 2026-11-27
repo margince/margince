@@ -8,14 +8,27 @@ import (
 	"strings"
 )
 
-const calendarResourceDomain = "resource.calendar.google.com"
+// calendarResourceDomains are the domains Google gives a calendar that is not
+// a human: a booked room or device, and a shared group calendar.
+var calendarResourceDomains = []string{"resource.calendar.google.com", "group.calendar.google.com"}
 
-// IsCalendarResourceDomain identifies folded calendar room and device domains.
+// IsCalendarResourceDomain identifies folded calendar room, device and shared
+// calendar domains.
 func IsCalendarResourceDomain(domain string) bool {
-	return domain == calendarResourceDomain || strings.HasSuffix(domain, "."+calendarResourceDomain)
+	for _, resource := range calendarResourceDomains {
+		if domain == resource || strings.HasSuffix(domain, "."+resource) {
+			return true
+		}
+	}
+	return false
 }
 
 // CalendarResourceDomainSQL accepts a compile-time folded domain expression.
 func CalendarResourceDomainSQL(domain string) string {
-	return "(" + domain + " = '" + calendarResourceDomain + "' OR right(" + domain + ", " + strconv.Itoa(len(calendarResourceDomain)+1) + ") = '." + calendarResourceDomain + "')"
+	clauses := make([]string, 0, len(calendarResourceDomains))
+	for _, resource := range calendarResourceDomains {
+		clauses = append(clauses, domain+" = '"+resource+"' OR right("+domain+", "+
+			strconv.Itoa(len(resource)+1)+") = '."+resource+"'")
+	}
+	return "(" + strings.Join(clauses, " OR ") + ")"
 }

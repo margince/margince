@@ -66,6 +66,9 @@ type UpdateActivityInput struct {
 	// doneAtAnyVersion lets a caller's Done land on a task already done at any
 	// version. A machine completion leaves it off: its skew says it did not flip the task.
 	doneAtAnyVersion bool
+	// takesUnassigned marks the one write a reader without write authority may
+	// make: setting themselves as the assignee of an open task nobody holds.
+	takesUnassigned bool
 	// confirmedDue admits a due date outside the window that a human kept when asked.
 	confirmedDue bool
 }

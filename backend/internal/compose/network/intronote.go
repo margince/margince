@@ -29,6 +29,8 @@ import (
 	"github.com/jackc/pgx/v5"
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
+	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -58,8 +60,8 @@ type Completer interface {
 // caller's profile here would sign the colleague's message in somebody else's
 // style — and the colleague need not be a Margince user at all, so there is
 // frequently no profile to load even in principle.
-func (h Reads) WithIntroNoteLane(lane Completer) Reads {
-	h.introNoteLane = lane
+func (h Reads) WithIntroNoteLane(lane Completer, rules draftvoice.RulesReader) Reads {
+	h.introNoteLane, h.introNoteRules = lane, rules
 	return h
 }
 
@@ -124,7 +126,12 @@ func (h Reads) DraftIntroNote(w http.ResponseWriter, r *http.Request, id crmcont
 	// this product knows about them, so an erasure reaching that contact must
 	// reach this call's payloads.
 	ctx := ai.WithSubject(r.Context(), contactID.Ref(), facts.contact)
-	httperr.WriteJSON(w, http.StatusOK, writeIntroNote(ctx, h.introNoteLane, facts))
+	draft, err := writeIntroNote(ctx, h.introNoteLane, h.introNoteRules, facts)
+	if err != nil {
+		modelfailure.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, draft)
 }
 
 // checkNoteIDs refuses an id the caller did not send, by name.

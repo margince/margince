@@ -27,6 +27,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/relstrength"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
@@ -244,14 +245,16 @@ func (w *capturedDealRefileWorker) offerBack(ctx context.Context, closed deals.S
 			return err
 		}
 		var progress *time.Time
+		var precision *string
 		keptOpen := relstrength.DealKeptOpenSQL("a", "al.deal_id")
-		err = tx.QueryRow(ctx, `SELECT max(a.occurred_at) FROM activity a JOIN activity_link al ON al.activity_id = a.id
+		err = tx.QueryRow(ctx, `SELECT max(a.occurred_at), `+occurredday.LatestPrecisionSQL("a", "")+`
+			 FROM activity a JOIN activity_link al ON al.activity_id = a.id
 			 WHERE al.deal_id = $1 AND a.archived_at IS NULL AND `+customerProgressAnyAudienceSQL("a", keptOpen, "$2"),
-			closed.Deal, closed.ClosedAt).Scan(&progress)
+			closed.Deal, closed.ClosedAt).Scan(&progress, &precision)
 		if err != nil {
 			return fmt.Errorf("compose: reading the customer's mail before a close: %w", err)
 		}
-		premature = progress != nil && daysSince(progress, closed.ClosedAt, zone) <= threshold
+		premature = progress != nil && daysSince(progress, occurredday.IsStatedDay(precision), closed.ClosedAt, zone) <= threshold
 		return nil
 	})
 	if err != nil || !premature {

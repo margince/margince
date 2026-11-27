@@ -387,6 +387,7 @@ function RoomView({
       <BuyerHero
         title={view.room.title}
         welcome={view.room.welcome_message ?? ""}
+        notice={view.engagement_notice}
         access={view.access}
         closedAt={view.room.closed_at}
       />

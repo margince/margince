@@ -209,7 +209,7 @@ func (s *Store) answerOnDealFiling(ctx context.Context, tx pgx.Tx, id ids.Activi
 	if err := fileRelinkedDealProject(ctx, tx, id, project); err != nil {
 		return err
 	}
-	return s.answerWhichDealTx(ctx, tx, id, in.EntityID)
+	return answerWhichDealTx(ctx, tx, id, in.EntityID)
 }
 
 // projectLinksFirst orders a copied link set so its own project lands before

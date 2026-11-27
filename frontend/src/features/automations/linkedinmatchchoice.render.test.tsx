@@ -7,6 +7,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Approval } from "../../lib/approvals.queries";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import type { GrantSpec } from "../../testing/mefixture";
+import { recordNamesAnswer } from "../../testing/recordnames.testkit";
 import {
   installFetchStub,
   jsonResponse,
@@ -269,5 +270,90 @@ describe("the LinkedIn match boxes", () => {
     show(linkedInMatch());
     await screen.findByRole("button", { name: "Approve" });
     expect(screen.queryByRole("button", { name: "Edit" })).toBeNull();
+  });
+});
+
+const CANDIDATE = "77777777-7777-4777-8777-777777777777";
+
+function vcardCreate(change: Record<string, unknown> = {}): Approval {
+  return {
+    id: "ap-card",
+    kind: "vcard_create",
+    status: "pending",
+    summary: "Anna Weber resembles an existing contact",
+    proposed_by: "human:importer",
+    proposed_change: {
+      entry: { full_name: "Anna Weber" },
+      name: "Anna Weber",
+      candidate_contact_id: CANDIDATE,
+      merge_into_candidate: false,
+      ...change,
+    },
+    created_at: "2026-10-20T09:00:00Z",
+  } as Approval;
+}
+
+function stubCardReview(sees: boolean) {
+  const sent: unknown[] = [];
+  installFetchStub({
+    "GET /me": meRoute({ contact: ["create", "update"] }),
+    "GET /records/references": (_body: unknown, url: URL) =>
+      recordNamesAnswer(
+        url,
+        sees ? { contact: { [CANDIDATE]: "Anna W." } } : {},
+      ) ?? jsonResponse({ data: [] }),
+    "POST /approvals/ap-card/approve": (body) => {
+      sent.push(body);
+      return jsonResponse({ id: "ap-card", status: "approved" });
+    },
+  });
+  return sent;
+}
+
+describe("the vCard review's merge box", () => {
+  it("keeps the card separate, with no edit, when the box is left alone", async () => {
+    const user = userEvent.setup();
+    const sent = stubCardReview(true);
+    show(vcardCreate());
+    expect(
+      await screen.findByRole("checkbox", {
+        name: "Merge into Anna W. instead of creating a new contact",
+      }),
+    ).not.toBeChecked();
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toBeNull();
+  });
+
+  it("sends the whole staged change with the merge choice when the box is ticked", async () => {
+    const user = userEvent.setup();
+    const sent = stubCardReview(true);
+    const approval = vcardCreate();
+    show(approval);
+    await user.click(
+      await screen.findByRole("checkbox", { name: /Merge into Anna W\./ }),
+    );
+    await user.click(screen.getByRole("button", { name: "Approve" }));
+    await waitFor(() => expect(sent).toHaveLength(1));
+    expect(sent[0]).toEqual({
+      edited_payload: {
+        ...approval.proposed_change,
+        merge_into_candidate: true,
+      },
+    });
+  });
+
+  it("offers no box for a contact this reader cannot see", async () => {
+    stubCardReview(false);
+    show(vcardCreate());
+    await screen.findByRole("button", { name: "Approve" });
+    expect(screen.queryByRole("checkbox")).toBeNull();
+  });
+
+  it("offers no box on a card staged before the choice existed", async () => {
+    stubCardReview(true);
+    show(vcardCreate({ merge_into_candidate: undefined }));
+    await screen.findByRole("button", { name: "Approve" });
+    expect(screen.queryByRole("checkbox")).toBeNull();
   });
 });

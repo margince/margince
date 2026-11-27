@@ -320,16 +320,18 @@ function SourcePreviewResult({
 }: Readonly<{ preview: components["schemas"]["NoticeSourcePreview"] }>) {
   const t = useT();
   const { locale } = useLocale();
-  const sentence = !preview.notice_required
-    ? t("notice.source.previewNone")
-    : preview.due_at
-      ? t(
-          preview.deadline_is_upper_bound
-            ? "notice.source.previewLatest"
-            : "notice.source.previewOwed",
-          { date: formatDate(preview.due_at, locale, preview.timezone) },
-        )
-      : t("notice.source.noDeadline");
+  const sentence = preview.subject_reached_out
+    ? t("notice.source.previewReachedOut")
+    : !preview.notice_required
+      ? t("notice.source.previewNone")
+      : preview.due_at
+        ? t(
+            preview.deadline_is_upper_bound
+              ? "notice.source.previewLatest"
+              : "notice.source.previewOwed",
+            { date: formatDate(preview.due_at, locale, preview.timezone) },
+          )
+        : t("notice.source.noDeadline");
   return <FieldRow label={t("notice.source.preview")}>{sentence}</FieldRow>;
 }
 

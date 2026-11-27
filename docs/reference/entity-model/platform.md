@@ -330,9 +330,15 @@ The 15 tables owned by `platform`, as the migrations build them. [Back to the en
 | `entity_type` | `text` | yes |  |
 | `evidence` | `uuid[]` | yes |  |
 | `fingerprint` | `text` | yes |  |
-| `language` | `text` | yes |  |
+| `language` | `text` | yes | Points at `language.code`. |
 | `text` | `text` | yes |  |
 | `written_at` | `timestamp with time zone`, default `now()` | yes |  |
+
+**Points at**
+
+| Columns | Table | When the parent goes |
+|---|---|---|
+| `language` | `language` | the parent cannot be deleted while this row points at it |
 
 **Rules**
 

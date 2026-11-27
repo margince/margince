@@ -110,8 +110,8 @@ func TestALiveListOverAnUnreadableKindIsRefusedAndOverARemovedOneEmpty(t *testin
 	if _, _, err := store.liveFilter(ctx, listRow{EntityType: "ext:gone:visit", ListType: listTypeDynamic}); !errors.Is(err, errKindRemoved) {
 		t.Errorf("liveFilter over a removed kind = %v, want errKindRemoved", err)
 	}
-	if clause := extensionMemberClause(ctx, visitKind, "ev.entity_id"); clause != "FALSE" {
-		t.Errorf("member clause = %q, want FALSE", clause)
+	if clause, err := extensionMemberClause(ctx, visitKind, "ev.entity_id", func(any) int { return 1 }); err != nil || clause != "FALSE" {
+		t.Errorf("member clause = %q, %v, want FALSE", clause, err)
 	}
 	visible, err := observedVisibleClause(readerOf("ext_alpha_visit"), visitKind, func(any) int { return 1 })
 	if err != nil || visible != `EXISTS (SELECT 1 FROM "ext"."ext_alpha_visit" e WHERE e.id = ev.entity_id AND e.archived_at IS NULL)` {

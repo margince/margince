@@ -11,14 +11,16 @@ import {
 } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
+import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
 import { useLastSubject } from "../../design-system/presence";
 import { QueryGate } from "../../design-system/querystates";
+import { Switch } from "../../design-system/switch";
 import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useCan, useCanWrite } from "../../lib/capability";
-import { throwProblem, unwrap } from "../../lib/problem";
+import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import {
   DocumentList,
@@ -26,6 +28,11 @@ import {
   NOT_SEARCHABLE,
   SETS_KEY,
 } from "./knowledge.documents";
+import {
+  EditDocumentSet,
+  SETS_WITH_ARCHIVED_KEY,
+  useRestoreDocumentSet,
+} from "./knowledge.edit";
 import { ReindexingNotice, shippedRefusal } from "./knowledge.notices";
 import "./knowledge.css";
 
@@ -46,10 +53,10 @@ import "./knowledge.css";
 
 type Corpus = components["schemas"]["KnowledgeCorpus"];
 
-function useDocumentSets(enabled: boolean) {
+function useDocumentSets(enabled: boolean, withArchived: boolean) {
   return useQuery({
     enabled,
-    queryKey: SETS_KEY,
+    queryKey: withArchived ? SETS_WITH_ARCHIVED_KEY : SETS_KEY,
     // A rebind sweep moves these counts with no document changing status.
     // An ordinary ingest refreshes this list from the documents instead.
     refetchInterval: (query) =>
@@ -57,7 +64,9 @@ function useDocumentSets(enabled: boolean) {
         ? INGEST_POLL_MS
         : false,
     queryFn: async () => {
-      const { data, error, response } = await api.GET("/knowledge/corpora");
+      const { data, error, response } = await api.GET("/knowledge/corpora", {
+        params: { query: withArchived ? { include_archived: true } : {} },
+      });
       if (error || !response.ok) {
         throwProblem(error);
       }
@@ -92,7 +101,10 @@ export function KnowledgeCard() {
   const t = useT();
   const canSee = useCan("knowledge_corpus", "read");
   const canManage = useCanWrite("knowledge_corpus", "create");
-  const query = useDocumentSets(canSee);
+  // Archived sets are listed for restoring them: the archive grant.
+  const canRestore = useCanWrite("knowledge_corpus", "delete");
+  const [showArchived, setShowArchived] = useState(false);
+  const query = useDocumentSets(canSee, showArchived && canRestore);
   const titleId = useId();
 
   if (!canSee) {
@@ -115,6 +127,15 @@ export function KnowledgeCard() {
         </span>
       }
       titleAction={canManage ? <NewDocumentSet /> : undefined}
+      actions={
+        canRestore && (
+          <Switch
+            label={t("knowledge.showArchived")}
+            checked={showArchived}
+            onChange={setShowArchived}
+          />
+        )
+      }
     >
       <PanelBody>
         <PanelIntro>{t("knowledge.sub")}</PanelIntro>
@@ -173,6 +194,8 @@ function DocumentSets({
   const plural = usePlural();
   const { locale } = useLocale();
   const [confirming, setConfirming] = useState<Corpus | null>(null);
+  const [editing, setEditing] = useState<Corpus | null>(null);
+  const restore = useRestoreDocumentSet();
   const asked = useLastSubject(confirming);
   const archived = useRef(false);
   const archive = useArchiveDocumentSet(() => {
@@ -183,7 +206,12 @@ function DocumentSets({
       key: "name",
       header: t("knowledge.col.name"),
       grow: true,
-      render: (set) => <span className="t-name">{set.name}</span>,
+      render: (set) => (
+        <span className="t-name">
+          {set.name}{" "}
+          {set.archived_at && <Badge>{t("knowledge.archivedBadge")}</Badge>}
+        </span>
+      ),
     },
     {
       key: "documents",
@@ -209,23 +237,38 @@ function DocumentSets({
       headerHidden: true,
       fold: "end",
       // A shipped set is filed again by the next update, so archiving it undoes nothing.
-      render: (set) =>
-        set.shipped ? null : (
-          <span className="cell-actions">
-            <OverflowMenu label={t("table.rowActions", { name: set.name })}>
+      render: (set) => (
+        <span className="cell-actions">
+          <OverflowMenu label={t("table.rowActions", { name: set.name })}>
+            {set.archived_at ? (
               <Button
-                aria-haspopup="dialog"
-                onClick={() => {
-                  archive.reset();
-                  archived.current = false;
-                  setConfirming(set);
-                }}
+                disabled={restore.isPending}
+                onClick={() => restore.mutate({ id: set.id })}
               >
-                {t("knowledge.archive")}
+                {t("knowledge.restore")}
               </Button>
-            </OverflowMenu>
-          </span>
-        ),
+            ) : (
+              <>
+                <Button aria-haspopup="dialog" onClick={() => setEditing(set)}>
+                  {t("knowledge.edit")}
+                </Button>
+                {set.shipped ? null : (
+                  <Button
+                    aria-haspopup="dialog"
+                    onClick={() => {
+                      archive.reset();
+                      archived.current = false;
+                      setConfirming(set);
+                    }}
+                  >
+                    {t("knowledge.archive")}
+                  </Button>
+                )}
+              </>
+            )}
+          </OverflowMenu>
+        </span>
+      ),
     });
   }
   return (
@@ -268,6 +311,12 @@ function DocumentSets({
       >
         <p>{t("knowledge.archiveConfirm.body")}</p>
       </ConfirmModal>
+      {editing && (
+        <EditDocumentSet set={editing} onClose={() => setEditing(null)} />
+      )}
+      {restore.isError && (
+        <ErrorLine standing>{problemMessageOf(restore.error, t)}</ErrorLine>
+      )}
     </>
   );
 }

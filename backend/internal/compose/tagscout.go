@@ -126,7 +126,7 @@ func tagScoutSQL(since, now time.Time) (string, []any) {
 	         a.id AS activity_id, a.occurred_at
 	    FROM activity a
 	    JOIN activity_link l ON l.activity_id = a.id AND l.entity_type IN ('contact', 'company')
-	    JOIN phrases p ON position(p.phrase IN lower(coalesce(a.subject, '') || ' ' || coalesce(a.body, ''))) > 0
+	    JOIN phrases p ON position(p.phrase IN lower(coalesce(a.subject, '') || ' ' || left(coalesce(a.body, ''), coalesce(a.body_own_end, char_length(coalesce(a.body, '')))))) > 0
 	   WHERE ` + tagScoutCitable("a") + `
 	     AND a.occurred_at > $1 -- occurred_at raw: the window starts where the previous pass stopped
 	     AND ` + occurredday.BegunSQL("a", "$2") + `

@@ -54,6 +54,7 @@ const IDENTITY_DEPTH: Readonly<Record<Screen, number>> = {
   // two kinds of mail.
   unsubscribe: WHOLE_ADDRESS,
   confirm: WHOLE_ADDRESS,
+  "confirm-merge": WHOLE_ADDRESS,
   room: WHOLE_ADDRESS,
   "oauth-consent": WHOLE_ADDRESS,
   "reset-password": WHOLE_ADDRESS,

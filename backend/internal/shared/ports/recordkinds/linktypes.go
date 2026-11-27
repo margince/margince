@@ -27,7 +27,7 @@ func IsLinkEnd(kind string) bool { return slices.Contains(extension.LinkEnds, ki
 
 // Allows reports whether the type may join a record of kind from to one of kind to.
 func (t LinkType) Allows(from, to string) bool {
-	return slices.Contains(t.From, from) && slices.Contains(t.To, to)
+	return extension.LinkType{From: t.From, To: t.To}.Joins(from, to)
 }
 
 // coreLinkTypes are the types core declares. They sit in the same registry an

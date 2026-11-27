@@ -14,7 +14,7 @@ mit Margince verbinden, liest das System Ihre geschäftliche E-Mail-Korresponden
 und legt sie im CRM ab, damit Vorgänge nachvollziehbar bleiben, wenn Sie im
 Urlaub sind oder das Unternehmen verlassen.
 
-**Die Verbindung erfolgt durch Sie selbst.** Ohne Ihre Anmeldung beim
+**Sie verbinden Ihr Postfach selbst.** Ohne Ihre Anmeldung beim
 E-Mail-Anbieter greift das System auf nichts zu.
 
 ## Welche Daten verarbeitet werden

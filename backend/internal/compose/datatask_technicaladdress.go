@@ -23,7 +23,7 @@ import (
 func technicalAddressDataTask(pool *pgxpool.Pool) datatask.Task {
 	store := newContactsStore(InstallationDB(pool))
 	return datatask.Task{
-		ID: "core/1793763111_technical_address_contacts", Version: 1,
+		ID: "core/1793763111_technical_address_contacts", Version: 2,
 		Title: systemtext.Literal("datatask.title.core.1793763111_technical_address_contacts"), Requires: []string{"core/1788327300"},
 		Steps: []datatask.Step{{
 			Name: "retire_technical_address_contacts", Limit: 25, MinLimit: 1,

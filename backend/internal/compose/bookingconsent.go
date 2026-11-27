@@ -296,3 +296,7 @@ func bookingMarketingFailure(err error, askedBySubject bool) (activities.Marketi
 	}
 	return activities.MarketingNotAsked, nil
 }
+
+func (a bookingConsentAdapter) BookingPrivacyInformation(ctx context.Context) (string, error) {
+	return a.store.BookingPrivacyInformation(ctx)
+}

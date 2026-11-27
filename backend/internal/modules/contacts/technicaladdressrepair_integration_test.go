@@ -106,3 +106,23 @@ func TestAMixedContactOnLegalHoldKeepsEveryAddress(t *testing.T) {
 		t.Errorf("addresses = %v, want both kept under legal hold", held)
 	}
 }
+
+// A shared Google calendar or a booked room names no one. A contact whose only
+// address is one is archived; a human's contact beside it is left alone.
+func TestACalendarAddressContactIsArchivedAndAHumansIsKept(t *testing.T) {
+	e := setupDedupe(t)
+	ctx := e.as()
+	calendar := legacyMachineContact(ctx, t, e, "c_0b8d1234abcd@group.calendar.google.com")
+	room := legacyMachineContact(ctx, t, e, "c_room42@resource.calendar.google.com")
+	human := legacyMachineContact(ctx, t, e, "anna-"+ids.NewV7().String()+"@human.test")
+
+	correctTechnicalPage(ctx, t, e)
+
+	if !contactIsArchived(ctx, t, e, calendar) || !contactIsArchived(ctx, t, e, room) {
+		t.Errorf("calendar archived = %v, room archived = %v; want both archived",
+			contactIsArchived(ctx, t, e, calendar), contactIsArchived(ctx, t, e, room))
+	}
+	if contactIsArchived(ctx, t, e, human) {
+		t.Error("a human's contact was archived")
+	}
+}

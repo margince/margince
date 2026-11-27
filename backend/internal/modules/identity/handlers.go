@@ -394,9 +394,12 @@ func (h Handlers) GetCurrentPrincipal(w http.ResponseWriter, r *http.Request, pa
 	httperr.WriteJSON(w, http.StatusOK, me)
 }
 
+// setSessionCookie keeps the cookie until the session's absolute expiry, so
+// closing the browser signs nobody out. Every caller has just opened the
+// session, and the server still checks the idle window and revocation.
 func setSessionCookie(w http.ResponseWriter, token string) {
 	http.SetCookie(w, &http.Cookie{
-		Name: SessionCookieName, Value: token,
+		Name: SessionCookieName, Value: token, MaxAge: int(absoluteTTL / time.Second),
 		Path: "/", HttpOnly: true, Secure: true, SameSite: http.SameSiteStrictMode,
 	})
 }

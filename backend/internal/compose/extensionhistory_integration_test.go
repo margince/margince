@@ -166,7 +166,7 @@ func TestTheExtensionHistoryReadUsesTheSubjectIndex(t *testing.T) {
 	if !ok {
 		t.Fatal("the visit kind did not register")
 	}
-	query, ok := extensionHistoryQuery(kind, "contact")
+	query, ok := extensionHistoryQuery(kind, "contact", "")
 	if !ok {
 		t.Fatal("the visit kind has no contact History")
 	}

@@ -612,7 +612,7 @@ func TestAnIntroRequestRefusesADealTheCallerCannotRead(t *testing.T) {
 	// A reader who may see the account, its contacts and their routes — and no
 	// deals at all.
 	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
-	_, err := svc.IntroRequestDraft(blind, nil, ids.CompanyID{UUID: company},
+	_, err := svc.IntroRequestDraft(blind, nil, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
 			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),
@@ -644,7 +644,7 @@ func TestAnIntroRequestWithoutADealStillDraftsForTheSameCaller(t *testing.T) {
 		e.Rep2, contact, company360Clock.AddDate(0, 0, -2))
 
 	blind := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
-	draft, err := svc.IntroRequestDraft(blind, nil, ids.CompanyID{UUID: company},
+	draft, err := svc.IntroRequestDraft(blind, nil, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
 			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),
@@ -684,7 +684,7 @@ func TestAnIntroRequestRefusesTheReaderAsTheirOwnIntroducer(t *testing.T) {
 		e.Rep1, contact, company360Clock.AddDate(0, 0, -2))
 
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
-	_, err := svc.IntroRequestDraft(reader, nil, ids.CompanyID{UUID: company},
+	_, err := svc.IntroRequestDraft(reader, nil, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
 			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep1),

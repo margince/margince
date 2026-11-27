@@ -177,6 +177,12 @@ const meta: Meta = {
       "GET /analytics/metrics": () => jsonResponse(overviewCatalog),
       "GET /analytics/evaluate": () => jsonResponse(startingMovement()),
       "GET /forecast": () => jsonResponse(readings),
+      "GET /users/names": (_body, url) =>
+        jsonResponse({
+          data: url.searchParams
+            .getAll("id")
+            .map((id) => ({ id, display_name: "Alex Quinn" })),
+        }),
       "GET /analytics/account-coverage": () => jsonResponse(coverage),
       "GET /analytics/sdr-summary/meetings": () =>
         jsonResponse({

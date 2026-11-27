@@ -13,6 +13,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strconv"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -184,6 +185,27 @@ func RefuseErasedEmails(ctx context.Context, tx pgx.Tx, field string, emails []s
 // the bot id for the same reason (0152).
 func ChannelIdentityHash(provider, channelUserID string) string {
 	return SuppressionHash(channelIdentityValue(provider, channelUserID))
+}
+
+// ChannelSuppressionAccount is the account string every writer and reader of the
+// channel suppression list keys an identity by. An identity seen through no
+// connected account is its bare id. Entries written before scopes existed, and
+// every Telegram entry, stay valid. A scoped identity is the scope and the id
+// behind a control character and a length prefix. No provider id holds that
+// character, so no pair can spell another pair or a bare id.
+func ChannelSuppressionAccount(scope, channelUserID string) string {
+	if scope == "" {
+		return channelUserID
+	}
+	return "\x1f" + strconv.Itoa(len(scope)) + "\x1f" + scope + channelUserID
+}
+
+// ChannelRawSubjectKey is how a raw_capture row names one channel identity in
+// channel_subjects. Every network that stores a raw row writes it for the
+// identities of the message. An erasure or access request reads it, so none of
+// them parses a provider's payload to find its subject.
+func ChannelRawSubjectKey(provider, scope, channelUserID string) string {
+	return provider + ":" + ChannelSuppressionAccount(scope, channelUserID)
 }
 
 // ChannelIdentityForms is SuppressionForms for a channel account.
