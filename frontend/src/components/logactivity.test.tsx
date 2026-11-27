@@ -541,7 +541,7 @@ describe("log activity from a 360", () => {
     await user.click(today);
     expect(dayBox("Date").value).toBe("23/10/2026");
   });
-  it("refuses a future day for a note and a due date past the window", async () => {
+  it("refuses a future or ancient day for a note and a due date past the window", async () => {
     const captured: Captured[] = [];
     stubApi({ "POST /activities": createdActivity }, captured);
     render(<LogActivity entityType="company" entityId="o1" />);
@@ -556,6 +556,10 @@ describe("log activity from a 360", () => {
     expect(captured.some((entry) => entry.key === "POST /activities")).toBe(
       false,
     );
+    // Nor may it lie further back than a due date may: 1900 is a typo too.
+    await typeDay(user, noteDay, "1900-01-01");
+    await user.tab();
+    expect(noteDay.getAttribute("aria-invalid")).toBe("true");
     // A due date may lie ahead, up to the window's ten years; 2199 is a typo.
     await pickOption(user, screen.getByLabelText("Type"), "Task");
     const dueDay = dayBox("Due date");

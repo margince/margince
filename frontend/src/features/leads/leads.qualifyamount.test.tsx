@@ -143,7 +143,9 @@ it("refuses a figure too large to store and sends nothing", async () => {
   const confirm = screen.getByRole("button", { name: "Qualify and open deal" });
   expect(confirm).toBeDisabled();
   await f.user.click(confirm);
-  expect(screen.getByText("This amount is too large to store.")).toBeVisible();
+  expect(
+    screen.getByText("Enter an amount of at most 90071992547409.91."),
+  ).toBeVisible();
   expect(f.posted).toHaveLength(0);
 });
 

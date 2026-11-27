@@ -322,24 +322,34 @@ func compileLeaf(p Predicate, fields map[string]Field, arg func(any) int, leaves
 		if field.Type == FieldMultiselect {
 			return fmt.Sprintf("%s && $%d::text[]", field.Expr, arg(values)), nil
 		}
-		return fmt.Sprintf("%s = ANY($%d)", compared, arg(values)), nil
+		return compared + " = " + membershipSQL(field, values, arg), nil
 
 	case OpContains:
-		text, ok := p.Value.(string)
-		if !ok || text == "" {
-			return "", &PredicateError{
-				Field: p.Field, Code: CodeFilterValueInvalid,
-				Message: "contains takes a non-empty string",
-			}
-		}
-		// Substring match, case-insensitive (the visual builder's
-		// "contains"); LIKE metacharacters in the operand match
-		// literally — a value of "100%" finds "100%", not everything.
-		return fmt.Sprintf("%s ILIKE $%d", field.Expr, arg("%"+EscapeLike(text)+"%")), nil
+		return compileContainsLeaf(p, field, compared, arg)
 
 	default: // eq, neq, gt, gte, lt, lte — scalar comparisons.
 		return compileScalarLeaf(p, field, compared, arg)
 	}
+}
+
+// compileContainsLeaf is a substring match. LIKE metacharacters in the operand
+// match literally, so "100%" finds "100%" and not everything.
+func compileContainsLeaf(p Predicate, field Field, compared string, arg func(any) int) (string, error) {
+	text, ok := p.Value.(string)
+	if ok && foldsText(field) {
+		text = strings.TrimSpace(text)
+	}
+	if !ok || text == "" {
+		return "", &PredicateError{
+			Field: p.Field, Code: CodeFilterValueInvalid,
+			Message: "contains takes a non-empty string",
+		}
+	}
+	pattern := "%" + EscapeLike(text) + "%"
+	if foldsText(field) {
+		return compared + " LIKE " + textOperandSQL(pattern, arg), nil
+	}
+	return fmt.Sprintf("%s ILIKE $%d", field.Expr, arg(pattern)), nil
 }
 
 // compileShapedLeaf compiles a leaf whose field is not a plain column: a
@@ -379,6 +389,7 @@ func compileScalarLeaf(p Predicate, field Field, compared string, arg func(any) 
 		}
 		return member, nil
 	}
+	operand := comparedOperandSQL(field, value, arg)
 	if p.Op == OpNeq {
 		// IS DISTINCT FROM rather than <>: a column that is UNSET is
 		// distinct from every value, and three-valued logic would otherwise
@@ -389,9 +400,9 @@ func compileScalarLeaf(p Predicate, field Field, compared string, arg func(any) 
 		// LINKED field compiles to NOT EXISTS(... = ...), which is true for a
 		// record with no linked row at all; `<>` here would make one operator
 		// mean two things depending on where the field lives.
-		return fmt.Sprintf("%s IS DISTINCT FROM %s", compared, operandSQL(value, arg)), nil
+		return fmt.Sprintf("%s IS DISTINCT FROM %s", compared, operand), nil
 	}
-	return fmt.Sprintf("%s %s %s", compared, comparisonSQL[p.Op], operandSQL(value, arg)), nil
+	return fmt.Sprintf("%s %s %s", compared, comparisonSQL[p.Op], operand), nil
 }
 
 // linkOperatorRefusal is the answer to an operator the link shape cannot
@@ -438,13 +449,13 @@ func compileLinkLeaf(p Predicate, field Field, arg func(any) int) (string, error
 		if err != nil {
 			return "", err
 		}
-		inner = fmt.Sprintf("%s = ANY($%d)", field.Expr, arg(values))
+		inner = comparedExpr(field) + " = " + membershipSQL(field, values, arg)
 	case OpEq, OpNeq:
 		value, err := scalarOperand(p.Value, field, p.Field, p.Op)
 		if err != nil {
 			return "", err
 		}
-		inner, negate = fmt.Sprintf("%s = %s", field.Expr, operandSQL(value, arg)), p.Op == OpNeq
+		inner, negate = comparedExpr(field)+" = "+comparedOperandSQL(field, value, arg), p.Op == OpNeq
 	default:
 		// linkOperators names exactly the cases above and compileLeaf refuses
 		// every other one first; this is the switch's own guard.

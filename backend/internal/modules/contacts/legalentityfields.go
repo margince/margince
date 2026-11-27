@@ -12,6 +12,7 @@ import (
 	"strings"
 	"unicode/utf8"
 
+	"github.com/margince/margince/backend/internal/platform/langcode"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/jurisdiction"
 )
@@ -184,7 +185,7 @@ var entityLanguageShape = regexp.MustCompile(`^[a-z]{2}$`)
 
 func cleanEntityLanguage(raw string) (string, error) {
 	lower := strings.ToLower(raw)
-	if !entityLanguageShape.MatchString(lower) {
+	if !langcode.Known(lower) {
 		return "", &values.ParseError{
 			Field: wireDefaultLanguage, Code: "invalid_language",
 			Message: "default_language is an ISO 639-1 code, for example de",

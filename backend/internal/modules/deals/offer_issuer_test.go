@@ -101,3 +101,11 @@ func TestATemplateLocaleKeepsItsRegion(t *testing.T) {
 		}
 	}
 }
+
+// A translation stored before the language table existed still has the shape
+// a delete takes, so it can be removed.
+func TestAnOldStoredTranslationCanStillBeNamedForDeletion(t *testing.T) {
+	if err := checkLanguageShape("zz"); err != nil {
+		t.Errorf("a stored zz translation could not be named for deletion: %v", err)
+	}
+}
