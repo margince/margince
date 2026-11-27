@@ -242,12 +242,11 @@ func descendContract(t testing.TB, doc map[string]any, path ...string) map[strin
 func loadContractDocument(t *testing.T) map[string]any {
 	t.Helper()
 	decodedContract.Lock()
+	defer decodedContract.Unlock()
 	if decodedContract.doc == nil {
 		decodedContract.doc = loadOpenAPIDocument(t, contractDocument)
 	}
-	doc := decodedContract.doc
-	decodedContract.Unlock()
-	return copyYAMLMapping(doc)
+	return copyYAMLMapping(decodedContract.doc)
 }
 
 // decodedContract stays empty when a decode fails, so the next caller fails
