@@ -28,7 +28,7 @@ func TestLogActivityInputCarriesAMeetingsHost(t *testing.T) {
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind:       crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
 		HostUserId: &host,
-		Source:     "human",
+		Source:     "manual",
 	})
 	if err != nil {
 		t.Fatalf("mapping a minuted meeting: %v", err)
@@ -44,7 +44,7 @@ func TestLogActivityInputRefusesAHostOnAMail(t *testing.T) {
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind:       crmcontracts.CreateActivityRequestKindCreateActivityRequestKindEmail,
 		HostUserId: &host,
-		Source:     "human",
+		Source:     "manual",
 	})
 
 	var fault *KindFieldError
@@ -62,7 +62,7 @@ func TestLogActivityInputRefusesAHostOnAMail(t *testing.T) {
 func TestLogActivityInputLeavesAnUnnamedHostToTheStore(t *testing.T) {
 	in, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind:   crmcontracts.CreateActivityRequestKindCreateActivityRequestKindMeeting,
-		Source: "human",
+		Source: "manual",
 	})
 	if err != nil {
 		t.Fatalf("mapping a meeting with no host named: %v", err)

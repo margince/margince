@@ -41,7 +41,7 @@ func TestAFollowUpNoLongerNeededIsWithdrawnWithItsReason(t *testing.T) {
 			if _, ok := errors.AsType[*approvals.ObsoleteError](err); !ok {
 				t.Fatalf("approving a follow-up no longer needed answered %v, want a no-longer-needed refusal", err)
 			}
-			assertCardClosedWithNothingWritten(t, e.Env, id.UUID, `SELECT count(*) FROM activity WHERE source = 'overnight-reconcile'`)
+			assertCardClosedWithNothingWritten(t, e.Env, id.UUID, `SELECT count(*) FROM activity WHERE source_system = 'overnight-reconcile'`)
 		})
 	}
 }
@@ -63,7 +63,7 @@ func TestTheFollowUpEffectWritesNothingOnceTheDealHasANextStep(t *testing.T) {
 	if _, ok := errors.AsType[*approvals.ObsoleteError](err); !ok {
 		t.Fatalf("the decider was answered %v, want the no-longer-needed reason", err)
 	}
-	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source = 'overnight-reconcile'`); n != 0 {
+	if n := e.WsCount(t, `SELECT count(*) FROM activity WHERE source_system = 'overnight-reconcile'`); n != 0 {
 		t.Errorf("the effect wrote %d follow-up(s) for a deal that has a next step", n)
 	}
 	// Spent and settled, so nothing re-drives it and no failed-effect lane
