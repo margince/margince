@@ -132,6 +132,15 @@ func orderByLeadOriginLabel(context.Context, func(any) int) (string, error) {
 // ListLeads is the row-scoped lead list read: quick-find, the status and
 // owner filters, and keyset pagination under the validated sort.
 func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontracts.Lead, storekit.Page, error) {
+	if in.CompanyID != nil {
+		if _, err := s.GetCompany(ctx, *in.CompanyID, storekit.IncludeArchived); err != nil {
+			if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+				return []crmcontracts.Lead{}, storekit.Page{}, nil
+			}
+			return nil, storekit.Page{}, err
+		}
+	}
+
 	// Narrowing by a contact the caller cannot open would tell them which lead
 	// it is worked through, so such a contact matches nothing.
 	if in.FromContactID != nil {
@@ -209,6 +218,7 @@ type ListLeadsInput struct {
 	TagMode storekit.TagMode
 	// FromContactID narrows to the leads worked from one contact.
 	FromContactID *ids.ContactID
+	CompanyID     *ids.CompanyID
 	// SLAState narrows to leads in one first-response state; breached is the
 	// overdue queue.
 	SLAState *crmcontracts.ListLeadsParamsSlaState
@@ -298,6 +308,9 @@ func leadNarrowing(ctx context.Context, in ListLeadsInput, policy leadSLAPolicy,
 	}
 	if in.FromContactID != nil {
 		where = append(where, storekit.SQLf("lead.from_contact_id = $%d", arg(*in.FromContactID)))
+	}
+	if in.CompanyID != nil {
+		where = append(where, storekit.SQLf("lead.company_id = $%d", arg(*in.CompanyID)))
 	}
 	return where, nil
 }

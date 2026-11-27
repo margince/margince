@@ -45,7 +45,7 @@ func TestEveryDeclaredContactsFilterNarrowsSomething(t *testing.T) {
 		"tag_id": ids.NewV7().String(), "tag_mode": "all", "from_contact_id": ids.NewV7().String(),
 		"source": "webinar", "origin": "referral", "sla_state": "breached",
 		"industry": "logistics_transport", "country": "de", "size_band": "51-200",
-		"partner_company_id": ids.NewV7().String(), "partner_accepted": "false",
+		"partner_company_id": ids.NewV7().String(), "partner_accepted": "false", "company_id": ids.NewV7().String(),
 	}))
 }
 
@@ -76,7 +76,7 @@ func TestEachEntityIsOfferedItsOwnVocabulary(t *testing.T) {
 			"cert_status", "partner_kind", "partner_role", "relationship_stage", "sort", "stage_meaning",
 		}},
 		{datasource.EntityLead, []string{
-			"ai_written", "captured_by_kind", "country", "from_contact_id", "include_archived", "industry", "list_id",
+			"ai_written", "captured_by_kind", "company_id", "country", "from_contact_id", "include_archived", "industry", "list_id",
 			"min_score", "origin", "owner_id", "owner_team_id", "partner_accepted", "partner_company_id", "salutation", "size_band",
 			"sla_state", "sort", "source", "status", "tag_id", "tag_mode", "unassigned",
 		}},

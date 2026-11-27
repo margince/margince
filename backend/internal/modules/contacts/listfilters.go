@@ -178,6 +178,7 @@ var leadListFilters = storekit.FilterSet[ListLeadsInput]{
 		in.TagMode = tagModeOrDefault(v)
 	}),
 	filterFromContact:     storekit.FilterID(func(in *ListLeadsInput, id *ids.ContactID) { in.FromContactID = id }),
+	filterCompanyID:       storekit.FilterID(func(in *ListLeadsInput, id *ids.CompanyID) { in.CompanyID = id }),
 	filterIndustry:        storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Industry = v }),
 	filterCountry:         storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Country = v }),
 	filterSizeBand:        storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.SizeBand = v }),

@@ -5449,6 +5449,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.narrative.add": "Thêm",
   "co.narrative.notOnSite": "Trang web công ty không nêu",
   "co.narrative.notReadYet": "Chưa đọc trang web của họ",
+  "co.leads.title": "Lead đang mở",
+  "co.leads.empty": "Không có lead đang mở nào liên kết với công ty này.",
+  "co.leads.more": "Xem mọi lead được liên kết",
+  "co.leads.list": "Mở danh sách lead",
   "co.contacts.engagement": "Mức tương tác",
   "co.contacts.lastInteraction": "Trao đổi gần nhất",
   "co.contacts.strength": "Mạng lưới",
@@ -14875,6 +14879,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Đã lưu lựa chọn của “{label}”. {count} bản ghi đã thay đổi.",
   "cf.choices.saved_other":
     "Đã lưu lựa chọn của “{label}”. {count} bản ghi đã thay đổi.",
+  "cf.filterAny": "Mọi giá trị",
+  "cf.filterApply": "Áp dụng bộ lọc",
+  "cf.filterValueRequired": "Nhập giá trị để lọc.",
   "cf.gate.title": "Thêm trường này?",
   "cf.gate.body":
     "Khi xác nhận, trường này được thêm vào mọi {object}: trên trang 360, trong tìm kiếm và bộ lọc, danh sách, bản xuất và API. Thao tác thêm này sẽ được ghi vào nhật ký hoạt động.",
@@ -18795,7 +18802,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Khóa ký API Webflow trả về một lần khi tạo webhook. Webhook do một ứng dụng OAuth tạo thì được ký bằng client secret của ứng dụng đó. Để trống cho đến khi có: trước đó biểu mẫu không nhận bài gửi nào.",
   "webForms.field.senderSecretKeep": "Để trống để giữ khóa đã lưu.",
   "webForms.field.notifyOwnerHint":
-    "Thông báo khi nhận biểu mẫu hoặc sau bước phân công của kế hoạch xử lý. Phân công sau đó trong công ty không gửi thêm thông báo.",
+    "Thông báo cho người phụ trách khi bài gửi đến, hoặc sau khi kế hoạch xử lý hay quy tắc phân công lead giao lead chưa có người phụ trách.",
   "webForms.field.notifyOwner":
     "Thông báo cho người phụ trách mỗi lượt gửi mới",
   "notifications.class.website_lead.label": "Lead mới từ trang web",

@@ -7,6 +7,7 @@ package customfields
 
 import (
 	"net/http"
+	"net/url"
 	"reflect"
 	"testing"
 
@@ -41,5 +42,27 @@ func TestMultiselectPreservesChoicesAndRefusesUnknownOnes(t *testing.T) {
 	}
 	if got, ok := result[field.ColumnName].([]any); !ok || len(got) != 0 {
 		t.Fatalf("clear failed: %v", result)
+	}
+}
+
+func TestMultiselectListFiltersCompareTheSelectedSetWithoutDependingOnOrder(t *testing.T) {
+	e := schemaWiredEnv(t)
+	status, field, problem := createCustomField(t, e, integration.AnyMap{"object": "company", "label": "Capabilities", "type": "multiselect", "options": []string{"Fit, scope", "C++", "Other"}, "source": "manual"})
+	if status != http.StatusCreated {
+		t.Fatalf("create field: %d %v", status, problem)
+	}
+	_, id := createWithCF(t, e, "/v1/companies", integration.AnyMap{"display_name": "Both choices", "source": "manual", field.ColumnName: []string{"Fit, scope", "C++"}})
+	createWithCF(t, e, "/v1/companies", integration.AnyMap{"display_name": "One choice", "source": "manual", field.ColumnName: []string{"C++"}})
+	query := url.Values{field.ColumnName: {`["C++","Fit, scope"]`}}
+	var result struct {
+		Data []struct {
+			ID string `json:"id"`
+		} `json:"data"`
+	}
+	if status := e.Call(t, "GET", "/v1/companies?"+query.Encode(), nil, nil, &result); status != http.StatusOK {
+		t.Fatalf("filter: %d", status)
+	}
+	if len(result.Data) != 1 || result.Data[0].ID != id {
+		t.Fatalf("filtered companies=%+v", result.Data)
 	}
 }

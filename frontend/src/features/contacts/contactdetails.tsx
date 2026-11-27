@@ -5,7 +5,6 @@ import { useEmployerSummary } from "../../components/contactemployersummary";
 import { rosterOwnerName } from "../../components/entityref";
 import { leadHeldNoticeFor } from "../../components/leadheldnotice";
 import { LinkedInChip } from "../../components/linkedinchip";
-import { RecordCustomFields } from "../../components/recordcustomfields";
 import { RecordFields } from "../../components/recordfields";
 import { useSectionEdit } from "../../components/sectionedit";
 import { TagsPanel } from "../../components/tagspanel";
@@ -317,7 +316,14 @@ function EmployerCard({ employment }: Readonly<{ employment: Employment }>) {
       identity={employment.company_id}
       logo={company?.logo_url}
       position={facts || undefined}
-      aside={<Badge wrap>{t("rel.current")}</Badge>}
+      aside={
+        <>
+          <Badge wrap>{t("rel.current")}</Badge>
+          {company?.archived_at && (
+            <Badge tone="warning">{t("record.archived")}</Badge>
+          )}
+        </>
+      }
     />
   );
 }
@@ -440,7 +446,6 @@ export function ContactDetails({
         refusalNotice={leadHeldNoticeFor}
         save={edit.save}
       />
-      <RecordCustomFields kind="contact" record={contact} />
     </>
   );
 }

@@ -245,6 +245,7 @@ function LeadsWorkbench({
         </Callout>
       )}
       <ListTable
+        customFieldsKind="lead"
         title={pageName}
         emptyNote={
           refused.length > 0 && (

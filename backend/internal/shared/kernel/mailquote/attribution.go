@@ -19,6 +19,8 @@ var attributionPatterns = []*regexp.Regexp{
 	regexp.MustCompile(`^_{5,}\s*$`),
 }
 
+var forwardAttribution = regexp.MustCompile(`(?i)^(-{2,}\s*(Forwarded message|Weitergeleitete Nachricht|Thư được chuyển tiếp|Tin nhắn được chuyển tiếp)|Begin forwarded message:|Anfang der weitergeleiteten (E-Mail|Nachricht)|(Thư được chuyển tiếp|Tin nhắn được chuyển tiếp):)`)
+
 // IsAttribution reports whether a line introduces quoted or forwarded mail.
 func IsAttribution(line string) bool {
 	for _, pattern := range attributionPatterns {

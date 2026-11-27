@@ -13750,6 +13750,10 @@ paths:
             of them, `all` a record carrying every one, `none` a record carrying not one.
 
             Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
+        - name: company_id
+          in: query
+          schema: { type: string, format: uuid }
+          description: Leads explicitly linked to this company. A company the caller cannot read matches no leads.
         - name: from_contact_id
           in: query
           deprecated: true
@@ -54519,8 +54523,11 @@ components:
           description: The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none".
           items:
             type: string
-            enum: [contacts, deals, projects, strength, activities, tags, list_memberships, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments, billing_contacts, commitments]
+            enum: [contacts, leads, deals, projects, strength, activities, tags, list_memberships, pending_approvals, next_steps, since_last_visit, suggestions, last_touch, state_strip, health, next_meeting, moments, billing_contacts, commitments]
             x-extensible-enum: true
+        leads:
+          allOf: [{ $ref: '#/components/schemas/LeadListResponse' }]
+          description: A bounded page of leads explicitly linked to this company, under the caller's lead row scope. Continue with GET /leads and company_id using the returned cursor.
         contacts:
           type: object
           required: [data, page]
@@ -79010,6 +79017,24 @@ components:
 
     # ---- Approval token (ADR-0036) ----
     # ---- Partner (ADR-0032) ----
+    PartnerGateMetrics:
+      type: [object, 'null']
+      additionalProperties: false
+      description: The two recorded program gate metrics. Unknown keys are refused by name.
+      properties:
+        certified_staff:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 32767
+          description: Number of certified staff.
+        retention_rate:
+          type: integer
+          format: int32
+          minimum: 0
+          maximum: 100
+          description: Whole percentage of customers retained. Omitted when unknown.
+
     Partner:
       type: object
       description: |
@@ -79043,7 +79068,7 @@ components:
           description: 'Deprecated: read `partner_kinds`. The first of hosting, consulting and strategic the partner holds; absent when it holds none of them.'
         cert_status: { type: string, enum: [applied, certified, suspended], x-extensible-enum: true }
         margin_tier: { type: [string, 'null'], enum: [null, tier1_15, tier2_20, tier3_25], x-extensible-enum: true, description: The partner's margin tier; the allowed values are in the table's CHECK constraint. }
-        gate_metrics: { type: [object, 'null'], additionalProperties: true, description: 'Program gate metrics (certified seats, CSAT, ...).' }
+        gate_metrics: { $ref: '#/components/schemas/PartnerGateMetrics' }
         relationship_stage: { type: string, description: 'The key of the stage from `/partner-stages` the partner stands on.' }
         stage_label: { type: string, readOnly: true, description: 'The label `/partner-stages` gives `relationship_stage`.' }
         stage_label_key: { $ref: '#/components/schemas/ShippedLabelKey' }
@@ -79082,7 +79107,7 @@ components:
         partner_role: { type: string, enum: [hosting, consulting, strategic], deprecated: true, description: 'Deprecated: send `partner_kinds`. Read as `partner_kinds: [partner_role]` when `partner_kinds` is absent.' }
         cert_status: { type: string, enum: [applied, certified, suspended] }   # data-model §4.3 CHECK
         margin_tier: { type: [string, 'null'], enum: [null, tier1_15, tier2_20, tier3_25] }
-        gate_metrics: { type: [object, 'null'], additionalProperties: true }
+        gate_metrics: { $ref: '#/components/schemas/PartnerGateMetrics' }
         relationship_stage:
           type: string
           description: |

@@ -61,6 +61,9 @@ const ATTRIBUTION = [
   /^_{5,}\s*$/,
 ];
 
+const FORWARD_ATTRIBUTION =
+  /^(-{2,}\s*(Forwarded message|Weitergeleitete Nachricht|Thư được chuyển tiếp|Tin nhắn được chuyển tiếp)|Begin forwarded message:|Anfang der weitergeleiteten (E-Mail|Nachricht)|(Thư được chuyển tiếp|Tin nhắn được chuyển tiếp):)/i;
+
 // The Outlook top-reply block: a From:/Von: line whose neighbours carry the
 // sent-date field. Recognised as a pair because "Von:" alone is ordinary prose
 // in German mail.
@@ -219,6 +222,10 @@ function forwardedBlockEnd(lines: readonly string[], subject: string): number {
   if (header < 0) {
     return 0;
   }
+  return forwardedHeaderEnd(lines, header);
+}
+
+function forwardedHeaderEnd(lines: readonly string[], header: number): number {
   let end = header + 1;
   while (
     end < lines.length &&
@@ -271,21 +278,75 @@ function headerAt(lines: readonly string[], index: number): number {
  * with ">" ends it only when nothing follows, so an inline reply stays whole.
  * A forward passes its first quoted mail on, which only its subject tells.
  */
-function ownTextEnd(lines: readonly string[], subject: string): number {
-  for (let i = forwardedBlockEnd(lines, subject); i < lines.length; i += 1) {
+type ForwardedBlock = { header: number; body: number };
+
+function forwardedSubject(
+  lines: readonly string[],
+  header: number,
+  end: number,
+): string {
+  for (const line of lines.slice(header, end)) {
+    const [label, ...value] = line.split(":");
+    if (
+      ["subject", "betreff"].includes(
+        (label ?? "").toLowerCase().replaceAll("*", "").trim(),
+      )
+    ) {
+      return value.join(":").replaceAll("*", "").trim();
+    }
+  }
+  return "";
+}
+
+function nestedForwardHeader(
+  lines: readonly string[],
+  index: number,
+  subject: string,
+): number {
+  if (
+    FORWARD_ATTRIBUTION.test((lines[index] ?? "").trim()) ||
+    (isForwardSubject(subject) && opensReplyHeader(lines, index))
+  ) {
+    return headerAt(lines, index);
+  }
+  return -1;
+}
+
+function readOwnText(
+  lines: readonly string[],
+  subject: string,
+): { end: number; blocks: ForwardedBlock[] } {
+  let enclosedSubject = subject;
+  const blocks: ForwardedBlock[] = [];
+  const start = forwardedBlockEnd(lines, subject);
+  if (start > 0) {
+    const header = forwardedHeader(lines);
+    blocks.push({ header, body: start });
+    enclosedSubject = forwardedSubject(lines, header, start);
+  }
+  for (let i = start; i < lines.length; i += 1) {
     if (!startsQuote(lines, i)) {
+      continue;
+    }
+    const header =
+      blocks.length > 0 ? nestedForwardHeader(lines, i, enclosedSubject) : -1;
+    if (header >= 0) {
+      const end = forwardedHeaderEnd(lines, header);
+      blocks.push({ header, body: end });
+      enclosedSubject = forwardedSubject(lines, header, end);
+      i = end - 1;
       continue;
     }
     const after = markedRunEnd(lines, i);
     if (after < 0) {
-      return i;
+      return { end: i, blocks };
     }
     if (isBlankFrom(lines, after)) {
-      return attributedStart(lines, i);
+      return { end: attributedStart(lines, i), blocks };
     }
     i = after - 1;
   }
-  return lines.length;
+  return { end: lines.length, blocks };
 }
 
 /**
@@ -302,10 +363,10 @@ function boundaryIndex(
   at: number;
   kind: "signature" | "quote";
 } {
-  const quote = ownTextEnd(lines, subject);
+  const { end: quote, blocks } = readOwnText(lines, subject);
   const signOffFloor = Math.max(0, lines.length - TRAILING_SCAN_LINES);
   // A sign-off above a forwarded mail closes the note, not the message.
-  for (let i = forwardedBlockEnd(lines, subject); i < quote; i += 1) {
+  for (let i = blocks.at(-1)?.body ?? 0; i < quote; i += 1) {
     const line = lines[i] ?? "";
     if (
       SIGNATURE_DELIMITER.test(line) ||

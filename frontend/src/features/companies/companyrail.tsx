@@ -38,6 +38,7 @@ import {
   displayHost,
   useCompanyVerbRefusal,
 } from "./companyheader";
+import { CompanyLeads } from "./companyleads";
 import { useCompanyEdit, useCompanyFieldSave } from "./companyrailedit";
 import {
   useOwnershipSection,
@@ -66,10 +67,22 @@ type RailProps = Readonly<{
 export function CompanyRail(props: RailProps) {
   // The lists read answers 404 while lists are switched off, and the server
   // refuses an archived account's lists, so it is asked for only otherwise.
-  return useListsAvailable() && !props.company.archived_at ? (
-    <ListedRail {...props} />
-  ) : (
-    <RailBody {...props} />
+  const lists = useListsAvailable();
+  return (
+    <>
+      {lists && !props.company.archived_at ? (
+        <ListedRail {...props} />
+      ) : (
+        <RailBody {...props} />
+      )}
+      {!props.company.archived_at && (
+        <CompanyLeads
+          companyId={props.company.id}
+          view={props.view}
+          loading={props.loading}
+        />
+      )}
+    </>
   );
 }
 

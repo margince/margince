@@ -5597,6 +5597,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "co.narrative.add": "Hinzufügen",
   "co.narrative.notOnSite": "Nicht auf ihrer Website",
   "co.narrative.notReadYet": "Website noch nicht analysiert",
+  "co.leads.title": "Offene Leads",
+  "co.leads.empty":
+    "Mit diesem Unternehmen sind keine offenen Leads verknüpft.",
+  "co.leads.more": "Alle verknüpften Leads anzeigen",
+  "co.leads.list": "Leadliste öffnen",
   "co.contacts.engagement": "Engagement",
   "co.contacts.lastInteraction": "Letzter Austausch",
   "co.contacts.strength": "Beziehung",
@@ -15296,6 +15301,9 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Auswahl von „{label}“ gespeichert. {count} Datensatz geändert.",
   "cf.choices.saved_other":
     "Auswahl von „{label}“ gespeichert. {count} Datensätze geändert.",
+  "cf.filterAny": "Beliebiger Wert",
+  "cf.filterApply": "Filter anwenden",
+  "cf.filterValueRequired": "Gib einen Wert zum Filtern ein.",
   "cf.gate.title": "Dieses Feld hinzufügen?",
   "cf.gate.body":
     "Nach der Bestätigung wird es jedem {object} hinzugefügt: auf der 360-Seite, in Suche und Filtern, Listen, Export und der API. Das Hinzufügen wird im Audit-Log erfasst.",
@@ -19315,7 +19323,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "webForms.field.senderSecretKeep":
     "Leer lassen, um den gespeicherten Signaturschlüssel zu behalten.",
   "webForms.field.notifyOwnerHint":
-    "Informiert den Verantwortlichen beim Eingang oder nach der Zuweisung durch den Bearbeitungsplan. Eine spätere Verteilung im Unternehmen löst keine nachträgliche Nachricht aus.",
+    "Benachrichtigt die verantwortliche Person beim Eingang oder sobald der Bearbeitungsplan oder die Lead-Zuweisung erstmals eine zuständige Person festlegt.",
   "webForms.field.notifyOwner":
     "Den Verantwortlichen über jede neue Anfrage informieren",
   "notifications.class.website_lead.label": "Neue Website-Anfragen",

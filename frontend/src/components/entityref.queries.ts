@@ -90,14 +90,20 @@ export function companyReferenceQuery(id: string) {
 }
 
 /** What one answer says about an id: its name, and whether it held the record. */
-export type NameAnswer = Readonly<{ name: string | null; found: boolean }>;
+export type NameAnswer = Readonly<{
+  name: string | null;
+  found: boolean;
+  archived?: boolean;
+}>;
 
 // A cached string is a name written straight into the cache.
 function answerOf(value: EntityReference | string | null): NameAnswer {
   if (value === null) {
     return { name: null, found: false };
   }
-  return { name: typeof value === "string" ? value : value.name, found: true };
+  return typeof value === "string"
+    ? { name: value, found: true }
+    : { name: value.name, found: true, archived: value.archived };
 }
 
 function nameReadQuery(
@@ -109,13 +115,14 @@ function nameReadQuery(
     : entityNameQuery(kind, id);
 }
 
-export function entityNameObserverQuery(
+export function entityReferenceObserverQuery(
   kind: EntityKind,
   id: string,
-): UseQueryOptions<EntityReference | string | null, Error, string | null> {
+): UseQueryOptions<EntityReference | string | null, Error, NameAnswer> {
   return {
     ...nameReadQuery(kind, id),
-    select: (value) => answerOf(value).name,
+    select: answerOf,
+    staleTime: (query) => (typeof query.state.data === "string" ? 0 : 60_000),
   };
 }
 
