@@ -2,8 +2,9 @@
 # Font-lock gate, two rules over one tree.
 #
 # 1. The three-family rule (design §2): every font-family declaration under
-#    frontend/src or an extension unit's frontend names only Outfit (display),
-#    Geist (body), or Geist Mono (code). Allowed besides the three families: the
+#    frontend/src or an extension unit's frontend names only Outfit (display;
+#    Be Vietnam Pro when the language is Vietnamese, which Outfit cannot
+#    write), Geist (body), or Geist Mono (code). Allowed besides the three families: the
 #    generic stack fallbacks the §2 token definitions name (system-ui,
 #    sans-serif, ui-monospace, monospace), var(--f-*) references, which resolve
 #    inside tokens.css, and the `inherit` keyword, which names no family at all
@@ -81,6 +82,7 @@ strip_allowed() {
     | sed -E 's/Geist Mono//g' \
     | sed -E 's/Geist//g' \
     | sed -E 's/Outfit//g' \
+    | sed -E 's/Be Vietnam Pro//g' \
     | sed -E 's/system-ui//g' \
     | sed -E 's/sans-serif//g' \
     | sed -E 's/ui-monospace//g' \
