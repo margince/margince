@@ -966,3 +966,24 @@ describe("pickOption", () => {
     expect(changes).toEqual([]);
   });
 });
+
+describe("a face shorter than the label", () => {
+  it("shows the picked option's face words and keeps its label in the list", async () => {
+    const user = userEvent.setup();
+    render(
+      <Select
+        aria-label="Rows per page"
+        value="25"
+        onChange={() => undefined}
+        options={[
+          { value: "25", label: "25 per page", faceLabel: "25" },
+          { value: "50", label: "50 per page", faceLabel: "50" },
+        ]}
+      />,
+    );
+    const trigger = screen.getByRole("combobox", { name: "Rows per page" });
+    expect(trigger.textContent).toBe("25");
+    await user.click(trigger);
+    expect(screen.getByRole("option", { name: "25 per page" })).toBeTruthy();
+  });
+});

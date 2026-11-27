@@ -171,6 +171,10 @@ const preview: Preview = {
           name: "Phone on its side",
           styles: { width: "844px", height: "390px" },
         },
+        tablet: {
+          name: "Tablet",
+          styles: { width: "768px", height: "1024px" },
+        },
       },
     },
   },

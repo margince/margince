@@ -134,20 +134,14 @@ func (p *Provider) Read(ctx context.Context, r datasource.EntityRef) (datasource
 	}
 }
 
-// SearchEntity lists one of this module's entity types under the shared
-// search contract (text query, structured filters, CAP-PAGE limit, per-entity
-// keyset cursor).
-//
-// A filter this type has no binding for is an ERROR rather than a dropped
-// clause — see listfilters.go. It is unreachable while the composition root
-// publishes only what ListFilters names, which is what makes it a safe
-// assertion instead of a silent widening.
+// SearchEntity lists one of this module's entity types under the shared search
+// contract. A filter the type cannot bind is an error, never a dropped clause.
 func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, text *string, limit int, cursor *string,
-	filters map[string]string,
+	offset *int, filters map[string]string,
 ) ([]datasource.Record, string, bool, error) {
 	switch t {
 	case datasource.EntityContact:
-		in := ListContactsInput{Query: text, Limit: &limit, Cursor: cursor}
+		in := ListContactsInput{Query: text, Limit: &limit, Cursor: cursor, Offset: offset}
 		if err := contactListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
@@ -161,7 +155,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 			return v.Id, v.Version
 		})
 	case datasource.EntityCompany:
-		in := ListCompaniesInput{Query: text, Limit: &limit, Cursor: cursor}
+		in := ListCompaniesInput{Query: text, Limit: &limit, Cursor: cursor, Offset: offset}
 		if err := companyListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}
@@ -174,7 +168,7 @@ func (p *Provider) SearchEntity(ctx context.Context, t datasource.EntityType, te
 		return pageOf(datasource.EntityCompany, rows, page, err,
 			func(v crmcontracts.Company) (openapi_types.UUID, *int64) { return v.Id, v.Version })
 	case datasource.EntityLead:
-		in := ListLeadsInput{Query: text, Limit: &limit, Cursor: cursor}
+		in := ListLeadsInput{Query: text, Limit: &limit, Cursor: cursor, Offset: offset}
 		if err := leadListFilters.Apply(&in, filters); err != nil {
 			return nil, "", false, err
 		}

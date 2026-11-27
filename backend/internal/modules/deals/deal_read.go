@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
 
@@ -103,6 +104,7 @@ type ListDealsInput struct {
 	TagIDs      []ids.UUID
 	TagMode     storekit.TagMode
 	Cursor      *string
+	Offset      *int
 	Limit       *int
 	Query       *string
 	PipelineID  *ids.PipelineID
@@ -229,10 +231,14 @@ func (s *Store) ListDeals(ctx context.Context, in ListDealsInput) ([]crmcontract
 		if err != nil {
 			return err
 		}
-		pre, where, err := s.dealListQuery(ctx, tx, in, active)
+		pre, where, terms, err := s.dealListQuery(ctx, tx, in, active)
 		if err != nil {
 			return err
 		}
+		if err := pre.Skip(in.Offset); err != nil {
+			return err
+		}
+		pre.Count(terms)
 		out, page, err = storekit.RunListPageTx(ctx, tx, pre, dealTable, dealColumns, active, where, scanDealPage,
 			func(d crmcontracts.Deal) (time.Time, ids.UUID) { return d.CreatedAt, ids.UUID(d.Id) },
 			func(tx pgx.Tx, page []crmcontracts.Deal) error {
@@ -266,7 +272,11 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 	if err := auth.Require(ctx, "deal", principal.ActionRead); err != nil {
 		return nil, storekit.Page{}, err
 	}
-	pre, where, err := s.dealListQuery(ctx, tx, in, active.cols)
+	// The composite reads page by cursor alone; an offset here is refused rather than dropped.
+	if in.Offset != nil {
+		return nil, storekit.Page{}, &datasource.OffsetUnsupportedError{Type: datasource.EntityDeal}
+	}
+	pre, where, _, err := s.dealListQuery(ctx, tx, in, active.cols)
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
@@ -284,40 +294,6 @@ func (s *Store) ListDealsTx(ctx context.Context, tx pgx.Tx, in ListDealsInput, a
 			}
 			return s.stampWinChances(ctx, tx, page)
 		})
-}
-
-// dealListQuery is the half of a deal list both entry points share: the sort
-// refusal, the shared prelude and the deal's own filters. The valuation is
-// read in the list's own transaction, and only when the request sorts or filters by Value or close day.
-func (s *Store) dealListQuery(ctx context.Context, tx pgx.Tx, in ListDealsInput, active []fieldcatalog.Column) (*storekit.ListPrelude, []string, error) {
-	if err := refuseMaskedSort(ctx, in.Sort); err != nil {
-		return nil, nil, err
-	}
-	vocab := dealListFields
-	if sortsByValue(in.Sort) || sortsByCloseDay(in.Sort) || in.readsValuation() {
-		valuation, err := s.valuationTx(ctx, tx)
-		if err != nil {
-			return nil, nil, err
-		}
-		vocab = dealListVocabulary(valuation)
-		in.valuation = valuation
-	}
-	pre, err := storekit.BuildListPrelude(ctx, "deal", "deals", vocab, active,
-		in.Sort, in.Limit, in.Cursor, in.CustomFilters)
-	if err != nil {
-		return nil, nil, err
-	}
-	if s.winChanceSQL != nil && (in.WinProbabilityMin != nil || in.WinProbabilityMax != nil) {
-		if in.winChance, err = s.winChanceSQL(ctx, tx, s.clock(), dealRef(""), pre.Arg); err != nil {
-			return nil, nil, err
-		}
-	}
-	s.bindMembershipChance(ctx, tx, &in)
-	where, err := appendDealFilters(ctx, pre.Where(), in, pre.Arg)
-	if err != nil {
-		return nil, nil, err
-	}
-	return pre, in.atRiskTerms(pre, where), nil
 }
 
 // scanDealPage drains one list query's rows: each deal plus, under a

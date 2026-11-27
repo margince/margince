@@ -75,6 +75,12 @@ func TestTheFrontendsCopiesOfServerLimitsMatchTheirOwners(t *testing.T) {
 			drift: "a row page carries storekit.RowTagCap tags, so the strip counts the rest off an array that stopped early",
 		},
 		{
+			file: "../frontend/src/components/listqueryparams.ts", name: "LIST_OFFSET_CAP",
+			read:  regexp.MustCompile(`(?m)^export const LIST_OFFSET_CAP = ([0-9_]+);`),
+			owner: fixed(strconv.Itoa(storekit.MaxListOffset)),
+			drift: "the pager opens a page at an offset storekit.MaxListOffset refuses, so move both together",
+		},
+		{
 			file: "../frontend/src/lib/voice-refusal.ts", name: "VOICE_SOURCE_MAX_BYTES",
 			read:  regexp.MustCompile(`(?m)^export const VOICE_SOURCE_MAX_BYTES = ([0-9_]+);`),
 			owner: fixed(strconv.Itoa(httperr.MaxBodyBytes)),
