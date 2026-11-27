@@ -91,7 +91,7 @@ func TestRequireMFAFlagsAMemberWithNoFactorAndClearsOnEnrolment(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.svc.ConfirmTOTP(ctx, code, hashToken(login.Token)); err != nil {
+	if _, err := e.svc.ConfirmTOTP(ctx, memberPassword, code, hashToken(login.Token)); err != nil {
 		t.Fatalf("confirm: %v", err)
 	}
 	cleared, err := e.svc.Authenticate(e.wsOnlyCtx(), login.Token)
@@ -189,7 +189,7 @@ func TestRequireMFATrustsTheProviderAndAsksThePasswordPath(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if _, err := e.svc.ConfirmTOTP(ctx, code, hashToken(token)); err != nil {
+	if _, err := e.svc.ConfirmTOTP(ctx, memberPassword, code, hashToken(token)); err != nil {
 		t.Fatalf("confirm: %v", err)
 	}
 

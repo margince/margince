@@ -25551,6 +25551,9 @@ export interface paths {
          * @description Verifies a code against the pending secret and, on success, activates the factor and
          *     returns a fresh set of one-time recovery codes — shown exactly once, never retrievable
          *     again (`Cache-Control: no-store`). A wrong code leaves the enrolment pending (401).
+         *     The caller's current password authorizes the confirmation, as it authorizes a password
+         *     change: a confirmed factor is asked for at every later password sign-in, so a session
+         *     alone must not install one. A wrong password counts toward the account lockout.
          */
         post: operations["confirmMyTotp"];
         delete?: never;
@@ -29360,6 +29363,8 @@ export interface components {
             otpauth_uri: string;
         };
         TotpConfirmRequest: {
+            /** @description The caller's current password, which authorizes the confirmation. */
+            current_password: string;
             /** @description The current code from the authenticator being enrolled. */
             code: string;
         };
@@ -105454,7 +105459,15 @@ export interface operations {
                     "application/json": components["schemas"]["RecoveryCodes"];
                 };
             };
-            401: components["responses"]["Unauthorized"];
+            /** @description A refused password carries its own machine `code`: `current_password_invalid` (the password is wrong) or `account_locked` (the lockout is in force, and waiting is the remedy). A missing session and a wrong authenticator code both answer `unauthorized`. */
+            401: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
             /** @description Refused with `code: mfa_already_enrolled` — the factor is already confirmed. */
             409: {
                 headers: {
@@ -105465,6 +105478,15 @@ export interface operations {
                 };
             };
             422: components["responses"]["ValidationError"];
+            /** @description Too many wrong current-password attempts for this account. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
         };
     };
     getMyWorkingHours: {

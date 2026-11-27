@@ -3758,6 +3758,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "views.none": "Keine gespeicherten Ansichten",
   "views.rename": "Umbenennen",
   "views.renameNamed": "{name} umbenennen",
+  "views.opensInFilters": "{name}, öffnet in Filter und Ansichten",
   "views.delete": "Löschen",
   "views.deleteNamed": "{name} löschen",
   "views.deleteAsk":
@@ -14338,6 +14339,10 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Der Code wurde nicht akzeptiert. Prüfe ihn und versuche es erneut.",
   "mfa.tooManyCodes":
     "Zu viele falsche Codes. Warte ein paar Minuten und versuche es dann erneut.",
+  "mfa.tooManyPasswords":
+    "Zu viele falsche Passwörter. Warte eine Minute und versuche es dann erneut.",
+  "mfa.passwordHint":
+    "Dein Margince-Passwort, nicht das von Google oder Microsoft.",
   "mfa.confirmFailedTitle": "Zweistufige Anmeldung nicht eingeschaltet",
   "mfa.onTitle": "Zweistufige Anmeldung an",
   "mfa.onBody": "Alle anderen Geräte wurden abgemeldet.",
@@ -21328,6 +21333,11 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.library.shared": "Mit mir geteilt",
   "filters.library.views": "Gespeicherte Ansichten",
   "filters.library.kindView": "Gespeicherte Ansicht",
+  "filters.library.savedOn.contacts": "Auf der Liste Kontakte gespeichert",
+  "filters.library.savedOn.companies": "Auf der Liste Unternehmen gespeichert",
+  "filters.library.savedOn.deals": "Auf der Liste Deals gespeichert",
+  "filters.library.savedOn.leads": "Auf der Liste Leads gespeichert",
+  "filters.library.savedOn.projects": "Auf der Liste Projekte gespeichert",
   "filters.library.rowMore": "Weitere Aktionen für {name}",
   "filters.library.records.contact_one": "{count} Kontakt",
   "filters.library.records.contact_other": "{count} Kontakte",
