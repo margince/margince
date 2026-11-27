@@ -201,6 +201,11 @@ func tsCutKey(entry string) (key, value string, ok bool) {
 
 // tsTopLevel splits text on the commas outside brackets and strings.
 func tsTopLevel(text string) []string {
+	return tsSplitTopLevel(text, ',')
+}
+
+// tsSplitTopLevel splits text on each sep outside brackets and strings.
+func tsSplitTopLevel(text string, sep byte) []string {
 	var parts []string
 	depth, start := 0, 0
 	var quote byte
@@ -220,7 +225,7 @@ func tsTopLevel(text string) []string {
 			depth++
 		case c == '}' || c == ']' || c == ')':
 			depth--
-		case c == ',' && depth == 0:
+		case c == sep && depth == 0:
 			parts = append(parts, text[start:i])
 			start = i + 1
 		}

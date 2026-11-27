@@ -12,89 +12,12 @@ import (
 	"strings"
 )
 
-// jsCall is one call in a source: the dotted name called and the offset of its "(".
-type jsCall struct {
-	callee      string
-	start, open int
-}
-
-// jsSites is one pass over a comment-blanked source: every call outside a string,
-// and the text of each import statement.
-type jsSites struct {
-	calls   []jsCall
-	imports []string
-}
-
-func scanJSSites(code string) jsSites {
-	var sites jsSites
-	last := byte(0)
-	for i := 0; i < len(code); {
-		c := code[i]
-		switch {
-		case c == ' ' || c == '\t' || c == '\n' || c == '\r':
-			i++
-			continue
-		case c == '"' || c == '\'' || c == '`':
-			i = literalEnd(code, i) + 1
-		case c == '/' && (last == 0 || strings.IndexByte("(,=:[!&|?{};+-*%<>~^", last) >= 0):
-			i = regexLiteralEnd(code, i) + 1
-		case isIdentStart(c) && (i == 0 || !isIdentPart(code[i-1]) && code[i-1] != '.'):
-			end := i
-			for end < len(code) && (isIdentPart(code[end]) || code[end] == '.') {
-				end++
-			}
-			next := end
-			for next < len(code) && strings.ContainsRune(" \t\n", rune(code[next])) {
-				next++
-			}
-			name := code[i:end]
-			switch {
-			case next < len(code) && code[next] == '(':
-				sites.calls = append(sites.calls, jsCall{name, i, next})
-			case name == "import" || name == "export":
-				sites.imports = append(sites.imports, code[i:min(len(code), i+importWindow)])
-			}
-			i = end
-			last = 'a'
-			continue
-		default:
-			i++
-		}
-		last = c
-	}
-	return sites
-}
-
-// regexLiteralEnd is the offset of the "/" that closes the regular expression
-// opened at start, or of the line's end.
-func regexLiteralEnd(code string, start int) int {
-	class := false
-	for i := start + 1; i < len(code); i++ {
-		switch c := code[i]; {
-		case c == '\\':
-			i++
-		case c == '\n':
-			return i
-		case c == '[':
-			class = true
-		case c == ']':
-			class = false
-		case c == '/' && !class:
-			return i
-		}
-	}
-	return len(code) - 1
-}
-
-// importWindow is longer than any import statement's text up to its specifier.
-const importWindow = 2000
-
 var (
-	fsReads         = []string{"readFileSync", "readFile", "existsSync", "statSync", "lstatSync", "createReadStream", "readdirSync", "readdir", "opendirSync", "globSync", "globbySync", "glob", "globby", "fastGlob", "fg"}
-	moduleCalls     = []string{"import", "require", "mock", "importActual"}
-	processCalls    = []string{"execFileSync", "execFile", "spawnSync", "spawn", "execSync", "exec", "execaSync", "execa"}
-	moduleSpecifier = regexp.MustCompile(`^(?:(?:import|export)\b[^;"'()]*?\bfrom\s*|import\s*)["'](\.[^"']*)["']`)
-	cwdOption       = regexp.MustCompile(`\bcwd\s*:\s*`)
+	fsReads      = []string{"readFileSync", "readFile", "existsSync", "statSync", "lstatSync", "createReadStream", "readdirSync", "readdir", "opendirSync", "globSync", "globbySync", "glob", "globby", "fastGlob", "fg"}
+	moduleCalls  = []string{"import", "require", "mock", "importActual"}
+	processCalls = []string{"execFileSync", "execFile", "spawnSync", "spawn", "execSync", "exec", "execaSync", "execa"}
+	// writeCommands make or remove the paths they are handed; they read none.
+	writeCommands = []string{"mkdir", "rm", "rmdir", "mv", "cp", "touch", "ln", "chmod"}
 )
 
 // sinkName is the function a call reaches: fs.readFileSync and readFileSync are
@@ -114,10 +37,13 @@ var processModules = []string{"child_process", "node:child_process", "execa"}
 // under vitest and pnpm, and the repository root under make.
 var defaultCwds = []string{frontendTree, "."}
 
-// scriptReads are the paths a TypeScript, JavaScript, CSS or HTML reader hands to
-// an fs call, an import, a glob or a subprocess. "." stands for the whole repository.
+// scriptReads are the paths a TypeScript or JavaScript reader hands to an fs
+// call, an import, a glob or a subprocess. "." stands for the whole repository.
 func (r *tsReader) scriptReads(file string) []string {
-	code := r.code[file]
+	parsed := r.files[file]
+	if parsed == nil {
+		return nil
+	}
 	reads := map[string]bool{}
 	place := func(values []pathValue, anchors []string) {
 		for _, value := range values {
@@ -136,16 +62,11 @@ func (r *tsReader) scriptReads(file string) []string {
 		}
 	}
 	here := []string{path.Dir(file)}
-	for _, statement := range r.sites[file].imports {
-		if match := moduleSpecifier.FindStringSubmatch(statement); match != nil {
-			place([]pathValue{{path: stripQuery(match[1])}}, here)
-		}
+	for _, specifier := range parsed.specifiers() {
+		place([]pathValue{{path: stripQuery(specifier)}}, here)
 	}
-	for _, call := range r.sites[file].calls {
-		args, end := callArgs(code, call.open)
-		if end < 0 {
-			continue
-		}
+	for _, call := range parsed.calls {
+		args := parsed.args(call.at)
 		name := sinkName(call.callee)
 		switch {
 		case slices.Contains(moduleCalls, name):
@@ -161,7 +82,9 @@ func (r *tsReader) scriptReads(file string) []string {
 			}
 			place(r.eval(file, firstArg(args), 0), anchors)
 		case slices.Contains(processCalls, name) && r.spawns(file, call.callee):
+			before := len(reads)
 			r.processReads(file, name, args, place)
+			r.spawned += len(reads) - before
 		}
 	}
 	return sortedKeys(reads)
@@ -179,15 +102,13 @@ func (r *tsReader) spawns(file, callee string) bool {
 	return ok && (original == "*" || original == "default") && method != ""
 }
 
-// cwdValues reads the cwd property of an options object.
 func (r *tsReader) cwdValues(file, options string) []string {
-	options = strings.TrimSpace(options)
-	at := cwdOption.FindStringIndex(options)
-	if !strings.HasPrefix(options, "{") || at == nil {
+	body, ok := tsBalanced(strings.TrimSpace(options))
+	if !ok || !strings.HasPrefix(strings.TrimSpace(options), "{") {
 		return nil
 	}
 	var cwds []string
-	for _, value := range r.eval(file, expressionAt(options, at[1]), 0) {
+	for _, value := range r.eval(file, tsLiteralEntries(body)["cwd"], 0) {
 		if value.anchored {
 			cwds = append(cwds, path.Clean(value.path))
 		}
@@ -199,6 +120,7 @@ func (r *tsReader) cwdValues(file, options string) []string {
 // any other command reads the directory it runs in and each path it is handed.
 func (r *tsReader) processReads(file, callee string, args []string, place func([]pathValue, []string)) {
 	var words []string
+	var anchored []pathValue
 	options := ""
 	if callee == "execSync" || callee == "exec" {
 		for _, value := range r.eval(file, firstArg(args), 0) {
@@ -217,7 +139,7 @@ func (r *tsReader) processReads(file, callee string, args []string, place func([
 			for _, element := range elements {
 				values := r.eval(file, element, 0)
 				if len(values) != 1 || values[0].anchored {
-					place(values, nil)
+					anchored = append(anchored, values...)
 					words = append(words, "")
 					continue
 				}
@@ -227,6 +149,10 @@ func (r *tsReader) processReads(file, callee string, args []string, place func([
 		}
 		options = firstArg(rest)
 	}
+	if len(words) > 0 && slices.Contains(writeCommands, words[0]) {
+		return
+	}
+	place(anchored, nil)
 	cwds := r.cwdValues(file, options)
 	anchors := cwds
 	if len(anchors) == 0 {
@@ -271,10 +197,36 @@ func listedPaths(words []string) (paths []string, listing bool) {
 		}
 		return paths, true
 	}
-	for _, word := range rest {
-		if strings.Contains(word, "/") && !strings.HasPrefix(word, "-") {
+	for i, word := range rest {
+		if strings.Contains(word, "/") && !strings.HasPrefix(word, "-") && (i == 0 || rest[i-1] != "-o") {
 			paths = append(paths, word)
 		}
 	}
 	return paths, false
+}
+
+var markupPath = regexp.MustCompile(`(?:@import\s+(?:url\()?|url\(|\b(?:src|href)\s*=\s*)\s*["']?([^"')\s;>]+)`)
+
+// markupReads are the escapes a stylesheet, page or MDX file names in @import,
+// url(), src, href or an import, relative to its own directory.
+func markupReads(tree repoTree, file, source string) []string {
+	var rels []string
+	for _, match := range markupPath.FindAllStringSubmatch(source, -1) {
+		rels = append(rels, match[1])
+	}
+	if path.Ext(file) == ".mdx" {
+		for _, imported := range tsImports(source) {
+			rels = append(rels, imported.from)
+		}
+	}
+	var found []string
+	for _, rel := range rels {
+		if !strings.HasPrefix(rel, ".") {
+			continue
+		}
+		if read, ok := tree.resolveRead(stripQuery(rel), []string{path.Dir(file)}); ok {
+			found = append(found, read)
+		}
+	}
+	return found
 }

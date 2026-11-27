@@ -31,6 +31,8 @@ type tsToken struct {
 	text     string
 	computed bool
 	pos      int
+	// raw is a regular expression's own source, flags included.
+	raw string
 }
 
 // tsNote is one comment: its text after the opener, and whether it is a
@@ -277,6 +279,7 @@ func (l *tsLexer) template() error {
 }
 
 func (l *tsLexer) regex() error {
+	start := l.pos
 	inClass := false
 	for l.pos++; l.pos < len(l.src); l.pos++ {
 		switch ch := l.src[l.pos]; {
@@ -294,7 +297,7 @@ func (l *tsLexer) regex() error {
 				l.pos++
 			}
 			// A regular expression is an operand, which this token records.
-			l.tokens = append(l.tokens, tsToken{kind: tkNumber, text: "/regex/", pos: l.pos})
+			l.tokens = append(l.tokens, tsToken{kind: tkNumber, text: "/regex/", pos: l.pos, raw: l.src[start:l.pos]})
 			return nil
 		}
 	}
@@ -307,7 +310,18 @@ func (l *tsLexer) opensElement() bool {
 		return false
 	}
 	next := l.src[l.pos+1]
-	return next == '>' || isIdentStart(next) && next != '#'
+	return next == '>' || isIdentStart(next) && next != '#' && !l.opensTypeParameters()
+}
+
+// opensTypeParameters reports a generic arrow's "<T,>" or "<T extends U>", which a
+// .tsx file spells where an element could start.
+func (l *tsLexer) opensTypeParameters() bool {
+	end := l.pos + 1
+	for end < len(l.src) && isIdentPart(l.src[end]) {
+		end++
+	}
+	rest := strings.TrimLeft(l.src[end:], " \t")
+	return strings.HasPrefix(rest, ",") || strings.HasPrefix(rest, "extends ")
 }
 
 // element reads one JSX element, its attributes and its children. Text is

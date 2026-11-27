@@ -33,26 +33,31 @@ refuse() {
   exit 1
 }
 
+# event_field and first_parent set a variable rather than print, so each runs
+# outside a command substitution and its refusal ends the script.
 event_field() {
-  jq -r "$1 // empty" "${GITHUB_EVENT_PATH:-/dev/null}" 2>/dev/null || true
+  [[ -r "${GITHUB_EVENT_PATH:-}" ]] || refuse "cannot read the event file '${GITHUB_EVENT_PATH:-}'"
+  field="$(jq -r "$1 // empty" "$GITHUB_EVENT_PATH")" || refuse "jq cannot read $1 from $GITHUB_EVENT_PATH"
 }
 
 first_parent() {
-  git rev-parse --verify --quiet 'HEAD^1' || refuse "HEAD has no parent in this clone; check out at least two commits"
+  base="$(git rev-parse --verify --quiet 'HEAD^1')" || refuse "HEAD has no parent in this clone; check out at least two commits"
 }
 
 event="${GITHUB_EVENT_NAME:-}"
 case "$event" in
   pull_request | schedule)
-    base="$(first_parent)"
+    first_parent
     ;;
   merge_group)
-    base="$(event_field .merge_group.base_sha)"
+    event_field .merge_group.base_sha
+    base="$field"
     ;;
   workflow_dispatch)
-    default_branch="$(event_field .repository.default_branch)"
+    event_field .repository.default_branch
+    default_branch="$field"
     if [[ -n "$default_branch" && "${GITHUB_REF:-}" == "refs/heads/$default_branch" ]]; then
-      base="$(first_parent)"
+      first_parent
     else
       base="$(curl -fsS --retry 3 \
         -H "Authorization: Bearer ${GH_TOKEN:-}" \

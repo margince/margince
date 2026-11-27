@@ -163,6 +163,27 @@ execFileSync("go", ["run", "./internal/a"], { cwd: join(repoRoot, "backend") });
 			source: "#!/usr/bin/env bash\ncat ../docs/reference/copy.md\n", want: copyMD},
 		{name: "a call after a regular expression that holds a backtick", reader: "frontend/src/a/r.test.ts",
 			source: "const quoted = /" + "`" + "([^" + "`" + "]+)" + "`" + "/g;\nreadFileSync(join(import.meta.dirname, \"../../../docs/reference/copy.md\"));", want: copyMD},
+		{name: "a generic arrow in a .tsx file", reader: "frontend/src/a/r.test.tsx",
+			source: `const pick = <T,>(value: T) => value;
+readFileSync(join(import.meta.dirname, "../../../docs/reference/copy.md"));`, want: copyMD},
+		{name: "an arrow with a return type", reader: "frontend/src/a/r.test.ts",
+			source: `const root = join(import.meta.dirname, "..", "..", "..");
+const read = (f: string): string => readFileSync(join(root, f), "utf8");
+read("docs/reference/copy.md");`, want: copyMD},
+		{name: "a stylesheet @import", reader: "frontend/src/a/r.css",
+			source: `@import "../../../docs/reference/copy.md";`, want: copyMD},
+		{name: "a page's script src", reader: "frontend/r.html",
+			source: `<script type="module" src="../docs/reference/copy.md"></script>`, want: copyMD},
+		{name: "a heredoc a shell runs", reader: "frontend/scripts/r.sh",
+			source: "bash <<'EOF'\ncat ../docs/reference/copy.md\nEOF\n", want: copyMD},
+		{name: "a heredoc no shell runs", reader: "frontend/scripts/r.sh",
+			source: "cat <<EOF\n../docs/reference/copy.md\nEOF\n"},
+		{name: "mkdir in a shell script", reader: "frontend/scripts/r.sh",
+			source: "mkdir -p ../docs/handbook\n"},
+		{name: "a write command a subprocess runs", reader: "frontend/scripts/r.ts",
+			source: spawnImport + rootFromScripts + `execFileSync("mkdir", ["-p", join(repoRoot, "docs/handbook")]);`},
+		{name: "a script path a subprocess is handed", reader: "frontend/scripts/r.ts",
+			source: spawnImport + rootFromScripts + `execFileSync("bash", [join(repoRoot, "scripts/check.sh")]);`, want: []string{"scripts/check.sh"}},
 		{name: "a comment", reader: "frontend/src/a/r.ts",
 			source: `// readFileSync(join(repoRoot, "docs/reference/copy.md"))`},
 		{name: "a path literal no call reads", reader: "frontend/src/a/r.ts",
@@ -183,14 +204,76 @@ fs.writeFileSync(path.join(dir, "copy.md"), text);`},
 func TestTheFrontendReadCensusSeesEachReadForm(t *testing.T) {
 	t.Parallel()
 	for _, c := range readFormCases() {
-		sources := map[string]string{c.reader: c.source, "frontend/census/tree.ts": plantedCensusTree}
+		sources := map[string]string{"frontend/census/tree.ts": plantedCensusTree}
+		if readerKindOf(c.reader, c.source) == scriptReader {
+			sources[c.reader] = c.source
+		}
 		for file, source := range c.others {
 			sources[file] = source
 		}
-		got := readsOf(newTSReader(plantedTree(), sources), c.reader, c.source)
+		ts, err := newTSReader(plantedTree(), sources)
+		if err != nil {
+			t.Errorf("%s: %v", c.name, err)
+			continue
+		}
+		got := readsOf(ts, c.reader, c.source)
 		slices.Sort(got)
 		if !slices.Equal(got, c.want) {
 			t.Errorf("%s: the census read %v from %s, want %v", c.name, got, c.reader, c.want)
 		}
+	}
+}
+
+func TestAJobReadsItsActionsAndTheCommandsItRuns(t *testing.T) {
+	t.Parallel()
+	var jobs laneJobs
+	steps := []laneStep{
+		{Uses: "./.github/actions/probe"},
+		{Run: "cd frontend && \\\n  cat ../docs/reference/copy.md\nmake -k -C backend lint", WorkingDirectory: "."},
+		{Run: "cat ../docs/handbook/a.md"},
+	}
+	jobs.walkSteps(t, plantedTree(), "job probe", steps, "backend")
+	var reads []string
+	for _, read := range jobs.reads {
+		reads = append(reads, read.path)
+	}
+	slices.Sort(reads)
+	if want := []string{".github/actions/probe", "docs/handbook/a.md", "docs/reference/copy.md"}; !slices.Equal(reads, want) {
+		t.Errorf("the planted job read %v, want %v", reads, want)
+	}
+	if !slices.Equal(jobs.makes, []makeCall{{"backend", "lint"}}) {
+		t.Errorf("the planted job makes %v, want backend lint", jobs.makes)
+	}
+}
+
+func TestARecipeReadIsPlacedOnTheDirectoryItsCdLeft(t *testing.T) {
+	t.Parallel()
+	cases := []struct {
+		dir, line string
+		want      []string
+	}{
+		{".", "\tcd frontend && node scripts/x.mjs ../docs/reference/copy.md", []string{"docs/reference/copy.md"}},
+		{".", "\t@bash scripts/check.sh docs/handbook/a.md", []string{"docs/handbook/a.md", "scripts/check.sh"}},
+		{".", "\t@./scripts/check.sh", []string{"scripts/check.sh"}},
+		{"backend", "\tgo run ./internal/a", []string{"backend/internal/a"}},
+		{".", "\t(cd backend && go run ./internal/a) && cat docs/handbook/a.md", []string{"backend/internal/a", "docs/handbook/a.md"}},
+		{"frontend", "\tcat $(CURDIR)/../docs/reference/copy.md", []string{"docs/reference/copy.md"}},
+		{".", "\tcd frontend && $(MAKE) -C .. x && cat $(CURDIR)/scripts/check.sh", []string{"scripts/check.sh"}},
+		{".", "\tmkdir -p docs/handbook && rm -f docs/reference/copy.md", nil},
+		{".", "\tcd frontend && pnpm exec vitest run src/x.ts", nil},
+	}
+	for _, c := range cases {
+		got := recipeReads(plantedTree(), c.dir, c.line)
+		slices.Sort(got)
+		if !slices.Equal(got, c.want) {
+			t.Errorf("recipeReads(%q, %q) = %v, want %v", c.dir, c.line, got, c.want)
+		}
+	}
+	joined := commandLines([]string{"\tcd frontend && \\", "\t  cat ../docs/reference/copy.md"})
+	if got := recipeReads(plantedTree(), ".", joined[0]); len(joined) != 1 || !slices.Equal(got, []string{"docs/reference/copy.md"}) {
+		t.Errorf("a cd carried over a backslash continuation read %v from %q, want [docs/reference/copy.md]", got, joined)
+	}
+	if calls := makeCalls(".", "\tPHASE=1 make -k -C backend lint FE=1 && $(MAKE) fe-unit"); !slices.Equal(calls, []makeCall{{"backend", "lint"}, {".", "fe-unit"}}) {
+		t.Errorf("makeCalls read %v, want backend lint and fe-unit", calls)
 	}
 }

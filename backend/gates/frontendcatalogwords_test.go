@@ -173,20 +173,52 @@ func tsImportedMapKeys(t *testing.T, path, local string) map[string]bool {
 	return tsKeySet(t, tsObjectEntries(t, target, "export const "+exported))
 }
 
-var tsNamedImport = regexp.MustCompile(`import\s+(?:type\s+)?\{([^}]*)\}\s*from\s*"([^"]+)"`)
+// tsBoundImport is one name an import statement binds: original is "*" for a
+// namespace import and "default" for a default one.
+type tsBoundImport struct {
+	local, original, from string
+}
 
-// tsImportOf finds the import that binds local, and answers the name the
-// module exports it under and the module it comes from.
-func tsImportOf(source, local string) (exported, from string, ok bool) {
-	for _, m := range tsNamedImport.FindAllStringSubmatch(source, -1) {
-		for spec := range strings.SplitSeq(m[1], ",") {
+var tsImportStatement = regexp.MustCompile(`\bimport\s+(?:type\s+)?([^;"']*?)\s*\bfrom\s*["']([^"']+)["']`)
+
+// tsImports returns the names the import statements of source bind.
+func tsImports(source string) []tsBoundImport {
+	var found []tsBoundImport
+	for _, m := range tsImportStatement.FindAllStringSubmatch(source, -1) {
+		clause, from := strings.TrimSpace(m[1]), m[2]
+		named := ""
+		if open := strings.IndexByte(clause, '{'); open >= 0 {
+			named = strings.Trim(clause[open:], "{} \n\t")
+			clause = strings.TrimSpace(strings.TrimSuffix(strings.TrimSpace(clause[:open]), ","))
+		}
+		for part := range strings.SplitSeq(clause, ",") {
+			fields := strings.Fields(part)
+			switch {
+			case len(fields) == 3 && fields[0] == "*" && fields[1] == "as":
+				found = append(found, tsBoundImport{fields[2], "*", from})
+			case len(fields) == 1 && fields[0] != "type":
+				found = append(found, tsBoundImport{fields[0], "default", from})
+			}
+		}
+		for spec := range strings.SplitSeq(named, ",") {
 			fields := strings.Fields(strings.TrimPrefix(strings.TrimSpace(spec), "type "))
 			switch {
-			case len(fields) == 1 && fields[0] == local:
-				return local, m[2], true
-			case len(fields) == 3 && fields[1] == "as" && fields[2] == local:
-				return fields[0], m[2], true
+			case len(fields) == 1:
+				found = append(found, tsBoundImport{fields[0], fields[0], from})
+			case len(fields) == 3 && fields[1] == "as":
+				found = append(found, tsBoundImport{fields[2], fields[0], from})
 			}
+		}
+	}
+	return found
+}
+
+// tsImportOf finds the named import that binds local, and answers the name the
+// module exports it under and the module it comes from.
+func tsImportOf(source, local string) (exported, from string, ok bool) {
+	for _, imported := range tsImports(source) {
+		if imported.local == local && imported.original != "*" && imported.original != "default" {
+			return imported.original, imported.from, true
 		}
 	}
 	return "", "", false

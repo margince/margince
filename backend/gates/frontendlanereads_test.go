@@ -9,12 +9,15 @@ package gates
 
 // The frontend lane runs on a change to every path outside frontend/ it reads.
 //
-// The readers are the frontend trees, the scripts the lane runs or sources, and
-// the recipes it makes. Out of reach: a path from process.cwd(), an environment
-// variable or a loop's arithmetic, and a subprocess built at run time. What a
-// regular expression keeps from a listing is declared in wholeTreeReaders.
+// The readers are the frontend trees, the frontend-scoped jobs' workflows and
+// actions, the scripts those run or source, and the recipes they make. Out of
+// reach: process.cwd(), an environment variable, a loop's arithmetic, a
+// subprocess built at run time, and a call inside a template's substitution.
+// wholeTreeReaders declares what a regular expression keeps from a listing.
 
 import (
+	"fmt"
+	"maps"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -114,19 +117,23 @@ func ancestors(reader string) []string {
 type readerKind string
 
 const (
-	notAReader   readerKind = ""
-	scriptReader readerKind = "TypeScript, JavaScript, CSS and HTML"
-	configReader readerKind = "JSON and YAML config"
-	shellReader  readerKind = "shell"
-	recipeReader readerKind = "Makefile recipe"
+	notAReader      readerKind = ""
+	scriptReader    readerKind = "TypeScript and JavaScript"
+	configReader    readerKind = "JSON and YAML config"
+	shellReader     readerKind = "shell"
+	markupReader    readerKind = "CSS, HTML and MDX"
+	recipeReader    readerKind = "Makefile recipe"
+	subMakeReads    readerKind = "sub-Makefile recipe"
+	subprocessReads readerKind = "subprocess"
+	workflowReads   readerKind = "workflow and action"
 )
 
 var readerKinds = map[string]readerKind{
 	".ts": scriptReader, ".tsx": scriptReader, ".mts": scriptReader, ".cts": scriptReader,
 	".js": scriptReader, ".jsx": scriptReader, ".mjs": scriptReader, ".cjs": scriptReader,
-	".css": scriptReader, ".html": scriptReader, ".mdx": scriptReader,
 	".json": configReader, ".yaml": configReader, ".yml": configReader,
-	".sh": shellReader,
+	".sh":  shellReader,
+	".css": markupReader, ".html": markupReader, ".mdx": markupReader,
 }
 
 // readerKindOf reads a file with no ending by its shebang.
@@ -146,116 +153,6 @@ func readerKindOf(file, source string) readerKind {
 	return notAReader
 }
 
-var (
-	configEscape = regexp.MustCompile(`(?:^|[\s"'=:(\[])((?:\.\./)+[\w@.*/-]*)`)
-	shellVarPath = regexp.MustCompile(`\$\{?\w+\}?((?:/[\w.*-]+)+)`)
-	commandPath  = regexp.MustCompile(`(?:^|[\s"'=(])((?:\./|(?:\.\./)+)?\w[\w.*-]*(?:/[\w.*-]+)+|\./\w[\w.*-]*)`)
-)
-
-// A config's escapes are relative to its own directory.
-func configReads(tree repoTree, file, source string) []string {
-	text, _ := stripTSComments(source)
-	if path.Ext(file) != ".json" {
-		var kept []string
-		for line := range strings.SplitSeq(source, "\n") {
-			if !strings.HasPrefix(strings.TrimSpace(line), "#") {
-				kept = append(kept, line)
-			}
-		}
-		text = strings.Join(kept, "\n")
-	}
-	var found []string
-	for _, match := range configEscape.FindAllStringSubmatch(text, -1) {
-		if read, ok := tree.resolveRead(match[1], []string{path.Dir(file)}); ok {
-			found = append(found, read)
-		}
-	}
-	return found
-}
-
-func shellReads(tree repoTree, file, source string) []string {
-	anchors := ancestors(file)
-	var found []string
-	for _, command := range scriptCommands(source) {
-		for _, rel := range commandPaths(command) {
-			if read, ok := tree.resolveRead(rel, anchors); ok {
-				found = append(found, read)
-			}
-		}
-	}
-	return found
-}
-
-var (
-	caseOpen        = regexp.MustCompile(`^case\b.*\bin$`)
-	shellPrint      = []string{"echo", "printf", "true", "false", ":"}
-	shellDeclarers  = []string{"local", "export", "readonly", "declare"}
-	shellAssignment = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*=`)
-)
-
-// scriptCommands is each simple command of a script. A case pattern is dropped:
-// it names the paths it matches, not paths the script opens.
-func scriptCommands(source string) []string {
-	var commands []string
-	depth, pattern := 0, false
-	for line := range strings.SplitSeq(source, "\n") {
-		text := strings.TrimSpace(line)
-		switch {
-		case strings.HasPrefix(text, "#"):
-			continue
-		case caseOpen.MatchString(text):
-			depth, pattern = depth+1, true
-			continue
-		case depth > 0 && strings.HasPrefix(text, "esac"):
-			depth, pattern = depth-1, false
-			continue
-		case pattern:
-			closing := strings.IndexByte(text, ')')
-			if closing < 0 {
-				continue
-			}
-			text, pattern = text[closing+1:], false
-		}
-		if depth > 0 && strings.HasSuffix(text, ";;") {
-			text, pattern = strings.TrimSuffix(text, ";;"), true
-		}
-		commands = append(commands, simpleCommands(text)...)
-	}
-	return commands
-}
-
-// commandPaths is the path-shaped words of one simple command. What echo and
-// printf print, and an output redirection, are no reads.
-func commandPaths(command string) []string {
-	words := strings.Fields(command)
-	var candidates []string
-	for len(words) > 0 && (shellAssignment.MatchString(words[0]) || slices.Contains(shellDeclarers, words[0])) {
-		if _, value, assigned := strings.Cut(words[0], "="); assigned {
-			candidates = append(candidates, value)
-		}
-		words = words[1:]
-	}
-	if len(words) == 0 || !slices.Contains(shellPrint, words[0]) {
-		for i, word := range words {
-			if strings.HasPrefix(word, ">") || i > 0 && bareRedirection.MatchString(words[i-1]) && strings.HasPrefix(words[i-1], ">") {
-				continue
-			}
-			candidates = append(candidates, strings.TrimLeft(word, "<"))
-		}
-	}
-	var rels []string
-	for _, word := range candidates {
-		word = strings.Trim(word, "\"'")
-		for _, match := range shellVarPath.FindAllStringSubmatch(word, -1) {
-			rels = append(rels, strings.TrimPrefix(match[1], "/"))
-		}
-		for _, match := range commandPath.FindAllStringSubmatch(word, -1) {
-			rels = append(rels, match[1])
-		}
-	}
-	return rels
-}
-
 func readsOf(ts *tsReader, file, source string) []string {
 	switch readerKindOf(file, source) {
 	case scriptReader:
@@ -264,136 +161,16 @@ func readsOf(ts *tsReader, file, source string) []string {
 		return configReads(ts.tree, file, source)
 	case shellReader:
 		return shellReads(ts.tree, file, source)
+	case markupReader:
+		return markupReads(ts.tree, file, source)
 	}
 	return nil
 }
 
-// A path is relative to where the line's last cd left the shell. That starts at
-// the directory of the Makefile that holds the line.
-func recipeReads(tree repoTree, dir, line string) []string {
-	var found []string
-	cwd := dir
-	for _, command := range simpleCommands(strings.TrimLeft(line, " \t@+-")) {
-		words := strings.Fields(command)
-		if len(words) == 2 && words[0] == "cd" {
-			cwd = path.Join(cwd, words[1])
-			continue
-		}
-		for _, rel := range commandPaths(command) {
-			if read, ok := tree.resolveRead(rel, []string{cwd}); ok {
-				found = append(found, read)
-			}
-		}
-	}
-	return found
-}
-
-var includeLine = regexp.MustCompile(`(?m)^-?include\s+(.+)$`)
-
-// makefile is one directory's Makefile with the files it includes folded in.
-type makefile struct {
-	files   []string
-	targets map[string]*recipeTarget
-	vars    map[string]string
-	// forward is the directory a match-anything rule hands an undeclared target to.
-	forward string
-}
-
-var forwardRule = regexp.MustCompile(`(?m)^%:.*\n\t\$\(MAKE\) -C (\S+) \$@[ \t]*$`)
-
-func loadMakefile(t *testing.T, dir string) makefile {
-	t.Helper()
-	main := path.Join(dir, "Makefile")
-	body, err := gatekit.ReadFile(filepath.Join(repoRoot, main))
-	if err != nil {
-		t.Fatalf("reading %s: %v", main, err)
-	}
-	loaded := makefile{files: []string{main}, targets: map[string]*recipeTarget{}, vars: map[string]string{}}
-	var files []string
-	for _, include := range includeLine.FindAllStringSubmatch(string(body), -1) {
-		for _, word := range strings.Fields(include[1]) {
-			files = append(files, path.Join(dir, word))
-		}
-	}
-	for _, file := range append(files, main) {
-		targets, vars := parseRecipes(t, filepath.Join(repoRoot, file))
-		for name, target := range targets {
-			if loaded.targets[name] == nil {
-				loaded.targets[name] = &recipeTarget{}
-			}
-			loaded.targets[name].pulls = append(loaded.targets[name].pulls, target.pulls...)
-			loaded.targets[name].recipes = append(loaded.targets[name].recipes, target.recipes...)
-		}
-		for name, value := range vars {
-			loaded.vars[name] = value
-		}
-	}
-	loaded.files = append(files, main)
-	if forward := forwardRule.FindStringSubmatch(string(body)); forward != nil {
-		loaded.forward = path.Join(dir, forward[1])
-	}
-	return loaded
-}
-
-// laneRecipes walks the targets the frontend-scoped jobs make, through their
-// prerequisites, $(MAKE) delegations and $(MAKE) -C into another Makefile.
-func laneRecipes(t *testing.T, tree repoTree, workflow workflowFile, lanes []filteredLane) []laneRead {
-	t.Helper()
-	makefiles := map[string]makefile{}
-	var reads []laneRead
-	seen := map[string]bool{}
-	var walk func(dir, name string)
-	walk = func(dir, name string) {
-		if _, loaded := makefiles[dir]; !loaded {
-			makefiles[dir] = loadMakefile(t, dir)
-			for _, file := range makefiles[dir].files {
-				reads = append(reads, laneRead{"make", file})
-			}
-		}
-		key := dir + "\x00" + name
-		target := makefiles[dir].targets[name]
-		if target == nil && makefiles[dir].forward != "" && !seen[key] {
-			seen[key] = true
-			walk(makefiles[dir].forward, name)
-			return
-		}
-		if seen[key] || target == nil {
-			return
-		}
-		seen[key] = true
-		reader := "make " + name
-		if dir != "." {
-			reader = "make -C " + dir + " " + name
-		}
-		for _, pulled := range target.pulls {
-			walk(dir, pulled)
-		}
-		for _, recipe := range target.recipes {
-			command := strings.ReplaceAll(expandRefs(recipe, makefiles[dir].vars), "$@", name)
-			for _, read := range recipeReads(tree, dir, command) {
-				reads = append(reads, laneRead{reader, read})
-			}
-			for _, sub := range subMakes(command) {
-				for _, delegated := range sub.targets {
-					walk(path.Join(dir, sub.dir), delegated)
-				}
-			}
-		}
-	}
-	for _, lane := range lanes {
-		for _, command := range jobCommands(t, workflow, workflow.Jobs[lane.name].Uses, lane.name) {
-			for _, invocation := range makeInvocation.FindAllStringSubmatch(command, -1) {
-				walk(".", invocation[1])
-			}
-		}
-	}
-	return reads
-}
-
 var frontendGuard = regexp.MustCompile(`outputs\s*(?:\.\s*frontend\b|\[\s*['"]frontend['"]\s*\])`)
 
-// frontendLanes is every job the frontend scope gates. A spelling of the scope
-// that filteredLanes does not parse fails here: the census would lose the job.
+// frontendLanes returns the jobs the frontend scope gates. A spelling of the
+// scope that filteredLanes does not parse fails here: the census would lose the job.
 func frontendLanes(t *testing.T, workflow workflowFile) []filteredLane {
 	t.Helper()
 	lanes, unparsed, gated := frontendGatedJobs(t, workflow)
@@ -446,21 +223,35 @@ func TestAFrontendGuardInAnotherSpellingIsNotDropped(t *testing.T) {
 	}
 }
 
-// wholeTreeReader is a reader that lists the whole repository. keeps holds the
-// regular expressions it keeps, verbatim, since the census cannot follow a path
-// through one. A reader the lane never runs that way says why in unread.
+// wholeTreeReader is a reader that lists the whole repository. Each regular
+// expression in it is named: keeps holds those that narrow the listing, and others
+// says why each of the rest does not. A reader the lane never runs that way says
+// why in unread.
 type wholeTreeReader struct {
 	keeps  []string
+	others map[string]string
 	unread string
 }
 
 var wholeTreeReaders = map[string]wholeTreeReader{
-	"frontend/scripts/tsconfig-roots.test.ts": {keeps: []string{`(^|\/)(Makefile|[^/]+\.mk)$`, `^(frontend|extensions\/(.+\/)?frontend)\/`}},
-	"frontend/scripts/move-modules.ts":        {unread: "its git grep runs from the command line alone; move-modules.test.ts imports planMoves and rewriteImports, which list nothing"},
+	"frontend/scripts/tsconfig-roots.test.ts": {
+		keeps: []string{`(^|\/)(Makefile|[^/]+\.mk)$`, `^(frontend|extensions\/(.+\/)?frontend)\/`},
+		others: map[string]string{
+			`\.(ts|tsx|mts|cts)$`:                    "it narrows only paths the frontend expression kept",
+			`(^|\/)tsconfig[^/]*\.json$`:             "it narrows only paths the frontend expression kept",
+			`(\.d\.ts|\.tsx)$`:                       "it narrows only paths the frontend expression kept",
+			`^[@-]*cd\s+(\S+)\s*&&`:                  "it reads a recipe line, not the listing",
+			`\btsc(?=[ \t]|$)((?:[ \t]+[^\s&|;]+)*)`: "it reads a recipe line, not the listing",
+			`\bpnpm\s+(?:run\s+)?([\w:-]+)`:          "it reads a recipe line, not the listing",
+			`\s+`:                                    "it splits a command into words",
+		},
+	},
+	"frontend/scripts/move-modules.ts": {unread: "its git grep runs from the command line alone; move-modules.test.ts imports planMoves and rewriteImports, which list nothing"},
 }
 
-// narrowWholeTree replaces each read of "." with the tracked files its reader keeps.
-func narrowWholeTree(t *testing.T, tree repoTree, sources map[string]string, reads []laneRead) []laneRead {
+// narrowWholeTree replaces each read of "." with the tracked files its reader
+// keeps. laneText is what the lane runs as commands, which names no unread reader.
+func narrowWholeTree(t *testing.T, tree repoTree, ts *tsReader, laneText string, reads []laneRead) []laneRead {
 	t.Helper()
 	var narrowed []laneRead
 	listers := map[string]bool{}
@@ -471,10 +262,15 @@ func narrowWholeTree(t *testing.T, tree repoTree, sources map[string]string, rea
 			continue
 		}
 		listers[read.reader] = true
-		for _, expression := range declared.keeps {
-			if !strings.Contains(sources[read.reader], "/"+expression+"/") {
-				t.Errorf("%s no longer holds the expression /%s/ that wholeTreeReaders says it keeps from its listing", read.reader, expression)
+		if declared.unread != "" && strings.Contains(laneText, path.Base(read.reader)) {
+			t.Errorf("wholeTreeReaders says the lane never runs %s, and a lane command names it", read.reader)
+		}
+		if declared.unread == "" {
+			for _, problem := range wholeTreeProblems(read.reader, ts.files[read.reader].regexSources(), declared) {
+				t.Error(problem)
 			}
+		}
+		for _, expression := range declared.keeps {
 			kept := regexp.MustCompile(expression)
 			for file := range tree.files {
 				if kept.MatchString(file) && !insideFrontend(file) {
@@ -491,9 +287,37 @@ func narrowWholeTree(t *testing.T, tree repoTree, sources map[string]string, rea
 	return narrowed
 }
 
+// wholeTreeProblems holds the reader's regular expressions to the ones declared
+// for it, both ways.
+func wholeTreeProblems(reader string, found []string, declared wholeTreeReader) []string {
+	var problems []string
+	named := slices.Concat(declared.keeps, slices.Collect(maps.Keys(declared.others)))
+	for _, expression := range found {
+		if !slices.Contains(named, expression) {
+			problems = append(problems, fmt.Sprintf("%s holds /%s/, which wholeTreeReaders does not name: put it in keeps when it narrows the listing, or in others with why it does not", reader, expression))
+		}
+	}
+	for _, expression := range named {
+		if !slices.Contains(found, expression) {
+			problems = append(problems, fmt.Sprintf("wholeTreeReaders names /%s/ for %s, which no longer holds it", expression, reader))
+		}
+	}
+	slices.Sort(problems)
+	return problems
+}
+
+func TestAWholeTreeReaderNamesEachOfItsExpressions(t *testing.T) {
+	t.Parallel()
+	declared := wholeTreeReader{keeps: []string{"kept"}, others: map[string]string{"gone": "why"}}
+	problems := wholeTreeProblems("r.ts", []string{"kept", "unnamed"}, declared)
+	if len(problems) != 2 || !strings.Contains(problems[0], "/unnamed/") || !strings.Contains(problems[1], "/gone/") {
+		t.Errorf("an unnamed expression and a stale one read %q, want both reported", problems)
+	}
+}
+
 var laneReaderTree = regexp.MustCompile(`^(frontend|extensions/(.+/)?frontend)/`)
 
-// laneCensus is every outside read, and how many each kind of reader makes.
+// laneCensus holds the outside reads, and how many each kind of reader makes.
 type laneCensus struct {
 	reads  []laneRead
 	byKind map[readerKind]int
@@ -509,6 +333,12 @@ func frontendLaneReads(t *testing.T, workflow workflowFile) laneCensus {
 	}
 	tree := newRepoTree(paths)
 	lanes := frontendLanes(t, workflow)
+	jobs := readLaneJobs(t, tree, lanes)
+	recipes := laneRecipes(t, tree, jobs.makes)
+	census := laneCensus{byKind: map[readerKind]int{
+		workflowReads: len(jobs.reads), recipeReader: len(recipes.reads), subMakeReads: recipes.subMakes,
+	}}
+	census.reads = slices.Concat(jobs.reads, recipes.reads)
 	sources := map[string]string{}
 	var queue []string
 	enqueue := func(file string) {
@@ -534,20 +364,31 @@ func frontendLaneReads(t *testing.T, workflow workflowFile) laneCensus {
 			enqueue(input)
 		}
 	}
-	census := laneCensus{byKind: map[readerKind]int{}}
+	for _, read := range census.reads {
+		enqueue(read.path)
+	}
 	scripts := map[string]string{}
 	for file, source := range sources {
 		if readerKindOf(file, source) == scriptReader {
 			scripts[file] = source
 		}
 	}
-	ts := newTSReader(tree, scripts)
+	ts, err := newTSReader(tree, scripts)
+	if err != nil {
+		t.Error(err)
+	}
+	laneText := slices.Concat(recipes.lines, jobs.runs)
 	for len(queue) > 0 {
 		file := queue[0]
 		queue = queue[1:]
 		kind := readerKindOf(file, sources[file])
-		if _, added := ts.code[file]; !added && kind == scriptReader {
-			ts.add(file, sources[file])
+		if _, added := ts.files[file]; !added && kind == scriptReader {
+			if err := ts.add(file, sources[file]); err != nil {
+				t.Errorf("the census cannot read %s, so it cannot see its reads: %v", file, err)
+			}
+		}
+		if kind == shellReader {
+			laneText = append(laneText, sources[file])
 		}
 		for _, read := range readsOf(ts, file, sources[file]) {
 			census.reads = append(census.reads, laneRead{file, read})
@@ -557,9 +398,8 @@ func frontendLaneReads(t *testing.T, workflow workflowFile) laneCensus {
 			}
 		}
 	}
-	recipes := laneRecipes(t, tree, workflow, lanes)
-	census.byKind[recipeReader] = len(recipes)
-	census.reads = narrowWholeTree(t, tree, sources, append(census.reads, recipes...))
+	census.byKind[subprocessReads] = ts.spawned
+	census.reads = narrowWholeTree(t, tree, ts, strings.Join(laneText, "\n"), census.reads)
 	slices.SortFunc(census.reads, func(a, b laneRead) int {
 		return strings.Compare(a.reader+"\x00"+a.path, b.reader+"\x00"+b.path)
 	})
@@ -579,7 +419,9 @@ func uncoveredReads(reads []laneRead, scope []string) []laneRead {
 
 // readFloors sits under each kind's count on today's tree, so a kind of reader
 // the census stopped seeing fails rather than shrinking the sum.
-var readFloors = map[readerKind]int{scriptReader: 40, configReader: 2, shellReader: 8, recipeReader: 9}
+var readFloors = map[readerKind]int{
+	scriptReader: 40, configReader: 2, shellReader: 8, recipeReader: 9, subMakeReads: 1, subprocessReads: 4, workflowReads: 10,
+}
 
 func TestTheFrontendLaneRunsOnAChangeToEveryPathItReads(t *testing.T) {
 	t.Parallel()
@@ -606,34 +448,16 @@ func TestTheFrontendLaneRunsOnAChangeToEveryPathItReads(t *testing.T) {
 	}
 }
 
-func TestARecipeReadIsPlacedOnTheDirectoryItsCdLeft(t *testing.T) {
-	t.Parallel()
-	cases := []struct {
-		dir, line string
-		want      []string
-	}{
-		{".", "\tcd frontend && node scripts/x.mjs ../docs/reference/copy.md", []string{"docs/reference/copy.md"}},
-		{".", "\t@bash scripts/check.sh docs/handbook/a.md", []string{"docs/handbook/a.md", "scripts/check.sh"}},
-		{".", "\t@./scripts/check.sh", []string{"scripts/check.sh"}},
-		{"backend", "\tgo run ./internal/a", []string{"backend/internal/a"}},
-		{".", "\tcd frontend && pnpm exec vitest run src/x.ts", nil},
-	}
-	for _, c := range cases {
-		got := recipeReads(plantedTree(), c.dir, c.line)
-		slices.Sort(got)
-		if !slices.Equal(got, c.want) {
-			t.Errorf("recipeReads(%q, %q) = %v, want %v", c.dir, c.line, got, c.want)
-		}
-	}
-}
-
 // A planted reader of a path the scope leaves out is reported, and adding the
 // path to the scope clears it.
 func TestAReadTheFrontendScopeMissesIsReported(t *testing.T) {
 	t.Parallel()
 	const reader = "frontend/src/i18n/r.test.ts"
 	source := `readFileSync(resolve(import.meta.dirname, "../../../docs/reference/copy.md"));`
-	ts := newTSReader(plantedTree(), map[string]string{reader: source})
+	ts, err := newTSReader(plantedTree(), map[string]string{reader: source})
+	if err != nil {
+		t.Fatal(err)
+	}
 	var reads []laneRead
 	for _, read := range readsOf(ts, reader, source) {
 		reads = append(reads, laneRead{reader, read})

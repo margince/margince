@@ -1,8 +1,8 @@
 #!/usr/bin/env bash
 # ci-change-base.sh's own test: the rule for each event, a base the clone has to
 # fetch, and both ways a run with no base ends (exit 1, or nothing with
-# --fail-open). A rule that stopped matching would print a base for no event, and
-# each case names the commit it must print.
+# --fail-open). Each case names the commit it must print, so a rule that stops
+# matching fails its case.
 #
 # Usage: bash scripts/ci-change-base.test.sh
 
@@ -62,9 +62,13 @@ chmod +x "$TMP/bin/curl"
 # expect LABEL WANT_EXIT WANT_OUT DIR EVENT EVENT_JSON REF [FLAG]
 expect() {
   local label="$1" want_exit="$2" want_out="$3" dir="$4" event="$5" json="$6" ref="$7" flag="${8:-}"
-  printf '%s\n' "$json" >"$TMP/event.json"
+  local event_path="$TMP/event.json"
+  printf '%s\n' "$json" >"$event_path"
+  if [[ "$json" == missing ]]; then
+    event_path="$TMP/no-such-event.json"
+  fi
   local got_exit=0
-  (cd "$dir" && env GITHUB_EVENT_NAME="$event" GITHUB_EVENT_PATH="$TMP/event.json" GITHUB_REF="$ref" \
+  (cd "$dir" && env GITHUB_EVENT_NAME="$event" GITHUB_EVENT_PATH="$event_path" GITHUB_REF="$ref" \
     GITHUB_SHA="$(git -C "$dir" rev-parse HEAD)" GITHUB_REPOSITORY=owner/repo \
     GITHUB_API_URL=https://api.example.invalid GH_TOKEN=token PATH="$TMP/bin:$PATH" \
     bash "$SCRIPT" ${flag:+"$flag"}) >"$TMP/out" 2>"$TMP/err" || got_exit=$?
@@ -98,6 +102,9 @@ COMPARE_SHA="" expect "a compare call that fails, --fail-open" 0 "" "$BRANCH" wo
   '{"repository":{"default_branch":"main"}}' refs/heads/feature --fail-open
 
 expect "a pull request with no parent in the clone" 1 "" "$BRANCH" pull_request '{}' refs/pull/1/merge
+expect "a pull request with no parent, --fail-open" 0 "" "$BRANCH" pull_request '{}' refs/pull/1/merge --fail-open
+expect "a merge group whose event file is missing" 1 "" "$PR" merge_group missing refs/heads/q
+grep -q "cannot read the event file" "$TMP/err" || fail "a missing event file does not say so"
 expect "an event with no rule" 1 "" "$PR" push '{}' refs/heads/main
 grep -q "no base rule for the 'push' event" "$TMP/err" || fail "an event with no rule does not say which event"
 expect "an event with no rule, --fail-open" 0 "" "$PR" push '{}' refs/heads/main --fail-open
