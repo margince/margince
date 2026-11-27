@@ -36243,7 +36243,17 @@ paths:
                 entity_type: { type: string, enum: [contact, company, deal, activity, lead, project] }
                 entity_id: { type: string, format: uuid }
                 file: { type: string, format: binary }
+                reuse_identical:
+                  type: boolean
+                  description: 'When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy.'
       responses:
+        '200':
+          description: The identical file the record already held, answered for `reuse_identical`. Nothing was stored.
+          headers:
+            Location: { schema: { type: string } }
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Attachment' }
         '201':
           description: The stored attachment metadata.
           headers:
@@ -81235,7 +81245,7 @@ components:
       type: object
       description: Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422).
       properties:
-        position: { type: integer, minimum: 1 }
+        position: { type: integer, minimum: 1, description: 'Moves the line to this place in the offer. The lines between shift to make room, and the offer''s lines are numbered from 1 again. A place past the last line puts it last.' }
         description: { type: string }
         unit: { type: string }
         quantity: { type: number, format: double }

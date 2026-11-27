@@ -60074,6 +60074,7 @@ export interface components {
         };
         /** @description Any subset; omit a field to leave it unchanged. Totals are derived and not settable (422). */
         UpdateOfferLineItemRequest: {
+            /** @description Moves the line to this place in the offer. The lines between shift to make room, and the offer's lines are numbered from 1 again. A place past the last line puts it last. */
             position?: number;
             description?: string;
             unit?: string;
@@ -104249,10 +104250,22 @@ export interface operations {
                     entity_id: string;
                     /** Format: binary */
                     file: string;
+                    /** @description When true, a live file with the same bytes already filed on this record, against the same agreement, is answered with 200 instead of storing a copy. */
+                    reuse_identical?: boolean;
                 };
             };
         };
         responses: {
+            /** @description The identical file the record already held, answered for `reuse_identical`. Nothing was stored. */
+            200: {
+                headers: {
+                    Location?: string;
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Attachment"];
+                };
+            };
             /** @description The stored attachment metadata. */
             201: {
                 headers: {

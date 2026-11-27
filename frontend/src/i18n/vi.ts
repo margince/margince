@@ -3875,7 +3875,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "co.strip.fin.neverInvoiced": "Chưa xuất hóa đơn",
   "co.strip.fin.noConnection": "Chưa kết nối kế toán",
   "co.strip.fin.unmapped": "Chưa khớp khách hàng",
-  "co.strip.fin.syncing": "Đang đồng bộ",
+  "co.strip.fin.syncing": "Chờ đồng bộ lần đầu",
   "co.strip.fin.staleFigure": "Dữ liệu đồng bộ đã cũ",
   "co.strip.fin.notCurrent": "Chưa cập nhật",
   "co.strip.fin.errorFigure": "Lần đồng bộ gần nhất bị lỗi",
@@ -4337,7 +4337,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "finance.none": "Chưa ghi nhận gì.",
   "finance.loading": "Đang tải hóa đơn…",
   "finance.syncing":
-    "Đang đồng bộ với hệ thống kế toán. Số liệu sẽ hiện sau lần đồng bộ đầu tiên.",
+    "Đang chờ lần đồng bộ đầu tiên với hệ thống kế toán. Việc đồng bộ chạy sáu giờ một lần, và quản trị viên có thể bắt đầu sớm hơn trong Cài đặt → Tích hợp.",
   "finance.noConnection":
     "Chưa kết nối hệ thống kế toán. Hóa đơn và hành vi thanh toán của khách hàng này sẽ hiện khi đã kết nối.",
   "finance.unmapped":
@@ -4393,13 +4393,18 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contracts.status.expired": "Đã hết hạn",
   "contracts.status.cancelled": "\u0110\u00e3 h\u1ee7y",
   "contracts.status.superseded": "Đã bị thay thế",
-  "contracts.endsOn": "K\u1ebft th\u00fac ng\u00e0y {when}",
+  "contracts.cancelledTo": "Đã hủy, kết thúc ngày {when}",
+  "contracts.cancelledToNotice":
+    "Đã hủy, kết thúc ngày {when}, báo hủy ngày {notice}",
+  "contracts.replacedBy": "Được thay bằng {title}",
+  "contracts.replacedByUnnamed": "Được thay bằng một hợp đồng sau",
   "contracts.renewsOn": "Gia h\u1ea1n ng\u00e0y {when}",
   "contracts.endedPendingStatus": "Đã hết kỳ hạn, chờ cập nhật trạng thái",
   "contracts.form.title": "Ghi nh\u1eadn h\u1ee3p \u0111\u1ed3ng",
   "contracts.form.name": "Ti\u00eau \u0111\u1ec1",
   "contracts.form.number": "S\u1ed1 h\u1ee3p \u0111\u1ed3ng",
   "contracts.form.value": "Gi\u00e1 tr\u1ecb",
+  "contracts.form.currency": "Loại tiền",
   "contracts.form.basis": "Gi\u00e1 tr\u1ecb n\u00e0y l\u00e0",
   "contracts.form.arr": "Doanh thu định kỳ hằng năm",
   "contracts.form.arrMonthly": "Tương đương mỗi tháng:",
@@ -4448,6 +4453,9 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "contracts.statusChange.label": "Tr\u1ea1ng th\u00e1i m\u1edbi",
   "contracts.statusChange.submit": "\u0110\u1ed5i tr\u1ea1ng th\u00e1i",
   "contracts.statusChange.errSame": "Hợp đồng đã ở trạng thái này.",
+  "contracts.statusChange.finalTitle": "{status} là trạng thái cuối cùng",
+  "contracts.statusChange.finalBody":
+    "Sau khi lưu, không thể đổi trạng thái nữa. Để tiếp tục thỏa thuận, hãy gia hạn hợp đồng.",
   "contracts.cancel.title": "Ghi nhận hủy hợp đồng",
   "contracts.cancel.hint":
     "Khách hàng vẫn chịu ràng buộc hợp đồng đến ngày có hiệu lực. Thao tác này ghi nhận thông báo hủy và không đổi trạng thái.",
@@ -6913,7 +6921,12 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "offer.termsText": "Điều khoản",
   "offer.lines": "Dòng hàng",
   "offer.addLine": "Thêm dòng",
-  "offer.positionTaken": "Một dòng khác đã dùng số thứ tự này.",
+  "offer.lineOrderHint":
+    "Kéo dòng bằng tay nắm, hoặc đặt tiêu điểm vào tay nắm rồi nhấn phím mũi tên lên hoặc xuống.",
+  "offer.lineHandle": "Di chuyển {name}, dòng {position} trên {total}",
+  "offer.lineMoved": "{name} giờ ở dòng {position} trên {total}",
+  "offer.lineHandleUnnamed": "Di chuyển dòng {position} trên {total}",
+  "offer.lineMovedUnnamed": "Dòng này giờ ở vị trí {position} trên {total}",
   "offer.lapsed":
     "Ngày “Có hiệu lực đến” của báo giá này đã qua. Với bản nháp, đổi ngày trong “Sửa phần đầu”, còn với báo giá đã gửi thì tạo lại phiên bản.",
   "offer.position": "Số thứ tự",

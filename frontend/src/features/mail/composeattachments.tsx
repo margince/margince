@@ -284,11 +284,12 @@ function AttachPicker({
   // An upload files the bytes on the record and then attaches what came back.
   // The two are one act to the reader and two writes underneath.
   // So the record's lists are re-asked: the Documents tab behind this drawer
-  // is now out of date about a file this rep just added.
+  // is now out of date about a file this rep just added. A file the record
+  // already holds comes back as itself, so a second upload stores no copy.
   const upload = useMutation({
     mutationFn: async (picked: File) => {
       const parent: AttachmentParent = { entityType, entityId };
-      return uploadAttachment(parent, picked);
+      return uploadAttachment(parent, picked, { reuse_identical: "true" });
     },
     onMutate: () => setFailed(null),
     onError: (error) => setFailed(problemMessageOf(error, t)),
@@ -358,6 +359,9 @@ function AttachPicker({
         hint={t("compose.fileUploadHint")}
         emptyLabel={t("compose.fileUploadEmpty")}
         onPick={(picked) => upload.mutate(picked)}
+        // A full message takes no more, and an upload still out may fill it.
+        // The bytes are filed on the record before the list can refuse them.
+        disabled={disabled || full || upload.isPending}
         accept={ACCEPTED_ATTACHMENT_ATTR}
       />
       <p className="t-caption">

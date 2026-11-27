@@ -6,7 +6,9 @@ package httperr
 import (
 	"errors"
 	"fmt"
+	"mime/multipart"
 	"net/http"
+	"strings"
 )
 
 // WriteMultipartRefusal answers a failed multipart parse, telling the two
@@ -33,7 +35,17 @@ func MultipartRefusal(err error, limit int64) *DetailedError {
 		return BodyTooLargeRefusal(fmt.Sprintf("The upload exceeds the %s limit.", Megabytes(limit)))
 	}
 	return Validation("file", "invalid_multipart",
-		"the request must be sent as multipart/form-data")
+		"The request must be sent as multipart/form-data.")
+}
+
+// formFilenameEscapes undoes the escapes a browser writes into a form's file
+// name: the HTML standard sends a quote, CR and LF as %22, %0D and %0A.
+var formFilenameEscapes = strings.NewReplacer("%22", `"`, "%0D", "\r", "%0A", "\n")
+
+// MultipartFilename is the name of an uploaded file as its sender typed it.
+// Go reads the part's filename as sent, escapes included.
+func MultipartFilename(header *multipart.FileHeader) string {
+	return formFilenameEscapes.Replace(header.Filename)
 }
 
 // Megabytes renders a byte ceiling the way the contact it just refused will

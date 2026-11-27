@@ -1961,7 +1961,7 @@
   "payments.syncFailed": "Die Synchronisierung der Buchhaltung ist fehlgeschlagen. Die Beträge stammen aus der letzten erfolgreichen Synchronisierung.",
   "payments.syncUnavailable": "Rechnungsdaten sind erst nach einer erfolgreichen Synchronisierung der Buchhaltung verfügbar.",
   "finance.loading": "Rechnungen werden geladen…",
-  "finance.syncing": "Synchronisierung mit dem Buchhaltungssystem läuft. Die Zahlen erscheinen nach der ersten Synchronisierung.",
+  "finance.syncing": "Die erste Synchronisierung mit dem Buchhaltungssystem steht noch aus. Margince synchronisiert alle sechs Stunden, und ein Admin kann die Synchronisierung unter Einstellungen → Anbindungen früher starten.",
   "finance.col.invoice": "Rechnung",
   "finance.col.due": "Fällig",
   "finance.unnumbered": "Ohne Nummer",
