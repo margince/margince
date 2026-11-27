@@ -21369,7 +21369,6 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "filters.field.phase": "Projektphase",
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Beziehungstyp",
-  "filters.field.stage_id": "Phase",
   "filters.field.tag": "Tags",
   "filters.field.technology": "Technologie",
   "filters.choosePlaceholder": "Feld ausw\u00e4hlen",

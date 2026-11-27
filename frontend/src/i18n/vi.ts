@@ -20785,7 +20785,6 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "filters.field.phase": "Giai đoạn dự án",
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Loại quan hệ",
-  "filters.field.stage_id": "Giai đoạn",
   "filters.field.tag": "Thẻ",
   "filters.field.technology": "Công nghệ",
   "filters.choosePlaceholder": "Chọn trường",

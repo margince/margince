@@ -15,7 +15,6 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Locale } from "../../i18n";
 import { LocaleProvider } from "../../i18n";
-import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,

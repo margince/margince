@@ -21106,7 +21106,6 @@ export const en = {
   "filters.field.phase": "Phase",
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Relationship type",
-  "filters.field.stage_id": "Stage",
   "filters.field.tag": "Tags",
   "filters.field.technology": "Technology",
   "filters.choosePlaceholder": "Select field",
