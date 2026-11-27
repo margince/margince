@@ -115,16 +115,20 @@ func billingContactsSection(
 		return storekit.HiddenSection{}, err
 	}
 	companyPos := arg(companyID)
-	scope, err := auth.ScopeClauseFor(ctx, "contact", "c", arg)
+	scope, err := auth.RowScopeClauseFor(ctx, "contact", "c", arg)
+	if err != nil {
+		return storekit.HiddenSection{}, err
+	}
+	exclusion, err := auth.ExclusionClauseFor(ctx, "contact", "c")
 	if err != nil {
 		return storekit.HiddenSection{}, err
 	}
 	return storekit.HiddenSection{
 		From: "relationship r JOIN contact c ON c.id = r.contact_id",
-		Where: storekit.SQLf(`r.kind = '`+BillingContactKind+`'
+		Where: storekit.BoundedBy(storekit.SQLf(`r.kind = '`+BillingContactKind+`'
 		   AND r.company_id = $%d
 		   AND r.archived_at IS NULL
-		   AND c.archived_at IS NULL`, companyPos),
+		   AND c.archived_at IS NULL`, companyPos), exclusion),
 		Entry:   "r.id",
 		Owner:   "c.owner_id",
 		Visible: scope,

@@ -41,7 +41,7 @@ func (s *Store) linkEmploymentEpisode(ctx context.Context, tx pgx.Tx, contact id
 	_, ended := preciseEmploymentDate(e.Ended)
 	matched, state := matchEmploymentEpisode(relationships, e, started, ended)
 	// Evidence that matches no row would make a new employment. For a pair
-	// somebody ended it waits for a person, who may still resolve it.
+	// somebody ended it waits for a human, who may still resolve it.
 	removed := false
 	if automatic && matched == nil {
 		if err := tx.QueryRow(ctx, "SELECT "+employment.EndedAtCompanySQL("$1::uuid", "$2::uuid"), contact, company).Scan(&removed); err != nil {

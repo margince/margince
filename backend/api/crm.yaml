@@ -52102,6 +52102,23 @@ components:
             a fact about the employment PAIRS, so the edge grant governs it exactly as it governs the
             employment list; write responses (create, update, archive, merge) omit it. Never
             client-supplied.
+
+            A count of 0 means "no contacts YOU can see", never "no contacts": read it with
+            `hidden_contact_holders`. Say "no contacts you can see" and name those colleagues
+            when the list is not empty.
+        hidden_contact_holders:
+          type: array
+          readOnly: true
+          description: >-
+            The live colleagues who own at least one current contact at this account that the
+            caller may not see, each once, so the reader knows whom to ask for an introduction
+            ("Dana and Minh have contacts here you can't see"). It names who to ask and nothing
+            else: no contact's name, role or id, and no count per colleague or in total. Empty
+            when nothing is hidden, and a colleague who left or an agent seat is never listed.
+            It reads the same employment set as `contact_count` with the contact scope turned
+            around, so the two never describe different populations. Present exactly when
+            `contact_count` is, and absent entirely on a write response. Never client-supplied.
+          items: { $ref: '#/components/schemas/HiddenRecordHolder' }
         open_deal_count:
           type: integer
           readOnly: true

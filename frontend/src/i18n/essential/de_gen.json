@@ -4676,6 +4676,8 @@
   "contact.notYoursToChange": "Du kannst diesen Kontakt nicht bearbeiten. Frage die verantwortliche Person, ob sie ihn dir übergibt oder mit dir teilt, oder frage einen Admin.",
   "contact.employer.contacts_one": "{count} Kontakt",
   "contact.employer.contacts_other": "{count} Kontakte",
+  "contact.employer.hiddenHolders_one": "{names} hat hier Kontakte, die du nicht sehen kannst. Frage nach einer Vorstellung.",
+  "contact.employer.hiddenHolders_other": "{names} haben hier Kontakte, die du nicht sehen kannst. Frage nach einer Vorstellung.",
   "contact.employer.openDeals_one": "{count} offener Deal",
   "contact.employer.openDeals_other": "{count} offene Deals",
   "contact.employer.noOpenDeals": "keine offenen Deals",

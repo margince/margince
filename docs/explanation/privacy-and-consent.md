@@ -89,8 +89,7 @@ its **proof**, and records a **decision** per recipient:
   no template makes an address that bounces work.
 - **Every category ships enforcing, even when left out.** `consent.authorization_modes` can move one
   to `observe` or `warn`. Those record the engine's answer without binding it. That is an operator's
-  way back; the shipped mode is enforcing. A category the stored map does not name
-  enforces.
+  way back; the shipped mode is enforcing. A category the stored map does not name enforces.
 
   A map with entries that leaves out any category is refused at write time, naming the ones
   it missed. So a half-written setting cannot leave mail with no check. An empty map is accepted and every
@@ -172,8 +171,7 @@ Using an instruction checks these facts:
 
 - **The decision is still live.** A revoked decision, one marked expired or one already used
   allows no send.
-- **It is this message.** An instruction is made against one review, and that review holds one
-  message.
+- **It is this message.** An instruction is made against one review, and that review holds one message.
 - **The scope still fits.** New instructions freeze the recipients, sender, purpose, attachments
   and other message context. A change to that scope needs a new decision.
 - **The wording is approved**, where there is a fingerprint to check. After an approved send fails,
@@ -242,8 +240,7 @@ one quote does not lift an opt-out for another.
 
 ## Reaching the subject without the message that carried the link
 
-Three records exist so a subject's own acts do not rest on a mailbox, a session or a token that has
-since rotated.
+Three records exist so a subject's own acts do not rest on a mailbox, a session or a token that has since rotated.
 
 - **A withdrawal credential lives longer than its mail.** `withdrawal_credential` is separate from
   `preference_token` because the two allow different things. The token to read and edit the profile
@@ -393,8 +390,7 @@ Four of those show *why* nothing else can reach them:
   the `contact_email` delete and would keep the erased address open to a new match.
 
 A data-subject duty must reach **every** store that holds the subject, in that one transaction per
-record. To route each delete through the module that owns the table would give up the all-or-nothing
-promise.
+record. To route each delete through the module that owns the table would give up the all-or-nothing promise.
 
 Privacy's deletes are one of the agreed cross-writer exceptions to "a module writes only its own
 tables." Every such write is **agreed per table** in `backend/gates/tableownershipwaivers_test.go`, with a

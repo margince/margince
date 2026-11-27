@@ -228,17 +228,29 @@ func predicateFor(p principal.Principal, table string, arg func(any) int,
 	capture capturePrivacy, class readClass, share shareLevel,
 ) func(alias string) string {
 	visible := scopedPredicate(p, table, arg, capture, class, share)
-	if p.Type != principal.PrincipalAgent || table != tableContact {
+	exclude := agentExclusion(p, table)
+	if exclude == nil {
 		return visible
 	}
-	// An agent does not see a restricted contact at all (GDPR Art. 18), so no
-	// record, listing or link walk hands it the contact or what hangs on it.
+	return func(alias string) string {
+		return "(" + visible(alias) + " AND " + exclude(alias) + ")"
+	}
+}
+
+// agentExclusion is what an agent never sees of a table, whatever its row
+// scope says, or nil when the principal is not held to one. An agent does not
+// see a restricted contact at all (GDPR Art. 18), so no record, listing or link
+// walk hands it the contact or what hangs on it.
+func agentExclusion(p principal.Principal, table string) func(alias string) string {
+	if p.Type != principal.PrincipalAgent || table != tableContact {
+		return nil
+	}
 	return func(alias string) string {
 		id := table + ".id"
 		if alias != "" {
 			id = alias + ".id"
 		}
-		return "(" + visible(alias) + " AND NOT " + ContactRestrictedSQL(id) + ")"
+		return "NOT " + ContactRestrictedSQL(id)
 	}
 }
 

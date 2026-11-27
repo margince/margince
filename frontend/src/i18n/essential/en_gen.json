@@ -4676,6 +4676,8 @@
   "contact.notYoursToChange": "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator.",
   "contact.employer.contacts_one": "{count} contact",
   "contact.employer.contacts_other": "{count} contacts",
+  "contact.employer.hiddenHolders_one": "{names} has contacts here you cannot see. Ask for an introduction.",
+  "contact.employer.hiddenHolders_other": "{names} have contacts here you cannot see. Ask for an introduction.",
   "contact.employer.openDeals_one": "{count} open deal",
   "contact.employer.openDeals_other": "{count} open deals",
   "contact.employer.noOpenDeals": "no open deals",

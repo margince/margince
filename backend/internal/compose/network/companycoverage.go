@@ -64,11 +64,11 @@ type CompanyCoverage struct {
 	// project of this account. A contact on three deals is one relationship.
 	VisibleStakeholders []ids.UUID
 	// CoverageIncomplete says some stakeholder of this account is one this
-	// reader cannot open. A BOOLEAN and never a count: the verdict below only
-	// ever asks whether anything was withheld, and an exact number is an oracle
-	// — a caller watching it move from 2 to 3 has learned that a colleague
-	// captured a new contact at this account, which is precisely the fact
-	// capture privacy exists to keep.
+	// reader cannot open. It is a boolean because the verdict below only asks
+	// whether anything was withheld. The account's employee roster is the one
+	// exception. Company.hidden_contact_holders names the colleagues who hold
+	// contacts the reader cannot see, so the reader knows whom to ask. That
+	// field carries no count and no contact.
 	CoverageIncomplete bool
 	// Roles are the distinct roles among the visible stakeholders, so a reader
 	// can see which side of the house is covered.
