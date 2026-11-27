@@ -3275,6 +3275,7 @@ export const en = {
     "An exchange rate is missing, so the total cannot be calculated.",
   "rollup.computedAt": "Computed at {when}",
   "rollup.wonIn": "Won in {period}",
+  "rollup.quarterOf": "Q{quarter} {year}",
   "rollup.periodNote":
     "Won deals count in {period} by the day they were won. The weighted deal value is the open deals today.",
   "rollup.period.label": "Period for won deals",
@@ -4108,6 +4109,8 @@ export const en = {
   "timeline.filters.search": "Search this timeline",
   "timeline.filters.from": "From",
   "timeline.filters.to": "To",
+  "timeline.filters.pickFrom": "Choose the start date",
+  "timeline.filters.pickTo": "Choose the end date",
   "timeline.filters.searchOmitsLimited":
     "Search excludes threads whose content you cannot open.",
   "tab.contacts": "Contacts",
@@ -4851,6 +4854,12 @@ export const en = {
   "co.evidence.verifiedAt": "Confirmed by a person {when}",
   "co.evidence.confidence": "Model confidence {percent}%",
   "co.evidence.gaps": "Not recorded: {fields}.",
+  "co.evidence.field.source_url": "Source",
+  "co.evidence.field.excerpt": "Excerpt",
+  "co.evidence.field.actor": "Recorded by",
+  "co.evidence.field.connector": "Connection",
+  "co.evidence.field.import": "Import",
+  "co.evidence.field.produced_by": "Produced by",
   "co.evidence.kind.site_read": "Read from company website",
   "co.evidence.kind.connector": "From a connected system",
   "co.evidence.kind.human": "Entered by a person",
@@ -9976,7 +9985,7 @@ export const en = {
     "Shown to colleagues on records you edit, in pickers and in the audit log.",
   "settings.greetingName": "Greeting name",
   "settings.greetingNameHelp":
-    "The name you are greeted by in drafted messages and greetings. Empty uses the first word of your display name.",
+    "The name you are greeted by in drafted messages and greetings. Empty uses your first name, or the last word after a Vietnamese family name.",
   "settings.installApp": "Margince app",
   "settings.installAppHelp":
     "Adds Margince to this device as an app with its own window and icon.",
@@ -16822,7 +16831,7 @@ export const en = {
   "users.namePlaceholder": "Full name",
   "users.greetingLabel": "Greeting name",
   "users.greetingHint":
-    "Optional. Leave empty to let greetings use the first word of the full name.",
+    "Optional. Leave empty to let greetings use the first name, or the last word after a Vietnamese family name.",
   "users.deactivateConfirmTitle": "Deactivate {name}?",
   "users.deactivateConfirmBody":
     "They are signed out everywhere and their agent passports are revoked immediately. They can be reactivated later and must then sign in again.",
@@ -23180,6 +23189,10 @@ export const en = {
   "magic.action.mail_filed": "Filed captured email under this contact",
   "magic.action.company_profile_read": "Read the company’s technical profile",
   "magic.action.fields_changed": "Changed {fields}",
+  "magic.action.guests_synced_from_calendar":
+    "Updated guests from the calendar",
+  "magic.action.task_done": "Marked the task done",
+  "magic.action.task_reopened": "Reopened the task",
   "magic.action.retention_lead_anonymize":
     "Anonymized unconverted leads past their retention period",
   "magic.action.retention_lead_archive":
@@ -23284,6 +23297,7 @@ export const en = {
   "magic.records.fromTo": "{from} → {to}",
   "magic.records.hidden_value": "hidden",
   "magic.records.empty_value": "empty",
+  "magic.records.filled_value": "filled in",
   "magic.records.count_one": "{count} record",
   "magic.records.count_other": "{count} records",
   "magic.undoReason.noCompletedChange":

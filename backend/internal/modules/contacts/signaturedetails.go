@@ -382,13 +382,13 @@ func fillCompanyStreetTx(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID
 		return false, err
 	}
 	auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", companyEntity, companyID.UUID,
-		map[string]any{fieldAddress: nil}, map[string]any{fieldAddress: signatureFieldFilled},
+		map[string]any{fieldAddress: nil}, map[string]any{fieldAddress: auditFilledMarker},
 		map[string]any{auditKeySource: enrichSource, auditKeySourceRef: sourceRef, auditKeySigner: contactID.String()})
 	if err != nil {
 		return false, err
 	}
 	return true, storekit.EmitEvent(ctx, tx, auditID, companyID.UUID, crmcontracts.PublicEventCompanyUpdated{
-		ChangedFields: map[string]any{fieldAddress: signatureFieldFilled, auditKeySource: enrichSource},
+		ChangedFields: map[string]any{fieldAddress: auditFilledMarker, auditKeySource: enrichSource},
 	})
 }
 
@@ -443,7 +443,7 @@ func withdrawEmployerStreetTx(ctx context.Context, tx pgx.Tx, line string, conta
 	}
 	for _, company := range cleared {
 		auditID, err := storekit.AuditWithEvidence(ctx, tx, "update", companyEntity, company,
-			map[string]any{fieldAddress: signatureFieldFilled}, map[string]any{fieldAddress: nil},
+			map[string]any{fieldAddress: auditFilledMarker}, map[string]any{fieldAddress: nil},
 			map[string]any{auditKeySource: fillRetractSource, auditKeySigner: contactID.String()})
 		if err != nil {
 			return err

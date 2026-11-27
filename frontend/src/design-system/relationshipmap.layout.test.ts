@@ -5,6 +5,7 @@ import { expect, onTestFinished, test } from "vitest";
 import {
   COL_W,
   fitLabel,
+  fitPhrase,
   GUTTER,
   LANE_CAP,
   layout,
@@ -339,4 +340,12 @@ test("falls back to the count where nothing measures", () => {
   const name = "A name far longer than any node can draw";
   expect(fitLabel(name, NAME_ROOM, null, NAME_CHARS)).toBe(truncate(name));
   expect(fitLabel(name, NAME_ROOM, null)).toBe(name);
+});
+
+test("cuts a job title between words, never inside one", () => {
+  const title = "Head of Business Development Asia Pacific";
+  const fitted = fitPhrase(title, NAME_ROOM, eightWide, NAME_CHARS);
+  expect(fitted).toMatch(/…$/);
+  expect(eightWide(fitted)).toBeLessThanOrEqual(NAME_ROOM);
+  expect(title.startsWith(`${fitted.slice(0, -1)} `)).toBe(true);
 });
