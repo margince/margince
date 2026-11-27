@@ -7,6 +7,7 @@ import (
 	"context"
 	"errors"
 	"net/http"
+	"slices"
 
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
@@ -95,6 +96,9 @@ func (h importHandlers) checkedTest(
 	}
 	mapping, err := h.checkedMapping(ctx, req)
 	if err != nil {
+		return nil, migration.RunMapping{}, err
+	}
+	if err := refuseBeyondOwnImport(ctx, mapping); err != nil {
 		return nil, migration.RunMapping{}, err
 	}
 	source, _, err := bundleSourceFor(h.blobs, mapping, run.SourceRef, h.uploadLimit)
@@ -224,4 +228,23 @@ func (h importHandlers) sessionRefusal(ctx context.Context, err error) error {
 		refusal.Details = map[string]any{"run_id": other.String()}
 	}
 	return refusal
+}
+
+// ownImportObjects are what a member who imports only their own records may
+// import. Companies, deals and activities are workspace imports.
+var ownImportObjects = []string{migration.ObjectLead, migration.ObjectContact}
+
+// refuseBeyondOwnImport refuses a mapping with a part a member importing their
+// own records may not import, before anything is tested.
+func refuseBeyondOwnImport(ctx context.Context, mapping migration.RunMapping) error {
+	if auth.WorkspaceImporter(ctx) {
+		return nil
+	}
+	for _, part := range mapping.PartList() {
+		if !slices.Contains(ownImportObjects, part.Object) {
+			return httperr.Validation("mapping", "own_import_only",
+				"you can import your own leads and contacts; ask an administrator to import "+part.Object+" records")
+		}
+	}
+	return nil
 }

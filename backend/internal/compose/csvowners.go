@@ -21,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/recordexport"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
@@ -66,6 +67,9 @@ func foldedEmail(email string) string {
 
 // ownerResolver holds the seat of every owner address a run names, read once.
 type ownerResolver struct {
+	// own is the importer, for a member who imports only their own records:
+	// every row they import is theirs, whatever its owner cell says.
+	own   *ids.UserID
 	seats map[string]ids.UUID
 	// refused are addresses whose seat the importer may not name; the test run
 	// reports each once, and its rows keep the importer as owner.
@@ -84,6 +88,9 @@ func (o *ownerResolver) refuse(email string) {
 // newOwnerResolver resolves every distinct owner address of the run.
 func newOwnerResolver(ctx context.Context, pool *pgxpool.Pool, emails []string) (*ownerResolver, error) {
 	o := &ownerResolver{seats: map[string]ids.UUID{}}
+	if !auth.WorkspaceImporter(ctx) {
+		o.own = storekit.OwnerOrActor(ctx)
+	}
 	if len(emails) == 0 {
 		return o, nil
 	}
@@ -114,6 +121,9 @@ func (o *ownerResolver) ownerFor(raw string) (*ids.UserID, *migration.SkippedRow
 // ownerOf resolves a row's owner cell, with the warning placed on the row's
 // own line and column.
 func (w *csvWriters) ownerOf(row migration.Row) (*ids.UserID, *migration.SkippedRow) {
+	if w.owners.own != nil {
+		return w.owners.own, nil
+	}
 	raw := strings.TrimSpace(textFields(row.Fields)[csvTargetOwner])
 	if raw == "" {
 		return nil, nil

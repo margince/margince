@@ -158,10 +158,12 @@ type sessionState struct {
 // decision a move makes on it cannot be overtaken by another writer.
 func lockSession(ctx context.Context, tx pgx.Tx, id RunID) (sessionState, error) {
 	var state sessionState
+	args := []any{id}
+	scope := ownRunScope(ctx, "captured_by", func(v any) int { args = append(args, v); return len(args) })
 	err := tx.QueryRow(ctx, `
 		SELECT status, connector, source_name, source_ref, coalesce(draft_step, ''), version, job_attempt,
 		       approved_at IS NOT NULL, source_released_at IS NOT NULL, superseded_by, mapping
-		  FROM import_run WHERE id = $1 FOR UPDATE`, id).Scan(
+		  FROM import_run WHERE id = $1`+scope+` FOR UPDATE`, args...).Scan(
 		&state.status, &state.connector, &state.sourceName, &state.sourceRef, &state.draftStep,
 		&state.version, &state.jobAttempt, &state.approved, &state.released, &state.supersededBy, &state.mapping)
 	if errors.Is(err, pgx.ErrNoRows) {

@@ -90,10 +90,10 @@ var (
 // so create/update/delete are admin/ops-only, while every role may read the
 // binding's status (a rep needs to know whether the channel is live before
 // expecting a reply to arrive there).
-// import_run is admin/ops-only on EVERY verb, read included: a
-// migration run is a workspace-wide bulk mutation of the estate, and unlike
-// custom_field there is no per-rep read surface — the migrate-in screen is an
-// admin surface.
+// import_run: admin and ops hold every verb, and delete is what marks a
+// workspace import (auth.WorkspaceImporter). A rep, a manager and management
+// hold the rest, to import the leads and contacts they own; they see only the
+// runs they started.
 // grid builds one role's document: every core object at `base`, then the
 // objects that differ. It replaces a 44-argument positional zip in which the
 // object a grant belonged to was decided by COUNTING — a transposed pair
