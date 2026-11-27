@@ -24,6 +24,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/projects"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/platform/testdb"
@@ -113,8 +114,11 @@ func Setup(t *testing.T) *Env {
 		AdminUser: ids.NewV7(),
 		Team1:     ids.NewV7(), Team2: ids.NewV7(),
 	}
-	if _, err := owner.Exec(ctx,
-		`INSERT INTO workspace (id) VALUES ($1)`, e.WS); err != nil {
+	var workspaceCreated time.Time
+	if err := owner.QueryRow(ctx, `INSERT INTO workspace (id) VALUES ($1) RETURNING created_at`, e.WS).Scan(&workspaceCreated); err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.RecordInstallationTx(ctx, owner, e.WS, workspaceCreated); err != nil {
 		t.Fatal(err)
 	}
 	seedInstallationIdentity(ctx, t, owner)

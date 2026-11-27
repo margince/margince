@@ -10,12 +10,14 @@ import (
 	"fmt"
 	"os"
 	"testing"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
 	"github.com/margince/margince/backend/internal/platform/testdb"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -75,7 +77,11 @@ func SetupSearch(t *testing.T) *SearchEnv {
 		Owner: owner, WS: ids.NewV7(),
 		Rep1: ids.NewV7(), Rep3: ids.NewV7(), Team1: ids.NewV7(), Team2: ids.NewV7(),
 	}
-	if _, err := owner.Exec(ctx, `INSERT INTO workspace (id) VALUES ($1)`, e.WS); err != nil {
+	var workspaceCreated time.Time
+	if err := owner.QueryRow(ctx, `INSERT INTO workspace (id) VALUES ($1) RETURNING created_at`, e.WS).Scan(&workspaceCreated); err != nil {
+		t.Fatal(err)
+	}
+	if err := storekit.RecordInstallationTx(ctx, owner, e.WS, workspaceCreated); err != nil {
 		t.Fatal(err)
 	}
 	// This harness builds its installation by raw SQL, so bootstrap never wrote

@@ -250,7 +250,17 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// and it double-counted them. Deleted.
 		counts.secretRefs = secretRefs
 
+		// installation_state is swept with the rest, and these two facts name data
+		// that outlives it: the id stored keys are scoped by, and the day the trial
+		// began. They go back right after the sweep.
+		kept, err := storekit.KeptInstallationFactsTx(ctx, tx)
+		if err != nil {
+			return err
+		}
 		if err := sweepWorkspaceData(ctx, tx, tables); err != nil {
+			return err
+		}
+		if err := kept.RestoreTx(ctx, tx); err != nil {
 			return err
 		}
 		// The provider platform needs no pass of its own any more. It used to:

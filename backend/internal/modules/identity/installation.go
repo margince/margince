@@ -17,6 +17,7 @@ import (
 	"fmt"
 	"maps"
 	"slices"
+	"time"
 
 	"github.com/jackc/pgx/v5"
 
@@ -255,8 +256,12 @@ func createInstallation(ctx context.Context, tx pgx.Tx, c *config.Config, in Ins
 	// The row is identity and lifecycle now, nothing else: ADR-0090 moved the
 	// installation's configuration into `setting`, and ADR-0091 retired the
 	// slug it used to carry.
+	var createdAt time.Time
 	if err := tx.QueryRow(ctx,
-		`INSERT INTO workspace DEFAULT VALUES RETURNING id`).Scan(&wsID); err != nil {
+		`INSERT INTO workspace DEFAULT VALUES RETURNING id, created_at`).Scan(&wsID, &createdAt); err != nil {
+		return ids.WorkspaceID{}, err
+	}
+	if err := storekit.RecordInstallationTx(ctx, tx, wsID.UUID, createdAt); err != nil {
 		return ids.WorkspaceID{}, err
 	}
 	// The installation's identity is written HERE, not read back off the row

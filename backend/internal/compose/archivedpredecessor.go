@@ -30,23 +30,26 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 )
 
 // WarnOnArchivedPredecessor says, once per boot, what an archived company
 // left behind in this installation.
 func WarnOnArchivedPredecessor(ctx context.Context, pool *pgxpool.Pool, log *slog.Logger) error {
-	var archived int
+	var predecessor storekit.ArchivedPredecessor
+	var found bool
 	if err := database.WithInfraTx(ctx, pool, func(tx pgx.Tx) error {
-		return tx.QueryRow(ctx,
-			`SELECT count(*) FROM workspace WHERE archived_at IS NOT NULL`).Scan(&archived)
+		var err error
+		predecessor, found, err = storekit.InstallationStateTx[storekit.ArchivedPredecessor](ctx, tx, storekit.StateArchivedPredecessor)
+		return err
 	}); err != nil {
 		return fmt.Errorf("compose: checking for an archived predecessor company: %w", err)
 	}
-	if archived == 0 {
+	if !found || predecessor.ArchivedCompanies == 0 {
 		return nil
 	}
 	log.Warn("this installation carries an archived company's rows, and they are no longer distinguishable from its own",
-		"archived_companies", archived,
+		"archived_companies", predecessor.ArchivedCompanies,
 		"what_merged", "login credentials, sessions and RBAC grants — not only records",
 		"what_to_check", "the roster and every role assignment: a seat from the archived company "+
 			"authenticates here and holds whatever role it held there",
