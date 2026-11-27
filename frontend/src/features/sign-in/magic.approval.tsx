@@ -32,9 +32,8 @@ const COMMERCIAL_FIELDS = new Set([
 ]);
 
 /**
- * A decision waiting on the reader, as one of Home's task cards: the staged
- * ring where a task has its tick, what the proposal does, the changes it
- * makes, its chips, and the one press that opens it to be answered.
+ * A decision waiting on the reader, drawn as one of Home's task cards. The
+ * staged ring sits where a task has its tick, and Decide opens the proposal.
  */
 export function MagicApprovalCard({
   line,
@@ -92,8 +91,8 @@ export function MagicApprovalCard({
   );
 }
 
-// What the proposal does, in its own words: a deal it closes, the task a
-// commitment asks for, or the receipt's sentence for every other kind.
+// What the proposal does, in its own words. A closing deal and a commitment
+// name their own step; every other kind keeps the receipt's sentence.
 function approvalTitle(line: MagicLine, t: Translator): string {
   const preview = line.approval_preview;
   const outcome = preview ? dealCloseOutcome(preview) : undefined;
