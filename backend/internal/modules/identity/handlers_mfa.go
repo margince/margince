@@ -134,6 +134,8 @@ func (h Handlers) StartMyTotpEnrolment(w http.ResponseWriter, r *http.Request) {
 // session behind THIS request is the one the service spares when it ends the
 // member's other sessions: those were opened before any factor guarded the
 // account, and the enrolment must not launder them into factor-backed ones.
+// The current password authorizes the confirmation, with the refusals and the
+// failure budget ChangePassword has.
 func (h Handlers) ConfirmMyTotp(w http.ResponseWriter, r *http.Request) {
 	var req crmcontracts.TotpConfirmRequest
 	if !httperr.Decode(w, r, &req) {
@@ -143,7 +145,13 @@ func (h Handlers) ConfirmMyTotp(w http.ResponseWriter, r *http.Request) {
 		httperr.Write(w, r, httperr.Validation("code", "required", "the authenticator code is required"))
 		return
 	}
-	recovery, err := h.svc.ConfirmTOTP(r.Context(), req.Code, currentSessionHash(r))
+	if !h.admitPasswordProof(w, r, req.CurrentPassword) {
+		return
+	}
+	recovery, err := h.svc.ConfirmTOTP(r.Context(), req.CurrentPassword, req.Code, currentSessionHash(r))
+	if h.writePasswordProofRefusal(w, r, err) {
+		return
+	}
 	switch {
 	case errors.Is(err, errBadMFACode):
 		httperr.Unauthorized(w, r, "the code is not valid")

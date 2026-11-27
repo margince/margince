@@ -65,8 +65,7 @@ func (s *Service) ChangePassword(ctx context.Context, current, next string) (str
 	if err := passwordRuleError("new_password", next); err != nil {
 		return "", err
 	}
-	wsID, ok := workspaceFrom(ctx)
-	if !ok {
+	if _, ok := workspaceFrom(ctx); !ok {
 		return "", apperrors.ErrNotFound
 	}
 	// Minted before the transaction, the way Login mints it: the raw value
@@ -135,7 +134,7 @@ func (s *Service) ChangePassword(ctx context.Context, current, next string) (str
 	//
 	// Its own transaction, because the one above has already rolled back.
 	if errors.Is(err, ErrCurrentPasswordWrong) {
-		if recErr := s.recordFailedChange(ctx, wsID, userID); recErr != nil {
+		if recErr := s.recordFailedPasswordProof(ctx, userID, "password_change_failed"); recErr != nil {
 			slog.ErrorContext(ctx, "recording a failed password change",
 				"user_id", userID.String(), "err", recErr)
 		}
@@ -191,14 +190,14 @@ func (s *Service) proveCurrentPassword(ctx context.Context, tx pgx.Tx, userID id
 // reader finds later.
 const passwordChangeRevokeReason = "password changed by its owner"
 
-// recordFailedChange folds a wrong current password into the SAME §27 lockout
-// the login path counts against, and leaves the evidence.
+// recordFailedPasswordProof folds a wrong current password into the SAME §27
+// lockout the login path counts against, and leaves the evidence under action.
 //
 // In its OWN transaction, because the caller's has already rolled back by the
 // time this runs — that is the whole reason recordFailedLogin does the same.
 // Without it an attacker with a borrowed session could guess forever: no
 // counter, no lock, and an audit trail showing nothing happened at all.
-func (s *Service) recordFailedChange(ctx context.Context, wsID ids.WorkspaceID, userID ids.UserID) error {
+func (s *Service) recordFailedPasswordProof(ctx context.Context, userID ids.UserID, action string) error {
 	// Detached from the request: a caller who aborts the connection the moment
 	// the verify fails must not thereby skip the counter and the evidence.
 	ctx, cancel := detachedForFailure(ctx)
@@ -213,7 +212,7 @@ func (s *Service) recordFailedChange(ctx context.Context, wsID ids.WorkspaceID, 
 		if errors.Is(err, pgx.ErrNoRows) {
 			// The row went away between the refusal and this write. Nothing to
 			// count against; the evidence below still lands.
-			return logAuthEvent(ctx, tx, userID, "password_change_failed",
+			return logAuthEvent(ctx, tx, userID, action,
 				"wrong current password; the account was no longer active")
 		}
 		if err != nil {
@@ -229,7 +228,7 @@ func (s *Service) recordFailedChange(ctx context.Context, wsID ids.WorkspaceID, 
 			// on the attempt that caused it.
 			detail = "wrong current password; the account is now locked"
 		}
-		return logAuthEvent(ctx, tx, userID, "password_change_failed", detail)
+		return logAuthEvent(ctx, tx, userID, action, detail)
 	})
 }
 
@@ -291,18 +290,7 @@ func (h Handlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	if req.CurrentPassword == "" {
-		httperr.Write(w, r, httperr.Validation("current_password", "required",
-			"the current password is required"))
-		return
-	}
-	// Capped per ACCOUNT before the verify runs. This route tests the same
-	// secret the login route does, so an uncapped one is a guessing oracle
-	// behind any borrowed session — and each attempt costs an Argon2
-	// verification, which is the second reason login caps it.
-	caller, hasCaller := callerUserID(r.Context())
-	if hasCaller && h.changeFailures.Blocked(caller.String()) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+	if !h.admitPasswordProof(w, r, req.CurrentPassword) {
 		return
 	}
 
@@ -313,38 +301,10 @@ func (h Handlers) ChangePassword(w http.ResponseWriter, r *http.Request) {
 	// session list will show, and a blank device there would be this account's
 	// whole history.
 	token, err := h.svc.ChangePassword(withUserAgent(r.Context(), r.UserAgent()), req.CurrentPassword, req.NewPassword)
+	if h.writePasswordProofRefusal(w, r, err) {
+		return
+	}
 	switch {
-	case errors.Is(err, errAccountLocked):
-		// Same answer the login path gives a locked account, for the same
-		// reason: the lock is the fact, and the caller's next step is to wait.
-		// A machine code, not just English: all three 401s this handler can
-		// write would otherwise carry code "unauthorized", and the caller —
-		// the settings card — reads the answer to tell a wrong password from
-		// an expired session. Prose alone makes an expired session mid-form
-		// render as a password error.
-		//
-		// Disclosing the lock is safe HERE, unlike on login: the caller already
-		// holds a session for this account, so the fact discloses nothing they
-		// could not already learn, and withholding it would leave them
-		// retyping a password that is correct.
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnauthorized, Code: "account_locked",
-			Detail: "the account is temporarily locked; try again later",
-		})
-		return
-	case errors.Is(err, ErrCurrentPasswordWrong):
-		// Only a FAILURE spends a token: the bucket caps wrong guesses, and
-		// charging a successful rotation for one would throttle the very thing
-		// the route exists to allow. The §27 counter and the evidence row are
-		// the service's job (ChangePassword records both).
-		if hasCaller {
-			h.changeFailures.Record(caller.String())
-		}
-		httperr.Write(w, r, &httperr.DetailedError{
-			Status: http.StatusUnauthorized, Code: "current_password_invalid",
-			Detail: "the current password does not match",
-		})
-		return
 	case errors.Is(err, ErrPasswordUnchanged):
 		httperr.Write(w, r, httperr.Validation("new_password", "unchanged",
 			"the new password must differ from the current one"))
@@ -371,4 +331,51 @@ func (s *Service) rejectEmailPassword(ctx context.Context, tx pgx.Tx, userID ids
 		return err
 	}
 	return passwordEmailError(field, pw, email)
+}
+
+// admitPasswordProof screens a request whose authority is the caller's current
+// password: the field must be present, and the account must have failure budget
+// left. The cap is per ACCOUNT and runs before the verify. Every such route tests
+// the secret login tests, so uncapped it is a guessing oracle behind any borrowed
+// session. Each attempt also costs an Argon2 verification.
+func (h Handlers) admitPasswordProof(w http.ResponseWriter, r *http.Request, current string) bool {
+	if current == "" {
+		httperr.Write(w, r, httperr.Validation("current_password", "required",
+			"the current password is required"))
+		return false
+	}
+	if caller, ok := callerUserID(r.Context()); ok && h.changeFailures.Blocked(caller.String()) {
+		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		return false
+	}
+	return true
+}
+
+// writePasswordProofRefusal answers a refused current-password proof and
+// reports whether err was one. Every such refusal is a 401, so each carries a
+// machine code: the caller reads it to tell a wrong password from an expired session.
+func (h Handlers) writePasswordProofRefusal(w http.ResponseWriter, r *http.Request, err error) bool {
+	switch {
+	case errors.Is(err, errAccountLocked):
+		// Disclosing the lock is safe HERE, unlike on login. The caller already
+		// holds a session for this account, and silence would leave them
+		// retyping a correct password.
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusUnauthorized, Code: "account_locked",
+			Detail: "the account is temporarily locked; try again later",
+		})
+		return true
+	case errors.Is(err, ErrCurrentPasswordWrong):
+		// Only a FAILURE spends a token, so a successful proof is never
+		// throttled. The §27 counter and the evidence row are the service's job.
+		if caller, ok := callerUserID(r.Context()); ok {
+			h.changeFailures.Record(caller.String())
+		}
+		httperr.Write(w, r, &httperr.DetailedError{
+			Status: http.StatusUnauthorized, Code: "current_password_invalid",
+			Detail: "the current password does not match",
+		})
+		return true
+	}
+	return false
 }

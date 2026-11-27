@@ -102,11 +102,11 @@ To sign out another device in Margince, open Settings → **Account** and find t
 To turn on two-step sign-in in Margince, open Settings → **Account** and choose **Set up** in the **Two-step sign-in** row.
 1. Open an app on your phone that makes sign-in codes, and scan the picture on the screen.
 2. If you cannot scan it, choose **Copy key** and add the **Secret key** to the app instead.
-3. Type the code the app shows into **Code from the app**, and choose **Turn on**.
+3. Type the code the app shows into **Code from the app**, and your password into **Current password**. Choose **Turn on**.
 4. Keep the backup codes under **Recovery codes** in a place only you can reach. **Copy codes** helps.
 5. Choose **Done**.
 
-Margince shows the backup codes once, and never again. The row then reads "On · 10 recovery codes left". When two or fewer are left, the row warns you. Turning it on signs you out on all your other computers and phones. Also called: MFA, second sign-in step, sign-in code, code app.
+Margince asks for your password so that someone at your unlocked computer cannot turn it on for you. Margince shows the backup codes once, and never again. The row then reads "On · 10 recovery codes left". When two or fewer are left, the row warns you. Turning it on signs you out on all your other computers and phones. Also called: MFA, second sign-in step, sign-in code, code app.
 
 A setup you started and did not finish shows **Not finished**. Choose **Remove** in that row, then **Discard setup**, with no code needed.
 

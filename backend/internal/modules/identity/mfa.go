@@ -151,13 +151,21 @@ func (s *Service) StartTOTPEnrolment(ctx context.Context) (string, error) {
 // sitting on, which the member enrolling a factor is often reacting to. The
 // accepted step is recorded so the confirmation code cannot be replayed at the
 // first login.
-func (s *Service) ConfirmTOTP(ctx context.Context, code, keepTokenHash string) ([]string, error) {
+//
+// The caller's current password authorizes the confirmation, as it authorizes
+// ChangePassword. Every later password sign-in demands a confirmed factor, so a
+// borrowed session alone must not install one. A wrong password counts toward
+// the login lockout.
+func (s *Service) ConfirmTOTP(ctx context.Context, currentPassword, code, keepTokenHash string) ([]string, error) {
 	human, wsID, err := s.selfWorkspace(ctx)
 	if err != nil {
 		return nil, err
 	}
 	var recovery []string
 	err = s.db.Tx(ctx, func(tx pgx.Tx) error {
+		if err := s.proveCurrentPassword(ctx, tx, human, currentPassword); err != nil {
+			return err
+		}
 		secret, confirmedAt, lastUsedStep, err := lockEnrolment(ctx, tx, human)
 		if err != nil {
 			return err
@@ -190,6 +198,12 @@ func (s *Service) ConfirmTOTP(ctx context.Context, code, keepTokenHash string) (
 		}
 		return logAuthEvent(ctx, tx, human, "mfa_enrolled", "authenticator confirmed and recovery codes issued")
 	})
+	if errors.Is(err, ErrCurrentPasswordWrong) {
+		if recErr := s.recordFailedPasswordProof(ctx, human, "mfa_enrol_failed"); recErr != nil {
+			slog.ErrorContext(ctx, "recording a failed authenticator confirmation",
+				"user_id", human.String(), "err", recErr)
+		}
+	}
 	if err != nil {
 		return nil, err
 	}

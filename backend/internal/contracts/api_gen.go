@@ -71088,6 +71088,9 @@ type ThreadAudienceOutcome struct {
 type TotpConfirmRequest struct {
 	// Code The current code from the authenticator being enrolled.
 	Code string `json:"code"`
+
+	// CurrentPassword The caller's current password, which authorizes the confirmation.
+	CurrentPassword string `json:"current_password"`
 }
 
 // TotpEnrolment A pending TOTP enrolment, returned once. Never retrievable again.

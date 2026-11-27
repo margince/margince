@@ -4003,6 +4003,8 @@
   "mfa.turningOn": "Wird eingeschaltet…",
   "mfa.codeRefused": "Der Code wurde nicht akzeptiert. Prüfe ihn und versuche es erneut.",
   "mfa.tooManyCodes": "Zu viele falsche Codes. Warte ein paar Minuten und versuche es dann erneut.",
+  "mfa.tooManyPasswords": "Zu viele falsche Passwörter. Warte eine Minute und versuche es dann erneut.",
+  "mfa.passwordHint": "Das Passwort, mit dem du dich anmeldest.",
   "mfa.confirmFailedTitle": "Zweistufige Anmeldung nicht eingeschaltet",
   "mfa.onTitle": "Zweistufige Anmeldung an",
   "mfa.onBody": "Alle anderen Geräte wurden abgemeldet.",
