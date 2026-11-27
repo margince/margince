@@ -14,8 +14,8 @@ import (
 
 // Register is a value of contact.greeting_register.
 //
-// Held by: TestTheGreetingRegisterVocabularyIsTheCatalogsCheck
-// (backend/gates/greetingregistervocabulary_test.go), which fails when this
+// Held by: TestEveryListedVocabularyIsItsColumnsCheck
+// (backend/gates/enumsync_test.go), which fails when this
 // set and the column's CHECK stop naming the same values.
 type Register string
 

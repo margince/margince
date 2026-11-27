@@ -15,21 +15,12 @@ package gates
 // answers to; this is the other direction, which nothing checked — and the
 // other direction is the one that costs a working feature rather than a boot.
 //
-// Both sides are derived: the declared set from events.Groups(), the subscribed
-// set from the string literals the role wiring actually names. A literal is the
-// right unit here because there is more than one way to start a lane — worker's
-// runSubscriber takes the name, api's inline webhook delivery matches on it —
-// and a walk keyed on one of those helpers would report the other's group as
-// unsubscribed.
+// Both sides are derived. The declared set comes from events.Groups(). The
+// subscribed set comes from subscribedGroupNames, which both directions share.
+// A group name in a log line is therefore not a lane.
 
 import (
-	"go/ast"
-	"go/token"
-	"io/fs"
-	"path/filepath"
 	"slices"
-	"strconv"
-	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -50,13 +41,13 @@ var reservedGroups = gatekit.Waive(map[string]string{
 
 func TestEveryDeclaredConsumerGroupIsSubscribedSomewhere(t *testing.T) {
 	t.Parallel()
-	subscribed := groupNamesTheRolesName(t)
+	subscribed := subscribedGroupNames(t)
 	// A walk that found no group at all reports exactly like a tree where every
 	// group has a lane, which is the failure this gate is closing elsewhere.
 	if len(subscribed) == 0 {
-		t.Fatal("found no consumer-group name in the role wiring at all; this gate would pass vacuously")
+		t.Fatal("found no consumer-group subscription in the worker at all; this gate would pass vacuously")
 	}
-	t.Logf("the role wiring names %d consumer group(s)", len(subscribed))
+	t.Logf("the worker subscribes %d consumer group(s)", len(subscribed))
 	defer reservedGroups.AssertAllMatched(t)
 
 	for _, g := range kevents.Groups() {
@@ -68,51 +59,6 @@ func TestEveryDeclaredConsumerGroupIsSubscribedSomewhere(t *testing.T) {
 			"will say so. Start a lane for it, or record it in reservedGroups with the reason it is "+
 			"declared ahead of its consumer", g.Name, g.Streams)
 	}
-}
-
-// groupNamesTheRolesName maps each cg: literal in the role wiring to where it
-// was found, so a finding can name the file rather than leave the reader to
-// grep for a string.
-func groupNamesTheRolesName(t *testing.T) map[string]string {
-	t.Helper()
-	out := map[string]string{}
-	fset := gatekit.SourceFileSet()
-	for _, root := range []string{"cmd", "internal/compose"} {
-		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".go") ||
-				strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
-				return err
-			}
-			file, parseErr := gatekit.ParseFile(path, 0)
-			if parseErr != nil {
-				return parseErr
-			}
-			collectGroupLiterals(file, fset, filepath.ToSlash(path), out)
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("walking %s for consumer-group names: %v", root, err)
-		}
-	}
-	return out
-}
-
-// collectGroupLiterals records every "cg:…" string literal in one file.
-func collectGroupLiterals(file *ast.File, fset *token.FileSet, path string, out map[string]string) {
-	ast.Inspect(file, func(n ast.Node) bool {
-		lit, ok := n.(*ast.BasicLit)
-		if !ok || lit.Kind != token.STRING {
-			return true
-		}
-		value, err := strconv.Unquote(lit.Value)
-		if err != nil || !strings.HasPrefix(value, "cg:") {
-			return true
-		}
-		if _, seen := out[value]; !seen {
-			out[value] = path + ":" + strconv.Itoa(fset.Position(lit.Pos()).Line)
-		}
-		return true
-	})
 }
 
 // TestTheLaneCensusReadsTheWholeCatalog is the floor: the gate above passes

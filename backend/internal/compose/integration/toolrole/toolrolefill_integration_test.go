@@ -89,7 +89,7 @@ var recordKinds = map[string]string{
 	"introducer_user_id": "user", "introduced_user_id": "user", "recipient_user_id": "user", "owner_id": "user",
 	"host_user_id": "user", "to_id": "user",
 	"teams": "team", "legal-entities": "legal_entity", "deal-rooms": "deal_room", "offers": "offer",
-	"contracts": "contract", "lead-sources": "lead_source", "lead-origins": "lead_origin",
+	"contracts": "contract", "lead-origins": "lead_origin",
 	"lead-disqualify-reasons": "lead_disqualify_reason", "acquisition-sources": "acquisition_source",
 	"loss-reasons": "loss_reason", "record-roles": "record_role", "role_id": "record_role",
 	"intro-requests": "intro_request", "voice-profiles": "voice_profile", "corpora": "corpus",

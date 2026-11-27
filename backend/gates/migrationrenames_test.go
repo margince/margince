@@ -3,18 +3,6 @@
 
 package gates
 
-// Reading the migrations as if the renames had always been there.
-//
-// A gate that derives the schema from migration TEXT reads the name a thing was
-// CREATED under. A later migration can rename it, and then the gate is looking
-// for a name the SQL never says while the code beside it knows only the new
-// one — so the census finds nothing and reports the clean tree it never read.
-// That is the failure mode a census must not have.
-//
-// The substitutions are derived from the `ALTER ... RENAME` statements
-// themselves, never listed here: a gate that hard-codes part of its subject has
-// become a second copy of it, and this one would go stale at the next rename.
-//
 // It carries NO build constraint, for the reason repoRoot beside it does not:
 // a helper behind `//go:build !integration` is invisible to `make lint`, which
 // sets that tag, so a gate using it would compile under `go test` and fail to
@@ -22,97 +10,26 @@ package gates
 
 import (
 	"path/filepath"
-	"regexp"
-	"sort"
-	"strings"
 	"sync"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// renameStatements are the four verbs that move a name in this tree's SQL. Each
-// captures the old name then the new one.
-var renameStatements = []*regexp.Regexp{
-	regexp.MustCompile(`(?is)ALTER\s+TABLE\s+(?:ONLY\s+)?(\w+)\s+RENAME\s+TO\s+(\w+)`),
-	regexp.MustCompile(`(?is)ALTER\s+TABLE\s+(?:ONLY\s+)?\w+\s+RENAME\s+(?:COLUMN\s+)?(\w+)\s+TO\s+(\w+)`),
-	regexp.MustCompile(`(?is)ALTER\s+TABLE\s+(?:ONLY\s+)?\w+\s+RENAME\s+CONSTRAINT\s+(\w+)\s+TO\s+(\w+)`),
-	regexp.MustCompile(`(?is)ALTER\s+(?:INDEX|FUNCTION|TRIGGER)\s+(\w+)(?:\(\))?(?:\s+ON\s+\w+)?\s+RENAME\s+TO\s+(\w+)`),
-}
-
-var currentNames = sync.OnceValue(buildRenames)
-
-// buildRenames walks the core migrations in apply order and collects every
-// rename, following a chain so a name moved twice lands on where it is now.
-func buildRenames() map[string]string {
-	files, err := gatekit.Glob(filepath.Join(repoRoot, "backend", "migrations", "core", "*.up.sql"))
-	if err != nil || len(files) == 0 {
-		return nil
-	}
-	sort.Strings(files)
-
-	renames := map[string]string{}
-	for _, file := range files {
-		body, err := gatekit.ReadFile(file) // #nosec G304 -- a *.up.sql name from the migrations tree, test-only
-		if err != nil {
-			continue
-		}
-		for _, verb := range renameStatements {
-			for _, m := range verb.FindAllStringSubmatch(string(body), -1) {
-				old, now := m[1], m[2]
-				if old == now {
-					continue
-				}
-				// A name that was itself the target of an earlier rename keeps
-				// one entry, pointing at where it ended up.
-				for from, to := range renames {
-					if to == old {
-						renames[from] = now
-					}
-				}
-				renames[old] = now
-			}
-		}
-	}
-	return renames
-}
-
-// withCurrentNames rewrites migration SQL so every renamed identifier reads
-// under the name the database has today. A gate scanning the result sees the
-// schema it is actually judging rather than the one the baseline first built.
+// withCurrentNames is gatekit.WithCurrentNames over this tree's core
+// migrations, which owns the rename derivation for every census that reads
+// migration text.
 //
-// Remembered per input: the schema gates rewrite the same migrations, and the rename
-// map cannot change during a run.
+// Remembered per input: the schema gates rewrite the same migrations, and the
+// rename map cannot change during a run.
 func withCurrentNames(sql string) string {
 	if done, ok := currentNameRewrites.Load(sql); ok {
 		if rewritten, isString := done.(string); isString {
 			return rewritten
 		}
 	}
-	rewritten := rewriteToCurrentNames(sql)
+	rewritten := gatekit.WithCurrentNames(filepath.Join(repoRoot, "backend", "migrations", "core"), sql)
 	currentNameRewrites.Store(sql, rewritten)
 	return rewritten
 }
 
 var currentNameRewrites sync.Map // migration SQL -> withCurrentNames of it
-
-func rewriteToCurrentNames(sql string) string {
-	renames := currentNames()
-	if len(renames) == 0 {
-		return sql
-	}
-	// Longest first: company_domain_disposition must move before
-	// company_domain, or the shorter match leaves a mangled tail.
-	olds := make([]string, 0, len(renames))
-	for old := range renames {
-		olds = append(olds, old)
-	}
-	sort.Slice(olds, func(i, j int) bool { return len(olds[i]) > len(olds[j]) })
-
-	for _, old := range olds {
-		if !strings.Contains(sql, old) {
-			continue
-		}
-		sql = compiledPattern(`\b`+regexp.QuoteMeta(old)+`\b`).ReplaceAllString(sql, renames[old])
-	}
-	return sql
-}

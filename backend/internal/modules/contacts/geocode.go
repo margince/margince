@@ -54,7 +54,7 @@ const (
 
 // GeocodeStatuses is every status company_geocode_state.status admits.
 //
-// Held by: TestTheGeocodeStatusesAreTheColumnsCheck (backend/gates/geocodestatuses_test.go)
+// Held by: TestEveryListedVocabularyIsItsColumnsCheck (backend/gates/enumsync_test.go)
 func GeocodeStatuses() []string {
 	return []string{GeocodeOK, GeocodeFailed, GeocodeNoMatch, GeocodeStale}
 }
