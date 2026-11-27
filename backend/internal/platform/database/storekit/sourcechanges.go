@@ -49,7 +49,7 @@ func readSourceChanges(ctx context.Context, tx pgx.Tx) (map[string]sourceChange,
 }
 
 func sourceAuditRows(ctx context.Context, tx pgx.Tx, action, entityType string, rows []auditRow) (map[int]sourceChange, error) {
-	if !sourceEntities[entityType] {
+	if !sourceEntities[entityType] || action == "create" {
 		return nil, nil
 	}
 	owner := database.CommitOwner(tx)

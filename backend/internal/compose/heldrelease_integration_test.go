@@ -364,9 +364,12 @@ func TestAPreflightRefusalLeavesTheDraftPending(t *testing.T) {
 
 	// A legacy installation may already hold a retired purpose referenced by a
 	// pending draft. New writes refuse this state; the release must still check it.
-	e.WsExec(t, `ALTER TABLE consent_purpose DISABLE TRIGGER used_purpose_does_not_change;
+	if _, err := integration.OwnerConn(t).Exec(t.Context(), `
+ALTER TABLE consent_purpose DISABLE TRIGGER used_purpose_does_not_change;
 UPDATE consent_purpose SET archived_at = now() WHERE key = 'business_correspondence';
-ALTER TABLE consent_purpose ENABLE TRIGGER used_purpose_does_not_change`)
+ALTER TABLE consent_purpose ENABLE TRIGGER used_purpose_does_not_change`); err != nil {
+		t.Fatalf("seeding a previously retired purpose: %v", err)
+	}
 
 	if _, err := svc.Decide(decider(e), f.approval, true, nil); err == nil {
 		t.Fatal("releasing with no answerable consent purpose succeeded, want a refusal")

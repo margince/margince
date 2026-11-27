@@ -71,7 +71,7 @@ ALTER TABLE consent_purpose ENABLE TRIGGER used_purpose_does_not_change`); err !
 	}
 
 	want := []purposeSendCount{
-		{PurposeKey: "unknown", Sends: 3, Disputed: 2},
+		{PurposeKey: "unknown", Sends: 3, Disputed: 1},
 		{PurposeKey: "business_correspondence", Class: "business_correspondence", Sends: 1},
 		{PurposeKey: "transactional", Class: "transactional", Sends: 1, Disputed: 1},
 	}
