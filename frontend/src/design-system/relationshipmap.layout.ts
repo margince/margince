@@ -458,6 +458,22 @@ export function fitLabel(
   return cutAt(glyphs, fits);
 }
 
+/** fitPhrase cuts a phrase such as a job title between words where it can,
+ * so it reads "Head of…", never "Head of Busi…". A name keeps fitLabel's
+ * longest cut, since its words are not a sentence. */
+export function fitPhrase(
+  text: string,
+  width: number,
+  measure: MeasureText | null,
+  fallbackChars?: number,
+): string {
+  const cut = fitLabel(text, width, measure, fallbackChars);
+  if (cut === text) return cut;
+  const kept = cut.slice(0, -1);
+  const gap = kept.lastIndexOf(" ");
+  return gap > 0 ? `${kept.slice(0, gap).trimEnd()}…` : cut;
+}
+
 function cutAt(glyphs: readonly string[], count: number): string {
   return `${glyphs.slice(0, count).join("").trimEnd()}…`;
 }

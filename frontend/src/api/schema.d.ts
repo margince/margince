@@ -26212,10 +26212,11 @@ export interface paths {
          * Change the name colleagues greet you by.
          * @description Always the CALLER's own, never anybody else's: there is no id to pass.
          *
-         *     A greeting opens with one name, and the first word of the display name
-         *     is often the wrong one ("Dr. Sofia Meier", "Nguyễn Thị Lan"). This is the
-         *     word a colleague's greeting uses instead. Empty or null clears it, and
-         *     the greeting falls back to the first word of the display name.
+         *     A greeting opens with one name, and the display name does not always say
+         *     which ("Dr. Sofia Meier"). This is the word a colleague's greeting uses
+         *     instead. Empty or null clears it, and the greeting falls back to the
+         *     given name of the display name: the last word after a Vietnamese family
+         *     name ("Nguyễn Thị Lan" is greeted as "Lan"), else the first word.
          *
          *     The first sign-in through a login provider fills it from the provider's
          *     given name, but only while it is empty, so a value saved here is never
@@ -52134,7 +52135,7 @@ export interface components {
             display_name: string;
             /** @description Where the client fetches this seat's profile picture, absent when the seat has none and the client draws initials. The URL changes whenever the picture does. */
             avatar_url?: string;
-            /** @description The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the first word of `display_name`. Present on the caller's own seat; absent on the roster. */
+            /** @description The name a colleague's greeting uses ("Hi Sofia,"), absent or null when nobody has said. Read through one rule on both sides: this when set, else the given name of `display_name` (the last word after a Vietnamese family name, else the first). Present on the caller's own seat; absent on the roster. */
             greeting_name?: string | null;
             /** @description The IANA zone this user's own times are shown in. Absent when no zone is stored; UTC is a zone somebody can pick, so absent is not UTC. */
             timezone?: string;
@@ -52258,7 +52259,7 @@ export interface components {
             /** Format: email */
             email: string;
             display_name: string;
-            /** @description The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset. */
+            /** @description The name the member's greetings use, when the given name read off `display_name` is not it. Optional; absent, empty or null leaves it unset. */
             greeting_name?: string | null;
             /** @description A live role's key: one of the seeded system roles or one made with `createRole`. Seeded keys are wire vocabulary and diverge from the product names on purpose — `manager` displays as "Team Lead", `rep` as "User"; `management` is the whole-company seat that holds no admin power. A caller who is not an admin may only produce an account whose whole access their own contains — every grant, row scope, team and readable field — because the set-password link goes to an address the caller chooses. `listAssignableRoles` names the roles this caller may hand out. */
             role: string;

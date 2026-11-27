@@ -2910,9 +2910,9 @@ type PublicEventUserDisplayNameChanged struct {
 	DisplayName string `json:"display_name"`
 }
 
-// PublicEventUserGreetingNameChanged Payload for user_greeting_name.changed — the name a member's colleagues greet them by changed (identity/greetingname.go). The member saved it themselves, or their first sign-in through a login provider filled an empty one from the provider's given name. A subscriber that drafts a greeting to this member reads it, because the first word of the display name is not always the name somebody is greeted by.
+// PublicEventUserGreetingNameChanged Payload for user_greeting_name.changed. The name a member's colleagues greet them by changed (identity/greetingname.go). The member saved it themselves, or their first sign-in through a login provider filled an empty one from the provider's given name. A subscriber that drafts a greeting to this member reads it, because the display name does not always say the name somebody is greeted by.
 type PublicEventUserGreetingNameChanged struct {
-	// GreetingName The greeting name now in force, trimmed. Null when it was cleared, and greetings fall back to the first word of the display name.
+	// GreetingName The greeting name now in force, trimmed. Null when it was cleared, and greetings fall back to the given name of the display name.
 	GreetingName *string `json:"greeting_name"`
 }
 

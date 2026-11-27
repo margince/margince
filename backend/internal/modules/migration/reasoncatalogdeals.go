@@ -105,7 +105,7 @@ var dealReasons = map[ReasonCode]reasonEntry{
 	ReasonLostReasonMissing: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "A lost deal needs the reason it was lost.",
 		textlang.German:     "Ein verlorener Deal braucht den Grund, warum er verloren ging.",
-		textlang.Vietnamese: "Deal đã thua cần có lý do thua.",
+		textlang.Vietnamese: "Deal thất bại cần có lý do thất bại.",
 	}},
 	ReasonDealPipelineFixed: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "This deal is in another pipeline than the file names. An import does not move a deal between pipelines, so the row is skipped.",

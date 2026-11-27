@@ -80,7 +80,7 @@ describe("HierarchyRollupPanel periods", () => {
     expect(screen.getByText("Weighted deal value today")).toBeTruthy();
     expect(
       screen.getByText(
-        "Won deals count in 2026-Q2 by the day they were won. The weighted deal value is the open deals today.",
+        "Won deals count in Q2 2026 by the day they were won. The weighted deal value is the open deals today.",
       ),
     ).toBeTruthy();
     expect([...asked[0].keys()]).toEqual(["scope"]);
@@ -113,13 +113,13 @@ describe("HierarchyRollupPanel periods", () => {
     });
     expect((forward as HTMLButtonElement).disabled).toBe(true);
 
-    await user.click(screen.getByRole("button", { name: "Show 2026-Q1" }));
+    await user.click(screen.getByRole("button", { name: "Show Q1 2026" }));
 
     await waitFor(() =>
-      expect(screen.getByText("Won in 2026-Q1")).toBeTruthy(),
+      expect(screen.getByText("Won in Q1 2026")).toBeTruthy(),
     );
     expect(asked.at(-1)?.get("period_quarter")).toBe("2026-Q1");
-    expect(screen.getByRole("button", { name: "Show 2026-Q2" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Show Q2 2026" })).toBeTruthy();
   });
 });
 
@@ -182,7 +182,7 @@ describe("HierarchyRollupPanel while a new grain loads", () => {
       screen.getByRole("combobox", { name: "Period for won deals" }),
     );
     await user.click(screen.getByRole("option", { name: "Year" }));
-    const back = screen.getByRole("button", { name: "Show 2026-Q1" });
+    const back = screen.getByRole("button", { name: "Show Q1 2026" });
     await waitFor(() => expect(back.getAttribute("aria-busy")).toBe("true"));
     await user.click(back);
     expect(asked.some((params) => params.has("period_quarter"))).toBe(false);
