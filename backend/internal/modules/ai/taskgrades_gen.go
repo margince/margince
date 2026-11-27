@@ -390,7 +390,7 @@ var taskGrades = map[CertKey]CertGrade{
 	// records/nl_search/anthropic_claude-haiku-5-5_cloud_frontier.json
 	{Task: "nl_search", Provider: "anthropic", Model: "claude-haiku-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "not_supported", State: "stale"},
 	// records/nl_search/anthropic_claude-sonnet-5-5_cloud_frontier.json
-	{Task: "nl_search", Provider: "anthropic", Model: "claude-sonnet-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
+	{Task: "nl_search", Provider: "anthropic", Model: "claude-sonnet-5-5", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "certified", State: "stale"},
 	// records/nl_search/gemini_gemini-3.1-flash-lite_cloud_frontier.json
 	{Task: "nl_search", Provider: "gemini", Model: "gemini-3.1-flash-lite", Profile: "cloud_frontier", ThinkingLevel: "", SiteThinking: "", Upstream: ""}: {Verdict: "supported_degraded", State: "stale"},
 	// records/nl_search/gemini_gemini-3.5-flash_cloud_frontier.json

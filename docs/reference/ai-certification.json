@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 64,
-    "sites_best_current": 51,
+    "sites_best_current": 52,
     "sites_best_partial": 0,
-    "sites_best_stale": 11,
+    "sites_best_stale": 10,
     "sites_absent": 2,
     "scenarios": 350,
     "records": 463,
@@ -3141,7 +3141,7 @@
             "model": "claude-sonnet-5-5",
             "env": "cloud_frontier"
           },
-          "band": "supported_degraded",
+          "band": "certified",
           "state": "stale",
           "fallback": {
             "tier": "cheap_cloud",
@@ -3155,12 +3155,12 @@
             "state": "stale"
           },
           "abandoned": 0,
-          "runs": 51,
-          "passed": 51,
+          "runs": 48,
+          "passed": 48,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 2,
+          "cases_below_quality_bar": 0,
           "scope": "full_invocation",
-          "judge": "gemini-3.1-flash-lite"
+          "judge": "gemini-3.8-flash"
         },
         {
           "task": "offer_draft",
@@ -3732,8 +3732,8 @@
         }
       ],
       "bands": {
-        "certified": 33,
-        "supported_degraded": 4,
+        "certified": 34,
+        "supported_degraded": 3,
         "not_supported": 0,
         "too_few_runs": 0
       },
@@ -10736,13 +10736,14 @@
       "answer": "mostly",
       "sites_shipped": 64,
       "sites_measured": 55,
-      "ready": 37,
-      "usable_with_care": 2,
+      "ready": 38,
+      "usable_with_care": 1,
       "not_reliable_yet": 0,
       "too_few_runs": 16,
-      "recheck_pending": 16,
+      "recheck_pending": 15,
       "judges": [
-        "gemini-3.1-flash-lite"
+        "gemini-3.1-flash-lite",
+        "gemini-3.8-flash"
       ],
       "models": [
         {
@@ -10777,20 +10778,20 @@
             "env": "cloud_frontier"
           },
           "sites": 45,
-          "sites_current": 32,
+          "sites_current": 33,
           "sites_partial": 0,
-          "sites_stale": 13,
-          "runs": 900,
-          "passed": 882,
-          "reliability": 0.98,
+          "sites_stale": 12,
+          "runs": 897,
+          "passed": 879,
+          "reliability": 0.979933110367893,
           "reliability_interval": {
-            "lower": 0.973087,
-            "upper": 0.985165
+            "lower": 0.972997,
+            "upper": 0.985115
           },
           "slowest_p95_ms": 67218,
           "bands": {
-            "certified": 26,
-            "supported_degraded": 4,
+            "certified": 27,
+            "supported_degraded": 3,
             "not_supported": 0,
             "too_few_runs": 15
           }
@@ -11221,11 +11222,11 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "stale",
+          "state": "current",
           "runs": 27,
           "passed": 27,
           "records": 2,
-          "judge": "gemini-3.1-flash-lite"
+          "judge": "gemini-3.8-flash"
         },
         {
           "key": "nl_search/search_data_plan",
@@ -11235,12 +11236,12 @@
             "model": "claude-sonnet-5-5",
             "env": "cloud_frontier"
           },
-          "band": "supported_degraded",
+          "band": "certified",
           "state": "stale",
-          "runs": 24,
-          "passed": 24,
+          "runs": 21,
+          "passed": 21,
           "records": 2,
-          "judge": "gemini-3.1-flash-lite"
+          "judge": "gemini-3.8-flash"
         },
         {
           "key": "offer_draft/draft",
@@ -14176,20 +14177,20 @@
         "env": "cloud_frontier"
       },
       "sites": 52,
-      "sites_current": 38,
+      "sites_current": 39,
       "sites_partial": 0,
-      "sites_stale": 14,
-      "runs": 993,
-      "passed": 974,
-      "reliability": 0.9808660624370594,
+      "sites_stale": 13,
+      "runs": 990,
+      "passed": 971,
+      "reliability": 0.9808080808080808,
       "reliability_interval": {
-        "lower": 0.974449,
-        "upper": 0.985695
+        "lower": 0.974371,
+        "upper": 0.985652
       },
       "slowest_p95_ms": 67218,
       "bands": {
-        "certified": 29,
-        "supported_degraded": 5,
+        "certified": 30,
+        "supported_degraded": 4,
         "not_supported": 0,
         "too_few_runs": 18
       }
@@ -29028,8 +29029,23 @@
         "offer",
         "market"
       ],
-      "best_state": "stale",
-      "recommended": null,
+      "best_state": "current",
+      "recommended": {
+        "binding": {
+          "provider": "anthropic",
+          "model": "claude-sonnet-5-5",
+          "env": "cloud_frontier"
+        },
+        "band": "certified",
+        "runs": 27,
+        "passed": 27,
+        "reliability": 1,
+        "reliability_interval": {
+          "lower": 0.942655,
+          "upper": 1
+        },
+        "state": "current"
+      },
       "scenarios": [
         {
           "name": "nl_search_bounds_a_score_and_a_start_date",
@@ -29134,10 +29150,10 @@
             "model": "claude-sonnet-5-5",
             "env": "cloud_frontier"
           },
-          "state": "stale",
+          "state": "current",
           "band": "certified",
-          "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 0,
+          "judge": "gemini-3.8-flash",
+          "scenarios_measured": 9,
           "scenarios_total": 9,
           "runs": 27,
           "passed": 27,
@@ -29146,28 +29162,15 @@
             "lower": 0.942655,
             "upper": 1
           },
-          "latency_p50_ms": 2472,
-          "latency_p95_ms": 4243,
+          "latency_p50_ms": 2549,
+          "latency_p95_ms": 4198,
           "reported": {
             "accepted": 27,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": "9 scenarios it scored have changed since (how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more",
-          "stale_cause": {
-            "grader_changed": [
-              "nl_search_bounds_a_score_and_a_start_date",
-              "nl_search_keeps_an_or_across_two_fields",
-              "nl_search_names_back_a_prediction_it_cannot_express",
-              "nl_search_reads_a_custom_field_by_its_label",
-              "nl_search_reads_a_list_of_countries_as_membership",
-              "nl_search_reads_german_input",
-              "nl_search_reads_not_as_a_negation",
-              "nl_search_reads_vietnamese_input",
-              "nl_search_refuses_a_value_outside_a_picklist"
-            ]
-          }
+          "stale_reason": ""
         },
         {
           "binding": {
@@ -29966,21 +29969,21 @@
             "env": "cloud_frontier"
           },
           "state": "stale",
-          "band": "supported_degraded",
-          "judge": "gemini-3.1-flash-lite",
+          "band": "certified",
+          "judge": "gemini-3.8-flash",
           "scenarios_measured": 0,
           "scenarios_total": 7,
-          "runs": 24,
-          "passed": 24,
+          "runs": 21,
+          "passed": 21,
           "reliability": 1,
           "reliability_interval": {
-            "lower": 0.935946,
+            "lower": 0.927459,
             "upper": 1
           },
-          "latency_p50_ms": 2472,
-          "latency_p95_ms": 4243,
+          "latency_p50_ms": 2549,
+          "latency_p95_ms": 4198,
           "reported": {
-            "accepted": 24,
+            "accepted": 21,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
