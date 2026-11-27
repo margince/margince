@@ -52,10 +52,8 @@ export type ListTableProps<Row> = Readonly<{
    * screen that passes it heads itself and belongs in `SELF_HEADED_SCREENS`.
    */
   title?: ReactNode;
-  /** Plural noun for the count and the empty state ("contacts", "leads"). */
+  /** Plural noun for the empty state and the rows' region ("contacts", "leads"). */
   unit: string;
-  /** Singular noun for a count of one ("contact", "lead"). Defaults to `unit`. */
-  unitOne?: string;
   /**
    * A likelier cause than "there is nothing here", under the empty line
    * whether it is narrowed or not. A caller whose note would blame the data
@@ -125,7 +123,7 @@ export type ListTableProps<Row> = Readonly<{
   hideShortChrome?: boolean;
   /**
    * How many rows match on the server, when it counts them: "1-25 of 8,372"
-   * against "1-25 of 200 loaded so far". Undefined means not counted, not zero.
+   * against "1-25 of 200 loaded". Undefined means not counted, not zero.
    */
   total?: number;
   /**

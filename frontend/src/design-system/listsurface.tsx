@@ -9,6 +9,7 @@ import {
 import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
+import type { Locale } from "../i18n/locale";
 import { useNarrowViewport } from "../lib/viewport";
 import { OverflowMenu } from "./atoms";
 import { useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
@@ -399,54 +400,62 @@ export function countSays(total: number, sortedBy?: string): boolean {
   return total > 0 || Boolean(sortedBy);
 }
 
+/** The rows on screen out of the set, and whether the set is only the rows loaded. */
+export type PageRange = Readonly<{
+  first: number;
+  last: number;
+  total: number;
+  /**
+   * The server holds pages past the ones counted. `total` is then how many rows
+   * have been LOADED, not how many exist, and the words say which it is.
+   */
+  more?: boolean;
+}>;
+
+/** "26-50 of 1,024", as the count line and the pager both say it. */
+export function rangeText(
+  t: ReturnType<typeof useT>,
+  locale: Locale,
+  range: PageRange,
+): string {
+  // All three figures are magnitudes in one phrase, so they group together or
+  // the line reads as two notations at once.
+  const figures = {
+    first: formatNumber(range.first, locale),
+    last: formatNumber(range.last, locale),
+    count: formatNumber(range.total, locale),
+  };
+  return range.more
+    ? t("table.rangeLoaded", figures)
+    : t("table.range", figures);
+}
+
 /**
  * What the reader is looking at: the visible range, the size of the set behind
  * it, and the ordering. Stated in words rather than left to a lone arrow, since
  * a sort applied from a saved view has no arrow to notice.
  */
 export function CountLine({
-  unit,
-  unitOne = unit,
   first,
   last,
   total,
   more = false,
   scope,
   sortedBy,
-}: Readonly<{
-  unit: string;
-  /** The noun for a total of one, where it differs from `unit`. */
-  unitOne?: string;
-  first: number;
-  last: number;
-  total: number;
-  /**
-   * The server holds pages past the ones counted. `total` is then how many rows
-   * have been LOADED, not how many exist — a keyset cursor never learns the
-   * second number — and the line has to say which of the two it is rather than
-   * report a total the client cannot know.
-   */
-  more?: boolean;
-  /** What the counted rows belong to, when the list reads one part of a set (a pipeline). */
-  scope?: string;
-  sortedBy?: string;
-}>) {
+}: PageRange &
+  Readonly<{
+    /** What the counted rows belong to, when the list reads one part of a set (a pipeline). */
+    scope?: string;
+    sortedBy?: string;
+  }>) {
   const t = useT();
   const { locale } = useLocale();
   if (!countSays(total, sortedBy)) {
     return null;
   }
-  // All three figures are magnitudes in ONE sentence ("1–25 of 1,234 rows"), so
-  // they group together or the line reads as two notations at once.
-  const range = {
-    first: formatNumber(first, locale),
-    last: formatNumber(last, locale),
-    count: formatNumber(total, locale),
-    unit: total === 1 ? unitOne : unit,
-  };
   // An empty list says why in its body: none yet, none matching, a failed read.
   // A zero here would only repeat that sentence or contradict it.
-  const ranged = more ? t("table.rangeLoaded", range) : t("table.range", range);
+  const ranged = rangeText(t, locale, { first, last, total, more });
   const scoped = scope ? t("table.rangeIn", { range: ranged, scope }) : ranged;
   const counted = total === 0 ? "" : scoped;
   const order = sortedBy

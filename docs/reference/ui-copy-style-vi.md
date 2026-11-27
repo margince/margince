@@ -129,7 +129,7 @@ bạn".
   named screen keeps its nav capital mid-sentence ("trong Cài đặt"). deal, lead and pipeline are lowercase
   mid-sentence.
 - **No dashes**: no em dash, en dash, "--" or spaced hyphen. Use a comma, a period, a colon or parentheses.
-  A range is "{start} đến {end}".
+  A range of figures is "{start}-{end}", a hyphen with no spaces, which is not a dash.
 - **Quotes** are “…”; the apostrophe is ’. Never a straight " or ', never „, » or «.
 - **Ellipsis** is the one character …, only where the English has one. End punctuation and edge spaces
   mirror the English.
@@ -137,7 +137,7 @@ bạn".
 - **No abbreviations**: v.v., vd., v/v and & are written out ("ví dụ", "và") or cut. Established acronyms
   stay: CRM, API, AI, VAT, PDF, CSV, UTC, DNS, IMAP, GDPR.
 - **Numbers, money, dates and times** come from the formatting layer through a placeholder, never grouped or
-  spelled by hand. A range is "1 đến 4"; percent sits on the number ("{pct}%"); relative time is "vừa xong",
+  spelled by hand. A range is "1-4"; percent sits on the number ("{pct}%"); relative time is "vừa xong",
   "hôm qua".
 - **Placeholders** keep the English set and move wherever Vietnamese order wants them; "Nhãn: {count}" where
   a noun reads wrong at 0.

@@ -1246,11 +1246,24 @@
   flex: none;
 }
 
+/* The pages over the range they show, the range starting at the text of
+   Previous. */
+.lt-pagerblock {
+  display: flex;
+  flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
+  margin: 0 auto;
+}
+
 .lt-pager {
   display: flex;
   align-items: center;
   gap: 2px;
-  margin: 0 auto;
+}
+
+.lt-range {
+  padding-inline-start: var(--space-2);
 }
 
 .lt-pager button {
@@ -1289,27 +1302,30 @@
   color: var(--textPrimary);
   cursor: progress;
 }
-/* The pages this row is not showing. Sized like a page button so the row keeps
-   its rhythm, but flat and quiet — it is a statement, not a control, and a
-   reader must not reach for it. */
+/* The pages this row is not showing. The box of a page button, so every item
+   in the strip stands the same distance apart, but flat: it is a statement,
+   not a control. */
 .lt-gap {
-  min-width: 26px;
-  height: 26px;
+  min-inline-size: var(--controlHeight);
+  min-block-size: var(--controlHeight);
   display: inline-flex;
   align-items: center;
   justify-content: center;
   user-select: none;
 }
 
-/* A skipped-page marker, and the bare room for one. Both hold a button's width
- * so the strip is the same size at every page: a pager that changed width would
- * move Next out from under the reader between clicks. */
-.lt-gap {
-  min-width: 26px;
-  height: 26px;
-  display: inline-flex;
-  align-items: center;
-  justify-content: center;
+/* A phone holds Previous, seven slots and Next in its width: no space between
+   items, and the words pad as tightly as the range under them. */
+@media (max-width: 720px) {
+  .lt-pager {
+    gap: 0;
+  }
+  .lt-pager button {
+    padding-inline: var(--space-1);
+  }
+  .lt-range {
+    padding-inline-start: var(--space-1);
+  }
 }
 
 /* Colour and corner only. The INSET is the trigger's own (`.select-control` in
@@ -1325,7 +1341,14 @@
 /* A list fills the viewport, so its pager sits where a toast lands. While a list
  * is on screen the toast stands above the pager's row, leaving the pages usable. */
 :root:has(.lt-foot) .toast-region {
-  --lt-foot-height: calc(var(--controlHeight) + 2 * var(--space-3));
+  /* The pages, the range under them (a 16px Body S line), and the padding. */
+  --lt-foot-height: calc(
+    var(--controlHeight) +
+    var(--space-1) +
+    var(--space-4) +
+    2 *
+    var(--space-3)
+  );
   bottom: calc(
     var(--stickyBottomInset) +
     var(--lt-foot-height) +

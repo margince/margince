@@ -328,29 +328,20 @@ export function usePaging<Row>(
   };
 }
 
-/** Page numbers around the current one, which sits in the middle of them. */
-const PAGE_WINDOW = 3;
+/** The slots of a strip longer than it: page one, a gap, three pages, a gap, the last. */
+const PAGER_SLOTS = 7;
 
-/** Page one and a gap before the window, a gap and the last page after it. */
-const PAGER_SLOTS = PAGE_WINDOW + 4;
-
-/**
- * A slot in the pager: a page to jump to, a gap where pages were skipped, or
- * the room a gap would take.
- */
-export type PagerSlot = number | "gap" | "room";
-
-const room = (count: number): PagerSlot[] =>
-  Array.from({ length: Math.max(0, count) }, () => "room" as const);
+/** A slot in the pager: a page to jump to, or a gap where pages were skipped. */
+export type PagerSlot = number | "gap";
 
 const pages = (first: number, last: number): PagerSlot[] =>
   Array.from({ length: last - first + 1 }, (_, index) => first + index);
 
 /**
  * Page one stays reachable because a lost reader goes back there. The last
- * page is numbered so the strip says how long the list is. An `open` list
- * has pages past `lastPage`, so a gap stands where its end would be. The same
- * number of slots at every position, so Next never slides out between clicks.
+ * page is numbered so the strip says how long the list is. A longer list
+ * fills the same seven slots at every page, so Next never slides out between
+ * clicks. An `open` list has pages past `lastPage`, so a gap follows them.
  */
 export function pagerSlots(
   current: number,
@@ -358,28 +349,23 @@ export function pagerSlots(
   open = false,
 ): PagerSlot[] {
   const tail: PagerSlot[] = open ? ["gap"] : [];
-  if (lastPage + tail.length <= PAGER_SLOTS - 2) {
-    const strip = [...room(2), ...pages(1, lastPage), ...tail];
-    return [...strip, ...room(PAGER_SLOTS - strip.length)];
+  if (lastPage <= PAGER_SLOTS) {
+    return [...pages(1, lastPage), ...tail];
   }
-  const first = Math.min(
-    Math.max(1, current - Math.floor(PAGE_WINDOW / 2)),
-    lastPage - PAGE_WINDOW + 1,
-  );
-  const last = first + PAGE_WINDOW - 1;
-  const lead: PagerSlot[] = first === 1 ? [] : first === 2 ? [1] : [1, "gap"];
-  const trail: PagerSlot[] = open
-    ? tail
-    : last === lastPage
-      ? []
-      : last === lastPage - 1
-        ? [lastPage]
-        : ["gap", lastPage];
+  // At either end the window widens to the gap, so the strip keeps its seven.
+  const end = PAGER_SLOTS - 2;
+  if (current < end) {
+    return [...pages(1, end), "gap", lastPage, ...tail];
+  }
+  if (current > lastPage - end + 1) {
+    return [1, "gap", ...pages(lastPage - end + 1, lastPage), ...tail];
+  }
   return [
-    ...room(2 - lead.length),
-    ...lead,
-    ...pages(first, last),
-    ...trail,
-    ...room(2 - trail.length),
+    1,
+    "gap",
+    ...pages(current - 1, current + 1),
+    "gap",
+    lastPage,
+    ...tail,
   ];
 }

@@ -98,7 +98,6 @@ export function BoardHeadCount({
   stageColumns: ReturnType<typeof useStageColumns>;
   stageTotalsQuery: ReturnType<typeof useStageTotals>;
 }>) {
-  const t = useT();
   const { locale } = useLocale();
   const totals = stageTotalsQuery.data;
   // isLoading, not isPending: a withheld report is a disabled query, pending for good.
@@ -122,7 +121,6 @@ export function BoardHeadCount({
     );
   return loadedOnly ? (
     <CountLine
-      unit={t("deals.unit")}
       first={1}
       last={count}
       total={count}

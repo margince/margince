@@ -246,7 +246,7 @@ describe("pagination", () => {
     );
     // The page size is the SERVER's page size: the table reports the choice and
     // the caller re-asks with it. A table that resliced its buffer here is what
-    // made a list say "1-25 of 50 loaded so far".
+    // made a list say "1-25 of 50 loaded".
     expect(onPerPage).toHaveBeenCalledWith(50);
   });
 
@@ -272,84 +272,59 @@ describe("pagination", () => {
   it("puts the current page between its neighbours and keeps page one reachable", () => {
     // Page one is where a reader who has lost their place goes back to.
     // Walking there one Prev at a time is not going back.
-    expect(pagerSlots(1, 6)).toEqual(["room", "room", 1, 2, 3, "gap", 6]);
-    expect(pagerSlots(4, 6)).toEqual([1, "gap", 3, 4, 5, 6, "room"]);
-    expect(pagerSlots(6, 6)).toEqual([1, "gap", 4, 5, 6, "room", "room"]);
+    expect(pagerSlots(5, 49)).toEqual([1, "gap", 4, 5, 6, "gap", 49]);
+    expect(pagerSlots(30, 49)).toEqual([1, "gap", 29, 30, 31, "gap", 49]);
+  });
+
+  it("widens the window at either end so the strip keeps seven slots", () => {
+    expect(pagerSlots(1, 49)).toEqual([1, 2, 3, 4, 5, "gap", 49]);
+    expect(pagerSlots(4, 49)).toEqual([1, 2, 3, 4, 5, "gap", 49]);
+    expect(pagerSlots(46, 49)).toEqual([1, "gap", 45, 46, 47, 48, 49]);
+    expect(pagerSlots(49, 49)).toEqual([1, "gap", 45, 46, 47, 48, 49]);
   });
 
   it("holds one width so Next stays where the reader clicked it", () => {
-    for (const [current, lastPage] of [
-      [1, 1],
-      [1, 3],
-      [5, 5],
-      [2, 6],
-      [4, 6],
-      [6, 6],
-      [9, 40],
-    ]) {
-      expect(pagerSlots(current, lastPage)).toHaveLength(7);
-      expect(pagerSlots(current, lastPage, true)).toHaveLength(7);
+    for (const lastPage of [8, 9, 40, 137]) {
+      for (let current = 1; current <= lastPage; current += 1) {
+        expect(pagerSlots(current, lastPage)).toHaveLength(7);
+      }
     }
   });
 
-  it("numbers the last page, so the strip says how long the list is", () => {
-    expect(pagerSlots(1, 137)).toEqual(["room", "room", 1, 2, 3, "gap", 137]);
-    expect(pagerSlots(5, 137)).toEqual([1, "gap", 4, 5, 6, "gap", 137]);
-    expect(pagerSlots(137, 137)).toEqual([
-      1,
-      "gap",
-      135,
-      136,
-      137,
-      "room",
-      "room",
-    ]);
+  it("skips at least two pages behind every gap", () => {
+    for (const lastPage of [8, 9, 40]) {
+      for (let current = 1; current <= lastPage; current += 1) {
+        const slots = pagerSlots(current, lastPage);
+        slots.forEach((slot, index) => {
+          if (slot === "gap") {
+            const before = Number(slots[index - 1]);
+            const after = Number(slots[index + 1]);
+            expect(after - before).toBeGreaterThan(2);
+          }
+        });
+      }
+    }
   });
 
-  it("shows every page of a list five pages long or shorter", () => {
-    for (const current of [1, 3, 5]) {
-      expect(pagerSlots(current, 5)).toEqual(["room", "room", 1, 2, 3, 4, 5]);
-    }
-    expect(pagerSlots(1, 4)).toEqual(["room", "room", 1, 2, 3, 4, "room"]);
-    expect(pagerSlots(2, 3)).toEqual(["room", "room", 1, 2, 3, "room", "room"]);
-    expect(pagerSlots(1, 1)).toEqual([
-      "room",
-      "room",
-      1,
-      "room",
-      "room",
-      "room",
-      "room",
-    ]);
+  it("shows every page of a list seven pages long or shorter", () => {
+    expect(pagerSlots(4, 7)).toEqual([1, 2, 3, 4, 5, 6, 7]);
+    expect(pagerSlots(2, 3)).toEqual([1, 2, 3]);
+    expect(pagerSlots(1, 1)).toEqual([1]);
   });
 
   it("follows the pages in hand with a gap while the end is not known", () => {
-    expect(pagerSlots(1, 2, true)).toEqual([
-      "room",
-      "room",
-      1,
-      2,
-      "gap",
-      "room",
-      "room",
-    ]);
-    expect(pagerSlots(1, 8, true)).toEqual([
-      "room",
-      "room",
-      1,
-      2,
-      3,
-      "gap",
-      "room",
-    ]);
-    expect(pagerSlots(8, 8, true)).toEqual([1, "gap", 6, 7, 8, "gap", "room"]);
+    expect(pagerSlots(1, 2, true)).toEqual([1, 2, "gap"]);
+    expect(pagerSlots(1, 12, true)).toEqual([1, 2, 3, 4, 5, "gap", 12, "gap"]);
+    for (let current = 1; current <= 12; current += 1) {
+      expect(pagerSlots(current, 12, true)).toHaveLength(8);
+    }
   });
 
   it("reaches page one from the strip rather than by walking Prev", async () => {
     const user = userEvent.setup();
     const { container } = render(
       <ListTable
-        rows={testRows(100)}
+        rows={testRows(250)}
         columns={columns}
         rowKey={(row) => row.id}
         unit="rows"
@@ -358,9 +333,9 @@ describe("pagination", () => {
     const slots = () => container.querySelectorAll(".lt-pager > *").length;
     const atFirstPage = slots();
 
-    await user.click(screen.getByRole("button", { name: "Page 3" }));
-    // The room a gap would take is rendered, not merely counted, so the strip
-    // holds its width and Next stays where the reader clicked it.
+    await user.click(screen.getByRole("button", { name: "Page 5" }));
+    await user.click(screen.getByRole("button", { name: "Page 6" }));
+    // The strip is drawn, not only counted, at the same length on every page.
     expect(slots()).toBe(atFirstPage);
 
     await user.click(screen.getByRole("button", { name: "Page 1" }));
@@ -432,7 +407,7 @@ describe("count line", () => {
         sort={{ value: "name", onChange: () => {} }}
       />,
     );
-    expect(screen.getByText(/1 to 25 of 60 rows, sorted by Name/)).toBeTruthy();
+    expect(screen.getByText("1-25 of 60, sorted by Name")).toBeTruthy();
   });
 });
 
@@ -687,7 +662,7 @@ describe("the count line", () => {
   it("holds its line for a narrowed list with no rows, and only then", () => {
     const { container, rerender } = render(table("", 3));
     const line = () => container.querySelector(".lt-count");
-    expect(line()).toHaveTextContent("1 to 3 of 3 rows");
+    expect(line()).toHaveTextContent("1-3 of 3");
 
     rerender(<LocaleProvider initial="en">{table("zzqx", 0)}</LocaleProvider>);
     expect(line()).toBeEmptyDOMElement();

@@ -61,7 +61,6 @@ function GermanSurface() {
       onViewChange={setActive}
       count={
         <CountLine
-          unit="Unternehmen"
           first={1}
           last={25}
           total={1312}
@@ -93,7 +92,7 @@ function RefusedSurface() {
     <ListSurface
       title="Unternehmen"
       views={VIEWS}
-      count={<CountLine unit="Unternehmen" first={1} last={25} total={1312} />}
+      count={<CountLine first={1} last={25} total={1312} />}
       refusal={{
         id: refusalId,
         text: "Du hast einen Leseplatz. Frage einen Admin nach einem vollen Platz.",
@@ -211,7 +210,7 @@ function SearchedSurface() {
         views={VIEWS}
         count={
           pending || !countSays(rows) ? undefined : (
-            <CountLine unit="Leads" first={1} last={rows} total={rows} />
+            <CountLine first={1} last={rows} total={rows} />
           )
         }
         holdCount={pending || (query !== "" && rows === 0)}
@@ -255,7 +254,7 @@ export const CountHoldsItsLinePhone: Story = {
     const search = canvas.getByRole("searchbox");
     const loading = toolbarTop(canvasElement);
     await userEvent.click(some);
-    await canvas.findByText("Leads 1 bis 25 von 25");
+    await canvas.findByText("1-25 von 25");
     await expect(toolbarTop(canvasElement)).toBe(loading);
 
     await userEvent.type(search, "a");
@@ -264,7 +263,7 @@ export const CountHoldsItsLinePhone: Story = {
     );
     await expect(toolbarTop(canvasElement)).toBe(loading);
     await userEvent.click(some);
-    await canvas.findByText("Leads 1 bis 25 von 25");
+    await canvas.findByText("1-25 von 25");
     await expect(toolbarTop(canvasElement)).toBe(loading);
 
     await userEvent.type(search, "zzqx");

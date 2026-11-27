@@ -85,9 +85,7 @@ describe("DealsScreen", () => {
     vi.stubGlobal("fetch", stubBackend([deal({})]));
     render(<DealsScreen />);
     await showLayout(userEvent.setup(), "Table");
-    expect(
-      await screen.findByText(/^1 to 1 of 1 deals in Sales/),
-    ).toBeInTheDocument();
+    expect(await screen.findByText(/^1-1 of 1 in Sales/)).toBeInTheDocument();
   });
 
   // A view saved on the deals list is a server row, and the tab rail has to

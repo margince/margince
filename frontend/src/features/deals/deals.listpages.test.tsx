@@ -62,7 +62,9 @@ describe("the deals table's pager", () => {
     expect(
       screen.getByRole("button", { name: "Page 137" }),
     ).toBeInTheDocument();
-    expect(screen.getByText(/of 3,412 deals/)).toBeInTheDocument();
+    expect(document.querySelector(".lt-count")).toHaveTextContent(
+      /^1-25 of 3,412/,
+    );
   });
 
   it("opens a pasted link to the last page in one read at its offset", async () => {

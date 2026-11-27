@@ -225,6 +225,9 @@ export const CountedAndReadAtAnOffset: Story = {
       await canvas.findByRole("button", { name: "Page 137" }),
     );
     await expect(await canvas.findByText("Contact 3401")).toBeVisible();
+    await expect(canvasElement.querySelector(".lt-range")?.textContent).toBe(
+      "3,401-3,412 of 3,412",
+    );
     await expect(canvas.getByRole("button", { name: "Next" })).toBeDisabled();
   },
 };

@@ -183,8 +183,8 @@ the English opens lowercase ("Über Partner" for "via partner").
 - **A no-break space** also holds together a short phrase a narrow chip would
   otherwise split, as in "in Arbeit" in the Worklist summary.
 - **Numbers** written as text use a period for thousands and a comma for
-  decimals: 1.234,50. Ranges use "bis": "1 bis 4", "von 1 bis
-  1.000.000.000.000".
+  decimals: 1.234,50. A range of figures is joined by a hyphen with no spaces,
+  as in English: "1-4". A sentence keeps "bis": "von 1 bis 1.000.000.000.000".
 - **Dates and times** come from the formatting layer through a placeholder and
   are never spelled in a string. Relative time: "gerade eben", "vor {n}
   Minuten", "gestern", "in {n} Tagen".

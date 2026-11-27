@@ -61,13 +61,18 @@ function Counted({
   );
 }
 
-// "1 2 3 … 137": the last page the count names is numbered from the start.
+// "1 2 3 4 5 … 137": the last page the count names is numbered from the start,
+// and the range under the strip says "1-25 of 3,412".
 export const CountedFirstPage: Story = {
   render: () => <Counted opensOn={1} />,
   play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
     await expect(
-      within(canvasElement).getByRole("button", { name: "Page 137" }),
+      canvas.getByRole("button", { name: "Page 137" }),
     ).toBeVisible();
+    await expect(canvasElement.querySelector(".lt-range")?.textContent).toBe(
+      "1-25 of 3,412",
+    );
   },
 };
 
@@ -76,7 +81,7 @@ export const CountedMiddlePage: Story = {
   render: () => <Counted opensOn={5} />,
 };
 
-// "1 … 135 136 137", and Next is off on the last page.
+// "1 … 133 134 135 136 137", and Next is off on the last page.
 export const CountedLastPage: Story = {
   render: () => <Counted opensOn={137} />,
   play: async ({ canvasElement }) => {

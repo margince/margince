@@ -175,7 +175,6 @@ export function CompanyContactsList({
       <ListTable
         state={state}
         unit="unit.contacts"
-        unitOne="unit.contact"
         // The contacts screen keeps its own layout under the same unit.
         layoutKey="company-contacts"
         searchable

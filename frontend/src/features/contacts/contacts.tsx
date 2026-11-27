@@ -142,7 +142,6 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
         title={pageName}
         state={state}
         unit="unit.contacts"
-        unitOne="unit.contact"
         emptyLine={
           mineEmptyLine({ t, state, viewerId, unit: "unit.contacts" }) ??
           sharedEmptyLine({ t, state, unit: "unit.contacts" })

@@ -191,7 +191,6 @@ export function CompaniesScreen({
         title={pageName}
         state={state}
         unit="unit.companies"
-        unitOne="unit.company"
         emptyLine={mineEmptyLine({
           t,
           state,
