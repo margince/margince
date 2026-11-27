@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/importrecords"
 	"github.com/margince/margince/backend/internal/compose/importwire"
 	"github.com/margince/margince/backend/internal/compose/recordexport"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -144,17 +145,7 @@ func (w *csvWriters) landingCells(row migration.Row) (map[string]any, []migratio
 
 // ownerFrom is the seat a create or an update names, nil when the file named
 // none this run knows.
-func ownerFrom(fields map[string]string, typed map[string]any) *ids.UserID {
-	if _, given := fields[csvTargetOwner]; !given {
-		return nil
-	}
-	seat, known := typed[csvTargetOwner].(ids.UUID)
-	if !known {
-		return nil
-	}
-	owner := ids.From[ids.UserKind](seat)
-	return &owner
-}
+var ownerFrom = importrecords.OwnerFrom
 
 // collapseUnknownOwners folds the unknown-owner warnings of one file that name
 // one address into a single issue. It sits on the first row that names the

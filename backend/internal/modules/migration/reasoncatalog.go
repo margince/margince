@@ -118,7 +118,7 @@ const (
 	textValueDetail = "{value:q}: {detail}"
 )
 
-var reasonCatalog = withWillDropReasons(withCellReasons(withRecordIDReasons(withUndoReasons(withActivityReasons(withDealReasons(map[ReasonCode]reasonEntry{
+var reasonCatalog = withWillDropReasons(withCellReasons(withRecordIDReasons(withUndoReasons(withActivityReasons(withProjectReasons(withDealReasons(map[ReasonCode]reasonEntry{
 	ReasonEmployerRefused: {text: map[textlang.Lang]string{
 		textlang.English:    "The employer could not be resolved. Choose an unambiguous company that you may link.",
 		textlang.German:     "Der Arbeitgeber konnte nicht zugeordnet werden. Wählen Sie ein eindeutiges Unternehmen, das Sie verknüpfen dürfen.",
@@ -320,7 +320,7 @@ var reasonCatalog = withWillDropReasons(withCellReasons(withRecordIDReasons(with
 		textlang.German:     "{value:q} braucht die Landesvorwahl, zum Beispiel +49 30 1234567.",
 		textlang.Vietnamese: "{value:q} cần mã quốc gia, ví dụ +49 30 1234567.",
 	}},
-	ReasonValueRefused: {params: []string{paramValue, "detail"}, text: map[textlang.Lang]string{
+	ReasonValueRefused: {params: []string{paramValue, paramDetail}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” was refused: {detail}",
 		textlang.German:     textValueDetail,
 		textlang.Vietnamese: textValueDetail,
@@ -400,7 +400,7 @@ var reasonCatalog = withWillDropReasons(withCellReasons(withRecordIDReasons(with
 		textlang.German:     "Mitarbeitende {value:q} gehört nicht zu: {allowed}",
 		textlang.Vietnamese: "Số nhân viên {value:q} không thuộc: {allowed}",
 	}},
-	ReasonTagNameInvalid: {params: []string{paramName, "detail"}, text: map[textlang.Lang]string{
+	ReasonTagNameInvalid: {params: []string{paramName, paramDetail}, text: map[textlang.Lang]string{
 		textlang.English:    "The tag “{name}” cannot be created: its name {detail}.",
 		textlang.German:     "Der Tag {name:q} kann nicht erstellt werden: Sein Name {detail}",
 		textlang.Vietnamese: "Không thể tạo thẻ {name:q}: tên của nó {detail}",
@@ -490,4 +490,4 @@ var reasonCatalog = withWillDropReasons(withCellReasons(withRecordIDReasons(with
 		textlang.German:     "Der Datensatz konnte nicht zurückgenommen werden.",
 		textlang.Vietnamese: "Không thể hoàn tác bản ghi này.",
 	}},
-}))))))
+})))))))

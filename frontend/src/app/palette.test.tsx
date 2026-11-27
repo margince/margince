@@ -23,11 +23,9 @@ import {
   useBuiltinCommands,
 } from "./palette";
 
-// B-EP09.5 (AC-shell-3..7) and RS-1 (live /search records + see-all)
-// acceptance. AC-shell-8 is no longer about this file: it covered the
-// record-scoped Ask composer, and now covers the claim that composer carried
-// about what the agent can reach — asserted on the panel that carries it, in
-// frontend/e2e/ac.spec.ts and agentrail.scope.test.tsx.
+// Acceptance for the palette (AC-shell-3..7) and live /search records with
+// see-all (RS-1). What the agent can reach is asserted on the panel that
+// carries it, in frontend/e2e/ac.spec.ts and agentrail.scope.test.tsx.
 
 afterEach(() => {
   cleanup();

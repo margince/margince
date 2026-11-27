@@ -183,7 +183,9 @@ func dealForNewProject(ctx context.Context, tx pgx.Tx, store *deals.Store, dealI
 	if refusal := projects.RefuseDealForNewProject(string(deal.Status), deal.ProjectId != nil, deal.MaskedFields); refusal != nil {
 		return deal, refusal
 	}
-	if deal.CompanyId != nil && ids.UUID(*deal.CompanyId) != company.UUID {
+	// The database holds a deal with a project to the project's company, so a deal
+	// with none cannot start one either.
+	if deal.CompanyId == nil || ids.UUID(*deal.CompanyId) != company.UUID {
 		return deal, &projects.DealCompanyMismatchError{}
 	}
 	return deal, nil

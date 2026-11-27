@@ -27,7 +27,7 @@ const legacyCompanyNameHeader = "Firmenname"
 
 // Columns is the guide of every core import target, keyed by target or by
 // "object.target" where one object's column means something else.
-var Columns = withLabels(withActivityColumns(map[string]Column{
+var Columns = withLabels(withProjectColumns(withActivityColumns(map[string]Column{
 	"salutation": {Description: langcopy.Phrase{
 		En: "An explicit salutation: mr, ms or none. Leave blank when unknown.",
 		De: "Eine ausdrücklich gewählte Anrede: mr, ms oder none. Leer lassen, wenn unbekannt.",
@@ -248,7 +248,7 @@ var Columns = withLabels(withActivityColumns(map[string]Column{
 		De: "Warum ein verlorener Deal verloren ging. Nötig, wenn die Phase verloren ist. Wird nur geschrieben, wenn die Zeile den Deal erstellt.",
 		Vi: "Lý do deal thất bại. Bắt buộc khi giai đoạn là thất bại; chỉ được ghi khi dòng tạo deal mới.",
 	}, Example: langcopy.Phrase{En: "Chose a cheaper supplier", De: "Günstigeren Anbieter gewählt", Vi: "Chọn nhà cung cấp rẻ hơn"}},
-}))
+})))
 
 // Custom is the guide of a custom field, by its type. A picklist's
 // example is replaced by its first option where the caller may read them.

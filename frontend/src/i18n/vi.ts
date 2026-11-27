@@ -10540,6 +10540,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "import.object.contact": "Liên hệ",
   "import.object.deal": "Deal",
   "import.object.activity": "Hoạt động",
+  "import.object.project": "Dự án",
+  "import.object.product": "Sản phẩm",
   "import.profiled_one": "“Đã điền” và “Giá trị” lấy từ dòng đầu tiên của tệp.",
   "import.profiled_other":
     "“Đã điền” và “Giá trị” lấy từ {count} dòng đầu tiên của tệp.",
@@ -11011,6 +11013,22 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "“{value}” cần mã quốc gia, ví dụ +49 30 1234567.",
   "import.reason.record_archived":
     "Bản ghi của hàng này đã được lưu trữ nên không được cập nhật. Hãy khôi phục bản ghi để cập nhật.",
+  "import.reason.project_unnamed": "Hãy đặt tên cho dự án.",
+  "import.reason.project_company_missing":
+    "Dự án thuộc về một công ty. Hãy nêu công ty trong cột công ty.",
+  "import.reason.project_company_fixed":
+    "Dự án giữ công ty mà nó được tạo cho, nên hàng này không được áp dụng. Hãy giữ nguyên cột công ty, hoặc nhập hàng này làm dự án mới.",
+  "import.reason.project_phase_unknown":
+    "“{value}” không phải giai đoạn bắt đầu của dự án. Các giai đoạn: {names}.",
+  "import.reason.project_phase_closed":
+    "Dự án không được tạo ở trạng thái đã đóng, vì đóng dự án cần có lý do. Hãy nhập ở giai đoạn khác rồi đóng trong ứng dụng.",
+  "import.reason.project_dates_inverted":
+    "Ngày kết thúc dự kiến nằm trước ngày bắt đầu.",
+  "import.reason.project_deal_refused":
+    "Deal không thể khởi động dự án này: {detail}",
+  "import.reason.product_unnamed": "Hãy đặt tên cho sản phẩm.",
+  "import.reason.product_sku_held":
+    "Một sản phẩm đang dùng khác đã có mã SKU “{value}”.",
   "import.reason.ref_taken_by_another_company":
     "Tham chiếu “{ref}” đã đại diện cho một công ty khác từ lần nhập trước nên hàng này không được áp dụng. Hãy dùng tham chiếu mới cho công ty này hoặc sửa cột mã.",
   "import.reason.row_key_empty":

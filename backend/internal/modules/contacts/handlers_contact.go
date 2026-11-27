@@ -20,12 +20,10 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// MergeContact serves POST /contacts/{id}/merge — merge this contact (A, the path id)
-// into target_id (B, the survivor). Returns the survivor. The store owns
-// the collision-aware relinking and the restrictive consent rule; this
-// handler is wire-only. Agent 🟡 governance is applied by the ADR-0055
-// admission gate that wraps this route (same staging as the merge_records
-// tool), not by this handler.
+// MergeContact serves POST /contacts/{id}/merge: it merges this contact (A, the
+// path id) into target_id (B, the survivor) and returns the survivor. The store
+// owns the relinking and the consent rule. An agent's call is staged by the
+// admission gate that wraps this route, as merge_records is.
 func (h Handlers) MergeContact(w http.ResponseWriter, r *http.Request, id crmcontracts.Id, _ crmcontracts.MergeContactParams) {
 	var req crmcontracts.MergeContactJSONBody
 	if !httperr.Decode(w, r, &req) {

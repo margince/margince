@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/compose/importrecords"
 	"github.com/margince/margince/backend/internal/compose/recordexport"
 	"github.com/margince/margince/backend/internal/modules/migration"
 	"github.com/margince/margince/backend/internal/platform/auth"
@@ -33,11 +34,12 @@ const csvTargetAuthor = recordexport.Author
 // isCreateOnlyTarget reports a target the import writes when it CREATES a
 // record and never on a re-import's update. The author is who wrote the record
 // where it came from. A lost reason is why the deal closed. An activity's type,
-// direction and links are what it was and about whom. A later file rewrites
-// none of them.
+// direction and links are what it was and about whom. A project is born in one
+// phase, and a later phase is a move the app records. A later file rewrites none
+// of them.
 func isCreateOnlyTarget(field string) bool {
 	switch field {
-	case csvTargetAuthor, dealTargetLostReason, activityTargetType, activityTargetDirection, activityTargetLinks:
+	case csvTargetAuthor, dealTargetLostReason, activityTargetType, activityTargetDirection, activityTargetLinks, importrecords.ProjectPhase:
 		return true
 	}
 	return false
