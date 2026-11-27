@@ -65,23 +65,29 @@ func TestEmploymentImportPreservesDistinctRolesAndReplays(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	linked := 0
+	// Once the first role is linked as a former employment, the contact has an
+	// ended row at the company, so a later role there waits for review rather
+	// than being linked again automatically.
+	want := map[string]crmcontracts.EmploymentImportItemState{"Engineer": "linked", "Director": "needs_review", "Advisor": "needs_review", "Consultant": "needs_match"}
 	for _, item := range report.Items {
-		if item.State == "linked" {
-			linked++
+		if item.State != want[item.Role] {
+			t.Fatalf("%s is %s, want %s: %+v", item.Role, item.State, want[item.Role], report)
 		}
 		if item.Role == "Advisor" && item.EmploymentStatus != "unknown" {
 			t.Fatal("undated history became current")
 		}
 	}
-	if linked != 3 {
-		t.Fatalf("linked=%d, report=%+v", linked, report)
+	if report.Items[0].Role != "Engineer" || report.Items[0].EmploymentStatus != "former" {
+		t.Fatalf("the first role is %s (%s), want Engineer as a former employment", report.Items[0].Role, report.Items[0].EmploymentStatus)
 	}
 	again, err := store.ApplyEmploymentImport(e.Admin(), contact, crmcontracts.EmploymentImportRequest{})
 	if err != nil {
 		t.Fatal(err)
 	}
 	for i, item := range again.Items {
+		if item.State != report.Items[i].State {
+			t.Fatalf("a replay moved %s from %s to %s", item.Role, report.Items[i].State, item.State)
+		}
 		if item.RelationshipId != nil && *item.RelationshipId != *report.Items[i].RelationshipId {
 			t.Fatal("replay created another relationship")
 		}
@@ -91,7 +97,7 @@ func TestEmploymentImportPreservesDistinctRolesAndReplays(t *testing.T) {
 		if err := tx.QueryRow(context.Background(), `SELECT count(*), count(*) FILTER (WHERE `+employment.CurrentPrimarySlotSQL("")+`) FROM relationship WHERE contact_id=$1 AND archived_at IS NULL`, subject).Scan(&count, &current); err != nil {
 			return err
 		}
-		if count != 3 || current != 0 {
+		if count != 1 || current != 0 {
 			t.Fatalf("roles=%d, primary=%d", count, current)
 		}
 		return nil
