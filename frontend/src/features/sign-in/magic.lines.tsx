@@ -8,7 +8,6 @@ import {
 import { AppLink } from "../../design-system/applink";
 import { Disclosure } from "../../design-system/atoms";
 import { PanelBody, PanelGroupHead } from "../../design-system/panel";
-import { Chip } from "../../design-system/readings";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { type Translator, useLocale, usePlural, useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
@@ -132,15 +131,13 @@ function SubjectChip({ line }: Readonly<{ line: MagicLine }>) {
   const label = subjectLabel(line);
   const entity = line.entity;
   if (!label) return null;
-  return entity ? (
+  return (
     <RecordMarkChip
-      id={entity.id}
+      id={entity?.id ?? line.id}
       name={label}
-      icon={CHIP_ICONS.get(entity.type)}
+      icon={entity && CHIP_ICONS.get(entity.type)}
       href={recordHref(line)}
     />
-  ) : (
-    <Chip dense>{label}</Chip>
   );
 }
 
