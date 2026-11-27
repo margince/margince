@@ -312,7 +312,7 @@ func TestCompletingATaskAnswersForWhatTheTaskIsNow(t *testing.T) {
 }
 
 // Reading the claims a task stands for, or the task a claim became, needs
-// contact read, and a settlement that is not its audit row has no task.
+// contact read. A settlement that is not its audit row has no task.
 func TestTheClaimTaskReadsNeedContactRead(t *testing.T) {
 	k := seedKeptCommitment(t)
 	blind := k.As(k.Rep2, []ids.UUID{k.Team1}, principal.Permissions{
