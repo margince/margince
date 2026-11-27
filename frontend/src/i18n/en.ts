@@ -15093,10 +15093,13 @@ export const en = {
   "cf.activityKindsFor": "Types “{label}” shows on",
   "cf.activityKindsSaved": "“{label}” now shows on the types you chose",
   "cf.pipelines": "Shows in",
-  "cf.pipelinesHint": "Leave it empty to show the field on deals in every pipeline.",
+  "cf.pipelinesHint":
+    "Leave it empty to show the field on deals in every pipeline.",
   "cf.pipelinesEvery": "Every pipeline",
+  "cf.pipelinesArchived": "Archived pipeline",
   "cf.pipelinesFor": "Pipelines “{label}” shows in",
-  "cf.pipelinesSaved": "“{label}” now shows on deals in the pipelines you chose",
+  "cf.pipelinesSaved":
+    "“{label}” now shows on deals in the pipelines you chose",
   "cf.col.inCreate": "In create forms",
   "cf.showInCreateFor": "Show “{label}” in create forms",
   "cf.shownInCreate": "“{label}” shown in create forms",

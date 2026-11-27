@@ -248,7 +248,7 @@ create, a patch and an import row. The code is `field_not_valid_for_pipeline`, a
 
 A patch never moves the deal, so it reads the stored pipeline. A deal that moves keeps its values.
 An array column cannot carry a reference constraint, so the engine checks each id against the live
-pipelines when it writes the list. A pipeline archived later matches nothing. The check is
+pipelines when it writes the list. A pipeline archived later matches nothing, and its id may stay on the list while only new ids must be live. The check is
 `checkPipelineScope` in `backend/internal/modules/deals/pipelinefields.go`.
 
 The forms show a field

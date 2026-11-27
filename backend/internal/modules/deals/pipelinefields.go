@@ -67,3 +67,12 @@ func FieldOutsidePipeline(err error) (string, bool) {
 	}
 	return "", false
 }
+
+// RefuseOutsidePipeline asks, without writing, whether a patch's custom values
+// fit the pipeline the stored deal sits in. A reconciling import runs it before
+// writing, so its preview and its commit skip the same rows.
+//
+//craft:ignore naked-any values is a request body's extension map
+func (c CustomColumns) RefuseOutsidePipeline(pipeline ids.UUID, values map[string]any) error {
+	return checkPipelineScope(ids.PipelineID{UUID: pipeline}, c.cols, values)
+}

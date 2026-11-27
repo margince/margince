@@ -43,9 +43,10 @@ func storedPipelines(pipelines []ids.UUID) []ids.UUID {
 	return slices.Compact(sorted)
 }
 
-// livePipelines refuses an id that names no unarchived pipeline. An empty list
-// is every pipeline and asks nothing. A pipeline archived later keeps its id in
-// the list and matches nothing, because the column cannot carry a foreign key.
+// livePipelines refuses an id that names no unarchived pipeline. The caller
+// passes only the ids a write adds. An id already on the field stays when its
+// pipeline is archived, so the list can still be edited. Such an id matches
+// nothing, because the column cannot carry a foreign key.
 func livePipelines(ctx context.Context, tx pgx.Tx, pipelines []ids.UUID) error {
 	if len(pipelines) == 0 {
 		return nil

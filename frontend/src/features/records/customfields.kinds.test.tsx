@@ -232,3 +232,49 @@ it("asks no pipelines of a field on another object", () => {
   );
   expect(screen.queryByLabelText(en["cf.pipelines"])).toBeNull();
 });
+
+it("shows a field scoped only to an archived pipeline and lets the admin remove it", async () => {
+  const user = userEvent.setup();
+  const onPipelines = vi.fn();
+  const tier: CustomField = {
+    id: "tier",
+    object: "deal",
+    label: "Partner tier",
+    slug: "partner_tier",
+    type: "text",
+    status: "active",
+    column_name: "cf_partner_tier",
+    show_in_create: true,
+    reportable: false,
+    pipeline_ids: ["pipe-gone"],
+    created_by: "u1",
+    created_at: "2026-01-01T00:00:00Z",
+    updated_at: "2026-01-01T00:00:00Z",
+  };
+  const queries = client();
+  queries.setQueryData(pipelinesOptions.queryKey, [
+    { id: "pipe-a", name: "Sales", is_default: true, position: 0 },
+  ]);
+  render(
+    <QueryClientProvider client={queries}>
+      <LocaleProvider initial="en">
+        <FieldTable
+          object="deal"
+          fields={[tier]}
+          canEdit
+          meUserId="u1"
+          onRename={noop}
+          onArchive={noop}
+          onSetting={noop}
+          onKinds={noop}
+          onPipelines={onPipelines}
+        />
+      </LocaleProvider>
+    </QueryClientProvider>,
+  );
+  const control = screen.getByLabelText("Pipelines “Partner tier” shows in");
+  expect(control).toHaveTextContent("Archived pipeline");
+  expect(control).not.toHaveTextContent("Every pipeline");
+  await toggleOptions(user, control, ["Archived pipeline"]);
+  expect(onPipelines).toHaveBeenCalledWith(tier, []);
+});

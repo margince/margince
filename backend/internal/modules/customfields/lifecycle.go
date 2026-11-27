@@ -12,6 +12,7 @@ import (
 	"context"
 	"errors"
 	"fmt"
+	"slices"
 	"strings"
 
 	"github.com/jackc/pgx/v5"
@@ -214,7 +215,8 @@ func (p FieldPatch) apply(ctx context.Context, tx pgx.Tx, id ids.UUID, f lockedF
 			return lockedField{}, &ValidationError{Errors: errs}
 		}
 		next.PipelineIDs = storedPipelines(*p.PipelineIDs)
-		if err := livePipelines(ctx, tx, next.PipelineIDs); err != nil {
+		added := slices.DeleteFunc(slices.Clone(next.PipelineIDs), func(id ids.UUID) bool { return slices.Contains(f.PipelineIDs, id) })
+		if err := livePipelines(ctx, tx, added); err != nil {
 			return lockedField{}, err
 		}
 	}

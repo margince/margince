@@ -131,8 +131,7 @@ const publishedToolCeiling = 48
 // Raised to 250,800 when main's tool text met develop's in one list. Main added
 // update_record's why, change_compliance's routes and the sweep's text. Raised
 // to 250,900 for the link suggestion queue's three actions, which an agent
-// reads and decides for its colleague. Raised to 251,000 for the pipeline_ids
-// setting of a custom field, which the create and rename tools now describe.
+// reads and decides for its colleague. Raised to 251,000 for pipeline_ids.
 const publishedCatalogByteCeiling = 251_000
 
 type mcpInfoFile struct {

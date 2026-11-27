@@ -68,7 +68,11 @@ type SelectAria = Readonly<{
   "aria-describedby"?: string;
 }>;
 
-/** The live pipelines a deal field can be narrowed to. */
+/**
+ * The live pipelines a deal field can be narrowed to. A pipeline archived after
+ * the field named it is still on the list. It stays an option, named as
+ * archived, so the admin can take it off.
+ */
 export function PipelinesSelect({
   values,
   onChange,
@@ -83,10 +87,15 @@ export function PipelinesSelect({
   return (
     <MultiSelect
       {...aria}
-      options={pipelines.map((pipeline) => ({
-        value: pipeline.id,
-        label: pipeline.name,
-      }))}
+      options={[
+        ...pipelines.map((pipeline) => ({
+          value: pipeline.id,
+          label: pipeline.name,
+        })),
+        ...values
+          .filter((id) => !pipelines.some((pipeline) => pipeline.id === id))
+          .map((id) => ({ value: id, label: t("cf.pipelinesArchived") })),
+      ]}
       values={values}
       onChange={onChange}
       placeholder={t("cf.pipelinesEvery")}

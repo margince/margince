@@ -14758,6 +14758,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.pipelines": "Hiện trong",
   "cf.pipelinesHint": "Để trống để hiện trường này ở deal thuộc mọi quy trình.",
   "cf.pipelinesEvery": "Mọi quy trình",
+  "cf.pipelinesArchived": "Quy trình đã lưu trữ",
   "cf.pipelinesFor": "Các quy trình hiện “{label}”",
   "cf.pipelinesSaved": "“{label}” giờ hiện ở deal thuộc các quy trình đã chọn",
   "cf.col.inCreate": "Trong biểu mẫu tạo mới",

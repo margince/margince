@@ -138,3 +138,34 @@ func TestThePipelineListOfAFieldIsCheckedWhereItIsSet(t *testing.T) {
 		t.Fatalf("an empty list answered %v, %v, want null for every pipeline", widened.PipelineIds, err)
 	}
 }
+
+func TestAPipelineArchivedAfterItWasListedStaysOnTheListUntilRemoved(t *testing.T) {
+	f := setupDealCFV(t)
+	retiring, _ := f.secondPipeline(t, "Retiring")
+	later, _ := f.secondPipeline(t, "Archived before it is added")
+	field, err := f.svc.Create(f.ctx, customfields.FieldSpec{
+		Object: "deal", Label: "Scoped", Type: customfields.TypeText, Source: "manual",
+		PipelineIDs: []ids.UUID{retiring.UUID},
+	})
+	if err != nil {
+		t.Fatalf("creating the field: %v", err)
+	}
+	for _, id := range []ids.PipelineID{retiring, later} {
+		if err := f.e.Deals.ArchivePipeline(f.ctx, id, nil); err != nil {
+			t.Fatalf("archiving a pipeline: %v", err)
+		}
+	}
+
+	kept := []ids.UUID{retiring.UUID, f.pipeline.UUID}
+	if _, err := f.svc.Update(f.ctx, ids.UUID(field.Id), customfields.FieldPatch{PipelineIDs: &kept}, nil); err != nil {
+		t.Fatalf("adding a live pipeline beside an archived one already listed: %v", err)
+	}
+	added := []ids.UUID{retiring.UUID, later.UUID}
+	if _, err := f.svc.Update(f.ctx, ids.UUID(field.Id), customfields.FieldPatch{PipelineIDs: &added}, nil); !errors.As(err, new(*customfields.ValidationError)) {
+		t.Fatalf("adding an archived pipeline answered %v, want a validation error", err)
+	}
+	removed := []ids.UUID{f.pipeline.UUID}
+	if _, err := f.svc.Update(f.ctx, ids.UUID(field.Id), customfields.FieldPatch{PipelineIDs: &removed}, nil); err != nil {
+		t.Fatalf("removing the archived pipeline: %v", err)
+	}
+}

@@ -74,7 +74,7 @@ func (w *csvWriters) predictDealCreate(ctx context.Context, row migration.Row, t
 		return predictUnwritable, migration.Why(migration.ReasonStageUnnamed), nil
 	}
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
-		_, err := w.deals.RefuseImportBirth(ctx, tx, made.Deal, terminal)
+		_, err := w.deals.RefuseImportBirth(ctx, tx, made.Deal, terminal, w.cols.deals)
 		return err
 	})
 	if why, refused := w.dealRefusal(err, textFields(row.Fields)); refused {
@@ -125,39 +125,29 @@ func dealRefusalOf(err error, fields map[string]string, stages dealStages) (migr
 	if err == nil {
 		return migration.Reason{}, false
 	}
-	if _, ok := errors.AsType[*deals.StageGoneError](err); ok {
+	switch {
+	case wrapsA[*deals.StageGoneError](err), wrapsA[*deals.PipelineRetiredError](err):
 		return stages.goneStage(fields[dealTargetPipeline], fields[dealTargetStage]), true
-	}
-	if _, ok := errors.AsType[*deals.NegativeAmountError](err); ok {
+	case wrapsA[*deals.NegativeAmountError](err):
 		return migration.Why(migration.ReasonAmountNegative, "value", strings.TrimSpace(fields[dealTargetAmount])), true
-	}
-	if _, ok := errors.AsType[*deals.PastCloseDateError](err); ok {
+	case wrapsA[*deals.PastCloseDateError](err):
 		return migration.Why(migration.ReasonCloseDatePast, "value", strings.TrimSpace(fields[dealTargetCloseDate])), true
-	}
-	if _, ok := errors.AsType[*deals.PipelineRetiredError](err); ok {
-		return stages.goneStage(fields[dealTargetPipeline], fields[dealTargetStage]), true
-	}
-	if _, ok := errors.AsType[*deals.StagePipelineMismatchError](err); ok {
+	case wrapsA[*deals.StagePipelineMismatchError](err):
 		return migration.Why(migration.ReasonDealPipelineFixed), true
+	case wrapsA[*deals.LostReasonRequiredError](err):
+		return migration.Why(migration.ReasonLostReasonMissing), true
+	case wrapsA[*contracts.DealContractsCrossCompanyError](err):
+		return migration.Why(migration.ReasonDealCompanyContracts), true
+	case wrapsA[*deals.LegalReviewRequiredError](err), wrapsA[*deals.LegalGateOnCreateError](err):
+		return migration.Why(migration.ReasonDealLegalGate), true
+	case wrapsA[*deals.PipelineHasNoOpenStageError](err):
+		return migration.Why(migration.ReasonPipelineNoOpenStage), true
 	}
 	if field, ok := deals.FieldOutsidePipeline(err); ok {
 		return migration.Why(migration.ReasonDealFieldNotForPipeline, "field", field), true
 	}
-	if _, ok := errors.AsType[*deals.LostReasonRequiredError](err); ok {
-		return migration.Why(migration.ReasonLostReasonMissing), true
-	}
 	if missing, ok := errors.AsType[*deals.MissingFxRateError](err); ok {
 		return migration.Why(migration.ReasonFxRateMissing, "currency", missing.From), true
-	}
-	if _, ok := errors.AsType[*contracts.DealContractsCrossCompanyError](err); ok {
-		return migration.Why(migration.ReasonDealCompanyContracts), true
-	}
-	_, review := errors.AsType[*deals.LegalReviewRequiredError](err)
-	if _, onCreate := errors.AsType[*deals.LegalGateOnCreateError](err); review || onCreate {
-		return migration.Why(migration.ReasonDealLegalGate), true
-	}
-	if _, ok := errors.AsType[*deals.PipelineHasNoOpenStageError](err); ok {
-		return migration.Why(migration.ReasonPipelineNoOpenStage), true
 	}
 	return migration.Reason{}, false
 }

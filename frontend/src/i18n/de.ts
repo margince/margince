@@ -15182,10 +15182,13 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "cf.activityKindsFor": "Typen, bei denen „{label}“ erscheint",
   "cf.activityKindsSaved": "„{label}“ erscheint jetzt bei den gewählten Typen",
   "cf.pipelines": "Gezeigt in",
-  "cf.pipelinesHint": "Leer lassen, um das Feld bei Deals in jeder Pipeline zu zeigen.",
+  "cf.pipelinesHint":
+    "Leer lassen, um das Feld bei Deals in jeder Pipeline zu zeigen.",
   "cf.pipelinesEvery": "Jede Pipeline",
+  "cf.pipelinesArchived": "Archivierte Pipeline",
   "cf.pipelinesFor": "Pipelines, in denen „{label}“ erscheint",
-  "cf.pipelinesSaved": "„{label}“ erscheint jetzt bei Deals in den gewählten Pipelines",
+  "cf.pipelinesSaved":
+    "„{label}“ erscheint jetzt bei Deals in den gewählten Pipelines",
   "cf.col.inCreate": "Beim Erstellen",
   "cf.showInCreateFor": "„{label}“ beim Erstellen zeigen",
   "cf.shownInCreate": "„{label}“ beim Erstellen eingeblendet",
