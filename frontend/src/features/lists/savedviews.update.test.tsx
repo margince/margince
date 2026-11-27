@@ -78,7 +78,10 @@ type Write = Readonly<{
 }>;
 
 // A /views that answers `views`, and records each write it is sent.
-function stubViews(views: unknown[], refuseWrites = false) {
+function stubViews(
+  views: unknown[],
+  refuseWrites: boolean | "view_name_taken" = false,
+) {
   const writes: Write[] = [];
   vi.stubGlobal(
     "fetch",
@@ -95,12 +98,19 @@ function stubViews(views: unknown[], refuseWrites = false) {
         ifMatch: request.headers.get("If-Match"),
         body: await request.clone().json(),
       });
-      return refuseWrites
-        ? Response.json(
-            { code: "version_skew", detail: "The view changed." },
-            { status: 409 },
-          )
-        : Response.json(VIP);
+      if (refuseWrites === "view_name_taken") {
+        return Response.json(
+          { code: "view_name_taken", detail: "The name is taken." },
+          { status: 409 },
+        );
+      }
+      if (refuseWrites) {
+        return Response.json(
+          { code: "version_skew", detail: "The view changed." },
+          { status: 409 },
+        );
+      }
+      return Response.json(VIP);
     }),
   );
   return writes;
@@ -142,6 +152,34 @@ describe("Save view beside the reader's saved views", () => {
     expect(update()).toBeNull();
   });
 
+  it("does not count a view that opens in the builder as holding the list, even when its list state matches", async () => {
+    const built = {
+      ...VIP,
+      query: {
+        ...VIP.query,
+        filter: { and: [{ field: "city", op: "eq", value: "Berlin" }] },
+      },
+    };
+    stubViews([built]);
+    function Tabs() {
+      const tabs = useSavedViewTabs("contacts");
+      return <p>{tabs.map((tab) => tab.link?.name ?? tab.label).join("|")}</p>;
+    }
+    wrap(
+      <>
+        <SaveViewAction resource="contacts" state={{ query: BY_NAME }} />
+        <Tabs />
+      </>,
+      { id: built.id, version: built.version },
+    );
+
+    expect(await screen.findByText(en["views.save"])).toBeTruthy();
+    expect(update()).toBeNull();
+    expect(
+      screen.getByText("VIP by name, opens in Filters and views"),
+    ).toBeTruthy();
+  });
+
   it("treats another page size as the same list", async () => {
     stubViews([VIP]);
     wrap(
@@ -167,6 +205,29 @@ describe("Save view beside the reader's saved views", () => {
     await screen.findByRole("button", { name: en["views.manage"] });
     expect(saveView()).toBeTruthy();
     expect(update()).toBeNull();
+  });
+
+  it("puts a stale-list server name conflict on the name field", async () => {
+    const user = userEvent.setup();
+    const writes = stubViews([VIP], "view_name_taken");
+    wrap(
+      <SaveViewAction
+        resource="contacts"
+        state={{ query: { ...BY_NAME, sort: "-created_at" } }}
+      />,
+    );
+    await screen.findByRole("button", { name: en["views.manage"] });
+    await user.click(screen.getByRole("button", { name: en["views.save"] }));
+    const name = screen.getByRole("textbox", { name: en["views.name"] });
+    await user.type(name, "New in another tab");
+    await user.click(
+      screen.getByRole("button", { name: en["views.saveConfirm"] }),
+    );
+    expect(await screen.findByText(en["views.nameTaken"])).toBeTruthy();
+    expect(name.getAttribute("aria-invalid")).toBe("true");
+    expect(writes).toHaveLength(1);
+    await user.type(name, " revised");
+    expect(screen.queryByText(en["views.nameTaken"])).toBeNull();
   });
 
   it("refuses a name one of the reader's views already has, whatever its case", async () => {
@@ -413,7 +474,10 @@ describe("a saved view another writer changed after the reader opened it", () =>
         server.ifMatch.push(ifMatch);
         if (ifMatch !== String(server.view.version)) {
           return Response.json(
-            { code: "version_skew", detail: "The view changed." },
+            {
+              code: "version_skew",
+              detail: "The view changed.",
+            },
             { status: 409 },
           );
         }

@@ -27,26 +27,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// The committed head catalog is the authority: it is the schema the migrations
-// actually build, so a CHECK read from it is the one the database enforces.
-// Reading a named migration file instead would pin this gate to a filename and
-// miss a later migration that widened the set — the gate would keep measuring
-// history while production moved.
-const replyVerdictCatalog = "migrations/testdata/head_catalog.txt"
-
-// Postgres renders an IN list as `= ANY (ARRAY[...])` once the constraint is in
-// the catalog, so this reads the catalog's own spelling rather than the
-// migration's.
-var replyVerdictCheckRE = regexp.MustCompile(
-	`activity_reply_verdict_check CHECK .*reply_verdict = ANY \(ARRAY\[([^\]]*)\]`)
+// The two CHECKs are read through catalogVocabularies, which reads each whole
+// CHECK vocabulary of the head catalog.
+const (
+	replyVerdictColumn        = "activity.reply_verdict"
+	replyVerdictHistoryColumn = "activity_reply_verdict_history.verdict"
+)
 
 func TestTheReplyVerdictVocabularyIsSpelledOnceEverywhere(t *testing.T) {
 	t.Parallel()
-	fromDB := replyVerdictsFromMigration(t)
+	checks := checkVocabularies(t)
+	fromDB := checks[replyVerdictColumn]
 	if len(fromDB) != 3 {
-		t.Fatalf("the migration's CHECK names %d verdicts (%v), and this gate was written against three — "+
+		t.Fatalf("the %s CHECK names %d verdicts (%v), and this gate was written against three — "+
 			"if the vocabulary genuinely changed, every reader below changed with it and this number moves too",
-			len(fromDB), fromDB)
+			replyVerdictColumn, len(fromDB), fromDB)
 	}
 
 	fromConstants := replyVerdictConstants(t)
@@ -60,7 +55,7 @@ func TestTheReplyVerdictVocabularyIsSpelledOnceEverywhere(t *testing.T) {
 	// migration widening one and not the other leaves a correction the activity
 	// accepts and the history refuses — the write fails halfway through a
 	// transaction that has already updated the row.
-	if history := replyVerdictsFromHistoryCheck(t); !equalSets(history, fromDB) {
+	if history := checks[replyVerdictHistoryColumn]; !equalSets(history, fromDB) {
 		t.Errorf("the history CHECK allows %v and the activity CHECK allows %v — "+
 			"a correction the row accepts would be refused by the record of it", history, fromDB)
 	}
@@ -120,38 +115,6 @@ func TestTheReplyVerdictVocabularyIsSpelledOnceEverywhere(t *testing.T) {
 				"\tA verdict nothing asks for is a column value that can never occur.", verdict)
 		}
 	}
-}
-
-// replyVerdictsFromHistoryCheck reads the closed set off the history table's own
-// constraint, so the two copies are compared rather than assumed equal.
-func replyVerdictsFromHistoryCheck(t *testing.T) []string {
-	t.Helper()
-	raw, err := gatekit.ReadFile(replyVerdictCatalog)
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
-	re := regexp.MustCompile(`activity_reply_verdict_history_verdict CHECK .*verdict = ANY \(ARRAY\[([^\]]*)\]`)
-	match := re.FindSubmatch(raw)
-	if match == nil {
-		t.Fatalf("no activity_reply_verdict_history_verdict constraint in %s", replyVerdictCatalog)
-	}
-	return splitCatalogTokens(string(match[1]))
-}
-
-// replyVerdictsFromMigration reads the closed set off the CHECK constraint that
-// enforces it.
-func replyVerdictsFromMigration(t *testing.T) []string {
-	t.Helper()
-	raw, err := gatekit.ReadFile(replyVerdictCatalog)
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
-	match := replyVerdictCheckRE.FindSubmatch(raw)
-	if match == nil {
-		t.Fatalf("no activity_reply_verdict_check in %s — the constraint this gate "+
-			"measures everything else against has moved or been renamed", replyVerdictCatalog)
-	}
-	return splitCatalogTokens(string(match[1]))
 }
 
 // splitCatalogTokens turns a catalog ARRAY[...] body into its bare words.

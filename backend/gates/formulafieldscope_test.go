@@ -15,27 +15,7 @@ package gates
 import (
 	"strings"
 	"testing"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
-
-// loadContract parses the authoritative OpenAPI 3.1 document into a plain
-// map tree — this test walks $ref/properties/items/allOf by hand rather
-// than pulling in an OpenAPI-aware library, since the shapes it needs
-// (requestBody → content → schema, and schema composition) are a handful
-// of map lookups.
-func loadContract(t *testing.T) map[string]any {
-	t.Helper()
-	src, err := gatekit.ReadFile("api/crm.yaml")
-	if err != nil {
-		t.Fatalf("reading api/crm.yaml: %v", err)
-	}
-	var doc map[string]any
-	if err := unmarshalYAML(src, &doc); err != nil {
-		t.Fatalf("parsing api/crm.yaml: %v", err)
-	}
-	return doc
-}
 
 // httpMethods are the OpenAPI path-item keys that carry an operation (and
 // so may carry a requestBody); the other path-item keys (parameters,
@@ -120,7 +100,7 @@ func schemaWritesFormulaSQL(doc map[string]any, schema map[string]any, seen map[
 // today's operation list — an operation added tomorrow is covered for free.
 func TestContract_noOperationWritesFormulaSQL(t *testing.T) {
 	t.Parallel()
-	doc := loadContract(t)
+	doc := loadContractDocument(t)
 	paths, ok := doc["paths"].(map[string]any)
 	if !ok {
 		t.Fatal("api/crm.yaml has no top-level paths map — the contract failed to parse as expected")

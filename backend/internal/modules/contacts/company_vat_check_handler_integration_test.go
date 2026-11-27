@@ -37,7 +37,7 @@ func TestGetCompanyVatCheckHandler(t *testing.T) {
 	// draws "we have not asked" from the absence, and an empty 200 would let it
 	// draw "we asked and learned nothing" instead.
 	rec := httptest.NewRecorder()
-	h.GetCompanyVatCheck(rec, req, company.Id)
+	h.GetCompanyVatCheck(rec, req, company.Id, crmcontracts.GetCompanyVatCheckParams{})
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("unconsulted company status = %d, want 404 (body: %s)", rec.Code, rec.Body.String())
 	}
@@ -57,7 +57,7 @@ func TestGetCompanyVatCheckHandler(t *testing.T) {
 	}
 
 	rec = httptest.NewRecorder()
-	h.GetCompanyVatCheck(rec, req, company.Id)
+	h.GetCompanyVatCheck(rec, req, company.Id, crmcontracts.GetCompanyVatCheckParams{})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("consulted company status = %d, want 200 (body: %s)", rec.Code, rec.Body.String())
 	}
@@ -86,7 +86,7 @@ func TestGetCompanyVatCheckHandler(t *testing.T) {
 	// A foreign or absent company is existence-hidden as 404, same as every other
 	// row-scoped read.
 	rec = httptest.NewRecorder()
-	h.GetCompanyVatCheck(rec, req, crmcontracts.Id(ids.NewV7()))
+	h.GetCompanyVatCheck(rec, req, crmcontracts.Id(ids.NewV7()), crmcontracts.GetCompanyVatCheckParams{})
 	if rec.Code != http.StatusNotFound {
 		t.Fatalf("foreign company status = %d, want 404", rec.Code)
 	}
@@ -118,7 +118,7 @@ func TestAVatCheckWithNoReceiptOmitsItRatherThanSendingEmpty(t *testing.T) {
 	}
 
 	rec := httptest.NewRecorder()
-	h.GetCompanyVatCheck(rec, req, company.Id)
+	h.GetCompanyVatCheck(rec, req, company.Id, crmcontracts.GetCompanyVatCheckParams{})
 	if rec.Code != http.StatusOK {
 		t.Fatalf("status = %d, want 200 (body: %s)", rec.Code, rec.Body.String())
 	}

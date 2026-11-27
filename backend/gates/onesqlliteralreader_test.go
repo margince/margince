@@ -126,7 +126,8 @@ func TestEveryCensusOfSQLReadsItAsPostgresReceivesIt(t *testing.T) {
 // Shared by the censuses that judge the CENSUSES: their subjects are _test.go
 // files, which gatekit.Scope deliberately does not sweep — a gate's own source
 // is not the tree it is about. Two walks would be the very drift these two
-// gates exist to stop.
+// gates exist to stop. Unlike handWrittenGoSources it keeps generated files: a
+// generated `func string` misleads gatekit.StringExpr as much as a written one.
 func eachGoFileInTheModule(t *testing.T, visit func(path string, file *ast.File)) {
 	t.Helper()
 	eachGoFileUnder(t, []string{"."}, visit)

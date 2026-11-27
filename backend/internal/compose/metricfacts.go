@@ -17,11 +17,12 @@ import (
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 const (
 	reportingFactLimit    = 100000
-	reportingExactInteger = int64(1<<53 - 1)
+	reportingExactInteger = int64(values.MaxExactInteger)
 )
 
 type metricFactQuery struct {

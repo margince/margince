@@ -209,7 +209,7 @@ func (s *OnboardingStore) Get(ctx context.Context) (OnboardingState, error) {
 		return json.Unmarshal(draft, &state.CompanyDraft)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
-		return OnboardingState{}, apperrors.ErrNotFound
+		return OnboardingState{}, apperrors.ErrNothingYet
 	}
 	return state, err
 }
@@ -388,6 +388,21 @@ func (s *OnboardingStore) updateOnboardingState(
 		return err
 	}
 	completed := in.Step == OnboardingStepComplete
+	// The wizard's state saved again as it stands moves no version and writes
+	// no history; a completing save always writes, because it stamps the end.
+	var unchanged bool
+	if err := tx.QueryRow(ctx, `SELECT (step, source_mode, website_url, site_read_id, company_draft,
+		selected_fact_keys, voice_skipped, connect_skipped) IS NOT DISTINCT FROM
+		($2::text, $3::text, $4::text, $5::uuid, $6::jsonb, $7::text[], $8::boolean, $9::boolean)
+		FROM onboarding_wizard_state WHERE user_id = $1`,
+		actor.UserID, in.Step, in.SourceMode, in.WebsiteURL, in.SiteReadID, draft,
+		in.SelectedFactKeys, in.VoiceSkipped, in.ConnectSkipped).Scan(&unchanged); err != nil {
+		return fmt.Errorf("identity: comparing the onboarding state: %w", err)
+	}
+	if unchanged && !completed {
+		*out = current
+		return json.Unmarshal(currentDraft, &out.CompanyDraft)
+	}
 	var storedDraft []byte
 	row = tx.QueryRow(ctx, `UPDATE onboarding_wizard_state SET
 		step = $2, source_mode = $3, website_url = $4, site_read_id = $5,

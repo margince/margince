@@ -20,7 +20,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/providerwait"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -124,8 +123,8 @@ func (e *deepReadEngine) confirmCompanySiteRead(w http.ResponseWriter, r *http.R
 		}
 	}
 	website := trimOptional(req.Profile.Website)
-	if website != nil && !parseableWebsite(*website) {
-		httperr.Write(w, r, httperr.Validation("profile.website", "invalid", "website must be a domain or an absolute http(s) URL"))
+	if website != nil && !values.PublicWebsite(*website) {
+		httperr.Write(w, r, httperr.Validation("profile.website", "invalid", "website must be a public domain or an absolute http(s) URL on one"))
 		return
 	}
 	company, unadoptedLogos, err := e.contacts.ConfirmCompanySiteRead(r.Context(), contacts.ConfirmCompanySiteReadInput{
@@ -195,13 +194,10 @@ func (e *deepReadEngine) stageOnboardingContacts(ctx context.Context, tx pgx.Tx,
 	if siteLeadsRefused(ctx, e.logger(), read.ID.String(), len(found)) {
 		return nil, nil
 	}
-	decider, ok := principal.Actor(ctx)
-	if !ok {
-		return nil, errors.New("compose: company site-read confirmation has no deciding principal")
+	execCtx, err := agentForActor(ctx, "agent:site-read")
+	if err != nil {
+		return nil, err
 	}
-	execCtx := principal.WithActor(ctx, principal.Principal{
-		Type: principal.PrincipalSystem, ID: "agent:site-read", UserID: decider.UserID, OnBehalfOf: decider.UserID,
-	})
 	// One confirmation, one bundle — the same grouping the crawl worker stages
 	// under, so a confirmed onboarding read reaches the inbox as one question
 	// about this company rather than as one per contact it published.
@@ -222,15 +218,12 @@ func (e *deepReadEngine) stageOnboardingContacts(ctx context.Context, tx pgx.Tx,
 		// A published contact the workspace already reaches by email is not a
 		// decision — the same floor the crawl worker's staging applies.
 		//
-		// Asked as the CONFIRMING HUMAN, not as execCtx's system principal.
-		// The answer decides whether a proposal reaches their inbox, so a
-		// workspace-wide answer would let them learn which addresses exist on
-		// records their own row scope hides. Under their scope such a record
-		// reads as absent and they simply get the proposal.
+		// Asked as the confirming human. The answer decides whether a
+		// proposal reaches their inbox. A wider answer would tell them which
+		// addresses exist on records their row scope hides.
 		known, err := e.contacts.EmailAlreadyOnFileTx(ctx, tx, contact.PublishedEmail)
 		// A confirmer who may not read contacts is told nothing and gets the
-		// proposal; asking on the system principal's authority instead is the
-		// disclosure the human context is here to prevent.
+		// proposal.
 		if errors.Is(err, apperrors.ErrPermissionDenied) {
 			known, err = false, nil
 		}

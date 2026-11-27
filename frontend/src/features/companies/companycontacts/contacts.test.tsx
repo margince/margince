@@ -206,3 +206,28 @@ test.each([
     expect(within(row as HTMLElement).queryByText("Ruhend")).toBeNull();
   },
 );
+
+const withheld = {
+  count: 2,
+  holders: [{ user_id: "u-dana", display_name: "Dana" }],
+};
+
+test("says how many contacts are hidden under the whole roster", async () => {
+  stubContacts(contactsFixture());
+  render(<CompanyContactsList companyId="o-1" hidden={withheld} />);
+
+  await screen.findByText("Dietmar Rietsch");
+  expect(screen.getByText("2 more you cannot see. Ask Dana.")).not.toBeNull();
+});
+
+test("drops the hidden count under a searched or narrowed list, which it does not count", async () => {
+  for (const address of ["q=Dietmar", "status=waiting"]) {
+    stubContacts(contactsFixture());
+    window.location.hash = `#/companies/o-1/contacts?${address}`;
+    render(<CompanyContactsList companyId="o-1" hidden={withheld} />);
+
+    await waitFor(() => expect(screen.queryByText(/Loading/)).toBeNull());
+    expect(screen.queryByText(/more you cannot see/)).toBeNull();
+    cleanup();
+  }
+});

@@ -23,7 +23,23 @@ const (
 	sqlArgKey     = "key"
 	sqlArgContact = "contact"
 	sqlArgKind    = "kind"
+	// sqlArgSubjectKeys carries the raw subject keys of a contact's identities.
+	sqlArgSubjectKeys = "subject_keys"
 )
+
+// namedSubjectSQL is true for a raw row whose recorded subjects name one of the
+// contact's identities. The row says whose message it is when it is stored, so no
+// network's payload is read to find it.
+const namedSubjectSQL = `coalesce(channel_subjects && @subject_keys::text[], false)`
+
+// subjectKeysOf spells the contact's identities as raw rows record them.
+func subjectKeysOf(identities []channelIdentity) []string {
+	keys := make([]string, 0, len(identities))
+	for _, identity := range identities {
+		keys = append(keys, storekit.ChannelRawSubjectKey(identity.Provider, identity.AccountScope, identity.ChannelUserID))
+	}
+	return keys
+}
 
 func rawEmailMatchSQL(payload, email string) string {
 	return `(` + payload + `)::text ILIKE '%' || ` + storekit.EscapeLikeSQL(email) + ` || '%' ESCAPE '\'`

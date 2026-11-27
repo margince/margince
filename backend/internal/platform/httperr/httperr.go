@@ -41,6 +41,7 @@ var mapping = []struct {
 	status   int
 	code     string
 }{
+	{apperrors.ErrNothingYet, http.StatusNotFound, "not_found"},
 	{apperrors.ErrNotFound, http.StatusNotFound, "not_found"},
 	{apperrors.ErrInvalidArgument, http.StatusBadRequest, "invalid_argument"},
 	{apperrors.ErrVersionSkew, http.StatusConflict, "version_skew"},
@@ -64,34 +65,17 @@ var mapping = []struct {
 // versionSkewDetail tells a reader who lost a version race what to do next.
 const versionSkewDetail = "This record changed after you opened it. Reload it to see the change, then make yours again."
 
-// clientInputValidation maps the typed errors that mean "the CALLER got the
-// request wrong" onto their contract validation shape — each carrying its own
-// field and machine code, so the client is told which input to fix rather than
-// being handed a generic 422. It reports false for anything else, leaving the
-// sentinel table (and ultimately the opaque 500) to answer.
-//
-// They are collected in one place because they share a single decision: none
-// of them is a server fault, so none of them may reach the unhandled-error
-// branch — a client mistake answered as a 500 sends the caller looking for an
-// outage that is not there.
+// Typed input refusals share one validation shape across REST and MCP.
 func clientInputValidation(err error) (error, bool) {
-	// The keyset cursor is client input: a token that fails to decode is
-	// the caller's fault, same 422 shape as every other bad query input.
 	if _, ok := errors.AsType[*storekit.MalformedCursorError](err); ok {
 		return Validation("cursor", "malformed_cursor", "cursor is not a valid page token"), true
 	}
 
-	// A cursor that decodes but was minted under a different sort carries
-	// the contract's dedicated code — the caller re-issues the query
-	// without the cursor (or under the sort it was minted with).
 	if _, ok := errors.AsType[*storekit.CursorSortMismatchError](err); ok {
 		return Validation("cursor", "cursor_param_mismatch",
 			"cursor was minted under a different sort; re-issue the query without the cursor"), true
 	}
 
-	// The list vocabularies' typed refusals (data-model §13.5): a sort
-	// spec or filter leaf outside the resource's closed vocabulary carries
-	// its own field and machine code — one wire mapping, like the cursor's.
 	if badSort, ok := errors.AsType[*storekit.SortError](err); ok {
 		return Validation("sort", badSort.Code, badSort.Message), true
 	}
@@ -99,43 +83,23 @@ func clientInputValidation(err error) (error, bool) {
 		return Validation(badPredicate.Field, badPredicate.Code, badPredicate.Message), true
 	}
 
-	// A value object refused to parse: client input in the wrong format,
-	// carrying its own field and machine code — the parse-don't-validate
-	// seam's single wire mapping.
 	if badValue, ok := errors.AsType[*values.ParseError](err); ok {
 		return Validation(badValue.Field, badValue.Code, badValue.Message).WithMax(badValue.Max), true
 	}
 
-	// A payload the datasource seam refused to decode is a 422, never a 500. A
-	// value outside a contract rule names its field and code, as the REST decode
-	// does. Any other cause is restated as the native body decode restates it,
-	// and Write logs what that withheld.
+	// Decode failures use the REST decoder's refusal; Write logs withheld causes.
 	if refused, ok := errors.AsType[*datasource.DecodedValueError](err); ok {
 		return Validation(refused.Field, refused.Code, refused.Error()).WithParams(refused.Params), true
 	}
 	if badFields, ok := errors.AsType[*datasource.FieldDecodeError](err); ok {
-		detail, _ := fieldDecodeRefusal(badFields.Cause)
-		return Validation("fields", "invalid_field", detail), true
+		return fieldDecodeValidation(badFields.Cause), true
 	}
 
-	// An entity_type no provider on this installation serves. Same obligation
-	// as the decode branch above: the seam documents 422 on every surface, and
-	// naming a type the installation does not serve is a client mistake, which
-	// must never answer 500. The seam's message already carries the known
-	// vocabulary, so it is the actionable half on its own.
 	if unservedEntity, ok := errors.AsType[*datasource.UnsupportedEntityError](err); ok {
 		return Validation("entity_type", "unsupported_entity_type", unservedEntity.Error()), true
 	}
 
-	// A module's own typed refusal, carrying its verdict on the error itself
-	// (apperrors.FieldFault). LAST on purpose: every branch above names the
-	// same shape more precisely for a type this one would also match, so the
-	// specific mapping wins and this is the general fallback.
-	//
-	// This is what lets a module-owned refusal answer identically on a surface
-	// that never runs that module's HTTP mapper — the MCP tool surface reaches
-	// the same stores through the datasource seam, and used to report every one
-	// of these as an internal fault with advice to retry.
+	// Specific mappings win over a module's broader fault interface.
 	return moduleDeclaredFault(err)
 }
 
@@ -277,55 +241,16 @@ func (f Fault) CallersToFix() bool {
 	return f.Status < http.StatusInternalServerError
 }
 
-// Classify is the ONE decision tree behind the error taxonomy: what err means
-// to a caller, independent of the surface that caller reached us through. It
-// reports false only for an error outside the taxonomy — a genuine server
-// fault, whose text never crosses to a client.
-//
-// Every surface classifies HERE. The REST mapper and the MCP tool dispatcher
-// each used to carry their own copy of this judgement, and the copies
-// disagreed: a malformed argument was a 422 naming the offending field on
-// REST, and "the tool failed for an internal reason; retry" on MCP — advice
-// that could never succeed, for a mistake the caller could have fixed had we
-// named it. One tree and two renderers means the surfaces cannot drift apart
-// again.
-func Classify(err error) (Fault, bool) {
-	// A REFUSAL THAT CARRIES A REFERENCE renders it as a field rather than
-	// leaving it in prose.
-	//
-	// BEFORE the sentinel table and after nothing, because the sentinel is
-	// still what decides the STATUS: this branch changes what a caller is
-	// handed, never what they are told happened. A surface reading `details`
-	// gets an id it can act on; one reading only the message gets exactly what
-	// it got before.
-	//
-	// It exists for the tool surface. An agent handed "consent not granted" in
-	// a sentence can do nothing with it; the same refusal naming the review it
-	// opened can hand the question to a human.
-	if referenced, ok := errors.AsType[apperrors.ReferencedFault](err); ok {
-		if fault, ok := Classify(referenced.Unreferenced()); ok {
-			fault.Details = referenced.FaultReference()
-			// AND THE MESSAGE KEEPS THE REFERENCE TOO. Classifying the
-			// unreferenced cause is what preserves the status, and it also
-			// answers the CAUSE's own text — which no longer names the review.
-			//
-			// A human reading the prose must not lose what a machine just
-			// gained. Both carry it: the sentence for whoever reads it, the
-			// field for whatever parses it.
-			if detail := referenced.Error(); detail != "" && !infrastructureCause(err) {
-				fault.Detail = detail
-			}
-			if waits, ok := referenced.(retryAfterFault); ok {
-				fault.RetryAfterSeconds = waits.RetryAfterSeconds()
-			}
-			return fault, true
-		}
+// Classify gives REST and MCP one error taxonomy. Unknown errors return false;
+// their text must never reach a client.
+func Classify(err error) (fault Fault, ok bool) {
+	defer func() { fault = withoutSentinelWords(fault) }()
+	if fault, ok := referencedFault(err); ok {
+		return fault, true
 	}
-
 	if fault, ok := unansweredFaultOf(err); ok {
 		return fault, true
 	}
-
 	if withDetails, ok := errors.AsType[*DetailedError](err); ok {
 		return Fault{
 			Status:  withDetails.Status,
@@ -337,11 +262,9 @@ func Classify(err error) (Fault, bool) {
 			RetryAfterSeconds: withDetails.RetryAfterSeconds,
 		}, true
 	}
-
 	if v, ok := clientInputValidation(err); ok {
 		return Classify(v)
 	}
-
 	for _, m := range mapping {
 		if errors.Is(err, m.sentinel) {
 			f := Fault{Status: m.status, Code: m.code, Detail: err.Error()}
@@ -384,6 +307,26 @@ func Classify(err error) (Fault, bool) {
 	return Fault{}, false
 }
 
+// A reference decorates the underlying refusal without changing its status.
+func referencedFault(err error) (Fault, bool) {
+	referenced, ok := errors.AsType[apperrors.ReferencedFault](err)
+	if !ok {
+		return Fault{}, false
+	}
+	fault, ok := Classify(referenced.Unreferenced())
+	if !ok {
+		return Fault{}, false
+	}
+	fault.Details = referenced.FaultReference()
+	if detail := referenced.Error(); detail != "" && !infrastructureCause(err) {
+		fault.Detail = detail
+	}
+	if waits, ok := referenced.(retryAfterFault); ok {
+		fault.RetryAfterSeconds = waits.RetryAfterSeconds()
+	}
+	return fault, true
+}
+
 // loggedPath is the request path as a log line may carry it: any capability
 // segment replaced, because a /v1/public/* route's token IS its authorization
 // and these error paths run on exactly the requests that have one.
@@ -399,6 +342,9 @@ func loggedPath(r *http.Request) string {
 // Write maps err onto the wire. Unknown errors become an opaque 500 — the
 // cause is logged server-side, never leaked to the client.
 func Write(w http.ResponseWriter, r *http.Request, err error) {
+	if answeredAbsent(w, r, err) {
+		return
+	}
 	fault, ok := Classify(err)
 	if timedOut, late := timedOutFault(r, err, ok); late {
 		fault, ok = timedOut, true

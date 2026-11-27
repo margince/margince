@@ -375,7 +375,7 @@ func TestARetriedAttachReplaysTheFirstReceipt(t *testing.T) {
 type kindRefusal struct{ code string }
 
 func (e kindRefusal) Error() string {
-	return `"logo.svg" is not a kind of file that can be attached; choose one of: PDF, zip archives`
+	return `The file "logo.svg" is not a kind that can be attached. Choose one of: PDF, zip archives.`
 }
 func (e kindRefusal) FieldFault() (field, code, message string) { return "file", e.code, e.Error() }
 
@@ -396,7 +396,7 @@ func TestAttachDocumentReportsARefusedKindAsFinal(t *testing.T) {
 	got := NewDispatcher(nil, nil, "t", "0").
 		WithLogger(slog.New(slog.NewTextHandler(&bytes.Buffer{}, nil))).
 		explain("attach_document", err)
-	for _, want := range []string{"choose one of: PDF, zip archives", "Do not retry", "zip or other archive", "as a note", "Tell the user"} {
+	for _, want := range []string{"Choose one of: PDF, zip archives", "Do not retry", "zip or other archive", "as a note", "Tell the user"} {
 		if !strings.Contains(got, want) {
 			t.Errorf("explain = %q, want it to say %q", got, want)
 		}

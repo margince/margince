@@ -32,7 +32,7 @@ import (
 // agent. It reports the evidence the store read and whether the judge ran.
 func aiHealthWrite(t *testing.T, e *Env, id ids.ProjectID, now time.Time) (projects.AIHealthResult, bool) {
 	t.Helper()
-	ctx := principal.SystemActing(principal.WithWorkspaceID(t.Context(), e.WS), "agent:project-health")
+	ctx := principal.SystemActing(principal.WithWorkspaceID(t.Context(), e.WS), "system:project-health")
 	store := projects.NewStore(e.DB()).SetClock(func() time.Time { return now })
 	judged := false
 	var result projects.AIHealthResult

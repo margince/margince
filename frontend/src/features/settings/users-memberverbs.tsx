@@ -1,10 +1,11 @@
 import { useMutation } from "@tanstack/react-query";
-import { useState } from "react";
+import { useId, useState } from "react";
 import { api } from "../../api/client";
 import { Button, OverflowMenu } from "../../design-system/atoms";
 import { ConfirmModal } from "../../design-system/confirmmodal";
 import { undoAction, useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
+import type { MessageKey } from "../../i18n/en";
 import { problemMessageOf, unwrap } from "../../lib/problem";
 import { EditMember } from "./users-edit";
 import { HandoverModal, HandoverSummary } from "./users-handover";
@@ -12,6 +13,7 @@ import {
   memberAnchorId,
   memberMutationKey,
   offers,
+  refusalsOf,
   type User,
   useMemberBusy,
   useMemberRefresh,
@@ -27,6 +29,40 @@ function deactivateBodyKey(member: User) {
   return member.is_agent
     ? "users.deactivateAgentConfirmBody"
     : "users.deactivateConfirmBody";
+}
+
+// The Merge item the server refuses, kept in the menu with the sentence that
+// says why.
+function MergeRefused({ member }: Readonly<{ member: User }>) {
+  const t = useT();
+  const why = useId();
+  const reasons = refusalsOf(member, "merge");
+  if (offers(member, "merge") || reasons.length === 0) {
+    return null;
+  }
+  return (
+    <>
+      <Button disabled aria-describedby={why}>
+        {t("users.merge")}
+      </Button>
+      <p id={why}>
+        {reasons.map((reason) => t(mergeRefusedKey(reason))).join(" ")}
+      </p>
+    </>
+  );
+}
+
+function mergeRefusedKey(reason: string): MessageKey {
+  switch (reason) {
+    case "sole_admin":
+      return "users.mergeRefused.sole_admin";
+    case "self":
+      return "users.mergeRefused.self";
+    case "agent_seat":
+      return "users.mergeRefused.agent_seat";
+    default:
+      return "users.mergeRefused.other";
+  }
 }
 
 // Mails an invited member a new link, which replaces any older one.
@@ -155,6 +191,7 @@ export function MemberVerbs({
     ![
       canEdit,
       canMerge,
+      refusalsOf(member, "merge").length,
       canRemove,
       editOpen,
       retirement,
@@ -186,6 +223,7 @@ export function MemberVerbs({
             {t("users.merge")}
           </Button>
         )}
+        <MergeRefused member={member} />
         {canRemove && (
           <Button disabled={pending} onClick={() => setRetirement("remove")}>
             {t("users.remove")}

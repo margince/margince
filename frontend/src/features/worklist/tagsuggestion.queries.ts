@@ -29,6 +29,7 @@ export function useTagSuggestion(id: string) {
         params: { path: { id } },
       });
       if (error) {
+        // absent-404: a decided or hidden suggestion has nothing left to decide.
         if (response.status === 404) {
           return null;
         }

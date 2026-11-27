@@ -25,6 +25,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
@@ -57,7 +58,6 @@ var taskSourceWriters = map[string][]string{
 	"compose/assurancebundletask.go:mintBundleTask":                       {provenance.AssuranceTaskSource},
 	"compose/decisionseam.go:Record":                                      {provenance.AnalyticsDecisionSource},
 	"compose/leadsla.go:Plan":                                             {provenance.LeadSLATaskSource},
-	"compose/capturewhichdeal.go:Ask":                                     {provenance.WhichDealSource},
 	"compose/requesttask/requesttask.go:OpenRequestTaskTx":                {provenance.PrivacyRequestTaskSource},
 	"compose/commitmenttask.go:writeCommitmentTask":                       {provenance.CommitmentTaskSource},
 	"compose/leadsla.go:Apply":                                            {provenance.LeadSLATaskSource},
@@ -150,7 +150,6 @@ var openTaskReadersElsewhere = map[string]string{
 	"modules/activities/lasttouch.go:openReminderHoldsEntityFrom":         "an open reminder of the engine's own family holds its re-raise; it creates no work",
 	"modules/activities/requestreminderreach.go:openReminderClause":       "names the reminder a reach recompute may move, where the waiting horizon would skip a stale one instead of correcting it",
 	"modules/activities/requestrecovery.go:requestAvailableForAcceptance": "checks a request has no accepted task before a human accepts it",
-	"modules/activities/whichdealanswer.go:openWhichDealQuestions":        "closes the deal questions a colleague's filing or decline has just answered; it creates no work",
 	"modules/activities/taskwindow.go:openTaskWindowClauses":              "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/taskreminder.go:dueReminderClause":                "narrows a list the caller already gates with the worklist clauses",
 	"modules/contacts/claimrecord.go:SetClaimTaskTx":                      "links a promise to its own task row",
@@ -171,6 +170,27 @@ type taskCensus struct {
 	builders map[string]activityShape
 	// readers maps each open-task reader to whether it reaches the clause.
 	readers map[string]bool
+}
+
+// internalTaskCensuses holds the census of internal/ once per test binary: two
+// tests read it. built stays false when a walk fails, so the next caller fails
+// the same way.
+var internalTaskCensuses struct {
+	sync.Mutex
+	built  bool
+	census taskCensus
+}
+
+// internalTaskCensus answers the shared census of internal/, read-only.
+func internalTaskCensus(t *testing.T) taskCensus {
+	t.Helper()
+	internalTaskCensuses.Lock()
+	defer internalTaskCensuses.Unlock()
+	if !internalTaskCensuses.built {
+		internalTaskCensuses.census = scanTaskCensus(t, "internal", nil)
+		internalTaskCensuses.built = true
+	}
+	return internalTaskCensuses.census
 }
 
 // scanTaskCensus reads every hand-written Go file under root, plus any
@@ -423,7 +443,7 @@ func builderFaults(found taskCensus, declarations map[string][]string) []string 
 
 func TestEveryAutomaticTaskWriterAndOpenTaskReaderIsDeclared(t *testing.T) {
 	t.Parallel()
-	if faults := taskCensusFaults(scanTaskCensus(t, "internal", nil), taskSourceWriters); len(faults) > 0 {
+	if faults := taskCensusFaults(internalTaskCensus(t), taskSourceWriters); len(faults) > 0 {
 		t.Fatalf("the task census found:\n%s", strings.Join(faults, "\n"))
 	}
 }
@@ -639,7 +659,7 @@ func mint(ctx context.Context, store *activities.Store, line string) error {
 // No UPDATE may turn a row into a task behind both counts.
 func TestTheTaskCensusHoldsEveryActivityInsertTheTableCensusFinds(t *testing.T) {
 	t.Parallel()
-	builders := scanTaskCensus(t, "internal", nil).builders
+	builders := internalTaskCensus(t).builders
 	inserts := 0
 	for owner, writes := range collectTableWrites(t) {
 		for _, write := range writes {

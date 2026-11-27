@@ -8,6 +8,7 @@ import { useCanWriteRecord } from "../lib/capability";
 import {
   type CustomField,
   customFieldHref,
+  dealNarrowing,
   useCustomFieldDisplay,
   useObjectCustomFields,
 } from "./customfields.form";
@@ -25,7 +26,11 @@ export function RecordCustomFields({
   record: FieldRecord & { writable?: boolean; archived_at?: string | null };
 }>) {
   const t = useT();
-  const cf = useObjectCustomFields(kind);
+  const cf = useObjectCustomFields(
+    kind,
+    "record",
+    kind === "deal" ? dealNarrowing(record) : undefined,
+  );
   const read = useCustomFieldDisplay();
   const canEdit = useCanWriteRecord(kind, record) && !record.archived_at;
   if (cf.loading || cf.failed)

@@ -327,6 +327,34 @@ export const ContactWithLatestMail: Story = {
   ),
 };
 
+/** A contact whose line a model wrote from one mail: the mail opens from
+ *  under the sentence, so a reader can check the line against it. */
+export const ContactWithStatusLineSource: Story = {
+  render: () => (
+    <HowItStands
+      date="11 Nov"
+      sources={{ by: "model", count: 1 }}
+      verdict={{
+        word: "Warm",
+        sentence:
+          "In her last mail Sonya Beck agreed to the first two parts and asked for the revised offer by Friday.",
+        tone: "success",
+      }}
+      citations={[{ id: "a-1", label: "Email · 10 Nov", onOpen: noop }]}
+    />
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole("button", { name: "Email · 10 Nov" }),
+    ).toBeVisible();
+  },
+};
+
+export const ContactWithStatusLineSourceDark: Story = {
+  ...ContactWithStatusLineSource,
+  globals: { theme: "dark" },
+};
+
 export const DealWithLatestWordDark: Story = {
   ...DealWithLatestWord,
   globals: { theme: "dark" },

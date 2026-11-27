@@ -67,6 +67,22 @@ it("declares every subset of each face it loads, as its @fontsource package does
   expect([...own].sort(byFile)).toEqual(packaged.sort(byFile));
 });
 
+// A heading in Vietnamese must find every Vietnamese letter in its own face.
+it("sets Vietnamese headings in a face that loads the Vietnamese subset", () => {
+  const tokens = readFileSync(
+    join(frontendRoot, "src/design-system/tokens.css"),
+    "utf8",
+  );
+  const rule = /:root:lang\(vi\)\s*\{([^}]*)\}/.exec(tokens)?.[1] ?? "";
+  const family = /--fontFamilyHeading:\s*"([^"]+)"/.exec(rule)?.[1];
+  const vietnameseWeights = own
+    .filter(
+      (face) => face.family === family && face.file.includes("-vietnamese-"),
+    )
+    .map((face) => face.weight);
+  expect(vietnameseWeights.sort(stable)).toEqual(["400", "500", "700"]);
+});
+
 it("swaps every face in when it arrives", () => {
   const displays = [...declared.matchAll(/@font-face\s*\{([^}]*)\}/g)].map(
     ([, block]) => descriptor(block, "font-display"),
@@ -100,7 +116,13 @@ it("serves every face to the dev server", async () => {
     root: frontendRoot,
     logLevel: "silent",
     optimizeDeps: { noDiscovery: true },
-    server: { ...spaConfig.server, port: 0, proxy: undefined },
+    // One address for the bind and the fetch: "localhost" can name two.
+    server: {
+      ...spaConfig.server,
+      host: "127.0.0.1",
+      port: 0,
+      proxy: undefined,
+    },
   });
   try {
     await server.listen();

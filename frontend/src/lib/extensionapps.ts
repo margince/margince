@@ -19,18 +19,12 @@ import { useMe } from "./session";
 /** The route segment an app lives under: `#/app/<name>`. */
 export const EXTENSION_APP_SCREEN = "app";
 
-/**
- * The drawer headings an app may sit under. Mirrors extension.AppGroups() in
- * backend/pkg/extension/app.go; backend/gates/frontendentryslots_test.go fails
- * when the two lists differ.
- */
-export const EXTENSION_APP_GROUPS = [
-  "records",
-  "work",
-  "intelligence",
-] as const;
-
-export type ExtensionAppGroup = (typeof EXTENSION_APP_GROUPS)[number];
+// The drawer headings an app may sit under, generated from
+// extension.AppGroups().
+export {
+  EXTENSION_APP_GROUPS,
+  type ExtensionAppGroup,
+} from "@composition/extensions";
 
 /** An app with the unit that declared it, which is where it leads. */
 export type UnitApp = ExtensionAppDescriptor & { readonly unit: string };

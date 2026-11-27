@@ -66,51 +66,13 @@ var whereClause = regexp.MustCompile(`(?is)\bWHERE\b(.*)$`)
 // then matches nothing.
 const byIDUpdateFloor = 250
 
-var (
-	// createTableLine opens a CREATE TABLE block; versionColumnLine marks
-	// the block's table as optimistic-locking. Line-based on purpose:
-	// column definitions nest parentheses (generated tsvector columns)
-	// beyond what a block regex can pair.
-	createTableLine   = regexp.MustCompile(`(?i)^\s*CREATE TABLE (?:IF NOT EXISTS )?([a-z_]+)\s*\(`)
-	versionColumnLine = regexp.MustCompile(`(?i)^\s*version\s+bigint`)
-)
-
-// versionedTables derives the set of optimistic-locking tables from the
-// migration sources: any CREATE TABLE whose columns include "version".
+// versionedTables derives the set of optimistic-locking tables from the head
+// catalog: every table carrying a bigint version column.
 func versionedTables(t *testing.T) map[string]bool {
 	t.Helper()
-	tables := map[string]bool{}
-	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
-				return err
-			}
-			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
-			if err != nil {
-				return err
-			}
-			current := ""
-			for line := range strings.SplitSeq(withCurrentNames(string(raw)), "\n") {
-				if m := createTableLine.FindStringSubmatch(line); m != nil {
-					current = m[1]
-					continue
-				}
-				if strings.HasPrefix(line, ");") {
-					current = ""
-					continue
-				}
-				if current != "" && versionColumnLine.MatchString(line) {
-					tables[current] = true
-				}
-			}
-			return nil
-		})
-		if err != nil {
-			t.Fatal(err)
-		}
-	}
+	tables := parseHeadCatalog(t).tablesWithColumn("version", "bigint")
 	if len(tables) < 10 {
-		t.Fatalf("derived only %d versioned tables from migrations — the derivation is broken, not the schema", len(tables))
+		t.Fatalf("derived only %d versioned tables from %s — the derivation is broken, not the schema", len(tables), headCatalogPath)
 	}
 	return tables
 }
@@ -133,7 +95,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/identity:recordTeamChange":            "the app_user touch runs only for setTeamMemberTx, under lockAuthorization; it writes only updated_at and no domain before-image",
 	"internal/modules/identity:changeUserRoleTx":            "lockAuthorization serializes the role change and the app_user touch in one transaction",
 	"internal/modules/privacy:clearActivityContent":         "terminal erasure empties the activity regardless of concurrent content changes; preserving a competing value would retain the erased content",
-	"internal/modules/activities:decideLinkSuggestion":      "reads the suggestion with FOR UPDATE in the same transaction and writes only after seeing it still pending, so no concurrent decision can slip between the read and the update",
 	"internal/modules/assurance:recordReadThrough": "the pass sets one column on the run row it inserted in the same transaction, " +
 		"under the assurance pass lock, so no other writer can hold that row",
 	"internal/modules/contacts:DisqualifyLead":             "readDisqualifiableLead locks this live lead with storekit.LockRow and checks its optional version pin before the update, in the same leadWrite transaction; the preview shares that reader",
@@ -156,7 +117,6 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/agents/runner:SaveOutcome":           "the same claimed run as MarkFailed, and the statement's own comment states that a correction of a settled run is a new attempt rather than an edit of this one",
 	"internal/modules/consent:setNoticeCaseOwner":          "lockNoticeCase reads the case FOR UPDATE first, which the file names as what orders two owners arriving together",
 	"internal/modules/consent:ExcuseNoticeCase":            "the excuse path takes the same lockNoticeCase FOR UPDATE before deciding, so the state it validated is the state it writes",
-	"internal/modules/consent:closeOwedCasesTx":            "closes the cases a subject's own reply settles, under the notice case lock the caller took; the statement names the reply as the cause rather than carrying a state it read",
 	"internal/modules/consent:markResolvedTx":              "the submission is held FOR UPDATE by the review that decides it, so the resolution it writes is the one it read",
 	"internal/modules/consent:applyDSRUpdateTx":            "every column coalesces onto the row's own value, so a field this caller did not set keeps what the row holds rather than what this caller last read",
 	"internal/modules/contacts:recordSiteReadConfirmation": "the confirmation rides the company lock the scan took before reading what to confirm",
@@ -258,7 +218,7 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/customfields:Update":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read), with the If-Match version checked under that lock",
 	"internal/modules/customfields:Retire":          "runs under the catalog row lock minted by lockField (FOR UPDATE before every decision read); the flip is an absolute idempotent transition besides",
 	"internal/modules/customfields:setOptionsInTx":  "runs under the catalog row lock minted by lockPicklistField (FOR UPDATE before every decision read), plus the per-table advisory lock serializeSchemaChange mints",
-	"internal/modules/deals:UpdateOfferLineItem":    "runs under the parent offer's row lock taken by visibleOfferLocked, which serializes every line edit",
+	"internal/modules/deals:applyOfferLinePatch":    "runs only inside UpdateOfferLineItem, under the parent offer's row lock taken by visibleOfferLocked, which serializes every line edit",
 	"internal/modules/signals:dropUnattributable":   "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
 	"internal/modules/signals:resolveToCompany":     "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
 	"internal/modules/signals:flagAmbiguous":        "runs only inside resolveTx, under its signal row lock (storekit.LockRow before the terminal-state pre-read)",
@@ -387,7 +347,7 @@ func lockTableConsts(t *testing.T, fset *token.FileSet, cache map[string]map[str
 	if consts, ok := cache[dir]; ok {
 		return consts
 	}
-	consts := stringConsts(t, fset, parsePackageDir(t, fset, dir))
+	consts := gatekit.StringConstantsOf(t, parsePackageDir(t, fset, dir))
 	cache[dir] = consts
 	return consts
 }

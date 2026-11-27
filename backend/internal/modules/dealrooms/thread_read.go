@@ -19,11 +19,9 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 const (
@@ -79,7 +77,43 @@ func threadRows(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, documentI
 	if err := attachComments(ctx, tx, roomID, out, byID); err != nil {
 		return nil, err
 	}
+	if err := markBuyerSight(ctx, tx, roomID, out); err != nil {
+		return nil, err
+	}
 	return out, nil
+}
+
+// buyerSeesThread is the one answer to "can the buyer read this conversation":
+// a room-level thread always, a document thread while its document is in view.
+// The buyer's list filters on it and the seller's list marks with it.
+func buyerSeesThread(inView map[openapi_types.UUID]bool, th crmcontracts.DealRoomThread) bool {
+	return th.DocumentId == nil || inView[*th.DocumentId]
+}
+
+// markBuyerSight sets VisibleToBuyer on every thread from buyerSeesThread. Room
+// state is left out: a paused room says so to both sides already.
+func markBuyerSight(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, threads []crmcontracts.DealRoomThread) error {
+	inView, err := documentsInViewSet(ctx, tx, roomID)
+	if err != nil {
+		return err
+	}
+	for i := range threads {
+		threads[i].VisibleToBuyer = buyerSeesThread(inView, threads[i])
+	}
+	return nil
+}
+
+// documentsInViewSet is documentsInView as the lookup buyerSeesThread takes.
+func documentsInViewSet(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID) (map[openapi_types.UUID]bool, error) {
+	docs, err := documentsInView(ctx, tx, roomID)
+	if err != nil {
+		return nil, err
+	}
+	inView := make(map[openapi_types.UUID]bool, len(docs))
+	for _, d := range docs {
+		inView[d.Id] = true
+	}
+	return inView, nil
 }
 
 func scanThread(row rowScanner) (crmcontracts.DealRoomThread, error) {
@@ -138,13 +172,16 @@ func readThread(ctx context.Context, tx pgx.Tx, roomID ids.DealRoomID, threadID 
 	if err := attachComments(ctx, tx, roomID, threads, map[openapi_types.UUID]int{th.Id: 0}); err != nil {
 		return crmcontracts.DealRoomThread{}, err
 	}
+	if err := markBuyerSight(ctx, tx, roomID, threads); err != nil {
+		return crmcontracts.DealRoomThread{}, err
+	}
 	return threads[0], nil
 }
 
 // GetThread reads one thread by its own id, under its room's read. The room is
 // what the caller's deal scope admits; a thread of a hidden room is absent.
 func (s *Store) GetThread(ctx context.Context, threadID ids.UUID) (crmcontracts.DealRoomThread, error) {
-	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
+	if err := requireRoomRead(ctx); err != nil {
 		return crmcontracts.DealRoomThread{}, err
 	}
 	var out crmcontracts.DealRoomThread
@@ -168,7 +205,7 @@ func (s *Store) GetThread(ctx context.Context, threadID ids.UUID) (crmcontracts.
 
 // ListThreads is the seller's read.
 func (s *Store) ListThreads(ctx context.Context, roomID ids.DealRoomID, documentID *ids.UUID) ([]crmcontracts.DealRoomThread, error) {
-	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
+	if err := requireRoomRead(ctx); err != nil {
 		return nil, err
 	}
 	var out []crmcontracts.DealRoomThread

@@ -5,6 +5,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { meFixture } from "../../testing/mefixture";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
 import {
@@ -60,7 +61,7 @@ describe("ProgressResult", () => {
       <ProgressResult
         progress={sellerMarch}
         onEvidence={vi.fn()}
-        onGoals={vi.fn()}
+        goalsHref="#/goals"
       />,
     );
     expect(screen.getByText("€60,000")).toBeTruthy();
@@ -73,7 +74,7 @@ describe("ProgressResult", () => {
       <ProgressResult
         progress={teamMarch}
         onEvidence={vi.fn()}
-        onGoals={vi.fn()}
+        goalsHref="#/goals"
       />,
     );
     expect(screen.queryByText(/below goal/)).toBeNull();
@@ -89,7 +90,7 @@ describe("ProgressResult", () => {
       <ProgressResult
         progress={{ ...sellerMarch, ...NO_GOAL }}
         onEvidence={vi.fn()}
-        onGoals={vi.fn()}
+        goalsHref="#/goals"
       />,
     );
     expect(
@@ -97,14 +98,10 @@ describe("ProgressResult", () => {
         /A colleague who manages sales goals can publish one\.$/,
       ),
     ).toBeTruthy();
-    expect(
-      screen.queryByRole("button", { name: "Set sales goals" }),
-    ).toBeNull();
+    expect(screen.queryByRole("link", { name: "Set sales goals" })).toBeNull();
   });
 
-  it("opens the sales goals for a reader who may set the missing goal", async () => {
-    const onGoals = vi.fn();
-    const user = userEvent.setup();
+  it("links a reader who may set the missing goal to the sales goals", () => {
     render(
       <ProgressResult
         progress={{
@@ -113,11 +110,14 @@ describe("ProgressResult", () => {
           capabilities: { write_goals: true },
         }}
         onEvidence={vi.fn()}
-        onGoals={onGoals}
+        goalsHref="#/goals?year=2026"
       />,
     );
-    await user.click(screen.getByRole("button", { name: "Set sales goals" }));
-    expect(onGoals).toHaveBeenCalled();
+    expect(
+      screen
+        .getByRole("link", { name: "Set sales goals" })
+        .getAttribute("href"),
+    ).toBe("/#/goals?year=2026");
   });
 
   it("counts down an open period instead of calling it below goal", () => {
@@ -125,7 +125,7 @@ describe("ProgressResult", () => {
       <ProgressResult
         progress={{ ...sellerMarch, state: "current" }}
         onEvidence={vi.fn()}
-        onGoals={vi.fn()}
+        goalsHref="#/goals"
       />,
     );
     expect(screen.getByText("€40,000 to go")).toBeTruthy();
@@ -139,7 +139,7 @@ describe("ProgressResult", () => {
       <ProgressResult
         progress={sellerMarch}
         onEvidence={onEvidence}
-        onGoals={vi.fn()}
+        goalsHref="#/goals"
       />,
     );
     await user.click(screen.getByRole("button", { name: "View won deals" }));
@@ -366,6 +366,36 @@ describe("ProgressWork", () => {
 });
 
 describe("ProgressScreen", () => {
+  it("opens a colleague who is absent from Analytics' team choices", async () => {
+    const seller = "00000000-0000-4000-8000-0000000000b2";
+    installFetchStub({
+      "GET /me": meRoute({ lead: ["read"], sales_target: ["read"] }),
+      "GET /analytics/context": () => jsonResponse(CONTEXTS.leader),
+      "GET /analytics/sales-goals": () =>
+        jsonResponse({
+          year: 2026,
+          currency: "EUR",
+          data: [
+            {
+              owner_id: seller,
+              name: "Colleague without a team",
+              state: "no_goal",
+              can_edit: false,
+            },
+          ],
+        }),
+      "GET /analytics/progress": () => jsonResponse(teamMarch),
+    });
+    render(<ProgressScreen />);
+    const user = userEvent.setup();
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Team member or team" }),
+      "Colleague without a team",
+    );
+    expect(window.location.hash).toContain(`scope=owner%3A${seller}`);
+  });
+
   it("reads the seller a team row opened, though the picker never listed them", async () => {
     const seller = "00000000-0000-4000-8000-0000000000b2";
     window.location.hash = `#/progress?scope=owner:${seller}`;
@@ -395,7 +425,7 @@ describe("ProgressScreen", () => {
     );
     // Analytics does not offer this reader the one team member, so no door.
     expect(
-      screen.queryByRole("button", { name: "Open in Analytics" }),
+      screen.queryByRole("link", { name: "Open in Analytics" }),
     ).toBeNull();
   });
 
@@ -432,7 +462,12 @@ describe("ProgressScreen", () => {
       ),
     ).toBeTruthy();
     expect(screen.queryByLabelText("Team member or team")).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Open in Analytics" }));
+    // A link, so the reader can open Analytics in a new tab.
+    const analytics = screen.getByRole("link", { name: "Open in Analytics" });
+    expect(analytics.getAttribute("href")).toMatch(
+      /#\/analytics\/performance\?/,
+    );
+    await user.click(analytics);
     expect(window.location.hash).toMatch(/^#\/analytics\/performance\?/);
     expect(window.location.hash).toContain("from=2026-03-01");
     expect(window.location.hash).toContain("through=2026-03-31");
@@ -454,7 +489,7 @@ describe("ProgressScreen", () => {
     });
     const user = userEvent.setup();
     render(<ProgressScreen />);
-    const links = await screen.findAllByRole("button", {
+    const links = await screen.findAllByRole("link", {
       name: "View sales goals",
     });
     await user.click(links[links.length - 1] as HTMLElement);

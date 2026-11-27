@@ -267,6 +267,26 @@ it("lets the owner withdraw their own answer, and says it is theirs", async () =
   );
 });
 
+it("shows a private sender as a standing decision the owner lifts with one press", async () => {
+  const user = userEvent.setup();
+  const sent = stubRoutes(
+    [],
+    [{ ...NEWSLETTER, kind: "personal", decision: "personal" }],
+  );
+
+  const drawer = await openList(user, en["senders.title"]);
+
+  expect(drawer.getByText(en["senders.kind.private"])).toBeVisible();
+  expect(drawer.getByText(en["senders.privateStands"])).toBeVisible();
+  const menu = await openRowMenu(user, NEWSLETTER.address);
+  await user.click(
+    menu.getByRole("button", { name: en["senders.liftPrivate"] }),
+  );
+  await waitFor(() =>
+    expect(sent).toEqual([expect.objectContaining({ method: "DELETE" })]),
+  );
+});
+
 // The contact a sender became is one press away, named by the list itself.
 // No row reads its contact, and the count says how much mail there is.
 it("links a sender to its contact beside its mail count and newest message", async () => {

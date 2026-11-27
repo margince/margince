@@ -5,6 +5,7 @@ import type { components } from "../../api/schema";
 import { CellStack } from "../../design-system/cellstack";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { formatDayMonth, formatMoney, formatNumber } from "../../format/format";
+import { addMinor, sumMinor } from "../../format/minorsum";
 import { type Locale, type Translator, useLocale, useT } from "../../i18n";
 import { aiTaskLabel } from "../../lib/ai-task-label";
 import { tierLabel, tierRank } from "../../lib/ai-tier-label";
@@ -20,8 +21,10 @@ type Figures = Readonly<{
   cached: number;
   tokensIn: number;
   tokensOut: number;
-  // Absent when the server priced none of the calls behind the line.
+  // Absent when the server priced none of the calls behind the line. Also
+  // absent when the priced calls add up past 2^53, with costTooLarge set.
   cost?: number;
+  costTooLarge: boolean;
   // Some calls behind a priced line had no rate, so the cost is short.
   partlyPriced: boolean;
 }>;
@@ -55,8 +58,10 @@ export function aggregate(days: AiUsage["days"]): UsageTask[] {
       current.unpriced_calls =
         (current.unpriced_calls ?? 0) + (task.unpriced_calls ?? 0);
       if (task.cost_est_minor !== undefined) {
+        // NaN marks a cost past the exact range; sumMinor carries it through.
         current.cost_est_minor =
-          (current.cost_est_minor ?? 0) + task.cost_est_minor;
+          addMinor(current.cost_est_minor ?? 0, task.cost_est_minor) ??
+          Number.NaN;
       }
     }
   }
@@ -86,15 +91,17 @@ function sum(
 // tasks, the month over everything.
 function figuresOf(lines: readonly UsageTask[]): Figures {
   const priced = lines.filter((entry) => entry.cost_est_minor !== undefined);
+  const cost =
+    priced.length === 0
+      ? undefined
+      : sumMinor(priced.map((entry) => entry.cost_est_minor ?? 0));
   return {
     calls: sum(lines, (entry) => entry.calls),
     cached: sum(lines, (entry) => entry.cached_hits ?? 0),
     tokensIn: sum(lines, (entry) => entry.tokens_in),
     tokensOut: sum(lines, (entry) => entry.tokens_out),
-    cost:
-      priced.length === 0
-        ? undefined
-        : sum(priced, (entry) => entry.cost_est_minor ?? 0),
+    cost,
+    costTooLarge: priced.length > 0 && cost === undefined,
     partlyPriced:
       priced.length > 0 &&
       lines.some(
@@ -181,7 +188,11 @@ function figureColumns<Row extends Figures>(
       // A line the server did not price is not a line that cost nothing.
       render: (row) =>
         row.cost === undefined ? (
-          "—"
+          row.costTooLarge ? (
+            t("format.tooLargeExact")
+          ) : (
+            "—"
+          )
         ) : (
           <CellStack>
             <span>{formatMoney(row.cost, currency, locale)}</span>

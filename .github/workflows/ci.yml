@@ -73,7 +73,7 @@ env:
 jobs:
   # Classify the diff so a change runs only the checks it can affect — a
   # frontend-only PR skips the Go build/gate + the integration shard fleet, a
-  # backend-only PR skips the frontend + UAT lanes, and a docs-only PR skips
+  # backend-only PR skips the frontend + `uat` lanes, and a docs-only PR skips
   # everything. Draft PRs run nothing until marked ready (the swarm pushes many
   # WIP commits). A required job skipped this way counts as passing.
   #   backend  = Go/DB + the gate inputs (backend, the dev compose stack,
@@ -83,7 +83,7 @@ jobs:
   #              DOES, which is why the compose stack is in the narrower
   #              backend_db below and the prose about it is not.
   #   frontend = frontend/ + backend/api (the contract drives FE types) —
-  #              gates the frontend lane + UAT
+  #              gates the frontend lane + `uat`
   #   e2e      = backend/ + frontend/ + the dev compose stack — gates the
   #              full-stack live-boot
   changes:
@@ -1527,6 +1527,7 @@ jobs:
       contents: read
     defaults:
       run:
+        shell: bash
         working-directory: .
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1

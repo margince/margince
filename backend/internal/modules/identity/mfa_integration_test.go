@@ -19,6 +19,7 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -79,7 +80,7 @@ func TestTOTPEnrolmentConfirmVerifyAndRecovery(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	recovery, err := e.svc.ConfirmTOTP(ctx, code, "")
+	recovery, err := e.svc.ConfirmTOTP(ctx, memberPassword, code, "")
 	if err != nil {
 		t.Fatalf("ConfirmTOTP: %v", err)
 	}
@@ -138,7 +139,7 @@ func TestMFACannotBeReEnrolledWhileConfirmedAndDisableDemandsTheFactor(t *testin
 		t.Fatalf("start: %v", err)
 	}
 	code, _ := totpCodeAt(secret, base, totpDigits)
-	recovery, err := e.svc.ConfirmTOTP(ctx, code, "")
+	recovery, err := e.svc.ConfirmTOTP(ctx, memberPassword, code, "")
 	if err != nil {
 		t.Fatalf("confirm: %v", err)
 	}
@@ -189,7 +190,7 @@ func TestMFACannotBeReEnrolledWhileConfirmedAndDisableDemandsTheFactor(t *testin
 		t.Fatalf("re-enrolment after disable was refused: %v", err)
 	}
 	freshCode, _ := totpCodeAt(fresh, base, totpDigits)
-	if _, err := e.svc.ConfirmTOTP(ctx, freshCode, ""); err != nil {
+	if _, err := e.svc.ConfirmTOTP(ctx, memberPassword, freshCode, ""); err != nil {
 		t.Fatalf("confirm after re-enrol: %v", err)
 	}
 	if left := statusOf(t, e).RecoveryCodesLeft; left != recoveryCodeCount {
@@ -205,7 +206,7 @@ func TestConfirmTOTPRefusesAWrongCode(t *testing.T) {
 	if _, err := e.svc.StartTOTPEnrolment(ctx); err != nil {
 		t.Fatalf("start: %v", err)
 	}
-	if _, err := e.svc.ConfirmTOTP(ctx, "000000", ""); err == nil {
+	if _, err := e.svc.ConfirmTOTP(ctx, memberPassword, "000000", ""); err == nil {
 		t.Fatal("a wrong confirmation code was accepted")
 	}
 	// The enrolment stays pending, not confirmed.
@@ -234,7 +235,7 @@ func TestConfirmTOTPEndsEveryOtherSessionOfTheMember(t *testing.T) {
 		t.Fatalf("start: %v", err)
 	}
 	code, _ := totpCodeAt(secret, e.svc.now(), totpDigits)
-	if _, err := e.svc.ConfirmTOTP(ctx, code, hashToken(keep.Token)); err != nil {
+	if _, err := e.svc.ConfirmTOTP(ctx, memberPassword, code, hashToken(keep.Token)); err != nil {
 		t.Fatalf("confirm: %v", err)
 	}
 
@@ -247,6 +248,74 @@ func TestConfirmTOTPEndsEveryOtherSessionOfTheMember(t *testing.T) {
 	if _, err := e.svc.Authenticate(e.wsOnlyCtx(), other.Token); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("the pre-factor session still authenticates: err=%v, want ErrNotFound", err)
 	}
+}
+
+// A live session without the password must not install a factor. Confirmed,
+// it would end the owner's other sessions and demand a code they never held at
+// every later password sign-in.
+func TestConfirmTOTPRequiresTheCurrentPassword(t *testing.T) {
+	e := setupRevocationEnv(t, "mfa-confirm-password")
+	e.withVault()
+	_, owner, err := e.svc.Login(e.wsOnlyCtx(), e.member.Email, memberPassword, noDevice)
+	if err != nil {
+		t.Fatalf("owner login: %v", err)
+	}
+
+	ctx := e.asMember()
+	secret, err := e.svc.StartTOTPEnrolment(ctx)
+	if err != nil {
+		t.Fatalf("start: %v", err)
+	}
+	code, err := totpCodeAt(secret, e.svc.now(), totpDigits)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if _, err := e.svc.ConfirmTOTP(ctx, "not the password", code, ""); !errors.Is(err, ErrCurrentPasswordWrong) {
+		t.Fatalf("confirm with a wrong password = %v, want ErrCurrentPasswordWrong", err)
+	}
+	if statusOf(t, e).Confirmed {
+		t.Fatal("a wrong password still confirmed the factor")
+	}
+	if _, err := e.svc.Authenticate(e.wsOnlyCtx(), owner.Token); err != nil {
+		t.Fatalf("a refused confirmation ended the owner's session: %v", err)
+	}
+	if n := failedLoginCount(t, e); n != 1 {
+		t.Errorf("failed_login_count = %d, want 1: the guess must count toward the login lockout", n)
+	}
+	if n := systemLogRows(t, e, "mfa_enrol_failed"); n != 1 {
+		t.Errorf("mfa_enrol_failed rows = %d, want 1", n)
+	}
+
+	// The same code with the password confirms: the refusal was the password's.
+	if _, err := e.svc.ConfirmTOTP(ctx, memberPassword, code, ""); err != nil {
+		t.Fatalf("confirm with the current password: %v", err)
+	}
+	if !statusOf(t, e).Confirmed {
+		t.Fatal("the factor is not confirmed after a correct password and code")
+	}
+}
+
+func failedLoginCount(t *testing.T, e *revocationEnv) int {
+	t.Helper()
+	var n int
+	if err := e.owner.QueryRow(context.Background(),
+		`SELECT failed_login_count FROM app_user WHERE id = $1`, e.member.UserID).Scan(&n); err != nil {
+		t.Fatalf("reading failed_login_count: %v", err)
+	}
+	return n
+}
+
+func systemLogRows(t *testing.T, e *revocationEnv, action string) int {
+	t.Helper()
+	var n int
+	if err := database.WithInfraTx(context.Background(), e.svc.db.Pool(), func(tx pgx.Tx) error {
+		return tx.QueryRow(context.Background(),
+			`SELECT count(*) FROM system_log WHERE action = $1 AND actor_id = $2`,
+			action, "human:"+e.member.UserID.String()).Scan(&n)
+	}); err != nil {
+		t.Fatalf("reading system_log: %v", err)
+	}
+	return n
 }
 
 func statusOf(t *testing.T, e *revocationEnv) MFAStatus {

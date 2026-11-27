@@ -229,7 +229,18 @@ func importAuthorHoldsMeeting(ctx context.Context, tx pgx.Tx, incumbent ids.Acti
 	if actingHumanOf(stamp) != author.String() {
 		return false, nil
 	}
-	err = auth.EnsureActivityWritableIn(ctx, tx, incumbent.UUID, true)
+	return importerMayChangeMeeting(ctx, tx, incumbent)
+}
+
+// importerMayChangeMeeting is the one check an import passes before it lands on
+// a meeting it did not file. The importer acting in ctx must be able to change
+// it: a seat that writes, a role that updates activities, and the row in scope.
+// The live bind and the imported-copies task both ask it.
+func importerMayChangeMeeting(ctx context.Context, tx pgx.Tx, meeting ids.ActivityID) (bool, error) {
+	if !auth.AllowsWrite(ctx, "activity", principal.ActionUpdate) {
+		return false, nil
+	}
+	err := auth.EnsureActivityWritableIn(ctx, tx, meeting.UUID, true)
 	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
 		return false, nil
 	}

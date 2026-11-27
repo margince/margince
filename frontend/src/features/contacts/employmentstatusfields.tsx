@@ -2,7 +2,7 @@ import { Field, TextInput } from "../../design-system/atoms";
 import { Select } from "../../design-system/select";
 import { type Locale, type Translator, useT } from "../../i18n";
 import { fieldCheckSentence } from "../../lib/problem";
-import { validDateEntry } from "./employmentpatch";
+import { datePatch, validDateEntry } from "./employmentpatch";
 
 /** A status the reader picked; empty until one is, for a link imported as unknown. */
 export type EmploymentStatusChoice = "current" | "former" | "";
@@ -70,12 +70,18 @@ export function EmploymentStatusFields({
   );
 }
 
-// A start or end typed in neither shape the hint names. Keyed as the dialogs
-// key their fields, so a press says which date to fix.
+// A start or end typed in neither shape the hint names, or a former job's end
+// after `today`, the installation's day the server judges it in. Keyed as the
+// dialogs key their fields, so a press says which date to fix.
 export function employmentDateFaults(
   locale: Locale,
   t: Translator,
-  dates: Readonly<{ start: string; end: string }>,
+  dates: Readonly<{
+    start: string;
+    end: string;
+    status?: EmploymentStatusChoice;
+    today?: string;
+  }>,
 ): Map<string, string> {
   const faults = new Map<string, string>();
   if (!validDateEntry(dates.start)) {
@@ -89,6 +95,24 @@ export function employmentDateFaults(
       "end",
       fieldCheckSentence("invalid_date", locale, t("employment.end")),
     );
+  } else if (formerEndsAhead(dates)) {
+    faults.set(
+      "end",
+      fieldCheckSentence("future", locale, t("employment.end")),
+    );
   }
   return faults;
+}
+
+// A month ends on its first day as stored, so a former job may end this month.
+function formerEndsAhead(
+  dates: Readonly<{ end: string; status?: string; today?: string }>,
+): boolean {
+  const ended = datePatch(dates.end).date;
+  return (
+    dates.status === "former" &&
+    dates.today !== undefined &&
+    ended !== undefined &&
+    ended > dates.today
+  );
 }

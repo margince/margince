@@ -1,0 +1,2 @@
+{"at": "2026-11-26T15:00:00Z", "method": "tools/list", "http_status": 200, "outcome": "ok", "latency_ms": 3}
+{"at": "2026-11-26T15:00:01Z", "correlation_id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e31", "caller": {"type": "agent", "passport_id": "0198f3a1-7c42-7e0b-9d51-2a6f4b8c1e12"}, "method": "tools/call", "tool": "preview_import", "arguments": {}, "http_status": 200, "outcome": "ok", "latency_ms": 30, "answer": "{\"data\": {\"dry_run\": true, \"would_create\": 3, \"would_skip\": 1, \"written\": 0}}"}

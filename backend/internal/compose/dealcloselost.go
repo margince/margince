@@ -28,8 +28,8 @@ import (
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database"
-	"github.com/margince/margince/backend/internal/shared/kernel/elapsed"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 	"github.com/margince/margince/backend/internal/shared/kernel/viability"
@@ -123,7 +123,7 @@ func (c silentDealCloser) closeOne(ctx context.Context, decision closeDecision, 
 		Record: func(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
 			return c.recordOnTimeline(ctx, tx, decision)
 		},
-		AsOwner: ownersAgentTx(c.users, decision.owner, marginceActorID),
+		AsOwner: agentForTx(c.users, decision.owner, marginceActorID),
 	})
 }
 
@@ -245,7 +245,7 @@ func decideClose(
 	}
 	decision := closeDecision{deal: ids.From[ids.DealKind](deal), owner: owner}
 	keptOpen := facts.keptOpenAt()
-	silentDays := min(assessed.SilentDays, daysSince(facts.anyProgressAt, now, zone))
+	silentDays := min(assessed.SilentDays, daysSince(facts.anyProgressAt, facts.anyProgressDateOnly, now, zone))
 	switch {
 	case facts.deferredAt(now), facts.replyOwed:
 		return closeDecision{}, false
@@ -254,7 +254,7 @@ func decideClose(
 		decision.code, decision.reason = deals.LossReasonOther, systemtext.Literal("deal.customer_declined")
 		decision.reasonCode, decision.refusal = "deal.customer_declined", facts.refusal
 		return decision, true
-	case !silenceHeld && silentReason(assessed.Reasons) && silentDays > threshold && daysSince(keptOpen, now, zone) > threshold:
+	case !silenceHeld && silentReason(assessed.Reasons) && silentDays > threshold && daysSince(keptOpen, false, now, zone) > threshold: // keptOpen is a logged row's created_at, an instant
 		decision.code = deals.LossReasonWentSilent
 		decision.reason = silenceReason(silentDays, assessed.SilentDays, threshold)
 		decision.reasonCode, decision.reasonDays = silenceReasonParts(silentDays, assessed.SilentDays, threshold)
@@ -291,9 +291,9 @@ func after(at, since *time.Time) bool {
 
 // daysSince counts days from at to now; a missing at is longer ago than any
 // threshold.
-func daysSince(at *time.Time, now time.Time, zone *time.Location) int {
+func daysSince(at *time.Time, dateOnly bool, now time.Time, zone *time.Location) int {
 	if at == nil {
 		return int(^uint(0) >> 1)
 	}
-	return elapsed.Days(*at, now, zone)
+	return occurredday.DaysSince(occurredday.Moment{At: *at, DateOnly: dateOnly}, now, zone)
 }

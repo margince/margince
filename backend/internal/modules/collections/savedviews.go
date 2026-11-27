@@ -173,8 +173,11 @@ func (s *Store) CreateSavedView(ctx context.Context, in CreateSavedViewInput) (s
 		return savedViewRow{}, &BadInputError{Field: "resource", Reason: fmt.Sprintf(
 			"%q is not a record kind you can read; read GET /v1/record-kinds for the kinds there are", in.Resource)}
 	}
+	if in.Resource == "" {
+		return savedViewRow{}, &BadInputError{Field: "resource", Code: codeRequired, Reason: "a view needs the kind of record it lists"}
+	}
 	if in.Query == nil {
-		return savedViewRow{}, &BadInputError{Field: viewQueryField, Reason: "must not be null"}
+		return savedViewRow{}, &BadInputError{Field: viewQueryField, Code: codeRequired, Reason: "a view needs a query"}
 	}
 	if err := s.validateViewFilter(ctx, in.Resource, in.Query); err != nil {
 		return savedViewRow{}, err
@@ -195,7 +198,7 @@ func (s *Store) CreateSavedView(ctx context.Context, in CreateSavedViewInput) (s
 		})
 		return err
 	})
-	return out, err
+	return out, savedViewNameError(err)
 }
 
 func (s *Store) GetSavedView(ctx context.Context, id ids.SavedViewID) (savedViewRow, error) {
@@ -352,7 +355,7 @@ func (s *Store) UpdateSavedView(ctx context.Context, id ids.SavedViewID, in Upda
 			selectSavedView+"id = $1", id))
 		return err
 	})
-	return out, err
+	return out, savedViewNameError(err)
 }
 
 func (s *Store) ArchiveSavedView(ctx context.Context, id ids.SavedViewID) (savedViewRow, error) {

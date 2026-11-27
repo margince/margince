@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/fieldcatalog"
 )
@@ -262,7 +263,7 @@ func appendProjectFilters(ctx context.Context, where []string, in ListProjectsIn
 
 // A var rather than a const: the seat-name subselect is built by a function.
 var projectColumns = `id, name, key, company_id, owner_id, phase, closed_reason,
-	description, started_at, target_end_date, ended_at, last_activity_at,
+	description, started_at, target_end_date, ended_at, last_activity_at, ` + LastActivityDaySQL(projectObject) + `,
 	source, captured_by,
 	source_system, source_author_id, source_author_name,
 	` + sourceAuthorSeatNameSQL("project") + `,
@@ -292,12 +293,13 @@ func scanProject(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 	var phase string
 	var startedAt, targetEnd, endedAt *time.Time
 	var version int64
+	var lastActivityDay bool
 	var sourceSystem, authorName, authorSeatName *string
 	var authorID *ids.UUID
 
 	dests := []any{
 		&id, &p.Name, &p.Key, &companyID, &ownerID, &phase, &p.ClosedReason,
-		&p.Description, &startedAt, &targetEnd, &endedAt, &p.LastActivityAt,
+		&p.Description, &startedAt, &targetEnd, &endedAt, &p.LastActivityAt, &lastActivityDay,
 		&p.Source, &p.CapturedBy,
 		&sourceSystem, &authorID, &authorName, &authorSeatName,
 		&version, &p.CreatedAt, &p.UpdatedAt, &p.ArchivedAt, &p.LegalHold,
@@ -326,6 +328,7 @@ func scanProject(row pgx.Row, active []fieldcatalog.Column, extra ...any) (crmco
 		p.EndedAt = &openapi_types.Date{Time: *endedAt}
 	}
 	p.Version = &version
+	p.LastActivityPrecision = occurredday.ClockPrecision[crmcontracts.OccurredPrecision](p.LastActivityAt, lastActivityDay)
 	p.Author = sourceAuthorOf(authorID, authorSeatName, authorName, sourceSystem)
 	return p, nil
 }

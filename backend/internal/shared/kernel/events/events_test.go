@@ -305,6 +305,9 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 		// Both streams: contract.* and deal_room.* ride the deal one,
 		// activity.captured its own.
 		"cg:stage-evidence": {"gw:events:crm:activity", "gw:events:crm:deal"},
+		// How it stands: a model call per landed activity, apart so it never
+		// holds up the evidence ledger.
+		"cg:standing-line": {"gw:events:crm:activity"},
 		// Closing an introduction the contact answered. Its own group because
 		// `replied` may only be reached from a captured message: a lane wedged
 		// behind an enrichment backlog leaves every introduction reading as
@@ -356,7 +359,7 @@ func TestGroupStreamSetsMatchSpecTable(t *testing.T) {
 
 	groups := Groups()
 	if len(groups) != len(want) {
-		t.Fatalf("Groups() returned %d groups, want %d — the core groups the catalog defines, the outbound-webhook fan-out, the interaction-edge projection, the LinkedIn ghost matcher, the licensed-provider enrichment consumer, the audience-rescope corrector, the voice-copy recheck, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the chat channel links, the commitment-settle consumer, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, the stage-progression outcome ledger, the approval-pending fan-out, and the assurance freshness marker", len(groups), len(want))
+		t.Fatalf("Groups() returned %d groups, want %d — the core groups the catalog defines, the outbound-webhook fan-out, the interaction-edge projection, the LinkedIn ghost matcher, the licensed-provider enrichment consumer, the audience-rescope corrector, the voice-copy recheck, the captured-cohort repair, the commission accrual, the AI-activity projection, the Deal Room timeline, the chat channel links, the commitment-settle consumer, the signature-enrich trigger, the introduction reply consumer, the deterministic stage-evidence writers, the How it stands check, the stage-progression outcome ledger, the approval-pending fan-out, and the assurance freshness marker", len(groups), len(want))
 	}
 	for _, g := range groups {
 		if !reflect.DeepEqual(g.Streams, want[g.Name]) {

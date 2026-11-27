@@ -28,10 +28,9 @@ const (
 )
 
 var (
-	tsWinPhases     = regexp.MustCompile(`(?s)MOVED_BY_A_WIN: readonly ProjectPhase\[\] = \[(.*?)\];`)
-	tsWinTarget     = regexp.MustCompile(`MOVED_INTO_BY_A_WIN = ["']([a-z_]+)["'] satisfies ProjectPhase;`)
-	tsQuotedPhase   = regexp.MustCompile(`["']([a-z_]+)["']`)
-	tsPhaseComments = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
+	tsWinPhases   = regexp.MustCompile(`(?s)MOVED_BY_A_WIN: readonly ProjectPhase\[\] = \[(.*?)\];`)
+	tsWinTarget   = regexp.MustCompile(`MOVED_INTO_BY_A_WIN = ["']([a-z_]+)["'] satisfies ProjectPhase;`)
+	tsQuotedPhase = regexp.MustCompile(`["']([a-z_]+)["']`)
 )
 
 func TestTheWonDialogMirrorsThePhasesAWinMoves(t *testing.T) {
@@ -47,7 +46,7 @@ func TestTheWonDialogMirrorsThePhasesAWinMoves(t *testing.T) {
 			"this gate cannot judge a list it cannot find", frontendWinMovesProject)
 	}
 	var inTS []string
-	for _, m := range tsQuotedPhase.FindAllStringSubmatch(tsPhaseComments.ReplaceAllString(list[1], " "), -1) {
+	for _, m := range tsQuotedPhase.FindAllStringSubmatch(gatekit.TSWithoutComments(list[1]), -1) {
 		inTS = append(inTS, m[1])
 	}
 	if len(inTS) == 0 {

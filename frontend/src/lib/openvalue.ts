@@ -1,6 +1,8 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import { addMinor } from "../format/minorsum";
+
 type Priced = Readonly<{
   amount_minor?: number | null;
   currency?: string | null;
@@ -22,13 +24,13 @@ export function openValue(
   complete: boolean,
 ): OpenValue {
   if (!complete || deals.length === 0) return { kind: "unknown" };
-  let minor = 0;
+  let minor: number | undefined = 0;
   const currencies = new Set<string>();
   for (const deal of deals) {
     if (deal.amount_minor == null || !deal.currency) return { kind: "unknown" };
-    minor += deal.amount_minor;
+    minor = addMinor(minor, deal.amount_minor);
     // Past 2^53 a sum rounds, and a rounded total is not one the server holds.
-    if (!Number.isSafeInteger(minor)) return { kind: "unknown" };
+    if (minor === undefined) return { kind: "unknown" };
     currencies.add(deal.currency);
   }
   const [currency] = currencies;

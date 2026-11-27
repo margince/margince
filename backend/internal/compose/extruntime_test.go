@@ -456,8 +456,10 @@ func TestADeclaredCapabilityGrantsOnlyItselfAndRemovingItCutsAccess(t *testing.T
 	if _, err := rt.Models().Complete(ctx, askTask, oneMessage); !errors.Is(err, extension.ErrNotDeclared) {
 		t.Errorf("Complete with only Objects declared: err = %v, want ErrNotDeclared", err)
 	}
-	if err := rt.Objects().Put(ctx, "a", []byte("x")); err != nil {
-		t.Fatalf("Put while declared: %v", err)
+	// Get reaches the store without the database this fixture lacks, so it
+	// shows the declaration admitting the call.
+	if _, err := rt.Objects().Get(ctx, "a"); !errors.Is(err, extension.ErrNotFound) {
+		t.Fatalf("Get while declared: err = %v, want the store's ErrNotFound", err)
 	}
 	setComposedExtensions([]extension.Extension{{Name: "summaries", Version: "1.0.0"}})
 	if err := rt.Objects().Put(ctx, "a", []byte("x")); !errors.Is(err, extension.ErrNotDeclared) {

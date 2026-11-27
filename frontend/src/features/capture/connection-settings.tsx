@@ -167,6 +167,8 @@ function isMailPosture(value: string): value is MailPosture {
 
 function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
   const t = useT();
+  const plural = usePlural();
+  const { locale } = useLocale();
   const settings = useCaptureSettings();
   const save = useSetMailPosture(conn);
   const [draft, setDraft] = useState<MailPosture | null>(null);
@@ -194,6 +196,17 @@ function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
     discard,
   });
   const help = t(labelFor(postureHelp, shown));
+  const pending = conn.history_narrowing;
+  const description = [
+    help,
+    !sharedAllowed && t("connectors.mailPosture.sharedNeedsAdmin"),
+    pending &&
+      plural("connectors.mailPosture.historyNarrowing", pending.remaining, {
+        count: formatNumber(pending.remaining, locale),
+      }),
+  ]
+    .filter(Boolean)
+    .join(" ");
 
   return (
     <>
@@ -202,11 +215,7 @@ function MailPostureRow({ conn }: Readonly<{ conn: CaptureConnection }>) {
         label={t("connectors.mailPosture.label")}
         // The reason a refused answer is greyed rides in the description: a
         // listbox row ellipsises, and the cut half is the half a reader needs.
-        description={
-          sharedAllowed
-            ? help
-            : `${help} ${t("connectors.mailPosture.sharedNeedsAdmin")}`
-        }
+        description={description}
         control={(controlProps) => (
           <Select
             {...controlProps}

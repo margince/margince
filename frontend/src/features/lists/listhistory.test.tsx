@@ -7,6 +7,8 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { formatDateTimeAbbrev } from "../../format/format";
+import { browserZone } from "../../format/timezone";
 import { en } from "../../i18n/en";
 import type { ListHistoryEntry } from "../../lib/lists.queries";
 import {
@@ -55,7 +57,9 @@ describe("ListHistoryPanel", () => {
   it("dates a change in the short form with its time", async () => {
     panel(liveHistory);
     expect(
-      await screen.findByText(/^29 Sept? 2026, 08:15$/),
+      await screen.findByText(
+        formatDateTimeAbbrev(liveHistory[0].occurred_at, "en", browserZone()),
+      ),
     ).toBeInTheDocument();
   });
 

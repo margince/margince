@@ -155,9 +155,9 @@ export function DocumentExtractionPanel({
           },
         },
       );
-      // 404 is the honest "nobody has read this file", not a failure — it is
-      // what the offer to read one is rendered from.
-      if (response.status === 404) {
+      // 204 means "nobody has read this file", not a failure. The offer to
+      // read one is rendered from it.
+      if (response.status === 204) {
         return null;
       }
       if (error) {

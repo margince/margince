@@ -14,7 +14,9 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/mailresend"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // EmailRowState keeps obligation and delivery facts in one page-batched read.
@@ -55,13 +57,17 @@ func EmailStatesFor(ctx context.Context, tx pgx.Tx, activityIDs []ids.UUID, asOf
 	if err != nil {
 		return nil, err
 	}
+	sendAgain, err := canSendAgainSQL(ctx, arg)
+	if err != nil {
+		return nil, err
+	}
 	rows, err := tx.Query(ctx, `WITH `+emailStateCandidates+` AS MATERIALIZED (
   SELECT a.id, a.thread_key, a.kind, a.channel_provider FROM activity a
    WHERE a.id = ANY(`+fmt.Sprintf("$%d", wanted)+`) AND a.restricted_at IS NULL),
 `+emailStateReadable+` AS MATERIALIZED (`+readable+`)
 SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
  delivery.sent_at, delivery.bounced_at, delivery.bounce_reason, coalesce(delivery.attachments, '[]'::jsonb),
- `+ControllerSendSQL+`,
+ `+ControllerSendSQL+`, `+sendAgain+`,
  `+moveSQL(in, mailKinds)+`, `+openRequestReminderSQL+`,
  our_reply.replied_at, our_reply.replied_precision, our_reply.still_asked, our_reply.reminder_id, our_reply.reminder_version, our_reply.by_reader
  FROM activity a LEFT JOIN comms_outbound delivery ON delivery.activity_id = a.id
@@ -79,7 +85,7 @@ SELECT a.id, coalesce(delivery.status, ''), delivery.reason,
 		if err := rows.Scan(append([]any{
 			&id, &state.Delivery.Status, &state.Delivery.Reason, &state.Delivery.SentAt,
 			&state.Delivery.BouncedAt, &state.Delivery.BounceReason, &state.Delivery.Files,
-			&state.Delivery.Controller, &state.Delivery.FromAddress, &state.Move,
+			&state.Delivery.Controller, &state.Delivery.FromAddress, &state.Delivery.CanSendAgain, &state.Move,
 			&state.RequestHasReminder,
 		}, reply.targets()...)...); err != nil {
 			return nil, err
@@ -229,3 +235,17 @@ const (
 	mailMoveCandidates = "mail_move_candidates"
 	mailMoveReadable   = "mail_move_readable"
 )
+
+// canSendAgainSQL is whether the reader may send the message's bounce again,
+// by the rule the Worklist and its endpoint use (platform/mailresend). A reader
+// with no user behind them, such as a system caller, may not.
+func canSendAgainSQL(ctx context.Context, arg func(any) int) (string, error) {
+	if actor, ok := principal.Actor(ctx); !ok || actor.UserID.IsZero() {
+		return sqlFalse, nil
+	}
+	rule, err := mailresend.ForGatedRows(ctx, "delivery", "a", arg)
+	if err != nil {
+		return "", err
+	}
+	return "(delivery.id IS NOT NULL AND " + rule.EligibleSQL() + ")", nil
+}

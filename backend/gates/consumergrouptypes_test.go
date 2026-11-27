@@ -24,6 +24,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose"
+	"github.com/margince/margince/backend/internal/compose/standingline"
 	"github.com/margince/margince/backend/internal/modules/aiactivity"
 	"github.com/margince/margince/backend/internal/modules/search"
 	"github.com/margince/margince/backend/internal/platform/clocktest"
@@ -61,6 +62,7 @@ func declaredTypeHandlers() map[string]func(context.Context, events.Envelope) er
 		"cg:cohort-promote":          (&compose.CohortPromoteGen{}).HandleEvent,
 		"cg:capture-enrich":          (&compose.CaptureEnrichTrigger{}).HandleEvent,
 		"cg:stage-evidence":          (&compose.StageEvidenceTrigger{}).HandleEvent,
+		"cg:standing-line":           (&standingline.Trigger{}).HandleEvent,
 		"cg:voice-copy-recheck":      (&compose.VoiceCopyRecheckGen{}).HandleEvent,
 		"cg:context-graph":           (&search.EmbedGen{}).HandleEvent,
 	}
@@ -176,6 +178,7 @@ func declaredTypeGuards() map[string]typeGuard {
 		"cg:cohort-promote":          {"compose/cohortpromotegen.go", "CohortPromoteGen", "HandleEvent", "CohortPromoteTypes", events.CohortPromoteTypes},
 		"cg:capture-enrich":          {"compose/captureenrichtrigger.go", "CaptureEnrichTrigger", "HandleEvent", "CaptureEnrichTypes", events.CaptureEnrichTypes},
 		"cg:stage-evidence":          {"compose/stageevidencetrigger.go", "StageEvidenceTrigger", "HandleEvent", "StageEvidenceTypes", events.StageEvidenceTypes},
+		"cg:standing-line":           {"compose/standingline/trigger.go", "Trigger", "HandleEvent", "StandingLineTypes", events.StandingLineTypes},
 		"cg:voice-copy-recheck":      {"compose/voicecopyrecheck.go", "VoiceCopyRecheckGen", "HandleEvent", "ActivityNarrowingTypes", events.ActivityNarrowingTypes},
 		"cg:context-graph":           {"modules/search/embedgen.go", "EmbedGen", "HandleEvent", "ContextGraphTypes", events.ContextGraphTypes},
 	}

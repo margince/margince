@@ -16,23 +16,17 @@ package gates
 //
 // Record versions move by DATABASE TRIGGER: set_updated_at_bump_version(), the one
 // house function that assigns version = OLD.version + 1, attached BEFORE UPDATE
-// per table. So the obligation is derived from the migrations, which are the
-// authority on what the database does, and not from any module's write shape —
-// a table whose writers issue bare UPDATEs still bumps, because the trigger
-// fires anyway.
+// per table. So the obligation is derived from the head catalog, the schema the
+// migrations build, and not from any module's write shape. A table whose
+// writers issue bare UPDATEs still bumps, because the trigger fires anyway.
 //
-// What the database ends up with is the FINAL state of the migrations, so that
-// is what is derived: they are read in apply order — core then custom, each
-// namespace by ascending version, which is how dbmigrate applies them — and
-// each statement is applied to a per-trigger state. A CREATE TRIGGER records
-// the function that trigger executes; a DROP TRIGGER removes that record. A
-// table qualifies when a trigger still attached after the last migration fires
-// before an UPDATE and executes the bump function.
+// A table qualifies when a trigger the catalog records on it fires before an
+// UPDATE and executes the bump function. A trigger a later migration dropped is
+// already gone from the catalog.
 
 import (
 	"go/ast"
 	"go/token"
-	"io/fs"
 	"path/filepath"
 	"regexp"
 	"strconv"
@@ -54,46 +48,18 @@ const approvalsDir = "internal/modules/approvals"
 // a resolution that silently yields fewer subjects would certify the rest.
 const versionPinnedTableFloor = 14
 
-var (
-	// triggerAttachment captures a CREATE TRIGGER's name, its event list and the
-	// table it fires on. Applied per STATEMENT, never per line: the name, the
-	// event list, the FOR EACH ROW / WHEN clauses and the EXECUTE clause sit on
-	// different lines, so a line-scoped match would find no attachment at all —
-	// a gate reading green off zero subjects.
-	triggerAttachment = regexp.MustCompile(`(?is)\bCREATE\s+(?:OR\s+REPLACE\s+)?(?:CONSTRAINT\s+)?TRIGGER\s+([a-z_][a-z0-9_]*)\s+(BEFORE|AFTER|INSTEAD\s+OF)\s+(.*?)\bON\s+([a-z_][a-z0-9_]*)`)
+// catalogTriggerTiming reads a trigger record the catalog prints: the events a
+// `BEFORE` trigger fires on, and the function its `EXECUTE` clause runs.
+var catalogTriggerTiming = regexp.MustCompile(`^CREATE (?:CONSTRAINT )?TRIGGER \S+ BEFORE (.*?) ON \S+ .*\bEXECUTE FUNCTION ([a-z_][a-z0-9_]*)\(`)
 
-	// triggerExecutes captures the function named in the EXECUTE clause — the
-	// only part of a CREATE TRIGGER that says what the trigger runs. A statement
-	// that merely mentions a function elsewhere, in its own trigger name or
-	// beside a different EXECUTE clause, executes something else.
-	triggerExecutes = regexp.MustCompile(`(?is)\bEXECUTE\s+(?:FUNCTION|PROCEDURE)\s+([a-z_][a-z0-9_]*)\s*\(`)
+// updateEvent finds the UPDATE event in a trigger's event list. A trigger
+// declared for several events fires on each of them, so an event list
+// naming UPDATE alongside others fires before an update too.
+var updateEvent = regexp.MustCompile(`(?i)\bUPDATE\b`)
 
-	// triggerDrop captures the trigger name and table a DROP TRIGGER detaches:
-	// PostgreSQL scopes a trigger name to its table, so the pair is what the
-	// statement removes, and a drop of one trigger says nothing about the others
-	// on the same table.
-	triggerDrop = regexp.MustCompile(`(?is)\bDROP\s+TRIGGER\s+(?:IF\s+EXISTS\s+)?([a-z_][a-z0-9_]*)\s+ON\s+([a-z_][a-z0-9_]*)`)
-
-	// updateEvent finds the UPDATE event in a trigger's event list. A trigger
-	// declared for several events fires on each of them, so an event list
-	// naming UPDATE alongside others fires before an update too.
-	updateEvent = regexp.MustCompile(`(?i)\bUPDATE\b`)
-
-	// sqlLineComment strips `-- …` so prose in a comment is never read as a
-	// statement the database runs.
-	sqlLineComment = regexp.MustCompile(`--[^\n]*`)
-)
-
-// attachedTrigger identifies one trigger by the pair PostgreSQL identifies it
-// by: its name, scoped to the table it is attached to.
-type attachedTrigger struct{ name, table string }
-
-// triggerBody is what a CREATE TRIGGER declared — the function the trigger
-// executes, and whether it fires before an UPDATE.
-type triggerBody struct {
-	function     string
-	beforeUpdate bool
-}
+// sqlLineComment strips `-- …` so prose in a comment is never read as a
+// statement the database runs.
+var sqlLineComment = regexp.MustCompile(`--[^\n]*`)
 
 var sessionVersionPins = gatekit.Waive(map[string]string{
 	"import_run": "this pin names the reviewed input revision, not worker progress: migration.redraft increments version and clears the report when choices change; leases, checkpoints and step-only edits retain it. TestImportApprovalPinsReviewedChoicesAcrossNativeDraftEdits proves native draft edits invalidate redemption; TestImportApprovalReleasesTheDisplayedRowsThroughTheQueuedWriter proves progress preserves the approved plan",
@@ -108,10 +74,10 @@ func TestEveryVersionPinnedTableBumpsItsVersion(t *testing.T) {
 			len(pinned), versionPinnedTableFloor, approvalsDir)
 	}
 
-	bumped := versionBumpingTables(t)
+	bumped := bumpTriggeredTables(parseHeadCatalog(t))
 	if len(bumped) == 0 {
-		t.Fatalf("no table is left with a BEFORE UPDATE trigger executing %s: the SQL derivation broke, not the subject — the scan must be statement-scoped and take the function from the EXECUTE clause, since a trigger's name, its event list and that clause sit on different lines",
-			bumpFunction)
+		t.Fatalf("no table in %s carries a BEFORE UPDATE trigger executing %s: the catalog reader broke, not the subject",
+			headCatalogPath, bumpFunction)
 	}
 	versioned := versionedTables(t) // reused from updateguard_test.go
 
@@ -123,7 +89,7 @@ func TestEveryVersionPinnedTableBumpsItsVersion(t *testing.T) {
 		if versioned[table] {
 			column = "the table carries a version column that nothing moves"
 		}
-		t.Errorf("approvals.versionTables pins %s but the migrations leave no BEFORE UPDATE trigger on it executing %s — %s, so the staged pin, the redemption re-check and the released call's If-Match all compare a constant. Attach the trigger in a new migration under migrations/core, or drop %s from versionTables in %s/redeem.go and leave TargetVersion nil for that type",
+		t.Errorf("approvals.versionTables pins %s but the head catalog records no BEFORE UPDATE trigger on it executing %s — %s, so the staged pin, the redemption re-check and the released call's If-Match all compare a constant. Attach the trigger in a new migration under migrations/core, or drop %s from versionTables in %s/redeem.go and leave TargetVersion nil for that type",
 			table, bumpFunction, column, table, approvalsDir)
 	}
 }
@@ -135,7 +101,7 @@ func versionPinnedTables(t *testing.T) map[string]bool {
 	t.Helper()
 	fset := gatekit.SourceFileSet()
 	files := parsePackageDir(t, fset, approvalsDir)
-	consts := stringConsts(t, fset, files)
+	consts := gatekit.StringConstantsOf(t, files)
 
 	lit := packageVarCompositeLit(t, files, "versionTables")
 	tables := map[string]bool{}
@@ -167,66 +133,19 @@ func versionPinnedTables(t *testing.T) map[string]bool {
 	return tables
 }
 
-// versionBumpingTables derives the tables the migrations leave with a live
-// BEFORE UPDATE attachment of the bump function. Statement-scoped over both
-// migration namespaces (ADR-0017), because the fork seam may attach its own.
-func versionBumpingTables(t *testing.T) map[string]bool {
-	t.Helper()
-	live := map[attachedTrigger]triggerBody{}
-	// Namespace order and, inside each, the walk's lexical order are the order
-	// dbmigrate applies the files in: a version is a stamp or a zero-padded
-	// sequence number, and dbmigrate orders versions as strings too, so
-	// ascending version and ascending name agree.
-	for _, root := range []string{"migrations/core", "migrations/custom"} {
-		err := gatekit.WalkDir(root, func(path string, d fs.DirEntry, err error) error {
-			if err != nil || d.IsDir() || !strings.HasSuffix(path, ".up.sql") {
-				return err
-			}
-			raw, err := gatekit.ReadFile(path) // #nosec G304 G122 -- path is a *.up.sql file from walking the trusted migrations tree
-			if err != nil {
-				return err
-			}
-			applyTriggerStatements(sqlLineComment.ReplaceAllString(withCurrentNames(string(raw)), ""), live)
-			return nil
-		})
-		if err != nil {
-			t.Fatalf("walking %s: %v", root, err)
-		}
-	}
-
+// bumpTriggeredTables names the tables carrying a `BEFORE UPDATE` trigger that
+// executes the bump function.
+func bumpTriggeredTables(schema *emSchema) map[string]bool {
 	bumped := map[string]bool{}
-	for trigger, body := range live {
-		if body.beforeUpdate && body.function == bumpFunction {
-			bumped[trigger.table] = true
+	for name, table := range schema.tables {
+		for _, trigger := range table.triggers {
+			m := catalogTriggerTiming.FindStringSubmatch(trigger.def)
+			if m != nil && updateEvent.MatchString(m[1]) && m[2] == bumpFunction {
+				bumped[name] = true
+			}
 		}
 	}
 	return bumped
-}
-
-// applyTriggerStatements folds one migration's trigger statements into the live
-// attachment state: a CREATE TRIGGER records what that trigger executes, a DROP
-// TRIGGER removes the record. A re-attachment therefore heals a drop, and a drop
-// of one trigger leaves every other trigger on the same table standing.
-func applyTriggerStatements(text string, live map[attachedTrigger]triggerBody) {
-	for stmt := range strings.SplitSeq(text, ";") {
-		if m := triggerDrop.FindStringSubmatch(stmt); m != nil {
-			delete(live, attachedTrigger{name: m[1], table: m[2]})
-			continue
-		}
-		m := triggerAttachment.FindStringSubmatch(stmt)
-		if m == nil {
-			continue
-		}
-		// An attachment whose EXECUTE clause the scan cannot read runs a function
-		// this derivation cannot name, so it is recorded as executing nothing —
-		// it replaces whatever the same trigger executed before, rather than
-		// leaving that reading in place.
-		body := triggerBody{beforeUpdate: strings.EqualFold(m[2], "BEFORE") && updateEvent.MatchString(m[3])}
-		if executes := triggerExecutes.FindStringSubmatch(stmt); executes != nil {
-			body.function = executes[1]
-		}
-		live[attachedTrigger{name: m[1], table: m[4]}] = body
-	}
 }
 
 // parsePackageDir parses the hand-written Go files of ONE package directory,
@@ -251,44 +170,6 @@ func parsePackageDir(t *testing.T, fset *token.FileSet, dir string) []*ast.File 
 		files = append(files, file)
 	}
 	return files
-}
-
-// stringConsts indexes every package-level string constant by name. A literal
-// the parser accepted as token.STRING but that does not unquote is reported
-// rather than skipped: the constant would silently drop out of the index, and
-// every versionTables key spelled with it would then look unresolvable for a
-// reason that has nothing to do with the pin.
-func stringConsts(t *testing.T, fset *token.FileSet, files []*ast.File) map[string]string {
-	t.Helper()
-	consts := map[string]string{}
-	for _, file := range files {
-		for _, decl := range file.Decls {
-			gd, ok := decl.(*ast.GenDecl)
-			if !ok || gd.Tok != token.CONST {
-				continue
-			}
-			for _, spec := range gd.Specs {
-				vs, ok := spec.(*ast.ValueSpec)
-				if !ok || len(vs.Names) != len(vs.Values) {
-					continue
-				}
-				for i, name := range vs.Names {
-					lit, ok := vs.Values[i].(*ast.BasicLit)
-					if !ok || lit.Kind != token.STRING {
-						continue
-					}
-					value, err := strconv.Unquote(lit.Value)
-					if err != nil {
-						t.Errorf("%s: const %s holds a string literal that does not unquote (%s): %v — it cannot enter the constant index, so any versionTables key spelled with it resolves to nothing",
-							fset.Position(lit.Pos()), name.Name, lit.Value, err)
-						continue
-					}
-					consts[name.Name] = value
-				}
-			}
-		}
-	}
-	return consts
 }
 
 // packageVarCompositeLit returns the composite literal a named package-level

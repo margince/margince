@@ -89,15 +89,17 @@ export function draftKey(anchor: SavedDraftAnchor | null) {
   return ["mail-draft", anchor?.type ?? "", anchor?.id ?? ""] as const;
 }
 
-// A 404 is the ordinary answer. It means no draft here, or an anchor this
-// reader can no longer see; the server does not tell the two apart.
+// No draft here is 204. An anchor this reader can no longer see is 404, and
+// reads as no draft too, so a draft never outlives its author's access.
 export async function readDraft(
   anchor: SavedDraftAnchor,
 ): Promise<MailDraft | null> {
   const { data, error, response } = await api.GET("/mail-drafts", {
     params: { query: { anchor_type: anchor.type, anchor_id: anchor.id } },
   });
-  if (response.status === 404) return null;
+  // absent-404: an anchor the reader can no longer see reads as no draft, so
+  // the compose window opens empty rather than reporting a failure.
+  if (response.status === 204 || response.status === 404) return null;
   if (!response.ok) throwProblem(error || {});
   return isMailDraft(data) ? data : null;
 }

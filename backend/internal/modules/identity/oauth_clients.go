@@ -244,10 +244,10 @@ func validAgentClientInput(in RegisterAgentClientInput) (string, []string, error
 	var uris []string
 	for _, raw := range in.RedirectURIs {
 		uri := strings.TrimSpace(raw)
-		if !validRedirectURI(uri) {
+		if fault := redirectURIFault(uri); fault != "" {
 			return "", nil, &InvalidAgentClientFieldError{
 				Field: agentClientFieldURIs, Code: "invalid_redirect_uri",
-				Message: fmt.Sprintf("%q: a redirect URI must be https, or http on localhost, with no fragment", uri),
+				Message: fmt.Sprintf("%q: %s", uri, fault),
 			}
 		}
 		if !slices.Contains(uris, uri) {

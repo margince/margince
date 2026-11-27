@@ -35,6 +35,9 @@ const (
 // trace (the member's answer to "why did this never appear"), and neither
 // names an address.
 func (s *Sink) dropBeforeStoreTx(ctx context.Context, tx pgx.Tx, rec connector.NormalizedRecord) (context.Context, string, error) {
+	if removed, err := removedBeforeFilingTx(ctx, tx, rec); err != nil || removed != "" {
+		return ctx, removed, err
+	}
 	// Only an enrolled source can authorize storing colleague mail.
 	internal, err := internalOnlyTx(ctx, tx, rec)
 	if err != nil {

@@ -127,6 +127,45 @@ describe("closeOnto", () => {
     expect(globalThis.location.hash).toBe("#/home?queue=1");
   });
 
+  it("closes by replacing the entry when the browser refuses the step back", () => {
+    entries("#/home", "#/home?queue=1");
+    const go = goPending();
+    // The browser's own list says this entry is its first, so it has nothing
+    // to go back to, whatever the app counted.
+    vi.stubGlobal("navigation", {
+      currentEntry: { index: 0 },
+      entries: () => [{}],
+      addEventListener: () => undefined,
+      removeEventListener: () => undefined,
+    });
+    try {
+      nav.closeOnto({ screen: "home" });
+    } finally {
+      vi.unstubAllGlobals();
+    }
+    expect(go).not.toHaveBeenCalled();
+    expect(globalThis.location.hash).toBe("#/home");
+  });
+
+  it("closes by replacing the entry when the step back never lands", () => {
+    vi.useFakeTimers();
+    try {
+      entries("#/home", "#/home?queue=1");
+      goPending();
+      const length = globalThis.history.length;
+      nav.closeOnto({ screen: "home" });
+      expect(globalThis.location.hash).toBe("#/home?queue=1");
+      vi.advanceTimersByTime(1000);
+      expect(globalThis.location.hash).toBe("#/home");
+      expect(globalThis.history.length).toBe(length);
+      // The entry behind is this same page, so a step that lands late after
+      // all reaches the page the replace wrote.
+      expect(depth.hashAt(0)).toBe("#/home");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
   it("puts the address in place when the entry behind is another page", () => {
     entries("#/contacts/c1", "#/home?queue=1");
     const go = goPending();

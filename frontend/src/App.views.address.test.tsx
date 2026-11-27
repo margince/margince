@@ -254,3 +254,8 @@ describe("the fourth segment", () => {
     expect(await screen.findByText("settings unknown")).toBeInTheDocument();
   });
 });
+
+it("replaces the unfinished offers list with Deals", async () => {
+  renderRouted("#/offers");
+  await waitFor(() => expect(window.location.hash).toBe("#/deals"));
+});

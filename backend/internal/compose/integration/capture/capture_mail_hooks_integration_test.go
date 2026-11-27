@@ -18,9 +18,14 @@ import (
 	"sync/atomic"
 	"testing"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/compose"
 	"github.com/margince/margince/backend/internal/compose/integration"
 	"github.com/margince/margince/backend/internal/compose/mailhooks"
+	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/pkg/extension"
 )
@@ -99,6 +104,72 @@ func TestADealHookDealDoesNotSurviveAColleaguesDecline(t *testing.T) {
 	if slices.Contains(dealsOf(t, e, "hook2@acme.example"), operations) {
 		t.Fatal("the hook's declined deal moved the mail onto the other one")
 	}
+}
+
+// The deal's timeline read says which unit filed the mail and why, until a
+// colleague's decline takes the filing back. Core's own filing names core.
+func TestTheActivityReadNamesWhoFiledAMailOnItsDeal(t *testing.T) {
+	env := newCaptureEnv(t)
+	e := env.e
+	w := newDealWorld(t, e)
+	w.employee(t, "alice@acme.example", w.customer)
+	only := w.deal(t, "Acme rollout")
+	env.sync(t, mailFrom("alice@acme.example", "filer1@acme.example", "", "status"))
+	wantDeals(t, e, "filer1@acme.example", only)
+	if got := filedBy(t, e, w, activityOf(t, e, "filer1@acme.example"), only); got != "core//" {
+		t.Errorf("core's filing reads as %q, want core", got)
+	}
+	chosen := w.deal(t, "Acme reporting")
+	registerMailHooks(t, extension.MailHooks{Deal: func(_ context.Context, _ extension.MailView, _ extension.MailDeal) (extension.MailDeal, error) {
+		return extension.MailDeal{Outcome: "linked", Deal: chosen.String(), Reason: "names_reporting"}, nil
+	}})
+	env.sync(t, mailFrom("alice@acme.example", "filer2@acme.example", "", "reporting question"))
+	mail := activityOf(t, e, "filer2@acme.example")
+	if got := filedBy(t, e, w, mail, chosen); got != "deal-rules/deal/names_reporting" {
+		t.Errorf("the unit's filing reads as %q, want deal-rules/deal/names_reporting", got)
+	}
+	// The classifier's later mark on the link does not take the filing over.
+	system := newRepairer(e, w).system
+	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+		_, err := activities.MarkDealLinkTx(system, tx, ids.From[ids.ActivityKind](mail), chosen, "uncertain", nil)
+		return err
+	}); err != nil {
+		t.Fatalf("the classifier's mark: %v", err)
+	}
+	wantMark(t, e, "filer2@acme.example", chosen, "uncertain/classifier")
+	if got := filedBy(t, e, w, mail, chosen); got != "deal-rules/deal/names_reporting" {
+		t.Errorf("after the classifier's mark the filing reads as %q, want the unit still", got)
+	}
+	if status, _ := decline(w.ctx, t, e, mail, dealBody(chosen)); status != http.StatusOK {
+		t.Fatalf("the decline answered %d", status)
+	}
+	if got := filedBy(t, e, w, mail, chosen); got != "" {
+		t.Errorf("after a colleague's decline the filing reads as %q, want none", got)
+	}
+}
+
+// filedBy reads the mail as the deal world's colleague and spells the filer of
+// its link to deal as actor/hook/reason, or "" when it names none.
+func filedBy(t *testing.T, e *integration.SearchEnv, w dealWorld, mail, deal ids.UUID) string {
+	t.Helper()
+	got, err := activities.NewStore(e.DB()).GetActivity(w.ctx, ids.From[ids.ActivityKind](mail), storekit.LiveOnly)
+	if err != nil {
+		t.Fatalf("reading the mail: %v", err)
+	}
+	for _, link := range deref(got.Links) {
+		if link.EntityType != "deal" || ids.UUID(link.EntityId) != deal || link.FiledBy == nil {
+			continue
+		}
+		hook, reason := "", ""
+		if link.FiledBy.Hook != nil {
+			hook = string(*link.FiledBy.Hook)
+		}
+		if link.FiledBy.Reason != nil {
+			reason = *link.FiledBy.Reason
+		}
+		return link.FiledBy.Actor + "/" + hook + "/" + reason
+	}
+	return ""
 }
 
 // A parties hook that names a company core did not derive moves the rule to

@@ -77,12 +77,7 @@ function Panel({
 }: Readonly<{ reading: Extraction | null; canAccept?: boolean }>) {
   installFetchStub({
     "GET /attachments/a-1/extraction": () =>
-      reading
-        ? jsonResponse(reading)
-        : jsonResponse(
-            { title: "Not found", status: 404, detail: "no reading yet" },
-            404,
-          ),
+      reading ? jsonResponse(reading) : new Response(null, { status: 204 }),
   });
   return (
     <StoryProviders>

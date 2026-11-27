@@ -359,7 +359,7 @@ func plantDomainEmployment(ctx context.Context, tx pgx.Tx, domain string, compan
 		INSERT INTO relationship (kind, contact_id, company_id, is_current_primary, source, captured_by, first_observed_at)
 		SELECT 'employment', p.id, $1, true, $2, $3, `+employmentFirstObservedSQL("p.id", "$5", "NULL::uuid", "$6")+`
 		FROM contact p
-		WHERE p.id = ANY($4)
+		WHERE p.id = ANY($4) AND NOT `+employment.EndedAtCompanySQL("p.id", "$1")+`
 		  AND NOT EXISTS (
 			SELECT 1 FROM relationship r
 			WHERE r.contact_id = p.id AND `+employment.CurrentPrimarySlotSQL("r")+`)

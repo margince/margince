@@ -6,8 +6,8 @@ package knowledge
 // A document kept in step with its source: an extension files the source's
 // text under the id the source gave it. A second filing replaces the first,
 // and the same bytes again do nothing. The ingest is not touched. A replacement
-// swaps the bytes and requeues the row in one transaction, and the retry
-// protocol (BeginIngest deletes the earlier passages) swaps the passages.
+// swaps the bytes, retires the passages and requeues the row in one transaction.
+// The retry protocol (BeginIngest deletes the earlier passages) then swaps them.
 
 import (
 	"context"
@@ -37,18 +37,19 @@ import (
 // files into. The schema's CHECK holds the same set.
 const GDocsSource = "gdocs"
 
-// The bounds on what a source may say about a document. The meta is shown beside
-// a citation, so it is kept short and flat.
 // MetaKeys is the closed set of fields a source may state about a document.
+// The meta is shown beside a citation, so it is kept short and flat.
 // "missing" lists, comma separated, the stated fields the source did not carry,
 // so a reader sees the gap rather than a guess. "path" is the folders the source
 // keeps the document under; the source states it, a document's own header cannot.
 var MetaKeys = []string{"owner", "department", "country", "type", "effective", "review", "audience", "version", "path", "missing"}
 
 const (
-	maxExternalID    = 256
-	maxMetaKeys      = 16
-	maxMetaValueRune = 500
+	externalCorpusNameKey  = "name"
+	externalCorpusTopicKey = "topic_statement"
+	maxExternalID          = 256
+	maxMetaKeys            = 16
+	maxMetaValueRune       = 500
 )
 
 // ManagedCorpus names the corpus a source files into, for the first filing.
@@ -171,11 +172,8 @@ func (s *Store) UpsertExternal(
 	id := ids.NewV7()
 	key := blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](storekit.MustWorkspace(ctx)),
 		string(storedobjects.KindKnowledge), id.String())
-	if err := storedobjects.NewLedger(s.db).Record(ctx, storedobjects.KindKnowledge, key); err != nil {
+	if err := s.storeExternalBytes(ctx, key, in, size, media); err != nil {
 		return none, "", err
-	}
-	if err := s.blob.Put(ctx, key, in.Content, size, media); err != nil {
-		return none, "", fmt.Errorf("store the external document: %w", err)
 	}
 
 	var out crmcontracts.KnowledgeDocument
@@ -207,6 +205,16 @@ func (s *Store) UpsertExternal(
 		return none, "", errors.Join(err, s.dropUnreferenced(ctx, key))
 	}
 	return out, outcome, s.deleteSuperseded(ctx, outcome, key, oldKey)
+}
+
+func (s *Store) storeExternalBytes(ctx context.Context, key string, in ExternalDocument, size int64, media string) error {
+	if err := storedobjects.NewLedger(s.db).Record(ctx, storedobjects.KindKnowledge, key); err != nil {
+		return err
+	}
+	if err := s.blob.Put(ctx, key, in.Content, size, media); err != nil {
+		return fmt.Errorf("store the external document: %w", err)
+	}
+	return nil
 }
 
 // deleteSuperseded removes the bytes the filing left unreferenced. An identical
@@ -275,7 +283,7 @@ func fileExternal(ctx context.Context, tx pgx.Tx, f externalFiling, queue QueueI
 	if oldStatus == "running" {
 		return "", "", &IngestBusyError{Filename: oldName}
 	}
-	if err := deleteChunksOf(ctx, tx, docID); err != nil {
+	if err := retireChunksOf(ctx, tx, docID); err != nil {
 		return "", "", err
 	}
 	if _, err := tx.Exec(ctx,
@@ -377,7 +385,7 @@ func ensureManagedCorpus(ctx context.Context, tx pgx.Tx, c ManagedCorpus, by str
 		}
 		if tag.RowsAffected() == 1 {
 			if _, err := storekit.Audit(ctx, tx, "create", "knowledge_corpus", newID, nil, map[string]any{
-				"name": c.Name, "topic_statement": c.Topic, managedSourceKey: c.Source,
+				externalCorpusNameKey: c.Name, externalCorpusTopicKey: c.Topic, managedSourceKey: c.Source,
 			}); err != nil {
 				return ids.Nil, fmt.Errorf("audit the managed corpus: %w", err)
 			}

@@ -419,6 +419,7 @@ var exportedApprovalKinds = map[string]string{
 	"KindVolumeRelease":     approvals.KindVolumeRelease,
 	"KindScheduledSendHeld": approvals.KindScheduledSendHeld,
 	"KindImportCommit":      approvals.KindImportCommit,
+	"KindVCardCreate":       approvals.KindVCardCreate,
 }
 
 // crossPackageKinds resolves a kind another module exports and compose stages

@@ -13,6 +13,7 @@ import (
 	"strings"
 	"time"
 
+	"github.com/margince/margince/backend/internal/compose/activitywhen"
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
@@ -20,6 +21,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/kernel/convstate"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 )
 
@@ -66,11 +68,11 @@ func recipientOf(lead crmcontracts.Lead, activities []crmcontracts.Activity) con
 		out.Email = string(*lead.Email)
 	}
 	lastIn, lastOut := lastEachWay(activities)
-	if !lastIn.IsZero() {
-		out.LastInbound = lastIn.Format(time.RFC3339)
+	if !lastIn.At.IsZero() {
+		out.LastInbound = occurredday.When(lastIn)
 	}
-	if !lastOut.IsZero() {
-		out.LastOutbound = lastOut.Format(time.RFC3339)
+	if !lastOut.At.IsZero() {
+		out.LastOutbound = occurredday.When(lastOut)
 	}
 	return out
 }
@@ -97,18 +99,20 @@ func greetingNames(full string) (first, last string) {
 //
 // The activities arrive newest first, so the first of each direction is the
 // latest of it. An activity with no direction is not a side speaking.
-func lastEachWay(rows []crmcontracts.Activity) (inbound, outbound time.Time) {
+func lastEachWay(rows []crmcontracts.Activity) (inbound, outbound occurredday.Moment) {
 	for _, activity := range rows {
 		ours, known := activities.WroteItOurSide(activity)
+		moment := activitywhen.MomentOf(activity)
+		moment.At = moment.At.UTC()
 		switch {
 		case !known:
 			continue
-		case ours && outbound.IsZero():
-			outbound = activity.OccurredAt.UTC()
-		case !ours && inbound.IsZero():
-			inbound = activity.OccurredAt.UTC()
+		case ours && outbound.At.IsZero():
+			outbound = moment
+		case !ours && inbound.At.IsZero():
+			inbound = moment
 		}
-		if !inbound.IsZero() && !outbound.IsZero() {
+		if !inbound.At.IsZero() && !outbound.At.IsZero() {
 			return inbound, outbound
 		}
 	}

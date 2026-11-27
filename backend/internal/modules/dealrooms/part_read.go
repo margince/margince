@@ -12,10 +12,8 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
-	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // GetDocument reads one room document by its own id, under its room's read, as
@@ -64,7 +62,7 @@ func (s *Store) GetComment(ctx context.Context, id ids.UUID) (crmcontracts.DealR
 // inPartsRoom finds the room a part of one belongs to and runs read inside
 // that room's own read, which applies the caller's deal scope.
 func (s *Store) inPartsRoom(ctx context.Context, table string, id ids.UUID, read func(pgx.Tx, ids.DealRoomID) error) error {
-	if err := auth.Require(ctx, roomObject, principal.ActionRead); err != nil {
+	if err := requireRoomRead(ctx); err != nil {
 		return err
 	}
 	return s.tx(ctx, func(tx pgx.Tx) error {

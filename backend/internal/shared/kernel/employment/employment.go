@@ -136,6 +136,15 @@ func LiveSlotSQL(alias string) string {
 		prefix, prefix, prefix, prefix)
 }
 
+// EndedAtCompanySQL is whether this contact has an employment row at this
+// company that is no longer live. Every automatic writer asks it first, so a
+// link a user removed stays removed. It negates LiveSlotSQL, so both read
+// one definition of live. `contact` and `company` are SQL expressions.
+func EndedAtCompanySQL(contact, company string) string {
+	return sqlf("EXISTS (SELECT 1 FROM relationship gone WHERE gone.contact_id = %s AND gone.company_id = %s AND gone.kind = 'employment' AND NOT (%s))",
+		contact, company, LiveSlotSQL("gone"))
+}
+
 // CurrentPrimarySlotSQL is the other question about `is_current_primary`:
 // WHICH ROW HOLDS THE SLOT that uq_rel_current_primary_employer keeps unique
 // per contact. It is the index's own predicate, and so it is date-BLIND —

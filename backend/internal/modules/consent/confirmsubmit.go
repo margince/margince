@@ -396,7 +396,7 @@ func stageProposals(ctx context.Context, tx pgx.Tx, ref ConfirmRef,
 // cannot drift apart: a proposal with no case is work nobody owns, and that is
 // the defect the case writer exists to close.
 //
-// Held by: TestOneWriterFilesAConfirmSubmission (backend/gates/rightscasewriters_test.go)
+// Held by: TestEachFactHasOneWriter (backend/gates/onewriters_test.go)
 func stageOneProposal(ctx context.Context, tx pgx.Tx, ref ConfirmRef, kind string,
 	field, value *string, receivedAt time.Time, deadlines requestDeadlineFunc,
 ) (RightsCaseReceipt, error) {

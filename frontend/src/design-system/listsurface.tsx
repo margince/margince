@@ -1,3 +1,4 @@
+import { ArrowUpRight } from "lucide-react";
 import {
   type ComponentProps,
   type ReactNode,
@@ -10,6 +11,7 @@ import { openingCase } from "../format/collate";
 import { formatNumber } from "../format/format";
 import { useLocale, useT } from "../i18n";
 import { useNarrowViewport } from "../lib/viewport";
+import { AppLink } from "./applink";
 import { OverflowMenu } from "./atoms";
 import { useCloseOnEscape, useCloseOnOutsideClick } from "./listmenu";
 import {
@@ -306,17 +308,29 @@ function ViewTabs({
   const edges = useClippedEdges(rail);
   return (
     <div className={clippedClass("lt-views", edges)} ref={rail}>
-      {views.map((view, index) => (
-        <button
-          type="button"
-          key={view.id ?? view.label}
-          className={`lt-vtab${index === activeView ? " on" : ""}`}
-          aria-pressed={index === activeView}
-          onClick={() => onViewChange?.(index)}
-        >
-          {view.label}
-        </button>
-      ))}
+      {views.map((view, index) =>
+        view.link ? (
+          <AppLink
+            key={view.id ?? view.label}
+            className="lt-vtab lt-vtab-link"
+            href={view.link.href}
+            aria-label={view.link.name}
+          >
+            {view.label}
+            <ArrowUpRight strokeWidth={1.5} aria-hidden="true" />
+          </AppLink>
+        ) : (
+          <button
+            type="button"
+            key={view.id ?? view.label}
+            className={`lt-vtab${index === activeView ? " on" : ""}`}
+            aria-pressed={index === activeView}
+            onClick={() => onViewChange?.(index)}
+          >
+            {view.label}
+          </button>
+        ),
+      )}
     </div>
   );
 }

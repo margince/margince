@@ -11,7 +11,7 @@ import "time"
 // would believe. It says nothing about the file on disk — a pair
 // regenerated TOGETHER from a stale contract matches here, and the drift
 // gate is what catches that.
-const JobContractHash = "4a9336dc7431ca4c053c2089e3570d37980f3967d45a1ad9ee20d0fbc042b360"
+const JobContractHash = "3168e4b5bdbcb7eadf1c09904bdcbc779157b6fa9e8302852b4ef4bd308740c1"
 
 // specs is every declared kind. A kind absent from this table is a kind
 // nobody declared, and MustBeTotal is what names them: the runner calls it
@@ -228,7 +228,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 20 * time.Minute},
 		OptsOwner: OptsCaller,
-		Cadence:   Cadence{Fixed: 10 * time.Minute},
+		Cadence:   Cadence{Setting: "installation.capture_confidentiality_verdict_interval_seconds"},
 	},
 	"capture_counterparty_verdict": {
 		Kind:      "capture_counterparty_verdict",
@@ -238,7 +238,7 @@ var specs = map[string]Spec{
 		Queue:     "default",
 		Timeout:   TimeoutPolicy{Fixed: 20 * time.Minute},
 		OptsOwner: OptsCaller,
-		Cadence:   Cadence{Fixed: 10 * time.Minute},
+		Cadence:   Cadence{Setting: "installation.capture_counterparty_verdict_interval_seconds"},
 	},
 	"capture_enrich": {
 		Kind:         "capture_enrich",
@@ -251,6 +251,16 @@ var specs = map[string]Spec{
 		Cadence:      Cadence{Fixed: 24 * time.Hour},
 		Registration: Registration{When: []string{"EnrichBrain"}},
 		Args:         []ArgField{{Name: "Pending", Scalar: true, Reason: "Selects the durable pending cohort; absent means the existing full repair pass."}},
+	},
+	"capture_history_narrowing": {
+		Kind:      "capture_history_narrowing",
+		GoType:    "CaptureHistoryNarrowingArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 10 * time.Second},
 	},
 	"capture_part_slim": {
 		Kind:         "capture_part_slim",
@@ -305,6 +315,16 @@ var specs = map[string]Spec{
 		FanOutTo:   "captured_deal_refile",
 		OptsOwner:  OptsCaller,
 		Cadence:    Cadence{Fixed: 1 * time.Hour},
+	},
+	"chat_clarification_sweep": {
+		Kind:      "chat_clarification_sweep",
+		GoType:    "ChatClarificationSweepArgs",
+		Role:      Worker,
+		Fleet:     true,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner: OptsCaller,
+		Cadence:   Cadence{Fixed: 1 * time.Minute},
 	},
 	"chat_link_flush": {
 		Kind:         "chat_link_flush",
@@ -998,6 +1018,16 @@ var specs = map[string]Spec{
 		Registration: Registration{When: []string{"StageEvidenceBrain"}, AbsentRegistersAnyway: true},
 		Args:         []ArgField{{Name: "After"}, {Name: "Domain", Scalar: true, Reason: "The removed own domain is an installation setting the admin list already showed; it names no contact and carries no mail content."}, {Name: "Removal"}, {Name: "Workspace"}},
 	},
+	"standing_line_check": {
+		Kind:         "standing_line_check",
+		GoType:       "StandingLineCheckArgs",
+		Role:         Worker,
+		Queue:        "ai_capture",
+		Timeout:      TimeoutPolicy{Fixed: 4 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Registration: Registration{When: []string{"StandingLineBrain"}},
+		Args:         []ArgField{{Name: "ActivityID"}, {Name: "Workspace"}},
+	},
 	"stored_object_reap": {
 		Kind:         "stored_object_reap",
 		GoType:       "StoredObjectReapArgs",
@@ -1177,6 +1207,35 @@ var specs = map[string]Spec{
 		Timeout:   TimeoutPolicy{Fixed: 10 * time.Minute},
 		OptsOwner: OptsCaller,
 		Cadence:   Cadence{Fixed: 1 * time.Hour},
+	},
+	"whatsapp_ingest": {
+		Kind:      "whatsapp_ingest",
+		GoType:    "WhatsAppIngestArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Args:      []ArgField{{Name: "ConnectionID"}, {Name: "RawCaptureID"}, {Name: "Workspace"}},
+	},
+	"zalo_oa_ingest": {
+		Kind:      "zalo_oa_ingest",
+		GoType:    "ZaloOAIngestArgs",
+		Role:      Worker,
+		Queue:     "default",
+		Timeout:   TimeoutPolicy{Fixed: 2 * time.Minute},
+		OptsOwner: OptsCaller,
+		Args:      []ArgField{{Name: "ConnectionID"}, {Name: "RawCaptureID"}, {Name: "Workspace"}},
+	},
+	"zalo_token_renew": {
+		Kind:         "zalo_token_renew",
+		GoType:       "ZaloTokenRenewArgs",
+		Role:         Worker,
+		Fleet:        true,
+		Queue:        "default",
+		Timeout:      TimeoutPolicy{Fixed: 5 * time.Minute},
+		OptsOwner:    OptsCaller,
+		Cadence:      Cadence{Fixed: 30 * time.Minute},
+		Registration: Registration{When: []string{"ChannelVault"}},
 	},
 }
 

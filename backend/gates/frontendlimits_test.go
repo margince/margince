@@ -19,6 +19,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/privacy"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/httperr"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
@@ -145,7 +146,7 @@ func TestTheFrontendsCopiesOfServerLimitsMatchTheirOwners(t *testing.T) {
 		t.Run(limit.name, func(t *testing.T) {
 			source, read := sources[limit.file]
 			if !read {
-				source = tsComment.ReplaceAllString(readFile(t, limit.file), " ")
+				source = gatekit.TSWithoutComments(readFile(t, limit.file))
 				sources[limit.file] = source
 			}
 			found := limit.read.FindAllStringSubmatch(source, -1)

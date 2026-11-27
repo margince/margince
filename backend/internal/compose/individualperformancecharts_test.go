@@ -17,7 +17,7 @@ import (
 // withheldOwnerLeaks projects every metric of the catalog in every block it
 // offers. The facts are owned by the reader and by a colleague they may not
 // measure. It names each chart with a point carrying the colleague.
-func withheldOwnerLeaks(project func(*reporting.Evaluation) error) ([]string, error) {
+func withheldOwnerLeaks(project func(*reporting.Evaluation)) []string {
 	reader, colleague := ids.NewV7(), ids.NewV7()
 	value := 100.0
 	at := time.Date(2026, 10, 5, 9, 0, 0, 0, time.UTC)
@@ -44,9 +44,7 @@ func withheldOwnerLeaks(project func(*reporting.Evaluation) error) ([]string, er
 					})
 				}
 			}
-			if err := project(&out); err != nil {
-				return nil, err
-			}
+			project(&out)
 			for _, chart := range out.Result.Charts {
 				if slices.ContainsFunc(chart.Points, func(point crmcontracts.ReportingPoint) bool {
 					return strings.Contains(point.Key+point.Label, colleague.String())
@@ -56,16 +54,13 @@ func withheldOwnerLeaks(project func(*reporting.Evaluation) error) ([]string, er
 			}
 		}
 	}
-	return leaks, nil
+	return leaks
 }
 
 // Every chart the metric catalog can draw keeps a withheld owner out of its
 // points. A new metric or block that groups by owner some other way fails here.
 func TestNoReportingChartDrawsAWithheldOwner(t *testing.T) {
-	leaks, err := withheldOwnerLeaks(projectReportingCharts)
-	if err != nil {
-		t.Fatalf("projecting the catalog: %v", err)
-	}
+	leaks := withheldOwnerLeaks(projectReportingCharts)
 	if len(leaks) > 0 {
 		t.Fatalf("these charts draw an owner the reader may not measure:\n%s", strings.Join(leaks, "\n"))
 	}
@@ -74,18 +69,14 @@ func TestNoReportingChartDrawsAWithheldOwner(t *testing.T) {
 // A projection that groups by owner and ignores the withheld mark must be
 // caught, or the test above proves nothing.
 func TestTheChartCensusCatchesAProjectionIgnoringTheMark(t *testing.T) {
-	byEveryOwner := func(out *reporting.Evaluation) error {
+	byEveryOwner := func(out *reporting.Evaluation) {
 		chart := crmcontracts.ReportingChart{Kind: reportingOwnerAttainment}
 		for _, fact := range out.Facts {
 			chart.Points = append(chart.Points, crmcontracts.ReportingPoint{Key: fact.OwnerID.String(), Label: fact.OwnerLabel})
 		}
 		out.Result.Charts = append(out.Result.Charts, chart)
-		return nil
 	}
-	leaks, err := withheldOwnerLeaks(byEveryOwner)
-	if err != nil {
-		t.Fatalf("projecting the catalog: %v", err)
-	}
+	leaks := withheldOwnerLeaks(byEveryOwner)
 	if len(leaks) == 0 {
 		t.Fatal("a projection drawing every owner passed the census")
 	}

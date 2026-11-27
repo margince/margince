@@ -5,6 +5,7 @@
 import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { pickOption } from "../../design-system/select-testing";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { render } from "./analytics.testkit";
 import {
@@ -50,6 +51,45 @@ function noTargets(): void {
 }
 
 describe("ReportingTargets", () => {
+  it("offers a colleague from the Sales goals roster when setting a target", async () => {
+    noTargets();
+    const routed = globalThis.fetch;
+    vi.stubGlobal("fetch", (input: RequestInfo | URL, init?: RequestInit) => {
+      const url = String(input instanceof Request ? input.url : input);
+      return url.includes("/analytics/sales-goals")
+        ? Promise.resolve(
+            jsonResponse({
+              ...goalRoster,
+              data: [
+                ...goalRoster.data,
+                {
+                  owner_id: "read-only-colleague",
+                  name: "Read only colleague",
+                  state: "no_goal",
+                  can_edit: false,
+                },
+              ],
+            }),
+          )
+        : routed(input, init);
+    });
+    const user = userEvent.setup();
+    render(<ReportingTargets />);
+    await user.click(await screen.findByRole("button", { name: "Set target" }));
+    await pickOption(
+      user,
+      await screen.findByRole("combobox", { name: "Record scope" }),
+      "Sam Okafor",
+    );
+    expect(
+      screen.getByRole("combobox", { name: "Record scope" }).textContent,
+    ).toContain("Sam Okafor");
+    await user.click(screen.getByRole("combobox", { name: "Record scope" }));
+    expect(
+      screen.queryByRole("option", { name: "Read only colleague" }),
+    ).toBeNull();
+  });
+
   it("reads a team member's published sales goals as one row a year that opens the plan", async () => {
     installFetchStub({
       ...reportingStoryRoutes(),
@@ -79,9 +119,11 @@ describe("ReportingTargets", () => {
     ).toBeTruthy();
     expect(within(row).getByText("€1,140,000")).toBeTruthy();
     expect(within(row).getByText("Sales goals 2026 · 12 months")).toBeTruthy();
-    await userEvent
-      .setup()
-      .click(within(row).getByRole("button", { name: "Open sales goals" }));
+    const goals = within(row).getByRole("link", { name: "Open sales goals" });
+    expect(goals.getAttribute("href")).toContain(
+      `seller=${goalRoster.data[1]?.owner_id}`,
+    );
+    await userEvent.setup().click(goals);
     expect(window.location.hash).toContain(
       `seller=${goalRoster.data[1]?.owner_id}`,
     );

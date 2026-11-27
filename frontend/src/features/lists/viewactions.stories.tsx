@@ -32,6 +32,11 @@ const VIEW: SavedView = {
 function routes() {
   installFetchStub({
     "GET /me": meRoute({}),
+    "GET /views": () =>
+      jsonResponse({
+        data: [VIEW, { ...VIEW, id: "v2", name: "Munich contacts" }],
+        page: { next_cursor: null, has_more: false },
+      }),
     "PATCH /views/v1": (body) => jsonResponse({ ...VIEW, ...(body as object) }),
     "DELETE /views/v1": () => new Response(null, { status: 204 }),
   });
@@ -42,7 +47,7 @@ export const RenameOpen: Story = {
     routes();
     return (
       <StoryProviders>
-        <RenameViewAction view={VIEW} />
+        <RenameViewAction view={VIEW} resource="contacts" />
       </StoryProviders>
     );
   },
@@ -59,6 +64,29 @@ export const RenameOpen: Story = {
 export const RenameOpenDark: Story = {
   ...RenameOpen,
   globals: { theme: "dark" },
+};
+
+// A name another view of the same records holds is refused on the field.
+export const RenameTakenName: Story = {
+  ...RenameOpen,
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Rename" }),
+    );
+    const page = within(canvasElement.ownerDocument.body);
+    const name = await page.findByRole("textbox", { name: "Name" });
+    await userEvent.clear(name);
+    await userEvent.type(name, "Munich contacts");
+    await userEvent.click(
+      within(await page.findByRole("dialog")).getByRole("button", {
+        name: "Rename",
+      }),
+    );
+    await page.findByText(
+      "A view with this name already exists. Choose another name.",
+    );
+  },
 };
 
 export const DeleteOpen: Story = {
