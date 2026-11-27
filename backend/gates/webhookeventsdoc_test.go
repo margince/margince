@@ -15,8 +15,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -62,7 +60,7 @@ func loadEventSchemas(t *testing.T) map[string]eventSchema {
 			Schemas map[string]eventSchema `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing %s: %v", publicEventsPath, err)
 	}
 	return doc.Components.Schemas

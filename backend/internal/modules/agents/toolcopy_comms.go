@@ -18,20 +18,20 @@ var draftEmailCopy = toolCopy{
 		"those in full. With no drafting model configured the text is a short deterministic note.",
 	Instead: "draft_follow_ups_for drafts across a set of slipping deals at once; send_email " +
 		"sends a reply, send_company_email a first message.",
-	Retain: "Keep what comes back — subject, body, to, and the activity_id or links echoed with " +
-		"it; the send takes them. Re-writing the text in between means the user agrees to one " +
+	Retain: "Keep what comes back (subject, body, to, and the activity_id or links echoed with " +
+		"it); the send takes them. Re-writing the text in between means the user agrees to one " +
 		"message and another goes out.",
 }
 
 var draftFollowUpsForCopy = toolCopy{
-	Purpose: "Draft a follow-up for each deal in a segment at once — today only the slipping " +
-		"deals — and leave each draft on its own deal's timeline.",
+	Purpose: "Draft a follow-up for each deal in a segment at once (today only the slipping " +
+		"deals), and leave each draft on its own deal's timeline.",
 	Limits: "It writes drafts and sends none of them, and it drafts only for deals whose risk is " +
 		"evidenced, so it covers the same set whats_slipping_this_week reports. One call writes " +
 		"to many records, up to a server-side ceiling of 25.",
 	Instead: "Use draft_email for one specific conversation; this tool answers \"chase everything " +
 		"that is slipping\" or \"that has gone quiet\", not \"reply to this\".",
-	Retain: "Each draft comes back with its deal_id and draft_activity_id — those are how a " +
+	Retain: "Each draft comes back with its deal_id and draft_activity_id: those are how a " +
 		"human finds the drafts to review.",
 }
 
@@ -65,8 +65,8 @@ var sendCompanyEmailCopy = toolCopy{
 }
 
 var sendMessageCopy = toolCopy{
-	Purpose: "Reply on a captured chat conversation — the channels this workspace has connected " +
-		"— on the thread it was captured from.",
+	Purpose: "Reply on a captured chat conversation (the channels this workspace has connected) " +
+		"on the thread it was captured from.",
 	Limits: "It replies to an existing conversation named by activity_id; it cannot start one, " +
 		"and it cannot choose a channel. The recipient must have granted the consent purpose the " +
 		"call names. By default the message leaves when this call answers; where an installation " +
@@ -87,7 +87,7 @@ var checkAvailabilityCopy = toolCopy{
 var enrichCopy = toolCopy{
 	Purpose: "Learn about a company by reading its public website, and propose what was " +
 		"found for a human to accept onto the record.",
-	Limits: "It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL — nothing " +
+	Limits: "It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL: nothing " +
 		"lands on the record until someone accepts it, which is the review that guards this, not " +
 		"an approval on the call. " +
 		"Reading one page answers immediately; reading a whole site is queued and answers with a " +
@@ -96,7 +96,7 @@ var enrichCopy = toolCopy{
 	Instead: "Use qualify_lead to qualify a lead when the missing values are already " +
 		"derivable from the record itself, which costs no external read and needs no approval.",
 	Retain: "Keep the company_id you enriched, and the read id when a whole-site read was " +
-		"queued — the result is collected against it later.",
+		"queued: the result is collected against it later.",
 }
 
 var sendOutboundCopy = toolCopy{
@@ -123,10 +123,10 @@ var sendOutboundCopy = toolCopy{
 }
 
 var draftOutboundCopy = toolCopy{
-	Purpose: "Write messages and send none. one_message: one email — a reply to a recorded thread " +
+	Purpose: "Write messages and send none. one_message: one email, either a reply to a recorded thread " +
 		"(activity_id), or a FIRST message to a contact or lead (links naming the recipient and, " +
 		"for a contact, the company, deal or project it is about). slipping_deals: a follow-up for " +
-		"each deal in a segment at once — today `slipping` — each left on its deal's timeline.",
+		"each deal in a segment at once (today `slipping`), each left on its deal's timeline.",
 	Limits: "A first email waits on the recipient's page, marked as drafted by an agent, until " +
 		"the human you act for sends it there; a reply, or one not_saved because they keep an " +
 		"unsent draft of their own, is not saved, so show it in full. slipping_deals covers the deals " +

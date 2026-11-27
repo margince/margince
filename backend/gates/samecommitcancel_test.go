@@ -116,7 +116,7 @@ func TestNoSameCommitPullRequestRunCancelsAnother(t *testing.T) {
 			t.Fatalf("reading %s: %v", path, err)
 		}
 		var wf cancelWorkflow
-		if err := yaml.Unmarshal(raw, &wf); err != nil {
+		if err := unmarshalYAML(raw, &wf); err != nil {
 			t.Fatalf("%s: %v", path, err)
 		}
 		triggers := wf.sameCommitTriggers()

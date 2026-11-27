@@ -71,6 +71,9 @@ var (
 	// a name to the list. Under-recognition is the one direction this must not
 	// fail in.
 	readsTheTable = regexp.MustCompile(`(?is)\bFROM\s+contact_email\b`)
+	// readsTheTableWords lets the census skip a file no picker can be in,
+	// because every picker matches readsTheTable.
+	readsTheTableWords = requiredWords(readsTheTable)
 	// aliasedArchived matches the archived filter bound to a named relation, so
 	// the census can ask whether it is the ADDRESS row that was filtered.
 	aliasedArchived = regexp.MustCompile(`(?is)([a-z_][a-z0-9_]*)\.archived_at\s+IS\s+NULL`)
@@ -106,6 +109,13 @@ func TestOneAnswerToWhichAddressAContactIsKnownBy(t *testing.T) {
 	judged := 0
 	for _, path := range handWrittenGoSources(t) {
 		if at := filepath.ToSlash(path); at == reachableOrderOwner || at == reachableOrderProbes {
+			continue
+		}
+		src, err := gatekit.ReadFile(path)
+		if err != nil {
+			t.Fatalf("reading %s: %v", path, err)
+		}
+		if !mayHoldFolded(string(src), readsTheTableWords...) {
 			continue
 		}
 		file, err := gatekit.ParseFile(path, parser.ParseComments)
@@ -343,6 +353,9 @@ func TestWhatCountsAsPickingAnAddress(t *testing.T) {
 	} {
 		if got := picksAnAddress(c.sql); got != c.picks {
 			t.Errorf("%s: picksAnAddress = %v, want %v", c.name, got, c.picks)
+		}
+		if c.picks && !mayHoldFolded(c.sql, readsTheTableWords...) {
+			t.Errorf("%s: the census skips a file whose only picker is this", c.name)
 		}
 	}
 

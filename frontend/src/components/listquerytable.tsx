@@ -52,6 +52,7 @@ import {
   translateChip,
   translateView,
   useActiveView,
+  withOpenedView,
 } from "./listqueryviews";
 
 /**
@@ -242,7 +243,7 @@ export function ListTable<Row>({
     })),
     ...dataViews,
   ];
-  const [view, pickView] = useActiveView(railViews, query);
+  const [view, pickView, openedView] = useActiveView(railViews, query, state);
   // No tab lit means the list departs from every view this rail offers.
   const changed = railViews.length > 0 && view < 0;
   // Every chip on the surface, declared and data-driven alike. The owner dial
@@ -426,7 +427,7 @@ export function ListTable<Row>({
       layout={layout}
       viewRows={viewRows}
       changed={changed}
-      saveView={saveView}
+      saveView={withOpenedView(saveView, openedView)}
       notice={notice}
       search={
         searchable

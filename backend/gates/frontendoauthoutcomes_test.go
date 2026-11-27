@@ -25,7 +25,6 @@ package gates
 // others move.
 
 import (
-	"path/filepath"
 	"regexp"
 	"slices"
 	"strings"
@@ -83,7 +82,7 @@ func renderedOutcomes(t *testing.T) (outcomes []string, read string) {
 	t.Helper()
 	var paths []string
 	for _, glob := range outcomeScreenGlobs {
-		found, err := filepath.Glob(glob)
+		found, err := gatekit.Glob(glob)
 		if err != nil {
 			t.Fatalf("globbing the connections screens: %v", err)
 		}

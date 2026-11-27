@@ -37,19 +37,21 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// gatekit:fixture the carriers' own source constants, read from the packages that emit them
-//
-// carrierSources is every non-router source in the registry, mapped to the
-// constant the carrier really emits. The VALUE is what makes this more than a
-// spelling check: it is read from the emitting package, so a carrier that
-// renames or retires its source breaks the pairing instead of leaving the
-// router silenced in favour of a source nothing writes.
-var carrierSources = map[string]string{
-	"agent_runner":          runner.ActivitySource,
-	"attachment_extraction": activities.ExtractionActivitySource,
-	"account_scan":          companyscan.ActivitySource,
-	"transcript_read":       activities.TranscriptActivitySource,
-	"voice_build":           ai.VoiceBuildActivitySource,
+// carrier is what one carrier really emits: its source and its ai_task, both
+// read from the emitting package's own exported constants.
+type carrier struct{ source, task string }
+
+// carrierSources is every non-router source in the registry, mapped to its
+// carrier. The value makes this more than a spelling check: a carrier that
+// renames or retires its source breaks the pairing. Otherwise the router would
+// stay silenced for a source nothing writes. aitaskparity reads the tasks from
+// here, so the emitters are listed once.
+var carrierSources = map[string]carrier{
+	"agent_runner":          {runner.ActivitySource, runner.ActivityAITask},
+	"attachment_extraction": {activities.ExtractionActivitySource, activities.ExtractionAITask},
+	"account_scan":          {companyscan.ActivitySource, companyscan.ActivityAITask},
+	"transcript_read":       {activities.TranscriptActivitySource, activities.TranscriptAITask},
+	"voice_build":           {ai.VoiceBuildActivitySource, ai.VoiceBuildAITask},
 }
 
 func TestEveryAITaskNamesTheSourceThatReportsIt(t *testing.T) {
@@ -190,14 +192,14 @@ func TestEveryCarrierOverrideNamesASourceThatIsReallyEmitted(t *testing.T) {
 		if source == ai.SourceRouter || source == ai.SourceNoOccurrence {
 			continue
 		}
-		emitted, known := carrierSources[source]
+		emitter, known := carrierSources[source]
 		if !known {
 			t.Errorf("task %q is reported by carrier source %q, and this gate knows no emitter for it — "+
 				"the router is silenced for a task nothing announces. Add the carrier's exported source "+
 				"constant to carrierSources, or point the task at ai.SourceRouter", task, source)
 			continue
 		}
-		if emitted != source {
+		if emitted := emitter.source; emitted != source {
 			t.Errorf("task %q is registered against source %q but its carrier emits %q — the projection "+
 				"would hold the occurrence under a name the registry does not know", task, source, emitted)
 		}

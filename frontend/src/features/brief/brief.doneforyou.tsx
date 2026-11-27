@@ -90,12 +90,9 @@ export function DoneForYou({
         </Eyebrow>
         {changed !== undefined && changed > 0 && (
           <span className="t-caption t-num brief-first-count">
-            <span aria-hidden="true">{formatNumber(changed, locale)}</span>
-            <span className="sr-only">
-              {plural("brief.done.drawerTitle", changed, {
-                count: formatNumber(changed, locale),
-              })}
-            </span>
+            {plural("brief.done.drawerTitle", changed, {
+              count: formatNumber(changed, locale),
+            })}
           </span>
         )}
         <AppLink

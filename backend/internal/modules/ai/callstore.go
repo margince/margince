@@ -113,6 +113,9 @@ type Call struct {
 	FinishReason  string
 	Degraded      bool
 	ErrorSentinel string
+	// FloorServed is the site's declaration (WithFloor) that it answers with its
+	// own result when this call fails. The rail reads it; the trace keeps none.
+	FloorServed bool
 	// DecisionAnswer is what a decision attempt was answered, stood or not;
 	// nil on every other kind and on a decision attempt that got no answer.
 	DecisionAnswer *DecisionAnswer

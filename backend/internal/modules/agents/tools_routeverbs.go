@@ -135,7 +135,7 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	var maxArgs int64
 	if v.UploadField != "" {
 		properties[routeFileName] = `{"type":"string","description":"The file's name, with its extension"}`
-		properties[routeFileType] = `{"type":"string","description":"The file's media type, e.g. image/png"}`
+		properties[routeFileType] = `{"type":"string","description":"The file's media type, for example image/png"}`
 		properties[argContentBase64] = contentBase64Schema
 		properties[argContentText] = contentTextSchema
 		required = append(required, routeFileName, routeFileType)

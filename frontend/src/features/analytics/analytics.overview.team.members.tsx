@@ -1,6 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
+import type { ReactNode } from "react";
 import type { components } from "../../api/schema";
 import { Button } from "../../design-system/atoms";
 import { DataTable, type DataTableColumn } from "../../design-system/datatable";
@@ -273,20 +274,31 @@ export function MemberTable({
   review,
   zone,
   onOpen,
+  workflowNote,
 }: Readonly<{
   review: Review;
   zone: string;
   onOpen?: (metric: ReportingMetricID, owner: string) => void;
+  // Joins the table's own definitions, so the page holds one such disclosure.
+  workflowNote?: ReactNode;
 }>) {
   const t = useT();
   const plural = usePlural();
   const { locale } = useLocale();
   const handoffColumns = useHandoffColumns(review);
   const metricName = useMetricNames();
+  const noteAlone = workflowNote && (
+    <Disclosure summary={t("reporting.definitions")}>{workflowNote}</Disclosure>
+  );
   if (review.members_withheld) {
-    return <p className="t-caption">{t("analytics.team.membersWithheld")}</p>;
+    return (
+      <>
+        <p className="t-caption">{t("analytics.team.membersWithheld")}</p>
+        {noteAlone}
+      </>
+    );
   }
-  if (review.members.length === 0) return null;
+  if (review.members.length === 0) return noteAlone || null;
   const columns =
     review.workflow === "qualification"
       ? qualificationColumns(review, t, locale)
@@ -369,6 +381,7 @@ export function MemberTable({
               {note}
             </p>
           ))}
+          {workflowNote}
         </Disclosure>
       </PanelBody>
     </Panel>

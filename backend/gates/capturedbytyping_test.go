@@ -53,7 +53,7 @@ func tableOfMigration(body string) string {
 
 func TestCapturedByIsAlwaysTextAndNeverAUserForeignKey(t *testing.T) {
 	t.Parallel()
-	migrations, err := filepath.Glob(filepath.Join("migrations", "core", "*.up.sql"))
+	migrations, err := gatekit.Glob(filepath.Join("migrations", "core", "*.up.sql"))
 	if err != nil {
 		t.Fatalf("listing core migrations: %v", err)
 	}

@@ -104,7 +104,7 @@ func TestPlatformOwnsNoDomain(t *testing.T) {
 // moment its directory exists.
 func TestNoSiblingModuleImports(t *testing.T) {
 	t.Parallel()
-	modules, err := filepath.Glob("internal/modules/*")
+	modules, err := gatekit.Glob("internal/modules/*")
 	if err != nil {
 		t.Fatal(err)
 	}
@@ -369,7 +369,7 @@ func funcsCallingSelector(t *testing.T, dir, pkgIdent, funcName string) []string
 // cmd/<role> is enrolled the moment its directory exists.
 func TestOneModelPathPerRole(t *testing.T) {
 	t.Parallel()
-	roles, err := filepath.Glob("cmd/*")
+	roles, err := gatekit.Glob("cmd/*")
 	if err != nil {
 		t.Fatal(err)
 	}

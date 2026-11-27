@@ -25,8 +25,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
@@ -82,7 +80,7 @@ func reopenCheckValues(t *testing.T, table string) []string {
 	clause := regexp.MustCompile(`CONSTRAINT\s+` + regexp.QuoteMeta(constraint) +
 		`\s+CHECK\s*\(reopen_on IS NULL OR reopen_on IN \(([^)]*)\)\)`)
 
-	files, err := filepath.Glob(filepath.Join("migrations", "core", "*.up.sql"))
+	files, err := gatekit.Glob(filepath.Join("migrations", "core", "*.up.sql"))
 	if err != nil {
 		t.Fatalf("listing the migrations: %v", err)
 	}
@@ -131,7 +129,7 @@ func reopenContractEnum(t *testing.T) []string {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(body, &doc); err != nil {
+	if err := unmarshalYAML(body, &doc); err != nil {
 		t.Fatalf("parsing the contract: %v", err)
 	}
 	schema, ok := doc.Components.Schemas["ReopenCondition"]

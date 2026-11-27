@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { ListQuery } from "../../components/listquery";
+import { OpenedViewContext } from "../../components/listqueryviews";
 import { ListSurface } from "../../design-system/listsurface";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
@@ -115,6 +116,51 @@ export const NothingWorthSaving: Story = {
   render: () => {
     routes();
     return <SaveViewAction resource="contacts" state={{ query: UNNARROWED }} />;
+  },
+};
+
+// The reader's own list view, as a tab stores it.
+const BY_OWNER = {
+  id: "v-3",
+  owner_id: "u-1",
+  resource: "contacts",
+  name: "Ann’s contacts",
+  query: { list: NARROWED },
+  version: 2,
+};
+
+function routesWithListView(): void {
+  routes({
+    "GET /views": () =>
+      jsonResponse({ ...VIEWS, data: [...VIEWS.data, BY_OWNER] }),
+    "PATCH /views/v-3": () => jsonResponse(BY_OWNER),
+  });
+}
+
+export const AlreadySaved: Story = {
+  // A saved view holds the list on screen, so a second save would only add a
+  // second tab of the same rows. Manage views stays.
+  render: () => {
+    routesWithListView();
+    return <SaveViewAction resource="contacts" state={{ query: NARROWED }} />;
+  },
+};
+
+export const OpenedViewChanged: Story = {
+  // The reader opened "Ann’s contacts" and changed its order. The view can be
+  // updated in place, or the change kept as a new view beside it.
+  render: () => {
+    routesWithListView();
+    return (
+      <OpenedViewContext.Provider
+        value={{ id: BY_OWNER.id, version: BY_OWNER.version }}
+      >
+        <SaveViewAction
+          resource="contacts"
+          state={{ query: { ...NARROWED, sort: "full_name" } }}
+        />
+      </OpenedViewContext.Provider>
+    );
   },
 };
 
