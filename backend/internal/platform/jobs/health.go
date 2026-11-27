@@ -112,16 +112,14 @@ type Health struct {
 // over a table River retains for days is a different product.
 const recentFailureLimit = 50
 
-// ReadHealth reads the installation's job table for its admin: every row,
+// ReadHealth reads every row of the job table for the installation's admin,
 // because an installation holds one company and so every job is its work.
 //
-// dispatcherKinds is supplied by the caller rather than read off the
-// declaration in this package: it marks which kinds the page reports as
-// fleet-wide, and a list the calling surface states for itself is one that
-// surface can be gated on.
+// dispatcherKinds marks which kinds the page reports as fleet-wide. The caller
+// states it, so the surface that owns the list can be gated on it.
 //
-// `recent` bounds DeadRecent, and arrives from the caller for the same reason:
-// it is an installation setting, and this package holds no settings reader.
+// `recent` bounds DeadRecent. It comes from the caller because it is an
+// installation setting and this package holds no settings reader.
 func ReadHealth(ctx context.Context, pool *pgxpool.Pool, dispatcherKinds []string, recent time.Duration) (Health, error) {
 	kinds, err := healthByKind(ctx, pool, dispatcherKinds, recent)
 	if err != nil {

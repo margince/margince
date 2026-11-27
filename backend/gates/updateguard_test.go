@@ -269,16 +269,11 @@ var unguardedByIDUpdates = gatekit.Waive(map[string]string{
 	"internal/modules/privacy:archiveDeal":            "terminal absolute write: the retention sweep archives an over-age lost/won deal regardless of concurrent state, by design",
 	"internal/modules/privacy:anonymizeContactRecord": "terminal absolute write: the sweep's contact/anonymize action overwrites the PII columns regardless of concurrent state, by design",
 
-	// A function the package-level folding attributes a statement to without its
-	// also executing it. Ratified here rather than smoothed away in the reader,
-	// because the shape recurs wherever a statement table is handed to an
-	// executor by value instead of by name, and a reader taught to excuse it
-	// would excuse the writers that DO need judging along with it.
-	//
-	// The lock this names is the COMPANY row's, not the workspace row's.
-	// SaveCompany also takes lockCompanyState, an advisory lock — and that one is
-	// deliberately not what ratifies this: it names no table at all, which is
-	// exactly the free credit the table-scoped witness was narrowed to stop giving.
+	// A function the folding attributes a statement to without its executing it.
+	// Ratified here, not smoothed away in the reader: a reader taught to excuse
+	// this shape would excuse writers that do need judging.
+	// The lock this names is the company row's. SaveCompany's advisory
+	// lockCompanyState names no table, so it does not ratify this write.
 })
 
 // guardMarkers are the identifiers whose presence in the same function

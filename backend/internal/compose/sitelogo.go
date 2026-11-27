@@ -285,8 +285,8 @@ func (w *siteDeepReadWorker) resolveLogo(ctx context.Context, args SiteDeepReadA
 // over at all.
 func (w *siteDeepReadWorker) storeResolvedLogo(ctx context.Context, args SiteDeepReadArgs, claim contacts.SiteReadClaim, logo resolvedLogo) string {
 	// A mark resolved before its company exists is keyed by the dossier id,
-	// which is what the object traces back to until a confirmation adopts it.
-	// The bytes are never copied when the company arrives: the record names the key.
+	// which the object traces back to until a confirmation adopts it. The bytes
+	// are never copied then: the record names the key.
 	what := "site-read/" + args.SiteReadID.String()
 	if claim.CompanyID != nil {
 		what = ids.From[ids.CompanyKind](*claim.CompanyID).String()

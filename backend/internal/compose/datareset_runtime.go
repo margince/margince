@@ -30,9 +30,8 @@ type ResetRuntime struct {
 	QuiesceQueues func(ctx context.Context) (drained bool, err error)
 	// ResumeQueues lifts the pause. Called from a deferred path.
 	ResumeQueues func(ctx context.Context) error
-	// PurgeQueue deletes the installation's job rows in every state — pending
-	// work and retained history alike, returning
-	// rows deleted.
+	// PurgeQueue deletes the installation's job rows in every state, pending
+	// work and retained history alike, and returns the rows deleted.
 	PurgeQueue func(ctx context.Context) (int, error)
 	// PurgeBus empties the event streams and the dedupe marks, returning
 	// stream keys deleted and cache keys unlinked.

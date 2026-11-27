@@ -80,20 +80,9 @@ func CountRunning(ctx context.Context, pool *pgxpool.Pool) (int, error) {
 	return n, nil
 }
 
-// PurgeJobs deletes the installation's job rows, in EVERY state — no state
-// predicate. The count it returns is therefore job rows deleted, not a backlog
-// depth.
-//
-// Every row is the installation's work, and the rows it would act on are about
-// to stop existing. Periodic ticks re-insert the dispatchers on their next
-// cadence.
-//
-// River's retained completed/discarded/cancelled history goes with them: an
-// installation wiped back to first-boot state must not carry a job record of
-// the work it no longer has the rows for.
-//
-// Running rows go too. The reset refuses to reach this point after a drain
-// timeout, so after a completed drain there are none.
+// PurgeJobs deletes the installation's job rows in every state, retained
+// history included. The count is rows deleted, not a backlog depth. Running
+// rows go too: the reset refuses to reach this point after a drain timeout.
 func PurgeJobs(ctx context.Context, pool *pgxpool.Pool) (int, error) {
 	tag, err := pool.Exec(ctx, `DELETE FROM river_job`)
 	if err != nil {

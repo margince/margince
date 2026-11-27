@@ -7,7 +7,7 @@ package integration
 
 // Every owner of object-store keys names the installation's stored-key id, the
 // one every object already stored was written under. These cases write or read
-// through the owner and count what sits under the legacy prefix, so a key that
+// through the owner and count what sits under the legacy prefix. A key that
 // moved to another id would show as an object outside it.
 
 import (

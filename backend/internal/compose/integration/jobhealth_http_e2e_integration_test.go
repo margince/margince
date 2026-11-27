@@ -154,10 +154,9 @@ func kindOf(report jobHealthDTO, kind string) (int, bool) {
 }
 
 // TestJobHealthReportsEveryRowWhateverWorkspaceIdItsArgsCarry holds that the
-// read no longer selects on args->>'workspace_id': an installation holds one
-// company, so a row queued with the key (an envelope from before the key was
-// dropped), a row queued without it and a dispatcher are all this
-// installation's work.
+// read no longer selects on args->>'workspace_id'. An installation holds one
+// company, so a row queued with the key, a row queued without it and a
+// dispatcher are all its work.
 func TestJobHealthReportsEveryRowWhateverWorkspaceIdItsArgsCarry(t *testing.T) {
 	e := apptest.SetupApp(t)
 	e.BootstrapWorkspace(t)
