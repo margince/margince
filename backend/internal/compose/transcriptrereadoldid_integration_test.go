@@ -43,7 +43,7 @@ func (e *transcriptEnv) readAsBeforeTheSplit(t *testing.T, brain completer) {
 func (e *transcriptEnv) filed(t *testing.T) int {
 	t.Helper()
 	return e.WsCount(t, `SELECT (SELECT count(*) FROM activity WHERE kind = 'task')
-		+ (SELECT count(*) FROM conversation_claim WHERE archived_at IS NULL)
+		+ (SELECT count(*) FROM conversation_claim)
 		+ (SELECT count(*) FROM approval)`)
 }
 

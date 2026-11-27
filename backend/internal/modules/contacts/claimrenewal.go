@@ -22,7 +22,7 @@ func renewClaimDeadline(ctx context.Context, tx pgx.Tx, in ClaimInput, claim crm
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	query := fmt.Sprintf(`UPDATE conversation_claim SET due_at = $%[1]d
- WHERE id = $%[2]d AND archived_at IS NULL AND captured_by = ANY($%[3]d::text[]) AND due_at IS DISTINCT FROM $%[1]d`,
+ WHERE id = $%[2]d AND captured_by = ANY($%[3]d::text[]) AND due_at IS DISTINCT FROM $%[1]d`,
 		arg(in.DueAt), arg(claim.Id), arg(append([]string{by}, in.SameFilers...)))
 	tag, err := tx.Exec(ctx, query, args...)
 	if err != nil {

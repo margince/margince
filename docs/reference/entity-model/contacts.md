@@ -1100,7 +1100,7 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 ## conversation_claim
 
-21 columns · primary key `(id)` · referenced by 0 foreign keys
+20 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -1119,7 +1119,6 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `taken_at` | `timestamp with time zone` |  | When the promise was taken over. |
 | `taken_by_user_id` | `uuid` |  | The colleague who took over this promise when nobody was asked to keep it. |
 | `task_activity_id` | `uuid` |  | The task an extracted `commitment_ours` created, so completing either side completes both. |
-| `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `source` | `text` | yes | Which internal channel the record arrived by. |
@@ -1144,10 +1143,10 @@ The 49 tables owned by `contacts`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `conversation_claim_contact_ix`: `btree (contact_id, kind) WHERE (archived_at IS NULL)`
-- `conversation_claim_evidence_ux`: `unique, btree (contact_id, source_activity_id, evidence_fingerprint) WHERE (archived_at IS NULL)`
+- `conversation_claim_contact_ix`: `btree (contact_id, kind)`
+- `conversation_claim_evidence_ux`: `unique, btree (contact_id, source_activity_id, evidence_fingerprint)`
 - `conversation_claim_pkey`: `unique, btree (id)`
-- `conversation_claim_task_ix`: `btree (task_activity_id) WHERE ((task_activity_id IS NOT NULL) AND (archived_at IS NULL))`
+- `conversation_claim_task_ix`: `btree (task_activity_id) WHERE (task_activity_id IS NOT NULL)`
 - `idx_conversation_claim_contact`: `btree (contact_id)`
 - `idx_conversation_claim_source_activity`: `btree (source_activity_id)`
 

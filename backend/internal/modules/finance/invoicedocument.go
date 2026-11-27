@@ -187,7 +187,7 @@ func readDocumentTarget(ctx context.Context, tx pgx.Tx, invoiceID ids.UUID) (doc
 	err = tx.QueryRow(ctx, `
 		SELECT company_id, external_id, number
 		  FROM finance_invoice
-		 WHERE id = $1 AND connection_id = $2 AND archived_at IS NULL`, invoiceID, conn.id).
+		 WHERE id = $1 AND connection_id = $2`, invoiceID, conn.id).
 		Scan(&target.companyID, &target.externalID, &target.number)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return documentTarget{}, apperrors.ErrNotFound

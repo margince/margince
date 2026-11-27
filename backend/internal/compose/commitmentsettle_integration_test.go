@@ -312,8 +312,7 @@ func TestCompletingATaskAnswersForWhatTheTaskIsNow(t *testing.T) {
 }
 
 // Reading the claims a task stands for, or the task a claim became, needs
-// contact read; a claim that is gone, or a settlement that is not its audit
-// row, has no task.
+// contact read, and a settlement that is not its audit row has no task.
 func TestTheClaimTaskReadsNeedContactRead(t *testing.T) {
 	k := seedKeptCommitment(t)
 	blind := k.As(k.Rep2, []ids.UUID{k.Team1}, principal.Permissions{
@@ -329,12 +328,7 @@ func TestTheClaimTaskReadsNeedContactRead(t *testing.T) {
 	if err := k.Contacts.SettleConversationClaim(k.Admin(), k.claim, claimStatusDone); err != nil {
 		t.Fatalf("settling the commitment: %v", err)
 	}
-	settled := k.newest(t, eventClaimChanged, `envelope->'payload'->>'claim_id' = $2`, k.claim.String())
 	if task, err := k.Contacts.ReadClaimSettlement(k.Admin(), k.claim, ids.NewV7()); err != nil || task != nil {
 		t.Errorf("a settlement that is no audit row answered task %v, %v; want none", task, err)
-	}
-	k.WsExec(t, `UPDATE conversation_claim SET archived_at = now() WHERE id = $1`, k.claim)
-	if task, err := k.Contacts.ReadClaimSettlement(k.Admin(), k.claim, settled.Trace.AuditLogID); err != nil || task != nil {
-		t.Errorf("an archived claim answered task %v, %v; want none", task, err)
 	}
 }

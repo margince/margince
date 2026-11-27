@@ -206,7 +206,7 @@ func (s *Store) readClaims(
 		FROM conversation_claim c
 		JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		LEFT JOIN app_user taker ON taker.id = c.taken_by_user_id
-		WHERE c.contact_id = $%d AND c.archived_at IS NULL AND (%s) AND %s AND (%s)
+		WHERE c.contact_id = $%d AND (%s) AND %s AND (%s)
 		ORDER BY %s
 		LIMIT %d`, contactPos, scope, filed, extra, order, limit), args...)
 	if err != nil {
@@ -360,7 +360,6 @@ func (s *Store) CommitmentsTheirsForProjects(ctx context.Context, tx pgx.Tx, pro
 		  JOIN activity_link l ON l.activity_id = a.id AND l.project_id = ANY($%[1]d)
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE `+theirPromiseOpen(now, arg)+`
-		   AND c.archived_at IS NULL
 		   AND (%[3]s)
 		 ORDER BY l.project_id,
 		          (c.due_at IS NOT NULL AND c.due_at < $%[2]d) DESC,

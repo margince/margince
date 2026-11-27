@@ -35,7 +35,7 @@ func ensureClaimContentVisible(ctx context.Context, tx pgx.Tx, id ids.UUID) erro
 	}
 	query := fmt.Sprintf(`SELECT EXISTS (SELECT 1 FROM conversation_claim c
  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
- WHERE c.id = $%d AND c.archived_at IS NULL AND %s)`, arg(id), content)
+ WHERE c.id = $%d AND %s)`, arg(id), content)
 	var visible bool
 	if err := tx.QueryRow(ctx, query, args...).Scan(&visible); err != nil {
 		return fmt.Errorf("read the claim's evidence boundary: %w", err)

@@ -5027,7 +5027,6 @@ public.contract_account_ix CREATE INDEX contract_account_ix ON public.contract U
 public.contract_deal_ix CREATE INDEX contract_deal_ix ON public.contract USING btree (deal_id) WHERE ((deal_id IS NOT NULL) AND (archived_at IS NULL))
 public.contract_pkey CREATE UNIQUE INDEX contract_pkey ON public.contract USING btree (id)
 public.conversation_claim acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.conversation_claim.archived_at timestamp with time zone gen=- def=-
 public.conversation_claim.body text NOT NULL gen=- def=-
 public.conversation_claim.captured_by text NOT NULL gen=- def=-
 public.conversation_claim.contact_id uuid NOT NULL gen=- def=-
@@ -5060,10 +5059,10 @@ public.conversation_claim.text_bound_update CREATE TRIGGER text_bound_update AFT
 public.conversation_claim.trg_conversation_claim_updated CREATE TRIGGER trg_conversation_claim_updated BEFORE UPDATE ON public.conversation_claim FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
 public.conversation_claim.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.conversation_claim.version bigint NOT NULL gen=- def=1
-public.conversation_claim_contact_ix CREATE INDEX conversation_claim_contact_ix ON public.conversation_claim USING btree (contact_id, kind) WHERE (archived_at IS NULL)
-public.conversation_claim_evidence_ux CREATE UNIQUE INDEX conversation_claim_evidence_ux ON public.conversation_claim USING btree (contact_id, source_activity_id, evidence_fingerprint) WHERE (archived_at IS NULL)
+public.conversation_claim_contact_ix CREATE INDEX conversation_claim_contact_ix ON public.conversation_claim USING btree (contact_id, kind)
+public.conversation_claim_evidence_ux CREATE UNIQUE INDEX conversation_claim_evidence_ux ON public.conversation_claim USING btree (contact_id, source_activity_id, evidence_fingerprint)
 public.conversation_claim_pkey CREATE UNIQUE INDEX conversation_claim_pkey ON public.conversation_claim USING btree (id)
-public.conversation_claim_task_ix CREATE INDEX conversation_claim_task_ix ON public.conversation_claim USING btree (task_activity_id) WHERE ((task_activity_id IS NOT NULL) AND (archived_at IS NULL))
+public.conversation_claim_task_ix CREATE INDEX conversation_claim_task_ix ON public.conversation_claim USING btree (task_activity_id) WHERE (task_activity_id IS NOT NULL)
 public.copy_activity_domain_evidence() secdef=false cfg=- acl=- 
 BEGIN
  UPDATE activity_participant SET domain_evidence_parent_version = NEW.domain_evidence_version
@@ -6251,7 +6250,6 @@ public.finance_customer_link_external_ux CREATE UNIQUE INDEX finance_customer_li
 public.finance_customer_link_mapping_key CREATE UNIQUE INDEX finance_customer_link_mapping_key ON public.finance_customer_link USING btree (id, connection_id, company_id)
 public.finance_customer_link_pkey CREATE UNIQUE INDEX finance_customer_link_pkey ON public.finance_customer_link USING btree (id)
 public.finance_external_customer acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.finance_external_customer.archived_at timestamp with time zone gen=- def=-
 public.finance_external_customer.captured_by text NOT NULL gen=- def=-
 public.finance_external_customer.connection_id uuid NOT NULL gen=- def=-
 public.finance_external_customer.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -6272,7 +6270,6 @@ public.finance_external_customer.version bigint NOT NULL gen=- def=1
 public.finance_external_customer_connection_id_extern_key CREATE UNIQUE INDEX finance_external_customer_connection_id_extern_key ON public.finance_external_customer USING btree (connection_id, external_customer_id)
 public.finance_external_customer_pkey CREATE UNIQUE INDEX finance_external_customer_pkey ON public.finance_external_customer USING btree (id)
 public.finance_invoice acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
-public.finance_invoice.archived_at timestamp with time zone gen=- def=-
 public.finance_invoice.captured_by text NOT NULL gen=- def=-
 public.finance_invoice.company_id uuid NOT NULL gen=- def=-
 public.finance_invoice.connection_id uuid NOT NULL gen=- def=-
@@ -6334,7 +6331,6 @@ public.finance_invoice_owner_key CREATE UNIQUE INDEX finance_invoice_owner_key O
 public.finance_invoice_pkey CREATE UNIQUE INDEX finance_invoice_pkey ON public.finance_invoice USING btree (id)
 public.finance_payment acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.finance_payment.amount_minor bigint NOT NULL gen=- def=-
-public.finance_payment.archived_at timestamp with time zone gen=- def=-
 public.finance_payment.captured_by text NOT NULL gen=- def=-
 public.finance_payment.company_id uuid NOT NULL gen=- def=-
 public.finance_payment.connection_id uuid NOT NULL gen=- def=-

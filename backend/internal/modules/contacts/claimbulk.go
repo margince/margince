@@ -134,7 +134,7 @@ func VisibleClaims(ctx context.Context, tx pgx.Tx, named []ids.UUID) (map[ids.UU
 		SELECT c.id FROM conversation_claim c
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
-		 WHERE c.id = ANY($%d) AND c.archived_at IS NULL AND (%s) AND (%s)`,
+		 WHERE c.id = ANY($%d) AND (%s) AND (%s)`,
 		idsPos, activityScope, contactScope), args...)
 	if err != nil {
 		return nil, fmt.Errorf("read which claims the caller may see: %w", err)

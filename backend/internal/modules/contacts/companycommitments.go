@@ -214,7 +214,6 @@ func rankedClaims(
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE `+side(asOf, arg)+`
-		   AND c.archived_at IS NULL
 		   AND (%[3]s)
 		   AND (%[2]s) AND (%[1]s)
 		 ORDER BY (c.due_at IS NOT NULL AND c.due_at < now()) DESC,
@@ -263,7 +262,6 @@ func countCompanyCommitments(ctx context.Context, tx pgx.Tx, companyID ids.UUID,
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE ` + side(asOf, arg) + `
-		   AND c.archived_at IS NULL
 		   AND EXISTS (
 		         SELECT 1 FROM relationship r
 		          WHERE r.contact_id = pr.id AND r.kind = 'employment'
@@ -337,7 +335,6 @@ func (s *Store) OpenCommitmentsAcrossWorkspace(
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE `+ourPromiseNotYetATask(s.clock(), arg)+`
-		   AND c.archived_at IS NULL
 		   AND (%[1]s) AND (%[2]s)
 		 ORDER BY (c.due_at IS NOT NULL AND c.due_at < now()) DESC,
 		          CASE WHEN c.due_at < now() THEN c.due_at END DESC,
@@ -417,7 +414,6 @@ func (s *Store) CountAccountCommitments(ctx context.Context, tx pgx.Tx, companyI
 		  JOIN activity a ON a.id = c.source_activity_id AND a.archived_at IS NULL
 		  JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
 		 WHERE `+openCommitmentEitherSide(s.clock(), arg)+`
-		   AND c.archived_at IS NULL
 		   AND (%[4]s)
 		   AND (%[2]s) AND (%[3]s)`, companyPos, activityScope, contactScope, employed)
 	if err := tx.QueryRow(ctx, query, args...).Scan(&total); err != nil {

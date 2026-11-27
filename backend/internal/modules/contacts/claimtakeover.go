@@ -61,7 +61,7 @@ func (s *Store) PromiseToTakeTx(ctx context.Context, tx pgx.Tx, claimID ids.UUID
 	}
 	out := PromiseToTake{Claim: claimID}
 	err := tx.QueryRow(ctx, `SELECT contact_id, source_activity_id, evidence_fingerprint
- FROM conversation_claim WHERE id = $1 AND archived_at IS NULL`, claimID).Scan(&out.Contact, &out.Source, &out.Locator)
+ FROM conversation_claim WHERE id = $1`, claimID).Scan(&out.Contact, &out.Source, &out.Locator)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return PromiseToTake{}, apperrors.ErrNotFound
 	}
@@ -107,7 +107,7 @@ func (s *Store) readPromiseState(ctx context.Context, tx pgx.Tx, p *PromiseToTak
    FROM conversation_claim c
    JOIN activity a ON a.id = c.source_activity_id
    LEFT JOIN app_user taker ON taker.id = c.taken_by_user_id
-  WHERE c.id = $%d AND c.archived_at IS NULL AND a.archived_at IS NULL AND %s
+  WHERE c.id = $%d AND a.archived_at IS NULL AND %s
     FOR UPDATE OF c`, current, claimPos, content), args...).Scan(
 		&p.Kind, &p.Status, &p.NeedsReview, &p.Current, &p.Body, &p.SourceLabel, &p.DueAt,
 		&p.Task, &p.TakenBy, &p.TakerName, &p.TakenAt)
@@ -141,7 +141,7 @@ func (s *Store) ownerlessCopies(ctx context.Context, tx pgx.Tx, p PromiseToTake,
  SELECT c.id FROM conversation_claim c
    JOIN contact pr ON pr.id = c.contact_id AND pr.archived_at IS NULL
   WHERE c.source_activity_id = $%d AND c.evidence_fingerprint = $%d
-    AND c.kind = 'commitment_ours' AND c.status = 'open' AND c.archived_at IS NULL
+    AND c.kind = 'commitment_ours' AND c.status = 'open'
     AND c.task_activity_id IS NULL AND c.taken_by_user_id IS NULL AND (%s)
     AND (COALESCE(cardinality($%d::uuid[]), 0) = 0 OR c.contact_id = ANY($%d::uuid[]))
   ORDER BY c.id

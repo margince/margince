@@ -51,7 +51,7 @@ func TestALateProposalsCustomerClaimIsHistoryUntilAccepted(t *testing.T) {
 			if _, current = customerClaims(t, e, customer); current != 0 {
 				t.Errorf("after refusing the customer owes %d promises, want none", current)
 			}
-			if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim WHERE contact_id = $1 AND status = 'open' AND archived_at IS NULL`, customer); n != 0 {
+			if n := e.WsCount(t, `SELECT count(*) FROM conversation_claim WHERE contact_id = $1 AND status = 'open'`, customer); n != 0 {
 				t.Errorf("after refusing %d claims on the customer still read open", n)
 			}
 		})

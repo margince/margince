@@ -129,8 +129,7 @@ func recordClaimInTx(
 			(contact_id, kind, body, source_activity_id, source_quote,
 			 due_at, evidence_fingerprint, source, captured_by)
 		VALUES ($1, $2, $3, $4, $5, $6, $7, $8, $9)
-		ON CONFLICT (contact_id, source_activity_id, evidence_fingerprint)
-		   WHERE archived_at IS NULL DO NOTHING
+		ON CONFLICT (contact_id, source_activity_id, evidence_fingerprint) DO NOTHING
 		RETURNING id`,
 		in.ContactID, in.Kind, in.Body,
 		in.ActivityID, in.Quote, in.DueAt,
@@ -198,7 +197,7 @@ func filedClaim(
 		       needs_review, corrected_at, task_activity_id
 		  FROM conversation_claim
 		 WHERE contact_id = $1 AND source_activity_id = $2 AND evidence_fingerprint = $3
-		   AND archived_at IS NULL FOR UPDATE`,
+		   FOR UPDATE`,
 		in.ContactID, in.ActivityID, fingerprint).Scan(&id, &claim.Kind, &claim.Body,
 		&activityID, &claim.SourceQuote, &claim.Status, &claim.DueAt,
 		&claim.NeedsReview, &claim.CorrectedAt, &taskID)

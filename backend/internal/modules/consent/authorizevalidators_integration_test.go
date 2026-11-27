@@ -764,8 +764,7 @@ func TestAnEvidenceRecordTheCallerMayNotReadIsRefused(t *testing.T) {
 	}
 }
 
-// A voided invoice authorizes nothing, and neither does an archived one. The
-// offer cases are in quoteondeal_integration_test.go.
+// A voided invoice authorizes nothing. The offer cases are in quoteondeal_integration_test.go.
 //
 // Mutation: drop any one of the added clauses and its own row here fails.
 func TestARecordThatIsOverAuthorizesNothing(t *testing.T) {
@@ -776,12 +775,6 @@ func TestARecordThatIsOverAuthorizesNothing(t *testing.T) {
 		{"voided invoice", func(t *testing.T, e *resolveEnv, _, invoice ids.UUID) {
 			if _, err := e.owner.Exec(context.Background(),
 				`UPDATE finance_invoice SET status = 'void', void_at = now() WHERE id = $1`, invoice); err != nil {
-				t.Fatal(err)
-			}
-		}},
-		{"archived invoice", func(t *testing.T, e *resolveEnv, _, invoice ids.UUID) {
-			if _, err := e.owner.Exec(context.Background(),
-				`UPDATE finance_invoice SET archived_at = now() WHERE id = $1`, invoice); err != nil {
 				t.Fatal(err)
 			}
 		}},
