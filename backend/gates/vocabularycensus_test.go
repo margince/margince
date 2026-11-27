@@ -133,6 +133,11 @@ var catalogVocabularies = sync.OnceValues(func() (map[string][]string, error) {
 			out[col] = values
 		}
 	}
+	evidence, err := readEvidenceVocabularies()
+	if err != nil {
+		return nil, err
+	}
+	maps.Copy(out, evidence)
 	if len(out) == 0 {
 		return nil, fmt.Errorf("%s yielded no CHECK vocabulary: the catalog format moved", vocabularyCatalog)
 	}
@@ -285,8 +290,6 @@ var namedVocabularyDrift = gatekit.Waive(map[string]string{
 		"an attachment on a deal room or an offer reads back with a type the contract cannot name",
 	"capture_connection.provider": "the CHECK also admits offline_demo, telegram and whatsapp, " +
 		"which the contract's provider enum does not name",
-	"channel_connection.status": "the contract names a pending state the CHECK refuses; no writer stores it, " +
-		"the capture store writes only connected, disconnected, error and reauth_required",
 	"company_profile_field.source": "the contract shares one source enum with company_fact; technical_lookup " +
 		"writes only company_fact, whose CHECK admits it, and never a profile field",
 	"custom_field.object": "the contract lists seven targets and the CHECK also admits partner and " +
@@ -311,7 +314,7 @@ var namedVocabularyDrift = gatekit.Waive(map[string]string{
 
 // namedVocabularyDriftCeiling is how many named pairs may disagree. It only
 // moves down: fix a pair, delete its waiver, lower this number.
-const namedVocabularyDriftCeiling = 13
+const namedVocabularyDriftCeiling = 12
 
 func TestEveryColumnNamedGoTypeHoldsItsColumnsCheck(t *testing.T) {
 	t.Parallel()
@@ -474,8 +477,8 @@ var repeatedVocabularies = gatekit.Waive(map[string]string{
 	"state: web_form, webhook_subscription":                                                     sharedByOwnBinding,
 	"status: assurance_run, close_date_run": "no Go type spells this vocabulary as typed constants, so " +
 		"there is no one type to bind both run tables to",
-	"status: capture_connection, channel_connection": "channel_connection's contract enum names a pending " +
-		"state its CHECK refuses (namedVocabularyDrift), so the two cannot share one type until it is settled",
+	"managed_source: knowledge_corpus, knowledge_document": "the knowledge package spells the sources as two " +
+		"untyped string constants, so there is no one type to bind both columns to",
 	"status: attachment_extraction, runner_job, transcript_read": "runner_job is the queue several readers " +
 		"share, and each reader's table is bound by name to its own contract status",
 })
@@ -488,7 +491,7 @@ const repeatedVocabulariesCeiling = 9
 // list this census does not read as a column's vocabulary. Each states a
 // condition inside a wider rule, such as finance_invoice_credit_note_status.
 // The ceiling rises only for such a rule.
-const unreadArrayCheckCeiling = 30
+const unreadArrayCheckCeiling = 29
 
 // TestNoVocabularyCheckHidesFromTheCensus fails when a CHECK with a value
 // list stops being read, so a catalog format change cannot shrink the census.
@@ -501,7 +504,7 @@ func TestNoVocabularyCheckHidesFromTheCensus(t *testing.T) {
 	var unread []string
 	for line := range strings.SplitSeq(string(raw), "\n") {
 		m := catalogCheckLine.FindStringSubmatch(line)
-		if m == nil || !strings.Contains(m[2], " = ANY (ARRAY[") {
+		if m == nil || !strings.Contains(m[2], " = ANY (ARRAY[") || isEvidenceVocabularyLine(line) {
 			continue
 		}
 		if v := readWholeVocabulary(m[2]); v == nil || (v[1] != "" && v[1] != v[2]) {

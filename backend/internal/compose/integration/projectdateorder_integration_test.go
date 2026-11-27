@@ -42,7 +42,7 @@ func TestATargetEndBeforeTheStartIsRefusedOnEveryDoor(t *testing.T) {
 		map[string]any{"started_at": "2026-07-01"}, http.StatusUnprocessableEntity)
 	assertDateOrderRefusal(t, "a start moved past the stored target end", string(refused), "started_at")
 	if refusal := d.toolRefused(t, "update_record", map[string]any{
-		"record_type": "project", "id": id,
+		"record_type": "project", "id": id, "why": "A test asks for this change.",
 		"fields": map[string]any{"target_end_date": "2026-02-01"},
 	}); !strings.Contains(refusal, "target_end_date") {
 		t.Errorf("the tool refused a target end before the start as %q, want it to name target_end_date", refusal)

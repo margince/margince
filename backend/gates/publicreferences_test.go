@@ -42,9 +42,19 @@ import (
 	"sort"
 	"strings"
 	"testing"
+	"unicode"
+	"unicode/utf8"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
+
+const privateProjectName = "constel" + "lation"
+
+// registryPullTarget is the one literal path allowed to carry the private
+// project's name: the image the release workflow pulls. It is matched
+// case-sensitively and whole, so a URL, a link target or a capitalised form
+// of the name still fails.
+const registryPullTarget = "ghcr.io/gradionhq/margince-" + privateProjectName + "/release-management"
 
 // forbidden is what a private reference looks like in this tree's history.
 // Each pattern carries the plain-language reason it fails, because a gate that
@@ -57,9 +67,12 @@ var forbidden = []struct {
 	// workflow name these sources functionally, while a page only cites them.
 	docsOnly bool
 }{
+	// The private project's name, bare or as a repository, in any case. It is
+	// built from parts so this file does not spell it out. The one registry pull
+	// target the release workflow needs is removed from a line before matching.
 	{
 		name:    "private repository name",
-		pattern: regexp.MustCompile(`margince-(foundation|principles|business)`),
+		pattern: regexp.MustCompile(`(?i)margince-(foundation|principles|business)|` + privateProjectName),
 		why:     "name the thing, not the repository — a reader here cannot open it",
 	},
 	{
@@ -106,8 +119,9 @@ func TestPublicTreeCitesNothingPrivate(t *testing.T) {
 		t.Fatalf("listing tracked files: %v (this test must run inside the git worktree)", err)
 	}
 
+	census, named := 0, 0
 	for _, rel := range strings.Split(strings.TrimRight(string(out), "\x00"), "\x00") {
-		if rel == "" || !scanned[filepath.Ext(rel)] {
+		if rel == "" || !isScanned(rel) {
 			continue
 		}
 		// This file names the patterns it bans, so scanning it would fail on
@@ -118,7 +132,26 @@ func TestPublicTreeCitesNothingPrivate(t *testing.T) {
 			continue
 		}
 		assertFileCitesNothingPrivate(t, rel)
+		census++
+		if rel == "Makefile" || rel == "docker-bake.hcl" {
+			named++
+		}
 	}
+	if census < publicTreeFloor || named != 2 {
+		t.Errorf("the gate read %d files (floor %d) and %d of the Makefile and docker-bake.hcl: "+
+			"its census has shrunk and a private name could hide in what it no longer reads", census, publicTreeFloor, named)
+	}
+}
+
+// publicTreeFloor is below the real count so ordinary deletions pass, and far above
+// what a broken file filter would leave.
+const publicTreeFloor = 15000
+
+// isScanned also takes files with no extension and the .hcl build files.
+// The Makefile and the bake configs carry prose in comments like any source.
+func isScanned(rel string) bool {
+	ext := filepath.Ext(rel)
+	return ext == "" || ext == ".hcl" || scanned[ext]
 }
 
 // assertFileCitesNothingPrivate reports every offending line in one file, so a
@@ -139,14 +172,104 @@ func assertFileCitesNothingPrivate(t *testing.T, rel string) {
 	}
 
 	for i, line := range strings.Split(string(body), "\n") {
-		for _, f := range forbidden {
+		shown := line
+		line = strings.ReplaceAll(line, registryPullTarget, "")
+		for p, f := range forbidden {
 			if f.docsOnly && filepath.Ext(rel) != ".md" {
 				continue
 			}
-			if f.pattern.MatchString(line) {
+			if mayMatchForbidden(p, line) && f.pattern.MatchString(line) {
 				t.Errorf("%s:%d carries a %s — %s\n\t%s",
-					rel, i+1, f.name, f.why, strings.TrimSpace(line))
+					rel, i+1, f.name, f.why, strings.TrimSpace(shown))
 			}
+		}
+	}
+}
+
+// forbiddenWords holds, index for index with forbidden, the words every match of
+// that pattern contains. Derived from the pattern, so an edit to one cannot
+// leave a stale list beside it.
+var forbiddenWords = func() [][]string {
+	words := make([][]string, len(forbidden))
+	for i, f := range forbidden {
+		words[i] = requiredWords(f.pattern)
+	}
+	return words
+}()
+
+// mayMatchForbidden is false only when line holds none of the words pattern i
+// requires. A pattern that requires none is always asked.
+func mayMatchForbidden(i int, line string) bool {
+	return mayHoldWordsOf(line, forbiddenWords[i])
+}
+
+// The fold the regexp engine uses is derived here from the Unicode tables Go
+// ships, so a rune a later table adds is caught.
+func TestMayHoldFoldedNeverSkipsTextACaseInsensitiveWordMatches(t *testing.T) {
+	t.Parallel()
+	for r := rune(utf8.RuneSelf); r <= unicode.MaxRune; r++ {
+		for fold := unicode.SimpleFold(r); fold != r; fold = unicode.SimpleFold(fold) {
+			if fold >= utf8.RuneSelf || !unicode.IsLetter(fold) {
+				continue
+			}
+			word := string(unicode.ToLower(fold))
+			if !regexp.MustCompile("(?i)" + word).MatchString(string(r)) {
+				t.Fatalf("(?i)%s does not match U+%04X, so this test no longer reads the fold the regexp engine uses", word, r)
+			}
+			if !mayHoldFolded(string(r), word) {
+				t.Errorf("(?i)%s matches U+%04X, and mayHoldFolded skips text holding it", word, r)
+			}
+		}
+	}
+}
+
+func TestRequiredWordsAreWordsEveryMatchHolds(t *testing.T) {
+	t.Parallel()
+	for pattern, want := range map[string][]string{
+		`specs/`:               {"specs/"},
+		`(?i)Margince-`:        {"margince-"},
+		`foo|bar`:              {"foo", "bar"},
+		`(^|[^\w])specs/[a-z]`: {"specs/"},
+		`a\d+longer`:           {"longer"},
+		`(ab|cd)e+`:            {"ab", "cd"},
+		`x{2,}`:                {"x"},
+	} {
+		if got := requiredWords(regexp.MustCompile(pattern)); !slices.Equal(got, want) {
+			t.Errorf("requiredWords(%q) = %q, want %q", pattern, got, want)
+		}
+	}
+	// A pattern a line can match without any fixed word promises none, so the
+	// regex must always run.
+	for _, pattern := range []string{`a?b?`, `[ab]+`, `a|\d`, `.*`, `x{0,3}`} {
+		if got := requiredWords(regexp.MustCompile(pattern)); got != nil {
+			t.Errorf("requiredWords(%q) = %q, but a match need hold none of them", pattern, got)
+		}
+	}
+}
+
+func TestEveryForbiddenPatternIsAskedOfTheLinesItMatches(t *testing.T) {
+	t.Parallel()
+	samples := map[string]string{
+		"private repository name":        "see the " + strings.ToUpper(privateProjectName) + " repository",
+		"private specification path":     "read specs/billing first",
+		"private pull-request reference": "as foundation PR #12 decided",
+		"private GitHub owner path":      "cloned from gradionhq/tools",
+		"private specification document": "as business/12-pricing says",
+	}
+	for i, f := range forbidden {
+		if forbiddenWords[i] == nil {
+			t.Errorf("%s: its pattern promises no word, so every line pays for its regex", f.name)
+		}
+		line, ok := samples[f.name]
+		if !ok {
+			t.Errorf("%s has no sample line here; add one that the pattern matches", f.name)
+			continue
+		}
+		if !f.pattern.MatchString(line) {
+			t.Errorf("%s: the sample %q does not match the pattern, so it proves nothing", f.name, line)
+		}
+		if !mayMatchForbidden(i, line) {
+			t.Errorf("%s: the words %q skip %q, a line the pattern matches", f.name, forbiddenWords[i], line)
 		}
 	}
 }

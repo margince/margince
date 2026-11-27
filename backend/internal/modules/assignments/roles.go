@@ -3,11 +3,11 @@
 
 package assignments
 
-// The administered vocabulary of responsibilities (record_role). Same catalog
-// shape as deal_acquisition_source and lead_source — stable key, editable
-// label, retire rather than delete — plus the two applicability sets that make
-// a role mean something: which record kinds it can be held on, and whether a
-// user, a team or either may hold it.
+// The administered vocabulary of responsibilities (record_role). It has the
+// catalog shape of deal_acquisition_source and lead_origin: a stable key, an
+// editable label, retired rather than deleted. Two applicability sets give a
+// role its meaning. One names the record kinds it can be held on. The other
+// says whether a user, a team or either may hold it.
 
 import (
 	"context"
@@ -19,7 +19,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/kernel/auditentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -31,6 +31,14 @@ const (
 	roleKeyColumn   = "key"
 	roleLabelColumn = "label"
 	codeRequired    = "required"
+)
+
+// The indexes holding one role per key and per label (trimmed, case-folded,
+// retired roles included), and the noun their refusal names.
+const (
+	roleKeyIndex   = "record_role_key_key"
+	roleLabelIndex = "record_role_label_once"
+	roleEntry      = "a record role"
 )
 
 // roleColumns is what a role read returns, shared by the list and the single
@@ -96,6 +104,9 @@ func (s *Store) CreateRecordRole(
 			Field: roleLabelColumn, Code: codeRequired, Message: "label is required",
 		}
 	}
+	if err := httperr.RequireWithin(roleLabelColumn, label, values.TextLabelCharacters); err != nil {
+		return crmcontracts.RecordRole{}, err
+	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
 		key = values.CatalogKey(label)
@@ -122,11 +133,8 @@ func (s *Store) CreateRecordRole(
 			`INSERT INTO record_role (id, key, label, record_types, assignee_kinds, sort_order)
 			 VALUES ($1, $2, $3, $4, $5, $6)`,
 			id, key, label, recordTypes, assigneeKinds, in.SortOrder)
-		if storekit.IsUniqueViolation(err) {
-			return apperrors.ErrConflict
-		}
 		if err != nil {
-			return fmt.Errorf("insert record role: %w", err)
+			return storekit.NameTaken(fmt.Errorf("insert record role: %w", err), roleEntry, label, roleKeyIndex, roleLabelIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", auditentity.RecordRole, id, nil,
 			map[string]any{roleKeyColumn: key, roleLabelColumn: label}); err != nil {
@@ -199,7 +207,7 @@ func (s *Store) UpdateRecordRole(
 			return err
 		}
 		if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
-			return err
+			return storekit.NameTaken(err, roleEntry, storekit.NameAfter(before.Label, in.Label), roleLabelIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", auditentity.RecordRole, id,
 			patch.Before(), patch.After()); err != nil {
@@ -219,6 +227,11 @@ func checkRoleUpdate(in UpdateRecordRoleInput) (recordTypes, assigneeKinds []str
 	if in.Label != nil && strings.TrimSpace(*in.Label) == "" {
 		return nil, nil, &values.ParseError{
 			Field: roleLabelColumn, Code: codeRequired, Message: "label cannot be blank",
+		}
+	}
+	if in.Label != nil {
+		if err := httperr.RequireWithin(roleLabelColumn, strings.TrimSpace(*in.Label), values.TextLabelCharacters); err != nil {
+			return nil, nil, err
 		}
 	}
 	if in.RecordTypes != nil {

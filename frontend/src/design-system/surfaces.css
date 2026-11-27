@@ -29,7 +29,6 @@
   .rmap-panel,
   .rmap-empty,
   .emailthread__message,
-  .sourceemail,
   .code-block,
   .md-code,
   .file-preview-stage,
@@ -128,7 +127,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -212,7 +210,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -311,7 +308,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -395,7 +391,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -479,7 +474,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -578,7 +572,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -662,7 +655,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -746,7 +738,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -830,7 +821,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -930,7 +920,8 @@
   .mw-aistat-pop,
   .ddeck-tray:not(.panel-foot > .ddeck-tray),
   .notifbell-loose,
-  .overflow-menu-labelled
+  .overflow-menu-labelled,
+  .trajectory-chart-readout
 ) {
   --ground: var(--bgElevated);
   --groundEdge: var(--ladder1Edge);
@@ -966,7 +957,8 @@
     .mw-aistat-pop,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
     .notifbell-loose,
-    .overflow-menu-labelled
+    .overflow-menu-labelled,
+    .trajectory-chart-readout
   )
   :where(
     .panel:not(.analytics-sheet .panel),
@@ -986,7 +978,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -1086,7 +1077,8 @@
     .mw-aistat-pop,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
     .notifbell-loose,
-    .overflow-menu-labelled
+    .overflow-menu-labelled,
+    .trajectory-chart-readout
   )
   :where(
     .panel:not(.analytics-sheet .panel),
@@ -1106,7 +1098,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -1190,7 +1181,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -1290,7 +1280,8 @@
     .mw-aistat-pop,
     .ddeck-tray:not(.panel-foot > .ddeck-tray),
     .notifbell-loose,
-    .overflow-menu-labelled
+    .overflow-menu-labelled,
+    .trajectory-chart-readout
   )
   :where(
     .panel:not(.analytics-sheet .panel),
@@ -1310,7 +1301,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -1394,7 +1384,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -1478,7 +1467,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,
@@ -1641,7 +1629,6 @@
     .rmap-panel,
     .rmap-empty,
     .emailthread__message,
-    .sourceemail,
     .code-block,
     .md-code,
     .file-preview-stage,

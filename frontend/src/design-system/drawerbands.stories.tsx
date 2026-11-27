@@ -39,11 +39,10 @@ function BandedDrawer({ wide }: Readonly<{ wide: boolean }>) {
         labelledBy={titleId}
         intent={wide ? "drawer-reading" : "drawer"}
       >
-        <DrawerHead>
+        <DrawerHead mark={<Badge>Public sources only</Badge>}>
           <Heading size="large" id={titleId} className="t-h2 modal-title">
             Research on Anna Brandt
           </Heading>
-          <Badge>Public sources only</Badge>
         </DrawerHead>
         <DrawerBody>
           {claims().map((claim) => (

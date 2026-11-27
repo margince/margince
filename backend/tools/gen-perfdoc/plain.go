@@ -27,6 +27,8 @@ const (
 	journey
 	// firstLoad: one ungated try after a restart, told as a sentence.
 	firstLoad
+	// recorded: rows timed beside a budget and never judged by it; the slowest is the time.
+	recorded
 )
 
 type moment struct {
@@ -62,7 +64,14 @@ var questions = []question{
 		{"lists", "A list of 50 records", screen},
 		{"record_open", "Opening a record", screen},
 		{"contact_360", "A contact's whole story", screen},
+		{"contact_page", "The rest of a contact's page", recorded},
 		{"company_360", "A company's whole page", screen},
+	}},
+	{"How fast does a record with a long history open?", []moment{
+		{"history_company_360", "A company's whole page", recorded},
+		{"history_contact_360", "A contact's whole story", recorded},
+		{"history_search_to_deal", "Search, then open the deal", recorded},
+		{"history_thread", "One long mail conversation", recorded},
 	}},
 	{"How fast is the analytics screen?", []moment{
 		{"analytics", "The analytics screen", screen},
@@ -88,6 +97,7 @@ many tries, and the time shown is one that nearly every try beat.
 | 🔴 Too slow | Over the promise with no fix under way yet. |
 | 🔴 Failed | Some tries got no answer, so no time can be trusted. |
 | ⚪ Not measured | The screen had nothing to show yet, or the run cannot prove it. |
+| ⚪ with a time | Measured, but we make no promise for it yet. |
 
 `
 
@@ -158,7 +168,11 @@ func renderQuestion(b *strings.Builder, q question, rows map[string]flowRows) {
 			after = append(after, firstLoadLines(mo, seats)...)
 			continue
 		}
-		rep, manager := answerFor(mo.kind, seats["rep"]), answerFor(mo.kind, seats["manager"])
+		answerOf := func(rows []measurement) answer { return answerFor(mo.kind, rows) }
+		if mo.kind == recorded {
+			answerOf = recordedAnswer
+		}
+		rep, manager := answerOf(seats["rep"]), answerOf(seats["manager"])
 		table = append(table, fmt.Sprintf("| %s | %s | %s | %s |", mo.label, rep.cell(), manager.cell(), worstOf(rep, manager).words()))
 	}
 	if len(table) == 0 && len(after) == 0 {
@@ -226,6 +240,8 @@ type answer struct {
 	ms       float64
 	budgetMs float64
 	issue    int
+	// recorded is a time no promise covers yet.
+	recorded bool
 }
 
 // answerFor folds a seat's rows for one moment into one answer: the worst
@@ -255,6 +271,21 @@ func answerFor(kind momentKind, rows []measurement) answer {
 	return a
 }
 
+// recordedAnswer is the slowest row a seat recorded without a budget. A failed
+// try still fails, as it does on a judged row.
+func recordedAnswer(rows []measurement) answer {
+	var a answer
+	for _, m := range rows {
+		if judge(m).sev == sevFailed {
+			return answer{measured: true, sev: sevFailed}
+		}
+		if m.Verdict == storedNotGated && m.Samples > 0 && m.P95Ms > a.ms {
+			a = answer{measured: true, recorded: true, ms: m.P95Ms}
+		}
+	}
+	return a
+}
+
 func worstOf(a, b answer) answer {
 	if !a.measured || (b.measured && b.sev > a.sev) {
 		return b
@@ -265,6 +296,9 @@ func worstOf(a, b answer) answer {
 func (a answer) cell() string {
 	if !a.measured {
 		return "⚪ Not measured"
+	}
+	if a.recorded {
+		return "⚪ " + spokenTime(a.ms)
 	}
 	switch a.sev {
 	case sevFailed:
@@ -288,6 +322,9 @@ func (a answer) promise() string {
 func (a answer) words() string {
 	if !a.measured {
 		return "Not measured yet."
+	}
+	if a.recorded {
+		return "Measured only: no promise covers a history this long yet."
 	}
 	switch a.sev {
 	case sevWithin:
@@ -397,6 +434,10 @@ func renderCorpusFacts(b *strings.Builder, c *corpus) {
 		if c.AICalls+c.PendingApprovals+c.AppliedApprovals > 0 {
 			fmt.Fprintf(b, "It also holds %s model calls this month, %s approvals waiting, %s applied today and %s expired.\n",
 				thousands(c.AICalls), thousands(c.PendingApprovals), thousands(c.AppliedApprovals), thousands(c.ExpiredApprovals))
+		}
+		if c.LargestCompany > 0 {
+			fmt.Fprintf(b, "Its longest histories are a company with %s activities, a deal with %s, a contact with %s\nand a mail conversation of %s messages.\n",
+				thousands(c.LargestCompany), thousands(c.LargestDeal), thousands(c.LargestContact), thousands(c.LargestThread))
 		}
 	}
 }

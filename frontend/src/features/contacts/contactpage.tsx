@@ -1,11 +1,7 @@
 import { useQuery } from "@tanstack/react-query";
 import { type ReactNode, useCallback, useId, useState } from "react";
 import type { components } from "../../api/schema";
-import {
-  type ActivityGate,
-  useActivityGate,
-} from "../../components/activitygate";
-import { EditAccessRequest } from "../../components/editaccessrequest";
+import { useActivityGate } from "../../components/activitygate";
 import { MergedIntoSentence } from "../../components/historymergedref";
 import {
   LatestInboundLine,
@@ -62,7 +58,7 @@ import {
   runContactMomentAction,
   useComposer,
 } from "./contactpage.drawers";
-import { ContactMarks } from "./contactpage.marks";
+import { ContactPulse, placeLogRefusal } from "./contactpage.marks";
 import {
   ContactRecordTabs,
   ContactTabPanel,
@@ -75,35 +71,6 @@ export type Contact360 = components["schemas"]["Contact360"];
 type Contact = components["schemas"]["Contact"];
 
 export type ContactMomentAction = components["schemas"]["ContactMomentAction"];
-
-// The refusals the left card's footnote states, or nothing while the record
-// and the activity gate refuse nothing.
-function refusalsOf(
-  readOnlyReason: string | undefined,
-  readOnlyReasonId: string,
-  activity: ActivityGate,
-  row: Contact | undefined,
-  t: ReturnType<typeof useT>,
-): ReactNode {
-  const activityRefused = activity.refusedId !== undefined;
-  if (!readOnlyReason && !activityRefused) {
-    return undefined;
-  }
-  return (
-    <>
-      {readOnlyReason && <span id={readOnlyReasonId}>{readOnlyReason}</span>}
-      {readOnlyReason && activityRefused && " "}
-      {activityRefused && (
-        <span id={activity.sentenceId}>
-          {t(activity.refusalKey ?? "record.logActivityRefused")}
-        </span>
-      )}
-      {readOnlyReason && row && (
-        <EditAccessRequest kind="contact" record={row} />
-      )}
-    </>
-  );
-}
 
 // An archived contact that was merged says where it went, after its reason.
 function mergedInto(row: Contact | undefined): ReactNode {
@@ -133,7 +100,7 @@ export function ContactPageV2({
   const view = useContact360(id, !record.data?.archived_at);
 
   const guard = useConsentGuard(id, live);
-  const activity = useActivityGate(record.data ?? null);
+  const activity = useActivityGate("contact", record.data ?? null);
   const latest = useLatestInbound("contact", id);
   const writeRefusalId = useId();
 
@@ -185,8 +152,8 @@ export function ContactPageV2({
   const shownRow = record.data?.archived_at ? record.data : view.data?.contact;
   const readOnlyReason = useKindWriteRefusal("contact", shownRow);
   const refusedReasonId = readOnlyReason ? readOnlyReasonId : undefined;
-  // A live contact states its read-only sentence in the left card's
-  // footnote; the archived page has no such card, so its band states it.
+  // A live contact states its read-only sentence in the head's View only
+  // pill; the archived page states it in its band.
   const band = useWaitingDraftBand({
     anchor: { type: "contact", id },
     composerOpen: drawer === "composer",
@@ -234,16 +201,10 @@ export function ContactPageV2({
       nextMeetingId: view.data.next_meeting?.activity_id ?? null,
     });
 
-  // What the record refuses this reader, stated once at the foot of the left
-  // card: every refused verb points at its sentence by id. The rail adds the
-  // Email verb's own refusal, which it reads from the same transports.
-  const refusals = refusalsOf(
-    readOnlyReason,
-    readOnlyReasonId,
-    activity,
-    shownRow,
-    t,
-  );
+  // A contact this reader may only view says so once, in the head's pill.
+  // Any other refusal stays at the foot of the left card, beside the Email
+  // verb's own, which the rail reads from the same transports.
+  const logRefusal = placeLogRefusal(activity, t, readOnlyReason);
   const contactDetails = (
     <ContactRail
       view={view.data}
@@ -255,7 +216,7 @@ export function ContactPageV2({
           void guard.refetch();
         },
       }}
-      refusals={refusals}
+      refusals={logRefusal.footnote}
       writeRefusalId={writeRefusalId}
     />
   );
@@ -289,7 +250,13 @@ export function ContactPageV2({
             // What they do and where under the name, then the pills. The ways
             // to reach them are details, and live in the aside.
             nameBadge={<ContactSubtitle view={view.data} />}
-            pulse={<ContactMarks view={view.data} />}
+            pulse={
+              <ContactPulse
+                view={view.data}
+                reasonId={readOnlyReasonId}
+                activityRefused={logRefusal.head}
+              />
+            }
             latest={
               tab !== "overview" && (
                 <LatestInboundLine
@@ -299,7 +266,7 @@ export function ContactPageV2({
               )
             }
             actions={
-              // refusedReasonId is the same sentence the band below states.
+              // refusedReasonId is the sentence the View only pill holds.
               // It is one write gate for the whole header, not a narrower one per
               // verb. Edit, merge and archive ride inside the header's menu,
               // so they read it too.

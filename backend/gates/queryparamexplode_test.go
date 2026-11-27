@@ -44,7 +44,7 @@ func TestQueryParametersAreEncodedTheWayTheClientSendsThem(t *testing.T) {
 		t.Fatalf("read crm.yaml: %v", err)
 	}
 	var doc yaml.Node
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parse crm.yaml: %v", err)
 	}
 	defer commaJoinedQueryParams.AssertAllMatched(t)

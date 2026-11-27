@@ -42,6 +42,7 @@ import (
 	"slices"
 	"strconv"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -67,6 +68,10 @@ const extSecretsStoreDir = "internal/platform/extsecrets"
 // inside a platform package the gate did not walk — and the hand-kept list of
 // those was short by two, which is what the derivation replaced.
 const keyVaultStoreDir = "internal/platform/keyvault"
+
+// generatedSummaryStoreDir holds the store the summary writers, the erasure
+// and the record merges share, so one package writes generated_summary.
+const generatedSummaryStoreDir = "internal/platform/generatedsummary"
 
 // jobsStoreDir runs the River fleet, and is where river_job is written from —
 // discovered by platformStoreDirs rather than named here; the constant exists
@@ -212,9 +217,7 @@ type tableWrite struct {
 // a struct field rather than a name this walker can read, each with the tables
 // the field can actually hold. Ratified, not discovered: the reason must name
 // them, so the exception is re-checkable against the construction sites.
-var indirectTableArg = gatekit.Waive(map[string]string{
-	"internal/modules/contacts:w.table": "the evidence writer is one shape over two sidecars; the field is set at four struct literals in this package, to the company_fact constant and to company_profile_field, and contacts owns both",
-})
+var indirectTableArg = gatekit.Waive(map[string]string{})
 
 // tableArgText reads a storekit table argument: a string literal, or an
 // identifier declared as a string constant in the same package.
@@ -234,12 +237,39 @@ func tableArgText(arg ast.Expr, consts map[string]string) (string, bool) {
 	}
 }
 
-// collectTableWrites walks every non-test module/compose source file and
-// records each SQL write target (string literals plus the storekit applier and
-// row-lock table arguments, see storekitTableArg) under its owning directory.
+// tableWriteCensus holds the write census once per test binary: seven tests
+// read it, and the tree does not change while they do. unreadable keeps the
+// table arguments it could not read, so every reader still reports them.
+var tableWriteCensus struct {
+	sync.Mutex
+	built      bool
+	writes     map[string][]tableWrite
+	unreadable []string
+}
+
+// collectTableWrites answers the shared write census, read-only. The first
+// caller builds it, so a walk that fails stops that caller's test.
 func collectTableWrites(t *testing.T) map[string][]tableWrite {
 	t.Helper()
+	tableWriteCensus.Lock()
+	defer tableWriteCensus.Unlock()
+	if !tableWriteCensus.built {
+		tableWriteCensus.writes, tableWriteCensus.unreadable = buildTableWrites(t)
+		tableWriteCensus.built = true
+	}
+	for _, finding := range tableWriteCensus.unreadable {
+		t.Error(finding)
+	}
+	return tableWriteCensus.writes
+}
+
+// buildTableWrites walks every non-test module/compose source file and records
+// each SQL write target under its owning directory. A target is a string
+// literal, or a storekit applier or row-lock table argument (storekitTableArg).
+func buildTableWrites(t *testing.T) (map[string][]tableWrite, []string) {
+	t.Helper()
 	writes := map[string][]tableWrite{} // owning dir → writes
+	var unreadable []string
 	// storekitWrites counts what the CallExpr arm attributes. This gate lost
 	// that whole arm once — it matched a method name no Patch has — and a
 	// matcher that matches nothing is indistinguishable from a tree with no
@@ -303,10 +333,10 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 						// attribute, and a skip here reads exactly like a module
 						// that writes nothing. Reported, so the write names its
 						// table where a reader — and this gate — can see it.
-						t.Errorf("%s: %s.%s takes its table from an expression this gate cannot read — "+
+						unreadable = append(unreadable, fmt.Sprintf("%s: %s.%s takes its table from an expression this gate cannot read — "+
 							"name the table in a string literal or a package-level string constant, "+
 							"or the write is attributed to no owner at all",
-							fset.Position(node.Pos()), exprText(fset, sel.X), sel.Sel.Name)
+							fset.Position(node.Pos()), exprText(fset, sel.X), sel.Sel.Name))
 						return
 					}
 					// Not "insert", and that is checkable rather than assumed:
@@ -338,7 +368,7 @@ func collectTableWrites(t *testing.T) map[string][]tableWrite {
 		t.Fatalf("attributed only %d storekit table arguments, expected at least %d — the %v matcher has stopped matching, and every versioned write in the tree is now invisible to this gate",
 			storekitWrites, storekitWriteFloor, slices.Sorted(maps.Keys(storekitTableArg)))
 	}
-	return writes
+	return writes, unreadable
 }
 
 // storekitWriteFloor is set below the live count so ordinary refactoring does

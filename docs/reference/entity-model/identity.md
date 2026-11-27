@@ -6,7 +6,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## app_user
 
-39 columns · primary key `(id)` · referenced by 154 foreign keys
+39 columns · primary key `(id)` · referenced by 150 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -106,7 +106,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## auth_token
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -115,7 +115,6 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `mail_failed_at` | `timestamp with time zone` |  |  |
 | `mail_queued_at` | `timestamp with time zone` |  |  |
 | `mail_sent_at` | `timestamp with time zone` |  |  |
-| `purpose` | `text` | yes | One of `password_reset`, `email_verify`, `invite`. |
 | `token_hash` | `text` | yes |  |
 | `used_at` | `timestamp with time zone` |  |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
@@ -130,29 +129,26 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 **Rules**
 
 - `auth_token_expires_after_creation`: `CHECK ((expires_at > created_at))`
-- `auth_token_purpose_check`: `CHECK ((purpose = ANY (ARRAY['password_reset', 'email_verify', 'invite'])))`
 - `auth_token_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 
 **Indexes**
 
 - `auth_token_pkey`: `unique, btree (id)`
 - `idx_auth_token_hash`: `unique, btree (token_hash)`
-- `idx_auth_token_user`: `btree (user_id, purpose) WHERE (used_at IS NULL)`
 - `idx_auth_token_user_cascade`: `btree (user_id)`
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"purpose": 20000, "token_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"purpose":20000,"token_hash":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"purpose": 20000, "token_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"purpose":20000,"token_hash":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"token_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"token_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"token_hash":20000}')`
 
 ## federated_identity
 
-6 columns · primary key `(id)` · referenced by 0 foreign keys
+5 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `email_at_link` | `text` | yes |  |
 | `provider` | `text` | yes |  |
 | `subject` | `text` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
@@ -177,8 +173,8 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"provider": 20000, "email_at_link": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"email_at_link":20000,"provider":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000, "email_at_link": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"email_at_link":20000,"provider":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"provider":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"provider": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"provider":20000}')`
 
 ## field_mask
 
@@ -316,6 +312,9 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `oauth_authorization_code_code_hash_check`: `CHECK ((code_hash ~ '^[0-9a-f]{64}$'))`
 - `oauth_authorization_code_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `oauth_authorization_code_scopes_present`: `CHECK ((cardinality(scopes) > 0))`
+- `oauth_authorization_code_scopes_vocabulary`: `CHECK ((scopes <@ ARRAY['read', 'draft', 'write', 'send', 'enrich', 'offline_access']))`
+- `oauth_authorization_code_work_areas_vocabulary`: `CHECK ((work_areas <@ ARRAY['business', 'compliance', 'capture', 'workspace_settings', 'admin_settings', 'own_account', 'agent_governance', 'operator', 'public']))`
 - `oauth_code_unique`: `UNIQUE (code_hash)`
 
 **Indexes**
@@ -389,6 +388,12 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | `client_id` | `oauth_client` | the parent cannot be deleted while this row points at it |
 | `lent_passport_id` | `passport` | deleting the parent keeps this row and clears the link |
 | `user_id` | `app_user` | deleting the parent deletes this row |
+
+**Rules**
+
+- `oauth_grant_scopes_present`: `CHECK ((cardinality(scopes) > 0))`
+- `oauth_grant_scopes_vocabulary`: `CHECK ((scopes <@ ARRAY['read', 'draft', 'write', 'send', 'enrich']))`
+- `oauth_grant_work_areas_vocabulary`: `CHECK ((work_areas <@ ARRAY['business', 'compliance', 'capture', 'workspace_settings', 'admin_settings', 'own_account', 'agent_governance', 'operator', 'public']))`
 
 **Indexes**
 
@@ -522,8 +527,11 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 - `passport_app_caller_pair`: `CHECK (((app_issuer IS NULL) = (app_subject IS NULL)))`
 - `passport_expires_after_creation`: `CHECK ((expires_at > created_at))`
+- `passport_scopes_present`: `CHECK ((cardinality(scopes) > 0))`
+- `passport_scopes_vocabulary`: `CHECK ((scopes <@ ARRAY['read', 'draft', 'write', 'send', 'enrich']))`
 - `passport_token_hash_check`: `CHECK ((token_hash ~ '^[0-9a-f]{64}$'))`
 - `passport_token_hash_key`: `UNIQUE (token_hash)`
+- `passport_work_areas_vocabulary`: `CHECK ((work_areas <@ ARRAY['business', 'compliance', 'capture', 'workspace_settings', 'admin_settings', 'own_account', 'agent_governance', 'operator', 'public']))`
 - `uq_passport_id_owner`: `UNIQUE (id, on_behalf_of)`
 
 **Indexes**
@@ -735,7 +743,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 ## team
 
-6 columns · primary key `(id)` · referenced by 10 foreign keys
+6 columns · primary key `(id)` · referenced by 11 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -754,7 +762,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 
 **Indexes**
 
-- `team_name_unique`: `unique, btree (name) WHERE (archived_at IS NULL)`
+- `team_name_unique`: `unique, btree (lower(btrim(name))) WHERE (archived_at IS NULL)`
 - `team_pkey`: `unique, btree (id)`
 
 **Triggers**

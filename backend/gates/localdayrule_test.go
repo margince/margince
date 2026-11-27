@@ -24,6 +24,10 @@ var localDaySpellings = regexp.MustCompile(
 	`installationZone\(|TaskDue(Before|From|Order)SQL\(|InstallationZoneSQL|CURRENT_DATE|now\(\)::date|AT TIME ZONE|` +
 		`date_trunc\('day'|Truncate\(24 ?\* ?time\.Hour\)|TimezoneAppliedTx|ZoneAppliedTx|TodaySQL\(`)
 
+// localDayWords holds a word of every localDaySpellings match, so a file with
+// none of them is skipped unscanned.
+var localDayWords = requiredWords(localDaySpellings)
+
 // ruleOwned is the code that implements the rule or owns the stored zone.
 var ruleOwned = []string{
 	"internal/compose/dayrule/",
@@ -62,6 +66,7 @@ var allowed = gatekit.Waive(map[string]string{
 	"internal/compose/handoffseam.go":                         record,
 	"internal/compose/installseam/":                           "installation set-up reads the installation zone",
 	"internal/compose/integration/harness.go":                 "the test harness seeds the installation zone",
+	"internal/compose/jobschedulebook.go":                     "a clock-time extension job runs once for the installation, on its zone",
 	"internal/compose/jobs_pastactivityclock.go":              combined,
 	"internal/compose/jobs_riskverdict.go":                    combined,
 	"internal/compose/lifecyclereview/":                       record,
@@ -118,7 +123,7 @@ func TestEveryLocalDayComputationGoesThroughTheRuleOrIsDeclared(t *testing.T) {
 		if strings.HasSuffix(path, "_test.go") || strings.HasPrefix(path, "internal/contracts/") {
 			return
 		}
-		if !localDaySpellings.MatchString(text) {
+		if !mayHoldFolded(text, localDayWords...) || !localDaySpellings.MatchString(text) {
 			return
 		}
 		found++

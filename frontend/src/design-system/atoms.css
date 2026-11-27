@@ -211,6 +211,9 @@
 .empty {
   text-align: start;
   padding: var(--space-5) var(--padCard);
+  /* An empty answer often repeats what the reader typed, which may be one
+     unbroken run; it wraps inside the card rather than running past it. */
+  overflow-wrap: anywhere;
 }
 /* The instructional variant: a heading in the primary ink, a measured
    paragraph under it, the one verb below. The measure keeps the explanation
@@ -275,9 +278,8 @@
   place-items: center;
   z-index: 50;
 }
-/* Every dialog and drawer is drawn on the page card's white (its rung is pinned
-   in the ladder), and paints that solid ground, which level 1 leaves see-through
-   in dark. */
+/* Every dialog and drawer is drawn on the page card's ground: its rung is pinned
+   in the ladder. */
 /* The box takes focus only when it holds nothing else to land on. It is not a
    control, so it draws no ring; the first Tab reaches the close door, which does. */
 .modal:focus {
@@ -346,6 +348,29 @@
     var(--space-4)
   );
   min-block-size: var(--modal-close-reason-clearance, 0);
+}
+/* A title with a mark: the line clears the corner, and the mark follows the
+   title's last word instead of the padding the corner rule gives a heading.
+   The line keeps the title's own space below it. */
+.modal > .drawer-head > .drawer-head-line {
+  display: flex;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--space-2);
+  padding-inline-end: calc(
+    var(--modal-corner, var(--controlHeight)) +
+    var(--space-4)
+  );
+}
+.modal > .drawer-head > .drawer-head-line:has(> .modal-title) {
+  margin-bottom: var(--space-3);
+}
+.modal
+  > .drawer-head
+  > .drawer-head-line
+  > :is(h1, h2, h3, .modal-title):first-child {
+  margin-block: 0;
+  padding-inline-end: 0;
 }
 /* A close control with a reason hangs up to two caption lines under the
    button, so the first line of content starts below them. */
@@ -907,8 +932,8 @@
   border-radius: 50%;
   background: var(--accent);
 }
-/* Keyboard focus reads an accent-token ring (matches .input/.textarea) rather
- * than the browser's off-palette native outline. */
+/* Keyboard focus shows as the glow. The outline is transparent until forced
+ * colours repaint it, so the browser's off-palette ring never shows. */
 .segmented button:focus-visible {
   outline: var(--focus-ring-forced);
   outline-offset: 2px;
@@ -1109,8 +1134,8 @@
 }
 .recordpicker-option {
   width: 100%;
-  text-align: left;
-  /* The name with its detail line beneath it, both from the left edge. */
+  text-align: start;
+  /* The name with its detail line beneath it, both from the start edge. */
   flex-direction: column;
   align-items: flex-start;
   gap: 0;
@@ -1281,7 +1306,7 @@ span.error-line {
   font: inherit;
   color: inherit;
   background: var(--bgField);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-control);
   padding: var(--inputPaddingY) var(--inputPaddingX);
   min-block-size: var(--inputHeight);
@@ -1331,6 +1356,12 @@ span.error-line {
   padding: 0 var(--controlPaddingX);
   font-weight: var(--fontWeightMedium);
 }
+/* The compact face: the same field on the button height, for a view filter in
+   a card head, where it stands beside 32px controls and not in a form column.
+   After `.select-control`, so it wins on source order as that rule does. */
+.select-compact {
+  min-block-size: var(--controlHeight);
+}
 /* Nor is it a well: a face rather than a hole, at the resting depth a button
    takes. Two classes here, for the opposite reason to the rule above — this one
    has to outrank `.input`'s own `--shadow-well` while still losing to the hover
@@ -1359,8 +1390,8 @@ span.error-line {
 /* The glow REPLACES the well rather than joining it: nothing in this product
    stacks a shadow under a shadow. */
 .input:focus {
-  border-color: var(--accent);
-  box-shadow: var(--focus-glow);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 /*
  * A field nobody may edit says so. Until this rule, it did not: `.input` sets
@@ -1377,19 +1408,28 @@ span.error-line {
  * focusable to be discoverable says it the ARIA way — a `disabled` attribute
  * takes it out of the tab order, which is the wrong answer for a field whose
  * label a reader still needs to reach.
+ *
+ * The edge drops to --borderStrong: 1.4.11 exempts a control nobody may use,
+ * and the full-strength edge is what reads as live.
  */
 .input:disabled,
 .input[aria-disabled="true"],
 .textarea:disabled,
 .textarea[aria-disabled="true"] {
   background: var(--bgInset);
+  border-color: var(--borderStrong);
   cursor: not-allowed;
 }
 /* The shell owns the boundary for a field that has something inside it, so it
    is the shell that has to dim — the input within it draws no fill of its own. */
-.field-shell:has(:disabled),
-.field-shell:has([aria-disabled="true"]) {
+.field-shell:has(
+  .input:disabled,
+  .input[aria-disabled="true"],
+  .textarea:disabled,
+  .textarea[aria-disabled="true"]
+) {
   background: var(--bgInset);
+  border-color: var(--borderStrong);
 }
 
 /* The field's OUTLINE, moved off the input, for the fields that have something
@@ -1406,7 +1446,7 @@ span.error-line {
   padding-inline: var(--inputPaddingX);
   min-block-size: var(--inputHeight);
   background: var(--bgField);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-sm);
   box-shadow: var(--shadow-well);
   transition:
@@ -1416,8 +1456,8 @@ span.error-line {
     color var(--dur-state) var(--ease-out);
 }
 .field-shell:focus-within {
-  border-color: var(--accent);
-  box-shadow: var(--focus-glow);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 /* A refused field says so in its boundary as well as in its words — but never
    ONLY in its boundary: the sentence under it carries the meaning, and this is
@@ -1432,7 +1472,7 @@ span.error-line {
   border-color: var(--danger);
 }
 .input[aria-invalid="true"]:focus {
-  box-shadow: var(--focus-glow-danger);
+  box-shadow: var(--focus-field-danger);
 }
 /* A textarea carries its own class rather than `.input`, so the boundary above
    never reached one: a refused body sat unmarked beside a refused subject that
@@ -1441,13 +1481,13 @@ span.error-line {
   border-color: var(--danger);
 }
 .textarea[aria-invalid="true"]:focus {
-  box-shadow: var(--focus-glow-danger);
+  box-shadow: var(--focus-field-danger);
 }
 .field-shell:has([aria-invalid="true"]) {
   border-color: var(--danger);
 }
 .field-shell:has([aria-invalid="true"]):focus-within {
-  box-shadow: var(--focus-glow-danger);
+  box-shadow: var(--focus-field-danger);
 }
 /* Inside the shell the input is only the text: the shell owns the fill, the
    boundary, the radius, the focus ring, the horizontal padding and the HEIGHT.
@@ -1593,7 +1633,8 @@ span.error-line {
 /* The field whose container draws the chrome (SearchField `flush`): the ⌘K
    palette's bar has its own ground, inset and bottom rule, so a bordered field
    nested inside it reads as a box in a box. The magnifier stays — it is the
-   affordance, not the chrome — and moves to the bar's own left inset. */
+   affordance, not the chrome — and moves to the bar's own left inset. The
+   container clears the field's edge, since only its sheet knows it rules one. */
 .input-icon-flush {
   display: flex;
   flex: 1;
@@ -1603,7 +1644,6 @@ span.error-line {
   left: 0;
 }
 .input-icon-flush .input {
-  border: 0;
   background: transparent;
   box-shadow: none;
   border-radius: 0;
@@ -1614,7 +1654,6 @@ span.error-line {
 .input-icon-flush .input:focus-visible {
   outline: none;
   box-shadow: none;
-  border: 0;
 }
 
 /* A textarea is the same field as .input, only taller: the two sit next to each
@@ -1634,7 +1673,7 @@ span.error-line {
   font: inherit;
   color: inherit;
   background: var(--bgField);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-sm);
   /* The field's own insets, so a textarea and the input above it start their
      text in the same place. Both figures are stated: a box of several lines has
@@ -1652,8 +1691,8 @@ span.error-line {
   resize: vertical;
 }
 .textarea:focus {
-  border-color: var(--accent);
-  box-shadow: var(--focus-glow);
+  border-color: var(--focusEdge);
+  box-shadow: var(--focus-field);
 }
 /* A note that grows with what is typed, from three lines up to ten, then
    scrolls. Dragging the corner still resizes it. */
@@ -1786,6 +1825,8 @@ span.error-line {
   width: 14px;
   height: 14px;
   flex: none;
+  /* Centred on the summary's first line, also where a summary aligns to start. */
+  margin-block: calc((1lh - 14px) / 2);
 }
 .disclosure-body {
   margin-top: var(--space-3);
@@ -2145,6 +2186,26 @@ span.error-line {
 .stat-strip[data-lead] > :first-child .stat-card-value {
   font: var(--fontPlateLeadFigure);
   font-variant-numeric: tabular-nums;
+}
+/* A plate of chart tabs heads its chart, so every figure is set large and
+   the shown one stands out by its ink, not its size (statstrip.css). */
+.stat-strip[data-density="plate"]:has(.stat-card-open[aria-pressed])
+.stat-card-value {
+  font: var(--fontHeadingXLarge);
+  font-weight: var(--fontWeightMedium);
+  color: var(--textSecondary);
+}
+.stat-strip[data-density="plate"]
+  > :is(.stat-card, * > .stat-card):has([aria-pressed="true"])
+  .stat-card-value {
+  color: var(--textPrimary);
+}
+/* On a row of chart tabs each figure's receipt waits for the reader: it
+   shows on hover and on focus, so four receipts never crowd the row. */
+.stat-strip[data-density="plate"]:has(.stat-card-open[aria-pressed])
+  .stat-card:not(:hover, :focus-within)
+  :is(.stat-card-source, .stat-card-basis:not([aria-expanded="true"])) {
+  opacity: 0;
 }
 /* A reading that is a word, such as a status, is set as words: it is an
    answer about the figure, not a figure. */

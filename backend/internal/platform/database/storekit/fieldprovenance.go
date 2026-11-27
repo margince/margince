@@ -3,10 +3,10 @@
 
 package storekit
 
-// Field-level provenance (B-E02.12): the ONE spelling of the shared
-// field_provenance child table — modules stamp and read per-field
-// origin through here, never with their own SQL, so the table's shape
-// has a single owner. Row-level source/captured_by on the record stays
+// Field-level provenance: the one spelling of the stamps in the shared
+// field_provenance table. Modules stamp and read per-field origin through here,
+// never with their own SQL. A stamp is a row without a value. A row with one is
+// company or contact evidence, which the contacts module owns. Row-level source/captured_by on the record stays
 // the creation default; FieldOrigins falls back to it for fields with
 // no field-level row (gate Q3→a: both layers coexist).
 
@@ -84,7 +84,7 @@ func FieldOrigins(ctx context.Context, tx pgx.Tx, objectType string, objectID id
 	rows, err := tx.Query(ctx, `
 		SELECT DISTINCT ON (field_name) field_name, source, captured_by, captured_at, confidence, evidence_ref
 		FROM field_provenance
-		WHERE object_type = $1 AND object_id = $2 AND field_name = ANY($3)
+		WHERE object_type = $1 AND object_id = $2 AND field_name = ANY($3) AND value IS NULL
 		ORDER BY field_name, captured_at DESC, id DESC`,
 		objectType, objectID, fields)
 	if err != nil {
@@ -111,7 +111,7 @@ func FieldOrigins(ctx context.Context, tx pgx.Tx, objectType string, objectID id
 func AgentWrittenFieldsSQL(objectType, idExpr string) string {
 	return `ARRAY(SELECT origin.field_name FROM (
 	   SELECT DISTINCT ON (field_name) field_name, captured_by, captured_at FROM field_provenance
-	    WHERE object_type = '` + objectType + `' AND object_id = ` + idExpr + `
+	    WHERE object_type = '` + objectType + `' AND object_id = ` + idExpr + ` AND value IS NULL
 	    ORDER BY field_name, captured_at DESC, id DESC) origin
 	  WHERE origin.captured_by LIKE 'agent:%'
 	    AND NOT EXISTS (SELECT 1 FROM audit_log edit
@@ -119,4 +119,26 @@ func AgentWrittenFieldsSQL(objectType, idExpr string) string {
 	            AND edit.action = 'update' AND edit.occurred_at > origin.captured_at
 	            AND edit.after ? origin.field_name)
 	  ORDER BY origin.field_name)`
+}
+
+// MoveFieldProvenance moves the provenance of the named fields from a
+// merged-away record to its survivor, and returns the rows it moved. A merge
+// calls it for the fields whose value the survivor took from the retired
+// record, so the origin travels with the value. Provenance of any other field
+// describes a value the merge did not keep, and stays.
+func MoveFieldProvenance(ctx context.Context, tx pgx.Tx, objectType string, from, to ids.UUID, fields []string) ([]ids.UUID, error) {
+	if len(fields) == 0 {
+		return nil, nil
+	}
+	rows, err := tx.Query(ctx, `UPDATE field_provenance SET object_id = $3
+		 WHERE object_type = $1 AND object_id = $2 AND field_name = ANY($4) AND value IS NULL RETURNING id`,
+		objectType, from, to, fields)
+	if err != nil {
+		return nil, fmt.Errorf("storekit: move field provenance: %w", err)
+	}
+	moved, err := pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+	if err != nil {
+		return nil, fmt.Errorf("storekit: move field provenance: %w", err)
+	}
+	return moved, nil
 }

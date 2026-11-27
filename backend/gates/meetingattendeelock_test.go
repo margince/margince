@@ -49,6 +49,8 @@ var attendeeSweeps = gatekit.Waive(map[string]string{
 		"activities a batch spans. It restates the address the row already carries",
 	"internal/modules/activities:CopyRosterSeatsTx": "copies a row's one roster seat into its seat set by row id, " +
 		"over whatever meetings a batch spans. Readers take both columns as one set, so no attendee set changes",
+	"internal/platform/database/storekit:LowercaseOlderParticipantAddresses": "lowercases the address a row already carries, over the rows " +
+		"its caller names, and folds two rows of one party into one. A caller that names a meeting holds its lock first",
 	"internal/modules/activities:storeParticipantEvidenceRows": "clears domain evidence by row id, across any activity a " +
 		"company change reaches. The attendee set stays the same",
 	"internal/compose/integration:LinkActivitySender":                             "an integration fixture, written before any judge runs",
@@ -121,7 +123,7 @@ func assertTheTextAgrees(t *testing.T, byDir map[string][]gatekit.ParsedFile) {
 	}
 	searched := map[string]bool{}
 	for path, src := range internalSources(t) {
-		if participantWrite.Match(src) {
+		if mayHoldWordsOf(string(src), participantWriteWords) && participantWrite.Match(src) {
 			searched[path] = true
 		}
 	}
@@ -254,11 +256,18 @@ func attendeeLockOrder(fn *ast.FuncDecl) (lockAt, rowLockAt token.Pos) {
 // attendeeCopy is a bulk COPY into the table, from SQL or from pgx's CopyFrom.
 var attendeeCopy = regexp.MustCompile(`(?is)\bCOPY\s+activity_participant\b|Identifier\{\s*"activity_participant"\s*\}`)
 
+// participantWriteWords and attendeeCopyWords are what every match of each
+// pattern holds, or nil when it promises none.
+var (
+	participantWriteWords = requiredWords(participantWrite)
+	attendeeCopyWords     = requiredWords(attendeeCopy)
+)
+
 // A COPY writes rows with no statement the census can read, so it is refused.
 func TestNothingCopiesIntoTheAttendeeTable(t *testing.T) {
 	t.Parallel()
 	for path, src := range internalSources(t) {
-		if attendeeCopy.Match(src) {
+		if mayHoldWordsOf(string(src), attendeeCopyWords) && attendeeCopy.Match(src) {
 			t.Errorf("%s copies into activity_participant. Write the rows with a statement that takes the attendee lock", path)
 		}
 	}

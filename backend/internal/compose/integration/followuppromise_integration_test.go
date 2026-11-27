@@ -50,7 +50,7 @@ func seedUnansweredMail(t *testing.T) unansweredPromise {
 	e := Setup(t)
 	p := e.SeedPromiseThread(t)
 	company := ids.From[ids.CompanyKind](e.SeedCompany(t, "Kunde GmbH", &e.AdminUser))
-	if _, err := e.Contacts.UpdateCompany(e.Admin(), company, contacts.UpdateCompanyInput{Lifecycle: new("customer")}); err != nil {
+	if _, err := e.Contacts.UpdateCompany(e.Admin(), company, contacts.UpdateCompanyInput{Status: new("customer")}); err != nil {
 		t.Fatalf("making the account a customer: %v", err)
 	}
 	if _, err := e.Contacts.CreateRelationship(e.Admin(), contacts.CreateRelationshipInput{

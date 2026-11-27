@@ -2,15 +2,21 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import { Bookmark } from "lucide-react";
+import { useContext, useState } from "react";
 import {
   isNarrowed,
   type ListOpening,
   type ListQuery,
   type SavedViewTab,
 } from "../../components/listquery";
+import {
+  matchesView,
+  OpenedViewContext,
+} from "../../components/listqueryviews";
 import { Button } from "../../design-system/atoms";
 import { ErrorLine } from "../../design-system/errorline";
 import { NamePrompt } from "../../design-system/nameprompt";
+import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
 import type { ViewResource } from "../../lib/filtersaddress";
 import { problemMessageOf } from "../../lib/problem";
@@ -18,6 +24,7 @@ import {
   type SavedView,
   useSavedViews,
   useSaveView,
+  viewNameTaken,
 } from "../../lib/savedviews.queries";
 import { ManageViewsButton } from "./savedviews.manage";
 
@@ -142,6 +149,7 @@ export function useSavedViewTabs(resource: ViewResource): SavedViewTab[] {
             filters: state.filters,
             includeArchived: state.includeArchived,
             perPage: state.perPage,
+            version: view.version,
           },
         ]
       : [];
@@ -160,13 +168,23 @@ export function useSavedViewTabs(resource: ViewResource): SavedViewTab[] {
 function SaveViewButton({
   resource,
   query,
-}: Readonly<{ resource: ViewResource; query: ListQuery }>) {
+  views,
+  asNew,
+}: Readonly<{
+  resource: ViewResource;
+  query: ListQuery;
+  views: readonly SavedView[];
+  /** Offered beside "Update": the trigger then says the view will be a new one. */
+  asNew: boolean;
+}>) {
   const t = useT();
+  const toast = useToast();
   const { create } = useSaveView();
+  const [nameTaken, setNameTaken] = useState(false);
 
   return (
     <NamePrompt
-      trigger={t("views.save")}
+      trigger={t(asNew ? "filters.saveAsNew" : "views.save")}
       icon={<Bookmark strokeWidth={1.5} aria-hidden="true" />}
       title={t("views.saveTitle")}
       label={t("views.name")}
@@ -176,13 +194,64 @@ function SaveViewButton({
       // is a ProblemError, and handing that to the body reader yields the
       // generic "request failed" instead of the reason the server gave.
       problem={create.isError ? problemMessageOf(create.error, t) : undefined}
-      onSave={(name, done) =>
-        create.mutate(
-          { resource, name, query: listStateFrom(query) },
-          { onSuccess: done },
-        )
-      }
+      nameProblem={nameTaken ? t("views.nameTaken") : null}
+      onSave={(name, done) => {
+        const taken = viewNameTaken(views, name);
+        setNameTaken(taken);
+        if (taken) {
+          return;
+        }
+        // The promise, not the mutate callback: the saved view makes this
+        // button leave, and a callback of an unmounted caller never runs.
+        create
+          .mutateAsync({ resource, name, query: listStateFrom(query) })
+          .then(() => {
+            done();
+            toast.show(t("filters.viewSaved"));
+          })
+          // A refusal is drawn from the mutation's own error state above.
+          .catch(() => undefined);
+      }}
     />
+  );
+}
+
+/**
+ * "Update": writes the list's dials over the view the reader opened and then
+ * changed, held to the version they opened it at. A write made since, even one
+ * a refetch has brought in, is then refused as a version skew rather than lost.
+ * Keys the view stores beside its list state are kept.
+ */
+function UpdateViewButton({
+  view,
+  version,
+  query,
+}: Readonly<{ view: SavedView; version: number; query: ListQuery }>) {
+  const t = useT();
+  const toast = useToast();
+  const { saveQuery } = useSaveView();
+  return (
+    <Button
+      pending={saveQuery.isPending}
+      onClick={() =>
+        saveQuery
+          .mutateAsync({
+            id: view.id,
+            version,
+            query: { ...view.query, ...listStateFrom(query) },
+          })
+          .then(
+            () => toast.show(t("views.updated", { name: view.name })),
+            (error: unknown) =>
+              toast.show(problemMessageOf(error, t), {
+                tone: "danger",
+                sticky: true,
+              }),
+          )
+      }
+    >
+      {t("views.update", { name: view.name })}
+    </Button>
   );
 }
 
@@ -216,7 +285,12 @@ export function SavedViewsFailure({
   );
 }
 
-/** Save view only once the reader has narrowed the list from how it opens. */
+/**
+ * Save view once the reader has narrowed the list from how it opens. It is not
+ * offered while a saved view already holds that list, which would be a second
+ * tab of the same rows. A changed view the reader opened can be updated in
+ * place, or kept beside a new one.
+ */
 export function SaveViewAction({
   resource,
   state,
@@ -225,15 +299,44 @@ export function SaveViewAction({
   state: ListOpening & Readonly<{ query: ListQuery }>;
 }>) {
   const views = useSavedViews(resource);
+  const openedView = useContext(OpenedViewContext);
+  if (views.data === undefined) {
+    // Until the reader's views are read, no name can be checked against them
+    // and no view can be known to hold this list already.
+    return null;
+  }
+  const saved = views.data;
+  const holdsThisList = (view: SavedView) => {
+    const stored = listStateOf(view);
+    return stored !== null && matchesView(stored, state.query);
+  };
+  const unsaved = isNarrowed(state.query, state) && !saved.some(holdsThisList);
+  const opened = saved.find(
+    (view) => view.id === openedView?.id && listStateOf(view) !== null,
+  );
+  // Only the version the reader opened may guard the write, never the cache's.
+  const openedVersion = openedView?.version;
   return (
     <>
-      {isNarrowed(state.query, state) && (
-        <SaveViewButton resource={resource} query={state.query} />
+      {unsaved && opened && openedVersion !== undefined && (
+        <UpdateViewButton
+          view={opened}
+          version={openedVersion}
+          query={state.query}
+        />
+      )}
+      {unsaved && (
+        <SaveViewButton
+          resource={resource}
+          query={state.query}
+          views={saved}
+          asNew={opened !== undefined}
+        />
       )}
       {/* Beside Save, because it is the same set of the reader's own views:
           a tab can be pressed but not named or removed, so this is the only
           place a view that has served its purpose can go. */}
-      {views.data && <ManageViewsButton views={views.data} />}
+      <ManageViewsButton views={saved} />
     </>
   );
 }

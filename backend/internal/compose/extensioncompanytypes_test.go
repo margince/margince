@@ -8,12 +8,12 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func TestRegisterExtensionsRegistersDeclaredCompanyTypes(t *testing.T) {
-	companytypes.Reset()
-	t.Cleanup(companytypes.Reset)
+	extregistrytest.Reset(t)
 	err := RegisterExtensions(composableAll([]extension.Extension{{
 		Name: "types-ok", Version: "0.0.1",
 		CompanyTypes: []extension.CompanyType{{Type: "reseller", Label: "Reseller"}},
@@ -28,6 +28,7 @@ func TestRegisterExtensionsRegistersDeclaredCompanyTypes(t *testing.T) {
 }
 
 func TestABadCompanyTypeDeclarationAbortsTheBoot(t *testing.T) {
+	extregistrytest.Reset(t)
 	for _, c := range []struct {
 		name  string
 		types []extension.CompanyType
@@ -48,5 +49,4 @@ func TestABadCompanyTypeDeclarationAbortsTheBoot(t *testing.T) {
 			t.Errorf("%s: %d types registered by a refused set", c.name, len(got))
 		}
 	}
-	t.Cleanup(companytypes.Reset)
 }

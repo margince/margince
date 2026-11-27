@@ -3,6 +3,7 @@
 
 import { Sparkles, X } from "lucide-react";
 import type { ReactNode } from "react";
+import { useScrolledIntoDialogView } from "./errorline";
 import { IconAction } from "./iconaction";
 import {
   CheckCircleFilled,
@@ -71,7 +72,8 @@ function announcementFor(
 }
 
 /** The tone's icon in its ink on a wash of its hue; words and verbs in plain
- * ink. No `className`: a notice wanting its own colour or edge is a second one. */
+ * ink. No `className`: a notice wanting its own colour or edge is a second one.
+ * An alert inside a dialog scrolls itself into view, as `ErrorLine` does. */
 export function Callout({
   tone = "info",
   kind,
@@ -109,12 +111,13 @@ export function Callout({
   /** Whatever the heading does not already say, where there is more to say. */
   children?: ReactNode;
 }>) {
+  const role = live ?? announcementFor(kind, tone);
+  const notice = useScrolledIntoDialogView<HTMLDivElement>(
+    role !== "alert",
+    null,
+  );
   return (
-    <div
-      id={id}
-      className={`callout callout-${tone}`}
-      role={live ?? announcementFor(kind, tone)}
-    >
+    <div id={id} ref={notice} className={`callout callout-${tone}`} role={role}>
       <span className="callout-icon" aria-hidden="true">
         <Icon size={16} />
       </span>

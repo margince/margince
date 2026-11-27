@@ -227,7 +227,7 @@ func insertLeadRow(ctx context.Context, tx pgx.Tx, in CreateLeadInput, active []
 	// The email is the third bind: lower() holds the dedupe key's spelling at the column, whatever door wrote it.
 	holders[2] = "lower(" + holders[2] + ")"
 	authorCols, authorHolders, base := storekit.AuthorInsertFragments(in.Author, fixed)
-	cfCols, cfHolders, args, err := storekit.InsertFragments(active, in.CustomFields, base)
+	cfCols, cfHolders, args, err := storekit.InsertFragmentsIn(ctx, tx, active, in.CustomFields, base)
 	if err != nil {
 		return ids.LeadID{}, err
 	}
@@ -268,6 +268,11 @@ func normalizedCreateLeadInput(in CreateLeadInput) (CreateLeadInput, error) {
 	if _, err := parseWritableLeadStatus(in.Status); err != nil {
 		return CreateLeadInput{}, err
 	}
+	if in.FullName != nil {
+		if err := requireNameWithin(contactNameColumn, *in.FullName); err != nil {
+			return CreateLeadInput{}, err
+		}
+	}
 	if in.Email != nil {
 		parsed, err := values.ParseEmail(*in.Email)
 		if err != nil {
@@ -301,17 +306,6 @@ func normalizedCreateLeadInput(in CreateLeadInput) (CreateLeadInput, error) {
 			"send at least one of full_name, email, phone, linkedin_url or company_name")
 	}
 	return in, nil
-}
-
-// hasLeadIdentity reports whether a lead names someone: a row with none of
-// these fields could never be recognised, worked or matched.
-func hasLeadIdentity(in CreateLeadInput) bool {
-	for _, field := range []*string{in.FullName, in.Email, in.Phone, in.LinkedInURL, in.CompanyName} {
-		if field != nil && strings.TrimSpace(*field) != "" {
-			return true
-		}
-	}
-	return false
 }
 
 // replayedLead resolves the (source_system, source_id) idempotency key:

@@ -99,18 +99,17 @@ export type ViewSpec = {
  * the id that says which view it is.
  *
  * Both halves are load-bearing. A tab carrying only the sort and the filters
- * restores a view saved with "Show archived" on as a view with it off — and
- * then the tab does not even match itself, because the archived toggle is part
- * of what a view claims about the list. The search is here for the same reason:
- * it narrows the list exactly as a filter does, so a tab that omitted it would
- * light while a search nobody saved was narrowing the rows underneath it. And
- * the id is what survives a rename or a newly created view: `/views` answers
- * ordered by name, so a position is a different view as soon as one is inserted
- * ahead of it.
+ * restores a view saved with "Show archived" on as a view with it off. The tab
+ * then does not even match itself, because the archived toggle is part of what
+ * a view claims about the list. The search is here for the same reason. It
+ * narrows the list as a filter does. A tab without it would light while a
+ * search nobody saved was narrowing the rows underneath it. The
+ * id also survives a rename or a newly created view. `/views` answers ordered
+ * by name, so a position names another view once one is inserted ahead of it.
  *
- * `perPage` is optional because a stored blob need not claim one: a view that
- * saved a page size asks for it, and a view that saved none leaves the reader's
- * own choice alone.
+ * `perPage` is optional because a stored blob need not claim one. A view that
+ * saved a page size asks for it. A view that saved none leaves the reader's own
+ * choice alone. `version` is the row's, read with it, for an update of it.
  */
 export type SavedViewTab = Readonly<{
   id: string;
@@ -120,6 +119,7 @@ export type SavedViewTab = Readonly<{
   filters: Readonly<Record<string, string>>;
   includeArchived: boolean;
   perPage?: number;
+  version: number;
 }>;
 
 /**
@@ -134,6 +134,8 @@ export type RailView = ListView &
     q: string;
     includeArchived: boolean;
     perPage?: number;
+    /** A saved view's row version; a preset is no row and has none. */
+    version?: number;
   }>;
 
 /** The codes a list read's `sort` field error carries for a sort it does not take. */
@@ -413,9 +415,10 @@ export function useTagChips(): readonly ListChip[] {
       // that exists is indistinguishable from one that does not — and a reader
       // who cannot find a word in a dial concludes the workspace lacks it.
       label: vocabulary.data?.truncated
-        ? t("tags.columnHeaderPartial")
-        : t("tags.columnHeader"),
+        ? t("tags.filterLabelPartial")
+        : t("tags.filterLabel"),
       allLabel: t("tags.filterAll"),
+      filterable: true,
       options: words.map((tag) => ({ value: tag.id, label: tag.name })),
     },
   ];

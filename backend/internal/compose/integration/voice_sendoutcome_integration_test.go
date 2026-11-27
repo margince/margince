@@ -152,8 +152,8 @@ func (e *voiceSendEnv) openVoiceDraft(t *testing.T, opts voiceDraftOptions) (ref
 	if err := e.Owner.QueryRow(ctx, `
 		INSERT INTO voice_learning_signal
 		  (voice_profile_id, draft_ref_hash, outcome, generated_original,
-		   content_erased_at, retention_until, source, captured_by)
-		VALUES ($1, $2, 'drafted', $3, $4, $5, 'draft', $6) RETURNING id`,
+		   content_erased_at, retention_until, captured_by)
+		VALUES ($1, $2, 'drafted', $3, $4, $5, $6) RETURNING id`,
 		profileID, hash[:], generated, erasedAt,
 		time.Now().UTC().Add(180*24*time.Hour), "human:"+ownerID.String()).Scan(&signal); err != nil {
 		t.Fatalf("seeding the drafted learning signal: %v", err)

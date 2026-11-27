@@ -39,7 +39,6 @@
     "DELETE /v1/knowledge/corpora/{id}": "archive_corpus",
     "DELETE /v1/lead-disqualify-reasons/{id}": "delete_lead_disqualify_reason",
     "DELETE /v1/lead-origins/{id}": "delete_lead_origin",
-    "DELETE /v1/lead-sources/{id}": "delete_lead_source",
     "DELETE /v1/leads/{id}": "disqualify_lead",
     "DELETE /v1/leads/{id}/manual-signals/{factor}": "clear_lead_manual_signal",
     "DELETE /v1/legal-entities/{id}/logo": "delete_legal_entity_logo",
@@ -325,7 +324,6 @@
     "GET /v1/lead-disqualify-reasons": "read_view",
     "GET /v1/lead-origins": "read_view",
     "GET /v1/lead-signal-catalog": "get_lead_signal_catalog",
-    "GET /v1/lead-sources": "read_view",
     "GET /v1/leads": "list_records",
     "GET /v1/leads/settings": "read_view",
     "GET /v1/leads/{id}": "read_record",
@@ -417,6 +415,7 @@
     "GET /v1/scheduling/profile": "read_view",
     "GET /v1/scheduling/proposals": "list_meeting_proposals",
     "GET /v1/scheduling/team-candidates": "read_view",
+    "GET /v1/scheduling/team-links": "read_view",
     "GET /v1/scheduling/team-requests": "read_view",
     "GET /v1/sdr-handoffs/{id}/assignee": "get_handoff_assignee",
     "GET /v1/search": "search_records",
@@ -493,7 +492,6 @@
     "PATCH /v1/knowledge/corpora/{id}": "update_corpus",
     "PATCH /v1/lead-disqualify-reasons/{id}": "update_lead_disqualify_reason",
     "PATCH /v1/lead-origins/{id}": "update_lead_origin",
-    "PATCH /v1/lead-sources/{id}": "update_lead_source",
     "PATCH /v1/leads/settings": "update_lead_settings",
     "PATCH /v1/leads/{id}": "update_record",
     "PATCH /v1/legal-entities/{id}": "update_legal_entity",
@@ -728,7 +726,6 @@
     "POST /v1/knowledge/corpora/{id}/documents": "upload_corpus_document",
     "POST /v1/lead-disqualify-reasons": "create_lead_disqualify_reason",
     "POST /v1/lead-origins": "create_lead_origin",
-    "POST /v1/lead-sources": "create_lead_source",
     "POST /v1/leads": "create_record",
     "POST /v1/leads/{id}/consent/qualifying-events": "record_lead_qualifying_event",
     "POST /v1/leads/{id}/consent/qualifying-events/{event_id}/retract": "retract_lead_qualifying_event",
@@ -1228,6 +1225,7 @@
     ],
     "attach_document": [
       "content_base64",
+      "content_text",
       "content_type",
       "contract_id",
       "entity_id",
@@ -1454,10 +1452,6 @@
       "idempotency_key",
       "request_body"
     ],
-    "create_lead_source": [
-      "idempotency_key",
-      "request_body"
-    ],
     "create_legal_entity": [
       "request_body"
     ],
@@ -1604,9 +1598,6 @@
       "id"
     ],
     "delete_lead_origin": [
-      "id"
-    ],
-    "delete_lead_source": [
       "id"
     ],
     "delete_legal_entity_logo": [
@@ -2134,12 +2125,14 @@
     ],
     "import_linkedin_connections": [
       "content_base64",
+      "content_text",
       "content_type",
       "filename"
     ],
     "import_vcards": [
       "company_id",
       "content_base64",
+      "content_text",
       "content_type",
       "filename"
     ],
@@ -2846,6 +2839,7 @@
     ],
     "read_card_photo": [
       "content_base64",
+      "content_text",
       "content_type",
       "filename"
     ],
@@ -3689,11 +3683,6 @@
     "update_lead_settings": [
       "request_body"
     ],
-    "update_lead_source": [
-      "id",
-      "idempotency_key",
-      "request_body"
-    ],
     "update_legal_entity": [
       "id",
       "if_version",
@@ -3728,7 +3717,8 @@
       "id",
       "idempotency_key",
       "if_version",
-      "record_type"
+      "record_type",
+      "why"
     ],
     "update_record_assignment": [
       "id",
@@ -3806,22 +3796,26 @@
     ],
     "upload_company_logo": [
       "content_base64",
+      "content_text",
       "content_type",
       "filename"
     ],
     "upload_company_logo_icon": [
       "content_base64",
+      "content_text",
       "content_type",
       "filename"
     ],
     "upload_corpus_document": [
       "content_base64",
+      "content_text",
       "content_type",
       "filename",
       "id"
     ],
     "upload_legal_entity_logo": [
       "content_base64",
+      "content_text",
       "content_type",
       "filename",
       "id",

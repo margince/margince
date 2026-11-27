@@ -216,8 +216,10 @@ deps:
   knowledge:
     # knowledge itself: the module reads its own handbook subpackage, the same
     # self-reference agents carries for its own.
+    # xtext: an audience is compared without case or accents, which needs the
+    # Unicode normal forms golang.org/x/text owns.
     mayDependOn: [knowledge, contracts, platform]
-    canUse: [pgx, oapi]
+    canUse: [pgx, oapi, xtext]
   projects:
     mayDependOn: [contracts, platform]
     canUse: [pgx, oapi]
@@ -346,7 +348,7 @@ deps:
     # parity_test.go reads runner.ProjectionStateFor: both hold a module's own
     # vocabulary to a set that lives OUTSIDE it — the contract's enum and a
     # migration's CHECK — and only gates may see all three at once.
-    # frontendapprovalkinds_test.go reads approvals.StageableKinds and holds it
+    # frontendvocabularymirrors_test.go reads approvals.StageableKinds and holds it
     # to the frontend's KIND_LABEL map: the same "only gates may hold both
     # halves" shape again, across the wire this time — approvals must not gain
     # a dependency on a TypeScript file to know its kinds have words.
@@ -394,8 +396,8 @@ deps:
     # completed outcome into "cancelled".
     # reviewoutcomes_test.go reads assurance.ReviewOutcomes so the answer sheet
     # offers the outcomes the server accepts without copying its catalog.
-    # frontendrunreasons_test.go reads automation.RunReasonCodes and holds them
-    # to the browser's words, as frontendapprovalkinds_test.go does for approvals.
+    # frontendvocabularymirrors_test.go also reads automation.RunReasonCodes and
+    # holds them to the browser's words, the same way as for approvals.
     # consumergrouptypes_test.go feeds search.EmbedGen every event type its
     # group leaves out, as it does for the compose handlers.
     # gates carries test files only, so this grants no production edge.

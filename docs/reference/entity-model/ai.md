@@ -53,7 +53,9 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 **Rules**
 
 - `ai_call_cache_write_tokens_js_safe`: `CHECK (((cache_write_tokens >= '-9007199254740991'::bigint) AND (cache_write_tokens <= '9007199254740991'::bigint)))`
+- `ai_call_cache_write_tokens_not_negative`: `CHECK ((cache_write_tokens >= 0)) NOT VALID`
 - `ai_call_cached_tokens_js_safe`: `CHECK (((cached_tokens >= '-9007199254740991'::bigint) AND (cached_tokens <= '9007199254740991'::bigint)))`
+- `ai_call_cached_tokens_not_negative`: `CHECK ((cached_tokens >= 0)) NOT VALID`
 - `ai_call_context_fingerprint_check`: `CHECK (((context_fingerprint = '') OR (context_fingerprint ~ '^[0-9a-f]{64}$')))`
 - `ai_call_context_scopes_check`: `CHECK ((context_scopes <@ ARRAY['identity', 'positioning', 'sales', 'offer', 'market', 'proof', 'administrative']))`
 - `ai_call_decision_answer_kind`: `CHECK (((decision_choice IS NULL) OR (kind = 'decision')))`
@@ -62,10 +64,13 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_call_kind_check`: `CHECK ((kind = ANY (ARRAY['completion', 'embedding', 'decision'])))`
 - `ai_call_latency_ms_js_safe`: `CHECK (((latency_ms >= '-9007199254740991'::bigint) AND (latency_ms <= '9007199254740991'::bigint)))`
 - `ai_call_reasoning_tokens_js_safe`: `CHECK (((reasoning_tokens >= '-9007199254740991'::bigint) AND (reasoning_tokens <= '9007199254740991'::bigint)))`
+- `ai_call_reasoning_tokens_not_negative`: `CHECK ((reasoning_tokens >= 0)) NOT VALID`
 - `ai_call_source_check`: `CHECK ((served_identity_source = ANY (ARRAY['response', 'echo', 'configured'])))`
 - `ai_call_subject_shape`: `CHECK (((subject_type IS NULL) = (subject_id IS NULL)))`
 - `ai_call_tokens_in_js_safe`: `CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))`
+- `ai_call_tokens_in_not_negative`: `CHECK ((tokens_in >= 0)) NOT VALID`
 - `ai_call_tokens_out_js_safe`: `CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))`
+- `ai_call_tokens_out_not_negative`: `CHECK ((tokens_out >= 0)) NOT VALID`
 
 **Indexes**
 
@@ -75,6 +80,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `ai_call_terminal_trace_idx`: `btree (occurred_at DESC, id DESC) WHERE is_terminal`
 - `idx_ai_call_agent_run`: `btree (agent_run_id)`
 - `idx_ai_call_correlation`: `btree (correlation_id)`
+- `idx_ai_call_negative_tokens`: `btree (id) WHERE ((tokens_in < 0) OR (tokens_out < 0) OR (reasoning_tokens < 0) OR (cached_tokens < 0) OR (cache_write_tokens < 0))`
 - `idx_ai_call_occurred`: `btree (occurred_at DESC)`
 
 **Triggers**
@@ -233,9 +239,13 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 **Rules**
 
+- `ai_usage_cached_hits_not_negative`: `CHECK ((cached_hits >= 0))`
 - `ai_usage_calls_js_safe`: `CHECK (((calls >= '-9007199254740991'::bigint) AND (calls <= '9007199254740991'::bigint)))`
+- `ai_usage_calls_not_negative`: `CHECK ((calls >= 0))`
 - `ai_usage_tokens_in_js_safe`: `CHECK (((tokens_in >= '-9007199254740991'::bigint) AND (tokens_in <= '9007199254740991'::bigint)))`
+- `ai_usage_tokens_in_not_negative`: `CHECK ((tokens_in >= 0))`
 - `ai_usage_tokens_out_js_safe`: `CHECK (((tokens_out >= '-9007199254740991'::bigint) AND (tokens_out <= '9007199254740991'::bigint)))`
+- `ai_usage_tokens_out_not_negative`: `CHECK ((tokens_out >= 0))`
 
 **Indexes**
 
@@ -369,7 +379,7 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 ## voice_learning_signal
 
-19 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -377,19 +387,15 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `content_erased_at` | `timestamp with time zone` |  |  |
 | `draft_ref_hash` | `bytea` | yes |  |
 | `final_captured_by` | `text` |  |  |
-| `final_text` | `text` |  |  |
 | `generated_original` | `text` |  |  |
 | `outcome` | `text` | yes | One of `drafted`, `accepted`, `edited_sent`, `rejected`. |
 | `profile_version` | `integer` |  |  |
-| `qualifies_as_source` | `boolean`, default `false` | yes |  |
 | `retention_until` | `timestamp with time zone` | yes |  |
 | `similarity` | `numeric(5,4)` |  |  |
-| `transformations` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `voice_profile_id` | `uuid` | yes | Points at `voice_profile.id`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
-| `source` | `text` | yes | Which internal channel the record arrived by. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
 | `version` | `bigint`, default `1` | yes | Optimistic-concurrency counter. Every write bumps it, so an update built on a stale read is refused instead of overwriting. |
 
@@ -406,7 +412,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 - `voice_learning_signal_draft_ref_hash_check`: `CHECK ((octet_length(draft_ref_hash) = 32))`
 - `voice_learning_signal_outcome_check`: `CHECK ((outcome = ANY (ARRAY['drafted', 'accepted', 'edited_sent', 'rejected'])))`
 - `voice_learning_signal_profile_version_check`: `CHECK ((profile_version >= 1))`
-- `voice_learning_signal_qualifies_check`: `CHECK (((NOT qualifies_as_source) OR ((outcome = 'edited_sent') AND (final_text IS NOT NULL) AND (final_captured_by ~~ 'human:%'))))`
 - `voice_learning_signal_similarity_check`: `CHECK (((similarity >= (0)::numeric) AND (similarity <= (1)::numeric)))`
 - `voice_learning_signal_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
@@ -419,12 +424,12 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"source": 20000, "outcome": 20000, "captured_by": 20000, "final_captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"outcome":20000,"source":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"source": 20000, "outcome": 20000, "captured_by": 20000, "final_captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"outcome":20000,"source":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"outcome": 20000, "captured_by": 20000, "final_captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"outcome":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"outcome": 20000, "captured_by": 20000, "final_captured_by": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"captured_by":20000,"final_captured_by":20000,"outcome":20000}')`
 
 ## voice_profile
 
-18 columns · primary key `(id)` · referenced by 5 foreign keys
+17 columns · primary key `(id)` · referenced by 5 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -432,7 +437,6 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 | `active_source_hash` | `text` |  |  |
 | `auto_learning_enabled` | `boolean`, default `false` | yes | Explicit owner opt-in; defaults off. |
 | `last_built_at` | `timestamp with time zone` |  |  |
-| `model_ref` | `text` |  |  |
 | `owner_id` | `uuid` |  | Points at `app_user.id`. |
 | `personality_md` | `text`, default `''::text` | yes | Owner-authored preferences; model output never overwrites this field. |
 | `profile_version` | `integer`, default `0` | yes | Zero means no active artifact yet. |
@@ -472,8 +476,8 @@ The 12 tables owned by `ai`, as the migrations build them. [Back to the entity m
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"scope": 20000, "source": 20000, "status": 20000, "model_ref": 20000, "captured_by": 20000, "personality_md": 20000, "active_source_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"active_source_hash":20000,"captured_by":20000,"model_ref":20000,"personality_md":20000,"scope":20000,"source":20000,"status":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000, "source": 20000, "status": 20000, "model_ref": 20000, "captured_by": 20000, "personality_md": 20000, "active_source_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"active_source_hash":20000,"captured_by":20000,"model_ref":20000,"personality_md":20000,"scope":20000,"source":20000,"status":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"scope": 20000, "source": 20000, "status": 20000, "captured_by": 20000, "personality_md": 20000, "active_source_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"active_source_hash":20000,"captured_by":20000,"personality_md":20000,"scope":20000,"source":20000,"status":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"scope": 20000, "source": 20000, "status": 20000, "captured_by": 20000, "personality_md": 20000, "active_source_hash": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"active_source_hash":20000,"captured_by":20000,"personality_md":20000,"scope":20000,"source":20000,"status":20000}')`
 - `voice_profile_owner_id_retirement_guard`: `BEFORE INSERT OR UPDATE FOR EACH ROW WHEN (((new.owner_id IS NOT NULL) AND (new.archived_at IS NULL))) EXECUTE FUNCTION refuse_retired_member_work('owner_id')`
 
 ## voice_profile_delta

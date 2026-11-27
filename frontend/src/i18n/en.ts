@@ -1762,8 +1762,6 @@ export const en = {
 
   "scheduling.readOnlyCalendar":
     "Your calendar is connected for reading events. Reconnect it and allow invitation access to create, reschedule and cancel meetings.",
-  "scheduling.bookRefused":
-    "An administrator must grant permission to book meetings.",
   "scheduling.meetingChanged":
     "The meeting changed. Review the updated details and try again.",
   "scheduling.previewCalendarSetup":
@@ -2010,6 +2008,8 @@ export const en = {
   "brief.queue.back": "Back to Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
+  "brief.queue.count_one": "{count} item in the Worklist",
+  "brief.queue.count_other": "{count} items in the Worklist",
   "brief.queue.hide": "Hide Worklist",
   "brief.team.planUnavailable": "No current plan visible to you for {name}.",
   "brief.team.noCommitments": "{name} has no commitments in this plan.",
@@ -2653,6 +2653,8 @@ export const en = {
   "history.field.qualifying_event_retracted": "Recorded exchange withdrawn",
   "history.field.acquisition_request_retracted":
     "Acquisition request withdrawn",
+  "history.field.impersonation_warning_raised":
+    "Impersonation warning raised by a later email",
   "history.field.impersonation_warning_cleared":
     "Impersonation warning cleared",
   "history.field.impersonation_warning_carried":
@@ -2669,7 +2671,7 @@ export const en = {
   "history.field.resolved_category": "Message category",
   "history.field.score": "Score",
   "history.field.score_override_reason": "Score override reason",
-  "history.field.size_band": "Employees",
+  "history.field.size_band": "Company size",
   "history.field.social": "Social profiles",
   "history.field.source": "Source",
   "history.field.origin": "Origin",
@@ -2850,7 +2852,7 @@ export const en = {
   "search.group.project": "Projects",
   "search.group.product": "Products",
   "search.group.offerTemplate": "Offer templates",
-  "search.group.activity": "Activities",
+  "search.group.activity": "Emails and activities",
   "search.group.lead": "Leads",
   "search.group.tag": "Tags",
   "search.group.email": "Emails",
@@ -3102,14 +3104,15 @@ export const en = {
     "You cannot edit this company. Ask its owner to hand it over or share it, or ask an administrator.",
   "record.actionRefused":
     "Your role does not include this action. Ask an administrator for the right.",
+  "record.roleReadsOnly":
+    "Your role can only read. Ask an administrator for another role.",
+  "record.archiveRefused": "Only its owner or a manager can archive this.",
   "record.accessUnknown":
     "Your access could not be read. Reload the page to check it again.",
   "contact.attachRefused":
     "You can only read this contact. Ask its owner for write access.",
   "record.attachRefused":
     "You can only read this record. Ask its owner for write access.",
-  "record.logActivityRefused":
-    "You do not have permission to log activities on this record.",
   "record.share": "Share",
   "record.moreActions": "More actions",
   "record.moreActionsFor": "More actions for {subject}",
@@ -3194,6 +3197,7 @@ export const en = {
 
   "merge.contact": "Merge contact",
   "merge.company": "Merge company",
+  "merge.deal": "Merge deal",
   "merge.searchPlaceholder": "Search…",
   "merge.pickTarget": "Select record to keep",
   "merge.confirm":
@@ -3329,6 +3333,7 @@ export const en = {
   "partnerStages.addOpen": "New stage",
   "partnerStages.addTitle": "New partner stage",
   "partnerStages.addConfirm": "Add stage",
+  "partnerStages.labelField": "Label",
   "partnerStages.renameTitle": "Rename stage",
   "partnerStages.colStage": "Stage",
   "partnerStages.colMeaning": "Meaning",
@@ -3658,7 +3663,7 @@ export const en = {
   "list.unowned": "Unassigned",
   "list.created": "Created",
   "list.lastActivity": "Last activity",
-  "list.filterOwnerMe": "Owned by you",
+  "list.filterOwnerMe": "You",
   "list.filterOwnerAll": "Any owner",
   "list.ownerDeactivated": "{name} (deactivated)",
   "list.ownerSuspended": "{name} (suspended)",
@@ -3670,6 +3675,10 @@ export const en = {
   "views.save": "Save view",
   "views.saveConfirm": "Save",
   "views.saveTitle": "Save this view",
+  "views.update": "Update “{name}”",
+  "views.updated": "View updated: “{name}”",
+  "views.nameTaken":
+    "A view with this name already exists. Choose another name.",
   "views.name": "Name",
   // Names the saved-view rail where the rail itself cannot: a failure notice
   // lands beside the list's own tools, and "this section did not load" under a
@@ -3870,7 +3879,7 @@ export const en = {
   // questions the retired classification answered with one value.
   "company.lifecycle": "Lifecycle",
   "company.relationshipTypes": "Relationship type",
-  "company.sizeBand": "Employees",
+  "company.sizeBand": "Company size",
   "company.sizeBandValue": "{band} employees",
   "company.lifecycle.unknown": "Unknown",
   "company.lifecycle.target": "Target",
@@ -3916,6 +3925,7 @@ export const en = {
   "stat.open": "Open",
   "stat.forecast": "Forecast",
   "stat.records": "View records",
+  "stat.chart": "Show on chart",
   "co.strip.fin.neverInvoiced": "Not invoiced",
   "co.strip.fin.noConnection": "Accounting not connected",
   "co.strip.fin.unmapped": "Customer not matched",
@@ -3965,7 +3975,7 @@ export const en = {
   "record.details.about": "About",
   "section.help": "About this section",
   "record.details.ownership": "Ownership",
-  "co.aside.size": "Employees",
+  "co.aside.size": "Company size",
   "co.aside.wayIn": "Way in",
   "record.details.visibleTo": "Visible to",
   "co.aside.visibleEveryone": "Everyone",
@@ -5657,6 +5667,8 @@ export const en = {
   "co.tech.laneFailed":
     "{lane} did not respond. The previous result is unchanged.",
   "co.tech.laneRefused": "The site blocked the read.",
+  "co.tech.laneFailedFirst":
+    "{lane} did not respond, so nothing has been read from it yet.",
   "co.tech.lane.dns": "DNS",
   "co.tech.lane.certlog": "Certificates",
   "co.tech.lane.homepage": "Homepage",
@@ -5777,7 +5789,8 @@ export const en = {
   "tags.moreUncounted": "more",
   "tags.moreUncountedTip":
     "Including {names}. Open the record for the full set.",
-  "tags.columnHeaderPartial": "Tags (partial list)",
+  "tags.filterLabel": "Tag",
+  "tags.filterLabelPartial": "Tag (partial list)",
   "tags.loading": "Loading tags…",
   "tags.panelTitle": "Tags",
   "tags.add": "Add tag",
@@ -5826,7 +5839,8 @@ export const en = {
     "No tag with that name. An administrator or operations user can add one.",
   "tagResult.gone":
     "This tag no longer exists. It may have been merged into another.",
-  "tagResult.totalVisible": "{count} visible assignments",
+  "tagResult.tagged_one": "{count} tagged record",
+  "tagResult.tagged_other": "{count} tagged records",
   "tagResult.contacts": "Contacts",
   "tagResult.companies": "Companies",
   "tagResult.deals": "Deals",
@@ -5891,16 +5905,13 @@ export const en = {
   "lead.project": "Project",
 
   "lead.source.manual": "Created manually",
-  "lead.source.inbound": "Inbound",
+  "lead.source.siteread": "From company website",
   "lead.source.webform": "Web form",
   "lead.source.webformNamed": "Web form “{name}”",
-  "lead.source.referral": "Referral",
   "lead.source.import": "Import",
-  "lead.source.crawl": "Web research",
   "lead.source.api": "Integration",
   "lead.source.automation": "Automation",
   "lead.source.capture": "Captured from a conversation",
-  "lead.source.siteread": "From company website",
   "lead.source.unknown": "Unknown source",
   "leadSources.removeOnlyTitle":
     "Your role can remove entries but not add or change them",
@@ -6037,8 +6048,6 @@ export const en = {
     "The counts cannot narrow by industry, country or company size, so none is shown.",
   "lead.boardCountsNoOtherFilter":
     "The counts cannot apply every filter on this list, so none is shown.",
-  "lead.boardCountsNoConnectorSource":
-    "The counts cannot narrow to every lead from one connector, so none is shown.",
   "lead.boardCountsOwnerNotMeasurable":
     "No count for this owner’s leads. Only an administrator can let you measure them.",
   "lead.boardTerminalRowsUnavailable":
@@ -6240,6 +6249,8 @@ export const en = {
   "deals.confirmAdvance": "Move to {stage}?",
   "deals.confirmTerminal":
     "This closes the deal as {status}. Nothing changes until you confirm.",
+  "deals.confirmMovesProject": "This also moves {project} to {phase}.",
+  "deals.confirmMovesUnreadProject": "This also moves its project to {phase}.",
   "deals.lostReason": "Lost reason",
   "deals.lostReasonNeeded": "Pick why the deal was lost.",
   "deals.lostReasonCode": "Why was it lost?",
@@ -6361,6 +6372,7 @@ export const en = {
   "deal.links.outgoing": "From this deal: {type}",
   "deal.links.incoming": "To this deal: {type}",
   "deal.links.remove": "Remove",
+  "deal.links.unknownType": "Link",
   "deal.links.type": "Link type",
   "deal.links.typePlaceholder": "Choose a type",
   "deal.links.search": "Search for the record to link",
@@ -6476,11 +6488,11 @@ export const en = {
   "deal.standing.risk.replyOwed": "Team reply owed",
   "deal.standing.risk.closePassed": "Close date passed",
   "deal.details.closingFootnote":
-    "Closing stages ask first: Won and Lost open a short dialog.",
+    "A closing stage asks first and opens a short dialog.",
   "deal.timeline.empty": "No activity on this deal yet.",
   "legalEntities.title": "Legal entities",
   "legalEntities.sub":
-    "The companies you trade as. A colleague you have not assigned works for the default, which takes its name, address and logo from the company above.",
+    "The companies you trade as. A colleague you have not assigned works for the default, which takes its name, address and logo from the company profile.",
   "legalEntities.loading": "Loading legal entities…",
   "legalEntities.addOpen": "New legal entity",
   "legalEntities.addTitle": "New legal entity",
@@ -6493,6 +6505,7 @@ export const en = {
     "Not set: the installation’s jurisdiction applies",
   "legalEntities.defaultBadge": "Default",
   "legalEntities.defaultUnnamed": "Your company",
+  "legalEntities.fromCompanyProfile": "From the company profile",
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Legal name",
   "legalEntities.country": "Country",
@@ -6581,6 +6594,7 @@ export const en = {
   "lossReasons.addOpen": "New reason",
   "lossReasons.addTitle": "New loss reason",
   "lossReasons.addConfirm": "Add reason",
+  "lossReasons.labelField": "Label",
   "lossReasons.renameTitle": "Rename reason",
   "lossReasons.activeFor": "{label} can be picked when a deal is lost",
   "lossReasons.colReason": "Reason",
@@ -6662,6 +6676,8 @@ export const en = {
   "outcomeReview.notes": "Other notes",
   "deal.commercialContext": "Commercial context",
 
+  "deal.closedAmountKept":
+    "A won or lost deal keeps its price. Reopen it first to remove it.",
   "deal.arrFromOffer":
     "Expected ARR comes from the accepted offer and is not edited here.",
   "deal.brief": "Deal brief",
@@ -6759,14 +6775,8 @@ export const en = {
   "deal.acquisitionRetired": "(retired)",
   "deal.waitUntil": "Wait until",
   "deal.fxBase": "{value} · rate {rate} on {date}",
-  "deal.archiveRefused":
-    "Only the deal’s owner or a manager can archive this deal.",
-  "contact.archiveRefused":
-    "Only the contact’s owner or a manager can archive this contact.",
   "contact.undoArchiveNothing":
     "This archive could not be undone, because the contact’s history holds no archive to put back. Open the contact to see whether it is still archived.",
-  "company.archiveRefused":
-    "Only the company’s owner or a manager can archive this company.",
   "deal.archive": "Archive deal",
   "deal.restore": "Restore deal",
   "deal.archiveConfirm":
@@ -6870,6 +6880,10 @@ export const en = {
   "bulk.selectPage": "Select every row on this page",
   "bulk.selectAll": "Select all",
   "bulk.clearSelection": "Clear selection",
+  "bulk.selecting_one": "Selecting {count}…",
+  "bulk.selecting_other": "Selecting {count}…",
+  "bulk.selectingOf_one": "Selecting {count} of {total}…",
+  "bulk.selectingOf_other": "Selecting {count} of {total}…",
   "bulk.selectionLimit_one":
     "One change takes at most {count} record, so the selection stops there.",
   "bulk.selectionLimit_other":
@@ -6937,12 +6951,19 @@ export const en = {
   "bulk.undoneCompanies_other": "{count} companies put back.",
   "bulk.undoneDeals_one": "{count} deal put back.",
   "bulk.undoneDeals_other": "{count} deals put back.",
+  "bulk.doneTasks_one": "{count} task created.",
+  "bulk.doneTasks_other": "{count} tasks created.",
+  "bulk.undoneTasks_one": "{count} task archived.",
+  "bulk.undoneTasks_other": "{count} tasks archived.",
   "bulk.undoLeftBehind_one":
     "{count} link, tag or list membership could not come back.",
   "bulk.undoLeftBehind_other":
     "{count} links, tags or list memberships could not come back.",
-  "bulk.reason.no_change_list": "Already on or off the Shortlist",
-  "bulk.reason.no_change_tag": "Already has or lacks this tag",
+  "bulk.reason.no_change_listed": "Already on this Shortlist",
+  "bulk.reason.no_change_unlisted": "Not on this Shortlist",
+  "bulk.reason.no_change_tagged": "Already has this tag",
+  "bulk.reason.no_change_untagged": "Does not have this tag",
+  "bulk.reason.no_change_undo": "Not part of the change you are undoing",
   "bulk.tag": "Tag",
   "bulk.tagPick": "Pick a tag",
   "bulk.addTag": "Add tag",
@@ -6976,7 +6997,7 @@ export const en = {
   "bulk.confirmComplete": "Mark done",
   "bulk.stateDone": "Done",
   "bulk.stateOpen": "Open",
-  "bulk.reason.no_change_done": "Already in that state",
+  "bulk.reason.no_change_done": "Already done",
   "bulk.titleMoveStage": "Move the selected {unit} to {stage}?",
   "bulk.confirmMoveStage": "Move",
   "bulk.stateStageUnnamed": "A stage",
@@ -7063,6 +7084,7 @@ export const en = {
   "offer.rejectConfirm": "Mark this offer as rejected?",
   "offer.rejectReason": "Reason (optional)",
   "offer.regenerate": "Regenerate revision",
+  "offer.regeneratedPlain": "Copied without AI changes.",
   "offer.writeUnsure":
     "Margince could not tell whether that went through. Check the deal’s offers before you try again.",
   "offer.aiDisclosureTitle": "AI-assisted offer",
@@ -7188,7 +7210,7 @@ export const en = {
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
   "brief.updating": "Updating…",
-  "brief.briefedAt": "Briefed by Margince at {time}",
+  "brief.briefedAt": "Prepared by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
   "brief.first.title": "Needs you",
@@ -7215,6 +7237,7 @@ export const en = {
   "brief.week.quiet": "No completed work or deal movement recorded.",
 
   // What is on screen out of what the day holds, on the panel's own line.
+  "brief.first.shownOf": "{shown} of {total} shown",
   "brief.feed.changedBadge_one": "1 changed",
   "brief.feed.changedBadge_other": "{count} changed",
   "brief.feed.loading": "Loading Morning brief…",
@@ -7530,8 +7553,20 @@ export const en = {
   "brief.readings.leadsBasis": "Planned tasks for prospects",
   "brief.readings.leadsDue": "Next due {value}",
   "brief.rail": "Context",
+  "brief.firstDay.title": "Your first day on Home",
+  "brief.firstDay.what":
+    "Home shows what needs you today, what Margince did for you and your meetings. Each morning it opens with your Morning brief.",
+  "brief.firstDay.briefTonight":
+    "Your first Morning brief is prepared overnight and opens Home tomorrow.",
+  "brief.firstDay.briefOff":
+    "Margince prepares a Morning brief overnight only once you allow it.",
+  "brief.firstDay.turnOn": "Turn on overnight preparation",
+  "brief.firstDay.briefLater":
+    "Your Morning brief opens Home once one has been prepared for you.",
+  "brief.firstDay.setup": "Set up next",
   "brief.rail.numbers": "Numbers",
   "extensionReports.withheld": "Withheld: too few records to show",
+  "extensionReports.unavailable": "This report could not be loaded.",
   "extensionReports.noValue": "No value",
   "extensionReports.excluded_one":
     "{count} record is hidden from you by a field permission.",
@@ -7625,6 +7660,22 @@ export const en = {
   "deepread.statusFailed": "Failed",
   "deepread.statusCancelled": "Canceled",
   "deepread.resumesAt": "Resumes automatically {when}.",
+  "deepread.failure.bot_blocked": "The site’s bot protection refused the read.",
+  "deepread.failure.http_server_error":
+    "The site answered with a server error.",
+  "deepread.failure.timeout": "The site did not answer in time.",
+  "deepread.failure.http_client_error":
+    "The site’s front page could not be found.",
+  "deepread.failure.dns": "The domain does not point to a server.",
+  "deepread.failure.tls": "The site’s HTTPS certificate could not be verified.",
+  "deepread.failure.robots_disallowed":
+    "The site asks crawlers not to read it.",
+  "deepread.failure.unreadable":
+    "The site answered, but with nothing readable.",
+  "deepread.failure.internal":
+    "Margince could not finish the read. The cause is on this installation, not on the site, and an admin finds it in the server log.",
+  "deepread.failure.stale_reclaim":
+    "The read stopped reporting, so it was ended.",
   "deepread.pagesSoFar_one": "{count} page read so far",
   "deepread.pagesSoFar_other": "{count} pages read so far",
   "deepread.stoppedEarly": "Stopped early: {reason}",
@@ -7726,7 +7777,7 @@ export const en = {
   "create.fullName": "Full name",
   "create.firstName": "First name",
   "create.lastName": "Last name",
-  "create.contactTitle": "Title",
+  "create.contactTitle": "Job title",
   "create.greetingRegister": "How to greet them",
   "create.greetingRegisterHint": "Drafts to this contact open this way.",
   "create.greetingRegister.unset": "Let Margince decide",
@@ -7748,7 +7799,7 @@ export const en = {
   "create.displayName": "Company name",
   "create.legalName": "Legal name",
   "create.industry": "Industry",
-  "create.sizeBand": "Employees",
+  "create.sizeBand": "Company size",
   "co.address.summary": "Address",
   "co.address.countryMismatch": "Postal code and city are in {country}",
 
@@ -8067,6 +8118,8 @@ export const en = {
   "docs.category.message": "Message attachment",
   "docs.category.other": "Other",
   "docs.category.link": "Links sent",
+  "docs.source.upload": "Uploaded",
+  "docs.source.link": "Link added",
   "docs.view.label": "Show documents as",
   "docs.view.grid": "Grid",
   "docs.view.list": "List",
@@ -8235,6 +8288,12 @@ export const en = {
   "editAccess.withdraw": "Withdraw edit access request",
   "editAccess.sent": "Edit access requested from {owner}",
   "editAccess.withdrawn": "Edit access request withdrawn",
+  // A record this reader may view but not change. The head's pill and the
+  // Ownership row say so, and the panel names the owner.
+  "viewOnly.pill": "View only",
+  "viewOnly.label": "Your access",
+  "viewOnly.owns": "{owner} owns {name}",
+  "record.details.access": "Access",
   // The owner offering a record to a colleague, from the access panel.
   "handover.offer": "Hand over to…",
   "handover.offerTo": "Hand over to",
@@ -8850,6 +8909,7 @@ export const en = {
   "tasks.movedTo": "Moved to {when}",
   "tasks.moveUndoFailed": "Task was not moved back. Retry.",
   "tasks.remind.menu": "Remind me",
+  "tasks.remind.chipName": "Remind me (reminder set for {when})",
   "tasks.remind.inAnHour": "In 1 hour",
   "tasks.remind.tomorrowMorning": "Tomorrow morning",
   "tasks.remind.beforeDue": "1 hour before it is due",
@@ -8866,6 +8926,8 @@ export const en = {
   "tasks.remind.needsTime": "Enter a day and a time.",
   "tasks.remind.past": "Pick a time that is still ahead.",
   "tasks.log.action": "Log what happened",
+  "tasks.more": "More",
+  "tasks.context": "Context",
   "tasks.log.record": "Which record is this activity for?",
   "tasks.log.chooseRecord": "Choose another record",
   "tasks.log.noRecord": "Log without a record",
@@ -9270,7 +9332,7 @@ export const en = {
   "analytics.field.project": "Project label",
   "analytics.field.project_id": "Project",
   "analytics.field.quiet_since": "Quiet since",
-  "analytics.field.size_band": "Employees",
+  "analytics.field.size_band": "Company size",
   "analytics.field.source": "Source",
   "analytics.field.origin": "Origin",
   "analytics.field.stage_id": "Stage",
@@ -9603,6 +9665,14 @@ export const en = {
     "Only the manager who made this call can submit a new one.",
   "review.submitNewCall": "Submit a new call",
   "review.forecastCallMoved": "Forecast call needs review",
+  "review.duplicateMotion": "May be one buying motion",
+  "review.duplicateHelp":
+    "These two open deals of one account share a mail, a meeting or a contact, sit in one pipeline and close within 60 days of each other.",
+  "review.duplicateThisDeal": "This deal",
+  "review.duplicateOtherDeal": "Looks like",
+  "review.duplicateOtherWithheld": "A deal you cannot open",
+  "review.duplicateSwap": "Keep the other deal instead",
+  "review.duplicateSeparate": "These are separate",
   "review.unknownCheck": "Unnamed check",
   "review.sheetTitle": "Answer check",
   "review.outcomeLegend": "Answer type",
@@ -9860,7 +9930,7 @@ export const en = {
   "rbac.masked": "Masked value",
   "settings.passports": "Passports",
   "settings.passportsSub":
-    "A passport is your personal API key for scripts and your own code. Whatever uses it acts as you, with the permissions you tick, and never more. To use Margince in an AI tool, connect the tool above instead.",
+    "A passport is for scripts and your own code. Whatever uses it acts as you, with the permissions you tick, and never more. To use Margince in an AI tool, connect the tool above instead.",
   // What each passport scope admits, in words. The wire carries `read`/`draft`/
   // `write`/`send`/`enrich`; a human granting them is choosing what an agent may
   // do on their behalf, and the protocol token alone does not say — "write" and
@@ -9942,8 +10012,8 @@ export const en = {
   "settings.passportUnnamed": "Unnamed passport",
   "settings.passportNameRequired": "Give the agent a name",
   "settings.passportNameTooLong": "Use at most 120 characters.",
-  "settings.mint": "Mint passport",
-  "settings.minting": "Minting…",
+  "settings.mint": "Create passport",
+  "settings.minting": "Creating…",
   "settings.mintCancel": "Cancel",
   "settings.mintDone": "Done",
   "settings.mintOpen": "New passport",
@@ -10074,7 +10144,7 @@ export const en = {
   "agent.activity.summarize.queued": "Summary queued",
   "agent.activity.summarize.running": "Writing summary…",
   "agent.activity.summarize.done": "Summary ready",
-  "agent.activity.summarize.degraded": "Summary stopped partway",
+  "agent.activity.summarize.degraded": "Summary made without full AI help",
   "agent.activity.summarize.failed": "Summary failed",
   "agent.activity.summarize.stalled": "Summary is taking unusually long",
   // The same six with the record NAMED — the company, the contact or the
@@ -10084,27 +10154,36 @@ export const en = {
   "agent.activity.summarizeNamed.queued": "Summary of {name} queued",
   "agent.activity.summarizeNamed.running": "Summarizing {name}…",
   "agent.activity.summarizeNamed.done": "Summary of {name} ready",
-  "agent.activity.summarizeNamed.degraded": "Summary of {name} stopped partway",
+  "agent.activity.summarizeNamed.degraded":
+    "Summary of {name} made without full AI help",
   "agent.activity.summarizeNamed.failed": "Summary of {name} failed",
   "agent.activity.summarizeNamed.stalled":
     "Summary of {name} is taking unusually long",
-  "agent.activity.draftReply.queued": "Reply draft queued",
-  "agent.activity.draftReply.running": "Drafting reply…",
-  "agent.activity.draftReply.done": "Draft reply ready",
-  "agent.activity.draftReply.degraded": "Reply draft stopped partway",
-  "agent.activity.draftReply.failed": "Reply draft failed",
-  "agent.activity.draftReply.stalled": "Reply draft is taking unusually long",
+  "agent.activity.draftEmail.queued": "Email draft queued",
+  "agent.activity.draftEmail.running": "Drafting email…",
+  "agent.activity.draftEmail.done": "Email draft ready",
+  "agent.activity.draftEmail.degraded": "Email draft made without full AI help",
+  "agent.activity.draftEmail.failed": "Email draft failed",
+  "agent.activity.draftEmail.stalled": "Email draft is taking unusually long",
+  "agent.activity.draftEmailNamed.queued": "Email draft about {name} queued",
+  "agent.activity.draftEmailNamed.running": "Drafting an email about {name}…",
+  "agent.activity.draftEmailNamed.done": "Email draft about {name} ready",
+  "agent.activity.draftEmailNamed.degraded":
+    "Email draft about {name} made without full AI help",
+  "agent.activity.draftEmailNamed.failed": "Email draft about {name} failed",
+  "agent.activity.draftEmailNamed.stalled":
+    "Email draft about {name} is taking unusually long",
   "agent.activity.offerDraft.queued": "Offer draft queued",
   "agent.activity.offerDraft.running": "Drafting offer…",
   "agent.activity.offerDraft.done": "Draft offer ready",
-  "agent.activity.offerDraft.degraded": "Offer draft stopped partway",
+  "agent.activity.offerDraft.degraded": "Offer draft made without full AI help",
   "agent.activity.offerDraft.failed": "Offer draft failed",
   "agent.activity.offerDraft.stalled": "Offer draft is taking unusually long",
   "agent.activity.draftReplyNamed.queued": "Reply draft for “{name}” queued",
   "agent.activity.draftReplyNamed.running": "Drafting a reply to “{name}”…",
   "agent.activity.draftReplyNamed.done": "Draft reply to “{name}” ready",
   "agent.activity.draftReplyNamed.degraded":
-    "Reply draft for “{name}” stopped partway",
+    "Reply draft for “{name}” made without full AI help",
   "agent.activity.draftReplyNamed.failed": "Reply draft for “{name}” failed",
   "agent.activity.draftReplyNamed.stalled":
     "Reply draft for “{name}” is taking unusually long",
@@ -10112,7 +10191,7 @@ export const en = {
   "agent.activity.offerDraftNamed.running": "Drafting an offer for {name}…",
   "agent.activity.offerDraftNamed.done": "Draft offer for {name} ready",
   "agent.activity.offerDraftNamed.degraded":
-    "Offer draft for {name} stopped partway",
+    "Offer draft for {name} made without full AI help",
   "agent.activity.offerDraftNamed.failed": "Offer draft for {name} failed",
   "agent.activity.offerDraftNamed.stalled":
     "Offer draft for {name} is taking unusually long",
@@ -10434,7 +10513,7 @@ export const en = {
   "aiAccess.connect.help": "Help from {vendor}",
   "aiAccess.connect.helpAdmin": "Help from {vendor} for your admin",
   "aiAccess.connect.devHint":
-    "Writing your own code? Create an API key under For developers below.",
+    "Writing your own code? Create a passport under For developers below.",
   "aiAccess.step.allow": "Margince opens. Sign in and choose Authorize. Done.",
   "aiAccess.claude.openConnectors":
     "In Claude, open “Customize”, then “Connectors”.",
@@ -10512,9 +10591,10 @@ export const en = {
   "aiAccess.guide.officialHead": "Official guide",
   "aiAccess.guide.checked": "These steps were checked on {date}.",
   "aiAccess.dev.title": "For developers",
+  "aiAccess.yourAgent.title": "Your agent",
   "aiAccess.dev.sub":
-    "API keys for your own code, and what agents may do without you.",
-  "aiAccess.dev.tab.passports": "API keys",
+    "Passports for your own code, and what agents may do without you.",
+  "aiAccess.dev.tab.passports": "Passports (API keys)",
   "aiAccess.dev.tab.rules": "Agent rules",
   "aiAccess.connect.placeQuestion": "Where do you use it?",
   "aiAccess.connect.copy": "Copy",
@@ -10568,6 +10648,16 @@ export const en = {
     "Put this text in ~/.gemini/config/mcp_config.json. If the file already lists servers, add only the margince entry beside them.",
   "aiAccess.local.antigravity.signIn":
     "Open the agent settings, then “Customizations”, and choose “Authenticate” next to margince.",
+  "aiAccess.place.lumoNote":
+    "Lumo on the web cannot connect to other apps yet. Use the Lumo desktop app, which you can download from proton.me/lumo/download.",
+  "aiAccess.local.lumo.open":
+    "In Lumo Desktop, choose “Settings” at the bottom of the sidebar, then “Desktop app” and “Connectors”.",
+  "aiAccess.local.lumo.add":
+    "Choose “Add MCP server…” and set “Transport” to “Remote (HTTP)”.",
+  "aiAccess.local.lumo.fill":
+    "Enter margince as the ID and Margince as the Display name, add a short description, and paste the address.",
+  "aiAccess.local.lumo.signIn":
+    "Choose “Add server”. Margince opens when Lumo asks: sign in and choose Authorize.",
   "aiAccess.other.sub":
     "Margince works with any AI tool that can add a remote MCP server. Look for “MCP”, “connectors” or “tools” in its settings.",
   "aiAccess.other.typeLabel": "Type",
@@ -10577,7 +10667,9 @@ export const en = {
   "aiAccess.other.signIn":
     "OAuth in your browser. Most tools start it the first time they connect.",
   "aiAccess.other.apiKey":
-    "No sign-in in the tool? Create an API key in Settings under AI assistants, For developers, and send it as the header “Authorization: Bearer” followed by the key.",
+    "No sign-in in the tool? Create a passport in Settings under AI assistants, For developers, and send it as the header “Authorization: Bearer” followed by the passport.",
+  "aiAccess.other.apiKeyBelow":
+    "No sign-in in the tool? Create a passport under For developers below, and send it as the header “Authorization: Bearer” followed by the passport.",
   "aiAccess.other.notAllowed":
     "If sign-in says the tool is not allowed, an administrator chooses which tools may connect in Settings under AI tool access.",
   "setup.step.ai": "Connect your AI tool",
@@ -10704,9 +10796,10 @@ export const en = {
   "import.recent.files_other": "{count} files",
   "import.recent.filesBy": "{files} · by {name}",
   "import.recent.undo": "Undo",
+  "import.recent.rowsImported": "{written} of {read} imported",
   "import.status.pending": "Draft",
   "import.status.validating": "Checking",
-  "import.status.awaiting_approval": "Not imported",
+  "import.status.awaiting_approval": "Test run ready",
   "import.status.running": "Importing",
   "import.status.complete": "Complete",
   "import.status.failed": "Stopped",
@@ -10999,7 +11092,7 @@ export const en = {
     "This import is already running. It finishes on its own and this page updates.",
   "import.reason.undo_failed": "The record could not be undone.",
   "import.reason.amount_negative":
-    "“{value}” is below zero, and a deal’s amount cannot be.",
+    "“{value}” is below zero, and an imported amount cannot be.",
   "import.reason.author_too_long": "Author is longer than {max} characters.",
   "import.reason.cannot_create":
     "You cannot create {plural}, so the {plural} file is skipped.",
@@ -11045,10 +11138,14 @@ export const en = {
     "The company column is empty, so the row names no employer.",
   "import.reason.employer_column_empty_dropped":
     "The company column is empty, so the row names no employer. The row was imported without the link.",
+  "import.reason.employer_column_empty_will_drop":
+    "The company column is empty, so the row names no employer. The row will be imported without the link.",
   "import.reason.employer_not_found":
-    "No company named “{name}” is in the CRM, so there was nothing to link this contact to.",
+    "No company named “{name}” is in the CRM, so there is nothing to link this contact to.",
   "import.reason.employer_not_found_dropped":
-    "No company named “{name}” is in the CRM, so there was nothing to link this contact to. The row was imported without the link.",
+    "No company named “{name}” is in the CRM, so there is nothing to link this contact to. The row was imported without the link.",
+  "import.reason.employer_not_found_will_drop":
+    "No company named “{name}” is in the CRM, so there is nothing to link this contact to. The row will be imported without the link.",
   "import.reason.employer_refused":
     "The employer could not be resolved. Choose an unambiguous company that you may link.",
   "import.reason.employer_will_create":
@@ -11072,10 +11169,14 @@ export const en = {
     "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer.",
   "import.reason.link_ambiguous_dropped":
     "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer. The row was imported without the link.",
+  "import.reason.link_ambiguous_will_drop":
+    "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer. The row will be imported without the link.",
   "import.reason.link_not_found":
     "No company with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.link_not_found_dropped":
     "No company with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.link_not_found_will_drop":
+    "No company with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.linkedin_held":
     "This LinkedIn URL is already held by another record in the CRM, so the row cannot claim it.",
   "import.reason.natural_key_taken": "A record with this key already exists.",
@@ -11085,7 +11186,13 @@ export const en = {
     "“{value}” is not a domain that can be written.",
   "import.reason.not_a_number": "“{value}” is not a number.",
   "import.reason.not_an_amount":
-    "“{value}” is not an amount in {currency}. Write it like 12000.50.",
+    "“{value}” is not an amount in {currency}. Write it like {example}.",
+  "import.reason.amount_too_many_decimals":
+    "“{value}” has more decimal places than {currency} takes. Write it like {example}.",
+  "import.reason.amount_needs_currency":
+    "The amount “{value}” has no currency. Fill the currency column of this row with a code, like EUR.",
+  "import.reason.not_a_phone":
+    "“{value}” is not a phone number. Write it with its country code, like +49 30 1234567.",
   "import.reason.not_an_email":
     "“{value}” is not an email address that can be written.",
   "import.reason.not_yes_no": "“{value}” is not yes or no.",
@@ -11137,6 +11244,10 @@ export const en = {
     "“{value}” is not a stage of pipeline “{pipeline}”. Its stages are: {names}.",
   "import.reason.currency_not_a_code":
     "“{value}” is not a currency code. Write its three letters, like EUR.",
+  "import.reason.currency_not_money":
+    "“{value}” is the code for no currency or for tests, so it prices no deal. Write the deal’s currency, like EUR.",
+  "import.reason.close_date_far":
+    "“{value}” is more than {years} years away. Check that this close date is right.",
   "import.reason.close_date_future":
     "“{value}” is in the future, and a closed deal’s close date cannot be.",
   "import.reason.close_date_past":
@@ -11165,6 +11276,8 @@ export const en = {
     "No contact with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.contact_not_found_dropped":
     "No contact with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.contact_not_found_will_drop":
+    "No contact with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.activity_type_unnamed":
     "Name the activity’s type: note, call, meeting or email.",
   "import.reason.activity_type_unknown":
@@ -11212,12 +11325,16 @@ export const en = {
     "No lead with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.lead_not_found_dropped":
     "No lead with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.lead_not_found_will_drop":
+    "No lead with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.deal_not_found":
     "No deal with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.link_row_skipped":
     "The row “{ref}” was skipped in this import, so there is nothing to link to.",
   "import.reason.link_row_skipped_dropped":
     "The row “{ref}” was skipped in this import, so there is nothing to link to. The row was imported without the link.",
+  "import.reason.link_row_skipped_will_drop":
+    "The row “{ref}” was skipped in this import, so there is nothing to link to. The row will be imported without the link.",
   "import.reason.undo_edited":
     "Someone changed this record after the import, so it was left in place.",
   "import.reason.undo_still_referenced":
@@ -11228,10 +11345,14 @@ export const en = {
     "A file cannot set the status “{value}”. Use Qualify or Disqualify on the lead. The statuses a file may set are: {allowed}.",
   "import.reason.deal_not_found_dropped":
     "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.deal_not_found_will_drop":
+    "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.activity_link_ambiguous":
     "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer.",
   "import.reason.activity_link_ambiguous_dropped":
     "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer. The row was imported without the link.",
+  "import.reason.activity_link_ambiguous_will_drop":
+    "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer. The row will be imported without the link.",
   "import.reason.value_unreadable": "“{value}” cannot be read.",
   "import.problem.broken_link": "Broken link",
   "import.problem.dropped_link": "Link left out",
@@ -12362,6 +12483,8 @@ export const en = {
   "translation.nameIn.vi": "Name in Vietnamese",
   "translation.given": "{language}: {name}",
   "stage.name": "Name",
+  "stage.nameTaken":
+    "A stage with this name already exists in this pipeline. Choose another name.",
   "stage.semantic": "Stage type",
   "stage.lastClosing":
     "A pipeline needs a Won and a Lost stage. Add another of this type first.",
@@ -13167,6 +13290,48 @@ export const en = {
   "connectors.telegramReplaceCta": "Replace token",
   "connectors.telegramConnectedAs": "Connected as @{username}.",
   "connectors.telegramConnectFailed": "Bot not connected",
+
+  "connectors.tgbiz.title": "Telegram Business",
+  "connectors.tgbiz.intro":
+    "Link a company Telegram Business account to the bot. Customer messages and the owner’s replies from that account then appear in each contact’s History. Staff keep replying in Telegram.",
+  "connectors.tgbiz.stepsTitle": "To link an account, its owner:",
+  "connectors.tgbiz.step1":
+    "Opens Telegram, then Settings, then Telegram Business, then Chatbots.",
+  "connectors.tgbiz.step2":
+    "Enters @{username} and chooses which chats the bot may see.",
+  "connectors.tgbiz.step3":
+    "The account then shows here as Waiting for approval. Nothing from it is captured until an admin approves it.",
+  "connectors.tgbiz.emptyTitle": "No business account linked",
+  "connectors.tgbiz.emptyNote":
+    "When an owner links the bot in Telegram, the account appears here.",
+  "connectors.tgbiz.statusPending": "Waiting for approval",
+  "connectors.tgbiz.statusConnected": "Connected",
+  "connectors.tgbiz.statusOff": "Switched off in Telegram",
+  "connectors.tgbiz.linked": "Linked {date}",
+  "connectors.tgbiz.approvedOn": "Approved {date}",
+  "connectors.tgbiz.offReason":
+    "The owner switched this link off in Telegram. Nothing new is captured. If they link the bot again, the account waits for approval again.",
+  "connectors.tgbiz.approve": "Approve as company account",
+  "connectors.tgbiz.approveTitle": "Approve {owner} as a company account?",
+  "connectors.tgbiz.approveBody":
+    "Customer messages and the owner’s replies from the Telegram app appear in the customer’s History. Until you change the visibility, only the team you choose can read them. Nothing from the account is captured before you approve.",
+  "connectors.tgbiz.ownAccount": "Member’s own account · each chat is held",
+  "connectors.tgbiz.changeReaders": "Change who reads",
+  "connectors.tgbiz.readerTeamRequired":
+    "Choose the team that reads this account’s messages.",
+  "connectors.tgbiz.visibilityTitle": "Change who reads {owner}’s messages",
+  "connectors.tgbiz.visibilityWarning":
+    "This applies to messages the account captures after the change. Messages held before stay held.",
+  "connectors.tgbiz.visibilityHeldHint":
+    "Only the reader team can read a message.",
+  "connectors.tgbiz.visibilitySharedHint":
+    "A message follows the sharing of the contact it is filed on.",
+  "connectors.tgbiz.visibilityConfirm": "Change visibility",
+  "connectors.tgbiz.approveConflict":
+    "This account cannot be approved. Either the owner switched the link off in Telegram (ask them to link the bot again), or this team differs from the one that already reads the account. The list is refreshed.",
+  "connectors.tgbiz.disconnectTitle": "Disconnect {owner}’s account?",
+  "connectors.tgbiz.disconnectBody":
+    "Margince stops capturing from this account. What it already captured stays in the CRM. If the owner links the bot again, the account waits for approval.",
 
   // The Dispact bot: the self-hosted team chat a deal or project links a
   // private channel in. Words it shares with the Telegram bot stay on those keys.
@@ -14945,7 +15110,16 @@ export const en = {
     "“{label}” added to reports. Everyone who reads reports sees its label and choices.",
   "cf.removedFromReports": "“{label}” removed from reports",
   "cf.audit.title": "Recent field changes",
+  "cf.audit.renamed": "Renamed",
+  "cf.audit.translations": "Translations changed",
+  "cf.audit.choices": "Choices changed",
+  "cf.audit.shownInCreate": "Shown in create forms",
+  "cf.audit.hiddenFromCreate": "Hidden from create forms",
+  "cf.audit.addedToReports": "Added to reports",
+  "cf.audit.removedFromReports": "Removed from reports",
+  "cf.audit.kinds": "Activity types changed",
   "audit.kind.customField": "Custom field",
+  "audit.kind.activity_retention_evidence": "Retention evidence",
   "audit.kind.activity_review_template": "Activity review template",
   "audit.kind.agent_standing_grant": "Standing agent permission",
   "audit.kind.ai_feedback": "AI feedback",
@@ -14978,12 +15152,14 @@ export const en = {
   "audit.kind.confirm_token": "Confirmation link",
   "audit.kind.consent_text_version": "Consent text version",
   "audit.kind.contact_acquisition_evidence": "Contact source evidence",
+  "audit.kind.commission_entry": "Commission entry",
   "audit.kind.contract": "Contract",
   "audit.kind.data_subject_request": "Data subject request",
   "audit.kind.deal_acquisition_source": "Deal source",
   "audit.kind.deal_loss_reason": "Loss reason",
   "audit.kind.deal_loss_reason_mapping": "Loss reason mapping",
   "audit.kind.deal_risk_day": "Deal risk check",
+  "audit.kind.deal_document_hide": "Hidden deal file",
   "audit.kind.deal_room": "Deal Room",
   "audit.kind.deal_room_comment": "Deal Room comment",
   "audit.kind.deal_room_document": "Deal Room document",
@@ -14994,6 +15170,7 @@ export const en = {
   "audit.kind.deal_suggestion": "Deal suggestion",
   "audit.kind.dedupe_candidate": "Possible duplicate",
   "audit.kind.existing_customer_notice": "Existing customer notice",
+  "audit.kind.field_provenance": "Field source",
   "audit.kind.finance_connection": "Accounting connection",
   "audit.kind.finance_customer_link": "Accounting customer link",
   "audit.kind.finance_external_customer": "Accounting customer",
@@ -15010,7 +15187,6 @@ export const en = {
   "audit.kind.lead_disqualify_reason": "Disqualification reason",
   "audit.kind.lead_origin": "Lead origin",
   "audit.kind.lead_privacy_notice": "Lead privacy notice",
-  "audit.kind.lead_source": "Lead source",
   "audit.kind.legal_entity": "Legal entity",
   "audit.kind.legal_review": "Legal review",
   "audit.kind.license": "License settings",
@@ -15043,6 +15219,7 @@ export const en = {
   "audit.kind.scheduled_send": "Scheduled email",
   "audit.kind.sdr_handoff": "SDR handoff",
   "audit.kind.signal": "Signal",
+  "audit.kind.signal_resolution": "Signal match",
   "audit.kind.site_read": "Website analysis",
   "audit.kind.stage": "Stage",
   "audit.kind.stage_exit_criterion": "Stage exit criterion",
@@ -15172,7 +15349,7 @@ export const en = {
   "settings.page.model-calls.sub": "Each model request and its response.",
   "settings.page.privacy.sub":
     "Data subject requests, consent purposes and record retention.",
-  "settings.page.audit.sub": "Every actor and every record they accessed.",
+  "settings.page.audit.sub": "Every change and who made it.",
   "settings.page.system-health.sub":
     "Whether background processing is keeping up.",
   "settings.page.extensions.sub":
@@ -15571,6 +15748,8 @@ export const en = {
   "knowledge.upload.submit_one": "Add document",
   "knowledge.new.title": "New document set",
   "knowledge.new.name": "Name",
+  "knowledge.new.nameTaken":
+    "A document set with this name already exists. Choose another name.",
   "knowledge.new.topic": "What this set covers",
   "knowledge.new.topicHint":
     "One sentence. It is shown to anyone whose question this set does not cover.",
@@ -15852,6 +16031,11 @@ export const en = {
   "settings.rates.fxTableLabel": "Rates in force",
   "settings.rates.fxAdd": "Set rate",
   "settings.rates.fxEmpty": "No currency rates yet.",
+  "settings.rates.fxRemoveVerb": "Remove {currency}",
+  "settings.rates.fxRemoveTitle": "Remove the {currency} rate?",
+  "settings.rates.fxRemoveBody":
+    "Deals in {currency} show no value in the base currency until a new rate is set. Figures already calculated keep the rate they used.",
+  "settings.rates.fxRemoveConfirm": "Remove",
   "settings.rates.fxModalTitle": "Set currency rate",
   "settings.rates.rateToBase": "Rate (to base currency)",
   "settings.rates.modelTableLabel": "Prices in force",
@@ -16358,11 +16542,15 @@ export const en = {
   "extAccess.brings.routes": "Routes",
   "extAccess.brings.jobs": "Background jobs",
   "extAccess.brings.needs": "Uses from the core",
+  "extAccess.brings.mail": "Reads from captured mail",
+  "extAccess.mail.subject": "The subject",
+  "extAccess.mail.addresses": "The participants' addresses",
+  "extAccess.mail.body_one": "The first {count} character of the text",
+  "extAccess.mail.body_other": "The first {count} characters of the text",
   "extAccess.need.models": "AI models",
   "extAccess.need.objects": "File storage",
   "extAccess.brings.none": "None",
-  "extAccess.noObjects":
-    "This unit registers no permission objects, so there is nothing to grant.",
+  "extAccess.noObjects": "This extension has no permissions to grant.",
   "extAccess.roleColumn": "Role",
   "extAccess.action.read": "Read",
   "extAccess.action.create": "Create",
@@ -16384,6 +16572,12 @@ export const en = {
     "Off: this extension leaves a company or deal field that a member last edited as it is, and reports it as withheld. On: it replaces that field.",
   "extGovernance.readOnly": "An admin changes this setting.",
   "extGovernance.notSaved": "Setting was not saved.",
+  "extAccess.setupReady": "Ready",
+  "extAccess.needsSetup": "Needs setup",
+  "extAccess.setupMissing": "Still missing: {items}.",
+  "extAccess.setupSecret": "the key “{name}” in Settings under Integrations",
+  "extAccess.setupApp":
+    "the app “{name}” in Settings under Sign-in and security",
   "users.empty": "No members yet.",
   "users.inviteTitle": "Invite member",
   "users.teamsLabel": "Teams",
@@ -17171,13 +17365,13 @@ export const en = {
   "installationSettings.baseCurrencyLock.ratesFrozen_other":
     "{count} records have frozen a conversion rate against this currency, so it cannot change.",
   "installationSettings.baseCurrencyLock.rateSheet_one":
-    "{count} currency rate converts into {base}. Clear the currency rates first to change the base currency.",
+    "{count} currency rate converts into {base}. Remove every currency from the rate sheet first to change the base currency.",
   "installationSettings.baseCurrencyLock.rateSheet_other":
-    "{count} currency rates convert into {base}. Clear the currency rates first to change the base currency.",
+    "{count} currency rates convert into {base}. Remove every currency from the rate sheet first to change the base currency.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_one":
-    "{count} currency rate converts into a base currency that is not on record. Clear the currency rates first to change the base currency.",
+    "{count} currency rate converts into a base currency that is not on record. Remove every currency from the rate sheet first to change the base currency.",
   "installationSettings.baseCurrencyLock.rateSheetUnnamed_other":
-    "{count} currency rates convert into a base currency that is not on record. Clear the currency rates first to change the base currency.",
+    "{count} currency rates convert into a base currency that is not on record. Remove every currency from the rate sheet first to change the base currency.",
   "installationSettings.baseLanguage": "Base language",
   "installationSettings.baseLanguageHint":
     "Language AI writes in when the whole team reads the text. Display language is separate, and customer replies follow the language of the thread.",
@@ -17500,6 +17694,9 @@ export const en = {
   "connectors.svc.queued": "Starting soon",
   "connectors.svc.imported": "Imported",
   "connectors.svc.stopped": "Stopped",
+  "connectors.svc.mailMissing": "Mail missing",
+  "connectors.svc.unreadPeriod":
+    "Some mail from {from} to {to} may be missing. Import older email with a window that reaches back to {from}.",
   "connectors.svc.calendar": "Calendar",
   "connectors.svc.calendarDesc":
     "Meetings show on contacts and deals, and your booking link offers only your free times.",
@@ -17807,6 +18004,7 @@ export const en = {
   "firstRun.ai.chatModel": "Model",
   "firstRun.ai.modelHint":
     "Any model the provider serves works. The tests graded the setup above, not one model on every tier.",
+  "firstRun.ai.setupTitle.anthropic_cloud": "Anthropic Claude",
   "firstRun.ai.setupTitle.consumer_class_brokered":
     "Gemma 4 you could run yourself, through OpenRouter",
   "firstRun.ai.setupTitle.gemini_cloud": "Google Gemini",
@@ -18638,6 +18836,7 @@ export const en = {
   "webForms.rotateConfirm.body":
     "The current secret stops working at once, and the new one is shown once. Paste it where the old one was right away.",
   "webForms.archive": "Archive",
+  "webForms.archiveTitle": "Archive {name}?",
   "webForms.archiveConfirm":
     "Archiving stops this form from taking submissions. This cannot be undone.",
   "webForms.archiveDone": "Website form archived",
@@ -19022,7 +19221,7 @@ export const en = {
     "A deal’s fields change, other than its stage or owner.",
   "webhooks.event.deal.stage_changed.label": "Deal moved to another stage",
   "webhooks.event.deal.stage_changed.when":
-    "A deal moves to a new stage, won and lost included.",
+    "A deal moves to a new stage, closing stages included.",
   "webhooks.event.deal.owner_changed.label": "Deal owner changed",
   "webhooks.event.deal.owner_changed.when":
     "A deal is reassigned to another owner.",
@@ -19130,9 +19329,6 @@ export const en = {
   "webhooks.event.lead.sla_breached.label": "First response overdue",
   "webhooks.event.lead.sla_breached.when":
     "A check finds a lead’s first-response deadline passed with no answer.",
-  "webhooks.event.lead_source.changed.label": "Lead source list changed",
-  "webhooks.event.lead_source.changed.when":
-    "A lead source is added, edited or removed in Settings.",
   "webhooks.event.lead_disqualify_reason.changed.label":
     "Disqualify reasons changed",
   "webhooks.event.lead_disqualify_reason.changed.when":
@@ -19173,6 +19369,7 @@ export const en = {
   "linkSuggestions.kind.project": "project",
   "linkSuggestions.accept": "File it there",
   "linkSuggestions.reject": "Not there",
+  "linkSuggestions.noAccess": "You do not have access to suggested links.",
   "linkSuggestions.unavailable":
     "The suggested links could not be read. Try again later.",
   "webhooks.event.activity.readiness_recorded.label":
@@ -19581,7 +19778,7 @@ export const en = {
     "Each value with the text it was read from. A corrected value is kept.",
   "contact.enriched.field.first_name": "First name",
   "contact.enriched.field.last_name": "Last name",
-  "contact.enriched.field.title": "Title",
+  "contact.enriched.field.title": "Job title",
   "contact.enriched.field.phone": "Phone",
   "contact.enriched.field.role": "Role",
   "contact.enriched.field.linkedin": "LinkedIn",
@@ -20478,7 +20675,7 @@ export const en = {
   "filters.field.company_country": "Company country",
   "filters.field.company_industry": "Company industry",
   "filters.field.company_lifecycle": "Company lifecycle",
-  "filters.field.company_size_band": "Employees",
+  "filters.field.company_size_band": "Company size",
   "filters.field.country": "Country code",
   "filters.field.created_at": "Created",
   "filters.field.hosting_provider": "Hosting",
@@ -20491,7 +20688,7 @@ export const en = {
   "filters.field.pipeline_id": "Pipeline",
   "filters.field.relationship_type": "Relationship type",
   "filters.field.stage_id": "Stage",
-  "filters.field.tag": "Tag",
+  "filters.field.tag": "Tags",
   "filters.field.technology": "Technology",
   "filters.choosePlaceholder": "Select field",
   "filters.customBadge": "Custom field",
@@ -20500,6 +20697,7 @@ export const en = {
   "filters.values": "Values",
   "filters.addValue": "Add value",
   "filters.removeClause": "Remove {field} condition",
+  "filters.removeEmptyClause": "Remove condition",
   "filters.existsLabel": "Field has value",
   "filters.hasValue": "has a value",
   "filters.isEmpty": "is empty",
@@ -20519,6 +20717,12 @@ export const en = {
   "filters.op.lessThan": "is less than",
   "filters.op.atMost": "is at most",
   "filters.op.withinRadius": "is within",
+  "filters.op.include": "include",
+  "filters.op.notInclude": "do not include",
+  "filters.op.includeAny": "include any of",
+  "filters.op.includeSome": "include at least one",
+  "filters.op.includeNone": "include none",
+  "filters.op.includeSomeOrNone": "include some or none",
   "filters.sentence.radiusOf": "{km} km of {place}",
   "filters.radius.km": "Distance (km)",
   "filters.radius.place": "Place name (optional)",
@@ -20640,6 +20844,7 @@ export const en = {
   "lists.audience.youAndSteward": "You and its steward",
   "lists.audience.ownerAndSteward": "Its owner and steward",
   "lists.audience.unknownTeam": "A team you cannot see",
+  "lists.health.unavailable": "Records unavailable",
   "lists.health.ownerless": "Needs a steward",
   "lists.health.invalid": "Filter no longer works",
   "lists.health.retiredField": "Uses a retired field",
@@ -20682,6 +20887,9 @@ export const en = {
   "lists.invalid.title": "This filter no longer works",
   "lists.invalid.body":
     "A field it names has changed. Its steward can fix the filter in the builder.",
+  "lists.unavailable.title": "These records are unavailable",
+  "lists.unavailable.body":
+    "This list holds records an extension adds, and that extension is not installed. The list works again when the extension is installed again.",
   "lists.ownerless.title": "Nobody looks after this list",
   "lists.ownerless.body":
     "Its steward has left or was never set. Somebody who may change the list should take it over.",
@@ -20777,6 +20985,11 @@ export const en = {
   "lists.editFilter": "Edit filter",
   "lists.filterCannotOpen": "This list’s filter cannot be opened here.",
   "lists.savedTo": "Saved to “{name}”",
+  "lists.settingsSaved": "List saved",
+  "lists.restored": "List restored",
+  "lists.archivedDone": "List archived",
+  "lists.addedTo": "Added to “{name}”",
+  "lists.addedToShortlist": "Added to the Shortlist",
   "lists.editingTitle": "Editing the filter of {name}",
   "lists.editingBody":
     "Save to the list to change which records it holds. To keep a copy instead, save the filter as a new view.",
@@ -20892,13 +21105,19 @@ export const en = {
   "filters.noFields": "No filterable fields for this record type.",
   "filters.resultsTitle": "Matching records",
   "filters.resultRefGone": "Removed, or hidden from you",
-  "filters.resultsCaption":
-    "First page of matches, for checking the filter. Not the full selection.",
+  "filters.resultsCaption": "A sample of the matches",
   "filters.noMatches":
     "No {records} match these conditions. Loosen one: switch a connector to “or”, or remove the most specific condition.",
   "filters.noMatchesLoosen":
     "No {records} match this filter. Loosen or remove a condition.",
-  "filters.pickRecord": "Select record",
+  "filters.pickTag": "Select tag",
+  "filters.pickOwner": "Select owner",
+  "filters.pickTeam": "Select team",
+  "filters.pickCompany": "Select company",
+  "filters.pickPipeline": "Select pipeline",
+  "filters.pickStage": "Select stage",
+  "filters.pickProject": "Select project",
+  "filters.pickProduct": "Select product",
   "filters.searchRecords": "Search companies",
   "filters.typeToSearch": "Type to search",
   "filters.searching": "Searching…",
@@ -20908,6 +21127,7 @@ export const en = {
   "filters.removeRecord": "Remove {record}",
   "filters.loadingRecords": "Loading choices…",
   "filters.pickValue": "Select value",
+  "filters.you": "You",
   "filters.amountUnpriced":
     "This amount has no known currency, so it cannot be shown or changed.",
   "filters.exportCsv": "Export CSV",
@@ -21038,11 +21258,9 @@ export const en = {
   "projectRole.subcontractor": "Subcontractor",
   "projectLinks.attach": "Attach project",
   "projectLinks.move": "Move to another project",
-  "projectLinks.detach": "Detach",
-  "projectLinks.detachConfirm": "Detach project",
-  "projectLinks.detachNamed": "Detach {name}",
+  "projectLinks.detachConfirm": "Remove from project",
   "projectLinks.roleLabel": "As",
-  "projectLinks.detachTitle": "Detach this project?",
+  "projectLinks.detachTitle": "Remove from project?",
   "projectLinks.detachBody":
     "{name} is unchanged. Only its link to this record ends; nothing is deleted.",
   "projectLinks.emptyTitle": "No projects yet",
@@ -21080,7 +21298,7 @@ export const en = {
   "project.ownerMe": "Me",
   "project.assignOwner": "Assign to a colleague",
   "project.description": "Description",
-  "project.targetEnd": "Target end date",
+  "project.targetEnd": "Target end",
   "project.startDate": "Start date",
   "project.endDate": "End date",
   "project.noCustomer": "No customer company",
@@ -21101,7 +21319,7 @@ export const en = {
     "You cannot edit this project. Ask its owner to share it, or an administrator for edit rights.",
   "project.phaseLabel": "Phase",
   "project.filterPhaseAll": "All phases",
-  "project.viewDelivering": "In delivery",
+  "project.viewDelivering": "Delivering",
   "project.phase.initiative": "Initiative",
   "project.phase.pursuing": "Pursuing",
   "project.phase.delivering": "Delivering",
@@ -21129,7 +21347,6 @@ export const en = {
   "project.stakeholders.removeTitle": "Remove stakeholder?",
   "project.stakeholders.removeConfirm":
     "{name} is no longer a stakeholder on this project. Their activity stays where it is.",
-  "project.stakeholders.removeOne": "Remove {name} from project",
   "project.role.sponsor": "Sponsor",
   "project.role.project_lead": "Project lead",
   "project.role.delivery_lead": "Delivery lead",
@@ -21174,13 +21391,14 @@ export const en = {
   "record.details.notShared": "Not shared",
   "project.visibility.sharedWith_one": "Shared with {count}",
   "project.visibility.sharedWith_other": "Shared with {count}",
-  "project.aside.targetEnd": "Target end",
   "project.aside.ended": "Ended",
   "project.aside.closedReason": "Closing reason",
   "project.history.since": "Since {date}",
   "project.history.movedBy": "{subject} moved it",
   "project.history.openedBy": "{subject} opened it",
   "project.history.unknown": "Who made this move was not recorded",
+  "project.history.dealWon": "Deal {name} won",
+  "project.history.dealWonUnnamed": "A deal was won",
   "project.standing.unassessed":
     "Nobody has recorded how delivery is going yet.",
   "project.standing.assessedBy": "Assessed {date} by {author}.",
@@ -21202,7 +21420,6 @@ export const en = {
   "project.standing.event.opened": "{phase} opened",
   "project.standing.event.signed": "Contract signed",
   "project.standing.event.won": "{name} won",
-  "project.standing.event.end": "Target end",
   "project.standing.event.dueLate": "due {date} · late",
   "project.standing.event.due": "due {date}",
   "project.standing.lastUpdate": "Last update",
@@ -21686,6 +21903,9 @@ export const en = {
   "worklist.manager.kind.next_step": "Deal next step",
   "worklist.manager.kind.review_backlog": "Review backlog",
   "worklist.manager.kind.general": "Other",
+  "worklist.manager.coachDeal": "Deal",
+  "worklist.manager.coachNoDeal":
+    "No deal is in their day, so there is none to name.",
   "worklist.board.title": "Team work needing attention",
   "worklist.gap.rankedOn": "Ranked on {date}.",
   "worklist.gap.masked_one":
@@ -22741,6 +22961,7 @@ export const en = {
   // four lanes. The `magic.action.*` and `magic.consequence.*` families are
   // the client half of a mirror the server sends keys against. So the set is
   // the contract (src/lib/magickeys.ts), not one screen's copy.
+  "magic.heading.firstBrief": "Before your first brief",
   "magic.heading.brief": "Since your last brief",
   "magic.loading": "Reading what the machinery did",
   "magic.lane.done": "Done for you",
@@ -22838,6 +23059,7 @@ export const en = {
   "magic.why.site_read_unnamed": "Read on the company’s website.",
   "magic.why.site_read_each": "Read on each company’s own website.",
   "magic.why.signature": "Taken from an email signature.",
+  "magic.why.stated": "Reason given: {why}",
   "magic.why.retention": "Retention rule: after {days} days.",
   "magic.by.retention": "Retention",
   "magic.by.mail_filing": "Mail filing",
@@ -23024,9 +23246,23 @@ export const en = {
   "scheduling.replaceAliasHelp":
     "Your short address {url} stops working too. You can choose it again afterwards.",
   "scheduling.replaceConfirmTitle": "Replace link address?",
-  "scheduling.team.title": "Colleagues on this link",
-  "scheduling.team.foot":
-    "Guests see only the times when you and every colleague here are free, in each colleague’s own working hours. Each booking invites every colleague.",
+  "scheduling.teamLinks.title": "Team links",
+  "scheduling.teamLinks.foot":
+    "A team link offers only the times when you and every colleague on it are free, in each one’s own working hours, and invites every colleague to each meeting. It uses the calendar and settings of your personal link, which always offers only your own free time.",
+  "scheduling.teamLinks.create": "New team link with",
+  "scheduling.teamLinks.createHelp":
+    "Choose a colleague to make a new link with its own address. Only colleagues with a connected calendar are offered. Each colleague confirms before the link takes bookings.",
+  "scheduling.teamLinks.defaultTitle": "Meet {names}",
+  "scheduling.teamLinks.off": "Off: takes no bookings",
+  "scheduling.teamLinks.ready": "Takes bookings",
+  "scheduling.teamLinks.waiting": "Waiting for colleagues",
+  "scheduling.teamLinks.paused": "Paused: your calendar cannot take meetings",
+  "scheduling.teamLinks.delete": "Delete link",
+  "scheduling.teamLinks.deleteTitle": "Delete “{title}”?",
+  "scheduling.teamLinks.deleteHelp":
+    "The link’s address stops working. Meetings already booked through it stay. Your personal link does not change.",
+  "scheduling.teamLinks.lastMember":
+    "A team link needs at least one colleague. Delete the link instead.",
   "scheduling.team.add": "Add a colleague",
   "scheduling.team.addHelp":
     "Only colleagues with a connected calendar are offered. Each one confirms before the link takes bookings.",
@@ -23049,7 +23285,7 @@ export const en = {
   "scheduling.team.confirm": "Confirm",
   "scheduling.team.leave": "Leave",
   "worklist.untitled.booking_health_team_not_ready":
-    "Your booking page is paused: a colleague on it has not confirmed, has left, or has no readable calendar",
+    "Your team link is paused: a colleague on it has not confirmed, has left, or has no readable calendar",
   "scheduling.personalLinksFoot":
     "Meeting one specific person? Open their contact and choose Book a meeting to send a few times or a personal link that only they can use.",
   "scheduling.liveNoInvitesTitle": "Guests can book, but no invitations go out",
@@ -23817,7 +24053,7 @@ export const en = {
   "contactCase.prefer.name": "Name",
   "contactCase.prefer.email": "Primary email",
   "contactCase.prefer.employment": "Current employer",
-  "contactCase.prefer.title": "Title",
+  "contactCase.prefer.title": "Job title",
   "contactCase.prefer.placeholder": "Choose a value",
   "contactCase.previewVerb": "Preview merge",
   "contactCase.merge_one": "Merge {count} contact",
@@ -23909,7 +24145,13 @@ export const en = {
   "analytics.trajectory.target": "Goal {amount}",
   "analytics.trajectory.projection": "{amount} projected",
   "analytics.trajectory.range": "Modelled finish",
-  "analytics.overview.more": "More",
+  "analytics.trajectory.pace": "Even pace",
+  "analytics.hero.chart.won": "Sales won through the period",
+  "analytics.hero.chart.forecast": "Where the quarter can finish",
+  "analytics.hero.chart.range": "Modelled quarter finish",
+  "analytics.hero.key.won": "Sales won",
+  "analytics.hero.key.goal": "Goal",
+  "analytics.hero.openForecast": "Open forecast",
   "analytics.outlook.valuedCount": "{included} of {eligible} valued",
   "analytics.outlook.periodPipeline": "Pipeline due this quarter",
   "analytics.outlook.selectedSales": "Sales outlook",
@@ -23947,8 +24189,6 @@ export const en = {
     "Completing the work does not qualify or win the deal.",
   "analytics.decisions.saveOutcome": "Save outcome",
   "analytics.overview.filtersToggle": "Filters",
-  "analytics.overview.chipPipeline": "Pipeline: {name}",
-  "analytics.overview.chipClose": "Closing: {window}",
   "analytics.overview.chipProduct": "Product: {name}",
   "analytics.overview.chipCountry": "Country: {name}",
   "analytics.overview.chipIndustry": "Industry: {name}",

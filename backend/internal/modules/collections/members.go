@@ -14,6 +14,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
@@ -49,6 +50,10 @@ type MemberRead struct {
 const memberIDsField = "entity_id"
 
 // checked bounds Only by the largest page and settles the page size.
+
+// sqlFalse is the predicate that admits no row.
+const sqlFalse = "FALSE"
+
 func (r MemberRead) checked() (MemberRead, error) {
 	if len(r.Only) == 0 {
 		r.Only, r.Limit = nil, pageSize(r.Limit)
@@ -94,6 +99,9 @@ func (s *Store) readMembers(ctx context.Context, listID ids.ListID, read MemberR
 	if err != nil {
 		return nil, storekit.Page{}, err
 	}
+	if kindRemoved(list.EntityType) {
+		return nil, storekit.Page{}, nil
+	}
 	if list.ListType == listTypeDynamic {
 		return s.evaluateSegment(ctx, list, read)
 	}
@@ -118,7 +126,7 @@ func (s *Store) readMembers(ctx context.Context, listID ids.ListID, read MemberR
 // reader's scope for the list's record type.
 func visibleMemberClause(ctx context.Context, entityType string, arg func(any) int) (string, error) {
 	if recordkinds.IsExtensionName(entityType) {
-		return extensionMemberClause(ctx, entityType)
+		return extensionMemberClause(ctx, entityType, "lm.entity_id"), nil
 	}
 	scope, err := recordScope(ctx, entityType, "e", arg)
 	if err != nil {
@@ -131,13 +139,13 @@ func visibleMemberClause(ctx context.Context, entityType string, arg func(any) i
 // extensionMemberClause is visibleMemberClause for a kind an extension declared.
 // Its rows have no owner to scope by, so the kind's read right is the whole
 // scope. A reader without it sees no member. One with it sees the live rows.
-func extensionMemberClause(ctx context.Context, kind string) (string, error) {
-	declared, ok := recordkinds.Lookup(kind)
-	if !ok || !auth.Allows(ctx, kind, principal.ActionRead) {
-		return "FALSE", nil
+func extensionMemberClause(ctx context.Context, kind, idColumn string) string {
+	declared, ok := auth.ReadableKind(ctx, kind)
+	if !ok {
+		return sqlFalse
 	}
-	return fmt.Sprintf("EXISTS (SELECT 1 FROM %s e WHERE e.id = lm.entity_id AND e.archived_at IS NULL)",
-		pgx.Identifier{"ext", declared.Table}.Sanitize()), nil
+	return fmt.Sprintf("EXISTS (SELECT 1 FROM %s e WHERE e.id = %s AND e.archived_at IS NULL)",
+		pgx.Identifier{"ext", declared.Table}.Sanitize(), idColumn)
 }
 
 // recordScope is the reader's row scope over a record of table aliased alias,
@@ -233,9 +241,16 @@ const dynamicAddedBy = "dynamic"
 // already held cannot wait on a second connection from the same pool without
 // risking a deadlock under load.
 func (s *Store) liveFilter(ctx context.Context, list listRow) (storekit.Query, storekit.Predicate, error) {
+	if kindRemoved(list.EntityType) {
+		return storekit.Query{}, storekit.Predicate{}, errKindRemoved
+	}
 	engine, ok, err := s.SegmentEngine(ctx, list.EntityType)
 	if err != nil {
 		return storekit.Query{}, storekit.Predicate{}, err
+	}
+	if !ok && recordkinds.IsExtensionName(list.EntityType) {
+		// A declared kind answers no engine only to a caller who may not read it.
+		return storekit.Query{}, storekit.Predicate{}, apperrors.ErrPermissionDenied
 	}
 	if !ok {
 		// A stored list.entity_type outside the segment set is a schema
@@ -318,6 +333,9 @@ func (s *Store) MemberFilter(ctx context.Context, listID ids.UUID, entityType st
 	}
 	if list.EntityType != entityType {
 		return nil, &BadInputError{Field: listIDField, Reason: "names a list of " + list.EntityType + ", not of " + entityType}
+	}
+	if kindRemoved(list.EntityType) {
+		return func(string, func(any) int) (string, error) { return sqlFalse, nil }, nil
 	}
 	if list.ListType == listTypeDynamic {
 		engine, pred, err := s.liveFilter(ctx, list)

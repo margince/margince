@@ -23,7 +23,7 @@ const grantRecordTypeArg = "record_type"
 const grantRecordScope = "record_type=@record_type AND record_id=@record_id"
 
 func admitGrantCarry(ctx context.Context, tx pgx.Tx, kind string, source, target ids.UUID) error {
-	if (kind != "contact" && kind != "company" && kind != "lead") || source.IsZero() || target.IsZero() || source == target {
+	if (kind != "contact" && kind != "company" && kind != "lead" && kind != "deal") || source.IsZero() || target.IsZero() || source == target {
 		return apperrors.ErrInvalidArgument
 	}
 	if err := auth.Require(ctx, kind, principal.ActionUpdate); err != nil {

@@ -178,7 +178,7 @@ func (d *DocumentExtractor) readAttachment(ctx context.Context, store documentRe
 		if errors.Is(err, errRefusedDocument) {
 			d.log.WarnContext(ctx, "document reading refused",
 				"attachment_extraction_id", readID, "attachment_id", attachmentID, "reason", err)
-			return d.fail(ctx, store, readID, claimedAt, d.refusedReadingDetail(err))
+			return d.fail(ctx, store, readID, claimedAt, d.refusedReadingDetail(question, err))
 		}
 		return d.retryable(ctx, store, readID, claimedAt, err)
 	}
@@ -421,20 +421,21 @@ func attachmentParent(meta crmcontracts.Attachment) ids.Ref {
 	return ids.From[ids.ActivityKind](id).Ref()
 }
 
-// refusedReadingDetail is what the panel says about a refused reading, and there
-// are two answers because one of them would otherwise be false.
+// refusedReadingDetail is what the panel says about a refused reading.
 //
-// The general refusal is honest about a reply the model produced and this
-// product would not act on: nothing about the document changed, so reading it
-// again is a reasonable thing to offer. A document whose BYTES are not the type
-// it was stored as is the opposite — every model reads them the same way, so
-// "can be read again" invites a rep to spend the same call twice and reach the
-// same place. The file has to change.
-func (d *DocumentExtractor) refusedReadingDetail(err error) string {
-	if errors.Is(err, model.ErrAttachmentMislabelled) {
+// The general refusal is the question's own: nothing about the file changed,
+// so the panel says what it offers next. Two causes would make that false.
+// Bytes that are not the type they were stored as read the same way on every
+// model, so the file has to change. A reply from the offline stand-in model
+// means no AI provider is set up, so an admin has to add one.
+func (d *DocumentExtractor) refusedReadingDetail(q documentQuestion, err error) string {
+	switch {
+	case errors.Is(err, model.ErrAttachmentMislabelled):
 		return documentWords.Mislabelled.In(d.said.Lang())
+	case errors.Is(err, ai.ErrUnconfiguredModel):
+		return documentWords.NoModel.In(d.said.Lang())
 	}
-	return documentWords.Refused.In(d.said.Lang())
+	return q.refused.In(d.said.Lang())
 }
 
 // ask puts one document to the model and returns what it may act on.

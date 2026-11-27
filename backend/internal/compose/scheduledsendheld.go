@@ -100,6 +100,7 @@ func (n scheduledSendHeldNotifier) NotifyHeldInTx(ctx context.Context, tx pgx.Tx
 	}
 	digest := sha256.Sum256(proposal)
 	_, err = n.approvals.StageOrJoinPendingInTx(ctx, tx, approvals.StageInput{
+		Why:            approvals.HeadlineSaysWhy,
 		Kind:           heldScheduledSendKind,
 		ProposedChange: proposal,
 		DiffHash:       hex.EncodeToString(digest[:]),

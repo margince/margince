@@ -7,7 +7,7 @@ on its own sentence. A scenario's `must_end_with` names the end state instead,
 one record field per entry, in the flat form parse_scenario reads:
 
     must_end_with:
-      - company "Emsland Ventilbau GmbH" lifecycle=prospect
+      - company "Emsland Ventilbau GmbH" status=prospect
       - company "Aachener Metallwerke GmbH" document=<sha256> *.md
       - company "Aachener Metallwerke GmbH" documents=1
       - activity "Signing" on project "Rollout" document_contract=<sha256> Service contract

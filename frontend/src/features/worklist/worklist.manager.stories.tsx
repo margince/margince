@@ -5,7 +5,8 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { en } from "../../i18n/en";
 import { jsonResponse, StoryProviders } from "../../testing/story-utils";
-import { CoachControl, OwnerPicker, ReassignForm } from "./worklist.manager";
+import { CoachControl } from "./worklist.coach";
+import { OwnerPicker, ReassignForm } from "./worklist.manager";
 import type { WorklistItem } from "./worklist.queries";
 
 // THE THREE THINGS A LEAD DOES with somebody else's queue: open it, hand one
@@ -85,7 +86,8 @@ export const AColleaguesDay: Story = {
  *  reader spends a press finding out, with its own verb on the panel's
  *  trailing edge. The hand-off rests as a line of the row's menu. */
 export const TheVerbsAtRest: Story = {
-  render: () => frame(<CoachControl owner={LENA} name="Lena Fischer" />),
+  render: () =>
+    frame(<CoachControl owner={LENA} name="Lena Fischer" deals={[]} />),
 };
 
 /** Handing the task on, the form the row's menu opens: one line ending in the
@@ -102,11 +104,39 @@ export const HandingItOn: Story = {
  *  the answer last. The panel keeps its title and its chrome across both
  *  states, so pressing the verb does not change the page's shape. */
 export const LeavingANote: Story = {
-  render: () => frame(<CoachControl owner={LENA} name="Lena Fischer" />),
+  render: () =>
+    frame(<CoachControl owner={LENA} name="Lena Fischer" deals={[]} />),
   play: async ({ canvasElement }) => {
     await userEvent.click(
       within(canvasElement).getByRole("button", {
         name: en["worklist.manager.coach"],
+      }),
+    );
+  },
+};
+
+/** A next-step note: the deal it names is picked from the deals in their
+ *  day, and the confirm waits for one, because the headline names it. */
+export const NamingTheDeal: Story = {
+  render: () =>
+    frame(
+      <CoachControl
+        owner={LENA}
+        name="Lena Fischer"
+        deals={[
+          { value: "d-1", label: "Depot rollout" },
+          { value: "d-2", label: "Fleet renewal" },
+        ]}
+      />,
+    ),
+  play: async ({ canvasElement }) => {
+    const canvas = within(canvasElement);
+    await userEvent.click(
+      canvas.getByRole("button", { name: en["worklist.manager.coach"] }),
+    );
+    await userEvent.click(
+      canvas.getByRole("button", {
+        name: en["worklist.manager.kind.next_step"],
       }),
     );
   },
@@ -117,5 +147,5 @@ export const LeavingANote: Story = {
  *  rather than reading "A note for undefined"; the write is addressed by id
  *  either way. */
 export const ANoteForSomebodyUnnamed: Story = {
-  render: () => frame(<CoachControl owner={LENA} />),
+  render: () => frame(<CoachControl owner={LENA} deals={[]} />),
 };

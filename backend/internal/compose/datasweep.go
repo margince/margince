@@ -68,11 +68,10 @@ var preservedResetTables = map[string]bool{
 	// activity_channel_provider_fkey constraints and abort the whole sweep
 	// transaction outright.
 	"activity_kind": true, "channel_provider": true,
-	// The two administered lead vocabularies — sources and disqualification
-	// reasons — are installation configuration on the same footing as
-	// `setting`: the migration seeds the built-ins and an administrator shapes
-	// the rest, and neither is a record of this workspace's customers.
-	"lead_source": true, "lead_origin": true, "lead_disqualify_reason": true,
+	// The lead origins and disqualification reasons are installation
+	// configuration, like `setting`. The migration seeds the built-ins and an
+	// administrator shapes the rest; neither is a record of a customer.
+	"lead_origin": true, "lead_disqualify_reason": true,
 	// The SDR handoff and deal loss reasons and the partner stages, seeded the same way.
 	"sdr_handoff_reason": true, "deal_loss_reason": true, "partner_stage": true,
 	// Installation configuration beside the users kept; only the migration seeds the default.
@@ -240,10 +239,10 @@ func clearWorkspaceOutbox(ctx context.Context, tx pgx.Tx) error {
 // streams are purged are re-published seconds later into streams that were just
 // emptied, and a subscriber then works events against rows the sweep is deleting.
 //
-// It narrows the window rather than closing it. The relay claims a batch FOR
-// UPDATE SKIP LOCKED, so this DELETE waits on whatever is in flight — but that
-// batch has already XADDed, and rows any concurrent request commits afterwards
-// still reach the bus. The residual is one relay batch wide, not seconds wide.
+// It narrows the window rather than closing it. An event a request commits
+// after this DELETE and before the sweep survives the reset and names a row the
+// sweep deletes. Its consumers answer events.ErrUnactionable for the missing
+// record, so the subscriber acks it once instead of retrying it forever.
 //
 // Running in its own transaction has a price the sweep's did not: a reset that
 // fails later has already dropped this workspace's staged events, and they are

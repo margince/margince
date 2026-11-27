@@ -18,8 +18,8 @@ var changeAttentionCopy = toolCopy{
 var changeAccessCopy = toolCopy{
 	Purpose: "Decide who works on what: share a record with a colleague or team and take the share back, " +
 		"make a colleague responsible for a record, offer, request or claim ownership, and set up the " +
-		"workspace — change a member's role, deactivate or remove a member, create " +
-		"teams and add or remove their members, and record a colleague who already left.",
+		"workspace (change a member's role, deactivate or remove a member, create " +
+		"teams and add or remove their members, and record a colleague who already left).",
 	Limits: "An agent never grants or removes the admin role, never changes its own user's role or " +
 		"teams, never acts on a member who is an admin, never hands a colleague's work to its own user and " +
 		"never changes a member's email; those are " +

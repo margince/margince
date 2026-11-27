@@ -347,7 +347,7 @@ func scoreDeals(
 	// privacy owns the list; a literal here would be a second copy of the one
 	// rule where almost-the-same resurrects what was certified destroyed.
 	verbsPos := arg(privacy.ScrubVerbs())
-	scope, err := auth.ScopeClauseFor(ctx, "deal", "d", arg)
+	scope, err := standingDealScope(ctx, arg)
 	if err != nil {
 		return nil, err
 	}

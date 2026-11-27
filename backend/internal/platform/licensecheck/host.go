@@ -3,32 +3,8 @@
 
 package licensecheck
 
-// The wazero host that runs the bundled validation module in this process.
-//
-// Vendored from margince-constellation's tools/licensecheckwasm/host/host.go at
-// 885471640ea89785c69942816984953257c83d62, and kept in step with it by hand. It
-// is a copy rather than an import because that package lives in a private
-// module: a public source installation could not resolve the import path, so
-// importing it would make this product unbuildable for exactly the contacts who
-// need to prove their entitlement.
-//
-// Deliberately a near-verbatim copy, down to MustInstantiate below, because
-// hand-syncing a diverged copy is how the two drift. What it accepts is therefore
-// upstream's decision: a raw, gzipped or brotli-compressed module, decided by
-// the bytes rather than by a file name.
-//
-// Two divergences, both additive. First, run() wraps a rejection in ErrVerdict.
-// A caller then tells "the module judged this license" from "the module could
-// not run" without reading the message. The wording is unchanged. This
-// repository forbids classifying errors by message text
-// (backend/gates/errmatch_test.go), because the two mean opposite things here.
-// Second, run() stops the module when its context ends, and reports that stop
-// as a fault rather than a verdict. Both are worth offering upstream.
-//
-// That commit is NEWER than the release module/VERSION pins, and the two are
-// expected to move independently: this side is the reader, and it reads every
-// framing upstream has published, so a source that runs ahead of the bundled
-// artifact is the safe direction rather than a mismatch to reconcile.
+// The reference host is copied here so a source installation builds without
+// fetching the checker. Its result types follow the bundled module's output.
 
 import (
 	"bytes"
@@ -66,17 +42,15 @@ type Result struct {
 // claims existed. A zero IssuedAt or NotBefore means the token carried no such
 // claim. InGrace reports a license past its expiry that the grace period still
 // accepts: the check passes today and will stop passing.
-//
-// Nothing in this build reads these yet. They are decoded rather than dropped
-// because the alternative is a decode that has to change before anyone can use
-// them, and this file is the one that has to match upstream byte for byte.
+// GraceUntil comes from the module so callers need no copy of its grace period.
 type License struct {
 	IssuedAt     time.Time `json:"issued_at"`
 	NotBefore    time.Time `json:"not_before"`
 	Expiry       time.Time `json:"expiry"`
+	GraceUntil   time.Time `json:"grace_until"`
 	ID           string    `json:"id"`
 	Subject      string    `json:"subject"`
-	Company      string    `json:"company,omitempty"`
+	Company      string    `json:"org,omitempty"`
 	ContactName  string    `json:"name,omitempty"`
 	ContactEmail string    `json:"email,omitempty"`
 	KeyID        string    `json:"key_id"`

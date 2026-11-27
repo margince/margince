@@ -30,8 +30,6 @@ package gates
 
 import (
 	"go/ast"
-	"io/fs"
-	"path/filepath"
 	"strings"
 	"testing"
 
@@ -114,15 +112,11 @@ var ownPools = gatekit.Waive(map[string]string{
 func TestModuleSuitesTakeTheProcessSharedPool(t *testing.T) {
 	t.Parallel()
 	var offenders, sharing, unguarded []string
-	err := gatekit.WalkDir(modulesTree, func(path string, d fs.DirEntry, err error) error {
-		if err != nil || d.IsDir() || !strings.HasSuffix(path, "_integration_test.go") {
-			return err
-		}
-		path = filepath.ToSlash(path)
-		file, err := gatekit.ParseFile(path, 0)
-		if err != nil {
-			return err
-		}
+	// A suite is a file the integration lane compiles, as go/build decides it
+	// for lanepoolbudget. So a //go:build integration file with another name is
+	// judged too.
+	for _, suite := range integrationSuitesUnder(t, modulesTree) {
+		path, file := suite.Path, suite.File
 		if gatekit.References(file, testdbPath, "Pool") {
 			sharing = append(sharing, path)
 			// Taking the shared pool without the quiescence gate is the SECOND
@@ -134,16 +128,9 @@ func TestModuleSuitesTakeTheProcessSharedPool(t *testing.T) {
 				unguarded = append(unguarded, path)
 			}
 		}
-		if !opensItsOwnPool(file) {
-			return nil
-		}
-		if !ownPools.Waived(t, path) {
+		if opensItsOwnPool(file) && !ownPools.Waived(t, path) {
 			offenders = append(offenders, path)
 		}
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walking %s for integration suites: %v", modulesTree, err)
 	}
 
 	if len(offenders) > 0 {

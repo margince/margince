@@ -70,11 +70,11 @@ To edit a contact in Margince, open it and press **Edit** in a section of the **
 ### Why can't I edit a contact or company?
 A contact or company in Margince takes no edits when it is archived ("This contact is archived and takes no changes."). It also takes none when it is not yours to change: "You cannot edit this contact. Ask the owner to hand it over or share it, or ask an administrator."
 
-Where you cannot edit, a section shows no **Edit**, a field shows no box or mark, and other actions are greyed out. The page states the reason once, at the foot of the **Details** panel, or in the band at the top of an archived contact. Except on an archived record, pointing at a greyed-out **Email** or **Log** button in the header shows the same reason. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
+Where you cannot edit, a section shows no **Edit**, a field shows no box, and other actions show a lock. The **View only** chip under the name gives the owner, the reason and **Ask … for edit access**; so does **Access** under **Ownership**. An archived record says why in the band at the top instead. If someone else changed the same field while you were editing, your edit is refused: "This record changed after you opened it. Reload it to see the change, then make yours again."
 Also called: read-only record, edit greyed out, cannot change.
 
 ### What does "This sender may be pretending to be someone else" mean?
-The warning shows on a contact when the first email from one of its addresses carried a sign that the sender is someone else. The warning names the sign when one was recorded, such as a mail domain in a coded spelling that can look like another domain. Check the address, then press **Looks fine** if the sender is right. The warning then goes for all users, and the **History** tab records who cleared it. Only a user who can edit the contact can clear it, and an agent cannot.
+The warning shows on a contact when any email from its addresses carried a sign that the sender is someone else. The warning names the sign when one was recorded, such as a mail domain in a coded spelling that can look like another domain. Check the address, then press **Looks fine** if the sender is right. The warning then goes for all users, even when a later email shows a sign, and the **History** tab records who cleared it. Only a user who can edit the contact can clear it, and an agent cannot.
 Also called: wrong sender, sender warning.
 ### How do I link a contact to a company?
 New contacts use the same company check from every source. A company name can find or create the employer; a work address can find a company or wait for a site check. Personal email domains create no company.
@@ -138,7 +138,7 @@ A company needs a display name and a source.
 ### How do I add a company?
 To add a company (a new customer, client or account) in Margince, open **Companies** in the sidebar and choose **New company**.
 1. Enter the **Company name** (required).
-2. If you like, fill **Legal name**, **Industry**, **Employees**, **Phone** and **Email**. You pick **Industry** from a list.
+2. If you like, fill **Legal name**, **Industry**, **Company size**, **Phone** and **Email**. You pick **Industry** from a list.
 3. Choose **Add domain** for each domain; a domain row you add must be filled.
 4. Fill any custom fields, then choose **Create**. If another company holds the same domain, **View existing record** opens it instead and nothing is created. If a company with the same name exists, Margince still creates yours and shows a notice with **View existing record**. Your company's page then shows **Possible duplicates** and a count. The website address comes from the main domain, so there is no website box.
 
@@ -149,7 +149,7 @@ To edit a company in Margince, open it and press **Edit** in a section of the pa
 1. If the panel beside the tabs is hidden, choose **Show details**.
 2. Press **Edit** in the section, change the fields in the dialog, and press **Save**. Nothing is stored until **Save**; **Cancel** or `Esc` closes without saving.
 
-**About** holds **Domain**, **Industry**, **Employees** and **Lifecycle**; **Address**, **Ownership** and **Registration** hold the address, **Owner** and **VAT ID**. The **Profile** tab holds **Legal name**, **Relationship type**, **Parent company**, **LinkedIn URL**, **Phone**, **Email** and **Registered address** under **Details**, and custom fields. There you press a value to change it; **Parent company** and **Relationship type** open a dialog with several fields. To rename the company, press its name at the top, type the new **Company name** and press **Save**; the website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
+**About** holds **Domain**, **Industry**, **Company size** and **Lifecycle**; **Address**, **Ownership** and **Registration** hold the address, **Owner** and **VAT ID**. The **Profile** tab holds **Legal name**, **Relationship type**, **Parent company**, **LinkedIn URL**, **Phone**, **Email** and **Registered address** under **Details**, and custom fields. There you press a value to change it; **Parent company** and **Relationship type** open a dialog with several fields. To rename the company, press its name at the top, type the new **Company name** and press **Save**; the website follows the main domain. **Industry** is a fixed list, and an import's text that names none of it goes into the **Description**.
 Also called: rename a company, update an account.
 
 ### How do I check a company's VAT number?
@@ -190,7 +190,7 @@ A company may have a parent company, and that parent may have a parent of its ow
 To merge two duplicate companies in Margince, open the company you want to remove, choose **More actions**, then **Merge company**.
 1. Search for the other company and pick it under **Select record to keep**.
 2. Read the question. It says what the record you keep takes over, and that a merge cannot be undone. Each name carries its main domain, so two companies with one name stay apart.
-3. Choose **Merge**. Margince opens the company you kept and says "{source} was merged into {target}." The company you kept takes each empty field from the other, such as **Industry**, **Employees** or the address. Its **Lifecycle** is taken when it was still **Unknown**.
+3. Choose **Merge**. Margince opens the company you kept and says "{source} was merged into {target}." The company you kept takes each empty field from the other, such as **Industry**, **Company size** or the address. Its **Lifecycle** is taken when it was still **Unknown**.
 
 The company you merged away is archived, not deleted. You cannot merge an archived company. Its **Overview** says that it is archived, and **Merged into** links the company you kept. Some contacts work at both companies, with the merged-away company as current employer. They keep the company you kept as current employer.
 
@@ -314,7 +314,7 @@ To undo a change in Margince, open the record's history and choose **Undo** on t
 1. Find the entry and choose **Undo**.
 <!-- prose:allow residue quotes the Undo this change? dialog title as the screen shows it -->
 2. If it changed more than one field, or a link between records, confirm in **Undo this change?**.
-An undone change folds into one line with its undo; press **Show both changes**, then **Redo** on the undo. If it changed more than one field, confirm the question that names them. Where **Undo** is refused, the button says why before you press it. Only a human can undo; an agent cannot.
+An undone change folds into one line with **Redo** and **Show both changes** on it. If it changed more than one field, confirm the question that names them. Where **Undo** is refused, the button says why before you press it. Only a human can undo; an agent cannot.
 Also called: revert, roll back, put a change back.
 
 Every Margince record keeps a history of what changed, who changed it and when. You can put back a single **entry** as a whole; you cannot take the record back to a point in time. There is no undo for a single field: if one change changed four fields, all four go back together, and the question lists them:
@@ -354,7 +354,7 @@ Also called: custom property, extra column, new attribute, hide a field on new r
 
 Renaming a field changes its label and keeps your reports working. To name a field and its choices per language, choose **Names in other languages** in its row menu. A colleague whose Margince is in that language sees those names in forms and on records. To take a field out of create forms later, turn off its switch under **In create forms**. The record page still shows it, and you can edit it there.
 
-A deal or company picklist or yes/no field has a switch under **In reports**. Turn it on to group and filter deal reports by that field. A company field groups each deal by its company's value. Everyone who reads deal reports then sees the field's name and choices.
+A deal or company picklist or yes/no field has a switch under **In reports**. Turn it on to group and filter deal reports by that field. A company field groups each deal by its company's value. Everyone who reads deal reports then sees the field's name and choices. **Recent field changes** under the list shows who changed a field, on which record type, and what the change did, such as **Renamed**. You see it only with the right to read the audit log.
 
 ### How do I change the choices of a field?
 To change the choices of a **picklist** or **multiple choice** field, choose **Edit choices** in its row menu in Settings → **Records and fields**. Each choice shows how many records hold it, and before you save Margince says how many lose a removed choice. Add one with **Add option**, take one away with **Remove option**, and choose **Save**; a field keeps at least one choice. Saving takes a removed choice off each record: a picklist record has no value left, and a **multiple choice** record keeps the rest. Each record's history shows the change, and a saved filter that names the removed choice finds no record by it.

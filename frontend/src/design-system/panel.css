@@ -525,6 +525,20 @@
 .panel-ai > .panel-head .panel-title {
   color: var(--aiText);
 }
+/* A flat head on a toned panel still draws its band, and a band is a box: it
+   keeps the same air above and below, with its title and action centred. */
+:is(
+  .panel-ai,
+  .panel-accent,
+  .panel-info,
+  .panel-success,
+  .panel-warning,
+  .panel-danger,
+  .panel-discovery
+) > .panel-head-flat {
+  align-items: center;
+  padding-block: var(--space-3);
+}
 .panel-ai > .panel-foot {
   border-top-color: var(--aiMed);
 }

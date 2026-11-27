@@ -46,6 +46,7 @@ import (
 // Each entry says what the file does about a HELD activity, which is the
 // question this door raises and the one the census next door cannot ask.
 var auditTrailReaders = gatekit.Waive(map[string]string{
+	"rawsubjectsql.go":            "reads only whether a subject has an erasure tombstone row, never an image. It decides whether an original may be destroyed, and a held activity keeps its original through the legal-hold clause beside it",
 	"linkedhistoricalaudit.go":    "system-only correction returning audit IDs and flags. Current holds and floors are checked before a per-entry metadata proof removes personal values; no image leaves the database",
 	"linkedhistoricalscope.go":    "resolves existing record links and privacy certificates to identify historical copies. It returns record kinds and UUIDs, never images, and bounds linked copies by the original certificate",
 	"markedaudit.go":              "system-only marker correction reads pending audit metadata, never its images. Any legal hold or open dispute defers correction; table locks keep that decision stable",

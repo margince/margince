@@ -90,6 +90,12 @@ function backend(allow: GrantSpec, calls: Call[] = []) {
         version: 1,
       });
     }
+    if (request.method === "PATCH" && raw.includes('"label":"Price"')) {
+      return jsonResponse(
+        { status: 409, code: "name_taken", detail: "name taken" },
+        409,
+      );
+    }
     if (request.method === "PATCH") {
       return jsonResponse(reason("timing", "Bad timing", false));
     }
@@ -132,6 +138,26 @@ it("retires a reason through its switch rather than deleting it", async () => {
     expect(
       wrote(calls, "PATCH", "/loss-reasons/reason-price", { active: false }),
     ).toBe(true),
+  );
+});
+
+it("says a rename to a taken name on the field", async () => {
+  const user = userEvent.setup();
+  vi.stubGlobal("fetch", backend(ADMIN));
+  render(<LossReasonsCard />);
+  await user.click(
+    await screen.findByRole("button", {
+      name: en["table.rowActions"].replace("{name}", "No decision"),
+    }),
+  );
+  await user.click(screen.getByRole("button", { name: "Rename" }));
+  const dialog = within(await screen.findByRole("dialog"));
+  const field = dialog.getByLabelText(en["lossReasons.labelField"]);
+  expect(field).toHaveAttribute("data-character-limit", "120");
+  await user.clear(field);
+  await user.type(field, "Price{Enter}");
+  await waitFor(() =>
+    expect(field).toHaveAccessibleDescription(en["lossReasons.duplicate"]),
   );
 });
 

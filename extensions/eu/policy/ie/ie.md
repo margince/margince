@@ -2,10 +2,13 @@
 jurisdiction: ie
 version: 1
 created: 2026-11-19
+source-checked: 2026-11-25
 instruments:
   - name: "S.I. No. 336/2011, European Communities (Electronic Communications Networks and Services) (Privacy and Electronic Communications) Regulations 2011"
     provision: "Regulation 13"
     source-url: https://www.irishstatutebook.ie/eli/2011/si/336/made/en/print
+    text-digest: 16ab7fe9dd240388abb7ebfa9189cdf589145e1cf66fdbde1fb7280282993f66
+    text-fetched: 2026-11-25
 marketing-exceptions: []
 fixtures:
   - finding: objection_route

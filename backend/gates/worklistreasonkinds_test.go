@@ -67,7 +67,7 @@ func TestEveryDeclaredReasonKindIsOneTheClientCanSay(t *testing.T) {
 		t.Fatalf("reading the English catalog: %v", err)
 	}
 	worded := map[string]bool{}
-	for _, m := range tsReasonCopyKey.FindAllStringSubmatch(tsComment.ReplaceAllString(string(catalog), " "), -1) {
+	for _, m := range tsReasonCopyKey.FindAllStringSubmatch(tsWithoutComments(string(catalog)), -1) {
 		worded[m[1]] = true
 	}
 	if len(declared) == 0 || len(census) == 0 || len(worded) == 0 {
@@ -110,7 +110,7 @@ func clientReasonCensus(t *testing.T) []string {
 		body = body[:end]
 	}
 	var kinds []string
-	for _, m := range knownReasonEntry.FindAllStringSubmatch(tsComment.ReplaceAllString(body, ""), -1) {
+	for _, m := range knownReasonEntry.FindAllStringSubmatch(tsWithoutComments(body), -1) {
 		kinds = append(kinds, m[1])
 	}
 	slices.Sort(kinds)

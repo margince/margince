@@ -128,6 +128,8 @@ func (r listRule) watchedList(ctx context.Context, id ids.UUID) (ListRef, *ruleP
 		return ListRef{}, nil, err
 	case list.Archived:
 		return list, &rulePause{reason: PausedListArchived}, nil
+	case list.Unavailable:
+		return list, &rulePause{reason: PausedListUnavailable}, nil
 	case list.Invalid:
 		return list, &rulePause{reason: PausedListInvalid}, nil
 	}

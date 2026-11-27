@@ -59,9 +59,12 @@ type SARPackage struct {
 	Deals               []map[string]any `json:"deals"`
 	Leads               []map[string]any `json:"leads"`
 	Activities          []map[string]any `json:"activities"`
-	Attachments         []map[string]any `json:"attachments"`
-	Consent             []map[string]any `json:"consent"`
-	ConsentEvents       []map[string]any `json:"consent_events"`
+	// MessageIdentities are the Message-IDs and meeting keys of the subject's
+	// disclosed messages, each with the door that attested it.
+	MessageIdentities []map[string]any `json:"message_identities"`
+	Attachments       []map[string]any `json:"attachments"`
+	Consent           []map[string]any `json:"consent"`
+	ConsentEvents     []map[string]any `json:"consent_events"`
 	// The declared personal columns of extension rows that name the contact, a
 	// lead twin or one of their activities.
 	ExtensionData []map[string]any `json:"extension_data"`
@@ -71,6 +74,8 @@ type SARPackage struct {
 	// Why this contact exists: the answer to Art. 15(1)(g).
 	AcquisitionEvidence []map[string]any `json:"acquisition_evidence"`
 	NoticeCases         []map[string]any `json:"notice_cases"`
+	// LeadPrivacyNotices are the notices a lead twin of the subject was sent.
+	LeadPrivacyNotices []map[string]any `json:"lead_privacy_notices"`
 	// Every confirm link the workspace mailed this subject, and what became of
 	// it: issued, opened, answered, or left to expire. The mail carrying the
 	// link is already in Activities; this says what the link itself did, which
@@ -163,6 +168,11 @@ type SARPackage struct {
 	// proposed, and how sure the writer was. Owed on ReplyJudgements' ground, because it
 	// is a conclusion drawn from what they wrote.
 	StageEvidence []map[string]any `json:"stage_evidence"`
+	// ConversationClaims is what a colleague or a model read out of a message
+	// about the subject: a promise, a question, an objection. Each row carries
+	// the reading next to the quoted words and is marked derived. So the subject
+	// can tell what they wrote from what we concluded. Who wrote it stays out.
+	ConversationClaims []map[string]any `json:"conversation_claims"`
 	// Handoffs is each time this contact was passed from one seat to another as a
 	// prospect, what was decided, and why. Art. 15 owes it twice over: the note
 	// is what one colleague wrote ABOUT them, and the decision is one colleagues
@@ -340,7 +350,7 @@ const sarSubjectQuery = `
 	SELECT p.id, p.full_name, p.first_name, p.last_name, p.title,
 	       (SELECT jsonb_object_agg(ps.platform, ps.handle) FROM contact_social ps WHERE ps.contact_id = p.id) AS social,
 	       p.address_line1, p.address_line2, p.address_city, p.address_region, p.address_postal_code, p.address_country,
-	       p.source, p.created_at
+	       p.source, p.source_system, p.created_at
 	FROM contact p WHERE p.id = $1`
 
 // appendSubjectCustomValues merges the subject's stored cf_ values into

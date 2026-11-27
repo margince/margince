@@ -67,7 +67,7 @@ func (s *Store) readSourceState(ctx context.Context, tx pgx.Tx) (crmcontracts.Fi
 	err := tx.QueryRow(ctx, `
 		SELECT id, provider, status, created_at, last_attempt_at, last_success_at, last_error_code
 		  FROM finance_connection
-		 WHERE archived_at IS NULL AND status <> 'disconnected'
+		 WHERE status <> 'disconnected'
 		 ORDER BY created_at DESC
 		 LIMIT 1`).Scan(&conn.Id, &conn.Provider, &conn.Status, &conn.ConnectedAt,
 		&conn.LastAttemptAt, &conn.LastSuccessAt, &conn.LastErrorCode)
@@ -133,12 +133,10 @@ func insertConnection(ctx context.Context, tx pgx.Tx, id ids.UUID, connectedAt t
 	if err != nil {
 		return err
 	}
-	// credential_ref names where the credential lives: with the unit that
-	// supplies the source, never in this table.
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO finance_connection (id, provider, status, credential_ref, created_at, source, captured_by)
-		VALUES ($1, $2, $3, $4, $5, 'manual', $6)`,
-		id, provider, statusConnectionConnecting, "extension:"+provider, connectedAt, by); err != nil {
+		INSERT INTO finance_connection (id, provider, status, created_at, captured_by)
+		VALUES ($1, $2, $3, $4, $5)`,
+		id, provider, statusConnectionConnecting, connectedAt, by); err != nil {
 		return fmt.Errorf("record the finance connection: %w", err)
 	}
 	if _, err := storekit.Audit(ctx, tx, "create", entityConnection, id, nil,
@@ -176,7 +174,7 @@ func (s *Store) Disconnect(ctx context.Context) error {
 		}
 		tag, err := tx.Exec(ctx, `
 			UPDATE finance_connection SET status = $2
-			 WHERE id = $1 AND version = $3 AND archived_at IS NULL`,
+			 WHERE id = $1 AND version = $3`,
 			live.id, statusDisconnected, version)
 		if err != nil {
 			return fmt.Errorf("disconnect the finance connection: %w", err)

@@ -8,6 +8,8 @@ package gates
 // A record's source channel is spelled three times: provenance.RecordSources(),
 // the table's CHECK and the contract's enum. A value in Go and not in the CHECK
 // fails the write at run time; one in the contract and not in Go is refused 422.
+// enumsync_test.go compares each held table's CHECK with the list. This file
+// holds the trigger, the mapping function and the contract to it.
 
 import (
 	"bufio"
@@ -21,14 +23,17 @@ import (
 )
 
 // recordSourceHeld maps a table whose source is held to the list onto the
-// create request that carries it. A partner has no source on the wire.
+// create request that carries it.
 //
 // gatekit:fixture the held tables and the request each one's source arrives on
 var recordSourceHeld = map[string]string{
+	"company": "CreateCompanyRequest",
+	"contact": "CreateContactRequest",
 	"deal":    "CreateDealRequest",
+	"lead":    "CreateLeadRequest",
 	"offer":   "CreateOfferRequest",
-	"partner": "",
 	"project": "CreateProjectRequest",
+	"signal":  "CreateSignalRequest",
 }
 
 // recordSourceFree names each create request whose source is still free text,
@@ -36,10 +41,6 @@ var recordSourceHeld = map[string]string{
 var recordSourceFree = gatekit.Waive(map[string]string{
 	"CreateActivityRequest":     "an activity's source also names the code that wrote the row, and readers select on those words",
 	"CreateTaskRequest":         "a task is an activity and shares its source",
-	"CreateCompanyRequest":      "capture and domain triage store a message id or a domain in a company's source",
-	"CreateContactRequest":      "capture stores the message a contact was read from in its source",
-	"CreateLeadRequest":         "a lead's source is matched against the administered lead source list",
-	"CreateSignalRequest":       "a signal's source names its producer, and the scan's readers select on it",
 	"CreateRelationshipRequest": "a relationship's source cites the record or mail the edge was read from",
 	"CreateCustomFieldRequest":  "a custom field is configuration, not a record that arrives by a channel",
 	"CreateProductRequest":      "a product is catalog data, not a record that arrives by a channel",
@@ -115,18 +116,12 @@ func recordSourceFindings(vocabulary []string, checks, triggers, requests map[st
 	var findings []string
 	held := map[string]bool{}
 	for table, request := range recordSourceHeld {
-		check, ok := checks[table]
-		switch {
-		case !ok:
+		// A held table with no check means recordSourceLists stopped reading one.
+		if _, ok := checks[table]; !ok {
 			findings = append(findings, table+": no "+table+"_source_check in the head catalog")
-		case !equalSets(vocabulary, check):
-			findings = append(findings, table+": the CHECK allows "+strings.Join(check, ", "))
 		}
 		if trigger, ok := triggers[table]; ok && !equalSets(vocabulary, trigger) {
 			findings = append(findings, table+": the update trigger lists "+strings.Join(trigger, ", "))
-		}
-		if request == "" {
-			continue
 		}
 		held[request] = true
 		if !equalSets(vocabulary, requests[request]) {
@@ -191,9 +186,7 @@ func TestTheRecordSourceGateSeesEachWayTheListCanDrift(t *testing.T) {
 		checks, triggers, requests = map[string][]string{}, map[string][]string{}, map[string][]string{}
 		for table, request := range recordSourceHeld {
 			checks[table], triggers[table] = vocabulary, vocabulary
-			if request != "" {
-				requests[request] = vocabulary
-			}
+			requests[request] = vocabulary
 		}
 		for request := range recordSourceFree.Reasons() {
 			requests[request] = nil
@@ -205,17 +198,16 @@ func TestTheRecordSourceGateSeesEachWayTheListCanDrift(t *testing.T) {
 		t.Fatalf("an agreeing tree was reported: %v", findings)
 	}
 	for name, drift := range map[string]func(checks, triggers, requests map[string][]string){
-		"a check with one more value":     func(checks, _, _ map[string][]string) { checks["deal"] = []string{"api", "manual", "seed"} },
-		"a held table with no check":      func(checks, _, _ map[string][]string) { delete(checks, "partner") },
+		"a held table with no check":      func(checks, _, _ map[string][]string) { delete(checks, "company") },
 		"a trigger that is shorter":       func(_, triggers, _ map[string][]string) { triggers["offer"] = []string{"manual"} },
 		"a contract enum that is shorter": func(_, _, requests map[string][]string) { requests["CreateOfferRequest"] = []string{"manual"} },
 		"a held request with no enum":     func(_, _, requests map[string][]string) { requests["CreateProjectRequest"] = nil },
-		"a check on a table not held":     func(checks, _, _ map[string][]string) { checks["lead"] = vocabulary },
+		"a check on a table not held":     func(checks, _, _ map[string][]string) { checks["activity"] = vocabulary },
 		"a new request with a source":     func(_, _, requests map[string][]string) { requests["CreateTicketRequest"] = nil },
 		"a free request that gained an enum": func(_, _, requests map[string][]string) {
-			requests["CreateLeadRequest"] = vocabulary
+			requests["CreateActivityRequest"] = vocabulary
 		},
-		"a free request that lost its source": func(_, _, requests map[string][]string) { delete(requests, "CreateSignalRequest") },
+		"a free request that lost its source": func(_, _, requests map[string][]string) { delete(requests, "CreateProductRequest") },
 	} {
 		checks, triggers, requests := agreeing()
 		drift(checks, triggers, requests)

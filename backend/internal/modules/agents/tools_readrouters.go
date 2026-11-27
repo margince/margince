@@ -58,13 +58,13 @@ type readRelationships struct{ routed }
 
 func (readRelationships) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "read_relationships", Title: "Read who we know, and how well", Version: toolVersionV1,
+		Name: "read_relationships", Title: "Read who your team knows, and how well", Version: toolVersionV1,
 		Description: readRelationshipsCopy.render(),
 		Instead:     readRelationshipsCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{
 			"contact_id":{"description":"The colleagues who know this contact; name exactly one of the three ids"},
 			"company_id":{"description":"A warm route into this company; name exactly one of the three ids"},
-			"deal_id":{"description":"Which roles at this deal's company we cover; name exactly one of the three ids"}}}`),
+			"deal_id":{"description":"Which roles at this deal's company your team covers; name exactly one of the three ids"}}}`),
 	}
 }
 
@@ -79,6 +79,15 @@ var relationshipTargetByID = map[string]string{
 }
 
 func (readRelationships) routeTargets() map[string]string { return relationshipTargetByID }
+
+// pickedBy names each choice by itself: a choice is the id argument that picks it.
+func (readRelationships) pickedBy() map[string]string {
+	picked := map[string]string{}
+	for id := range relationshipTargetByID {
+		picked[id] = id
+	}
+	return picked
+}
 
 var errRelationshipsNamesOneID = &BadArgsError{Cause: errors.New("name exactly one of contact_id, company_id or deal_id")}
 

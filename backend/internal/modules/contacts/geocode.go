@@ -54,7 +54,7 @@ const (
 
 // GeocodeStatuses is every status company_geocode_state.status admits.
 //
-// Held by: TestTheGeocodeStatusesAreTheColumnsCheck (backend/gates/geocodestatuses_test.go)
+// Held by: TestEveryListedVocabularyIsItsColumnsCheck (backend/gates/enumsync_test.go)
 func GeocodeStatuses() []string {
 	return []string{GeocodeOK, GeocodeFailed, GeocodeNoMatch, GeocodeStale}
 }
@@ -320,10 +320,10 @@ func (s *Store) recordGeocodeAfter(
 		if status == GeocodeOK {
 			_, err := tx.Exec(ctx, `
 				INSERT INTO company_geocode_state
-				       (company_id, attempts, last_outcome, updated_at, lat, lon, status, provider, input_hash, geocoded_at)
-				VALUES ($1, 0, $2, now(), $3, $4, $2, $5, $6, now())
+				       (company_id, attempts, updated_at, lat, lon, status, provider, input_hash, geocoded_at)
+				VALUES ($1, 0, now(), $3, $4, $2, $5, $6, now())
 				ON CONFLICT (company_id) DO UPDATE
-				   SET attempts = 0, last_outcome = $2, next_attempt_at = NULL, updated_at = now(),
+				   SET attempts = 0, next_attempt_at = NULL, updated_at = now(),
 				       lat = $3, lon = $4, status = $2, provider = $5, input_hash = $6, geocoded_at = now()`,
 				companyID, status, lat, lon, provider, inputHash)
 			if err != nil {
@@ -341,12 +341,11 @@ func (s *Store) recordGeocodeAfter(
 		}
 		_, err = tx.Exec(ctx, `
 			INSERT INTO company_geocode_state
-			       (company_id, attempts, last_outcome, next_attempt_at, updated_at,
+			       (company_id, attempts, next_attempt_at, updated_at,
 			        lat, lon, status, provider, input_hash, geocoded_at)
-			VALUES ($1, 1, $2, now() + $3::interval, now(), $4, $5, $2, $6, $7, now())
+			VALUES ($1, 1, now() + $3::interval, now(), $4, $5, $2, $6, $7, now())
 			ON CONFLICT (company_id) DO UPDATE
 			   SET attempts = company_geocode_state.attempts + 1,
-			       last_outcome = $2,
 			       next_attempt_at = now() + $3::interval,
 			       updated_at = now(),
 			       lat = $4, lon = $5, status = $2, provider = $6, input_hash = $7, geocoded_at = now()`,

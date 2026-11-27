@@ -230,7 +230,13 @@ function LaneNotices({
           <Badge tone="warning">{t(laneLabel(lane.lane))}</Badge>{" "}
           {lane.outcome === "refused"
             ? t("co.tech.laneRefused")
-            : t("co.tech.laneFailed", { lane: t(laneLabel(lane.lane)) })}
+            : t(
+                // A previous result is promised only where one was ever read.
+                lane.last_success_at
+                  ? "co.tech.laneFailed"
+                  : "co.tech.laneFailedFirst",
+                { lane: t(laneLabel(lane.lane)) },
+              )}
         </p>
       ))}
     </div>

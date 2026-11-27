@@ -102,8 +102,7 @@ func (p *TranscriptProposer) readClaimed(ctx context.Context, store transcriptRe
 		if errors.Is(err, errRefusedTranscript) {
 			p.log.WarnContext(ctx, "transcript reading refused",
 				"transcript_read_id", readID, "activity_id", activityID, "reason", err)
-			return p.fail(ctx, store, readID, activityID,
-				activities.TranscriptFailure{Code: activities.TranscriptFailureRefused})
+			return p.fail(ctx, store, readID, activityID, refusedTranscriptFailure(err))
 		}
 		return err
 	}
@@ -265,4 +264,14 @@ func (p *TranscriptProposer) stage(
 		}
 	}
 	return out, nil
+}
+
+// refusedTranscriptFailure names why a reading the product would not act on
+// closed. A reply from the offline stand-in model means no AI provider is set
+// up, which an admin fixes; reading it again would change nothing.
+func refusedTranscriptFailure(err error) activities.TranscriptFailure {
+	if errors.Is(err, ai.ErrUnconfiguredModel) {
+		return activities.TranscriptFailure{Code: activities.TranscriptFailureNoModel}
+	}
+	return activities.TranscriptFailure{Code: activities.TranscriptFailureRefused}
 }

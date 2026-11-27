@@ -8,7 +8,7 @@ import {
   jsonResponse,
   StoryProviders,
 } from "../testing/story-utils";
-import { ConnectAiToolCard } from "./connect-ai-tool";
+import { ConnectAiTool, ConnectAiToolCard } from "./connect-ai-tool";
 
 function story(connectorEnabled = true) {
   return () => {
@@ -108,8 +108,30 @@ export const Cursor: Story = {
   play: picking("Cursor"),
 };
 
+// Lumo is used in one place, so the card does not ask where.
+export const Lumo: Story = {
+  render: story(),
+  play: picking("Lumo"),
+};
+
 export const AnotherTool: Story = {
   render: story(),
+  play: picking("Another AI tool"),
+};
+
+// Without the card, as onboarding shows it, the passport line names Settings.
+export const AnotherToolOutsideSettings: Story = {
+  render: () => {
+    installFetchStub({
+      "GET /.well-known/oauth-protected-resource": () =>
+        jsonResponse({ resource: "https://margince.example/mcp" }),
+    });
+    return (
+      <StoryProviders>
+        <ConnectAiTool />
+      </StoryProviders>
+    );
+  },
   play: picking("Another AI tool"),
 };
 

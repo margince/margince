@@ -55,6 +55,6 @@ func MarkPartySourceReplayedTx(ctx context.Context, tx pgx.Tx, activity ids.Acti
 }
 
 func markPartySourceKnownTx(ctx context.Context, tx pgx.Tx, activity ids.ActivityID, outcome string) error {
-	_, err := tx.Exec(ctx, `INSERT INTO capture_party_source_replay(activity_id,outcome) VALUES(@activity,@outcome) ON CONFLICT(activity_id) DO NOTHING`, pgx.NamedArgs{partyActivityArg: activity, "outcome": outcome})
+	_, err := tx.Exec(ctx, `INSERT INTO capture_party_source_replay(activity_id,outcome) VALUES(@activity,@outcome) ON CONFLICT(activity_id) DO NOTHING`, pgx.NamedArgs{partyActivityArg: activity, fieldOutcome: outcome})
 	return err
 }

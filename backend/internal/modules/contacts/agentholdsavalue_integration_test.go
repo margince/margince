@@ -64,7 +64,7 @@ func TestALogoIsHeldByAUsersAgentAndNotByAutomaticWork(t *testing.T) {
 			ctx := e.as()
 			companyID := seedLogoCompany(ctx, t, e, "Nordwind Energie AG", "nordwind.test")
 			if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-				if _, err := tx.Exec(ctx, `UPDATE company SET logo_object_key = 'k', logo_origin = 'upload' WHERE id = $1`, companyID); err != nil {
+				if _, err := tx.Exec(ctx, `UPDATE company SET logo_object_key = 'k', logo_source = 'upload' WHERE id = $1`, companyID); err != nil {
 					return err
 				}
 				return storekit.StampFields(ctx, tx, "company", companyID.UUID, CompanySourceAgent, stamp,
@@ -106,7 +106,7 @@ func TestATechnicalValueAUsersAgentCorrectedIsNotAReplacedMachineValue(t *testin
 	} {
 		t.Run(name, func(t *testing.T) {
 			if err := e.store.tx(ctx, func(tx pgx.Tx) error {
-				if _, err := tx.Exec(ctx, `UPDATE company_fact SET captured_by = $2, source = 'agent' WHERE company_id = $1 AND field = $3`,
+				if _, err := tx.Exec(ctx, `UPDATE field_provenance SET captured_by = $2, source = 'agent' WHERE object_type = 'company' AND value IS NOT NULL AND object_id = $1 AND field_name = $3`,
 					companyID, tc.stamp, FactMailProvider); err != nil {
 					return err
 				}
@@ -138,9 +138,10 @@ func TestTheRequesterVatNumberTrustsAUsersAgentAndNotAutomaticWork(t *testing.T)
 			e := newAnchorEnv(t)
 			if err := e.store.tx(e.ctx, func(tx pgx.Tx) error {
 				_, err := tx.Exec(e.ctx, `
-					INSERT INTO company_profile_field (company_id, field, value, source, captured_by)
-					VALUES ($1, 'register_vat', 'DE123456789', $2, $3)
-					ON CONFLICT (company_id, field) DO UPDATE SET source = EXCLUDED.source, captured_by = EXCLUDED.captured_by`,
+					INSERT INTO field_provenance (object_type, object_id, field_name, value, source, captured_by)
+					VALUES ('company', $1, 'register_vat', 'DE123456789', $2, $3)
+					ON CONFLICT (object_type, object_id, field_name, value_key) WHERE value IS NOT NULL
+					DO UPDATE SET source = EXCLUDED.source, captured_by = EXCLUDED.captured_by`,
 					e.anchorID, tc.source, tc.stamp)
 				return err
 			}); err != nil {

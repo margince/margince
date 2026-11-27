@@ -1,0 +1,7 @@
+{
+  "verdict": "no",
+  "reason": "The answer says the mail went to Dom Digital and only the calls went to Aachener Metallwerke, so it does not say all three items moved as one batch to Aachener Metallwerke.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 2. The answer says the three items that sat on Vorort Systeme now sit on Aachener Metallwerke, moved as one batch. Any noun for them counts (mails, calls, activities), and so does a line such as 3 moved, 0 failed. Answer no if it gives another number, or says only some moved.",
+  "answer": "On 3 March 2025 I moved the mail across to Dom Digital and the calls to Aachener Metallwerke. The old links are gone."
+}

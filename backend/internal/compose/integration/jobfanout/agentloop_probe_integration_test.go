@@ -45,7 +45,10 @@ func (re *runnerEnv) probeSeed(t *testing.T, sc agentloope2e.Scenario, w *loopWo
 	re.enqueue(t, string(sc.Agent), trigger, &re.passportID)
 	re.tick(t)
 	status, trace, _ := re.runRow(t, trigger)
-	if status != string(runner.OutcomeCompleted) {
+	// The sweep's outcome check refuses a run that wrote no note, so its reads-only
+	// probe ends degraded. The executed reads below are what the probe is for.
+	sweepRefused := sc.Agent == agentloope2e.OvernightSweep && status == string(runner.OutcomeDegraded)
+	if status != string(runner.OutcomeCompleted) && !sweepRefused {
 		t.Fatalf("harness: the probe run ended %s", status)
 	}
 	p := &probed{

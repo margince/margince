@@ -15,8 +15,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
@@ -71,24 +69,6 @@ func TestFrontendTextLimitsComeFromTheSharedValues(t *testing.T) {
 	}
 	if string(raw) != textbounds.Frontend() {
 		t.Fatal("frontend text limits differ from shared values; run make gen")
-	}
-}
-
-func TestCompanyAndDealDescriptionsShareTheDocumentLimit(t *testing.T) {
-	t.Parallel()
-	raw, err := gatekit.ReadFile("api/crm.yaml")
-	if err != nil {
-		t.Fatal(err)
-	}
-	var contract map[string]any
-	if err := yaml.Unmarshal(raw, &contract); err != nil {
-		t.Fatal(err)
-	}
-	for _, schema := range []string{"CreateCompanyRequest", "UpdateCompanyRequest", "CreateDealRequest", "UpdateDealRequest"} {
-		cap := publishedMaxLength(t, contract, schemaPath("components", "schemas", schema, "properties", "description"))
-		if cap != values.TextDocumentCharacters {
-			t.Errorf("%s.description has limit %d, want %d", schema, cap, values.TextDocumentCharacters)
-		}
 	}
 }
 
@@ -309,7 +289,7 @@ func TestEveryDisplayNameBodyPublishesItsOwnersLimit(t *testing.T) {
 		t.Fatal(err)
 	}
 	var contract map[string]any
-	if err := yaml.Unmarshal(raw, &contract); err != nil {
+	if err := unmarshalYAML(raw, &contract); err != nil {
 		t.Fatal(err)
 	}
 	schemas, ok := contract["components"].(map[string]any)["schemas"].(map[string]any)

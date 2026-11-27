@@ -1119,6 +1119,22 @@ func (stubs) ConnectChannel(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ConnectChannel")
 }
 
+func (stubs) ListTelegramBusinessConnections(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListTelegramBusinessConnections")
+}
+
+func (stubs) DisconnectTelegramBusinessConnection(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "DisconnectTelegramBusinessConnection")
+}
+
+func (stubs) ApproveTelegramBusinessConnection(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "ApproveTelegramBusinessConnection")
+}
+
+func (stubs) UpdateTelegramBusinessConnectionVisibility(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "UpdateTelegramBusinessConnectionVisibility")
+}
+
 func (stubs) DisconnectChannel(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "DisconnectChannel")
 }
@@ -2127,6 +2143,10 @@ func (stubs) ListDealMarginceChanges(w nethttp.ResponseWriter, r *nethttp.Reques
 	httperr.NotImplemented(w, r, "ListDealMarginceChanges")
 }
 
+func (stubs) MergeDeal(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MergeDealParams) {
+	httperr.NotImplemented(w, r, "MergeDeal")
+}
+
 func (stubs) MoveDealPipeline(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.MoveDealPipelineParams) {
 	httperr.NotImplemented(w, r, "MoveDealPipeline")
 }
@@ -2483,6 +2503,10 @@ func (stubs) ProposeFxRateRefresh(w nethttp.ResponseWriter, r *nethttp.Request) 
 	httperr.NotImplemented(w, r, "ProposeFxRateRefresh")
 }
 
+func (stubs) RemoveFxRate(w nethttp.ResponseWriter, r *nethttp.Request, from string) {
+	httperr.NotImplemented(w, r, "RemoveFxRate")
+}
+
 func (stubs) ListImportRuns(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListImportRunsParams) {
 	httperr.NotImplemented(w, r, "ListImportRuns")
 }
@@ -2721,22 +2745,6 @@ func (stubs) UpdateLeadOrigin(w nethttp.ResponseWriter, r *nethttp.Request, id c
 
 func (stubs) GetLeadSignalCatalog(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetLeadSignalCatalog")
-}
-
-func (stubs) ListLeadSources(w nethttp.ResponseWriter, r *nethttp.Request) {
-	httperr.NotImplemented(w, r, "ListLeadSources")
-}
-
-func (stubs) CreateLeadSource(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.CreateLeadSourceParams) {
-	httperr.NotImplemented(w, r, "CreateLeadSource")
-}
-
-func (stubs) DeleteLeadSource(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
-	httperr.NotImplemented(w, r, "DeleteLeadSource")
-}
-
-func (stubs) UpdateLeadSource(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id, params crmcontracts.UpdateLeadSourceParams) {
-	httperr.NotImplemented(w, r, "UpdateLeadSource")
 }
 
 func (stubs) ListLeads(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListLeadsParams) {
@@ -3953,6 +3961,26 @@ func (stubs) CreateMeetingProposal(w nethttp.ResponseWriter, r *nethttp.Request,
 
 func (stubs) ListSchedulingTeamCandidates(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ListSchedulingTeamCandidates")
+}
+
+func (stubs) ListSchedulingTeamLinks(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListSchedulingTeamLinks")
+}
+
+func (stubs) CreateSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "CreateSchedulingTeamLink")
+}
+
+func (stubs) DeleteSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Request, pageId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "DeleteSchedulingTeamLink")
+}
+
+func (stubs) UpdateSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Request, pageId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "UpdateSchedulingTeamLink")
+}
+
+func (stubs) AnswerSchedulingTeamLink(w nethttp.ResponseWriter, r *nethttp.Request, pageId openapi_types.UUID) {
+	httperr.NotImplemented(w, r, "AnswerSchedulingTeamLink")
 }
 
 func (stubs) ListSchedulingTeamRequests(w nethttp.ResponseWriter, r *nethttp.Request) {

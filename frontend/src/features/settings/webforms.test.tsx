@@ -141,7 +141,7 @@ function backendFor(
       return jsonResponse({ data: forms, secrets_available: true });
     }
     if (req.method === "GET" && req.url.includes("/v1/custom-fields")) {
-      return jsonResponse({ data: [budgetField] });
+      return jsonResponse({ page: { has_more: false }, data: [budgetField] });
     }
     if (req.method === "GET" && new URL(req.url).pathname === "/v1/users") {
       return jsonResponse(roster);
@@ -202,6 +202,19 @@ describe("WebFormsCard", () => {
     vi.stubGlobal("fetch", backendFor(OPERATOR, [waiting]).fetch);
     render(<WebFormsCard />);
     expect(await screen.findByText("Waiting for its secret")).toBeTruthy();
+  });
+
+  it("names the form in the heading of its Archive dialog", async () => {
+    vi.stubGlobal("fetch", backendFor(OPERATOR, [contactForm]).fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(
+      await screen.findByRole("button", { name: "More actions" }),
+    );
+    await user.click(await screen.findByTestId("archive-record"));
+    expect(
+      await screen.findByRole("heading", { name: "Archive Contact page?" }),
+    ).toBeTruthy();
   });
 
   it("offers no write control to a role without the integrations grants", async () => {

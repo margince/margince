@@ -39,7 +39,7 @@ type SignalFields struct {
 
 func (s SignalFields) validate() error {
 	switch {
-	case !recordKindGrammar.MatchString(s.Kind) || len(s.Kind) > maxRecordKindLength:
+	case !shortNameGrammar.MatchString(s.Kind) || len(s.Kind) > maxShortNameLength:
 		return errors.New("extension: the signal names no valid signal type")
 	case s.Subject.Type == "" || !uuidShape.MatchString(s.Subject.ID):
 		return errors.New("extension: the signal names its subject by type and id")

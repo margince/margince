@@ -19,6 +19,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/contacts"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
@@ -103,8 +104,8 @@ func TestConcurrentMergesNeverStrandChildrenOnADeadRecord(t *testing.T) {
 	// conflict; merge(C→A) may lose to A's archival (a dead target is a
 	// refusal, never a partial write).
 	for name, err := range map[string]error{"merge A->B": errAB, "merge C->A": errCA} {
-		var already *contacts.AlreadyMergedError
-		var deadTarget *contacts.MergedTargetError
+		var already *recordmerge.AlreadyMergedError
+		var deadTarget *recordmerge.MergedTargetError
 		if err != nil && !errors.As(err, &already) && !errors.As(err, &deadTarget) &&
 			!errors.Is(err, apperrors.ErrConflict) && !errors.Is(err, apperrors.ErrNotFound) {
 			t.Errorf("%s: unexpected error class %v", name, err)

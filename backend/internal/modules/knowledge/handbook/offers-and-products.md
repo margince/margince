@@ -124,11 +124,13 @@ A line with no price is marked "unpriced, excluded from total". It is not counte
 
 **Send** fixes the exchange rate and the tax rates on the offer. It also records who the buyer and the seller were in law at that time. It sends nothing to the buyer.
 
-**Accept** sets the deal's amount and currency to the offer's gross total, so the deal shows what the buyer agreed to. It needs permission to change both the offer and the deal.
+**Accept** sets the deal's amount and currency to the offer's net total, the figure without tax, because a deal's value never includes tax. A deal that lives on its lines keeps the value of its lines. It needs permission to change both the offer and the deal.
 
 **Reject** takes a reason you may leave empty. The reason is kept in the audit log, not on the offer.
 
 **Regenerate revision** creates the next version as a new **draft**. It copies the header and every line word for word, and marks the old version as replaced. The **template** is not carried over, so pick it again before you make the PDF. Prices are not updated from today's rate card: a price that changed last week does not change the offer you already sent. A line with a **Tax category** takes today's rate in the new version; a typed rate stays as it was.
+
+Where AI drafting is set up, it may also add lines to the new draft from what the deal has on record. When it adds none, or the AI cannot answer, the draft is still made, and Margince says "Copied without AI changes."
 
 You can make an offer **PDF** at any point, draft included. Where your Margince has no file storage set up, it says "PDF rendering is not available on this installation."
 

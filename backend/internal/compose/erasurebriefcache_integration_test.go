@@ -30,23 +30,10 @@ import (
 	"github.com/margince/margince/backend/internal/compose/integration"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/privacy"
+	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
-
-// briefUpsertSQL mirrors contactbrief.Service.save. A mirror is a liability, so
-// TestTheBriefCacheTestsMirrorTheWriterTheyStandIn holds the two together.
-const briefUpsertSQL = `
-	WITH live AS (
-	    SELECT id FROM contact WHERE id = $2 AND archived_at IS NULL FOR SHARE
-	)
-	INSERT INTO contact_brief (user_id, contact_id, fingerprint,
-	                          generated_at, generated_by, payload)
-	SELECT $1, live.id, $3, $4, $5, $6 FROM live
-	ON CONFLICT (user_id, contact_id) DO UPDATE
-	SET fingerprint = EXCLUDED.fingerprint,
-	    generated_at = EXCLUDED.generated_at,
-	    generated_by = EXCLUDED.generated_by,
-	    payload = EXCLUDED.payload`
 
 func TestErasureDestroysTheCachedBriefEveryReaderHeld(t *testing.T) {
 	e := integration.Setup(t)
@@ -88,21 +75,14 @@ func TestAnonymisingAContactDestroysTheCachedBriefToo(t *testing.T) {
 	}
 }
 
-// cacheABrief writes one reader's cached brief for the subject.
-//
-// The row goes in directly rather than through contactbrief.Service, which
-// would need a stubbed model lane and an assembled contact page to produce a
-// payload this assertion never reads: the purge is keyed on contact_id alone.
-// The shape is the catalog's — payload NOT NULL, generated_by one of two
-// values — and cachedBriefs is read once BEFORE each act, so a column this
-// fixture stops matching fails the insert rather than quietly testing nothing.
+// cacheABrief writes one reader's cached brief for the subject, through the
+// store. The payload is one this assertion never reads: the purge is keyed on
+// the contact alone.
 func cacheABrief(t *testing.T, e *integration.Env, subject ids.UUID, fingerprint string) {
 	t.Helper()
-	if _, err := e.Pool.Exec(e.Admin(), `
-		INSERT INTO contact_brief (user_id, contact_id, fingerprint, generated_by, payload)
-		VALUES ($1, $2, $4, 'deterministic', $3::jsonb)`,
-		e.AdminUser, subject,
-		`{"headline":"Briefed Subject asked about the retrofit timeline"}`, fingerprint); err != nil {
+	err := generatedsummary.Save(e.Admin(), e.Pool, ids.From[ids.UserKind](e.AdminUser),
+		generatedsummary.ContactBrief(ids.From[ids.ContactKind](subject)), briefEntry(fingerprint))
+	if err != nil {
 		t.Fatalf("caching a brief for the subject: %v", err)
 	}
 	if n := cachedBriefs(t, e, subject); n != 1 {
@@ -110,11 +90,18 @@ func cacheABrief(t *testing.T, e *integration.Env, subject ids.UUID, fingerprint
 	}
 }
 
+func briefEntry(fingerprint string) generatedsummary.Entry {
+	return generatedsummary.Entry{
+		Fingerprint: fingerprint, GeneratedAt: time.Now(), GeneratedBy: "deterministic",
+		Payload: []byte(`{"headline":"Briefed Subject asked about the retrofit timeline"}`),
+	}
+}
+
 func cachedBriefs(t *testing.T, e *integration.Env, subject ids.UUID) int {
 	t.Helper()
 	var n int
 	if err := e.Pool.QueryRow(e.Admin(),
-		`SELECT count(*) FROM contact_brief WHERE contact_id = $1`, subject).Scan(&n); err != nil {
+		`SELECT count(*) FROM generated_summary WHERE contact_id = $1`, subject).Scan(&n); err != nil {
 		t.Fatalf("counting the subject's cached briefs: %v", err)
 	}
 	return n
@@ -160,7 +147,7 @@ func TestABriefComposedBeforeAnErasureCannotLandAfterIt(t *testing.T) {
 		`UPDATE contact SET archived_at = now() WHERE id = $1`, live); err != nil {
 		t.Fatalf("archiving the contact in the open transaction: %v", err)
 	}
-	if err := saveABriefWaitingAtMost(t, e, live, "250ms"); err == nil {
+	if err := saveABriefWaitingAtMost(e, live, "250ms"); err == nil {
 		t.Error("the save completed while an erasure held the contact row, so it never took the " +
 			"row and an in-flight erasure cannot stop it")
 	} else if !strings.Contains(err.Error(), "lock timeout") && !strings.Contains(err.Error(), "55P03") {
@@ -168,34 +155,29 @@ func TestABriefComposedBeforeAnErasureCannotLandAfterIt(t *testing.T) {
 	}
 }
 
-// saveABrief runs the cache write the brief service runs, as its own statement
-// rather than through Service.save: reaching that unexported path needs an
-// assembled page and a model lane, and what is under test is the statement.
+// saveABrief runs the cache write the brief service runs. Service.save itself
+// needs an assembled page and a model lane, and it calls this same function.
 func saveABrief(e *integration.Env, contact ids.UUID) error {
-	_, err := e.Pool.Exec(e.Admin(), briefUpsertSQL,
-		e.AdminUser, contact, "fp-late", time.Now(), "deterministic",
-		`{"headline":"composed before the erasure"}`)
-	return err
+	return saveABriefIn(e, contact, "fp-late", nil)
 }
 
-func saveABriefWaitingAtMost(t *testing.T, e *integration.Env, contact ids.UUID, wait string) error {
-	t.Helper()
-	tx, err := e.Pool.Begin(e.Admin())
-	if err != nil {
+func saveABriefWaitingAtMost(e *integration.Env, contact ids.UUID, wait string) error {
+	return saveABriefIn(e, contact, "fp-racing", func(tx pgx.Tx) error {
+		_, err := tx.Exec(e.Admin(), `SET LOCAL lock_timeout = '`+wait+`'`)
 		return err
-	}
-	defer func() {
-		if err := tx.Rollback(e.Admin()); err != nil {
-			t.Errorf("rolling back the racing save: %v", err)
+	})
+}
+
+func saveABriefIn(e *integration.Env, contact ids.UUID, fingerprint string, prepare func(pgx.Tx) error) error {
+	return database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if prepare != nil {
+			if err := prepare(tx); err != nil {
+				return err
+			}
 		}
-	}()
-	if _, err := tx.Exec(e.Admin(), `SET LOCAL lock_timeout = '`+wait+`'`); err != nil {
-		return err
-	}
-	_, err = tx.Exec(e.Admin(), briefUpsertSQL,
-		e.AdminUser, contact, "fp-racing", time.Now(), "deterministic",
-		`{"headline":"composed while the erasure ran"}`)
-	return err
+		return contactbrief.SaveForLiveContact(e.Admin(), tx, ids.From[ids.UserKind](e.AdminUser),
+			ids.From[ids.ContactKind](contact), briefEntry(fingerprint))
+	})
 }
 
 // The real writer refuses after an erasure, driven through contactbrief.Service
@@ -304,7 +286,7 @@ func refuseBriefDeletes(t *testing.T) {
 	}
 	t.Cleanup(func() {
 		for _, stmt := range []string{
-			`DROP TRIGGER IF EXISTS trg_refuse_brief_deletes ON contact_brief`,
+			`DROP TRIGGER IF EXISTS trg_refuse_brief_deletes ON generated_summary`,
 			`DROP FUNCTION IF EXISTS refuse_brief_deletes()`,
 		} {
 			if _, err := owner.Exec(context.Background(), stmt); err != nil {
@@ -318,7 +300,7 @@ func refuseBriefDeletes(t *testing.T) {
 	for _, stmt := range []string{
 		`CREATE OR REPLACE FUNCTION refuse_brief_deletes() RETURNS trigger AS $$
 		 BEGIN RAISE EXCEPTION 'the cache refuses deletion'; END $$ LANGUAGE plpgsql`,
-		`CREATE TRIGGER trg_refuse_brief_deletes BEFORE DELETE ON contact_brief
+		`CREATE TRIGGER trg_refuse_brief_deletes BEFORE DELETE ON generated_summary
 		 FOR EACH ROW WHEN (OLD.fingerprint = '` + refusedFingerprint + `')
 		 EXECUTE FUNCTION refuse_brief_deletes()`,
 	} {

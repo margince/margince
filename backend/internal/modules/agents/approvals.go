@@ -78,6 +78,8 @@ type StageRequest struct {
 	Summary      string
 	// SummaryParts is Summary taken apart, nil when Summary is a sentence alone.
 	SummaryParts *crmcontracts.ApprovalSummaryParts
+	// Why is the reason the call gave for itself, in the agent's words.
+	Why string
 }
 
 // StageInfo is what a 🟡-capable tool contributes to its own staging: the
@@ -329,7 +331,7 @@ func refuseArchiveHere(ctx context.Context, p datasource.SystemOfRecordProvider,
 	if !ok {
 		return fmt.Errorf(
 			"this workspace's system of record cannot archive a %s at a named version, and an approved "+
-				"archive names one — so no approval of this could be carried out as approved: %w",
+				"archive names one, so no approval of this could be carried out as approved: %w",
 			ref.Type, apperrors.ErrUnsupportedBySoR)
 	}
 	return archiver.RefuseArchive(ctx, ref)

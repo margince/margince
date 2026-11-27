@@ -200,18 +200,18 @@ func mayLink(ctx context.Context, tx pgx.Tx, link ActivityLinkInput,
 	if linkColumn(link.EntityType) == "" {
 		return &InvalidLinkTypeError{EntityType: link.EntityType}
 	}
-	if link.EntityType == linkEntityProject {
-		if err := refuseAnUnattendedFiling(ctx); err != nil {
-			return err
-		}
-		if err := auth.Require(ctx, "activity", principal.ActionUpdate); err != nil {
-			return err
-		}
-	}
+	// The row-scope probe answers first, so a refusal about the record's kind
+	// never tells a caller that a record they cannot see exists.
 	if err := probe(ctx, tx, link.EntityType, link.EntityID); err != nil {
 		return err
 	}
-	if link.EntityType == linkEntityDeal {
+	switch link.EntityType {
+	case linkEntityProject:
+		if err := refuseAnUnattendedFiling(ctx); err != nil {
+			return err
+		}
+		return auth.Require(ctx, "activity", principal.ActionUpdate)
+	case linkEntityDeal:
 		return refuseAnotherMembersDeal(ctx, tx, link.EntityID)
 	}
 	return nil

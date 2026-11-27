@@ -160,7 +160,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 | `evidence_ref` | `text` |  |  |
 | `exception_id` | `uuid` | yes | Points at `assurance_exception.id`. |
 | `expires_at` | `timestamp with time zone` |  |  |
-| `outcome` | `text` | yes | One of `fixed_record`, `added_evidence`, `value_correct`, `not_relevant`, `remind_later`, `reassign` and 1 more. |
+| `outcome` | `text` | yes | One of `fixed_record`, `added_evidence`, `value_correct`, `not_relevant`, `remind_later`, `reassign` and 2 more. |
 | `reason` | `text` |  |  |
 | `remind_at` | `timestamp with time zone` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -177,7 +177,7 @@ The 9 tables owned by `assurance`, as the migrations build them. [Back to the en
 
 - `assurance_resolution_deferral_returns`: `CHECK (((outcome <> 'remind_later') OR (remind_at IS NOT NULL)))`
 - `assurance_resolution_expiry_after_creation`: `CHECK (((expires_at IS NULL) OR (expires_at > created_at)))`
-- `assurance_resolution_outcome_check`: `CHECK ((outcome = ANY (ARRAY['fixed_record', 'added_evidence', 'value_correct', 'not_relevant', 'remind_later', 'reassign', 'condition_cleared'])))`
+- `assurance_resolution_outcome_check`: `CHECK ((outcome = ANY (ARRAY['fixed_record', 'added_evidence', 'value_correct', 'not_relevant', 'remind_later', 'reassign', 'condition_cleared', 'separate'])))`
 - `assurance_resolution_suppression_expires`: `CHECK (((outcome <> ALL (ARRAY['value_correct', 'not_relevant'])) OR (expires_at IS NOT NULL)))`
 
 **Indexes**

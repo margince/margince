@@ -373,7 +373,7 @@ func (s *AnalyticsShareStore) Revoke(ctx context.Context, tx pgx.Tx, id ids.UUID
 	var revoked time.Time
 	err = tx.QueryRow(ctx, `
 		UPDATE analytics_share
-		SET revoked_at = COALESCE(revoked_at, $2), version = version + 1, updated_at = now()
+		SET revoked_at = COALESCE(revoked_at, $2)
 		WHERE id = $1 AND created_by = $3
 		RETURNING revoked_at`, id, s.now(), actor.UserID).Scan(&revoked)
 	if errors.Is(err, pgx.ErrNoRows) {

@@ -188,7 +188,7 @@ Also called: turn off keys, keyboard shortcuts, single key.
 
 The Meetings page in Settings is where customers book time with you. It has three tabs: **Booking links**, with your links and the calendar, **Availability**, with **When people can book**, and **Guest page**, with **What guests see**.
 While no Google or Microsoft 365 calendar is connected, a card **Connect a calendar to take bookings** comes first on **Booking links**.
-**Booking links** also holds **Colleagues on this link**, where you name the colleagues who join each meeting booked through your link. A colleague confirms under **Colleagues’ links that name you**; see [Meetings and booking](meetings-and-booking.md#how-do-i-offer-times-when-several-colleagues-are-free).
+**Booking links** also holds **Team links**: links of their own that name the colleagues who join each meeting booked through them. Your personal link always offers only your own free time. A colleague confirms under **Colleagues’ links that name you**; see [Meetings and booking](meetings-and-booking.md#how-do-i-offer-times-when-several-colleagues-are-free).
 
 ### How do I set up bookings?
 <!-- opens: settings/meetings -->
@@ -302,8 +302,9 @@ When at least half of a file comes from named speakers, Margince reads it as a c
 ## AI assistants
 
 The AI assistants page in Settings is where you connect your AI tool, such as
-Claude or ChatGPT, to Margince. Under **For developers** you also make and take
-back **passports**: the keys that let a script or your own code work as you.
+Claude or ChatGPT, to Margince. Under **Your agent** you choose which changes run
+without your review, and which proposals leave your own queue. Under **For developers**
+you create and revoke **passports**, which let a script or your own code work as you.
 Every member can open this page.
 
 To connect your AI tool, see [How do I connect my AI tool to Margince?](agents-and-passports.md#how-do-i-connect-my-ai-tool-to-margince).

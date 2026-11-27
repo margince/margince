@@ -53,8 +53,8 @@ import {
   grantOf,
   nextGrant,
 } from "../settings/grantmatrix";
-import { UnitGovernance } from "./extension-governance";
-import { bringsCount, needsFact } from "./extension-needs";
+import { UnitGovernance, UnitSetup } from "./extension-governance";
+import { borrowedFacts, bringsCount } from "./extension-needs";
 
 // Extension access (settings → Extensions): what the composed extension tier
 // brought into this installation, and who may use it.
@@ -225,19 +225,9 @@ function UnitCard({
 }>) {
   const t = useT();
   const { locale } = useLocale();
-  // Two sources say which units exist and they can disagree. The inventory
-  // above is what /extensions answered — what the RUNNING BINARY composed —
-  // while `#/ext/<name>` can only resolve what the SPA's generated registry
-  // was built with. A bundle older than the binary lists a unit here whose
-  // page App.tsx's ExtensionRoute would answer with its (deliberate, honest)
-  // not-found card.
-  //
-  // So the link is rendered from the registry, never from the API's list. And
-  // when the registry misses, the miss is SAID rather than silently omitted:
-  // "this unit has no page" and "the page exists but this bundle predates it"
-  // are different facts, and an operator hunting a missing screen has to be
-  // able to tell them apart — an absent link would leave them debugging the
-  // grants below instead of the deploy.
+  // The inventory is what the running binary composed; `#/ext/<name>` resolves
+  // only what this bundle's registry holds. So the link comes from the registry,
+  // and a unit the registry misses is said, not silently left out.
   // How much this unit contributes at all. A jurisdiction pack contributes
   // none of the three: it supplies policy the core consults and registers no
   // object, route or job, which is a complete answer rather than an empty card.
@@ -289,6 +279,7 @@ function UnitCard({
     >
       <PanelBody className="ext-unit-body">
         <p>{unit.description}</p>
+        <UnitSetup missing={unit.setup_missing} />
         {/* Said only where the two registries disagree: a unit the running
             binary composed whose descriptor this bundle does not carry is a
             version skew, not a unit that simply has no page. */}
@@ -402,7 +393,7 @@ function UnitBrings({ unit }: Readonly<{ unit: ExtensionUnit }>) {
           term: t("extAccess.brings.jobs"),
           value: list(unit.jobs),
         },
-        needsFact(unit.needs, t("extAccess.brings.needs")),
+        ...borrowedFacts(unit, t),
       ]}
     />
   );

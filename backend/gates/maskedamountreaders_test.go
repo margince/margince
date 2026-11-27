@@ -14,6 +14,7 @@ import (
 	"path"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -220,11 +221,11 @@ func TestTheCensusSubjectIsDerivedAndRefusesACatalogItCannotRead(t *testing.T) {
 // that reaches a grounding package has already passed through a statement this
 // census subjected — and the masks it carries are the ones that were applied.
 //
-// The second half is a premise, so it is asserted rather than assumed:
-// TestNoDealAmountStatementLivesWhereTheCensusCannotSeeIt refuses a deal-amount
-// statement anywhere outside `internal`. Without it, a reader placed in cmd/,
-// pkg/ or an extension unit would not fail this census — it would be one this
-// census never reads, and it would go on answering PASS.
+// The second half is a premise, so it is asserted rather than assumed. The
+// scope's sweep and assertNoDealAmountReadBesideTheModule refuse a deal-amount
+// statement anywhere outside `internal`. Without them, a reader placed in cmd/,
+// pkg/ or an extension unit would not fail this census. This census would never
+// read it, and would go on answering PASS.
 //
 // And it reads a mask's PRESENCE rather than its placement: a declaration
 // rendering one somewhere in its body reads as gated even where the aggregate
@@ -283,6 +284,7 @@ var lifecycleMaskedAmountReads = gatekit.Waive(map[string]string{
 	"internal/compose/extsystemread.go:readDealSummary":           "an extension unit's system read of one deal (Runtime.Deals().Get), as the delivery's or tick's PrincipalSystem, and refused by systemRead on any invocation a caller could receive it on. Whom the unit then shows the figure is the unit's to ask through Authority().CanRead, which answers false while auth.MaskedFields withholds a named field from that colleague, a conditional mask included",
 	"internal/compose/assurancebundle.go:bundleableFindings":      "the bundling pass's and the review delivery job's read of one run's findings, as the input check's PrincipalSystem. The amount only orders the findings WITHIN one deal (findingRank), so the most material one leads that deal's bundle. The deals themselves get their tasks in id order (groupBySubject, held by TestTheTasksAreMintedInAnOrderTheAmountsDoNotSet), so the creation order of the tasks says nothing about which deal is bigger, and the task names a count and no figure (bundleTaskSubject). What a HUMAN reads is AssuranceExceptions, which renders the money through maskedFindingMoney",
 	"internal/compose/assuranceseam.go":                           "the assurance scan's subject statement, selecting each deal's owner, amount and currency so a finding can be raised against it. The pass runs as PrincipalSystem over the whole installation (assurancebundle.go records it), and what a HUMAN later reads is AssuranceExceptions, which renders the finding's money through auth.MaskedExpressionSQL over the joined deal (assurancelist.go maskedFindingMoney). A mask applied to the scan would hide a finding from everybody rather than a figure from one reader",
+	"internal/compose/assurancepair/assurancepair.go":             "the assurance scan's pair statement, selecting the later deal's amount and currency so a pair finding can be raised against it, as the input check's system principal. What a human reads is AssuranceExceptions, which renders the finding's money through auth.MaskedExpressionSQL over the joined deal (assurancelist.go maskedFindingMoney)",
 	"internal/compose/dealverdictpass.go:dueVerdictCandidates":    "the nightly verdict's candidate read, as the close-date pass's PrincipalSystem. The amount is hashed into the checksum and only the hash leaves",
 	"internal/compose/dealverdictinput.go:readVerdictDeal":        "the nightly verdict's read of one deal, as the close-date pass's PrincipalSystem. The amount reaches the model and the change Margince makes as the owner's agent; the owner reads it back on their own Home receipt",
 	"internal/compose/dealverdictjudge.go:applyAsOwner":           "the deal's checksum after the nightly verdict's own writes, read inside the write's transaction as the owner's agent. Only the hash leaves",
@@ -309,12 +311,12 @@ var calleeGatedMaskedAmountReads = gatekit.Waive(map[string]string{
 // nobody can check from the statement it is written beside.
 var writePreimageMaskedAmountReads = gatekit.Waive(map[string]string{
 	"internal/modules/deals/basecurrencyfreezewrite.go:frozenBefore":   "the frozen base amount a re-price or a reopen is about to overwrite. amount_minor_base is an internal column on no contract, so the writer has no pre-image to hand over and reads the row for one; recording nil instead would write \"there was no converted amount\" into the audit diff of every reopen, which is the row a reversal reads to put the old figure back",
-	"internal/modules/initiatives/store.go:Launch":                     "the member deals' base amounts the launch freezes into sales_initiative_baseline, the figure every later origin reading compares against. Nothing of it reaches the caller: the launch answers the initiative row, and a masked reader meets the mask on the reports that read the baseline back",
 	"internal/modules/deals/verdictapply.go:lockVerdictDeal":           "the deal's amount and currency under the row lock a verdict change writes under: the change is dropped when they moved since the decision, and the patch's pre-image records what the change replaced. Nothing of it is returned to the caller",
 	"internal/modules/deals/verdictapply.go:addProbabilityValuation":   "the deal's amount and currency under the row lock a probability change writes under, stored in that change's audit evidence as what its move is valued from. Nothing of it is returned to the caller, and every reader of that evidence strips the keys under an amount mask (correctionReceiptSelect) or masks them (changeMovedSQL)",
 	"internal/modules/deals/stagemoveverdict.go:readVerdictValues":     "the fields a verdict changes, read again under the row lock after Margince's stage move reset the probability. The changes that follow compare against it and record it as their pre-image; nothing of it is returned to the caller",
 	"internal/modules/deals/deallineread.go:readDealCommercialHead":    "the deal's amount, recurring value and currency as a line write's pre-image, and the money its patch compares against, under the deal's row lock. The reader GetDealLines returns none of them: dealAmountBasis compares the amount only for a reader dealAmountReadable admits, and every figure it shows is the lines' own, withheld by the same mask",
-	"internal/modules/deals/offer_dealsync.go:syncDealAmountFromOffer": "the deal's current price under a row lock, so an accepted offer's gross can be compared against it and the audit diff can name what it replaced. The comparison is what keeps an accept re-pricing at the figure already held out of the forecast trail. The pre-image it reads reaches only that diff: the money the function returns in p.After() is the offer's own gross, which its caller supplied",
+	"internal/modules/deals/offer_netrepair.go":                        "the amount of each deal the correction re-prices, and the count of them, as the patch's pre-image and the audit diff's old value, under the deal's row lock. The system principal runs it as a data task. The old and new figures reach only the audit row and the deal owner's notice, never a reader that a mask could be withholding from",
+	"internal/modules/deals/offer_dealsync.go:syncDealAmountFromOffer": "the deal's current price under a row lock, so an accepted offer's net can be compared against it and the audit diff can name what it replaced. The comparison is what keeps an accept re-pricing at the figure already held out of the forecast trail. The pre-image it reads reaches only that diff: the money the function returns in p.After() is the offer's own net, which its caller supplied",
 })
 
 // ruledMaskedAmountReads: a read the product has ruled may print the figure
@@ -360,8 +362,67 @@ func maskedAmountScope(columns *regexp.Regexp, builders map[string]bool) gatekit
 		Subject: func(filePath string, file *ast.File) bool {
 			return readsADealAmount(filePath, file, columns, builders)
 		},
-		Exempt: gatekit.Waive(map[string]string{}),
+		Exempt: outsideInternal,
 	}
+}
+
+// outsideInternal is the register of files outside internal/ that read a deal
+// amount, each with why the census need not see it. Empty, and the emptiness is
+// the finding. The scope consults it for the module's other trees, and the
+// sibling walk below for the trees beside the module.
+var outsideInternal = gatekit.Waive(map[string]string{})
+
+// besideTheModule are the Go trees outside the backend module that ship the
+// same way. An extension unit reaches core data through the published seam, so
+// a deal-amount statement in one is the read this census most needs to see.
+var besideTheModule = []string{"../extensions", "../fixtures"}
+
+// assertNoDealAmountReadBesideTheModule walks the trees the scope's sweep
+// cannot reach, since gatekit.Scope proves its roots inside the module alone.
+// Every tree must hold a source, or a renamed tree would read as a clean one.
+func assertNoDealAmountReadBesideTheModule(t *testing.T, columns *regexp.Regexp, builders map[string]bool) {
+	t.Helper()
+	var offenders []string
+	for _, root := range besideTheModule {
+		read := 0
+		err := gatekit.WalkDir(root, func(path string, info fs.DirEntry, err error) error {
+			if err != nil || info.IsDir() || !sweptLikeTheCensus(filepath.ToSlash(path)) {
+				return err
+			}
+			read++
+			file, parseErr := gatekit.ParseFile(path, 0)
+			if parseErr != nil {
+				return parseErr
+			}
+			if readsADealAmount(path, file, columns, builders) && !outsideInternal.Waived(t, filepath.ToSlash(path)) {
+				offenders = append(offenders, filepath.ToSlash(path))
+			}
+			return nil
+		})
+		if err != nil {
+			t.Fatalf("walking %s: %v", root, err)
+		}
+		if read == 0 {
+			t.Errorf("%s holds no Go source this census reads, so it would report a clean result over any "+
+				"statement placed there: correct besideTheModule to where those trees now live", root)
+		}
+	}
+	if len(offenders) > 0 {
+		t.Errorf("%d file(s) outside the backend module read a deal amount, where the masked-amount "+
+			"scope cannot see them:\n\t%s\n\nMove the statement into a module, or ratify it in "+
+			"outsideInternal with the reason the census need not see it.",
+			len(offenders), strings.Join(offenders, "\n\t"))
+	}
+}
+
+// sweptLikeTheCensus is gatekit's own membership rule, asked of one path. The
+// scope applies it only inside its own walk, and the two must agree on what a
+// source is.
+func sweptLikeTheCensus(path string) bool {
+	if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || strings.HasSuffix(path, "_gen.go") {
+		return false
+	}
+	return !slices.Contains(strings.Split(path, "/"), "testdata")
 }
 
 // readsADealAmount is the compound subject, and the compound is the point.
@@ -424,7 +485,7 @@ func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]boo
 	t.Helper()
 	names := map[string]bool{}
 	var functions []*ast.FuncDecl
-	err := gatekit.WalkDir("internal", func(filePath string, info fs.DirEntry, err error) error {
+	collect := func(filePath string, info fs.DirEntry, err error) error {
 		if err != nil || info.IsDir() || !strings.HasSuffix(filePath, ".go") ||
 			strings.HasSuffix(filePath, "_test.go") || strings.HasSuffix(filePath, "_gen.go") {
 			return err
@@ -442,9 +503,12 @@ func dealAmountBuilderNames(t testing.TB, columns *regexp.Regexp) map[string]boo
 			}
 		}
 		return nil
-	})
-	if err != nil {
-		t.Fatalf("deriving the deal-amount builders: %v", err)
+	}
+	// A builder in a sibling tree hides a caller there as well as one in internal.
+	for _, root := range append([]string{"internal"}, besideTheModule...) {
+		if err := gatekit.WalkDir(root, collect); err != nil {
+			t.Fatalf("deriving the deal-amount builders under %s: %v", root, err)
+		}
 	}
 	for changed := true; changed; {
 		changed = false
@@ -595,6 +659,9 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 	columns := dealMaskedColumns(t)
 	builders := dealAmountBuilderNames(t, columns)
 	files := maskedAmountScope(columns, builders).Files(t)
+	t.Run("NoDealAmountStatementLivesWhereTheCensusCannotSeeIt", func(t *testing.T) {
+		assertNoDealAmountReadBesideTheModule(t, columns, builders)
+	})
 	gated := maskGate.walkPackages(t, files).gated
 	consts := constantTable{}
 
@@ -680,6 +747,47 @@ func TestEveryReaderOfADealAmountCarriesTheMaskOrAVerdict(t *testing.T) {
 	notTheDealAmount.AssertAllMatched(t)
 	ruledMaskedAmountReads.AssertAllMatched(t)
 	deferredMaskedAmountReads.AssertAllMatched(t)
+	outsideInternal.AssertAllMatched(t)
+}
+
+// TestTheRootsGateJudgesReadsAndNotFieldNames holds the subject's boundary. A
+// unit naming the money field to the seam reads nothing. A statement reading
+// the deal's money is what the census exists for.
+func TestTheRootsGateJudgesReadsAndNotFieldNames(t *testing.T) {
+	t.Parallel()
+	columns := dealMaskedColumns(t)
+	builders := dealAmountBuilderNames(t, columns)
+	for _, c := range []struct {
+		name   string
+		source string
+		reads  bool
+	}{
+		{
+			name:   "a unit's field list for the authority seam",
+			source: "var cardFields = []string{\"name\", \"stage_id\", \"amount_minor\", \"currency\"}",
+		},
+		{
+			name:   "a statement reading the deal's money",
+			source: "func total() string { return `SELECT sum(d.amount_minor) FROM deal d WHERE d.archived_at IS NULL` }",
+			reads:  true,
+		},
+		{
+			name:   "the converted column read the same way",
+			source: "func base() string { return \"SELECT d.amount_minor_base \" + \"FROM deal d\" }",
+			reads:  true,
+		},
+	} {
+		t.Run(c.name, func(t *testing.T) {
+			t.Parallel()
+			file, err := parser.ParseFile(gatekit.SourceFileSet(), "unit.go", "package unit\n"+c.source, 0)
+			if err != nil {
+				t.Fatalf("parsing the fixture: %v", err)
+			}
+			if got := readsADealAmount("unit.go", file, columns, builders); got != c.reads {
+				t.Fatalf("readsADealAmount = %v, want %v", got, c.reads)
+			}
+		})
+	}
 }
 
 // TestTheObjectGateDoesNotVouchForAMask plants the shape this census could not

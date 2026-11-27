@@ -56,10 +56,10 @@ var (
 func seedSupersededHistory(ctx context.Context, t *testing.T, owner *pgx.Conn, contact ids.ContactID) {
 	t.Helper()
 	if _, err := owner.Exec(ctx, `
-		INSERT INTO contact_profile_field
-		  (contact_id, field, value, evidence_snippet, source_ref, source, captured_by,
+		INSERT INTO field_provenance
+		  (object_type, object_id, field_name, value, evidence_snippet, evidence_ref, source, captured_by,
 		   observed_at, superseded_value, superseded_captured_by, superseded_observed_at)
-		VALUES ($1, 'title', $2, 'signature block', 'activity:test', 'signature', 'agent:enrich',
+		VALUES ('contact', $1, 'title', $2, 'signature block', 'activity:test', 'signature', 'agent:enrich',
 		        $3, $4, 'user:test', $5)`,
 		contact, livedTitle, observedAt, replacedTitle, replacedObservedAt); err != nil {
 		t.Fatal(err)

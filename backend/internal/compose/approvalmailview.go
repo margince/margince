@@ -39,7 +39,7 @@ func refreshApprovalNotice(
 	ctx context.Context, pool *pgxpool.Pool, attempt notices.EmailAttempt, now time.Time, use approvalNoticeUse,
 ) (notices.EmailAttempt, approvalMailFacts, bool, error) {
 	var facts approvalMailFacts
-	if attempt.TeamRequestHost != nil {
+	if attempt.TeamRequestPage != nil {
 		refreshed, current, err := refreshTeamRequest(ctx, pool, attempt)
 		return refreshed, facts, current, err
 	}

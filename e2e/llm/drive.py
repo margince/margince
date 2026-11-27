@@ -235,7 +235,7 @@ def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
             out.finish(True, f"HARNESS: {fault}", 0)
         print(fault, file=sys.stderr)
         return HARNESS
-    with tempfile.TemporaryDirectory(prefix="e2e-llm-agy.") as workspace:
+    with tempfile.TemporaryDirectory(prefix="e2e-llm-agy.") as workspace, clean.agy_home() as home:
         agents = os.path.join(workspace, ".agents", "agents")
         os.makedirs(agents)
         with open(os.path.join(agents, "margince-e2e-llm.md"), "w", encoding="utf-8") as handle:
@@ -247,13 +247,16 @@ def run_agy(route, mcp_url, token_env, prompt, out_path, timeout=AGY_TIMEOUT):
         ]
         try:
             done = subprocess.run(argv, cwd=workspace, stdin=subprocess.DEVNULL, capture_output=True,
-                                  text=True, timeout=timeout + AGY_GRACE, check=False)
+                                  text=True, timeout=timeout + AGY_GRACE, check=False,
+                                  env={**os.environ, "HOME": home})
             lines, stderr, exited = done.stdout.splitlines(), done.stderr, done.returncode
         except subprocess.TimeoutExpired as expired:
             partial = expired.stdout or b""
             lines = (partial.decode("utf-8", "replace") if isinstance(partial, bytes) else partial).splitlines()
             stderr, exited = f"agy overran its {timeout}s wall clock and was killed", "killed"
-    code = transcript.from_agy(lines, out_path, route.model, driver, [t["name"] for t in tools], workspace)
+        # Inside the home's lifetime: a long result is read back from the file agy spilled there.
+        code = transcript.from_agy(lines, out_path, route.model, driver, [t["name"] for t in tools],
+                                   workspace, home)
     # A non-zero exit, or a kill at the wall clock, is a program failure
     # whatever the stream says.
     if exited:

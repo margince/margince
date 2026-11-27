@@ -45,9 +45,7 @@ function narrowingDials(query: ListQuery): Map<string, unknown> {
   );
 }
 
-// The list matches these two by a rule, not by equality. A connector family
-// matches each of its accounts, and `unset` a missing origin.
-const CONNECTOR_FAMILY = /^connector:[^:]*$/;
+// The list matches a missing origin by this word, not by equality.
 const ORIGIN_UNSET = "unset";
 
 function isCounted(dial: string): boolean {
@@ -60,10 +58,6 @@ export function terminalCountsWithheldBecause(
   query: ListQuery,
 ): MessageKey | undefined {
   const dials = narrowingDials(query);
-  const source = dials.get("source");
-  if (typeof source === "string" && CONNECTOR_FAMILY.test(source)) {
-    return "lead.boardCountsNoConnectorSource";
-  }
   const uncounted = [...dials.keys()].filter((dial) => !isCounted(dial));
   if (uncounted.length === 0) return undefined;
   const named = WITHHELD_DIALS.find(([dial]) => uncounted.includes(dial));

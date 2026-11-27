@@ -12,14 +12,14 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/internal/shared/ports/recordkinds"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func declareKinds(t *testing.T) {
 	t.Helper()
-	recordkinds.Reset()
-	t.Cleanup(recordkinds.Reset)
+	extregistrytest.Reset(t)
 	field := []extension.RecordKindField{{Name: "code", Label: "Code"}}
 	recordkinds.Register("beta", []extension.RecordKindDeclaration{{Kind: "visit", DisplayName: "Beta visit", Table: "ext_beta_visit", Fields: field, NaturalKey: []string{"code"}}})
 	recordkinds.Register("alpha", []extension.RecordKindDeclaration{{

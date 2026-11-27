@@ -75,14 +75,25 @@ type queryArgs struct {
 type argumentReader func(w http.ResponseWriter, r *http.Request) (json.RawMessage, error)
 
 // argumentReaderFor picks the reader an operation's method calls for, and fails
-// the mount if a bodyless operation's declaration cannot be described.
+// the mount if a bodyless operation's declaration cannot be described. A route
+// with path arguments adds each to the arguments it read, under its own name.
 func argumentReaderFor(v extension.Verb) (argumentReader, error) {
-	if extension.CarriesBody(v.Method) {
+	path := v.PathArguments()
+	if extension.CarriesBody(v.Method) && len(path) == 0 {
 		return readBodyArguments, nil
 	}
 	args, err := queryArgumentsFor(v)
 	if err != nil {
 		return nil, err
+	}
+	if extension.CarriesBody(v.Method) {
+		return func(w http.ResponseWriter, r *http.Request) (json.RawMessage, error) {
+			body, err := readBodyArguments(w, r)
+			if err != nil {
+				return nil, err
+			}
+			return args.withPathArguments(body, path, r)
+		}, nil
 	}
 	// A bodyless route does not read a body at all, not even to reject one: the
 	// contract says the operation has none, so reading it would make the route's
@@ -101,8 +112,44 @@ func argumentReaderFor(v extension.Verb) (argumentReader, error) {
 			return nil, httperr.Validation("query", "malformed_query",
 				"the query string is not valid urlencoded form data")
 		}
+		for _, name := range path {
+			if _, sent := values[name]; sent {
+				return nil, repeatedArgument(name)
+			}
+			values[name] = []string{r.PathValue(name)}
+		}
 		return args.decode(values)
 	}, nil
+}
+
+// withPathArguments adds the route's path arguments to a body's arguments
+// object, each typed as its declaration says. Core's toolArgsWithPath sets its
+// ids over the body instead. This seam refuses an id sent twice, because it is
+// the only check an extension's arguments get.
+func (q queryArgs) withPathArguments(body json.RawMessage, path []string, r *http.Request) (json.RawMessage, error) {
+	var args map[string]json.RawMessage
+	if err := json.Unmarshal(body, &args); err != nil || args == nil {
+		return nil, httperr.Validation("body", "malformed_json", "the request body must be a JSON object")
+	}
+	for _, name := range path {
+		if _, sent := args[name]; sent {
+			return nil, repeatedArgument(name)
+		}
+		encoded, err := encodeQueryValue(q.types[name], r.PathValue(name))
+		if err != nil {
+			return nil, httperr.Validation(name, "invalid_type", err.Error())
+		}
+		args[name] = encoded
+	}
+	return json.Marshal(args)
+}
+
+// repeatedArgument refuses an argument given twice. A schema argument is one
+// value, so picking either would be this seam inventing a rule the published
+// contract does not state.
+func repeatedArgument(name string) error {
+	return httperr.Validation(name, "repeated_parameter",
+		"this argument was given more than once, and it takes a single value")
 }
 
 // readBodyArguments reads a body-carrying operation's arguments: the request body
@@ -189,11 +236,7 @@ func (q queryArgs) decode(values url.Values) (json.RawMessage, error) {
 				"this operation declares no argument by that name")
 		}
 		if len(vals) > 1 {
-			// A repeated key has no meaning in a flat object: the schema says this
-			// argument is one primitive, so picking the first or the last would be
-			// this seam inventing a rule the published contract does not state.
-			return nil, httperr.Validation(name, "repeated_parameter",
-				"this argument was given more than once, and it takes a single value")
+			return nil, repeatedArgument(name)
 		}
 		encoded, err := encodeQueryValue(declared, vals[0])
 		if err != nil {

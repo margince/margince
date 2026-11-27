@@ -68,7 +68,7 @@ var triggerFunction = regexp.MustCompile(`EXECUTE FUNCTION ([a-z_0-9]+)\(\)`)
 func lastStatement(t *testing.T, pattern string) string {
 	t.Helper()
 	re := regexp.MustCompile(`(?s)` + pattern)
-	files, err := filepath.Glob(filepath.Join("migrations", "core", "*.up.sql"))
+	files, err := gatekit.Glob(filepath.Join("migrations", "core", "*.up.sql"))
 	if err != nil {
 		t.Fatalf("listing core migrations: %v", err)
 	}

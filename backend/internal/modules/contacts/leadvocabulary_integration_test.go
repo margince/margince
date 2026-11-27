@@ -5,15 +5,15 @@
 
 package contacts
 
-// The two administered lead vocabularies against Postgres: the seed the
-// migration writes agrees with the scorer's fixture, the CRUD's refusals are
-// the ones the contract promises, and a lead's source and disqualify reason
-// round-trip through the lead read.
+// The administered lead vocabularies against Postgres. The migration's seed
+// agrees with the scorer's fixture, and a lead's source and reason round-trip.
 
 import (
 	"context"
 	"errors"
+	"net/http"
 	"slices"
+	"strings"
 	"testing"
 
 	"github.com/jackc/pgx/v5"
@@ -23,7 +23,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // The migration's seed and the code's fixture name the same seven origins with
@@ -56,217 +56,46 @@ func TestLeadOriginSeedMatchesTheScorerFixture(t *testing.T) {
 	}
 }
 
-func TestLeadSourceCRUDRefusesWhatTheContractPromises(t *testing.T) {
+// A lead's source is one of the channels. An internal writer that still hands
+// an older word lands on its channel, and the list filters by the channel.
+func TestALeadSourceLandsOnItsChannel(t *testing.T) {
 	e := setupPromoteConsent(t)
-	created, err := e.store.CreateLeadSource(e.ctx, CreateLeadSourceInput{Label: "Trade show", Intent: SourceIntentHigh})
-	if err != nil {
-		t.Fatalf("create: %v", err)
+	siteread := "siteread"
+	cases := []struct {
+		name, source, want string
+		system             *string
+	}{
+		{name: "a website form", source: "web_form", want: "webform"},
+		{name: "a website read", source: "siteread", system: &siteread, want: "capture"},
+		{name: "a retired list key", source: "crawl", want: "api"},
+		{name: "a connector stamp", source: "connector:apollo:a-1", want: "api"},
+		{name: "a channel", source: "import", want: "import"},
 	}
-	if created.Key != "trade_show" || created.Intent != crmcontracts.LeadSourceIntentLeadSourceIntentHigh || created.System == nil || *created.System {
-		t.Fatalf("created = %+v, want key trade_show, intent high, not system", created)
-	}
-	if _, err := e.store.CreateLeadSource(e.ctx, CreateLeadSourceInput{Label: "Trade Show"}); !errors.Is(err, apperrors.ErrConflict) {
-		t.Errorf("duplicate key err = %v, want ErrConflict", err)
-	}
-	if _, err := e.store.CreateLeadSource(e.ctx, CreateLeadSourceInput{Label: "  "}); err == nil {
-		t.Error("blank label was accepted")
-	}
-
-	renamed := "Messe"
-	inactive := false
-	updated, err := e.store.UpdateLeadSource(e.ctx, ids.UUID(created.Id), UpdateLeadSourceInput{Label: &renamed, Active: &inactive})
-	if err != nil {
-		t.Fatalf("update: %v", err)
-	}
-	if updated.Label != "Messe" || updated.Active || updated.Key != "trade_show" {
-		t.Errorf("updated = %+v, want label Messe, inactive, key unchanged", updated)
-	}
-
-	list, err := e.store.ListLeadSources(e.ctx)
-	if err != nil {
-		t.Fatalf("list: %v", err)
-	}
-	var importSource *crmcontracts.LeadSource
-	for i := range list.Data {
-		if list.Data[i].Key == "import" {
-			importSource = &list.Data[i]
+	for _, c := range cases {
+		email := ids.NewV7().String()[24:] + "@example.test"
+		in := CreateLeadInput{Email: &email, Source: c.source, SourceSystem: c.system}
+		if c.system != nil {
+			in.SourceID = new("key-" + email)
+		}
+		lead, _, err := e.store.CreateLead(e.ctx, in)
+		if err != nil {
+			t.Fatalf("%s: create: %v", c.name, err)
+		}
+		if lead.Source != c.want || lead.Score != 0 {
+			t.Errorf("%s: source %q scores %d, want %q and 0: how a lead arrived is not scored", c.name, lead.Source, lead.Score, c.want)
 		}
 	}
-	if importSource == nil {
-		t.Fatal("the seeded import source is missing from the list")
-	}
-	if err := e.store.DeleteLeadSource(e.ctx, ids.UUID(importSource.Id)); !errors.Is(err, apperrors.ErrConflict) {
-		t.Errorf("deleting a built-in err = %v, want ErrConflict", err)
-	}
-	if err := e.store.DeleteLeadSource(e.ctx, ids.UUID(created.Id)); err != nil {
-		t.Errorf("deleting an unused custom source err = %v, want nil", err)
-	}
-
-	rep := e.withGrants(map[string]principal.ObjectGrant{
-		"lead": {Create: true, Read: true, Update: true, Delete: true}, "custom_field": {Read: true},
-	})
-	if _, err := e.store.CreateLeadSource(rep, CreateLeadSourceInput{Label: "Rep source"}); !errors.Is(err, apperrors.ErrPermissionDenied) {
-		t.Errorf("rep create err = %v, want ErrPermissionDenied", err)
-	}
-	if _, err := e.store.ListLeadSources(rep); err != nil {
-		t.Errorf("rep list err = %v, want the read to be granted", err)
-	}
-}
-
-// The deprecated source list governs nothing. An inactive key is accepted on
-// create and on correction, and a source value never moves the score. The list
-// filter and the counts still read the source column as before.
-func TestLeadSourceListNoLongerGovernsWritesOrTheScore(t *testing.T) {
-	e := setupPromoteConsent(t)
-	list, err := e.store.ListLeadSources(e.ctx)
+	webform := "webform"
+	listed, _, err := e.store.ListLeads(e.ctx, ListLeadsInput{Source: &webform})
 	if err != nil {
 		t.Fatal(err)
 	}
-	var crawl crmcontracts.LeadSource
-	for _, s := range list.Data {
-		if s.Key == "crawl" {
-			crawl = s
-		}
+	if len(listed) != 1 || listed[0].Source != webform {
+		t.Errorf("source=webform lists %d leads, want the one the form wrote", len(listed))
 	}
-	inactive := false
-	if _, err := e.store.UpdateLeadSource(e.ctx, ids.UUID(crawl.Id), UpdateLeadSourceInput{Active: &inactive}); err != nil {
-		t.Fatal(err)
-	}
-	// Reset keeps the source table; the adopted family is in use, so the store refuses its delete.
-	t.Cleanup(func() {
-		active := true
-		if _, err := e.store.UpdateLeadSource(e.ctx, ids.UUID(crawl.Id), UpdateLeadSourceInput{Active: &active}); err != nil {
-			t.Errorf("reactivating crawl: %v", err)
-		}
-		if _, err := e.owner.Exec(context.Background(), `DELETE FROM lead_source WHERE key = 'connector:apollo'`); err != nil {
-			t.Errorf("removing the adopted connector family: %v", err)
-		}
-	})
-	email := "vocab@example.test"
-	if _, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Email: &email, Source: "crawl"}); err != nil {
-		t.Fatalf("create with an inactive source err = %v, want it accepted: the list no longer governs writes", err)
-	}
-	other0 := "second@example.test"
-	lead, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Email: &other0, Source: "connector:apollo:a-1"})
-	if err != nil {
-		t.Fatalf("create with a connector value: %v", err)
-	}
-	if lead.Score != 0 || lead.SourceLabel != nil {
-		t.Errorf("connector lead = score %d label %v, want 0 and no label until the family is adopted", lead.Score, lead.SourceLabel)
-	}
-	lowImport, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{FullName: new("Import Lead"), Source: "import"})
-	if err != nil {
-		t.Fatalf("create with the import source: %v", err)
-	}
-	if lowImport.Score != 0 {
-		t.Errorf("a lead written by an import scores %d, want 0: the way a row reached Margince is not scored", lowImport.Score)
-	}
-
-	leadID := ids.From[ids.LeadKind](ids.UUID(lead.Id))
-	crawlKey := "crawl"
-	if _, err := e.store.UpdateLead(e.ctx, leadID, UpdateLeadInput{Source: &crawlKey}); !isSourceFieldError(err) {
+	crawl := "crawl"
+	if _, err := e.store.UpdateLead(e.ctx, ids.From[ids.LeadKind](ids.UUID(listed[0].Id)), UpdateLeadInput{Source: &crawl}); !isSourceFieldError(err) {
 		t.Errorf("rewriting how the lead arrived = %v, want a source field error", err)
-	}
-	labelled, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{FullName: new("Referral Lead"), Source: "referral"})
-	if err != nil {
-		t.Fatalf("create with the referral source: %v", err)
-	}
-	if labelled.Score != 0 || labelled.SourceLabel == nil || *labelled.SourceLabel != "Referral" {
-		t.Errorf("labelled = score %d label %v, want 0 and \"Referral\": the source is labelled and never scores", labelled.Score, labelled.SourceLabel)
-	}
-
-	// Adopting the connector family weights the leads that still carry it.
-	other := "other@example.test"
-	connectorLead, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Email: &other, Source: "connector:apollo:a-2"})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if _, err := e.store.CreateLeadSource(e.ctx, CreateLeadSourceInput{Key: "connector:apollo", Label: "Apollo", Intent: SourceIntentHigh}); err != nil {
-		t.Fatalf("adopt connector family: %v", err)
-	}
-	if err := e.store.RecomputeLeadScore(e.ctx, ids.From[ids.LeadKind](ids.UUID(connectorLead.Id)), connectorLead.CreatedAt); err != nil {
-		t.Fatal(err)
-	}
-	after, err := e.store.GetLead(e.ctx, ids.From[ids.LeadKind](ids.UUID(connectorLead.Id)), storekit.LiveOnly)
-	if err != nil {
-		t.Fatal(err)
-	}
-	if after.Score != 0 {
-		t.Errorf("adopted connector lead = score %d, want 0: the source list's intent is no longer read", after.Score)
-	}
-	list, err = e.store.ListLeadSources(e.ctx)
-	if err != nil {
-		t.Fatal(err)
-	}
-	for _, s := range list.Data {
-		if s.Key == "connector:apollo" && (s.LeadCount == nil || *s.LeadCount != 2) {
-			t.Errorf("connector family lead_count = %v, want 2 counted through the prefix", s.LeadCount)
-		}
-	}
-	for _, d := range list.Discovered {
-		if d.Key == "connector:apollo" {
-			t.Errorf("an adopted family still reads as discovered: %+v", d)
-		}
-	}
-
-	// The list filter names the family and finds the connector's leads.
-	family := "connector:apollo"
-	listed, _, err := e.store.ListLeads(e.ctx, ListLeadsInput{Source: &family})
-	if err != nil {
-		t.Fatal(err)
-	}
-	if len(listed) != 2 {
-		t.Errorf("source=%s lists %d leads, want the two connector leads still carrying the family", family, len(listed))
-	}
-
-	// The counts are a lead read, and a lead is customer identity: an actor
-	// scoped to their own rows still reads every lead in the workspace, so
-	// owning the leads elsewhere changes nothing about what they count.
-	owner := ids.From[ids.UserKind](e.user)
-	for _, id := range []ids.LeadID{leadID, ids.From[ids.LeadKind](ids.UUID(connectorLead.Id))} {
-		if _, err := e.store.UpdateLead(e.ctx, id, UpdateLeadInput{OwnerID: &owner}); err != nil {
-			t.Fatalf("assign owner: %v", err)
-		}
-	}
-	ownScope := principal.WithActor(principal.WithCorrelationID(principal.WithWorkspaceID(context.Background(), e.ws), ids.NewV7()),
-		principal.Principal{
-			Type: principal.PrincipalHuman, ID: "human:" + ids.NewV7().String(), UserID: ids.NewV7(),
-			Permissions: principal.Permissions{
-				RoleKeys: []string{"rep"},
-				Objects:  map[string]principal.ObjectGrant{"lead": {Read: true}, "custom_field": {Read: true}},
-				RowScope: principal.RowScopeOwn,
-			},
-		})
-	scoped, err := e.store.ListLeadSources(ownScope)
-	if err != nil {
-		t.Fatalf("scoped list: %v", err)
-	}
-	counts := map[string]int{}
-	for _, s := range list.Data {
-		if s.LeadCount != nil {
-			counts[s.Key] = *s.LeadCount
-		}
-	}
-	for _, s := range scoped.Data {
-		got := 0
-		if s.LeadCount != nil {
-			got = *s.LeadCount
-		}
-		if got != counts[s.Key] {
-			t.Errorf("own-scoped actor counts %d leads under %q, want %d — a lead is workspace-readable", got, s.Key, counts[s.Key])
-		}
-	}
-	discovered := map[string]int{}
-	for _, d := range list.Discovered {
-		discovered[d.Key] = d.LeadCount
-	}
-	if len(scoped.Discovered) != len(discovered) {
-		t.Errorf("own-scoped actor sees discovered sources %+v, want the same %d every seat sees", scoped.Discovered, len(discovered))
-	}
-	for _, d := range scoped.Discovered {
-		if want, ok := discovered[d.Key]; !ok || want != d.LeadCount {
-			t.Errorf("own-scoped actor discovers %q with %d leads, want %d — a lead is workspace-readable", d.Key, d.LeadCount, want)
-		}
 	}
 }
 
@@ -308,19 +137,11 @@ func TestDisqualifyRecordsAnActiveReason(t *testing.T) {
 	}
 }
 
-// Every one of the six vocabulary mutations publishes, in the transaction that
-// writes the row.
+// Every disqualification reason mutation publishes, in the transaction that
+// writes the row, because a change to configuration is a fact a subscriber needs.
 //
-// The audit row alone was the state before this: the change was recorded and
-// nothing downstream was told, so a subscriber caching the source list to
-// render or group by it kept serving an entry an admin had deleted. events.md
-// §5.3b — config changes are first-class facts, which is why pipeline.created
-// exists for the same kind of edit.
-//
-// It asserts the KEY on the wire and not just a row count. The count alone
-// passes if all three verbs publish the same payload, and `deleted` is exactly
-// the case where the key has to be right: the row is gone, so the event is the
-// only thing naming what a subscriber should drop.
+// It asserts the label on the wire and not just a row count. After `deleted`
+// the row is gone, so the event is the only thing naming what to drop.
 func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 	e := setupPromoteConsent(t)
 
@@ -351,25 +172,6 @@ func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 		return out
 	}
 
-	source, err := e.store.CreateLeadSource(e.ctx, CreateLeadSourceInput{Label: "Webinar"})
-	if err != nil {
-		t.Fatalf("create source: %v", err)
-	}
-	renamed := "Webinar EMEA"
-	if _, err := e.store.UpdateLeadSource(e.ctx, ids.UUID(source.Id), UpdateLeadSourceInput{Label: &renamed}); err != nil {
-		t.Fatalf("update source: %v", err)
-	}
-	if err := e.store.DeleteLeadSource(e.ctx, ids.UUID(source.Id)); err != nil {
-		t.Fatalf("delete source: %v", err)
-	}
-	// The key, not the label, and unchanged by the rename: it is what a lead
-	// carries and what a subscriber has cached the entry under.
-	wantSources := []string{"created:webinar", "updated:webinar", "deleted:webinar"}
-	slices.Sort(wantSources)
-	if got := published("lead_source.changed"); !slices.Equal(got, wantSources) {
-		t.Errorf("lead_source.changed = %v, want %v", got, wantSources)
-	}
-
 	reason, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: "Procurement freeze"})
 	if err != nil {
 		t.Fatalf("create reason: %v", err)
@@ -381,9 +183,8 @@ func TestEveryLeadVocabularyMutationPublishesItsChange(t *testing.T) {
 	if err := e.store.DeleteLeadDisqualifyReason(e.ctx, ids.UUID(reason.Id)); err != nil {
 		t.Fatalf("delete reason: %v", err)
 	}
-	// The label FOLLOWS the rename here, where the source's key did not: a
-	// reason has no key, so the label is its identity and a stale one would
-	// name something that no longer exists.
+	// The label follows the rename. A reason has no key, so the label is its
+	// identity, and a stale one would name something gone.
 	wantReasons := []string{"created:Procurement freeze", "updated:Budget withdrawn", "deleted:Budget withdrawn"}
 	slices.Sort(wantReasons)
 	if got := published("lead_disqualify_reason.changed"); !slices.Equal(got, wantReasons) {
@@ -450,9 +251,9 @@ func TestADisqualifyReasonLabelIsHeldOnce(t *testing.T) {
 	if !errors.Is(err, apperrors.ErrConflict) {
 		t.Fatalf("a second spelling of the stock \"No budget\" answered %v, want a conflict", err)
 	}
-	want := `conflict: a disqualification reason called "no budget" already exists`
-	if fault, _ := httperr.Classify(err); fault.Detail != want {
-		t.Errorf("the conflict reads %q, want %q", fault.Detail, want)
+	want := `a disqualification reason called "no budget" already exists; choose a different name`
+	if fault, _ := httperr.Classify(err); fault.Status != http.StatusConflict || fault.Code != "name_taken" || fault.Detail != want {
+		t.Errorf("the conflict reads %d %s %q, want 409 name_taken %q", fault.Status, fault.Code, fault.Detail, want)
 	}
 	custom, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: "Procurement freeze"})
 	if err != nil {
@@ -474,5 +275,151 @@ func TestADisqualifyReasonLabelIsHeldOnce(t *testing.T) {
 	sortOrder := 5
 	if _, err := e.store.UpdateLeadDisqualifyReason(e.ctx, ids.UUID(custom.Id), UpdateLeadDisqualifyReasonInput{SortOrder: &sortOrder}); err != nil {
 		t.Fatalf("a reorder that leaves the label alone: %v", err)
+	}
+}
+
+// vocabularyList drives one administered list. A keyed list takes a caller's own
+// key beside the label.
+type vocabularyList struct {
+	name   string
+	keyed  bool
+	create func(key, label string) (ids.UUID, error)
+	rename func(id ids.UUID, label string) error
+	retire func(id ids.UUID) error
+}
+
+func leadVocabularyLists(e *promoteConsentEnv) []vocabularyList {
+	return []vocabularyList{{
+		name: "lead origin", keyed: true,
+		create: func(key, label string) (ids.UUID, error) {
+			made, err := e.store.CreateLeadOrigin(e.ctx, CreateLeadOriginInput{Key: key, Label: label})
+			return ids.UUID(made.Id), err
+		},
+		rename: func(id ids.UUID, label string) error {
+			_, err := e.store.UpdateLeadOrigin(e.ctx, id, UpdateLeadOriginInput{Label: &label})
+			return err
+		},
+		retire: func(id ids.UUID) error {
+			_, err := e.store.UpdateLeadOrigin(e.ctx, id, UpdateLeadOriginInput{Active: new(false)})
+			return err
+		},
+	}, {
+		name: "disqualification reason",
+		create: func(_, label string) (ids.UUID, error) {
+			made, err := e.store.CreateLeadDisqualifyReason(e.ctx, CreateLeadDisqualifyReasonInput{Label: label})
+			return ids.UUID(made.Id), err
+		},
+		rename: func(id ids.UUID, label string) error {
+			_, err := e.store.UpdateLeadDisqualifyReason(e.ctx, id, UpdateLeadDisqualifyReasonInput{Label: &label})
+			return err
+		},
+		retire: func(id ids.UUID) error {
+			_, err := e.store.UpdateLeadDisqualifyReason(e.ctx, id, UpdateLeadDisqualifyReasonInput{Active: new(false)})
+			return err
+		},
+	}}
+}
+
+// requireLabelHeldOnce proves a list holds each label once, compared trimmed and
+// ignoring case. A retired entry keeps its label; create and rename both conflict.
+func requireLabelHeldOnce(t *testing.T, list vocabularyList) {
+	t.Helper()
+	suffix := ids.NewV7().String()[24:]
+	held, err := list.create("", "Freeze "+suffix)
+	if err != nil {
+		t.Fatalf("creating the first entry: %v", err)
+	}
+	if err := list.retire(held); err != nil {
+		t.Fatalf("retiring it: %v", err)
+	}
+	if _, err := list.create("", "  FREEZE "+strings.ToUpper(suffix)+" "); !errors.Is(err, apperrors.ErrConflict) {
+		t.Errorf("a second spelling of a retired entry's label answered %v, want a conflict", err)
+	}
+	if list.keyed {
+		if _, err := list.create("other_"+suffix, "freeze "+suffix); !errors.Is(err, apperrors.ErrConflict) {
+			t.Errorf("the label under a key of its own answered %v, want a conflict", err)
+		}
+	}
+	other, err := list.create("", "Thaw "+suffix)
+	if err != nil {
+		t.Fatalf("creating a second entry: %v", err)
+	}
+	err = list.rename(other, " freeze "+strings.ToUpper(suffix))
+	if !errors.Is(err, apperrors.ErrConflict) {
+		t.Fatalf("a rename onto a held label answered %v, want a conflict", err)
+	}
+	if fault, _ := httperr.Classify(err); fault.Status != http.StatusConflict || fault.Code != "name_taken" {
+		t.Errorf("the conflict reads %d %s %q, want 409 name_taken", fault.Status, fault.Code, fault.Detail)
+	}
+	if err := list.rename(other, "THAW "+suffix); err != nil {
+		t.Errorf("a rename that changes only the case of its own label: %v", err)
+	}
+}
+
+func requireLongLabelRefused(t *testing.T, list vocabularyList) {
+	t.Helper()
+	long := strings.Repeat("a", values.TextLabelCharacters+1)
+	_, err := list.create("", long)
+	requireTooLong(t, err, leadOriginLabelField)
+	kept, err := list.create("", "Kept "+ids.NewV7().String()[24:])
+	if err != nil {
+		t.Fatalf("creating an entry to rename: %v", err)
+	}
+	requireTooLong(t, list.rename(kept, long), leadOriginLabelField)
+}
+
+func requireTooLong(t *testing.T, err error, field string) {
+	t.Helper()
+	fault, _ := httperr.Classify(err)
+	if fault.Status != http.StatusUnprocessableEntity || len(fault.Fields) != 1 {
+		t.Fatalf("answered %v (status %d), want one 422 field refusal", err, fault.Status)
+	}
+	got := fault.Fields[0]
+	if got.Field != field || got.Code != "too_long" || got.Max != values.TextLabelCharacters {
+		t.Errorf("refusal = %+v, want %s too_long with max %d", got, field, values.TextLabelCharacters)
+	}
+}
+
+func TestALeadListHoldsEachLabelOnce(t *testing.T) {
+	e := setupPromoteConsent(t)
+	keepOriginCatalogAsSeeded(t, e)
+	keepDisqualifyReasonsAsSeeded(t, e)
+	for _, list := range leadVocabularyLists(e) {
+		t.Run(list.name, func(t *testing.T) {
+			requireLabelHeldOnce(t, list)
+			requireLongLabelRefused(t, list)
+		})
+	}
+}
+
+// keepDisqualifyReasonsAsSeeded removes the reasons a test added and wakes the
+// built-ins it retired. A reset keeps the list, so they would outlive the test.
+func keepDisqualifyReasonsAsSeeded(t *testing.T, e *promoteConsentEnv) {
+	t.Helper()
+	t.Cleanup(func() {
+		for _, statement := range []string{
+			`DELETE FROM lead_disqualify_reason WHERE NOT system`,
+			`UPDATE lead_disqualify_reason SET active = true`,
+		} {
+			if _, err := e.owner.Exec(context.Background(), statement); err != nil {
+				t.Errorf("restoring the disqualification reasons: %v", err)
+			}
+		}
+	})
+}
+
+// A lead's name holds at most a label's characters, typed or changed, and the
+// refusal names full_name before anything is written.
+func TestALeadNamePastTheLimitIsRefusedBeforeTheWrite(t *testing.T) {
+	e := setupPromoteConsent(t)
+	long := strings.Repeat("n", values.TextLabelCharacters+1)
+	_, _, err := e.store.CreateLead(e.ctx, CreateLeadInput{Source: "manual", FullName: &long})
+	requireTooLong(t, err, contactNameColumn)
+	lead := e.seedLead(t, "named-"+ids.NewV7().String()+"@example.test")
+	_, err = e.store.UpdateLead(e.ctx, lead, UpdateLeadInput{FullName: &long})
+	requireTooLong(t, err, contactNameColumn)
+	fits := strings.Repeat("n", values.TextLabelCharacters)
+	if _, err := e.store.UpdateLead(e.ctx, lead, UpdateLeadInput{FullName: &fits}); err != nil {
+		t.Errorf("a name at the limit was refused: %v", err)
 	}
 }

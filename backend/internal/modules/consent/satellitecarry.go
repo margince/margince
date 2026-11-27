@@ -24,6 +24,7 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -40,6 +41,7 @@ const PreferenceRevokedMergedIntoSurvivor = "merged_into_survivor"
 type satelliteCarry struct {
 	moved   map[string][]ids.UUID
 	dropped map[string][]ids.UUID
+	expired map[string][]ids.UUID
 }
 
 // noteRows keeps a table out of the audit evidence when nothing of it moved.
@@ -65,17 +67,21 @@ func (s *Store) CarrySatellitesTx(ctx context.Context, tx pgx.Tx, from, to comms
 	if err := admitACarry(ctx, tx, from, to); err != nil {
 		return err
 	}
-	carry := satelliteCarry{moved: map[string][]ids.UUID{}, dropped: map[string][]ids.UUID{}}
+	carry := satelliteCarry{moved: map[string][]ids.UUID{}, dropped: map[string][]ids.UUID{}, expired: map[string][]ids.UUID{}}
 	if err := carrySubjectArmRows(ctx, tx, from, to, carry); err != nil {
 		return err
 	}
 	if err := carryQualifyingEvents(ctx, tx, from, to, carry); err != nil {
 		return err
 	}
-	// The remaining tables name contacts only, so a lead has none to carry.
 	// admitACarry refuses contact to lead, so a contact source has a contact survivor.
 	if !from.ContactID.IsZero() {
 		if err := carryContactOnlyRows(ctx, tx, from.ContactID, to.ContactID, carry); err != nil {
+			return err
+		}
+	}
+	if !from.LeadID.IsZero() && !to.LeadID.IsZero() {
+		if err := carryConfirmLinks(ctx, tx, subjectColumnLead, from.LeadID.UUID, to.LeadID.UUID, carry); err != nil {
 			return err
 		}
 	}
@@ -88,7 +94,8 @@ func (s *Store) CarrySatellitesTx(ctx context.Context, tx pgx.Tx, from, to comms
 // A stop for the whole subject and a withdrawal are bound the same way as a
 // request. An anonymize then pins each only to its own record's addresses. The
 // trigger bind_requests_on_address_move binds the same rows when a merge runs
-// on code that predates this call.
+// on code that predates this call. The open privacy requests move here too,
+// while the addresses they were filed for are still the merged-away record's.
 func (s *Store) BindRequestsToAddressesTx(ctx context.Context, tx pgx.Tx, from, to ids.ContactID) error {
 	if err := admitACarry(ctx, tx, commsauthz.ContactStopSubject(from), commsauthz.ContactStopSubject(to)); err != nil {
 		return err
@@ -107,6 +114,9 @@ func (s *Store) BindRequestsToAddressesTx(ctx context.Context, tx pgx.Tx, from, 
 	if err := bindQualifyingAddresses(ctx, tx, sub, to.UUID); err != nil {
 		return err
 	}
+	if err := carryOpenRightsRequests(ctx, tx, from, to); err != nil {
+		return err
+	}
 
 	if _, err := tx.Exec(ctx, `
 		UPDATE communication_suppression s SET recorded_for_addresses = `+storekit.RequestAddressesSQL("s.contact_id")+`
@@ -120,6 +130,45 @@ func (s *Store) BindRequestsToAddressesTx(ctx context.Context, tx pgx.Tx, from, 
 		return fmt.Errorf("consent: binding the withdrawals to their addresses: %w", err)
 	}
 	return nil
+}
+
+// ErrRightsRequestBeingAnswered refuses a merge while a privacy request on the
+// merged-away contact is being fulfilled.
+var ErrRightsRequestBeingAnswered = fmt.Errorf("%w: a privacy request on the merged-away contact is being answered; "+
+	"merge again once it is closed", apperrors.ErrConflict)
+
+// carryOpenRightsRequests moves the privacy requests still being answered onto
+// the survivor, so the answer reaches the data the survivor now holds. That is
+// a case linked to the retired contact, or one an officer opened naming its id
+// (resolveDSRSubject reads either). A closed request stays on the record it
+// acted on. Each moved request's audit row names the merge and the addresses of
+// the record it was filed on, read before any address moves.
+//
+// The requests are locked without waiting. A fulfilment holds its request
+// while the erasure runs in a second transaction that needs the contact this
+// merge already holds. The database cannot see that cycle.
+func carryOpenRightsRequests(ctx context.Context, tx pgx.Tx, from, to ids.ContactID) error {
+	args := pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to}
+	open, err := collectIDs(ctx, tx, `SELECT id FROM data_subject_request
+ WHERE (contact_id = @source OR (contact_id IS NULL AND subject_ref = @source::text))
+   AND status IN ('open', 'in_progress') ORDER BY id FOR UPDATE NOWAIT`, args)
+	if storekit.IsLockTimeout(err) {
+		return ErrRightsRequestBeingAnswered
+	}
+	if err != nil || len(open) == 0 {
+		return err
+	}
+	var filedFor []string
+	if err := tx.QueryRow(ctx, `SELECT `+storekit.RequestAddressesSQL("@source::uuid"), args).Scan(&filedFor); err != nil {
+		return fmt.Errorf("consent: reading the addresses the requests were filed for: %w", err)
+	}
+	if _, err := tx.Exec(ctx, `UPDATE data_subject_request SET contact_id = @target WHERE id = ANY(@requests)`,
+		pgx.NamedArgs{carryTargetArg: to, "requests": open}); err != nil {
+		return fmt.Errorf("consent: carrying the open privacy requests: %w", err)
+	}
+	return storekit.AuditEach(ctx, tx, "update", "data_subject_request", open,
+		map[string]any{contactIDKey: from},
+		map[string]any{contactIDKey: to, "merged_from": from, "filed_for_addresses": filedFor})
 }
 
 // carrySubjectArmRows moves the two tables that can name a lead or a contact.
@@ -148,24 +197,58 @@ func carrySubjectArmRows(ctx context.Context, tx pgx.Tx, from, to commsauthz.Sto
 	return nil
 }
 
-// carryContactOnlyRows moves the four tables that name a contact and nothing
-// else.
+// carryContactOnlyRows moves the tables that name a contact and nothing else.
 func carryContactOnlyRows(ctx context.Context, tx pgx.Tx, from, to ids.ContactID, carry satelliteCarry) error {
 	if err := carryPreferenceTokens(ctx, tx, from, to, carry); err != nil {
 		return err
 	}
-	confirm, err := collectIDs(ctx, tx,
-		`UPDATE confirm_token SET contact_id = @target WHERE `+contactCarrySource+` RETURNING id`, pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to})
-	if err != nil {
-		return fmt.Errorf("consent: carrying the confirm links: %w", err)
+	if err := carryConfirmLinks(ctx, tx, subjectColumnContact, from.UUID, to.UUID, carry); err != nil {
+		return err
 	}
 	doi, err := collectIDs(ctx, tx,
 		`UPDATE consent_doi_token SET contact_id = @target WHERE `+contactCarrySource+` RETURNING id`, pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to})
 	if err != nil {
 		return fmt.Errorf("consent: carrying the double-opt-in history: %w", err)
 	}
-	noteRows(carry.moved, "confirm_token", confirm)
 	noteRows(carry.moved, "consent_doi_token", doi)
+	return nil
+}
+
+// confirmLinkCarries are, per subject column, the statement that expires the
+// merged-away record's live confirm links and the one that moves them all.
+var confirmLinkCarries = map[string][2]string{
+	subjectColumnContact: {
+		`UPDATE confirm_token SET expires_at = GREATEST(now(), issued_at + interval '1 microsecond')
+ WHERE contact_id = @source AND consumed_at IS NULL AND expires_at > now() RETURNING id`,
+		`UPDATE confirm_token SET contact_id = @target WHERE contact_id = @source RETURNING id`,
+	},
+	subjectColumnLead: {
+		`UPDATE confirm_token SET expires_at = GREATEST(now(), issued_at + interval '1 microsecond')
+ WHERE lead_id = @source AND consumed_at IS NULL AND expires_at > now() RETURNING id`,
+		`UPDATE confirm_token SET lead_id = @target WHERE lead_id = @source RETURNING id`,
+	},
+}
+
+// carryConfirmLinks moves the merged-away record's confirm links onto the
+// survivor, and first expires each one still live. An answer through a link
+// acts on the record it names. The link was mailed for the retired record
+// alone, so it gets no say over the survivor, and the contact asks for a new one.
+func carryConfirmLinks(ctx context.Context, tx pgx.Tx, subjectColumn string, from, to ids.UUID, carry satelliteCarry) error {
+	statements, ok := confirmLinkCarries[subjectColumn]
+	if !ok {
+		return fmt.Errorf("consent: no confirm-link carry for the subject column %q", subjectColumn)
+	}
+	args := pgx.NamedArgs{carrySourceArg: from, carryTargetArg: to}
+	expired, err := collectIDs(ctx, tx, statements[0], args)
+	if err != nil {
+		return fmt.Errorf("consent: expiring the merged-away record's confirm links: %w", err)
+	}
+	moved, err := collectIDs(ctx, tx, statements[1], args)
+	if err != nil {
+		return fmt.Errorf("consent: carrying the confirm links: %w", err)
+	}
+	noteRows(carry.expired, "confirm_token", expired)
+	noteRows(carry.moved, "confirm_token", moved)
 	return nil
 }
 
@@ -280,7 +363,7 @@ const answeredByAGrant = `EXISTS (SELECT 1 FROM consent_event ce WHERE ce.subjec
 // AuditEvent for the reason CarryStopsTx gives: the survivor held none of
 // these rows before, so there is no before-image to record.
 func auditSatelliteCarry(ctx context.Context, tx pgx.Tx, from, to commsauthz.StopSubject, carry satelliteCarry) error {
-	if len(carry.moved) == 0 && len(carry.dropped) == 0 {
+	if len(carry.moved) == 0 && len(carry.dropped) == 0 && len(carry.expired) == 0 {
 		return nil
 	}
 	entity, entityID := entityContact, to.ContactID.UUID
@@ -293,6 +376,7 @@ func auditSatelliteCarry(ctx context.Context, tx pgx.Tx, from, to commsauthz.Sto
 			"carried_from": subjectKey(from),
 			"moved":        carry.moved,
 			"dropped":      carry.dropped,
+			"expired":      carry.expired,
 		})
 	if err != nil {
 		return fmt.Errorf("consent: auditing the carried links: %w", err)

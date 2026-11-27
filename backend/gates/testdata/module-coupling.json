@@ -85,6 +85,8 @@
     "report_definition.report_definition_audience_team_id_fkey": "FOREIGN KEY (audience_team_id) REFERENCES team(id) ON DELETE RESTRICT",
     "report_definition.report_definition_owner_id_fkey": "FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT",
     "report_definition_revision.report_definition_revision_created_by_fkey": "FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT",
+    "report_edition.report_edition_owner_id_fkey": "FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT",
+    "report_edition.report_edition_publication_team_id_fkey": "FOREIGN KEY (publication_team_id) REFERENCES team(id) ON DELETE RESTRICT",
     "report_execution.report_execution_owner_id_fkey": "FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT",
     "report_schedule.report_schedule_owner_id_fkey": "FOREIGN KEY (owner_id) REFERENCES app_user(id) ON DELETE RESTRICT",
     "reporting_framework_revision.reporting_framework_revision_created_by_fkey": "FOREIGN KEY (created_by) REFERENCES app_user(id) ON DELETE RESTRICT",

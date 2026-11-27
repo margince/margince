@@ -144,3 +144,18 @@ func TestOverridesEmitSortedAndStubStaysEmpty(t *testing.T) {
 		t.Fatalf("empty stub lacks the empty overrides export:\n%s", empty)
 	}
 }
+
+// A tree whose units ship no overrides needs no frontend; one that ships a bad
+// key is refused against the real core catalogue.
+func TestComposedOverridesReadsCoreOnlyWhenAUnitHasOverrides(t *testing.T) {
+	none := []extensionUnit{{Name: "plain", Dir: t.TempDir()}}
+	if got, err := composedOverrides(t.TempDir(), none); err != nil || got != nil {
+		t.Fatalf("no overrides: got %v, %v", got, err)
+	}
+	dir := t.TempDir()
+	writeOverride(t, dir, "en.json", `{"no.such.key":"x"}`)
+	_, err := composedOverrides(filepath.Join("..", "..", ".."), []extensionUnit{{Name: "acme", Dir: dir}})
+	if err == nil || !strings.Contains(err.Error(), "no.such.key") {
+		t.Fatalf("want a refusal naming the key, got %v", err)
+	}
+}

@@ -166,7 +166,6 @@
     "createLead": "business",
     "createLeadDisqualifyReason": "admin_settings",
     "createLeadOrigin": "admin_settings",
-    "createLeadSource": "admin_settings",
     "createLegalEntity": "admin_settings",
     "createList": "business",
     "createLossReason": "admin_settings",
@@ -216,7 +215,6 @@
     "deleteCompanyFact": "business",
     "deleteLeadDisqualifyReason": "admin_settings",
     "deleteLeadOrigin": "admin_settings",
-    "deleteLeadSource": "admin_settings",
     "deleteLegalEntityLogo": "admin_settings",
     "deleteVoiceProfile": "business",
     "deleteWorkspaceEmailDomain": "admin_settings",
@@ -571,7 +569,6 @@
     "listLeadDisqualifyReasons": "workspace_settings",
     "listLeadManualSignals": "business",
     "listLeadOrigins": "workspace_settings",
-    "listLeadSources": "workspace_settings",
     "listLeadStops": "compliance",
     "listLeads": "business",
     "listLegacyLossReasons": "admin_settings",
@@ -623,6 +620,7 @@
     "listSavedViews": "business",
     "listScheduledSends": "business",
     "listSchedulingTeamCandidates": "business",
+    "listSchedulingTeamLinks": "business",
     "listSchedulingTeamRequests": "business",
     "listSdrUpcomingMeetings": "business",
     "listSdrWaitingHandoffs": "business",
@@ -889,7 +887,6 @@
     "updateLeadDisqualifyReason": "admin_settings",
     "updateLeadOrigin": "admin_settings",
     "updateLeadSettings": "admin_settings",
-    "updateLeadSource": "admin_settings",
     "updateLegalEntity": "admin_settings",
     "updateLegalReviewSettings": "admin_settings",
     "updateList": "business",
@@ -962,6 +959,7 @@
     "annotateMorningBrief": "worklist",
     "answerCalendarInvitation": "activities",
     "answerReportingQuestionCard": "reports",
+    "answerSchedulingTeamLink": "scheduling",
     "answerSchedulingTeamRequest": "scheduling",
     "answerWeeklyPlanCommitment": "worklist",
     "applyContactEmploymentImport": "contacts",
@@ -971,6 +969,7 @@
     "approveApproval": "agent_limits",
     "approveApprovalBundle": "agent_limits",
     "approveImportRun": "imports",
+    "approveTelegramBusinessConnection": "connectors",
     "archiveActivity": "activities",
     "archiveCompany": "companies",
     "archiveContact": "contacts",
@@ -1082,7 +1081,6 @@
     "createLead": "leads",
     "createLeadDisqualifyReason": "sales_lists",
     "createLeadOrigin": "sales_lists",
-    "createLeadSource": "sales_lists",
     "createLegalEntity": "company_profile",
     "createList": "lists",
     "createLossReason": "sales_lists",
@@ -1107,6 +1105,7 @@
     "createRole": "members",
     "createSalesInitiative": "reports",
     "createSavedView": "lists",
+    "createSchedulingTeamLink": "scheduling",
     "createSignal": "signals",
     "createStage": "pipelines",
     "createStageExitCriterion": "pipelines",
@@ -1143,7 +1142,6 @@
     "deleteCorpusDocument": "knowledge",
     "deleteLeadDisqualifyReason": "sales_lists",
     "deleteLeadOrigin": "sales_lists",
-    "deleteLeadSource": "sales_lists",
     "deleteLegalEntityLogo": "company_profile",
     "deleteMyAvatar": "own_profile",
     "deleteOauthApp": "installation",
@@ -1152,6 +1150,7 @@
     "deleteProviderData": "connectors",
     "deleteRecordLink": "search",
     "deleteRetentionPolicy": "retention",
+    "deleteSchedulingTeamLink": "scheduling",
     "deleteVoiceCorpusSource": "voice",
     "deleteVoiceProfile": "voice",
     "deleteWorkspaceEmailDomain": "capture_rules",
@@ -1175,6 +1174,7 @@
     "disconnectFinanceSource": "finance_source",
     "disconnectProvider": "connectors",
     "disconnectSharedMailbox": "connectors",
+    "disconnectTelegramBusinessConnection": "connectors",
     "dismissCompanySuggestion": "companies",
     "dismissConnectorSilence": "connectors",
     "dismissContactMoment": "contacts",
@@ -1586,7 +1586,6 @@
     "listLeadDisqualifyReasons": "sales_lists",
     "listLeadManualSignals": "leads",
     "listLeadOrigins": "sales_lists",
-    "listLeadSources": "sales_lists",
     "listLeadStops": "consent",
     "listLeads": "leads",
     "listLegacyLossReasons": "sales_lists",
@@ -1648,6 +1647,7 @@
     "listSavedViews": "lists",
     "listScheduledSends": "activities",
     "listSchedulingTeamCandidates": "scheduling",
+    "listSchedulingTeamLinks": "scheduling",
     "listSchedulingTeamRequests": "scheduling",
     "listSdrUpcomingMeetings": "reports",
     "listSdrWaitingHandoffs": "reports",
@@ -1660,6 +1660,7 @@
     "listTags": "tags",
     "listTaxRates": "rates",
     "listTeams": "members",
+    "listTelegramBusinessConnections": "connectors",
     "listTransitionPolicies": "pipelines",
     "listUnroutedMail": "capture_triage",
     "listUserSessions": "members",
@@ -1686,6 +1687,7 @@
     "mergeCompany": "companies",
     "mergeContact": "contacts",
     "mergeContactCase": "duplicates",
+    "mergeDeal": "deals",
     "mergeMembers": "members",
     "mergeTags": "tags",
     "messageAnchorCompanySiteRead": "company_profile",
@@ -1802,6 +1804,7 @@
     "removeConsumerMailDomain": "capture_rules",
     "removeDealLine": "deals",
     "removeDealRoomDocument": "deal_rooms",
+    "removeFxRate": "rates",
     "removeListMember": "lists",
     "removeMember": "members",
     "removeOfferLineItem": "offers",
@@ -2014,7 +2017,6 @@
     "updateLeadDisqualifyReason": "sales_lists",
     "updateLeadOrigin": "sales_lists",
     "updateLeadSettings": "sales_rules",
-    "updateLeadSource": "sales_lists",
     "updateLegalEntity": "company_profile",
     "updateLegalReviewSettings": "sales_rules",
     "updateList": "lists",
@@ -2040,12 +2042,14 @@
     "updateRole": "members",
     "updateSalesInitiative": "reports",
     "updateSavedView": "lists",
+    "updateSchedulingTeamLink": "scheduling",
     "updateSharedMailbox": "connectors",
     "updateSignal": "signals",
     "updateStage": "pipelines",
     "updateStageExitCriterion": "pipelines",
     "updateTag": "tags",
     "updateTeam": "members",
+    "updateTelegramBusinessConnectionVisibility": "connectors",
     "updateVoiceCorpusSource": "voice",
     "updateVoiceProfile": "voice",
     "updateWebForm": "web_forms",
@@ -2384,9 +2388,6 @@
     "create_lead_origin": [
       "sales_lists"
     ],
-    "create_lead_source": [
-      "sales_lists"
-    ],
     "create_legal_entity": [
       "company_profile"
     ],
@@ -2500,9 +2501,6 @@
       "sales_lists"
     ],
     "delete_lead_origin": [
-      "sales_lists"
-    ],
-    "delete_lead_source": [
       "sales_lists"
     ],
     "delete_legal_entity_logo": [
@@ -4100,9 +4098,6 @@
     "update_lead_settings": [
       "sales_rules"
     ],
-    "update_lead_source": [
-      "sales_lists"
-    ],
     "update_legal_entity": [
       "company_profile"
     ],
@@ -4533,9 +4528,6 @@
     "create_lead_origin": [
       "admin_settings"
     ],
-    "create_lead_source": [
-      "admin_settings"
-    ],
     "create_legal_entity": [
       "admin_settings"
     ],
@@ -4643,9 +4635,6 @@
       "admin_settings"
     ],
     "delete_lead_origin": [
-      "admin_settings"
-    ],
-    "delete_lead_source": [
       "admin_settings"
     ],
     "delete_legal_entity_logo": [
@@ -6201,9 +6190,6 @@
       "admin_settings"
     ],
     "update_lead_settings": [
-      "admin_settings"
-    ],
-    "update_lead_source": [
       "admin_settings"
     ],
     "update_legal_entity": [

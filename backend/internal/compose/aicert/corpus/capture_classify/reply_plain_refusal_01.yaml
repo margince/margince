@@ -18,6 +18,12 @@ expect:
     - label: other
       reply: negative
   rubric: >
+    The candidate output is the harness's record of the run, not one reply.
+    "replies" holds each raw reply in the order the pass asked, and "messages"
+    holds what the pass stored for each message. That wrapper is the harness's,
+    so never score it as a format fault; each reply inside it is the model's.
+    A message answered under the 0.7 floor is re-asked alone, so a second reply
+    is that re-ask and not a contradiction.
     The customer declines the proposal in plain words. Nothing is promised
     or requested of us and no time is proposed, so
     the label is "other". The reply verdict is "negative": the sender says

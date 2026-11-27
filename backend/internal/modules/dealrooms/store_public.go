@@ -128,9 +128,9 @@ func openSession(ctx context.Context, tx pgx.Tx, participantID ids.DealRoomParti
 	}
 	id := ids.NewV7()
 	if _, err := tx.Exec(ctx,
-		`INSERT INTO deal_room_session (id, participant_id, room_id, token_hash, expires_at, last_seen_at, source, captured_by)
-		 VALUES ($1, $2, $3, $4, $5, now(), $6, $7)`,
-		id, participantID, roomID, digest, expiresAt, sourceCredential, by); err != nil {
+		`INSERT INTO deal_room_session (id, participant_id, room_id, token_hash, expires_at, last_seen_at, captured_by)
+		 VALUES ($1, $2, $3, $4, $5, now(), $6)`,
+		id, participantID, roomID, digest, expiresAt, by); err != nil {
 		return fmt.Errorf("open deal room session: %w", err)
 	}
 	// The audit row names the session, not the token: nothing in the image

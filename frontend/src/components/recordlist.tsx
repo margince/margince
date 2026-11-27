@@ -5,6 +5,7 @@ import { useListFocusHandoff } from "../design-system/listfocus";
 import type { ListChip } from "../design-system/listsurface.dials";
 import type { ListColumn } from "../design-system/listtable";
 import { RowTags } from "../design-system/rowtags";
+import { ABSENT } from "../format/absent";
 import { formatDateAbbrev } from "../format/format";
 import type { useLocale, useT } from "../i18n";
 import type { MessageKey } from "../i18n/en";
@@ -92,17 +93,13 @@ export function createdColumn<Row extends OwnedRecord>(
       <span>
         {row.created_at
           ? formatDateAbbrev(row.created_at, locale, recordZone)
-          : ""}
+          : ABSENT}
       </span>
     ),
     sort: "created_at",
   };
 }
 
-/**
- * The Last activity column: the timeline's clock, maintained in the schema so
- * the server can sort on it; empty until something has happened.
- */
 /**
  * The Last activity CELL, without a column around it.
  *
@@ -120,7 +117,7 @@ export function lastActivityCell<Row extends OwnedRecord>(
     <span>
       {row.last_activity_at
         ? formatDateAbbrev(row.last_activity_at, locale, recordZone)
-        : ""}
+        : ABSENT}
     </span>
   );
 }

@@ -37,8 +37,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/modules/collections"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -58,7 +56,8 @@ const contractDocument = "api/crm.yaml"
 // picklist added tomorrow is covered the day it lands — by forcing whoever adds
 // it to say where the contract admits its values.
 var picklistInContract = map[string]struct{ schema, property string }{
-	"company.lifecycle":         {"Company", "lifecycle"},
+	"company.status":            {"Company", "status"},
+	"company.lifecycle":         {"Company", "status"},
 	"company.industry":          {"Company", "industry"},
 	"company.size_band":         {"Company", "size_band"},
 	"company.relationship_type": {"Company", "relationship_types"},
@@ -69,7 +68,8 @@ var picklistInContract = map[string]struct{ schema, property string }{
 	// sets above appear a second time under the deal engine. Both entries name the
 	// Company property they reach, which is the point: a link leaf offering a
 	// different set from the field it reads is exactly the drift this catches.
-	"deal.company_lifecycle": {"Company", "lifecycle"},
+	"deal.company_status":    {"Company", "status"},
+	"deal.company_lifecycle": {"Company", "status"},
 	"deal.company_size_band": {"Company", "size_band"},
 	"deal.company_industry":  {"Company", "industry"},
 	"lead.company_industry":  {"Company", "industry"},
@@ -251,7 +251,7 @@ func loadOpenAPIDocument(t *testing.T, path string) map[string]any {
 		t.Fatalf("reading %s: %v", path, err)
 	}
 	var doc map[string]any
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing %s: %v", path, err)
 	}
 	return doc

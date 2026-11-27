@@ -171,7 +171,6 @@ func New() extension.Extension {
 		// who may read the endpoint the screen opens on.
 		App: &extension.App{
 			Icon:   extension.IconPlug,
-			Label:  "extOpenchannel.title",
 			Group:  extension.AppGroupWork,
 			Object: "ext_openchannel_endpoint",
 			Export: "OpenchannelApp",

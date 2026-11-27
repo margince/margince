@@ -270,7 +270,7 @@ func (t createRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawM
 	}
 	return marshalResult(createdRecord{
 		wireRecord:          rec,
-		Changes:             t.words.describeCreate(ctx, summaryIn(ctx, t.language).lang, args.Fields, rec.Fields),
+		Changes:             t.words.describeCreate(ctx, summaryIn(ctx, t.language).lang, args.RecordType, args.Fields, rec.Fields),
 		DuplicateCandidates: t.reportCreateDuplicates(ctx, args.RecordType, args.Fields, ref.ID, filed.IDs()),
 		TagOffer:            t.offerTag(ctx, args.RecordType, args.OfferTag),
 	}, nil)
@@ -397,13 +397,13 @@ func (t logActivity) Spec() mcp.ToolSpec {
 			"links":{"type":"array","items":{"type":"object","required":["entity_type","entity_id"],"properties":{
 				"entity_type":{"type":"string","enum":` + activityLinkEntityTypeEnum + `},
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
-				"description":"Every record this was about, ALL OF THEM in this call — EXCEPT a project, which this verb REFUSES because filing there marks commercial correspondence. A meeting or a call is with a CONTACT and reaches their company through them — linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing. Adding a link AFTERWARDS is a second write — and a later link onto a project stages an approval that waits for the user's yes before it takes effect."},
+				"description":"Every record this was about, ALL OF THEM in this call: adding one AFTERWARDS is a second write. ` + ProjectLinkRefused + ` A meeting or a call is with a CONTACT and reaches their company through them; linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing."},
 			"attendee_user_ids":{"type":"array","maxItems":25,"items":{"type":"string","format":"uuid"},
 				"description":"Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused."},
 			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
 			"follow_up_task":` + string(argumentSchemaFor[crmcontracts.ActivityFollowUpTask](timestampRule)) + `,
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},
-			"patternProperties":{"^cf_[a-z0-9_]+$":{"description":"An activity custom field, by its cf_ key from describe_vocabulary. A key no active activity field names is refused."}},
+			"patternProperties":{"^cf_[a-z0-9_]+$":{"description":"An activity custom field, by its cf_ key: the column_name read_view lists with view custom_fields and object activity. A key no active activity field names is refused."}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[wireRecord](),
 	}

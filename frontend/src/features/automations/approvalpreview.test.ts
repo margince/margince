@@ -349,7 +349,7 @@ it("shows edited words and lifecycle choices without changing reference labels",
         after: { kind: "text", text: "Old reason" },
       },
       {
-        field: "lifecycle",
+        field: "status",
         before: { kind: "lifecycle", text: "customer" },
         after: { kind: "lifecycle", text: "former_customer" },
       },

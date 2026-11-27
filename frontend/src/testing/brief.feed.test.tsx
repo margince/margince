@@ -74,7 +74,9 @@ it("renders the server focus even when the queue page contains different rows", 
     ),
   ).toEqual(rows.slice(1, 6).map((row) => row.title));
   expect(container.querySelectorAll(".brief-triage > li")).toHaveLength(6);
-  expect(container.querySelector(".brief-first-count")?.textContent).toBe("6");
+  expect(container.querySelector(".brief-first-count")?.textContent).toBe(
+    "6 of 9 shown",
+  );
 });
 
 it("opens a waiting card where it stands when it is pressed", async () => {
@@ -284,7 +286,7 @@ it("names why the row in hand is first, whose it is, and its inbox", () => {
     <BriefFeed day={readingsDay({}, [row])} state="ready" />,
   );
   const head = container.querySelector(".brief-triage-lead-head");
-  expect(head?.querySelector(".brief-task-status")?.textContent).toBe(
+  expect(head?.querySelector(".task-meta-status")?.textContent).toBe(
     "Customer waiting",
   );
   expect(head?.textContent).toContain(en["visibility.team"]);

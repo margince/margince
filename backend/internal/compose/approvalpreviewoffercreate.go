@@ -107,7 +107,7 @@ func (r approvalPreviewReader) offerCreationDetails(ctx context.Context, dealID 
 func (r approvalPreviewReader) offerCreationLineDetails(ctx context.Context, currency string, line deals.OfferCreationLine) ([]crmcontracts.ApprovalPreviewDetail, error) {
 	in := line.Input
 	fields := map[string]any{
-		"product_id": in.ProductID, descriptionField: in.Description, previewFieldUnit: in.Unit,
+		previewFieldProductID: in.ProductID, descriptionField: in.Description, previewFieldUnit: in.Unit,
 		"quantity": json.Number(in.Quantity), previewFieldUnitPriceMinor: in.UnitPriceMinor, dealTargetCurrency: currency,
 		"discount_pct": json.Number(*in.DiscountPct), "tax_rate": json.Number(*in.TaxRate),
 		"tax_category":  in.TaxCategory,

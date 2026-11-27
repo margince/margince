@@ -11,12 +11,12 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/shared/ports/companytypes"
+	"github.com/margince/margince/backend/internal/shared/ports/extregistrytest"
 	"github.com/margince/margince/backend/pkg/extension"
 )
 
 func TestTheCompanyTypeDirectoryListsEveryDeclaredType(t *testing.T) {
-	companytypes.Reset()
-	t.Cleanup(companytypes.Reset)
+	extregistrytest.Reset(t)
 	companytypes.Register("beta", []extension.CompanyType{{Type: "reseller", Label: "Beta reseller"}})
 	companytypes.Register("alpha", []extension.CompanyType{{Type: "holding", Label: "Holding"}})
 
@@ -40,7 +40,7 @@ func TestTheCompanyTypeDirectoryListsEveryDeclaredType(t *testing.T) {
 }
 
 func TestTheCompanyTypeDirectoryIsAnEmptyListWhenNothingIsDeclared(t *testing.T) {
-	companytypes.Reset()
+	extregistrytest.Reset(t)
 	rec := httptest.NewRecorder()
 	channelProvidersHandlers{}.ListCompanyTypes(rec, httptest.NewRequest(http.MethodGet, "/v1/company-types", nil))
 	if body := rec.Body.String(); body != "{\"data\":[]}\n" && body != "{\"data\":[]}" {

@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { DateFormatsProvider } from "../../app/dateformats";
+import { faultSentence } from "../../lib/problem";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
 import { REPORTING_FIXTURE_ZONE } from "../../testing/reporting.fixtures";
@@ -42,7 +43,7 @@ const SETTINGS: InstallationSettings = {
   forecast_self_correcting: true,
   forecast_likely_threshold: 90,
   base_currency_locked_reason:
-    "3 rate(s) in the sheet convert into EUR and cannot be restated against another base; clear the rate sheet first",
+    "3 rate(s) in the sheet convert into EUR and cannot be restated against another base; remove every currency from the rate sheet first",
   base_currency_lock: { reason: "rate_sheet", count: 3, base_currency: "EUR" },
 };
 
@@ -51,11 +52,13 @@ function ProfileForm({
   part = "regional",
   start = SETTINGS,
   refused = new Map(),
+  lockRefused = false,
 }: Readonly<{
   locale?: "de" | "vi";
   part?: InstallationPart;
   start?: InstallationSettings;
   refused?: ReadonlyMap<string, string>;
+  lockRefused?: boolean;
 }>) {
   const [draft, setDraft] = useState(start);
   return (
@@ -70,6 +73,7 @@ function ProfileForm({
           dirty={JSON.stringify(draft) !== JSON.stringify(SETTINGS)}
           pending={false}
           refused={refused}
+          lockRefused={lockRefused}
           formRef={() => undefined}
           blanketError={null}
           describe={(control) => control["aria-describedby"]}
@@ -94,6 +98,38 @@ export const BaseCurrencyLocked: Story = { render: () => <ProfileForm /> };
 
 export const BaseCurrencyLockedVietnamese: Story = {
   render: () => <ProfileForm locale="vi" />,
+};
+
+// A save refused because a rate froze the currency after the dialog opened.
+// The refusal words the lock, and the hint that would repeat it stays hidden.
+export const BaseCurrencyRefusedGerman: Story = {
+  render: () => (
+    <ProfileForm
+      locale="de"
+      start={{ ...SETTINGS, base_currency: "CHF" }}
+      refused={
+        new Map([
+          [
+            "base_currency",
+            faultSentence(
+              {
+                field: "installation.base_currency",
+                code: "setting_frozen",
+                message: "3 rate(s) in the sheet convert into EUR",
+                params: {
+                  reason: "rate_sheet",
+                  count: "3",
+                  base_currency: "EUR",
+                },
+              },
+              "de",
+            ),
+          ],
+        ])
+      }
+      lockRefused
+    />
+  ),
 };
 
 // A new fiscal start in the draft: the dialog counts the saved work it

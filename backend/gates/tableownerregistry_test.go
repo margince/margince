@@ -88,7 +88,6 @@ var tableOwners = map[string]string{
 	"lead":                    "internal/modules/contacts",
 	"lead_score_history":      "internal/modules/contacts",
 	"lead_manual_signal":      "internal/modules/contacts",
-	"lead_source":             "internal/modules/contacts",
 	"lead_origin":             "internal/modules/contacts",
 	"lead_disqualify_reason":  "internal/modules/contacts",
 	"partner_stage":           "internal/modules/contacts",
@@ -97,19 +96,23 @@ var tableOwners = map[string]string{
 	// administered reason a refusal names. contacts owns them because the SUBJECT
 	// is a lead or a contact; the deal an acceptance produces is an outcome, and
 	// compose wires the caller that does both.
-	"sdr_handoff":           "internal/modules/contacts",
-	"sdr_handoff_event":     "internal/modules/contacts",
-	"sdr_handoff_reason":    "internal/modules/contacts",
-	"legal_entity":          "internal/modules/contacts",
-	"legal_entity_member":   "internal/modules/contacts",
-	"company_profile_field": "internal/modules/contacts",
-	"company_vat_check":     "internal/modules/contacts",
-	"contact_profile_field": "internal/modules/contacts",
+	"sdr_handoff":         "internal/modules/contacts",
+	"sdr_handoff_event":   "internal/modules/contacts",
+	"sdr_handoff_reason":  "internal/modules/contacts",
+	"legal_entity":        "internal/modules/contacts",
+	"legal_entity_member": "internal/modules/contacts",
+	"company_vat_check":   "internal/modules/contacts",
+	// The evidence of a company or contact: field_provenance rows with a value,
+	// and the older rows that wait in the legacy tables to move. storekit writes
+	// the stamps, the rows without a value, and this gate does not walk it.
+	"field_provenance":             "internal/modules/contacts",
+	"company_fact_legacy":          "internal/modules/contacts",
+	"company_profile_field_legacy": "internal/modules/contacts",
+	"contact_profile_field_legacy": "internal/modules/contacts",
 	// The signature pass's per-contact read cursor (PO-F-2a): which mail was
 	// already shown to the model, so the same empty signature is not re-read
 	// every night.
 	"contact_signature_enrich_state": "internal/modules/contacts",
-	"company_fact":                   "internal/modules/contacts",
 	"company_fact_revision":          "internal/modules/contacts",
 	"company_geocode_state":          "internal/modules/contacts",
 	"geocode_cache":                  "internal/modules/contacts",
@@ -487,7 +490,7 @@ var tableOwners = map[string]string{
 	// extension port, before any module is reached.
 	"extension_ingest_refusal": "internal/compose",
 	// Where a unit's bulk load stopped, written by the extension port.
-	"extension_ingest_position": "internal/compose",
+	"extension_ingest_position": "internal/compose/extingress",
 	"idempotency_key":           "internal/compose",
 	// A bulk change and the user's confirmation of one. compose owns both
 	// because the change spans three record types in two modules, and the
@@ -577,22 +580,9 @@ var tableOwners = map[string]string{
 	// The rep's own "not this, not now" on a suggestion: per user, keyed on
 	// the evidence it fired on. Same ruling — view state, no audit row.
 	"suggestion_dismissal": "internal/compose/company360",
-	// The account brief's per-user cache: derived content, regenerable at
-	// any time, readable by nobody but its own user. Same ruling.
-	"company_brief":      "internal/compose/companybrief",
-	"company_dossier":    "internal/compose/companydossier",
-	"company_growth_fit": "internal/compose/companydossier",
 	// The account scan's per-user row: the last findings the model read for
 	// this reader, and the job carrier of the read in flight. Same ruling.
-	"company_scan": "internal/compose/companyscan",
-	// The relationship brief's per-user cache — the contact-side sibling of
-	// company_brief, and the same ruling for the same reasons.
-	"contact_brief": "internal/compose/contactbrief",
-	// The deal status card's per-user cache — the deal-side sibling of the
-	// two above, and the same ruling: derived content, regenerable from the
-	// records at any time, readable by nobody but the user it was written
-	// for.
-	"deal_status_card":    "internal/compose/dealstatus",
+	"company_scan":        "internal/compose/companyscan",
 	"deal_move_dismissal": "internal/compose/dealstatus",
 	// The reader's own "not this, not now" on the page's one moment, held
 	// against the evidence it fired on so it re-arms when that evidence moves
@@ -609,17 +599,18 @@ var tableOwners = map[string]string{
 	// rest, and a purge is the one statement this tree issues against it.
 	"river_job": jobsStoreDir,
 
-	// platform, storekit: the audit+outbox pair has ONE sanctioned writer, and
-	// the shared field-provenance layer (B-E02.12) is spelled once next to it.
+	// platform, storekit: the audit+outbox pair has one sanctioned writer.
 	// system_log is the non-entity operational ledger written through
 	// storekit.LogSystem, the same storekit-owned posture as audit_log.
-	"audit_log":        storekitOwned,
-	"event_outbox":     storekitOwned,
-	"field_provenance": storekitOwned,
-	"system_log":       storekitOwned,
+	"audit_log":    storekitOwned,
+	"event_outbox": storekitOwned,
+	"system_log":   storekitOwned,
 	// The bookkeeping rows of the background passes. A module reaches its row
 	// through the storekit readers and writers, with a shape of its own.
 	"installation_state": storekitOwned,
+	// One reader's generated summaries of a company, a contact or a deal:
+	// derived content, rebuilt from the record, read by no other reader.
+	"generated_summary": generatedSummaryStoreDir,
 }
 
 // sqlTarget is one write a literal performs: which table, by which verb, and

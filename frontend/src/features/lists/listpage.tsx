@@ -14,6 +14,7 @@ import { ErrorLine } from "../../design-system/errorline";
 import { Heading } from "../../design-system/heading";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { Fact, RecordFacts } from "../../design-system/recordfacts";
+import { useToast } from "../../design-system/toast";
 import { formatDateTime, formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { ENTITY } from "../../lib/entity";
@@ -310,7 +311,12 @@ function ListSinceVisit({ list }: Readonly<{ list: List }>) {
   );
 }
 
-type ListNotice = "archived" | "invalid" | "retired_field" | "ownerless";
+type ListNotice =
+  | "archived"
+  | "unavailable"
+  | "invalid"
+  | "retired_field"
+  | "ownerless";
 
 /** The one standing state the list's notice speaks for, most pressing first. */
 function noticeOf(list: List): ListNotice | null {
@@ -318,6 +324,7 @@ function noticeOf(list: List): ListNotice | null {
     return "archived";
   }
   if (
+    list.health === "unavailable" ||
     list.health === "invalid" ||
     list.health === "retired_field" ||
     list.health === "ownerless"
@@ -361,6 +368,7 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
   const me = useMe();
   const update = useUpdateList();
   const archive = useArchiveList();
+  const toast = useToast();
   const notice = noticeOf(list);
   if (notice === "archived") {
     return (
@@ -371,7 +379,12 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
           list.can_edit ? (
             <Button
               pending={archive.isPending}
-              onClick={() => archive.mutate({ id: list.id, archive: false })}
+              onClick={() =>
+                archive.mutate(
+                  { id: list.id, archive: false },
+                  { onSuccess: () => toast.show(t("lists.restored")) },
+                )
+              }
             >
               {t("lists.restore")}
             </Button>
@@ -380,6 +393,13 @@ function ListNotices({ list }: Readonly<{ list: List }>) {
       >
         <p>{t("lists.archived.body")}</p>
         <ErrorLine error={archive.error} />
+      </Callout>
+    );
+  }
+  if (notice === "unavailable") {
+    return (
+      <Callout tone="info" title={t("lists.unavailable.title")}>
+        {t("lists.unavailable.body")}
       </Callout>
     );
   }

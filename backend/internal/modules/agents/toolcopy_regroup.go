@@ -27,7 +27,7 @@ var readContextCopy = toolCopy{
 	Purpose: "Get the story so far. catch_up tells what has been happening on one contact, " +
 		"company, deal or project. meeting prepares for a meeting: who is coming, the open " +
 		"threads and what was promised. brief reads this morning's brief for the seat.",
-	Limits: "It reads and writes nothing. catch_up summarises the timeline; a field's current " +
+	Limits: "It reads and writes nothing. catch_up summarizes the timeline; a field's current " +
 		"value is read_record's. brief answers the brief already made, never a fresh one.",
 	Instead: "Use read_attention for what is at risk across the whole pipeline, and read_details " +
 		"for a company's dossier, growth fit, scan or brief.",
@@ -94,7 +94,8 @@ var scheduleMeetingCopy = toolCopy{
 	Purpose: "Put a meeting on the host's calendar. invite creates the calendar event and the " +
 		"provider sends the invitation to every attendee: the contact, and any further addresses.",
 	Limits: "invite reaches attendees outside the workspace. The call queues it and returns it " +
-		"pending, so name them and the time and get the user's yes first. Read check_availability " +
+		"pending, so name them and the time and get the user's yes first, unless they asked for " +
+		"this invite themselves. Read check_availability " +
 		"before choosing a time. A start_intent (the user's local time) replaces start, and end " +
 		"moves with it so the meeting keeps its length.",
 	Instead: "Use change_activities with log to record a meeting without inviting anyone, or one " +

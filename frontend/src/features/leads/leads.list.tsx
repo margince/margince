@@ -31,6 +31,7 @@ import { QueryGate } from "../../design-system/querystates";
 import { useOwnToast } from "../../design-system/toast";
 import { industryOptions } from "../../format/industry";
 import { useLocale, useT } from "../../i18n";
+import { leadIdentityName } from "../../lib/leadname";
 import {
   originFilterOptions,
   originPickOptions,
@@ -47,7 +48,6 @@ import {
 } from "../lists/savedviews";
 import { LeadBulkBar, useBulkDoneMessage } from "./leadbulk";
 import { useLeadSettings } from "./leadhandling";
-import { leadIdentityName } from "./leadname";
 import { LEAD_STATUS_FILTER_OPTIONS, LeadBoard } from "./leadpresentation";
 import { leadColumns } from "./leads.columns";
 import {
@@ -57,6 +57,7 @@ import {
   useRefusalOf,
   useWithheldLeadDials,
 } from "./leads.companydials";
+import { LEAD_IDENTITY_CREATE_FIELDS } from "./leads.form";
 import "./leads.css";
 import { useViewerZone } from "../../lib/viewerzone";
 import { leadPartnerCreateFields, useLeadPartnerOptions } from "./leadpartner";
@@ -291,13 +292,7 @@ function LeadsWorkbench({
                 : { screen: "leads", id }
             }
             fields={[
-              // Typed, never offered from the contacts: someone is either a
-              // lead or a contact, and the server refuses a contact's address.
-              { key: "full_name", label: "create.fullName", required: true },
-              { key: "email", label: "create.email", type: "email" },
-              { key: "linkedin_url", label: "create.linkedinUrl" },
-              { key: "title", label: "create.contactTitle" },
-              { key: "company_name", label: "create.companyName" },
+              ...LEAD_IDENTITY_CREATE_FIELDS,
               {
                 key: "industry",
                 label: "create.industry",

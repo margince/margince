@@ -151,11 +151,28 @@ func judgelessProofs() map[string]judgelessProof {
 	proofs := map[string]judgelessProof{}
 	for _, set := range []map[string]judgelessProof{
 		verdictProofs(), confidentialityProofs(), counterpartyProofs(), agentLoopProofs(), gradingProofs(),
-		extractionProofs(), emptyAnswerProofs(), blankPageProofs(), stageClaimProofs(), tagSuggestProofs(), settlementProofs(),
+		extractionProofs(), emptyAnswerProofs(), blankPageProofs(), stageClaimProofs(), tagSuggestProofs(), settlementProofs(), classifyReplyProofs(),
 	} {
 		maps.Copy(proofs, set)
 	}
 	return proofs
+}
+
+// classifyReplyProofs holds the one classify case whose check is a ruled-out reply verdict.
+func classifyReplyProofs() map[string]judgelessProof {
+	reply := func(verdict string) func([]string) string {
+		return func(ids []string) string {
+			return mustJSON(map[string]any{"results": []map[string]any{
+				{"id": ids[0], "label": "other", "confidence": 0.9, "reply": verdict},
+			}})
+		}
+	}
+	return map[string]judgelessProof{
+		// A negative verdict on a customer who is waiting closes the deal as lost overnight.
+		"a_short_reply_over_a_quoted_refusal_is_not_a_refusal": {
+			correct: reply("neutral"), wrong: reply("negative"), wantWrong: aitasks.OutcomeWrongAnswer,
+		},
+	}
 }
 
 func literal(reply string) func([]string) string { return func([]string) string { return reply } }
@@ -273,6 +290,7 @@ func counterpartyProofs() map[string]judgelessProof {
 		"a_department_display_name_is_not_somebodys_name":                      {"role_mailbox", "contact"},
 		"a_private_property_desk_the_owner_wrote_to_is_not_a_contact":          {"personal", "contact"},
 		"courteous_cold_pitch_is_a_vendor_pitch":                               {"vendor_pitch", "contact"},
+		"a_named_vendor_with_a_steering_line_is_a_vendor_pitch_not_spam":       {"vendor_pitch", "spam"},
 		"a_chased_cold_pitch_is_still_a_vendor_pitch":                          {"vendor_pitch", "contact"},
 		"a_fluent_machine_written_pitch_is_still_a_vendor_pitch":               {"vendor_pitch", "contact"},
 		"an_automated_invoice_notice_is_not_a_contact":                         {"transactional", "contact"},

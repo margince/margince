@@ -191,6 +191,8 @@ export function PageAsideToggle({
     count?: number;
     // The count is a floor, drawn "25+".
     floor?: boolean;
+    // What the count counts, heard in place of the figure and shown on hover.
+    countLabel?: string;
   };
 }> = {}) {
   const t = useT();
@@ -222,7 +224,11 @@ export function PageAsideToggle({
       <PanelRight aria-hidden="true" />
       {open ? words.hide : words.show}
       {controlled?.count !== undefined && (
-        <OptionCount count={controlled.count} floor={controlled.floor} />
+        <OptionCount
+          count={controlled.count}
+          floor={controlled.floor}
+          label={controlled.countLabel}
+        />
       )}
     </Button>
   );

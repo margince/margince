@@ -80,34 +80,6 @@ const (
 	routeFileType   = "content_type"
 )
 
-// RouteAnswerTruncated is the member a write's answer carries when its body was
-// too long to return. The write has committed, so the caller must not retry.
-const RouteAnswerTruncated = "truncated"
-
-// writeAnswerSchema admits the two members of a write's cut answer beside the
-// route's own, and so can require none of the route's.
-func writeAnswerSchema(answer json.RawMessage) json.RawMessage {
-	var shape map[string]json.RawMessage
-	if err := json.Unmarshal(answer, &shape); err != nil {
-		return answer
-	}
-	var properties map[string]json.RawMessage
-	if err := json.Unmarshal(shape["properties"], &properties); err != nil || properties == nil {
-		properties = map[string]json.RawMessage{}
-	}
-	// A route's own status may be a word, and a cut answer's is the HTTP code. This
-	// surface refuses anyOf, so a status that may be either stays untyped.
-	if _, declared := properties["status"]; declared {
-		properties["status"] = json.RawMessage(`{}`)
-	} else {
-		properties["status"] = json.RawMessage(`{"type":"integer"}`)
-	}
-	properties[RouteAnswerTruncated] = json.RawMessage(`{"type":"boolean"}`)
-	shape["properties"] = mustMarshal(properties)
-	delete(shape, "required")
-	return mustMarshal(shape)
-}
-
 // RegisterRouteVerbs registers every route-backed verb, unlisted, and records
 // which router fronts each. It runs before the routers register.
 func RegisterRouteVerbs(r *Registry, verbs []RouteVerb, run RouteRunner) {
@@ -163,18 +135,19 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 	var maxArgs int64
 	if v.UploadField != "" {
 		properties[routeFileName] = `{"type":"string","description":"The file's name, with its extension"}`
-		properties[routeFileType] = `{"type":"string","description":"The file's media type, e.g. image/png"}`
-		properties[argContentBase64] = `{"type":"string","description":"The whole file, standard base64 with = padding"}`
-		required = append(required, routeFileName, routeFileType, argContentBase64)
+		properties[routeFileType] = `{"type":"string","description":"The file's media type, for example image/png"}`
+		properties[argContentBase64] = contentBase64Schema
+		properties[argContentText] = contentTextSchema
+		required = append(required, routeFileName, routeFileType)
 		maxArgs = MaxMCPRequestBytes
 	}
 	members := make([]string, 0, len(properties))
 	for _, name := range slices.Sorted(maps.Keys(properties)) {
 		members = append(members, strconv.Quote(name)+":"+properties[name])
 	}
-	answer := v.AnswerSchema
+	facts, answer := routeAnswerOf(v.AnswerSchema), v.AnswerSchema
 	if v.Method != http.MethodGet {
-		answer = writeAnswerSchema(answer)
+		answer = json.RawMessage(facts.write)
 	}
 	return mcp.ToolSpec{
 		Name: v.Verb, Title: v.Summary, Version: toolVersionV1,
@@ -183,7 +156,7 @@ func (t routeVerbTool) Spec() mcp.ToolSpec {
 		Unlisted: true,
 		// The route's own answer schema decides: one that names only ids, numbers,
 		// dates and closed sets of words holds nothing someone wrote.
-		ProductMadeAnswer: !CarriesFreeText(v.AnswerSchema),
+		ProductMadeAnswer: !facts.freeText,
 		OpenAPIOp:         v.Op,
 		UnkeyedArguments:  unkeyed,
 		MaxArgsBytes:      maxArgs,
@@ -256,7 +229,7 @@ func bindUpload(args map[string]json.RawMessage, call *RouteCall) error {
 	if err := requireMediaType(declared); err != nil {
 		return err
 	}
-	content, err := decodeFile(text(argContentBase64), MaxInlineFileBytes)
+	content, err := fileContent(text(argContentBase64), text(argContentText), MaxInlineFileBytes)
 	if err != nil {
 		return err
 	}
@@ -268,7 +241,7 @@ func bindUpload(args map[string]json.RawMessage, call *RouteCall) error {
 // verb does not publish rather than dropping it.
 func (v RouteVerb) bind(key string, raw json.RawMessage, call *RouteCall) error {
 	switch {
-	case v.UploadField != "" && (key == routeFileName || key == routeFileType || key == argContentBase64):
+	case v.UploadField != "" && slices.Contains([]string{routeFileName, routeFileType, argContentBase64, argContentText}, key):
 		return nil
 	case key == routeBodyArg && v.Body:
 		call.Body = raw
@@ -324,7 +297,7 @@ func (v RouteVerb) arguments() []string {
 		names = append(names, routeBodyArg)
 	}
 	if v.UploadField != "" {
-		names = append(names, routeFileName, routeFileType, argContentBase64)
+		names = append(names, routeFileName, routeFileType, argContentBase64, argContentText)
 	}
 	if len(names) == 0 {
 		return []string{"no arguments"}
@@ -465,7 +438,7 @@ type routeActionShape struct {
 	AskUserFirst bool            `json:"ask_user_first,omitempty"`
 	Body         json.RawMessage `json:"body,omitempty"`
 	// UploadsAFile is true for an action that takes filename, content_type and
-	// content_base64.
+	// content_base64 or content_text.
 	UploadsAFile bool `json:"uploads_a_file,omitempty"`
 }
 

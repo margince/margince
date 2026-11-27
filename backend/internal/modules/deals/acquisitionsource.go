@@ -25,18 +25,17 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
-// acquisitionVocabularyObject is the RBAC object this catalog is gated by:
-// the custom-field catalog's posture — everyone reads, admin/ops write —
-// which is exactly this list's posture, and lead_source is gated the same
-// way for the same reason. Adding a policy-matrix object for a list that
-// behaves identically to one already there would be a second answer to a
-// settled question.
+// acquisitionVocabularyObject is the RBAC object this catalog is gated by.
+// It has the custom-field catalog's posture: everyone reads, admin and ops
+// write. lead_origin uses the same object, so the policy matrix needs no
+// second entry for a list that behaves the same.
 const acquisitionVocabularyObject = "custom_field"
 
 // dealAcquisitionSourceConstraint is the FK a deal's acquisition_source
@@ -55,6 +54,14 @@ const (
 	// a stage-criterion COLUMN — one is what a client reads off a 422, the
 	// other is a place in a table.
 	codeRequired = "required"
+)
+
+// The indexes holding one source per key and per label (trimmed, case-folded,
+// retired sources included), and the noun their refusal names.
+const (
+	sourceKeyIndex   = "deal_acquisition_source_key_key"
+	sourceLabelIndex = "deal_acquisition_source_label_once"
+	sourceEntry      = "an acquisition source"
 )
 
 // acquisitionSourceColumns is the catalog's wire projection.
@@ -184,6 +191,9 @@ func (s *Store) CreateAcquisitionSource(
 			Field: sourceLabelColumn, Code: codeRequired, Message: "label is required",
 		}
 	}
+	if err := httperr.RequireWithin(sourceLabelColumn, label, values.TextLabelCharacters); err != nil {
+		return crmcontracts.AcquisitionSource{}, err
+	}
 	key := strings.TrimSpace(in.Key)
 	if key == "" {
 		key = values.CatalogKey(label)
@@ -213,11 +223,8 @@ func (s *Store) CreateAcquisitionSource(
 		_, err := tx.Exec(ctx,
 			`INSERT INTO deal_acquisition_source (id, key, label, sort_order) VALUES ($1, $2, $3, $4)`,
 			id, key, label, in.SortOrder)
-		if storekit.IsUniqueViolation(err) {
-			return apperrors.ErrConflict
-		}
 		if err != nil {
-			return fmt.Errorf("insert acquisition source: %w", err)
+			return storekit.NameTaken(fmt.Errorf("insert acquisition source: %w", err), sourceEntry, label, sourceKeyIndex, sourceLabelIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "create", "deal_acquisition_source", id, nil,
 			map[string]any{sourceKeyColumn: key, sourceLabelColumn: label}); err != nil {
@@ -244,6 +251,11 @@ func (s *Store) UpdateAcquisitionSource(
 			Field: sourceLabelColumn, Code: codeRequired, Message: "label cannot be blank",
 		}
 	}
+	if in.Label != nil {
+		if err := httperr.RequireWithin(sourceLabelColumn, strings.TrimSpace(*in.Label), values.TextLabelCharacters); err != nil {
+			return crmcontracts.AcquisitionSource{}, err
+		}
+	}
 	var out crmcontracts.AcquisitionSource
 	err := s.Tx(ctx, func(tx pgx.Tx) error {
 		before, err := readAcquisitionSourceForUpdate(ctx, tx, id)
@@ -261,7 +273,7 @@ func (s *Store) UpdateAcquisitionSource(
 			patch.Set("active", before.Active, *in.Active)
 		}
 		if in.IfVersion != nil && *in.IfVersion != before.Version {
-			return apperrors.ErrConflict
+			return apperrors.ErrVersionSkew
 		}
 		if patch.Empty() {
 			out, err = readAcquisitionSource(ctx, tx, id)
@@ -279,7 +291,7 @@ func (s *Store) UpdateAcquisitionSource(
 			return err
 		}
 		if err := patch.ApplyLocked(ctx, tx, lock); err != nil {
-			return err
+			return storekit.NameTaken(err, sourceEntry, storekit.NameAfter(before.Label, in.Label), sourceLabelIndex)
 		}
 		if _, err := storekit.Audit(ctx, tx, "update", "deal_acquisition_source", id,
 			patch.Before(), patch.After()); err != nil {

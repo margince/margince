@@ -67,18 +67,18 @@ func seedSSOEnv(t *testing.T, slug string) (svc *Service, ownerConn *pgx.Conn, u
 	return svc, ownerConn, userID, email
 }
 
-func linkFederatedIdentityRow(t *testing.T, conn *pgx.Conn, userID ids.UserID, subject, email string) {
+func linkFederatedIdentityRow(t *testing.T, conn *pgx.Conn, userID ids.UserID, subject string) {
 	t.Helper()
 	if _, err := conn.Exec(context.Background(),
-		`INSERT INTO federated_identity (user_id, provider, subject, email_at_link) VALUES ($1, 'google', $2, $3)`,
-		userID, subject, email); err != nil {
+		`INSERT INTO federated_identity (user_id, provider, subject) VALUES ($1, 'google', $2)`,
+		userID, subject); err != nil {
 		t.Fatal(err)
 	}
 }
 
 func TestResolveFederatedUserPrefersLinkedSubjectOverEmail(t *testing.T) {
 	svc, conn, userID, email := seedSSOEnv(t, "sso-subject-first")
-	linkFederatedIdentityRow(t, conn, userID, "sub-1", email)
+	linkFederatedIdentityRow(t, conn, userID, "sub-1")
 
 	var resolved ids.UserID
 	var isFirstLink bool
@@ -138,7 +138,7 @@ func TestResolveFederatedUserRefusesUnknownEmail(t *testing.T) {
 // from federated_identity with no LiveMemberSQL check at all.
 func TestResolveFederatedUserRefusesADeactivatedLinkedSubject(t *testing.T) {
 	svc, conn, userID, email := seedSSOEnv(t, "sso-deactivated-linked")
-	linkFederatedIdentityRow(t, conn, userID, "sub-1", email)
+	linkFederatedIdentityRow(t, conn, userID, "sub-1")
 	if _, err := conn.Exec(context.Background(),
 		`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, userID); err != nil {
 		t.Fatal(err)
@@ -221,7 +221,7 @@ func TestLinkFederatedIdentityTransfersAStaleSubjectFromANonLiveUser(t *testing.
 		staleUserID, "departed@example.com"); err != nil {
 		t.Fatal(err)
 	}
-	linkFederatedIdentityRow(t, conn, staleUserID, "sub-recycled", "departed@example.com")
+	linkFederatedIdentityRow(t, conn, staleUserID, "sub-recycled")
 
 	// The live user's email now verifies for the SAME Google subject
 	// (Google-side email reassignment) — resolveFederatedUser falls through
@@ -252,7 +252,7 @@ func TestLinkFederatedIdentityTransfersAStaleSubjectFromANonLiveUser(t *testing.
 
 func TestLoginViaFederatedIdentityRelinksOnSubjectChange(t *testing.T) {
 	svc, conn, userID, email := seedSSOEnv(t, "sso-relink")
-	linkFederatedIdentityRow(t, conn, userID, "sub-old", email)
+	linkFederatedIdentityRow(t, conn, userID, "sub-old")
 
 	// A different Google account now presents the same verified, previously
 	// linked email — the recycling case linkFederatedIdentity's ON CONFLICT

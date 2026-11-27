@@ -102,7 +102,6 @@ components:
         - lead.merged
         - lead.sla_breached
         - lead.updated
-        - lead_source.changed
         - lead_disqualify_reason.changed
         - activity.captured
         - activity.archived
@@ -1404,9 +1403,10 @@ components:
       x-entity-type: offer
       x-version: 1
       description: >-
-        Payload for offer.accepted — a sent offer was accepted. The deal's
-        headline amount is synced from this offer's gross in the same
-        transaction (see deal.updated on the paired deal entity).
+        Payload for offer.accepted: a sent offer was accepted. The deal's
+        headline amount is synced from this offer's net, the figure without tax, in
+        the same transaction. The paired deal.updated carries that net. This
+        payload still states the offer's own gross.
       required:
         - offer_id
         - deal_id
@@ -1932,11 +1932,14 @@ components:
           additionalProperties: true
           description: >-
             What this update touched, incl. runtime cf_* custom fields.
-            The value shape depends on the emit site: a column patch
-            carries a flat field → new-value entry, while the
+            The value shape depends on the emit site. A column patch
+            carries a flat field → new-value entry. The
             recompute/routing/relationship sites carry a `{delta: {...}}`
-            sub-object (occasionally with a sibling `source`). Read a
-            key's value as either form.
+            sub-object, sometimes with a sibling `source`. Read a key's
+            value as either form. A change to the company's `status`
+            also carries the value under `lifecycle`, the key this
+            version first gave it. `lifecycle` is deprecated; read
+            `status`.
       additionalProperties: false
 
     PublicEventLeadCreated:
@@ -1965,38 +1968,6 @@ components:
       description: Payload for lead.disqualified — a lead was disqualified. Carries no data.
       additionalProperties: false
 
-    PublicEventLeadSourceChanged:
-      type: object
-      x-event-type: lead_source.changed
-      x-entity-type: lead_source
-      x-version: 1
-      description: >-
-        Deprecated: the lead source list no longer feeds the score, and a
-        separate breaking change retires it. Payload for lead_source.changed.
-        A lead source was added, edited or removed (contacts/leadsource.go). It rides the lead stream because
-        every lead carries a source value. A subscriber that renders or groups
-        by source re-reads the catalog on this event. The payload carries
-        `key` and not `label`. The key is what leads carry and what a
-        subscriber keys its own cache by. It is also the only thing left to
-        identify the entry once `deleted` has removed it. The label is mutable
-        and still readable while the entry exists. Publishing it here would
-        invite a subscriber to trust a copy that can go stale.
-      required:
-        - source_id
-        - change
-        - key
-      properties:
-        source_id:
-          type: string
-          format: uuid
-        change:
-          type: string
-          enum: [created, updated, deleted]
-        key:
-          type: string
-          description: The stable key leads carry, which never changes for a given source.
-      additionalProperties: false
-
     PublicEventLeadDisqualifyReasonChanged:
       type: object
       x-event-type: lead_disqualify_reason.changed
@@ -2005,11 +1976,11 @@ components:
       description: >-
         Payload for lead_disqualify_reason.changed. A disqualification reason
         was added, edited or removed (contacts/leaddisqualifyreason.go). It
-        rides the lead stream for the same reason lead_source.changed does. A
+        rides the lead stream because every disqualified lead names its reason. A
         subscriber reporting on why leads were disqualified re-reads the
-        catalog on this event. It carries `label` where the source event
-        carries `key`, because a reason has no key. The label is its identity,
-        and after `deleted` it is the only thing naming what went away.
+        catalog on this event. It carries `label` because a reason has no key.
+        The label is its identity, and after `deleted` it is the only thing
+        naming what went away.
       required:
         - reason_id
         - change
@@ -2734,7 +2705,7 @@ components:
         Payload for forecast.exception_resolved. Somebody answered a finding
         from the nightly input check. The entity is the author, because an
         answer is attributable to whoever gave it. The `outcome` field says
-        what kind of answer it was, and consumers must not treat the seven
+        what kind of answer it was, and consumers must not treat the eight
         alike. The `value_correct` and `not_relevant` outcomes hide the
         finding from the screens a revenue commitment is made from. So a
         surface counting open findings has to drop them. The `remind_later`
@@ -2747,7 +2718,7 @@ components:
         outcome:
           type: string
           enum: [fixed_record, added_evidence, value_correct, not_relevant, remind_later,
-                 reassign, condition_cleared]
+                 reassign, condition_cleared, separate]
           x-enum-varnames:
             - ResolvedFixedRecord
             - ResolvedAddedEvidence
@@ -2756,6 +2727,7 @@ components:
             - ResolvedRemindLater
             - ResolvedReassign
             - ResolvedConditionCleared
+            - ResolvedSeparate
         actor_user_id: { type: string, format: uuid }
         expires_at:
           type: string

@@ -18,7 +18,7 @@
 # What the roles then refuse is the RUN — so every role has to carry the
 # version it was built from, in the image and in the binary alike.
 
-# The constellation registry namespace the publisher grant admits
+# The publisher's registry namespace the publisher grant admits
 # (registryauth catalog: push on margince/*). The release workflow pushes the
 # baked images here.
 variable "REPO" {

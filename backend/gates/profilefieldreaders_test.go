@@ -33,6 +33,19 @@ import (
 
 var profileFieldRead = gatekit.TableReadPattern("contact_profile_field")
 
+// evidenceRead and contactEvidence read a contact's rows in field_provenance,
+// which a writer reads directly where the view cannot be locked.
+var (
+	evidenceRead    = gatekit.TableReadPattern("field_provenance")
+	contactEvidence = regexp.MustCompile(`'contact'`)
+)
+
+// readsProfileFields reports whether a statement reads a contact's evidence,
+// through the view or in field_provenance.
+func readsProfileFields(sql string) bool {
+	return profileFieldRead.MatchString(sql) || (evidenceRead.MatchString(sql) && contactEvidence.MatchString(sql))
+}
+
 // selectsValues distinguishes a read that serves the assertion from one that
 // only asks whether a row exists or moves it. `SELECT 1 … EXISTS` and a
 // `DELETE`/`UPDATE … SET contact_id` touch the table without ever putting a
@@ -74,7 +87,7 @@ var profileFieldRead = gatekit.TableReadPattern("contact_profile_field")
 // proves nothing about that word. The comparison is what holds both directions
 // — a word dropped here fails, and a word added here fails until the test names
 // it too.
-var valueColumns = []string{"value", "evidence_snippet", "source_ref", "confidence"}
+var valueColumns = []string{"value", "evidence_snippet", "source_ref", "evidence_ref", "confidence"}
 
 var selectsValues = regexp.MustCompile(
 	`(?is)SELECT\s.*?(?:\b(?:` + strings.Join(valueColumns, "|") + `)\b|(?:[a-z_]+\.)?\*).*?\sFROM\s`)
@@ -95,6 +108,7 @@ var profileFieldValueReaders = gatekit.Waive(map[string]string{
 	"internal/modules/contacts/signatureretraction.go:takeBackSignatureFieldsTx":      "the retraction serves the value to NOBODY: it reads f.value to compare against the contact COLUMN, which is the compare-and-swap that decides whether the column may be restored. Overlaying a verdict would make that test WRONG rather than safer, for the reason RestoreProfileField gives above — the overlaid value is what a human SAID and the column is what the record carries, so a match between them would read as 'this pass wrote the column' in exactly the case where a human has since typed something else, and their answer would be overwritten. The ledger IS consulted, on the other side of the same statement: a field carrying a live `corrected` verdict is excluded from the sweep entirely. The cost is that this file must be re-examined if it ever grows a read that reaches a reader",
 	"internal/modules/contacts/signaturerepair.go:SignatureFieldSourcesTx":            "the signature repair serves the value to NOBODY: it pages the rows the pass wrote, with the mail each was read from, so the data task can ask whether the evidence lies in the sender's own text. What leaves the batch is which field ids RetractSignatureFieldsByIDTx takes back, and that core excludes a corrected field itself. Overlaying a verdict would judge what a human SAID against a mail they never wrote it in",
 	"internal/modules/contacts/signaturerepair.go:CountSignatureFieldSources":         "the estimate of the same repair counts the rows SignatureFieldSourcesTx pages and returns only the count",
+	"internal/modules/privacy/erasure_companyevidence.go:purgeSubjectCompanyEvidence": "the erasure serves the value to NOBODY: it reads the subject's stored addresses and numbers to find the company facts that repeat them, and deletes those. A verdict overlay would match on what a human SAID rather than on what the record carries, and a fact repeating the stored value would survive the erasure. The cost is that this file must be re-examined if it ever grows a read that reaches a reader",
 	"internal/modules/privacy/sarsections.go:sarProvenanceSections":                   "the Article 15 export owes the subject what this installation HOLDS, and it holds two facts: the value the machine asserted and the verdict the human recorded against it. It exports the stored columns here and ai_feedback as its own section beside them, so the subject sees both. Overlaying the verdict instead would hand them one merged value and conceal that an override exists — the opposite of what an export is for. It also cannot share contact360's reader: privacy is a module and may not import compose (ADR-0054 §3). The cost is that the two statements must be corrected together when the column set changes, which is why they name each other at both sites",
 })
 
@@ -171,7 +185,7 @@ func unoverlaidValueReaders(file *ast.File, constants map[string]string) []strin
 		reads := gatekit.SQLStatementsWithConstants(decl, constants)
 		serves := false
 		for _, read := range reads {
-			if profileFieldRead.MatchString(read) && selectsValues.MatchString(read) {
+			if readsProfileFields(read) && selectsValues.MatchString(read) {
 				serves = true
 			}
 		}
@@ -215,7 +229,7 @@ func TestEveryReaderServingProfileFieldValuesConsultsTheVerdictLedger(t *testing
 				constants[dir] = gatekit.PackageStringConstants(t, dir)
 			}
 			for _, sql := range gatekit.SQLStatementsWithConstants(file, constants[dir]) {
-				if profileFieldRead.MatchString(sql) && selectsValues.MatchString(sql) {
+				if readsProfileFields(sql) && selectsValues.MatchString(sql) {
 					return true
 				}
 			}
@@ -348,7 +362,7 @@ func applyFieldVerdicts() {}`,
 	// The equality check below is what makes this hold in both directions: a
 	// word removed from the pattern fails it, and a word ADDED to the pattern
 	// fails it until somebody writes the case that proves the pattern sees it.
-	expectedValueColumns := []string{"value", "evidence_snippet", "source_ref", "confidence"}
+	expectedValueColumns := []string{"value", "evidence_snippet", "source_ref", "evidence_ref", "confidence"}
 	if strings.Join(valueColumns, ",") != strings.Join(expectedValueColumns, ",") {
 		t.Fatalf("valueColumns = %v, and this test names %v — every value word owes a must-catch case below, so add or remove one here to match",
 			valueColumns, expectedValueColumns)

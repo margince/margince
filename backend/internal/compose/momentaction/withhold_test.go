@@ -12,22 +12,31 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// reader is a full-seat rep with the activity grants named and row scope over
-// everything. So the assertions below can answer only the object grant.
+// reader is a full-seat rep whose role updates the records when it creates
+// activities, as every seeded role does, with row scope over everything.
 func reader(grant principal.ObjectGrant) context.Context {
 	return seated(principal.SeatFull, grant)
 }
 
 func seated(seat principal.SeatType, grant principal.ObjectGrant) context.Context {
+	onRecord := principal.ObjectGrant{Read: true, Update: grant.Create}
+	return holding(seat, map[string]principal.ObjectGrant{
+		"activity": grant, "contact": onRecord, "company": onRecord, "deal": onRecord,
+	})
+}
+
+func holding(seat principal.SeatType, objects map[string]principal.ObjectGrant) context.Context {
 	return principal.WithActor(context.Background(), principal.Principal{
 		Type: principal.PrincipalHuman, ID: "human:test", UserID: ids.NewV7(), SeatType: seat,
-		Permissions: principal.Permissions{
-			RoleKeys: []string{"rep"},
-			Objects: map[string]principal.ObjectGrant{
-				"activity": grant, "deal": {Read: true, Update: grant.Create},
-			},
-			RowScope: principal.RowScopeAll,
-		},
+		Permissions: principal.Permissions{RoleKeys: []string{"rep"}, Objects: objects, RowScope: principal.RowScopeAll},
+	})
+}
+
+// customRole updates every record and creates no activity, which no seeded role does.
+func customRole() context.Context {
+	onRecord := principal.ObjectGrant{Read: true, Update: true}
+	return holding(principal.SeatFull, map[string]principal.ObjectGrant{
+		"activity": {Read: true}, "contact": onRecord, "company": onRecord, "deal": onRecord,
 	})
 }
 
@@ -63,7 +72,7 @@ func card() crmcontracts.ContactMoment {
 func TestWithholdBlocksBothWritingVerbsForAReaderWhoCannotLog(t *testing.T) {
 	moment := card()
 
-	Withhold(reader(principal.ObjectGrant{Read: true}), "en", &moment)
+	Withhold(reader(principal.ObjectGrant{Read: true}), "en", "contact", &moment)
 
 	for _, action := range append([]crmcontracts.ContactMomentAction{moment.RecommendedAction},
 		(*moment.SecondaryActions)[0]) {
@@ -87,7 +96,7 @@ func TestWithholdBlocksBothWritingVerbsForAReaderWhoCannotLog(t *testing.T) {
 func TestWithholdLeavesAReadingVerbAlone(t *testing.T) {
 	moment := card()
 
-	Withhold(reader(principal.ObjectGrant{Read: true}), "en", &moment)
+	Withhold(reader(principal.ObjectGrant{Read: true}), "en", "contact", &moment)
 
 	open := (*moment.SecondaryActions)[1]
 	if open.State != crmcontracts.ContactMomentActionStateAvailable {
@@ -98,7 +107,7 @@ func TestWithholdLeavesAReadingVerbAlone(t *testing.T) {
 func TestWithholdLeavesTheCardAloneForAReaderWhoMayLog(t *testing.T) {
 	moment := card()
 
-	Withhold(reader(principal.ObjectGrant{Read: true, Create: true}), "en", &moment)
+	Withhold(reader(principal.ObjectGrant{Read: true, Create: true}), "en", "contact", &moment)
 
 	if moment.RecommendedAction.State != crmcontracts.ContactMomentActionStateAvailable {
 		t.Errorf("recommended state = %q, want available", moment.RecommendedAction.State)
@@ -120,7 +129,7 @@ func TestWithholdBlocksTheRecommendationOnACardWithNoSecondaries(t *testing.T) {
 		},
 	}
 
-	Withhold(reader(principal.ObjectGrant{Read: true}), "en", &moment)
+	Withhold(reader(principal.ObjectGrant{Read: true}), "en", "contact", &moment)
 
 	if moment.RecommendedAction.State != crmcontracts.ContactMomentActionStateBlocked {
 		t.Errorf("recommended state = %q, want blocked", moment.RecommendedAction.State)
@@ -142,7 +151,7 @@ func TestWithholdLeavesAnAlreadyBlockedVerbSayingWhatItSaid(t *testing.T) {
 		},
 	}
 
-	Withhold(reader(principal.ObjectGrant{Read: true}), "en", &moment)
+	Withhold(reader(principal.ObjectGrant{Read: true}), "en", "contact", &moment)
 
 	got := moment.RecommendedAction
 	if got.BlockedReason == nil {
@@ -166,17 +175,17 @@ func TestWithholdBlocksDraftReplyForAReaderWhoCannotSend(t *testing.T) {
 	}
 
 	readOnly := draft()
-	Withhold(reader(principal.ObjectGrant{Read: true}), "en", &readOnly)
+	Withhold(reader(principal.ObjectGrant{Read: true}), "en", "contact", &readOnly)
 	got := readOnly.RecommendedAction
 	if got.State != crmcontracts.ContactMomentActionStateBlocked || got.Destination != nil {
 		t.Fatalf("draft_reply for a read-only reader = %q with destination %+v, want blocked with none", got.State, got.Destination)
 	}
-	if got.BlockedReason == nil || *got.BlockedReason != "You do not have permission to send email" {
-		t.Errorf("draft_reply blocked reason = %v, want the send refusal, not the log one", got.BlockedReason)
+	if got.BlockedReason == nil || *got.BlockedReason != RoleReadsOnly().En {
+		t.Errorf("draft_reply blocked reason = %v, want the role sentence", got.BlockedReason)
 	}
 
 	writer := draft()
-	Withhold(reader(principal.ObjectGrant{Read: true, Create: true}), "en", &writer)
+	Withhold(reader(principal.ObjectGrant{Read: true, Create: true}), "en", "contact", &writer)
 	if writer.RecommendedAction.State != crmcontracts.ContactMomentActionStateAvailable {
 		t.Errorf("draft_reply for a reader who may send = %q, want available", writer.RecommendedAction.State)
 	}
@@ -187,7 +196,7 @@ func TestWithholdBlocksDraftReplyForAReaderWhoCannotSend(t *testing.T) {
 func TestWithholdBlocksTheWritingVerbsForAReadSeatWhoseRoleMayLog(t *testing.T) {
 	moment := card()
 
-	Withhold(seated(principal.SeatRead, principal.ObjectGrant{Read: true, Create: true}), "en", &moment)
+	Withhold(seated(principal.SeatRead, principal.ObjectGrant{Read: true, Create: true}), "en", "contact", &moment)
 
 	if got := moment.RecommendedAction.State; got != crmcontracts.ContactMomentActionStateBlocked {
 		t.Errorf("log_activity state for a read seat = %q, want blocked", got)

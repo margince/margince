@@ -29,6 +29,8 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/generatedsummary"
+	"github.com/margince/margince/backend/internal/platform/recordmerge"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -65,7 +67,7 @@ func relinkCompanySatellites(ctx context.Context, tx pgx.Tx, sourceID, targetID 
 	if err := repointLinkedLeads(ctx, tx, sourceID, targetID); err != nil {
 		return err
 	}
-	return moveKindIDRows(ctx, tx, "company", sourceID.UUID, targetID.UUID)
+	return recordmerge.MoveKindIDRows(ctx, tx, "company", sourceID.UUID, targetID.UUID)
 }
 
 // repointCompanyReferences moves the rows whose only tie to a company is the
@@ -89,8 +91,6 @@ func repointCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID
 		// counting.
 		`UPDATE linkedin_connection SET matched_company_id = $2 WHERE matched_company_id = $1`,
 		`UPDATE offer SET buyer_company_id = $2 WHERE buyer_company_id = $1`,
-		`UPDATE signal SET resolved_company_id = $2 WHERE resolved_company_id = $1`,
-		`UPDATE signal_resolution SET matched_company_id = $2 WHERE matched_company_id = $1`,
 		`UPDATE signal_thread_scan SET resolved_company_id = $2 WHERE resolved_company_id = $1`,
 	} {
 		if _, err := tx.Exec(ctx, stmt, sourceID, targetID); err != nil {
@@ -110,38 +110,28 @@ func repointCompanyReferences(ctx context.Context, tx pgx.Tx, sourceID, targetID
 // rather than taking its default — a re-dated fact would outrank the
 // company's own later evidence.
 //
-// Each conflict target NAMES the uniqueness it relies on, so a future
-// constraint cannot silently start swallowing a different collision here.
+// The survivor's answer is the evidence key it already holds.
 func carryCompanyEnrichment(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
+	if err := moveLegacyEvidence(ctx, tx, entityCompany, sourceID.UUID, targetID.UUID); err != nil {
+		return err
+	}
 	// Moved by UPDATE rather than copied, so each row keeps the id its audit
 	// trail is filed under and the survivor's History carries it on.
 	if _, err := tx.Exec(ctx, `
-		UPDATE company_fact a SET company_id = $2
-		 WHERE a.company_id = $1
-		   AND NOT EXISTS (SELECT 1 FROM company_fact b
-		                    WHERE b.company_id = $2 AND b.category = a.category
-		                      AND b.field = a.field AND b.value_key = a.value_key)`,
+		UPDATE field_provenance a SET object_id = $2
+		 WHERE a.object_type = 'company' AND a.object_id = $1 AND a.value IS NOT NULL
+		   AND NOT EXISTS (SELECT 1 FROM field_provenance b
+		                    WHERE b.object_type = 'company' AND b.object_id = $2 AND b.value IS NOT NULL
+		                      AND b.field_name = a.field_name AND b.value_key = a.value_key)`,
 		sourceID, targetID); err != nil {
-		return fmt.Errorf("carry company facts: %w", err)
+		return fmt.Errorf("carry company facts and profile fields: %w", err)
 	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM company_fact WHERE company_id = $1`, sourceID); err != nil {
-		return fmt.Errorf("retire the merged-away company facts: %w", err)
+	if _, err := tx.Exec(ctx, `DELETE FROM field_provenance
+		 WHERE object_type = 'company' AND object_id = $1 AND value IS NOT NULL`, sourceID); err != nil {
+		return fmt.Errorf("retire the merged-away company facts and profile fields: %w", err)
 	}
 	if err := settleFactRevisions(ctx, tx, sourceID, targetID); err != nil {
 		return err
-	}
-	if _, err := tx.Exec(ctx, `
-		UPDATE company_profile_field a SET company_id = $2
-		 WHERE a.company_id = $1
-		   AND NOT EXISTS (SELECT 1 FROM company_profile_field b
-		                    WHERE b.company_id = $2 AND b.field = a.field)`,
-		sourceID, targetID); err != nil {
-		return fmt.Errorf("carry company profile fields: %w", err)
-	}
-	if _, err := tx.Exec(ctx,
-		`DELETE FROM company_profile_field WHERE company_id = $1`, sourceID); err != nil {
-		return fmt.Errorf("retire the merged-away company profile fields: %w", err)
 	}
 	if _, err := tx.Exec(ctx, `
 		INSERT INTO company_technical_state
@@ -159,49 +149,14 @@ func carryCompanyEnrichment(ctx context.Context, tx pgx.Tx, sourceID, targetID i
 	return nil
 }
 
-// carryCompanyReaderRows moves the per-reader rows: the brief, the dossier,
-// the growth reading, and what a reader chose not to be asked again.
-//
-// These are keyed per (reader, company) rather than per company, so the
-// collision is per reader too: a reader holding a row on BOTH companies keeps
-// their own reading of the survivor, and the merged-away one is dropped
-// instead of blending two readers' answers into one row neither wrote.
+// carryCompanyReaderRows moves the generated summaries each reader holds, and
+// retires what a reader chose not to be asked again.
 //
 // company_scan is deliberately NOT here — it is a durable job, not a reading,
 // and moveCompanyScans retires it.
 func carryCompanyReaderRows(ctx context.Context, tx pgx.Tx, sourceID, targetID ids.CompanyID) error {
-	// Spelled out per table rather than looped over their names. The coverage
-	// census reads THIS source to decide which tables the merge touches, and a
-	// table name assembled at runtime is invisible to it — a statement built by
-	// concatenation would move the rows and still read as forgotten.
-	for _, stmt := range []string{
-		`UPDATE company_brief a SET company_id = $2
-		 WHERE a.company_id = $1
-		   AND NOT EXISTS (SELECT 1 FROM company_brief b
-		                    WHERE b.company_id = $2 AND b.user_id = a.user_id)`,
-		`UPDATE company_dossier a SET company_id = $2
-		 WHERE a.company_id = $1
-		   AND NOT EXISTS (SELECT 1 FROM company_dossier b
-		                    WHERE b.company_id = $2 AND b.user_id = a.user_id)`,
-		`UPDATE company_growth_fit a SET company_id = $2
-		 WHERE a.company_id = $1
-		   AND NOT EXISTS (SELECT 1 FROM company_growth_fit b
-		                    WHERE b.company_id = $2 AND b.user_id = a.user_id)`,
-	} {
-		if _, err := tx.Exec(ctx, stmt, sourceID, targetID); err != nil {
-			return fmt.Errorf("carry the per-reader rows: %w", err)
-		}
-	}
-	// The retirements name the source alone, so they carry one parameter
-	// rather than two.
-	for _, stmt := range []string{
-		`DELETE FROM company_brief WHERE company_id = $1`,
-		`DELETE FROM company_dossier WHERE company_id = $1`,
-		`DELETE FROM company_growth_fit WHERE company_id = $1`,
-	} {
-		if _, err := tx.Exec(ctx, stmt, sourceID); err != nil {
-			return fmt.Errorf("retire the merged-away per-reader rows: %w", err)
-		}
+	if err := generatedsummary.CarryCompany(ctx, tx, sourceID, targetID); err != nil {
+		return fmt.Errorf("carry the per-reader rows: %w", err)
 	}
 	// A dismissal is a reader saying "stop offering me this about this
 	// company", and it is NOT carried — the fingerprint it is keyed by is

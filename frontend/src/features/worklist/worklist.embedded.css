@@ -79,51 +79,29 @@
   white-space: nowrap;
 }
 
-/* The day's head carries Select at its far end, its title and badge together,
-   on the cards' own inset. Once rows are picked the bar takes its own line. */
+/* The day's head carries its title and badge together and Select at its far
+   end, on the cards' own inset. Once rows are picked the bar takes its own line. */
 .worklist-embedded .worklist-day > .panel-ai > .panel-head {
   padding-inline: 0;
 }
 .worklist-embedded .worklist-day > .panel-ai > .panel-head > .panel-title {
   margin-inline-end: 0;
 }
-.worklist-embedded .lt-bulkbar:has(> :only-child) {
-  position: relative;
-  z-index: 1;
-  justify-content: flex-end;
-  margin: 0;
-  /* ds:ignore centres Select on the day's head band it overlays */
-  padding: calc((var(--panel-head-h) - var(--controlHeight)) / 2) 0;
-  border: 0;
-  background: transparent;
-}
-.worklist-embedded .lt-bulkbar:has(> :only-child) + .panel {
-  /* ds:ignore lifts the panel under the Select it shares a line with */
-  margin-top: calc(-1 * var(--panel-head-h));
+.worklist-embedded .worklist-day > .panel-ai > .panel-head > .worklist-select {
+  margin-inline-start: auto;
 }
 .worklist-embedded .worklist-band {
   margin-block: var(--space-3) var(--space-2);
 }
 
-/* The kind chip heads the work it labels, so a long kind reads whole. The verbs
-   sit under the work, so the title and its caption keep the card's width; from
-   70rem, the width worklist.row.css uses for the same move, they stand beside it. */
+/* The verbs sit under the work, so the title and its chips keep the card's
+   width; from 70rem, as in worklist.row.css, they stand beside it. */
 .worklist-embedded .worklist-list > li > .worklist-row {
   grid-template-columns: auto minmax(0, 1fr);
   column-gap: var(--space-3);
 }
-.worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-kind {
-  grid-column: 2;
-}
-.worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-lead {
-  grid-row: 1 / span 2;
-}
-.worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-text {
-  grid-column: 2;
-  margin-top: calc(var(--space-1) - var(--space-2));
-}
 .worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-acts,
-.worklist-embedded .worklist-list > li > .worklist-row > :nth-child(n + 5) {
+.worklist-embedded .worklist-list > li > .worklist-row > :nth-child(n + 4) {
   grid-column: 2 / -1;
 }
 @container (min-width: 70rem) {
@@ -134,6 +112,5 @@
   }
   .worklist-embedded .worklist-list > li > .worklist-row > .worklist-row-acts {
     grid-column: 3;
-    grid-row: 1 / span 2;
   }
 }
