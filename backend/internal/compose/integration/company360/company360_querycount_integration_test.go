@@ -167,8 +167,9 @@ func TestCompany360CostDoesNotGrowWithTheAccount(t *testing.T) {
 	// answer. So strength reads the stored row and then the history's dates and the
 	// window's counts. The single-thread threshold is read from the reporting framework's
 	// own table. The contacts and billing contacts lists each count what row scope hid,
-	// from the statement the list reads, so each adds one read.
-	const budget = 65
+	// from the statement the list reads, so each adds one read. One more names the
+	// colleagues who hold the contacts row scope hid.
+	const budget = 66
 	if tracer.languageReads != 2 {
 		t.Errorf("two assemblies read base language %d times, want once each", tracer.languageReads)
 	}
