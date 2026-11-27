@@ -82,10 +82,8 @@ const EMPTY_DRAFT: ContractDraft = {
   contractNumber: "",
   valueMinor: 0,
   arrMinor: 0,
-  // No currency of its own. There is no currency control on this form, so
-  // whatever stands here is written to the record unseen — and a literal would
-  // label every installation's agreements in one country's money. The unit
-  // comes from the installation itself, resolved at the moment of the save.
+  // Blank until the reader picks one: the currency control shows the
+  // installation's, which is resolved at the moment of the save (pricedIn).
   currency: "",
   valueBasis: "total",
   startsOn: "",
@@ -128,7 +126,7 @@ export function ContractForm({
   const [openedCustom, setOpenedCustom] = useState<Record<string, unknown>>({});
 
   // A recorded agreement keeps its own currency (draftOf preserves it); a new
-  // one takes the installation's, which this form offers no control for.
+  // one takes the installation's unless the reader picks another.
   const {
     base: baseCurrency,
     currency: contractCurrency,

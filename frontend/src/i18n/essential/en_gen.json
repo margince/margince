@@ -1961,7 +1961,7 @@
   "payments.syncFailed": "The accounting sync failed. Amounts show the last successful sync.",
   "payments.syncUnavailable": "Invoice data is unavailable until the accounting sync succeeds.",
   "finance.loading": "Loading invoices…",
-  "finance.syncing": "Syncing with the accounting system. Figures appear after the first sync.",
+  "finance.syncing": "Waiting for the first sync with the accounting system. It runs every six hours, and an admin can start it sooner in Settings → Integrations.",
   "finance.col.invoice": "Invoice",
   "finance.col.due": "Due",
   "finance.unnumbered": "No number",

@@ -3930,7 +3930,7 @@ export const en = {
   "co.strip.fin.neverInvoiced": "Not invoiced",
   "co.strip.fin.noConnection": "Accounting not connected",
   "co.strip.fin.unmapped": "Customer not matched",
-  "co.strip.fin.syncing": "Syncing",
+  "co.strip.fin.syncing": "First sync pending",
   "co.strip.fin.staleFigure": "Sync outdated",
   "co.strip.fin.notCurrent": "Not current",
   "co.strip.fin.errorFigure": "Last sync failed",
@@ -4414,7 +4414,7 @@ export const en = {
   "finance.none": "Nothing recorded.",
   "finance.loading": "Loading invoices…",
   "finance.syncing":
-    "Syncing with the accounting system. Figures appear after the first sync.",
+    "Waiting for the first sync with the accounting system. It runs every six hours, and an admin can start it sooner in Settings → Integrations.",
   "finance.noConnection":
     "No accounting system connected. Invoices and payment behavior for this customer appear once one is.",
   "finance.unmapped":
@@ -4469,13 +4469,17 @@ export const en = {
   "contracts.status.expired": "Expired",
   "contracts.status.cancelled": "Canceled",
   "contracts.status.superseded": "Superseded",
-  "contracts.endsOn": "Ends {when}",
+  "contracts.cancelledTo": "Canceled, ends {when}",
+  "contracts.cancelledToNotice": "Canceled, ends {when}, notice given {notice}",
+  "contracts.replacedBy": "Replaced by {title}",
+  "contracts.replacedByUnnamed": "Replaced by a later contract",
   "contracts.renewsOn": "Renews {when}",
   "contracts.endedPendingStatus": "Term ended, status pending",
   "contracts.form.title": "Record contract",
   "contracts.form.name": "Title",
   "contracts.form.number": "Contract number",
   "contracts.form.value": "Value",
+  "contracts.form.currency": "Currency",
   "contracts.form.basis": "This value is",
   "contracts.form.arr": "Annual recurring revenue",
   "contracts.form.arrMonthly": "Monthly equivalent:",
@@ -4523,6 +4527,9 @@ export const en = {
   "contracts.statusChange.label": "New status",
   "contracts.statusChange.submit": "Change status",
   "contracts.statusChange.errSame": "The contract already has this status.",
+  "contracts.statusChange.finalTitle": "{status} is final",
+  "contracts.statusChange.finalBody":
+    "Once saved, the status cannot be changed again. To carry on with the agreement, renew it.",
   "contracts.cancel.title": "Record cancellation",
   "contracts.cancel.hint":
     "The customer stays under contract until the effective date. This records notice and does not change the status.",
@@ -7054,7 +7061,12 @@ export const en = {
   "offer.termsText": "Terms text",
   "offer.lines": "Line items",
   "offer.addLine": "Add line",
-  "offer.positionTaken": "Another line already has this position.",
+  "offer.lineOrderHint":
+    "Drag a line by its handle, or focus the handle and press the up or down arrow.",
+  "offer.lineHandle": "Move {name}, line {position} of {total}",
+  "offer.lineMoved": "{name} is now line {position} of {total}",
+  "offer.lineHandleUnnamed": "Move line {position} of {total}",
+  "offer.lineMovedUnnamed": "The line is now line {position} of {total}",
   "offer.lapsed":
     "The Valid until date of this offer has passed. Change it under Edit header on a draft, or regenerate a sent offer.",
   "offer.position": "Position",
