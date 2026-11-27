@@ -13,12 +13,14 @@ import (
 	"errors"
 	"fmt"
 	"strings"
+	"sync/atomic"
 	"time"
 
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/blobstore"
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/storedobjects"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -45,6 +47,8 @@ type Service struct {
 	db     *database.DB
 	blob   blobstore.Store
 	ledger *storedobjects.Ledger
+	// storedKey holds the installation's stored-key id once read; it never changes.
+	storedKey atomic.Pointer[ids.UUID]
 }
 
 type contextKey struct{}
@@ -92,16 +96,44 @@ func (s *Service) workspaceContext(ctx context.Context) (context.Context, error)
 	return principal.WithWorkspaceID(ctx, known), nil
 }
 
-func prefix(ctx context.Context) (string, error) {
-	ws, ok := principal.WorkspaceID(ctx)
-	if !ok || ws.IsZero() {
-		return "", errors.New("original store requires a workspace")
+// prefix is where every original of this installation is stored. It names the
+// installation's stored-key id, the one every object already stored was
+// written under, and never the id the request happens to carry.
+func (s *Service) prefix(ctx context.Context) (string, error) {
+	ws, err := s.storedKeyWorkspace(ctx)
+	if err != nil {
+		return "", err
 	}
 	return blobstore.WorkspaceKey(ids.From[ids.WorkspaceKind](ws), "raw-original", ""), nil
 }
 
-func validate(ctx context.Context, ref Reference) error {
-	root, err := prefix(ctx)
+// storedKeyWorkspace reads the id from installation_state once per handle. A
+// handle with no database holds no stored data, so it names the bound workspace.
+func (s *Service) storedKeyWorkspace(ctx context.Context) (ids.UUID, error) {
+	if s.db == nil {
+		ws, ok := principal.WorkspaceID(ctx)
+		if !ok || ws.IsZero() {
+			return ids.UUID{}, errors.New("original store requires a workspace")
+		}
+		return ws, nil
+	}
+	if cached := s.storedKey.Load(); cached != nil {
+		return *cached, nil
+	}
+	var id ids.UUID
+	if err := s.db.Tx(ctx, func(tx pgx.Tx) error {
+		var err error
+		id, err = storekit.StoredKeyWorkspaceTx(ctx, tx)
+		return err
+	}); err != nil {
+		return ids.UUID{}, fmt.Errorf("original store: reading the installation's stored-key id: %w", err)
+	}
+	s.storedKey.Store(&id)
+	return id, nil
+}
+
+func (s *Service) validate(ctx context.Context, ref Reference) error {
+	root, err := s.prefix(ctx)
 	if err != nil {
 		return err
 	}
@@ -153,7 +185,7 @@ func PrepareTx(ctx context.Context, tx pgx.Tx, payload []byte) ([]byte, *Referen
 	if err != nil {
 		return nil, nil, err
 	}
-	root, err := prefix(ctx)
+	root, err := s.prefix(ctx)
 	if err != nil {
 		return nil, nil, err
 	}

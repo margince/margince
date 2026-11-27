@@ -12,7 +12,9 @@ import (
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgconn"
+	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -191,4 +193,16 @@ func (k KeptInstallationFacts) RestoreTx(ctx context.Context, tx pgx.Tx) error {
 		return nil
 	}
 	return RecordInstallationTx(ctx, tx, k.company, k.trial)
+}
+
+// ReadStoredKeyWorkspace reads the id stored keys are scoped by, for a caller that
+// holds a pool and no transaction.
+func ReadStoredKeyWorkspace(ctx context.Context, pool *pgxpool.Pool) (ids.UUID, error) {
+	var company ids.UUID
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
+		var err error
+		company, err = StoredKeyWorkspaceTx(ctx, tx)
+		return err
+	})
+	return company, err
 }

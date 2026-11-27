@@ -30,7 +30,7 @@ func Read(ctx context.Context, ref Reference) (payload []byte, err error) {
 	if err != nil {
 		return nil, err
 	}
-	if err := validate(ctx, ref); err != nil {
+	if err := s.validate(ctx, ref); err != nil {
 		return nil, err
 	}
 	ctx, cancel := context.WithTimeout(ctx, objectTimeout)

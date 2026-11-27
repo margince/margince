@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/platform/config"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -108,7 +109,10 @@ func fromRootKey(ctx context.Context, pool *pgxpool.Pool, encoded string) (vault
 	if err != nil {
 		return nil, false, err
 	}
-	return v, true, nil
+	return pin(v, func(ctx context.Context) (ids.WorkspaceID, error) {
+		stored, err := storekit.ReadStoredKeyWorkspace(ctx, pool)
+		return ids.From[ids.WorkspaceKind](stored), err
+	}), true, nil
 }
 
 // newAEAD builds the AES-256-GCM AEAD from the root key. The error names the
