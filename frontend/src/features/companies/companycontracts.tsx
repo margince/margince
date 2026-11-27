@@ -29,6 +29,11 @@ import {
   isTerminalContractStatus,
 } from "../projects/contractlifecycle";
 import { ContractPaper } from "../projects/contractpaperchip";
+import {
+  ContractSuccessor,
+  ContractTerm,
+  ContractTermState,
+} from "./companycontracts.state";
 import { CustomFieldsPanel } from "./customfields.card";
 // The row and card shapes this file draws — co-rowlink, co-row-meta, co-card —
 // are defined in company360.css. Imported HERE rather than left to the caller:
@@ -184,6 +189,15 @@ export function CompanyContractsCard({
                 key={contract.id}
                 contract={contract}
                 menuName={names[index] ?? contract.title}
+                // The menu's name, since a renewal starts with its
+                // predecessor's title and the bare title names both.
+                successorTitle={
+                  names[
+                    contracts.findIndex(
+                      (row) => row.id === contract.superseded_by_id,
+                    )
+                  ]
+                }
                 companyId={companyId}
                 mayWrite={mayEdit}
                 mayArchive={mayArchive}
@@ -235,6 +249,7 @@ function menuNames(contracts: Contract[], locale: Locale, zone: string) {
 function ContractRow({
   contract,
   menuName,
+  successorTitle,
   companyId,
   mayWrite,
   mayArchive,
@@ -243,6 +258,7 @@ function ContractRow({
 }: Readonly<{
   contract: Contract;
   menuName: string;
+  successorTitle?: string;
   companyId: string;
   mayWrite: boolean;
   mayArchive: boolean;
@@ -310,6 +326,10 @@ function ContractRow({
           {contract.contract_number && <span>{contract.contract_number}</span>}
           <ContractTerm contract={contract} />
           <ContractTermState contract={contract} />
+          <ContractSuccessor
+            contract={contract}
+            successorTitle={successorTitle}
+          />
           <ContractTerms contract={contract} />
           {/* A bare EntityRef here would read as a company name or a contact —
               the other siblings on this line are all self-identifying by
@@ -406,73 +426,6 @@ function ContractRow({
       </ConfirmModal>
     </PanelRow>
   );
-}
-
-// The term as the two dates that bound it. Absent dates say so in words,
-// because a blank reads as "not loaded". An agreement entered from an invoice
-// often has no recorded term.
-function ContractTerm({ contract }: Readonly<{ contract: Contract }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const readerZone = useViewerZone();
-  const on = (date: string) => formatDateAbbrev(date, locale, readerZone);
-  if (!contract.starts_on && !contract.ends_on) {
-    return <span>{t("contracts.noTerm")}</span>;
-  }
-  return (
-    <span className="rec-term-dates">
-      {contract.starts_on ? on(contract.starts_on) : t("contracts.openStart")}
-      {" – "}
-      {contract.ends_on ? on(contract.ends_on) : t("contracts.openEnd")}
-    </span>
-  );
-}
-
-/**
- * ContractTermState is where the row says what is actually true about its
- * dates, which is not always what its status says.
- *
- * The order is deliberate: the pending status change is the most surprising
- * thing a reader can meet, so it leads. A cancellation that has not taken
- * effect comes next, because the customer is still under contract and a card
- * that read as though they had gone would be wrong on the day it matters most.
- * A renewal date is ordinary information and comes last.
- */
-function ContractTermState({ contract }: Readonly<{ contract: Contract }>) {
-  const t = useT();
-  const { locale } = useLocale();
-  const readerZone = useViewerZone();
-
-  // Its dates have run out and nobody has moved the status. Saying only
-  // "active" here would present an approval queue as a live agreement.
-  if (contract.term_state === "ended" && contract.status === "active") {
-    return (
-      <span className="t-caption">{t("contracts.endedPendingStatus")}</span>
-    );
-  }
-  if (contract.cancellation_effective_on && contract.under_contract) {
-    return (
-      <Badge tone="warning">
-        {t("contracts.endsOn", {
-          when: formatDateAbbrev(
-            contract.cancellation_effective_on,
-            locale,
-            readerZone,
-          ),
-        })}
-      </Badge>
-    );
-  }
-  if (contract.renewal_on) {
-    return (
-      <span className="t-caption">
-        {t("contracts.renewsOn", {
-          when: formatDateAbbrev(contract.renewal_on, locale, readerZone),
-        })}
-      </span>
-    );
-  }
-  return null;
 }
 
 // One agreement's figure, and separately the basis it is stated on.

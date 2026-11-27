@@ -7,6 +7,7 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
+	"runtime"
 	"sync"
 	"weak"
 )
@@ -56,7 +57,49 @@ func (slot *parseSlot) get(path string, mode parser.Mode) (*ast.File, error) {
 		return tree, err
 	}
 	slot.tree = weak.Make(tree)
+	holdFacts(tree, slot.tree)
 	return tree, nil
+}
+
+// treeFacts are what gatekit derives from one shared tree. Each is read once,
+// on first use, and dropped with the tree, so it never pins one.
+type treeFacts struct {
+	statementsOnce sync.Once
+	statements     []string
+	literalsOnce   sync.Once
+	literals       []string
+}
+
+// sharedTrees maps each tree ParseFile is sharing to its facts. A tree a caller
+// parsed for itself is not here: that caller may still change it.
+var sharedTrees sync.Map // weak.Pointer[ast.File] -> *treeFacts
+
+func holdFacts(tree *ast.File, key weak.Pointer[ast.File]) {
+	sharedTrees.Store(key, &treeFacts{})
+	runtime.AddCleanup(tree, func(key weak.Pointer[ast.File]) { sharedTrees.Delete(key) }, key)
+}
+
+// factsOf answers the facts of a tree ParseFile shared.
+func factsOf(file *ast.File) (*treeFacts, bool) {
+	held, ok := sharedTrees.Load(weak.Make(file))
+	if !ok {
+		return nil, false
+	}
+	facts, ok := held.(*treeFacts)
+	return facts, ok
+}
+
+// sqlStatementsOf is the file's statements, which every caller shares.
+func (facts *treeFacts) sqlStatementsOf(file *ast.File) []string {
+	facts.statementsOnce.Do(func() { facts.statements = sqlStatements(file, nil) })
+	return facts.statements
+}
+
+// stringLiterals is the text of every string literal in the file, in source
+// order, which every caller shares.
+func (facts *treeFacts) stringLiterals(file *ast.File) []string {
+	facts.literalsOnce.Do(func() { facts.literals = stringLiterals(file) })
+	return facts.literals
 }
 
 // fileSetFrom is a throwaway FileSet whose next file starts at base. A re-parse

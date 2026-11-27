@@ -221,7 +221,7 @@ func contractSwitchFamilies(t *testing.T, doc map[string]any) []string {
 
 func TestEveryFamilyTheSwitchNamesIsPlacedOnTheContract(t *testing.T) {
 	t.Parallel()
-	families := contractSwitchFamilies(t, loadContract(t))
+	families := contractSwitchFamilies(t, loadContractDocument(t))
 	if got, want := slices.Sorted(maps.Keys(familyPaths)), slices.Sorted(slices.Values(families)); !slices.Equal(got, want) {
 		t.Errorf("familyPaths places %q, but the individual_performance description names %q.\n\t"+
 			"Place each family the sentence names on its paths, and drop one it no longer names", got, want)
@@ -231,7 +231,7 @@ func TestEveryFamilyTheSwitchNamesIsPlacedOnTheContract(t *testing.T) {
 func TestEverySurfaceTheSwitchCoversReadsIt(t *testing.T) {
 	t.Parallel()
 	defer carriesNoColleagueFigure.AssertAllMatched(t)
-	doc := loadContract(t)
+	doc := loadContractDocument(t)
 	paths, _ := doc["paths"].(map[string]any)
 	ops, err := scopedOperations(paths, contractSwitchFamilies(t, doc), familyPaths)
 	if err != nil {

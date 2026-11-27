@@ -1,0 +1,76 @@
+name: task_explanation_reads_the_promise
+task: summarize
+site: task_explanation
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5
+fixture:
+  task:
+    type: reach_out
+    title: "Follow up on: Jonas promises to send the signed acceptance once his team has reviewed the handover"
+    text: "Promised by Jonas Keller in the email “Re: Handover document and acceptance”."
+    origin: commitment
+  source_label: acceptance_promise
+  source_text: >
+    Thanks for the handover document. I am collecting feedback from the two
+    shift leads this week. Once they have signed off on the rota export I will
+    send you the signed acceptance, so you can close the project.
+  relationship:
+    name: Jonas Keller
+    title: Project Manager
+    employer: Nordwerk GmbH
+    strength: 58
+    # The promise is the message the task turns on. The newer note is about
+    # parking for a visit and must not be read as the state of the promise.
+    messages:
+      - label: parking_note
+        days_ago: 1
+        direction: inbound
+        author: { kind: contact_record, name: Jonas Keller, role: author }
+        subject: "Parking on Friday"
+        preview: >
+          You can park in the visitor spots behind building B on Friday.
+        move: none
+      - label: acceptance_promise
+        days_ago: 2
+        direction: inbound
+        author: { kind: contact_record, name: Jonas Keller, role: author }
+        subject: "Re: Handover document and acceptance"
+        preview: >
+          I am collecting feedback from the two shift leads this week. Once they
+          have signed off on the rota export I will send you the signed acceptance.
+        move: waiting_for_them
+      - label: handover_sent
+        days_ago: 6
+        direction: outbound
+        author: { kind: colleague, reader: true, role: addressee }
+        subject: "Handover document and acceptance"
+        preview: >
+          Attached is the handover document. Could you confirm the acceptance so
+          we can close the project?
+        move: none
+    claims:
+      - kind: commitment_theirs
+        body: Send the signed acceptance once the shift leads have reviewed the handover.
+        quote: Once they have signed off on the rota export I will send you the signed acceptance
+        status: open
+        from_label: acceptance_promise
+expect:
+  outcome: accepted
+  # A right explanation reads the promise, says what it waits on (the shift
+  # leads and the rota export, which only that message names) and ends on one
+  # step. A floor or a stock sentence never names the rota export.
+  answer:
+    cites_label: acceptance_promise
+    names_token: rota
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the explanation says what happened in substance: Jonas promised
+    the signed acceptance once his shift leads have signed off on the rota
+    export, and nothing newer moved it on (the parking note is unrelated). Score
+    whether the stake is specific to this promise (the project cannot close
+    without the acceptance) and whether the one next step names Jonas and what
+    to ask him. Penalise any sentence that would fit any task, such as telling
+    the reader to finish the task or mark it done, and any invented date.

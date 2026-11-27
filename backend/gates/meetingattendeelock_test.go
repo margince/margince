@@ -14,9 +14,11 @@ package gates
 // into the table fails here, because it carries no statement to read.
 
 import (
+	"fmt"
 	"go/ast"
 	"go/token"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"slices"
@@ -83,9 +85,10 @@ func TestEveryAttendeeWriterTakesTheMeetingLock(t *testing.T) {
 	assertTheTextAgrees(t, byDir)
 	var unlocked []string
 	for dir, files := range byDir {
-		graph := packageCallGraph(t, dir)
+		graph := cloneCallGraph(packageCallGraph(t, dir))
 		// A package-qualified call is not an edge in the graph, so a function
-		// naming a lock is marked as calling the exclusive one.
+		// naming a lock is marked as calling the exclusive one. The copy keeps
+		// that mark from the shared graph.
 		for _, entry := range graph {
 			if entry.reads[attendeeWriteLock] || entry.reads["LockMeetingAttendeePage"] {
 				entry.calls[attendeeWriteLock] = true
@@ -303,4 +306,56 @@ func internalSources(t *testing.T) map[string][]byte {
 
 func writesAttendees(entry *graphFunc) bool {
 	return slices.ContainsFunc(entry.statements, participantWrite.MatchString)
+}
+
+// cloneCallGraph is a deep copy of a shared graph, for a caller that adds edges.
+func cloneCallGraph(graph map[string]*graphFunc) map[string]*graphFunc {
+	out := make(map[string]*graphFunc, len(graph))
+	for key, entry := range graph {
+		out[key] = &graphFunc{
+			statements: slices.Clone(entry.statements),
+			calls:      maps.Clone(entry.calls),
+			reads:      maps.Clone(entry.reads),
+			shadowed:   maps.Clone(entry.shadowed),
+			hidden:     slices.Clone(entry.hidden),
+		}
+	}
+	return out
+}
+
+// The shared graph is what a fresh build answers, and a caller's edits to its
+// copy reach neither the shared graph nor the next caller.
+func TestEditsToACopyOfACallGraphStayOutOfTheSharedGraph(t *testing.T) {
+	t.Parallel()
+	edited := cloneCallGraph(packageCallGraph(t, privacyPackage))
+	if len(edited) == 0 {
+		t.Fatalf("%s gave an empty call graph, so this check compared nothing", privacyPackage)
+	}
+	for _, entry := range edited {
+		entry.calls["plantedCallee"] = true
+		entry.reads["plantedName"] = true
+		entry.shadowed["plantedName"] = true
+		entry.statements = append(entry.statements, "DELETE FROM planted")
+		entry.hidden = append(entry.hidden, "DELETE FROM planted")
+	}
+	edited["plantedFunction"] = &graphFunc{}
+	shared, fresh := packageCallGraph(t, privacyPackage), buildPackageCallGraph(t, privacyPackage)
+	got, want := callGraphLines(shared), callGraphLines(fresh)
+	if extra, lost := missing(got, want), missing(want, got); len(extra)+len(lost) > 0 {
+		t.Errorf("after a copy was edited, %d functions of the shared %s graph read differently from a fresh "+
+			"build, and %d of a fresh build are missing from it", len(extra), privacyPackage, len(lost))
+	}
+}
+
+// callGraphLines spells each function of a graph on one line, its sets sorted,
+// since a build appends a function's statements in map order.
+func callGraphLines(graph map[string]*graphFunc) []string {
+	var lines []string
+	for key, entry := range graph {
+		lines = append(lines, fmt.Sprintf("%s calls=%v reads=%v shadowed=%v statements=%q hidden=%q", key,
+			slices.Sorted(maps.Keys(entry.calls)), slices.Sorted(maps.Keys(entry.reads)),
+			slices.Sorted(maps.Keys(entry.shadowed)), slices.Sorted(slices.Values(entry.statements)),
+			slices.Sorted(slices.Values(entry.hidden))))
+	}
+	return lines
 }

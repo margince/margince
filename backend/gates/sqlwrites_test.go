@@ -6,6 +6,7 @@ package gates
 import (
 	"slices"
 	"strings"
+	"sync"
 )
 
 func sqlWriteTargets(literal string) []string {
@@ -19,7 +20,29 @@ func sqlWriteTargets(literal string) []string {
 
 // An empty answer is unknown. Callers must never treat it as proof that
 // protected data stays unchanged.
+//
+// Several censuses judge the same statements, so each is read once per test
+// binary. Every caller gets its own copy of the answer.
 func sqlWrites(literal string) []sqlTarget {
+	held, found := sqlWritesRead.Load(literal)
+	writes, read := held.([]sqlTarget)
+	if !found || !read {
+		// Read from a clone, so neither the key nor a name cut from it holds
+		// the whole file a statement may have been cut from.
+		statement := strings.Clone(literal)
+		writes = readSQLWrites(statement)
+		sqlWritesRead.Store(statement, writes)
+	}
+	copied := slices.Clone(writes)
+	for i := range copied {
+		copied[i].cols = slices.Clone(copied[i].cols)
+	}
+	return copied
+}
+
+var sqlWritesRead sync.Map // statement -> []sqlTarget
+
+func readSQLWrites(literal string) []sqlTarget {
 	tokens := sqlToken.FindAllString(stripNoise(literal), -1)
 	var writes []sqlTarget
 	for i, word := range tokens {

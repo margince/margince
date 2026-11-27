@@ -167,15 +167,6 @@ func boundedQuantityColumns(t *testing.T, catalog string) []string {
 	return columns
 }
 
-func headCatalog(t *testing.T) string {
-	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
-	return string(raw)
-}
-
 func TestEveryBoundedQuantityColumnStatesItsRange(t *testing.T) {
 	t.Parallel()
 	defer unboundedOnPurpose.AssertAllMatched(t)

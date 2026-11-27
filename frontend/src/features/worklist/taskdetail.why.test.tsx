@@ -53,14 +53,40 @@ const ROW: WorklistItem = {
   actions: ["complete", "snooze"],
 };
 
+// What the server wrote about this task, each part citing the reminder itself.
+const EXPLANATION = {
+  task_id: "task-1",
+  generated_at: "2026-09-06T14:00:00Z",
+  generated_by: "model",
+  sentences: [
+    {
+      text: "Nothing has been logged on Acme since 30 June, when Anna asked for the renewal terms.",
+      nature: "fact",
+      evidence: [{ entity_type: "activity", entity_id: "task-1" }],
+    },
+    {
+      text: "Acme renews in October, and the terms are still unsent.",
+      nature: "assessment",
+      evidence: [{ entity_type: "activity", entity_id: "task-1" }],
+    },
+    {
+      text: "Send Anna the renewal terms and ask who signs on her side.",
+      nature: "recommendation",
+      evidence: [{ entity_type: "activity", entity_id: "task-1" }],
+    },
+  ],
+};
+
 function openTask(
   task: Record<string, unknown>,
   item?: WorklistItem,
   openSource: (id: string) => void = () => {},
+  explanation: Record<string, unknown> = EXPLANATION,
 ) {
   installFetchStub({
     "GET /me": meRoute({ activity: ["read", "update"] }, { seat: "full" }),
     "GET /activities/task-1": () => jsonResponse(task),
+    "GET /activities/task-1/task-explanation": () => jsonResponse(explanation),
   });
   return render(
     <StoryProviders>
@@ -140,8 +166,34 @@ test("a task a colleague typed claims no automation", async () => {
   ).toBeNull();
 });
 
-// The row's due day is the event, so its "due today" is not said a second time.
-test("a dated task says when it fell due, once", async () => {
+test("a task's details say what happened, what it costs and what to do, from its own records", async () => {
+  openTask(QUIET_REMINDER, ROW);
+
+  await screen.findByText(EXPLANATION.sentences[0]?.text ?? "");
+  const sections = ["happened", "consequence", "todo"] as const;
+  for (const [i, nature] of sections.entries()) {
+    const heading = await screen.findByText(en[`worklist.why.${nature}`]);
+    expect(
+      heading
+        .closest("section")
+        ?.textContent?.includes(EXPLANATION.sentences[i]?.text ?? ""),
+    ).toBe(true);
+  }
+});
+
+test("a task's details never fall back to a sentence any task would get", async () => {
+  openTask(QUIET_REMINDER, ROW, () => {}, {
+    ...EXPLANATION,
+    generated_by: "deterministic",
+    sentences: EXPLANATION.sentences.slice(0, 1),
+  });
+
+  await screen.findByText(EXPLANATION.sentences[0]?.text ?? "");
+  expect(screen.queryByText(en["worklist.why.consequence"])).toBeNull();
+  expect(screen.queryByText(/stays undone|mark it done/)).toBeNull();
+});
+
+test("an overdue task keeps its reason, since nothing else dates it", async () => {
   openTask(QUIET_REMINDER, {
     ...ROW,
     due_at: "2026-09-10T21:59:59Z",
@@ -149,18 +201,10 @@ test("a dated task says when it fell due, once", async () => {
     because: [{ kind: "overdue" }, { kind: "unassigned" }],
   });
 
-  expect(
-    await screen.findByText(/^It was due on .* and is still open\.$/),
-  ).toBeTruthy();
-  const reasons = screen.getByRole("list", {
+  const reasons = await screen.findByRole("list", {
     name: en["worklist.why.reasons"],
   });
-  expect(
-    within(reasons)
-      .getAllByRole("listitem")
-      .map((reason) => reason.textContent),
-  ).toEqual([en["worklist.because.unassigned"]]);
-  expect(screen.getByText(en["worklist.consequence.task_slips"])).toBeTruthy();
+  expect(within(reasons).getAllByRole("listitem")).toHaveLength(2);
 });
 
 test("a task opened from a record page has no list to explain it", async () => {
@@ -170,10 +214,12 @@ test("a task opened from a record page has no list to explain it", async () => {
   expect(screen.queryByText(en["worklist.why.title"])).toBeNull();
 });
 
-test("a row with no reasons still says what it asks", async () => {
+test("a row with no reasons still says what to do", async () => {
   openTask(QUIET_REMINDER, { ...ROW, because: [], consequence: "none" });
 
-  expect(await screen.findByText(en["worklist.todo.task"])).toBeTruthy();
+  expect(
+    await screen.findByText(EXPLANATION.sentences[2]?.text ?? ""),
+  ).toBeTruthy();
   expect(
     screen.queryByRole("list", { name: en["worklist.why.reasons"] }),
   ).toBeNull();

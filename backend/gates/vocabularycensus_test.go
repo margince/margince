@@ -33,7 +33,6 @@ package gates
 
 import (
 	"bufio"
-	"bytes"
 	"fmt"
 	"go/ast"
 	"go/token"
@@ -50,11 +49,6 @@ import (
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/capturekind"
 )
-
-// vocabularyCatalog is the schema the migrations build, committed and held
-// current by the migration gates. A CHECK read here is the one the database
-// enforces, after every later migration widened or narrowed it.
-const vocabularyCatalog = "migrations/testdata/head_catalog.txt"
 
 // catalogCheckLine reads one CHECK constraint line of the catalog. A check not
 // yet validated binds new rows all the same, so its suffix is set aside.
@@ -96,13 +90,13 @@ var catalogTextLiteral = regexp.MustCompile(`'((?:[^']|'')*)'::text`)
 // catalogVocabularies maps "table.column" to the sorted, de-duplicated values
 // its CHECK admits, for every text column whose CHECK is a whole vocabulary.
 var catalogVocabularies = sync.OnceValues(func() (map[string][]string, error) {
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
+	raw, err := headCatalogText()
 	if err != nil {
 		return nil, err
 	}
 	textColumns := map[string]bool{}
 	found := map[string][]string{}
-	scanner := bufio.NewScanner(bytes.NewReader(raw))
+	scanner := bufio.NewScanner(strings.NewReader(raw))
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
 		line := scanner.Text()
@@ -139,10 +133,21 @@ var catalogVocabularies = sync.OnceValues(func() (map[string][]string, error) {
 	}
 	maps.Copy(out, evidence)
 	if len(out) == 0 {
-		return nil, fmt.Errorf("%s yielded no CHECK vocabulary: the catalog format moved", vocabularyCatalog)
+		return nil, fmt.Errorf("%s yielded no CHECK vocabulary: the catalog format moved", headCatalogPath)
 	}
 	return out, nil
 })
+
+// checkVocabularies is catalogVocabularies for a test, which a catalog it
+// cannot read fails. The map is shared, so a caller copies before it changes one.
+func checkVocabularies(t *testing.T) map[string][]string {
+	t.Helper()
+	vocabularies, err := catalogVocabularies()
+	if err != nil {
+		t.Fatal(err)
+	}
+	return vocabularies
+}
 
 // goTypedSetRoots are the trees whose Go constants can mirror a column. The
 // generated contract lives under internal/, so generated files are read too.
@@ -497,12 +502,9 @@ const unreadArrayCheckCeiling = 29
 // list stops being read, so a catalog format change cannot shrink the census.
 func TestNoVocabularyCheckHidesFromTheCensus(t *testing.T) {
 	t.Parallel()
-	raw, err := gatekit.ReadFile(vocabularyCatalog)
-	if err != nil {
-		t.Fatal(err)
-	}
+	raw := headCatalog(t)
 	var unread []string
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	for line := range strings.SplitSeq(raw, "\n") {
 		m := catalogCheckLine.FindStringSubmatch(line)
 		if m == nil || !strings.Contains(m[2], " = ANY (ARRAY[") || isEvidenceVocabularyLine(line) {
 			continue

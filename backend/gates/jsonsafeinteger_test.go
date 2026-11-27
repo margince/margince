@@ -76,7 +76,7 @@ func TestABigintReachingAJSONClientIsBoundedToWhatItCanHold(t *testing.T) {
 	t.Parallel()
 	root := gatekit.ModuleRoot(t)
 	published := publishedIntegerFields(t, root)
-	columns, bounded := bigintColumnsAndTheirBounds(t, root)
+	columns, bounded := bigintColumnsAndTheirBounds(t)
 
 	var checked int
 	for column, tables := range columns {
@@ -167,14 +167,11 @@ func enclosingProperty(lines []string, at int) (string, bool) {
 
 // bigintColumnsAndTheirBounds reads the catalog for bigint columns and which of them
 // a CHECK already bounds to the safe range.
-func bigintColumnsAndTheirBounds(t *testing.T, root string) (columns map[string][]string, bounded map[string]bool) {
+func bigintColumnsAndTheirBounds(t *testing.T) (columns map[string][]string, bounded map[string]bool) {
 	t.Helper()
-	body, err := gatekit.ReadFile(filepath.Join(root, "migrations", "testdata", "head_catalog.txt"))
-	if err != nil {
-		t.Fatalf("reading the head catalog: %v", err)
-	}
+	body := headCatalog(t)
 	columns, bounded = map[string][]string{}, map[string]bool{}
-	for line := range strings.SplitSeq(string(body), "\n") {
+	for line := range strings.SplitSeq(body, "\n") {
 		line = strings.TrimSpace(line)
 		if found := bigintColumn.FindStringSubmatch(line); found != nil {
 			columns[found[2]] = append(columns[found[2]], found[1])
