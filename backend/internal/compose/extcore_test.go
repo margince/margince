@@ -33,7 +33,7 @@ func TestAJobTickCannotWriteACoreRecord(t *testing.T) {
 	core := extensionCore{unattended: true}
 
 	_, err := core.Activities().Create(context.Background(), crm.CreateActivityRequest{
-		Kind: crm.CreateActivityRequestKindNote, Source: "extension:probe",
+		Kind: crm.CreateActivityRequestKindNote, Source: "api",
 	})
 	if !errors.Is(err, extension.ErrForbidden) {
 		t.Fatalf("err = %v, want ErrForbidden", err)
@@ -108,7 +108,7 @@ func TestTheBridgeCarriesAWholeActivity(t *testing.T) {
 		Subject:    &subject,
 		Direction:  &direction,
 		OccurredAt: occurred,
-		Source:     "extension:notes",
+		Source:     "api",
 		CapturedBy: &capturedBy,
 		Links: &[]crmcontracts.ActivityLink{{
 			EntityType: crmcontracts.ActivityLinkEntityTypeContact,
@@ -151,7 +151,7 @@ func TestTheBridgeCarriesAWholeActivity(t *testing.T) {
 func TestTheBridgeCarriesARequestWithItsLinks(t *testing.T) {
 	body := "a filed note"
 	request := crm.CreateActivityRequest{
-		Kind: crm.CreateActivityRequestKindNote, Body: &body, Source: "extension:notes",
+		Kind: crm.CreateActivityRequestKindNote, Body: &body, Source: "api",
 	}.LinkTo(crm.CreateActivityRequestLinksEntityTypeDeal, "7c9e6679-7425-40de-944b-e07fc1f90ae7")
 
 	internal, err := transcode[crmcontracts.CreateActivityRequest](request)
@@ -173,7 +173,7 @@ func TestTheBridgeCarriesARequestWithItsLinks(t *testing.T) {
 // subject, and a helper that overwrote the previous one would lose the first
 // silently.
 func TestLinkToAppends(t *testing.T) {
-	request := crm.CreateActivityRequest{Kind: crm.CreateActivityRequestKindNote, Source: "extension:probe"}.
+	request := crm.CreateActivityRequest{Kind: crm.CreateActivityRequestKindNote, Source: "api"}.
 		LinkTo(crm.CreateActivityRequestLinksEntityTypeContact, "7c9e6679-7425-40de-944b-e07fc1f90ae7").
 		LinkTo(crm.CreateActivityRequestLinksEntityTypeCompany, "3f2504e0-4f89-41d3-9a0c-0305e82c3301")
 	if request.Links == nil || len(*request.Links) != 2 {

@@ -25,11 +25,23 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 )
 
 // meetingNotesMailSource is the source of a transcript landed from a notes mail.
 const meetingNotesMailSource = "meeting_notes_mail"
+
+// notesMailKeyPrefix starts the source_id of a transcript landed from a notes mail.
+const notesMailKeyPrefix = "mail:"
+
+// notesMailTranscriptSQL tests that the transcript at alias was landed from a
+// notes mail, also before the correction task reached it. A Doc's notes are
+// captured as well, and their source_id is the Doc's link.
+func notesMailTranscriptSQL(alias string) string {
+	return fmt.Sprintf("(%[1]s.source IN ('%[2]s', '%[3]s') AND starts_with(%[1]s.source_id, '%[4]s') AND split_part(%[1]s.captured_by, ':', 1) = 'connector')",
+		alias, meetingNotesMailSource, provenance.RecordSourceCapture, notesMailKeyPrefix)
+}
 
 // meetingNotesMailRawKey preserves which mail the transcript was read from.
 const meetingNotesMailRawKey = "notes_mail"
@@ -149,7 +161,7 @@ func (s *Store) LandMeetingNotesMailTx(ctx context.Context, tx pgx.Tx, in Meetin
 	if err != nil || !found {
 		return false, err
 	}
-	key := "mail:" + in.MessageID
+	key := notesMailKeyPrefix + in.MessageID
 	if free, err := lockNotesMailMeetingTx(ctx, tx, in, id, key); err != nil || !free {
 		return false, err
 	}

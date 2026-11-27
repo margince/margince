@@ -249,7 +249,7 @@ func importTitledMeeting(
 		OccurredAt:     &start,
 		SourceSystem:   &system,
 		SourceId:       &sourceID,
-		Source:         "hubspot_import:1",
+		Source:         "import",
 		SourceAuthorId: &authorID,
 	}
 	if uid != "" {

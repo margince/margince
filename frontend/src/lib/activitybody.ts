@@ -195,6 +195,10 @@ export function outgoingBody(body: string, transcript: boolean): string | null {
   return (transcript ? body : body.trim()) || null;
 }
 
+// The channel of an entry a member typed.
+const TYPED_BY_A_MEMBER: components["schemas"]["CreateActivityRequest"]["source"] =
+  "manual";
+
 // The wire body one drafted entry becomes.
 export function activityRequestBody(
   input: ActivityDraft,
@@ -247,7 +251,7 @@ export function activityRequestBody(
       ? { attendee_user_ids: [...attendees.colleagueIds] }
       : {}),
     ...input.custom,
-    source: "manual",
+    source: TYPED_BY_A_MEMBER,
   };
 }
 

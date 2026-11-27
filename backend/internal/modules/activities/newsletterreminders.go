@@ -71,7 +71,7 @@ func (s *Store) ReopenNewsletterClosedRemindersTx(ctx context.Context, tx pgx.Tx
 		arg(string(principal.PrincipalSystem)), arg(systemCapturedBy),
 		reminderReachSet("a"), relstrength.BulkMailSQL("x"), anchor,
 		arg([]string{string(principal.PrincipalHuman), string(principal.PrincipalAgent)}),
-		genuineEngagement("x", arg(systemSource), arg(systemCapturedBy), arg(systemCapturedByPattern)))
+		genuineEngagement("x", arg(systemTaskSources), arg(systemCapturedBy), arg(systemCapturedByPattern)))
 	// The page is locked, so this statement's fresh snapshot sees every edit a
 	// user committed before the lock, and none can land before the reopen.
 	query := storekit.SQLf(`SELECT a.id FROM activity a WHERE a.id = ANY($%d) AND a.is_done AND %s`,

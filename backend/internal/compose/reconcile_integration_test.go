@@ -284,7 +284,7 @@ func (e *reconcileEnv) dealTasks(t *testing.T, dealID ids.UUID) (count int, capt
 	if err := e.owner.QueryRow(ctx, `
 		SELECT count(*) FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
-		WHERE a.kind = 'task' AND a.source = 'overnight-reconcile'`, dealID).Scan(&count); err != nil {
+		WHERE a.kind = 'task' AND a.source_system = 'overnight-reconcile'`, dealID).Scan(&count); err != nil {
 		t.Fatal(err)
 	}
 	if count == 0 {
@@ -293,7 +293,7 @@ func (e *reconcileEnv) dealTasks(t *testing.T, dealID ids.UUID) (count int, capt
 	if err := e.owner.QueryRow(ctx, `
 		SELECT a.captured_by, a.source_system, a.due_at FROM activity a
 		JOIN activity_link l ON l.activity_id = a.id AND l.deal_id = $1
-		WHERE a.kind = 'task' AND a.source = 'overnight-reconcile'
+		WHERE a.kind = 'task' AND a.source_system = 'overnight-reconcile'
 		ORDER BY a.occurred_at DESC LIMIT 1`, dealID).Scan(&capturedBy, &sourceSystem, &due); err != nil {
 		t.Fatal(err)
 	}
