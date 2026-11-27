@@ -121,7 +121,7 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 ## project_phase_history
 
-10 columns · primary key `(id)` · referenced by 0 foreign keys
+9 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -129,7 +129,6 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 | `audit_log_id` | `uuid` |  |  |
 | `cause_deal_id` | `uuid` |  |  |
 | `cause_kind` | `text` |  | One of `deal_won`. |
-| `changed_by` | `text` | yes |  |
 | `from_phase` | `text` |  |  |
 | `occurred_at` | `timestamp with time zone`, default `now()` | yes |  |
 | `project_id` | `uuid` | yes | Points at `project.id`. |
@@ -154,5 +153,5 @@ The 3 tables owned by `projects`, as the migrations build them. [Back to the ent
 
 **Triggers**
 
-- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"reason": 2000, "to_phase": 20000, "cause_kind": 120, "changed_by": 20000, "from_phase": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"cause_kind":120,"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}')`
-- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "to_phase": 20000, "cause_kind": 120, "changed_by": 20000, "from_phase": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"cause_kind":120,"changed_by":20000,"from_phase":20000,"reason":2000,"to_phase":20000}')`
+- `text_bound_insert`: `AFTER INSERT FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL, '{"reason": 2000, "to_phase": 20000, "cause_kind": 120, "from_phase": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"cause_kind":120,"from_phase":20000,"reason":2000,"to_phase":20000}')`
+- `text_bound_update`: `AFTER UPDATE FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"reason": 2000, "to_phase": 20000, "cause_kind": 120, "from_phase": 20000}')) EXECUTE FUNCTION refuse_oversized_text('{"cause_kind":120,"from_phase":20000,"reason":2000,"to_phase":20000}')`

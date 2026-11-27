@@ -20,12 +20,7 @@ import {
 import { Badge } from "../design-system/atoms";
 import { Chip } from "../design-system/readings";
 import { activityDay, activityTimeOfDay } from "../format/activitywhen";
-import { taskDueOnDay } from "../format/calendarday";
-import {
-  calendarDaysBetween,
-  formatDayMonthNearYear,
-  formatNumber,
-} from "../format/format";
+import { formatDayMonthNearYear } from "../format/format";
 import { useLocale, usePlural, useT, type Words } from "../i18n";
 import type { MessageKey } from "../i18n/en";
 import { changeBadge } from "../lib/calendarchange";
@@ -156,7 +151,7 @@ function statusOf(item: WorklistItem, titled: boolean): CardStatus | null {
 
 /**
  * The clock a card races. An undated task has none, so it shows none. A late
- * one says its day and how late it is, the two facts a reader acts on.
+ * one says its day and how late it is, as whenText writes it for the Worklist.
  */
 export function cardWhen(
   item: WorklistItem,
@@ -166,22 +161,7 @@ export function cardWhen(
   now: Date,
 ): string | null {
   if (item.source === "task" && !item.due_at) return null;
-  const { t, plural, locale } = words;
-  // Only a task's due day counts days late; a meeting's time is its own read.
-  if (item.source === "task" && item.overdue === true && item.due_at) {
-    const dueDay = taskDueOnDay(
-      item.due_at,
-      item.due_has_time,
-      item.due_intent,
-      recordZone,
-    );
-    const late = calendarDaysBetween(new Date(dueDay), now, recordZone);
-    if (late > 0)
-      return [
-        formatDayMonthNearYear(dueDay, locale, recordZone, now),
-        plural("co.next.daysLate", late, { days: formatNumber(late, locale) }),
-      ].join(" · ");
-  }
+  const { t, locale } = words;
   // A waiting message is dated by its arrival, as the row in the queue is.
   const arrived = emailNamesRow(item) ? item.email_summary : null;
   if (arrived) {

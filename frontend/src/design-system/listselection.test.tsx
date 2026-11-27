@@ -1,6 +1,6 @@
 /** @vitest-environment happy-dom */
 import "@testing-library/jest-dom/vitest";
-import { cleanup, screen, waitFor } from "@testing-library/react";
+import { act, cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { type ReactNode, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
@@ -14,6 +14,10 @@ afterEach(cleanup);
 const selectPage = en["bulk.selectPage"];
 const selectAll = en["bulk.selectAll"];
 const clearSelection = en["bulk.clearSelection"];
+const selectingOf = (count: number, total: number) =>
+  en["bulk.selectingOf_other"]
+    .replace("{count}", String(count))
+    .replace("{total}", String(total));
 
 // A list whose server holds `total` rows and answers `perRead` at a time.
 // It hands the table its rows and next-page call as a cursor-paged screen does.
@@ -24,6 +28,9 @@ function PagedList({
   selectable,
   body,
   onRowClick,
+  counted = false,
+  reported,
+  inFlight,
 }: Readonly<{
   total: number;
   perRead: number;
@@ -31,12 +38,19 @@ function PagedList({
   selectable?: (row: Row) => boolean;
   body?: ReactNode;
   onRowClick?: (row: Row) => void;
+  /** The server says how many rows match, as a record list's first read does. */
+  counted?: boolean;
+  /** A count the server reported that no longer matches the rows it holds. */
+  reported?: number;
+  /** Holds each read until the test lets it land, as a network does. */
+  inFlight?: (() => void)[];
 }>) {
   const all = testRows(total);
   const [held, setHeld] = useState(perRead);
   const [narrowed, setNarrowed] = useState(false);
   const rows = narrowed ? all.slice(0, 3) : all.slice(0, held);
   const chosen = useRowSelection({ rows, keyOf: (row) => row.id, limit });
+  const land = () => setHeld((now) => Math.min(total, now + perRead));
   return (
     <ListTable<Row>
       rows={rows}
@@ -44,7 +58,8 @@ function PagedList({
       rowKey={(row) => row.id}
       unit="rows"
       hasMore={held < total}
-      onLoadMore={() => setHeld((now) => Math.min(total, now + perRead))}
+      total={reported ?? (counted ? total : undefined)}
+      onLoadMore={() => (inFlight ? inFlight.push(land) : land())}
       body={body}
       onRowClick={onRowClick}
       action={
@@ -110,6 +125,102 @@ describe("selecting every row of a list", () => {
         en["bulk.selectionLimit_other"].replaceAll("{count}", "150"),
       ),
     ).toBeInTheDocument();
+  });
+
+  it("says how many rows Select all has read, of how many, while it reads", async () => {
+    const user = userEvent.setup();
+    const inFlight: (() => void)[] = [];
+    render(
+      <PagedList
+        total={1000}
+        perRead={50}
+        limit={500}
+        counted
+        inFlight={inFlight}
+      />,
+    );
+    await user.click(screen.getByRole("checkbox", { name: "Select Row 01" }));
+    await user.click(screen.getByRole("button", { name: selectAll }));
+    expect(screen.getByText(selectingOf(50, 500))).toBeInTheDocument();
+    expect(screen.getByText("1 chosen")).toBeInTheDocument();
+
+    act(() => inFlight.shift()?.());
+    expect(await screen.findByText(selectingOf(100, 500))).toBeInTheDocument();
+  });
+
+  it("counts toward the server's total when fewer rows match than the limit", async () => {
+    const user = userEvent.setup();
+    render(
+      <PagedList total={130} perRead={50} limit={500} counted inFlight={[]} />,
+    );
+    await user.click(screen.getByRole("checkbox", { name: "Select Row 01" }));
+    await user.click(screen.getByRole("button", { name: selectAll }));
+    expect(screen.getByText(selectingOf(50, 130))).toBeInTheDocument();
+  });
+
+  // Rows added since the count was read leave the walk past it.
+  it("names no target once the walk holds more rows than the server counted", async () => {
+    const user = userEvent.setup();
+    const inFlight: (() => void)[] = [];
+    render(
+      <PagedList
+        total={130}
+        perRead={50}
+        limit={500}
+        reported={60}
+        inFlight={inFlight}
+      />,
+    );
+    await user.click(screen.getByRole("checkbox", { name: "Select Row 01" }));
+    await user.click(screen.getByRole("button", { name: selectAll }));
+    expect(screen.getByText(selectingOf(50, 60))).toBeInTheDocument();
+
+    act(() => inFlight.shift()?.());
+    expect(
+      await screen.findByText(
+        en["bulk.selecting_other"].replace("{count}", "100"),
+      ),
+    ).toBeInTheDocument();
+  });
+
+  // The limit alone is no target: a list of 130 never reaches 500.
+  it("names no target while the server sends no total", async () => {
+    const user = userEvent.setup();
+    render(<PagedList total={130} perRead={50} limit={500} inFlight={[]} />);
+    await user.click(screen.getByRole("checkbox", { name: "Select Row 01" }));
+    await user.click(screen.getByRole("button", { name: selectAll }));
+    expect(
+      screen.getByText(en["bulk.selecting_other"].replace("{count}", "50")),
+    ).toBeInTheDocument();
+  });
+
+  // The total counts rows the verbs cannot act on, so it is no end to walk to.
+  it("names no target while some matching rows cannot be selected", async () => {
+    const user = userEvent.setup();
+    render(
+      <PagedList
+        total={1000}
+        perRead={50}
+        limit={500}
+        counted
+        inFlight={[]}
+        selectable={(row) => row.value % 2 === 0}
+      />,
+    );
+    await user.click(screen.getByRole("checkbox", { name: "Select Row 02" }));
+    await user.click(screen.getByRole("button", { name: selectAll }));
+    expect(
+      screen.getByText(en["bulk.selecting_other"].replace("{count}", "25")),
+    ).toBeInTheDocument();
+  });
+
+  it("drops the progress line once the rows are ticked", async () => {
+    const user = userEvent.setup();
+    render(<PagedList total={130} perRead={50} limit={500} counted />);
+    await user.click(screen.getByRole("checkbox", { name: "Select Row 01" }));
+    await user.click(screen.getByRole("button", { name: selectAll }));
+    expect(await screen.findByText("130 chosen")).toBeInTheDocument();
+    expect(screen.queryByText(/Selecting/)).not.toBeInTheDocument();
   });
 
   it("leaves the rows the verbs cannot act on out of Select all", async () => {

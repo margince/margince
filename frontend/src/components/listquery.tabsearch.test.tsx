@@ -62,6 +62,7 @@ function Rail({
           filters: {},
           includeArchived: false,
           perPage: LIST_PAGE_SIZES[0],
+          version: 1,
         },
       ]}
     />

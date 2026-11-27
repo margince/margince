@@ -240,7 +240,7 @@ func sourceNote(shapes map[datasource.EntityType]reflect.Type, patch bool) []str
 		return []string{"`source` on a lead says how the row reached Margince and is read-only: any value but the stored one is refused, and it never scores. " +
 			"Where the lead came from is `origin`, an active key from `/lead-origins` (Settings › Leads); while the lead is open (new, contacted or engaged), a patch to it rescores the lead."}
 	}
-	return []string{"`source` is accepted but overwritten — this surface stamps its own provenance."}
+	return []string{"`source` is accepted but overwritten: this surface stamps its own provenance."}
 }
 
 // dealPipelineNote says where the two ids a deal cannot be born without come
@@ -251,7 +251,7 @@ func dealPipelineNote(shapes map[datasource.EntityType]reflect.Type) []string {
 	if !describesField(shapes, "pipeline_id") {
 		return nil
 	}
-	return []string{"A deal's `pipeline_id` and `stage_id` come from " + pipelinesSource + " — nothing else on " +
+	return []string{"A deal's `pipeline_id` and `stage_id` come from " + pipelinesSource + ". Nothing else on " +
 		"this surface yields them, and neither is defaultable."}
 }
 
@@ -271,7 +271,7 @@ func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 		// The patch half still owes the reader the pointer, because a contact's
 		// employer is the field they will look for first and not find.
 		return "A contact's employer is NOT a field here: employment is a relationship, created and " +
-			"archived as record_type=relationship — its endpoints are what it IS, so they cannot be patched. " +
+			"archived as record_type=relationship. Its endpoints are what it IS, so they cannot be patched. " +
 			"To correct a wrong employer, find the edge with read_view view=relationships (contact_id, kind=employment), " +
 			"end it with update_record on that relationship (employment_status=former, ended_at), then create the right one."
 	}
@@ -289,9 +289,9 @@ func relationshipNote(shapes map[datasource.EntityType]reflect.Type) string {
 	return "Contact creation accepts company_id or company_name and resolves employment atomically. " +
 		"For later employment changes use record_type=relationship " +
 		"with kind=employment, contact_id and company_id. Each kind REQUIRES its own endpoint pair, " +
-		"and a wrong pair is refused by name — employment: contact + company; deal_stakeholder: " +
+		"and a wrong pair is refused by name (employment: contact + company; deal_stakeholder: " +
 		"deal + contact; project_stakeholder: project + contact; partner_of, referred_by and co_sell_with: " +
-		"company + counterparty_company_id. An edge is not searchable, so keep the id a relationship " +
+		"company + counterparty_company_id). An edge is not searchable, so keep the id a relationship " +
 		"write returns."
 }
 
@@ -393,7 +393,7 @@ func assigneeNote(shapes map[datasource.EntityType]reflect.Type) []string {
 	if !describesField(shapes, "assignee_id") {
 		return nil
 	}
-	return []string{"`assignee_id` and `owner_id` take a COLLEAGUE's id — the colleague roster " +
+	return []string{"`assignee_id` and `owner_id` take a COLLEAGUE's id. The colleague roster " +
 		"answers those, whoami answers your own. A contact id is a contact and is refused."}
 }
 
@@ -409,7 +409,7 @@ func transcriptNote(shapes map[datasource.EntityType]reflect.Type) []string {
 		return nil
 	}
 	return []string{"A recording of a conversation is logged with " +
-		"`source_system: \"transcript\"` — that value is what has it read for next steps and " +
+		"`source_system: \"transcript\"`. That value is what has it read for next steps and " +
 		"commitments; any other value stores the text and reads nothing."}
 }
 
@@ -427,6 +427,6 @@ func descriptionNote(shapes map[datasource.EntityType]reflect.Type) []string {
 	}
 	return []string{"A company's `description` is the header's standing answer to what the " +
 		"company SELLS, and a site read fills it from the company's own website. Omit it rather " +
-		"than summarising a meeting or a document into it; what one conversation covered belongs " +
+		"than summarizing a meeting or a document into it; what one conversation covered belongs " +
 		"on that activity."}
 }

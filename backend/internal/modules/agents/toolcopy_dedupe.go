@@ -13,7 +13,7 @@ var decideDuplicateCopy = toolCopy{
 
 var resolveDuplicatesCopy = toolCopy{
 	Purpose: "Settle two records that may be one. With candidate_id and decision: a pair " +
-		"create_record flagged in duplicate_candidates — not_the_same says they are two, so the " +
+		"create_record flagged in duplicate_candidates; not_the_same says they are two, so the " +
 		"pair is not flagged again, and reopen takes that back; neither record changes. With " +
 		"record_type, source_id and target_id: merge two contacts or two companies into one, " +
 		"moving the source's activities, deals and links onto the survivor. With record_type contact, " +
@@ -23,6 +23,6 @@ var resolveDuplicatesCopy = toolCopy{
 		"merging the other way round, and by default nothing holds it. A merged pair cannot be " +
 		"reopened.",
 	Instead: "Use archive_record when the extra record has nothing worth keeping.",
-	Retain: "target_id is the record that survives and source_id the one merged away — read both " +
+	Retain: "target_id is the record that survives and source_id the one merged away. Read both " +
 		"records before choosing.",
 }

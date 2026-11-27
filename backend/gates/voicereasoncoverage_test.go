@@ -22,7 +22,7 @@ var voiceReasonBranch = regexp.MustCompile(`(?:case\s+["']([a-z_]+)["']\s*:|code
 
 func TestEveryVoiceReviewCodeHasAClientExplanation(t *testing.T) {
 	t.Parallel()
-	file, err := parser.ParseFile(token.NewFileSet(), "internal/modules/ai/voice_review_codes.go", nil, 0)
+	file, err := gatekit.ParseFile("internal/modules/ai/voice_review_codes.go", 0)
 	if err != nil {
 		t.Fatal(err)
 	}

@@ -249,7 +249,6 @@ public.audit_log.actor_id exempt system-written rows on the write path of every 
 public.audit_log.actor_type exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.audit_log.authorization_rule exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.audit_log.entity_type exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
-public.auth_token.purpose document
 public.auth_token.token_hash document
 public.automation.key document
 public.automation.name label
@@ -798,7 +797,6 @@ public.extension_ingest_refusal.unit document
 public.extension_secret.extension_name label
 public.extension_secret.key document
 public.extension_secret.vault_ref document
-public.federated_identity.email_at_link document
 public.federated_identity.provider document
 public.federated_identity.subject exempt opaque provider subject keys retain the complete external identity
 public.field_mask.condition document
@@ -1004,7 +1002,6 @@ public.linkedin_connection.normalized_company document
 public.linkedin_connection.normalized_name label
 public.linkedin_connection.position document
 public.linkedin_connection.profile_url document checked: a cell of an uploaded export; the upload is refused past it
-public.linkedin_connection.provider_member_ref document
 public.linkedin_connection.source document
 public.list.entity_type document
 public.list.list_type document
@@ -1110,7 +1107,6 @@ public.partner.next_step document
 public.partner.partner_kinds document
 public.partner.relationship_stage document
 public.partner.served_segments document
-public.partner.source document
 public.partner_stage.key document
 public.partner_stage.label label
 public.partner_stage.label_key exempt generated from independently checked source columns
@@ -1172,7 +1168,6 @@ public.project_health_assessment.source document
 public.project_health_assessment.source_author document
 public.project_health_assessment.state document
 public.project_phase_history.cause_kind label
-public.project_phase_history.changed_by document
 public.project_phase_history.from_phase document
 public.project_phase_history.reason note
 public.project_phase_history.to_phase document
@@ -1408,7 +1403,6 @@ public.voice_corpus_source.source_label line
 public.voice_corpus_source.source_ref document
 public.voice_learning_signal.captured_by document
 public.voice_learning_signal.final_captured_by document
-public.voice_learning_signal.final_text exempt a copy of the sent mail body, which has no length bound
 public.voice_learning_signal.generated_original exempt a copy of the model-drafted mail body, which mail_draft.body keeps whole
 public.voice_learning_signal.outcome document
 public.voice_profile.active_source_hash document

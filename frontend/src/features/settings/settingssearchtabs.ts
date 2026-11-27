@@ -20,6 +20,7 @@ const TAB_ALIASES: Partial<
       "trace",
     ],
   },
+  company: { money: ["exchange rate", "fx"] },
   deals: {
     sources: ["acquisition"],
     loss: ["lost reasons"],

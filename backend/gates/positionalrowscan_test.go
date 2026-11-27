@@ -25,6 +25,7 @@ package gates
 // scan into named fields, which also documents which columns that query needs.
 
 import (
+	"bytes"
 	"go/ast"
 	"go/parser"
 	"io/fs"
@@ -57,6 +58,14 @@ func TestAPositionalRowScanTargetsItsOwnPackagesStruct(t *testing.T) {
 				return nil
 			}
 			if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_gen.go") {
+				return nil
+			}
+			body, err := gatekit.ReadFile(path)
+			if err != nil {
+				return err
+			}
+			// isPositionalRowMapper matches only a selector spelled positionalRowMapper.
+			if !bytes.Contains(body, []byte(positionalRowMapper)) {
 				return nil
 			}
 			foreign, found := foreignPositionalScans(t, path)
@@ -104,9 +113,11 @@ func foreignPositionalScans(t *testing.T, path string) ([]string, int) {
 	return foreign, found
 }
 
+const positionalRowMapper = "RowToStructByPos"
+
 func isPositionalRowMapper(fn ast.Expr) bool {
 	selector, ok := fn.(*ast.SelectorExpr)
-	return ok && selector.Sel.Name == "RowToStructByPos"
+	return ok && selector.Sel.Name == positionalRowMapper
 }
 
 func unwrapPositionalScanType(expr ast.Expr) ast.Expr {

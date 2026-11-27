@@ -33,6 +33,77 @@ const columns: readonly ListColumn<Row>[] = [
   { key: "name", header: "Name", cell: (row) => row.name, fixed: true },
 ];
 
+const pageButton = (number: number) =>
+  screen.queryByRole("button", { name: `Page ${number}` });
+
+describe("the pager's page numbers", () => {
+  it("run to the last page the server's total names, past the rows in hand", () => {
+    render(
+      <ListTable
+        rows={testRows(50)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        hasMore
+        total={4363}
+      />,
+    );
+    expect(pageButton(3)).toBeTruthy();
+    expect(pageButton(175)).toBeTruthy();
+    expect(pageButton(176)).toBeNull();
+  });
+
+  // The pages in hand would read as the whole list, so Next speaks alone.
+  it("give way to Previous and Next while the server sends no total", () => {
+    render(
+      <ListTable
+        rows={testRows(50)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        hasMore
+      />,
+    );
+    expect(pageButton(1)).toBeNull();
+    expect(pageButton(2)).toBeNull();
+    expect(screen.getByRole("button", { name: "Previous" })).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Next" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+  });
+
+  it("name the last page of a list whose every row is in hand", () => {
+    render(
+      <ListTable
+        rows={testRows(150)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+      />,
+    );
+    expect(pageButton(6)).toBeTruthy();
+  });
+
+  it("follow the rows in hand when they outrun a total read earlier", () => {
+    render(
+      <ListTable
+        rows={testRows(100)}
+        columns={columns}
+        rowKey={(row) => row.id}
+        unit="rows"
+        hasMore
+        total={60}
+      />,
+    );
+    expect(pageButton(4)).toBeTruthy();
+    expect(screen.getByRole("button", { name: "Next" })).toHaveProperty(
+      "disabled",
+      false,
+    );
+  });
+});
+
 describe("the count line", () => {
   it("says the server's total, not the rows it has loaded", () => {
     render(
