@@ -12,6 +12,7 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/auth"
+	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -260,16 +261,19 @@ func (s *Store) GetContact(ctx context.Context, id ids.ContactID, archived store
 		return crmcontracts.Contact{}, err
 	}
 	var out crmcontracts.Contact
-	err := s.tx(ctx, func(tx pgx.Tx) (err error) {
-		active, err := s.activeColumnsIn(ctx, tx, "contact")
-		if err != nil {
+	err := s.tx(ctx, func(tx pgx.Tx) error {
+		// The row scope makes each statement plan far longer than it runs.
+		return database.ReuseGenericPlansTx(ctx, tx, func() error {
+			active, err := s.activeColumnsIn(ctx, tx, "contact")
+			if err != nil {
+				return err
+			}
+			if err := auth.EnsureReadable(ctx, tx, "contact", id.UUID); err != nil {
+				return err
+			}
+			out, err = readContact(ctx, tx, id, archived, active)
 			return err
-		}
-		if err := auth.EnsureReadable(ctx, tx, "contact", id.UUID); err != nil {
-			return err
-		}
-		out, err = readContact(ctx, tx, id, archived, active)
-		return err
+		})
 	})
 	return out, err
 }
