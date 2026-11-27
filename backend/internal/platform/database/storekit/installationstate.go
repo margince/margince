@@ -161,18 +161,27 @@ func StoredKeyWorkspaceTx(ctx context.Context, tx pgx.Tx) (ids.UUID, error) {
 }
 
 // KeptInstallationFacts is the part of installation_state a reset must not
-// lose. A company is cleared, the installation is not.
+// lose. A company is cleared, the installation is not, and the leftover seats of
+// an archived predecessor are still there after a reset.
 type KeptInstallationFacts struct {
-	company ids.UUID
-	trial   time.Time
-	held    bool
+	company     ids.UUID
+	trial       time.Time
+	held        bool
+	predecessor ArchivedPredecessor
+	hasArchived bool
 }
 
 // KeptInstallationFactsTx reads the facts before a sweep clears the table.
 func KeptInstallationFactsTx(ctx context.Context, tx pgx.Tx) (KeptInstallationFacts, error) {
-	company, err := StoredKeyWorkspaceTx(ctx, tx)
+	var kept KeptInstallationFacts
+	var err error
+	kept.predecessor, kept.hasArchived, err = InstallationStateTx[ArchivedPredecessor](ctx, tx, StateArchivedPredecessor)
+	if err != nil {
+		return KeptInstallationFacts{}, err
+	}
+	kept.company, err = StoredKeyWorkspaceTx(ctx, tx)
 	if errors.Is(err, ErrNoStoredKeyWorkspace) {
-		return KeptInstallationFacts{}, nil
+		return kept, nil
 	}
 	if err != nil {
 		return KeptInstallationFacts{}, err
@@ -184,11 +193,17 @@ func KeptInstallationFactsTx(ctx context.Context, tx pgx.Tx) (KeptInstallationFa
 	if !found {
 		return KeptInstallationFacts{}, errors.New("storekit: the installation has a stored-key workspace and no trial start")
 	}
-	return KeptInstallationFacts{company: company, trial: trial.StartedAt, held: true}, nil
+	kept.trial, kept.held = trial.StartedAt, true
+	return kept, nil
 }
 
 // RestoreTx writes the facts back after the sweep.
 func (k KeptInstallationFacts) RestoreTx(ctx context.Context, tx pgx.Tx) error {
+	if k.hasArchived {
+		if err := StoreInstallationStateTx(ctx, tx, StateArchivedPredecessor, k.predecessor); err != nil {
+			return err
+		}
+	}
 	if !k.held {
 		return nil
 	}

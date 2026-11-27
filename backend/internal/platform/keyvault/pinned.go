@@ -23,10 +23,15 @@ type pinnedVault struct {
 
 // pin wraps vault so each call is scoped to the id resolve answers. The answer
 // is read until it succeeds once, then kept: the stored-key id never changes.
-//
-//nolint:ireturn // the seam has two providers behind one Vault; returning the interface is the design.
-func pin(vault Vault, resolve func(context.Context) (ids.WorkspaceID, error)) Vault {
+func pin(vault Vault, resolve func(context.Context) (ids.WorkspaceID, error)) *pinnedVault {
 	return &pinnedVault{inner: vault, resolve: resolve}
+}
+
+// prime resolves the id before any caller holds a connection. A vault used
+// inside an open transaction must not need a second connection to learn it.
+func (p *pinnedVault) prime(ctx context.Context) error {
+	_, err := p.scope(ctx)
+	return err
 }
 
 func (p *pinnedVault) scope(ctx context.Context) (ids.WorkspaceID, error) {
@@ -65,7 +70,14 @@ func (p *pinnedVault) GetOn(ctx context.Context, q Querier, _ ids.WorkspaceID, r
 	return p.inner.GetOn(ctx, q, ws, ref)
 }
 
+// Delete removes a secret under the id its own ref names. A retention or
+// erasure pass thus reaches an archived company's ciphertext. A read does not
+// widen like this: that credential stays out of reach of every live caller, as
+// it did before the id was pinned.
 func (p *pinnedVault) Delete(ctx context.Context, _ ids.WorkspaceID, ref Ref) error {
+	if parsed, err := ref.parse(); err == nil {
+		return p.inner.Delete(ctx, parsed.workspace, ref)
+	}
 	ws, err := p.scope(ctx)
 	if err != nil {
 		return err

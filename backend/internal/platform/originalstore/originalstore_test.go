@@ -55,7 +55,7 @@ func TestStoredOriginalsRequireTheirWorkspaceAndExactBytes(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	prefix, err := svc.prefix(ctx)
+	prefix, err := svc.prefix(ctx, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

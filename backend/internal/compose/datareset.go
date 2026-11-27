@@ -250,8 +250,8 @@ func (h dataResetHandlers) sweepAndReseed(ctx context.Context, wsID ids.UUID, co
 		// and it double-counted them. Deleted.
 		counts.secretRefs = secretRefs
 
-		// The sweep clears installation_state. Two facts name data that outlives
-		// it, so they are written back.
+		// The sweep clears installation_state. Three facts outlive a reset, so
+		// they are written back.
 		kept, err := storekit.KeptInstallationFactsTx(ctx, tx)
 		if err != nil {
 			return err

@@ -220,6 +220,7 @@ func TestResetRunRestoresBootstrapState(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
 	e.SeedContact(t, "Alice", nil)
+	e.WsExec(t, `INSERT INTO installation_state (key, value) VALUES ('archived_predecessor', '{"archived_companies": 1}')`)
 	// A pre-reset staged event, marked by its stream so the seeders' own outbox
 	// writes cannot be mistaken for it: the run must leave nothing for the relay
 	// to ship into the streams it purges.
@@ -263,8 +264,8 @@ func TestResetRunRestoresBootstrapState(t *testing.T) {
 	if got := e.WsCount(t, `SELECT count(*) FROM event_outbox WHERE stream = 'pre-reset'`); got != 0 {
 		t.Errorf("pre-reset staged events = %d, want 0 — the relay would ship them into the streams the reset just purged", got)
 	}
-	if got := e.WsCount(t, `SELECT count(*) FROM installation_state WHERE key IN ('stored_key_workspace', 'installation_trial')`); got != 2 {
-		t.Errorf("installation facts after reset = %d, want 2 — stored keys and the trial start outlive a reset", got)
+	if got := e.WsCount(t, `SELECT count(*) FROM installation_state WHERE key IN ('stored_key_workspace', 'installation_trial', 'archived_predecessor')`); got != 3 {
+		t.Errorf("installation facts after reset = %d, want 3 — stored keys, the trial start and the archived-company warning outlive a reset", got)
 	}
 }
 

@@ -109,10 +109,16 @@ func fromRootKey(ctx context.Context, pool *pgxpool.Pool, encoded string) (vault
 	if err != nil {
 		return nil, false, err
 	}
-	return pin(v, func(ctx context.Context) (ids.WorkspaceID, error) {
+	pinned := pin(v, func(ctx context.Context) (ids.WorkspaceID, error) {
 		stored, err := storekit.ReadStoredKeyWorkspace(ctx, pool)
 		return ids.From[ids.WorkspaceKind](stored), err
-	}), true, nil
+	})
+	// An installation with no company yet has no id to read. The first call
+	// after setup reads it then.
+	if err := pinned.prime(ctx); err != nil && !errors.Is(err, storekit.ErrNoStoredKeyWorkspace) {
+		return nil, false, fmt.Errorf("keyvault: reading the installation's stored-key id: %w", err)
+	}
+	return pinned, true, nil
 }
 
 // newAEAD builds the AES-256-GCM AEAD from the root key. The error names the
