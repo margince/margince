@@ -29876,7 +29876,7 @@
                 "type": "string"
               },
               "greeting_name": {
-                "description": "The name the member's greetings use, when the first word of `display_name` is not it. Optional; absent, empty or null leaves it unset.",
+                "description": "The name the member's greetings use, when the given name read off `display_name` is not it. Optional; absent, empty or null leaves it unset.",
                 "maxLength": 120,
                 "type": "string"
               },

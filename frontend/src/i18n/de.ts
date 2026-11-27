@@ -23531,7 +23531,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "magic.action.company_profile_read":
     "Technisches Profil des Unternehmens analysiert",
   "magic.action.fields_changed": "{fields} geändert",
-  "magic.action.guests_synced_from_calendar": "Gäste aus dem Kalender aktualisiert",
+  "magic.action.guests_synced_from_calendar":
+    "Gäste aus dem Kalender aktualisiert",
   "magic.action.task_done": "Aufgabe als erledigt markiert",
   "magic.action.task_reopened": "Aufgabe wieder geöffnet",
   "magic.action.retention_lead_anonymize":

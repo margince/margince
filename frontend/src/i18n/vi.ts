@@ -6308,7 +6308,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deal.supportedBy": "Đối tác hỗ trợ:",
   "deal.referral.sourced": "(mang về)",
   "deal.referral.influenced": "(có hỗ trợ)",
-  "deal.recordedBy": "Tạo bởi",
+  "deal.recordedBy": "Bên ghi nhận",
   "deal.companyWithheld": "Công ty bị ẩn",
   "deal.partnerWithheld": "Đối tác bị ẩn",
   "deal.committee.title": "Nhóm quyết định mua",

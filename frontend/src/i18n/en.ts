@@ -23177,7 +23177,8 @@ export const en = {
   "magic.action.mail_filed": "Filed captured email under this contact",
   "magic.action.company_profile_read": "Read the company’s technical profile",
   "magic.action.fields_changed": "Changed {fields}",
-  "magic.action.guests_synced_from_calendar": "Updated guests from the calendar",
+  "magic.action.guests_synced_from_calendar":
+    "Updated guests from the calendar",
   "magic.action.task_done": "Marked the task done",
   "magic.action.task_reopened": "Reopened the task",
   "magic.action.retention_lead_anonymize":
