@@ -182,6 +182,7 @@ ready before we need it, because the first date comes 24 hours after we learn of
 ### Reference: look it up
 
 - [API changes](reference/api-compatibility.md): when an API may change.
+- [API rate limits](reference/api-rate-limits.md): enforced ceilings, shared counters and retry headers.
 - [modules.md](reference/modules.md): each module, what it owns, its tables and its API.
 - [entity-model/](reference/entity-model/README.md): every table and field, one page per part
   of the product.

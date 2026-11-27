@@ -55,7 +55,7 @@ func publicRecordPreviews(s Server, svc *identity.Service) func(http.Handler) ht
 			w.Header().Set("Cache-Control", "no-store")
 			w.Header().Set("X-Robots-Tag", "noindex, nofollow, noarchive")
 			if !limit.Allow(httpserver.ClientIP(r)) {
-				s.writeRecordPreview(w, r, fallback, apperrors.ErrBudgetExceeded)
+				s.writeRecordPreview(w, r, fallback, ratelimit.Refused(limit))
 				return
 			}
 			workspace, err := svc.InstallationWorkspace(r.Context())
@@ -150,6 +150,7 @@ func (s Server) GetPublicRecordPreview(w http.ResponseWriter, r *http.Request, k
 }
 
 func (s Server) writeRecordPreview(w http.ResponseWriter, r *http.Request, preview recordPreview, cause error) {
+	ratelimit.SetRefusalHeaders(w.Header(), cause)
 	s.writePreviewCard(w, r, recordPreviewCard(preview, readerlocale.Anonymous(r)), "record", cause)
 }
 

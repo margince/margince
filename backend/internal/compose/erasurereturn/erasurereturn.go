@@ -132,7 +132,7 @@ func (h Handlers) RequestBookingReturn(w http.ResponseWriter, r *http.Request, h
 	// the link, the recipient and the stored contact all use it.
 	address := mailidentity.FoldAddress(email.String())
 	if !h.perAddress.Allow(address) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		httperr.Write(w, r, ratelimit.Refused(h.perAddress))
 		return
 	}
 	request := returnlink.Request{Slug: hostSlug, Name: name, Email: address, PurposeID: purpose}

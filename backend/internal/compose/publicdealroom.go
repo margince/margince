@@ -28,7 +28,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/ratelimit"
-	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
@@ -85,13 +84,15 @@ func publicDealRoom(store *dealrooms.Store, limits publicDealRoomLimiters, origi
 			}
 			operation, _, _ := strings.Cut(strings.TrimPrefix(r.URL.Path, publicDealRoomPrefix), "/")
 			if !limits.perIP.Allow(httpserver.ClientIP(r)) {
-				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+				httperr.Write(w, r, ratelimit.Refused(limits.perIP))
 				return
 			}
 			if publicDealRoomAnonymous[operation] {
-				if operation == "link-request" && !linkRequestAdmitted(limits, r) {
-					httperr.Write(w, r, apperrors.ErrBudgetExceeded)
-					return
+				if operation == "link-request" {
+					if bucket := linkRequestRefusedBy(limits, r); bucket != nil {
+						httperr.Write(w, r, ratelimit.WaitOnly(max(limits.linkPerIP.RetryAfterSeconds(), limits.linkShared.RetryAfterSeconds(), limits.linkPerEmail.RetryAfterSeconds())))
+						return
+					}
 				}
 				next.ServeHTTP(w, r)
 				return
@@ -101,7 +102,7 @@ func publicDealRoom(store *dealrooms.Store, limits publicDealRoomLimiters, origi
 				return
 			}
 			if r.Method != http.MethodGet && !limits.perSessionMut.Allow(sess.ID.String()) {
-				httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+				httperr.Write(w, r, ratelimit.Refused(limits.perSessionMut))
 				return
 			}
 			ctx := dealrooms.WithSession(r.Context(), sess)
@@ -111,23 +112,26 @@ func publicDealRoom(store *dealrooms.Store, limits publicDealRoomLimiters, origi
 	}
 }
 
-// linkRequestAdmitted takes the link-request buckets in order of cost: the
+// linkRequestRefusedBy takes the link-request buckets in order of cost: the
 // per-IP one first so a single source is refused before it eats into the
 // ceiling everyone shares, the per-address one last because reading it means
 // reading the body.
-func linkRequestAdmitted(limits publicDealRoomLimiters, r *http.Request) bool {
+func linkRequestRefusedBy(limits publicDealRoomLimiters, r *http.Request) *ratelimit.Limiter {
 	if !limits.linkPerIP.Allow(httpserver.ClientIP(r)) {
-		return false
+		return limits.linkPerIP
 	}
 	if !limits.linkShared.Allow(linkSharedKey) {
-		return false
+		return limits.linkShared
 	}
 	email, ok := peekLinkRequestEmail(r)
 	if !ok {
 		// Unparseable: let the handler answer the 422. Nothing is reissued.
-		return true
+		return nil
 	}
-	return limits.linkPerEmail.Allow(email)
+	if !limits.linkPerEmail.Allow(email) {
+		return limits.linkPerEmail
+	}
+	return nil
 }
 
 // peekLinkRequestEmail reads the address out of the body without consuming it

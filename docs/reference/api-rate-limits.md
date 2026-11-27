@@ -1,0 +1,94 @@
+<!-- prose:plain -->
+# API rate limits
+
+The API and worker roles bind the process rate-limiter registry to Redis. Replicas
+share one counter per named key. Human sessions, agent credentials, public intake
+and extension execution use separate named budgets. Ordinary authenticated REST
+requests have no general requests-per-minute ceiling; the operation-specific
+limits below still apply. An external MCP client keeps its user's authority.
+
+MCP calls count per credential; stream opens count separately. OAuth and pre-authentication traffic have their own buckets.
+Changing credentials never changes the user's permissions or row access.
+
+A limiter refusal returns HTTP 429 with Retry-After, RateLimit-Limit,
+RateLimit-Remaining and RateLimit-Reset. Remaining is zero: this limiter admits no
+more attempts now. Reset is a relative number of seconds to wait, conservatively
+one full window (or a longer form cooldown). It is not a wall-clock timestamp.
+Headers do not expose a key, a user identity or an exact counter reading.
+Deal-room link requests use one opaque refusal and the longest wait for all
+three guards. They omit the ceiling so email request history stays private.
+An unavailable shared store can also refuse a fail-closed limiter. Successful
+responses do not claim a remaining count, and no extra Redis read is made for
+these headers. Budget and concurrency refusals without a timed limiter make no
+claim about when a quota will reset.
+
+The table derives every constructor carrying a FailClosed or FailOpen policy, including
+registry methods, injected factories and escalators. A configured
+expression names an operator setting or an extension manifest value, rather than
+claiming a universal limit. See [configuration](configuration.md) for settings.
+Regenerate with `cd backend && go test ./gates -run TestRateLimitReferenceMatchesTheEnforcedConstructors -update-rate-limits`.
+
+| Counter / key class | Attempts | Window | Enforced at |
+|---|---:|---|---|
+| `"channel-events/" + name` | 600 | 1m0s | [internal/modules/capture/webhookgate.go:45](../../backend/internal/modules/capture/webhookgate.go) |
+| `"extension-inbound/" + unit + "/" + slug` | configured: `rate.Limit` | configured: `rate.Window` | [internal/compose/extinbound.go:135](../../backend/internal/compose/extinbound.go) |
+| `"webhook-refusals/" + spec.Provider` | 20 | 1m0s | [internal/compose/webhook.go:124](../../backend/internal/compose/webhook.go) |
+| `channel-events/dispact` | 600 | 1m0s | [internal/modules/chatlinks/events.go:72](../../backend/internal/modules/chatlinks/events.go) |
+| `comms/mailbox-send` | configured: `limit` | configured: `window` | [internal/modules/comms/policy.go:46](../../backend/internal/modules/comms/policy.go) |
+| `erasure-return/per-address` | 1 | 24h0m0s | [internal/compose/erasurereturn/erasurereturn.go:83](../../backend/internal/compose/erasurereturn/erasurereturn.go) |
+| `extension-core-read` | 600 | 1m0s | [internal/compose/extcoreread.go:44](../../backend/internal/compose/extcoreread.go) |
+| `extension-link-suggestion` | 120 | 1m0s | [internal/compose/extlinksuggestion.go:29](../../backend/internal/compose/extlinksuggestion.go) |
+| `extension-notice` | 60 | 1m0s | [internal/compose/extnotice.go:39](../../backend/internal/compose/extnotice.go) |
+| `extension-signal` | 600 | 1m0s | [internal/compose/extingresssignal.go:35](../../backend/internal/compose/extingresssignal.go) |
+| `finance/invoice-document-per-user` | 20 | 1m0s | [internal/modules/finance/invoicedocument.go:45](../../backend/internal/modules/finance/invoicedocument.go) |
+| `identity/capabilities-per-ip` | 60 | 1m0s | [internal/modules/identity/handlers.go:240](../../backend/internal/modules/identity/handlers.go) |
+| `identity/login-failures` | 10 | 1m0s | [internal/modules/identity/handlers.go:230](../../backend/internal/modules/identity/handlers.go) |
+| `identity/login-per-ip` | 30 | 1m0s | [internal/modules/identity/handlers.go:231](../../backend/internal/modules/identity/handlers.go) |
+| `identity/mfa-attempts` | 10 | 1m0s | [internal/modules/identity/handlers.go:235](../../backend/internal/modules/identity/handlers.go) |
+| `identity/mfa-per-ip` | 30 | 1m0s | [internal/modules/identity/handlers.go:236](../../backend/internal/modules/identity/handlers.go) |
+| `identity/oidc-per-ip` | 30 | 1m0s | [internal/modules/identity/handlers.go:239](../../backend/internal/modules/identity/handlers.go) |
+| `identity/oidc-per-ip` | 30 | 1m0s | [internal/modules/identity/oidcroutes.go:103](../../backend/internal/modules/identity/oidcroutes.go) |
+| `identity/password-change-failures` | 10 | 1m0s | [internal/modules/identity/handlers.go:234](../../backend/internal/modules/identity/handlers.go) |
+| `identity/password-link-per-actor` | 20 | 1h0m0s | [internal/modules/identity/handlers.go:237](../../backend/internal/modules/identity/handlers.go) |
+| `identity/password-link-per-target` | 5 | 1h0m0s | [internal/modules/identity/handlers.go:238](../../backend/internal/modules/identity/handlers.go) |
+| `identity/reset-per-address` | 3 | 1h0m0s | [internal/modules/identity/handlers.go:232](../../backend/internal/modules/identity/handlers.go) |
+| `identity/reset-per-ip` | 30 | 1h0m0s | [internal/modules/identity/handlers.go:233](../../backend/internal/modules/identity/handlers.go) |
+| `mcp/authorize` | 60 | 1m0s | [internal/compose/mcpedge.go:267](../../backend/internal/compose/mcpedge.go) |
+| `mcp/peer-ceiling` | 600 | 1m0s | [internal/compose/mcpedge.go:270](../../backend/internal/compose/mcpedge.go) |
+| `mcp/per-passport` | 240 | 1m0s | [internal/compose/mcpedge.go:262](../../backend/internal/compose/mcpedge.go) |
+| `mcp/pre-auth-per-peer` | 600 | 1m0s | [internal/compose/mcpedge.go:264](../../backend/internal/compose/mcpedge.go) |
+| `mcp/pre-auth` | 60 | 1m0s | [internal/compose/mcpedge.go:263](../../backend/internal/compose/mcpedge.go) |
+| `mcp/register` | 60 | 1m0s | [internal/compose/mcpedge.go:269](../../backend/internal/compose/mcpedge.go) |
+| `mcp/revoke` | 60 | 1m0s | [internal/compose/mcpedge.go:268](../../backend/internal/compose/mcpedge.go) |
+| `mcp/stream-open` | 30 | 1m0s | [internal/compose/mcpedge.go:265](../../backend/internal/compose/mcpedge.go) |
+| `mcp/token` | 60 | 1m0s | [internal/compose/mcpedge.go:266](../../backend/internal/compose/mcpedge.go) |
+| `name` | configured: `ratelimit.Escalation{PerMinute: perMinute, BlockAfter: limits.BlockAfter, Cooldown: limits.Cooldown, MaxCooldown: limits.MaxCooldown, MinSenders: minSenders}` | clock minute; configured cooldown | [internal/modules/webforms/throttle.go:52](../../backend/internal/modules/webforms/throttle.go) |
+| `public-booking/per-ip` | 60 | 1m0s | [internal/compose/publicbooking.go:54](../../backend/internal/compose/publicbooking.go) |
+| `public-booking/per-slug` | 20 | 1m0s | [internal/compose/publicbooking.go:55](../../backend/internal/compose/publicbooking.go) |
+| `public-confirm/per-ip` | 60 | 1m0s | [internal/compose/publicconfirm.go:44](../../backend/internal/compose/publicconfirm.go) |
+| `public-confirm/per-token` | 20 | 1m0s | [internal/compose/publicconfirm.go:45](../../backend/internal/compose/publicconfirm.go) |
+| `public-deal-room/link-per-address` | 3 | 1h0m0s | [internal/compose/publicdealroom.go:66](../../backend/internal/compose/publicdealroom.go) |
+| `public-deal-room/link-per-ip` | 3 | 1m0s | [internal/compose/publicdealroom.go:61](../../backend/internal/compose/publicdealroom.go) |
+| `public-deal-room/link-shared` | 10 | 1m0s | [internal/compose/publicdealroom.go:67](../../backend/internal/compose/publicdealroom.go) |
+| `public-deal-room/per-ip` | 60 | 1m0s | [internal/compose/publicdealroom.go:60](../../backend/internal/compose/publicdealroom.go) |
+| `public-deal-room/per-session-write` | 20 | 1m0s | [internal/compose/publicdealroom.go:68](../../backend/internal/compose/publicdealroom.go) |
+| `public-forms/unknown-keys` | configured: `limits.UnknownKeys` | 1m0s | [internal/modules/webforms/throttle.go:63](../../backend/internal/modules/webforms/throttle.go) |
+| `public-instrument/per-ip` | 600 | 1m0s | [internal/compose/publicinstrument.go:27](../../backend/internal/compose/publicinstrument.go) |
+| `public-preferences/per-ip` | 60 | 1m0s | [internal/compose/publicpreferences.go:42](../../backend/internal/compose/publicpreferences.go) |
+| `public-preferences/per-token` | 20 | 1m0s | [internal/compose/publicpreferences.go:43](../../backend/internal/compose/publicpreferences.go) |
+| `record-previews/per-ip` | 60 | 1m0s | [internal/compose/publicrecordpreview.go:32](../../backend/internal/compose/publicrecordpreview.go) |
+| `setup/claim-per-ip` | 20 | 1m0s | [internal/compose/handlers_setup.go:47](../../backend/internal/compose/handlers_setup.go) |
+
+## Website form defaults
+
+These may be changed by webforms.throttle settings. A repeated refusal can
+extend the cooldown; Retry-After and RateLimit-Reset carry that longer wait.
+
+| Key | Posts per minute |
+|---|---:|
+| Address across all forms | 10 |
+| Address on one form | 5 |
+| One form | 30 |
+| Workspace | 120 |
+| Installation | 600 |
+| Preflights per address | 20 |

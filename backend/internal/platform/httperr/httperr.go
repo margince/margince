@@ -16,6 +16,7 @@ import (
 	"strconv"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/capabilitypath"
 	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
@@ -345,6 +346,10 @@ func Classify(err error) (Fault, bool) {
 	for _, m := range mapping {
 		if errors.Is(err, m.sentinel) {
 			f := Fault{Status: m.status, Code: m.code, Detail: err.Error()}
+			var waits retryAfterFault
+			if errors.As(err, &waits) {
+				f.RetryAfterSeconds = waits.RetryAfterSeconds()
+			}
 			// What an outside service said is text a remote party chose: its
 			// vendor, its account, its limits. The caller learns that it gave no
 			// usable answer; the rest stays with whoever reads the log.
@@ -399,6 +404,7 @@ func loggedPath(r *http.Request) string {
 // Write maps err onto the wire. Unknown errors become an opaque 500 — the
 // cause is logged server-side, never leaked to the client.
 func Write(w http.ResponseWriter, r *http.Request, err error) {
+	ratelimit.SetRefusalHeaders(w.Header(), err)
 	fault, ok := Classify(err)
 	if timedOut, late := timedOutFault(r, err, ok); late {
 		fault, ok = timedOut, true

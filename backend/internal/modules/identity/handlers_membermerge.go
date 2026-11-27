@@ -9,6 +9,8 @@ import (
 	"log/slog"
 	"net/http"
 
+	"github.com/margince/margince/backend/internal/platform/ratelimit"
+
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/platform/httperr"
 	"github.com/margince/margince/backend/internal/platform/httpserver"
@@ -71,11 +73,11 @@ func (h Handlers) RequestMemberMerge(w http.ResponseWriter, r *http.Request, id 
 // account, because each request mails a link that acts on an account.
 func (h Handlers) mergeRequestBudget(actor Identity, source ids.UserID, target ids.UUID) error {
 	if !h.passwordLinkPerActor.Allow(actor.UserID.String()) {
-		return tooManyPasswordLinksBy("you have asked for too many account links in the last hour; wait before asking again")
+		return tooManyPasswordLinksBy("you have asked for too many account links in the last hour; wait before asking again", h.passwordLinkPerActor)
 	}
 	for _, side := range []string{source.String(), target.String()} {
 		if !h.passwordLinkPerTarget.Allow(side) {
-			return tooManyPasswordLinksBy("too many account links have been sent for one of these accounts in the last hour; wait before asking again")
+			return tooManyPasswordLinksBy("too many account links have been sent for one of these accounts in the last hour; wait before asking again", h.passwordLinkPerTarget)
 		}
 	}
 	return nil
@@ -118,7 +120,7 @@ func (h Handlers) sendMergeConfirmation(r *http.Request, actor Identity, rawToke
 // ConfirmMemberMerge (POST /auth/confirm-member-merge) spends the mailed link.
 func (h Handlers) ConfirmMemberMerge(w http.ResponseWriter, r *http.Request) {
 	if !h.resetPerIP.Allow(httpserver.ClientIP(r)) {
-		httperr.Write(w, r, apperrors.ErrBudgetExceeded)
+		httperr.Write(w, r, ratelimit.Refused(h.resetPerIP))
 		return
 	}
 	var req struct {

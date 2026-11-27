@@ -32,6 +32,9 @@ type Escalator struct {
 	esc   Escalation
 }
 
+// Limit is the number of attempts admitted in a clock minute before escalation.
+func (e *Escalator) Limit() int { return e.meter.Limit() }
+
 // Change names the step a Check moved a key into, for the caller's log line.
 type Change string
 

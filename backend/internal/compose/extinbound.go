@@ -177,13 +177,21 @@ func (h *inboundHandler) ServeHTTP(w http.ResponseWriter, r *http.Request) {
 	// Both budgets, both spent, before any work: everything below costs the
 	// installation a body read, a secret decrypt and an HMAC.
 	admitted := true
+	var refused *ratelimit.Limiter
 	if limiter := h.perIP[key]; limiter != nil && !limiter.Allow(httpserver.ClientIP(r)) {
 		admitted = false
+		if refused == nil || limiter.RetryAfterSeconds() > refused.RetryAfterSeconds() {
+			refused = limiter
+		}
 	}
 	if limiter := h.perSlug[key]; limiter != nil && !limiter.Allow(key) {
 		admitted = false
+		if refused == nil || limiter.RetryAfterSeconds() > refused.RetryAfterSeconds() {
+			refused = limiter
+		}
 	}
 	if !admitted {
+		ratelimit.SetHeaders(w.Header(), refused.Limit(), refused.RetryAfterSeconds())
 		h.log.WarnContext(r.Context(), "inbound: over the metered rate", "unit", unit, "slug", slug)
 		w.WriteHeader(http.StatusTooManyRequests)
 		return
