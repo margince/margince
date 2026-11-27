@@ -57,12 +57,33 @@ export function useRowSelection<Row>({
 }
 
 /**
+ * How far a walk has read, of the rows it will end with: the server's count,
+ * or the limit when that is lower. Without a count the end is not known, and
+ * the limit alone would name a target a short list never reaches. A count the
+ * walk has already passed is stale, so it names no end either.
+ */
+function walkProgress(
+  walking: boolean,
+  held: number,
+  limit: number,
+  total: number | undefined,
+) {
+  if (!walking) {
+    return undefined;
+  }
+  const of =
+    total === undefined || held > total ? undefined : Math.min(limit, total);
+  return { held: Math.min(held, of ?? limit), of };
+}
+
+/**
  * What the table offers over a selection: the header box for the page, and
  * "Select all" for every matching row, up to the limit.
  *
  * "Select all" asks for the next pages one at a time, then ticks the rows. It
  * stops once it holds every row or enough to fill the limit. Each answer grows
  * `rows`, and only that growth asks for the next page. No read is asked twice.
+ * While it reads, `progress` says how many rows it holds of how many it wants.
  */
 export function useSelectAll<Row>({
   rows,
@@ -72,6 +93,7 @@ export function useSelectAll<Row>({
   hasMore,
   onLoadMore,
   failed,
+  total,
 }: Readonly<{
   rows: readonly Row[];
   pageRows: readonly Row[];
@@ -80,6 +102,8 @@ export function useSelectAll<Row>({
   hasMore: boolean;
   onLoadMore?: () => void;
   failed: boolean;
+  /** How many rows match on the server, when it counts them. */
+  total?: number;
 }>) {
   // The row count when Select all was pressed; null while not walking.
   const [walkFrom, setWalkFrom] = useState<number | null>(null);
@@ -95,7 +119,8 @@ export function useSelectAll<Row>({
   const count = selection?.selected.size ?? 0;
   const canLoad = hasMore && onLoadMore !== undefined;
   // Distinct keys: a row read twice across pages must not end the walk early.
-  const holdsEnough = !canLoad || new Set(held.map(rowKey)).size >= limit;
+  const heldCount = new Set(held.map(rowKey)).size;
+  const holdsEnough = !canLoad || heldCount >= limit;
   const complete = !canLoad && held.every(isSelected);
   const atLimit = count >= limit;
   // The walk ends once its ticks have landed or a read failed. Fewer rows than
@@ -139,6 +164,14 @@ export function useSelectAll<Row>({
     // Rows match that the limit leaves out of the selection.
     capped: atLimit && (canLoad || held.length > count),
     pending: walking,
+    // The server counts every matching row. A list that leaves some out of the
+    // selection has no known end, so its walk shows the count alone.
+    progress: walkProgress(
+      walking,
+      heldCount,
+      limit,
+      selection?.selectable === undefined ? total : undefined,
+    ),
     run: () => {
       askedAt.current = -1;
       setWalkFrom(rows.length);
@@ -186,6 +219,18 @@ export function SelectAllControls({
           {plural("bulk.selectionLimit", all.limit, {
             count: formatNumber(all.limit, locale),
           })}
+        </span>
+      )}
+      {all.progress && (
+        <span className="t-caption">
+          {all.progress.of === undefined
+            ? plural("bulk.selecting", all.progress.held, {
+                count: formatNumber(all.progress.held, locale),
+              })
+            : plural("bulk.selectingOf", all.progress.held, {
+                count: formatNumber(all.progress.held, locale),
+                total: formatNumber(all.progress.of, locale),
+              })}
         </span>
       )}
       {!all.complete && !all.atLimit && (

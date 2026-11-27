@@ -17,6 +17,7 @@ import (
 	"go/ast"
 	"go/token"
 	"io/fs"
+	"maps"
 	"path/filepath"
 	"regexp"
 	"sort"
@@ -188,7 +189,6 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"ai_feedback.verdict":                          {"internal/contracts", "AIFeedbackInputVerdict"},
 	"analytics_share.kind":                         {"internal/contracts", "ForecastShareKind"},
 	"analytics_share.scope_kind":                   {"internal/contracts", "ForecastCallScopeKind"},
-	"app_user.locale":                              {"internal/contracts", "SaveMyLocaleRequestLocale"},
 	"app_user.morning_brief_delivery":              {"internal/contracts", "BriefDeliveryMorningBriefDelivery"},
 	"app_user.routine_mail_scope":                  {"internal/contracts", "BriefDeliveryRoutineMailScope"},
 	"app_user.seat_type":                           {"internal/shared/kernel/principal", "SeatType"},
@@ -418,6 +418,13 @@ func tableCheckSets(t *testing.T) map[string][]string {
 			t.Fatal(err)
 		}
 	}
+	// The evidence views store nothing, so their vocabularies are the lists on
+	// field_provenance, read from the catalog the migrations build.
+	evidence, err := readEvidenceVocabularies()
+	if err != nil {
+		t.Fatal(err)
+	}
+	maps.Copy(sets, evidence)
 	return sets
 }
 

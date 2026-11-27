@@ -201,6 +201,10 @@ func fillSchema(raw json.RawMessage, pattern string, pool *recordPool) map[strin
 	if _, takesBody := shape.Properties["request_body"]; takesBody {
 		args["request_body"] = map[string]any{}
 	}
+	// A file comes as base64 or as text, so neither is required; the sweep sends base64.
+	if _, takesFile := shape.Properties["content_base64"]; takesFile {
+		args["content_base64"] = namedValues["content_base64"]
+	}
 	return args
 }
 

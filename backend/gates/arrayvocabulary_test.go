@@ -25,6 +25,7 @@ import (
 	"testing"
 
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/workarea"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -48,6 +49,7 @@ const addressesAreOpen = "mail addresses a message or a request named; any addre
 
 // openTextArrays are the text arrays whose set the database does not close.
 var openTextArrays = gatekit.Waive(map[string]string{
+	"raw_capture.ask_message_ids":                         "the provider message ids of the questions a company account asked a colleague about held forwards, so an echo of one is never filed; the providers own the ids",
 	"raw_capture.channel_subjects":                        "channel identities as `provider:account`, written by every network that stores a raw original; the providers own the set",
 	"activity.redacted_fields":                            "names of activity columns, written by the privacy erasure paths; the set moves with the schema",
 	"comms_outbound.redacted_fields":                      "names of comms_outbound columns, written by the privacy erasure paths; the set moves with the schema",
@@ -69,7 +71,6 @@ var openTextArrays = gatekit.Waive(map[string]string{
 	"mail_draft.bcc_addresses":                            addressesAreOpen,
 	"mail_draft.cc_addresses":                             addressesAreOpen,
 	"mail_draft.to_addresses":                             addressesAreOpen,
-	"oauth_authorization_code.scopes":                     "passport scopes plus the offline_access marker, which parseOAuthScopes admits and the token exchange removes",
 	"oauth_client.redirect_uris":                          "URIs a client registers",
 	"onboarding_wizard_state.selected_fact_keys":          "keys of facts read from the company's own site",
 	"partner.served_segments":                             "free text a partner describes itself with",
@@ -89,12 +90,19 @@ var arrayVocabularySources = map[string]func(t *testing.T) []string{
 	"passport.work_areas":                 workAreaKeys,
 	"oauth_grant.work_areas":              workAreaKeys,
 	"oauth_authorization_code.work_areas": workAreaKeys,
+	"oauth_authorization_code.scopes":     authorizationCodeScopes,
 	"custom_field.activity_kinds":         typedSet("internal/contracts.ActivityKind"),
 	"deal.manager_request_reasons":        func(*testing.T) []string { return asSet(deals.ManagerRequestReasons) },
 }
 
 func principalScopes(t *testing.T) []string {
 	return typedSet("internal/shared/kernel/principal.Scope")(t)
+}
+
+// authorizationCodeScopes are the passport scopes plus the offline_access marker
+// a code carries until the token exchange turns it into refresh_allowed.
+func authorizationCodeScopes(t *testing.T) []string {
+	return asSet(append(principalScopes(t), identity.ScopeOfflineAccess))
 }
 
 func workAreaKeys(*testing.T) []string {

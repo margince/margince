@@ -15,7 +15,6 @@ package gates
 import (
 	"fmt"
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"maps"
 	"path/filepath"
@@ -23,6 +22,8 @@ import (
 	"strconv"
 	"strings"
 	"testing"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // targetWording is the wording, per locale, that claims a target the product
@@ -99,17 +100,17 @@ func copyFindings(locale, text string) []string {
 // files, which compose the labels and the summary.
 func teamWeeklyGoStrings(t *testing.T) map[string]string {
 	t.Helper()
-	files, err := filepath.Glob(filepath.Join("internal", "compose", "weekly", "team*.go"))
+	files, err := gatekit.Glob(filepath.Join("internal", "compose", "weekly", "team*.go"))
 	if err != nil {
 		t.Fatal(err)
 	}
 	out := map[string]string{}
-	fset := token.NewFileSet()
+	fset := gatekit.SourceFileSet()
 	for _, file := range files {
 		if strings.HasSuffix(file, "_test.go") {
 			continue
 		}
-		parsed, err := parser.ParseFile(fset, file, nil, 0)
+		parsed, err := gatekit.ParseFile(file, 0)
 		if err != nil {
 			t.Fatalf("parsing %s: %v", file, err)
 		}

@@ -289,6 +289,46 @@ describe("BuyerRoomScreen", () => {
     expect(posted?.credentials).toBe("include");
   });
 
+  // A notice, not a dialog: the buyer reads what the room records and nothing
+  // asks them to answer.
+  it("shows the engagement notice with the company and no button, once the server sends it", async () => {
+    stubRoom({
+      "GET /public/rooms/me": () =>
+        jsonResponse({ ...LIVE, engagement_notice: { company: "Northwind" } }),
+    });
+    render(<BuyerRoomScreen />);
+
+    await screen.findByRole("heading", { name: "Acme rollout" });
+    const notice = screen.getByText(
+      "Northwind can see when you sign in and which documents you download.",
+    );
+    expect(notice.closest("header")).not.toBeNull();
+    expect(
+      within(notice.closest("header") as HTMLElement).queryByRole("button"),
+    ).toBeNull();
+  });
+
+  it("words the engagement notice without a company when the installation has no name", async () => {
+    stubRoom({
+      "GET /public/rooms/me": () =>
+        jsonResponse({ ...LIVE, engagement_notice: { company: "" } }),
+    });
+    render(<BuyerRoomScreen />);
+
+    await screen.findByText(
+      "The company that invited you can see when you sign in and which documents you download.",
+    );
+    expect(screen.queryByText(/^ can see/)).toBeNull();
+  });
+
+  it("shows no engagement notice when the server sends none", async () => {
+    stubRoom();
+    render(<BuyerRoomScreen />);
+
+    await screen.findByRole("heading", { name: "Acme rollout" });
+    expect(screen.queryByText(/can see when you sign in/)).toBeNull();
+  });
+
   it("a paused room shows the paused notice and no content", async () => {
     stubRoom({
       "GET /public/rooms/me": () =>
@@ -756,5 +796,30 @@ describe("an access state this build does not know", () => {
         "This room is closed. Its content is kept as a record.",
       ),
     ).toBeNull();
+  });
+});
+
+describe("the buyer's own withheld conversations", () => {
+  const WITHHELD = "A conversation about a file that is no longer shared.";
+
+  it("says so once, whatever the number of withheld conversations", async () => {
+    stubRoom({
+      "GET /public/rooms/threads": () =>
+        jsonResponse({ data: [], hidden_own_conversations: true }),
+    });
+    render(<BuyerRoomScreen />);
+
+    expect(await screen.findAllByText(WITHHELD)).toHaveLength(1);
+  });
+
+  it("says nothing when no conversation of theirs is withheld", async () => {
+    stubRoom({
+      "GET /public/rooms/threads": () =>
+        jsonResponse({ data: [], hidden_own_conversations: false }),
+    });
+    render(<BuyerRoomScreen />);
+
+    await screen.findByLabelText("New thread");
+    expect(screen.queryByText(WITHHELD)).toBeNull();
   });
 });

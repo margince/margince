@@ -57,7 +57,6 @@ var taskSourceWriters = map[string][]string{
 	"compose/assurancebundletask.go:mintBundleTask":                       {provenance.AssuranceTaskSource},
 	"compose/decisionseam.go:Record":                                      {provenance.AnalyticsDecisionSource},
 	"compose/leadsla.go:Plan":                                             {provenance.LeadSLATaskSource},
-	"compose/capturewhichdeal.go:Ask":                                     {provenance.WhichDealSource},
 	"compose/requesttask/requesttask.go:OpenRequestTaskTx":                {provenance.PrivacyRequestTaskSource},
 	"compose/commitmenttask.go:writeCommitmentTask":                       {provenance.CommitmentTaskSource},
 	"compose/leadsla.go:Apply":                                            {provenance.LeadSLATaskSource},
@@ -150,11 +149,10 @@ var openTaskReadersElsewhere = map[string]string{
 	"modules/activities/lasttouch.go:openReminderHoldsEntityFrom":         "an open reminder of the engine's own family holds its re-raise; it creates no work",
 	"modules/activities/requestreminderreach.go:openReminderClause":       "names the reminder a reach recompute may move, where the waiting horizon would skip a stale one instead of correcting it",
 	"modules/activities/requestrecovery.go:requestAvailableForAcceptance": "checks a request has no accepted task before a human accepts it",
-	"modules/activities/whichdealanswer.go:openWhichDealQuestions":        "closes the deal questions a colleague's filing or decline has just answered; it creates no work",
 	"modules/activities/taskwindow.go:openTaskWindowClauses":              "narrows a list the caller already gates with the worklist clauses",
 	"modules/activities/taskreminder.go:dueReminderClause":                "narrows a list the caller already gates with the worklist clauses",
 	"modules/contacts/claimrecord.go:SetClaimTaskTx":                      "links a promise to its own task row",
-	"modules/contacts/lead_read.go:leadNextTaskDueSQL":                    "the lead's next due date as a record fact",
+	"modules/contacts/lead_read.go:leadOpenTasksSQL":                      "its callers pass storekit.CurrentTaskClause in as work (leadTaskWorkSQL)",
 	"modules/deals/nextstep.go:OpenNextStepSQL":                           "its caller passes storekit.CurrentTaskClause in as currentTask",
 }
 
@@ -177,14 +175,9 @@ type taskCensus struct {
 // planted sources keyed by their path under root.
 func scanTaskCensus(t *testing.T, root string, planted map[string]string) taskCensus {
 	t.Helper()
-	fset := token.NewFileSet()
 	byDir := map[string][]*ast.File{}
 	names := map[*ast.File]string{}
-	add := func(rel string, src any) {
-		file, err := parser.ParseFile(fset, rel, src, 0)
-		if err != nil {
-			t.Fatalf("parsing %s: %v", rel, err)
-		}
+	add := func(rel string, file *ast.File) {
 		dir := filepath.Dir(rel)
 		byDir[dir] = append(byDir[dir], file)
 		names[file] = filepath.ToSlash(rel)
@@ -198,18 +191,23 @@ func scanTaskCensus(t *testing.T, root string, planted map[string]string) taskCe
 		if err != nil || strings.HasPrefix(rel, "contracts") {
 			return err
 		}
-		body, err := gatekit.ReadFile(path) // #nosec G304 -- a *.go file from walking the trusted backend tree
+		file, err := gatekit.ParseFile(path, 0)
 		if err != nil {
 			return err
 		}
-		add(rel, body)
+		add(rel, file)
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("walking %s: %v", root, err)
 	}
+	fset := token.NewFileSet()
 	for rel, src := range planted {
-		add(rel, src)
+		file, err := parser.ParseFile(fset, rel, src, 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", rel, err)
+		}
+		add(rel, file)
 	}
 	out := taskCensus{readers: map[string]bool{}, builders: map[string]activityShape{}}
 	consts := packageConsts{t: t, byDir: map[string]map[string]string{}}

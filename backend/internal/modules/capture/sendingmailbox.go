@@ -6,6 +6,7 @@ package capture
 import (
 	"context"
 	"fmt"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -21,6 +22,8 @@ type SendingMailbox struct {
 	Provider       string
 	AccountLabel   *string
 	ProviderScopes []string
+	// Shared marks a team's mailbox the seat may reply as, never a default.
+	Shared bool
 }
 
 // SendingMailboxes lists userID's live connections of providers: the one they
@@ -82,6 +85,20 @@ func (r *Registry) ChooseSendingMailbox(
 	ctx context.Context, userID ids.UserID, from ids.UUID, anchor ids.ActivityID, providers []string,
 	canSend func(SendingMailbox) (bool, error),
 ) (SendingMailbox, error) {
+	// A shared mailbox is reached only when the sender names it. It is never
+	// the default or the mailbox an anchor arrived in. A rep who never asked to
+	// write as the team address never does.
+	shared, replyable, err := r.ReplyableSharedMailbox(ctx, userID, from)
+	if err != nil {
+		return SendingMailbox{}, err
+	}
+	if replyable && slices.Contains(providers, shared.Provider) {
+		can, err := canSend(shared)
+		if err != nil || !can {
+			return SendingMailbox{}, err
+		}
+		return shared, nil
+	}
 	all, err := r.SendingMailboxes(ctx, userID, providers)
 	if err != nil {
 		return SendingMailbox{}, err

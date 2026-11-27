@@ -4549,7 +4549,9 @@ paths:
         the company carries it. `linkCompanyContacts` accepts exactly these contacts.
 
         A candidate with no current employer is also attached by the daily link reconcile,
-        so the list's lasting use is contacts who work elsewhere today.
+        so the list's lasting use is contacts who work elsewhere today. The reconcile does not
+        re-make a link somebody removed: a contact whose job at this company was ended or
+        archived stays unlinked until a user links them again.
 
         Ordered by name, then id. At most 50 candidates; `truncated` is true when more exist.
         Needs read on companies, contacts and relationships. A caller without
@@ -10482,14 +10484,16 @@ paths:
     get:
       tags: [Activities]
       operationId: listLinkSuggestions
-      x-agent-access: human-only
-      x-human-only-reason: security   # a reader decides what a message attaches to
-      security: [{ cookieAuth: [] }]
-      summary: The records an extension suggests messages belong to, waiting for a reader to decide.
+      x-mcp-tool: { verb: list_link_suggestions, router: read_workspace, action: link_suggestions, tier: auto_execute, scope: read, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: The link suggestions waiting for the caller to decide.
       description: |
         An extension may suggest which deal, company, contact or project a message belongs to. A
-        suggestion attaches nothing. It waits here until a reader accepts or rejects it. Core makes
-        none of its own: this queue holds only what an extension proposed.
+        suggestion attaches nothing. It waits here until a reader accepts or rejects it. Margince
+        itself asks one question here: when several open deals fit a captured mail, it suggests each
+        of them to the one colleague the mailbox confirms is responsible. Such a suggestion has no
+        `unit`, and only that colleague sees and decides it. An agent acting for a colleague sees
+        and decides what that colleague would, and never another colleague's question.
 
         Oldest first, at most 50. A decided suggestion leaves the queue, so asking again shows the
         next ones. A suggestion is left out when the caller may not read its message or its target,
@@ -10509,10 +10513,9 @@ paths:
     post:
       tags: [Activities]
       operationId: acceptLinkSuggestion
-      x-agent-access: human-only
-      x-human-only-reason: security   # a reader decides what a message attaches to
-      security: [{ cookieAuth: [] }]
-      summary: Accept a suggestion, which files the message under the record it names.
+      x-mcp-tool: { verb: accept_link_suggestion, router: change_activities, action: accept_link_suggestion, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Accept a suggestion, filing the message under its record.
       description: |
         Files the message under the suggested record through the same relink as any other filing,
         and closes the suggestion in the same transaction. The caller needs the right to update the
@@ -10536,14 +10539,17 @@ paths:
     post:
       tags: [Activities]
       operationId: rejectLinkSuggestion
-      x-agent-access: human-only
-      x-human-only-reason: security   # a reader decides what a message attaches to
-      security: [{ cookieAuth: [] }]
+      x-mcp-tool: { verb: reject_link_suggestion, router: change_activities, action: reject_link_suggestion, tier: auto_execute, scope: write, served_by: route, ask_user_first: true }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
       description: |
         Closes the suggestion and attaches nothing. The same target is not proposed for the same
         message a second time. Rejecting a suggestion that is already rejected is the same success.
         An accepted one answers `409`.
+
+        Rejecting a deal Margince itself suggested also declines that deal, as `declineActivityDeal`
+        does: on the message and on each unfiled message of its conversation, so no automatic pass
+        files them there again.
       responses:
         '200':
           description: The suggestion, now rejected.
@@ -10579,9 +10585,10 @@ paths:
         as a member's does. `project_kept` says so.
 
         Without `deal_id`, the answer is "none of them" to the open "Which deal is this about?"
-        question of the message's conversation. Each deal the question offered is declined on the
-        message and on each unfiled message of the conversation, and the question is done. A
-        message with no open question answers 422.
+        question of the message's conversation: the deals Margince suggested to the caller in the
+        link suggestion queue. Each of them is declined on the message and on each unfiled message
+        of the conversation, and the suggestions are rejected. A message with no open question for
+        the caller answers 422.
 
         Declining a deal already declined is the same success and writes nothing. With `deal_id`,
         the caller needs the right to change the deal too, as for `setActivityDealRelevance`.
@@ -12932,7 +12939,7 @@ paths:
       security: [{ dealRoomSession: [] }]
       x-agent-access: human-only
       summary: The room's conversation as the buyer sees it.
-      description: Optionally narrowed to one published document. Empty while the room serves no content.
+      description: Optionally narrowed to one published document. Empty while the room serves no content. `hidden_own_conversations` is true when a thread this buyer wrote in is withheld because its file is no longer shared.
       parameters:
         - name: document_id
           in: query
@@ -12942,7 +12949,7 @@ paths:
           description: The threads.
           content:
             application/json:
-              schema: { $ref: '#/components/schemas/DealRoomThreadListResponse' }
+              schema: { $ref: '#/components/schemas/BuyerRoomThreadListResponse' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '422': { $ref: '#/components/responses/ValidationError' }
         '429':
@@ -22468,6 +22475,29 @@ paths:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
 
+  /shared-mailboxes/replyable:
+    get:
+      tags: [Connectors]
+      operationId: listReplyableSharedMailboxes
+      summary: The shared mailboxes the signed-in member may reply as.
+      description: |
+        Each is a live shared mailbox with `reply_enabled` whose reader team has the caller as a
+        live member. A mailbox the caller may not reply as is absent, so the answer never shows
+        that it exists. The `id` is what a send names as `from_connection_id`.
+
+        Signed-in session only: an agent never names a shared mailbox.
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [ { cookieAuth: [] } ]
+      responses:
+        '200':
+          description: The mailboxes the caller may reply as, ordered by address.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ReplyableSharedMailboxList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+
   /shared-mailboxes/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -22968,6 +22998,59 @@ paths:
               schema: { $ref: '#/components/schemas/Attention' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/Forbidden' }
+
+  /attention/bounces/{id}/send-again:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Brief]
+      operationId: sendBouncedMessageAgain
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security   # rewrites a contact's address and sends a message a user wrote
+      summary: Send a bounced message again to a corrected address.
+      description: |
+        The `send_again` verb of a bounce row. `{id}` is the bounced delivery's id, which is the
+        row's `id`. The same message goes to the new address: the same subject, text, files, cc
+        and bcc, filed under the same records, under the consent purpose the first send went out
+        with. Nothing is inferred and nothing is chosen for the sender.
+
+        It is the one send. Authorization refuses before the consent gate answers, the gate is
+        asked the same question about the same purpose for the corrected address, and a
+        withdrawn consent, a suppression or a missing grant refuses the send exactly as it
+        refuses any other.
+
+        In order:
+
+        * the bounced address on the contact the message is filed under is replaced by `address`,
+          keeping its type, and the replaced address is archived. A caller who may not change the
+          contact is refused before anything is sent. A contact already holding `address` is
+          not written again;
+        * the message goes out to `address` wherever the bounced address stood, in To, cc or bcc.
+
+        A bounce can be sent again once. A repeat that bounces carries no `send_again`, and a
+        second request for the same bounce answers 404, as does a bounce of another user's, a
+        soft bounce, one filed under no contact the caller can read, and a message sent before
+        its text was recorded. `address` equal to the address that refused answers 422.
+
+        Humans only: it changes a contact's address and sends a message a user wrote, and an
+        agent has the `send_email` tool for its own mail.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/BounceSendAgainRequest' }
+      responses:
+        '202':
+          description: Accepted for send (queued); the resulting outbound activity is logged.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/Activity' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/SendRefused' }
+        '422': { $ref: '#/components/responses/SendValidationError' }
 
 
   /magic:
@@ -24085,7 +24168,10 @@ paths:
         conversion rate against it, because changing it would re-mean every roll-up built on
         those rates (ADR-0085 §7). Before that point it is freely changeable, which is the
         case this serves: an installation that chose wrong in its configuration and noticed
-        in week one. Audit-only write (no event stream, EVT-NOEVT-3).
+        in week one. The refusal's field error keeps its English `message` and carries
+        `params` that mirror `BaseCurrencyLock`: `reason`, `count` as a decimal string, and
+        `base_currency` only when the lock names one, so a client words it as it words the
+        read's `base_currency_lock`. Audit-only write (no event stream, EVT-NOEVT-3).
       requestBody:
         required: true
         content:
@@ -28365,7 +28451,7 @@ paths:
       summary: Rename a custom field or change whether create dialogs offer it (not a schema change).
       description: |
         CUSTOM-FIELDS-WIRE-3. Audited catalog update of `label`, `show_in_create`, `reportable`
-        or `activity_kinds`;
+        `activity_kinds` or `pipeline_ids`;
         `column_name` never moves — the physical column identity is stable across rename.
         Merge-PATCH: `column_name`, `object`, and `type` are absent from the request schema
         entirely, and a body with neither setting is refused with a 422. A retired field
@@ -38317,6 +38403,70 @@ paths:
         '403': { $ref: '#/components/responses/Forbidden' }
         '404': { $ref: '#/components/responses/NotFound' }
 
+  /me/chat-identities:
+    get:
+      tags: [Identity]
+      operationId: listMyChatIdentities
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Your own chat accounts that are confirmed, or waiting for their code.
+      description: |
+        One row per network where you have a confirmed account or an unexpired code. The account
+        is shown with all but its last digits hidden. A confirmed account lets the company's chat
+        accounts recognise you, so a customer message you forward is filed for that customer and
+        never for you.
+      responses:
+        '200':
+          description: Your chat accounts.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatIdentityList' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+
+  /me/chat-identities/{network}:
+    parameters:
+      - name: network
+        in: path
+        required: true
+        schema: { type: string, enum: [whatsapp, telegram, zalo] }
+    post:
+      tags: [Identity]
+      operationId: startMyChatVerification
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security   # an agent must not be able to claim a chat account as a member's
+      summary: Get a code that confirms your account on one chat network.
+      description: |
+        Returns a short code once, valid for ten minutes. Send exactly that code as a message from
+        your own account to any connected company account on the same network. A second start
+        replaces the first code. The code is stored only as a hash.
+      responses:
+        '200':
+          description: The code and when it stops working.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatVerificationStarted' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+    delete:
+      tags: [Identity]
+      operationId: removeMyChatIdentity
+      security: [ { cookieAuth: [] } ]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      summary: Forget your confirmed account and any waiting code on one network.
+      description: Removing a network where you have nothing is not an error.
+      responses:
+        '204': { description: Removed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /me/ai-activity:
     get:
       tags: [AI]
@@ -40149,6 +40299,8 @@ paths:
       x-mcp-tool: { verb: list_corpora, router: read_workspace, action: corpora, tier: auto_execute, scope: read, served_by: route }
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       summary: The document corpora this workspace has defined.
+      parameters:
+        - $ref: '#/components/parameters/IncludeArchived'
       responses:
         '200':
           description: The corpora.
@@ -40157,6 +40309,7 @@ paths:
               schema: { $ref: '#/components/schemas/KnowledgeCorpusList' }
         '401': { $ref: '#/components/responses/Unauthorized' }
         '403': { $ref: '#/components/responses/PermissionDenied' }
+        '422': { $ref: '#/components/responses/ValidationError' }
     post:
       tags: [Knowledge]
       operationId: createCorpus
@@ -40265,6 +40418,36 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /knowledge/corpora/{id}/restore:
+    parameters:
+      - $ref: '#/components/parameters/Id'
+    post:
+      tags: [Knowledge]
+      operationId: restoreCorpus
+      x-mcp-tool: { verb: restore_corpus, router: change_capture, action: restore_corpus, tier: auto_execute, scope: write, served_by: route }
+      security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
+      summary: Bring an archived corpus back with everything filed in it.
+      description: >-
+        The undo half of `archiveCorpus`. The set, its documents and their passages
+        return in one transaction, and the ask finds the passages again.
+
+        Restoring a set that is not archived succeeds and changes nothing, so a retried
+        call after a lost response answers the same way as the first.
+
+        It does NOT make the set the default again. The default moved elsewhere when the
+        set was archived, and `updateCorpus` says which set the palette asks.
+      responses:
+        '200':
+          description: The restored corpus.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/KnowledgeCorpus' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/PermissionDenied' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/NameTakenConflict' }
         '422': { $ref: '#/components/responses/ValidationError' }
 
   /knowledge/corpora/{id}/documents:
@@ -40428,6 +40611,15 @@ paths:
               required: [question]
               properties:
                 question: { type: string, minLength: 1, maxLength: 1000 }
+                audiences:
+                  type: array
+                  maxItems: 20
+                  items: { type: string, minLength: 1, maxLength: 200 }
+                  description: |
+                    Optional. When present and not empty, only documents whose `meta.audience` is one
+                    of these values are searched and cited. Values compare with no case, no accents and
+                    `đ` as `d`. A document with no audience is left out. When no document matches, the
+                    outcome is `not_covered`. Absent or empty, every document is searched.
       responses:
         '200':
           description: The answer, or the refusal — `outcome` says which.
@@ -41456,6 +41648,30 @@ components:
 
   # ------------------------------- schemas ----------------------------------
   schemas:
+    ChatNetwork:
+      type: string
+      x-extensible-enum: true
+      enum: [whatsapp, telegram, zalo]
+    ChatIdentity:
+      type: object
+      required: [network]
+      properties:
+        network: { $ref: '#/components/schemas/ChatNetwork' }
+        account_hint: { type: string, maxLength: 64, description: The confirmed account with all but its last digits hidden. Absent while only a code waits. }
+        verified_at: { type: string, format: date-time, description: When the account was confirmed. }
+        expires_at: { type: string, format: date-time, description: When the waiting code stops working. }
+    ChatIdentityList:
+      type: object
+      required: [data]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/ChatIdentity' } }
+    ChatVerificationStarted:
+      type: object
+      required: [network, code, expires_at]
+      properties:
+        network: { $ref: '#/components/schemas/ChatNetwork' }
+        code: { type: string, maxLength: 16, description: Shown once. Send it as a message from your own account. }
+        expires_at: { type: string, format: date-time }
     DealViability:
       type: object
       additionalProperties: false
@@ -42901,7 +43117,8 @@ components:
           type: string
           description: |
             ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
-            rate against the current base.
+            rate against the current base. The refusal's `params` mirror `BaseCurrencyLock`:
+            `reason`, `count` as a decimal string, and `base_currency` when the lock names one.
         base_language:
           type: string
           enum: [en, de, vi]
@@ -45323,6 +45540,18 @@ components:
         sync_failing_since: { type: [string, 'null'], format: date-time, description: 'When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage''s — last_synced_at moves on every postponed tick and dates the newest attempt instead.' }
         next_sync_due_at: { type: [string, 'null'], format: date-time, description: 'When the sweep will next pick this connection up (backoff-aware).' }
         backfill: { allOf: [ { $ref: '#/components/schemas/BackfillStatus' } ], description: 'Summary of the connection''s backfill run; state `none` when never run.' }
+        unread_period:
+          allOf: [{ $ref: '#/components/schemas/CaptureUnreadPeriod' }]
+          description: >-
+            A period no sync of this mailbox read: a sync found its provider cursor gone and
+            listed only the newest mail, or a first sync could not reach back to where it was
+            to start. A successful sync since, and a finished import, do not clear it. Only an
+            import whose window reaches back over it, and that failed no message, does. Absent
+            when there is none.
+
+            A recent `last_success_at` and a `backfill` in state `done` say a poll and a scan
+            completed. This period says which mail neither of them read, so the owner knows to
+            import a window that covers it.
         signature_enrich_enabled:
           type: [boolean, 'null']
           description: |
@@ -45713,9 +45942,11 @@ components:
           description: The ledger's own lifecycle for this sender.
         decision:
           type: string
-          enum: [business, keep_out]
+          enum: [business, keep_out, personal]
           x-extensible-enum: true
-          description: What YOU decided instead, absent when you have not.
+          description: |
+            What YOU decided instead, absent when you have not. `personal` is the standing decision a
+            private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
         overruled_kind:
           type: string
           description: |
@@ -46183,6 +46414,12 @@ components:
           type: [string, 'null']
           format: date-time
           description: When the provider accepted it. Null unless the state is `sent`.
+        can_send_again:
+          type: boolean
+          description: |
+            True when the reader may send this bounced message again to a corrected address,
+            by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+            message that bounced hard qualifies, once, and not one an agent wrote.
         files:
           type: array
           items: { $ref: '#/components/schemas/EmailDeliveryFile' }
@@ -46977,7 +47214,7 @@ components:
     SharedMailbox:
       type: object
       description: A mailbox no one owns. One team reads what it captures.
-      required: [id, provider, address, reader_team_id, mail_visibility, status, connected_at]
+      required: [id, provider, address, reader_team_id, mail_visibility, status, connected_at, reply_enabled]
       properties:
         id: { type: string, format: uuid, description: The connection id. It stays the same across a disconnect and a reconnect. }
         provider: { type: string, enum: [imap, graph, gmail, test_mailbox], x-extensible-enum: true }
@@ -46992,6 +47229,7 @@ components:
         connected_by: { type: [string, 'null'], format: uuid, description: The admin who last connected it. }
         connected_at: { type: string, format: date-time }
         backup_owner_id: { type: [string, 'null'], format: uuid, description: 'The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.' }
+        reply_enabled: { type: boolean, description: 'True when an admin let the reader team reply as this mailbox. A member then names the mailbox id as `from_connection_id` of a send. Always false for an `imap` mailbox, which only captures.' }
         unread_period:
           allOf: [{ $ref: '#/components/schemas/CaptureUnreadPeriod' }]
           description: >-
@@ -47006,6 +47244,21 @@ components:
         items:
           type: array
           items: { $ref: '#/components/schemas/SharedMailbox' }
+    ReplyableSharedMailbox:
+      type: object
+      description: A shared mailbox the signed-in member may reply as.
+      required: [id, provider, address]
+      properties:
+        id: { type: string, format: uuid, description: 'The mailbox id, sent as `from_connection_id`.' }
+        provider: { type: string, enum: [graph, gmail], x-extensible-enum: true }
+        address: { type: string, description: 'The mailbox address, which is the From address of a reply.' }
+    ReplyableSharedMailboxList:
+      type: object
+      required: [items]
+      properties:
+        items:
+          type: array
+          items: { $ref: '#/components/schemas/ReplyableSharedMailbox' }
     ConnectSharedMailboxRequest:
       type: object
       description: |
@@ -47043,6 +47296,7 @@ components:
         mail_visibility: { type: string, enum: [held, shared, classified], description: '`classified` is refused with `422`.' }
         apply_to_history: { type: boolean, description: 'Also narrow mail already captured when the visibility moves to `held`. Absent or false leaves it as it is.' }
         backup_owner_id: { type: [string, 'null'], format: uuid, description: 'The backup owner from now on. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Null removes it; absent leaves it as it is.' }
+        reply_enabled: { type: boolean, description: 'True lets every live member of the reader team send mail with this mailbox as its From address. The installation''s own grant must already allow it: an application permission to send for a Microsoft mailbox, a delegation that includes the send scope for a Google one. False ends it. An `imap` mailbox is refused with `422` `shared_mailbox_cannot_send`.' }
         confirm: { type: boolean, description: 'Must be true when the readers or the visibility change: such a change moves every message the mailbox captured to other readers.' }
     SharedMailboxHistoryImportRequest:
       type: object
@@ -48172,7 +48426,8 @@ components:
         p50_ms: { type: integer, format: int64 }
         gave_up: { type: object, additionalProperties: { type: integer, format: int64 }, description: 'Why the walk moved past this step, by sentinel (timeout, provider_error) or the next attempt''s reason (decision_below_floor, …).' }
         switched: { type: integer, format: int64, description: 'Calls this step answered with another model than the one bound, by the provider''s own report; out of `answered`.' }
-        switched_to: { type: string, description: 'The model the provider named most often on those calls; absent when switched is 0.' }
+        switched_to: { type: string, description: 'The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step''s own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read.' }
+        switched_to_certification: { $ref: '#/components/schemas/AiRouteCertification' }
     AiDeferredWork:
       type: object
       required: [carrier, unit, available]
@@ -49147,7 +49402,7 @@ components:
 
     ImportReasonCode:
       type: string
-      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_unset, deal_already_closed, deal_company_has_contracts, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_not_found, employer_not_found_dropped, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_a_record_id, id_not_visible, id_record_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, ref_taken_by_another_record, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
+      enum: [activity_empty, activity_held, address_erased, address_not_split, activity_link_ambiguous, activity_link_ambiguous_dropped, activity_link_ambiguous_will_drop, activity_type_unknown, activity_type_unnamed, activity_unlinked, amount_negative, amount_needs_currency, amount_too_many_decimals, author_too_long, cannot_create, cannot_create_tags, cannot_edit, cannot_edit_and_tag, cannot_link_stakeholders, cannot_read_pipelines, cannot_read_tags, cannot_write_type, close_date_far, close_date_future, close_date_past, company_domain_matched, company_duplicate_found, company_duplicate_skipped, company_link_on_meeting, company_name_empty, contact_duplicate_found, contact_duplicate_skipped, contact_email_held, contact_holds_lead, contact_not_found, contact_not_found_dropped, contact_not_found_will_drop, contact_channel_missing, contact_unnamed, currency_not_a_code, currency_not_money, currency_unset, deal_already_closed, deal_company_has_contracts, deal_field_not_for_pipeline, deal_legal_gate, deal_not_found, deal_not_found_dropped, deal_not_found_will_drop, deal_pipeline_fixed, description_too_long, direction_unknown, domain_held, duplicate_email, duration_not_valid_for_kind, email_names_no_contact, duration_out_of_range, employer_column_empty, employer_column_empty_dropped, employer_column_empty_will_drop, employer_not_found, employer_not_found_dropped, employer_not_found_will_drop, employer_refused, employer_will_create, empty_payload, field_inactive, fx_rate_missing, id_not_a_company_id, id_not_a_record_id, id_not_visible, id_record_not_visible, id_on_non_company, lead_not_found, lead_not_found_dropped, lead_not_found_will_drop, lead_status_not_importable, lead_status_unknown, link_ambiguous, link_ambiguous_dropped, link_ambiguous_will_drop, link_contact_not_imported, link_edge_unsupported, link_malformed, link_not_attachable, link_not_found, link_not_found_dropped, link_not_found_will_drop, link_row_not_imported, link_row_skipped, link_row_skipped_dropped, link_row_skipped_will_drop, link_type_unknown, linkedin_held, lost_reason_missing, meeting_not_taken_place, meeting_status_not_valid_for_kind, meeting_status_unknown, message_not_importable, natural_key_taken, not_a_date, note_repeated, not_a_domain, not_a_number, not_a_phone, not_an_amount, not_an_email, not_yes_no, occurred_at_future, occurred_at_unnamed, option_not_allowed, option_not_in_list, options_need_semicolons, owner_refused, owner_unknown, phone_needs_country, pipeline_no_open_stage, pipeline_unknown, pipeline_unnamed, record_archived, ref_taken_by_another_company, ref_taken_by_another_record, row_key_empty, row_key_repeated, run_in_flight, size_band_invalid, stage_unknown, stage_unnamed, stored_values_kept, tag_created, tag_name_invalid, tag_new, task_not_importable, timestamp_needs_zone, too_many_links, undo_edited, undo_failed, undo_grant_lost, undo_not_visible, undo_rule_protects, undo_still_referenced, value_refused, value_too_long, value_unreadable]
       x-extensible-enum: true
       description: 'Why a row was skipped or warned about, so a screen can say it in the reader''s language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.'
 
@@ -49427,7 +49682,7 @@ components:
 
     ImportRowIssue:
       type: object
-      description: One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line.
+      description: One problem of a row, named by its line so a human can go fix it. A row with several cells at fault has one issue for each, and counts once in `skipped`. A problem of a whole file, such as a tag the file names that does not exist yet, has no line.
       required: [reason]
       properties:
         line:   { type: integer, minimum: 1, description: 'The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file.' }
@@ -49640,6 +49895,7 @@ components:
         object:     { $ref: '#/components/schemas/ImportObject' }   # absent for a ZIP run, whose types are in `parts`
         file_name:   { type: string, description: 'The uploaded file''s name, as the run was created with it. Display only.' }
         source_name: { type: string, description: 'The name the run''s source is filed under.' }
+        row_count:   { type: integer, minimum: 0, readOnly: true, description: 'Rows the upload counted in the file, a ZIP''s files added together. Present while the run keeps what the upload read of the file, in a list too, so a draft no test has read still says how many rows it holds.' }
         parts:
           type: array
           items: { $ref: '#/components/schemas/ImportRunPart' }
@@ -49725,6 +49981,7 @@ components:
         file:      { type: string, description: 'The ZIP entry, or the uploaded file''s name for a single CSV. Empty for a single CSV created without `file_name`.' }
         object:    { $ref: '#/components/schemas/ImportObject' }
         row_count: { type: integer, minimum: 0, description: 'Rows the file holds, once a dry run has read it; 0 before.' }
+        rows_written: { type: integer, minimum: 0, readOnly: true, description: 'Rows of the file the run created or updated. Present once the run has written: `complete`, `failed`, `undoing` or `undone`.' }
         mapping:
           type: object
           additionalProperties: { type: string }
@@ -61989,6 +62246,14 @@ components:
           type: boolean
           readOnly: true
           description: Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities.
+        mailbox_imported:
+          type: boolean
+          readOnly: true
+          description: Whether an import brought this in; the per-message audience write refuses it.
+        thread_audience_yours:
+          type: boolean
+          readOnly: true
+          description: Whether the thread audience write acts on this row for the caller.
 
         writable:
           type: boolean
@@ -62092,7 +62357,7 @@ components:
         assignee_id: { type: [string, 'null'], format: uuid, description: Task only. }
         is_done: { type: boolean, default: false, description: Task only. }
         done_at: { type: [string, 'null'], format: date-time }
-        duration_seconds: { type: [integer, 'null'], description: Meeting/call only. }
+        duration_seconds: { type: [integer, 'null'], minimum: 0, description: Meeting/call only. }
         host_user_id:
           type: [string, 'null']
           format: uuid
@@ -62942,7 +63207,7 @@ components:
             win over this field. A contact that is not in `links` returns
             `422 code: sender_not_linked`. Any other kind, or a direction other than `inbound`,
             returns `422 code: field_not_valid_for_kind`.
-        duration_seconds: { type: [integer, 'null'] }
+        duration_seconds: { type: [integer, 'null'], minimum: 0 }
         direction: { type: [string, 'null'], enum: [null, inbound, outbound] }
         call_outcome:
           type: [string, 'null']
@@ -63292,13 +63557,25 @@ components:
         entity_name:
           type: [string, 'null']
           description: The name of the suggested record, for the screen. Absent on a decision's answer.
+        deal_amount_minor:
+          type: [integer, 'null']
+          format: int64
+          description: For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+        deal_currency:
+          type: [string, 'null']
+          pattern: '^[A-Z]{3}$'
+          description: The currency of `deal_amount_minor`, withheld with it.
+        deal_expected_close_date:
+          type: [string, 'null']
+          format: date
+          description: For a suggested deal, when it is expected to close. Absent on a decision's answer.
         unit:
-          type: string
-          description: The extension that proposed it.
+          type: [string, 'null']
+          description: The extension that proposed it. Null when Margince itself asks which deal a mail is about.
         reason:
           type: string
           maxLength: 200
-          description: One short sentence from the extension on why.
+          description: One short sentence from the extension on why, or Margince's own question.
         score: { type: number, minimum: 0, maximum: 1 }
         status: { type: string, enum: [pending, accepted, rejected], x-extensible-enum: true }
         created_at: { type: string, format: date-time }
@@ -63386,7 +63663,7 @@ components:
         questions_closed:
           type: integer
           minimum: 0
-          description: The open deal questions of the conversation this call marked done.
+          description: The messages of the conversation whose open deal question this call closed.
     SetActivityDispositionRequest:
       type: object
       additionalProperties: false
@@ -63667,17 +63944,17 @@ components:
           format: uuid
           readOnly: true
           description: >-
-            The account an upload is filed under: the company it was uploaded on, or the account of the
-            deal it was uploaded on at that time. A file that came with a captured mail carries none; the
-            account's Documents list reaches it through the mail's links as they are now. A read path
-            rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
+            The account a file is filed under, worked out when it is read: the company it is filed on, or
+            the company of the deal it is filed on now. A file on any other record names none;
+            the account's Documents list reaches a mail's file through the mail's links as they are now. A
+            read path rather than a second parent: visibility stays the primary parent's.
         contract_id:
           type: [string, 'null']
           format: uuid
           readOnly: true
           description: >-
-            The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at
-            upload by the contact filing the paper; never inferred from a filename or a date,
+            The agreement this file is about. A read path rather than a second parent: visibility stays
+            the primary parent's. Set at upload by the member filing the paper; never inferred from a filename or a date,
             which is the guess the document state exists to refuse.
         bytes_withheld:
           type: boolean
@@ -64392,7 +64669,8 @@ components:
             `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
             conversation arrived in, and a new message from the sender's default mailbox. A mailbox
             that is not the sender's, or cannot send, is refused with 422
-            `mailbox_not_send_capable`.
+            `mailbox_not_send_capable`. A shared mailbox with `reply_enabled` can be named here by
+            its id, and only by a member of its reader team.
         subject: { type: string, description: The subject line. Blank or only white space is refused with 422 `required`. }
         body: { type: string, description: The (possibly edited) final body that is sent. Blank or only white space is refused with 422 `required`. }
         html_body:
@@ -72952,6 +73230,10 @@ components:
             the keys turned a grouping by identity into a paginated dump of every record's
             identity with only the measures blanked. The row itself stays so the answer's
             row count is not a signal of its own.
+
+            A number past ±(2^53−1) is null, and `_out_of_range` lists the columns it
+            was withheld from: a JSON reader parses every number as a float64, which
+            would turn that total into another number. The rest of the row is answered.
         withheld:
           type: boolean
           description: >-
@@ -75190,6 +75472,15 @@ components:
             other object's field is null. A logged or edited activity of another kind refuses a
             value for the field with `422 field_not_valid_for_kind`. A value stored before the
             field was narrowed stays readable, and sending null clears it.
+        pipeline_ids:
+          type: [array, 'null']
+          items: { type: string, format: uuid }
+          description: >-
+            The pipelines a deal field applies to; null means every pipeline, and every other
+            object's field is null. A created or edited deal of another pipeline refuses a value
+            for the field with `422 field_not_valid_for_pipeline`. A pipeline that is archived
+            matches nothing. A value stored before the field was narrowed, or on a deal that
+            moved pipeline, stays stored and readable, and sending null clears it.
         created_by: { type: string, format: uuid }
         created_at: { type: string, format: date-time }
         updated_at: { type: string, format: date-time }
@@ -75285,6 +75576,13 @@ components:
             The activity kinds the field applies to. Only an activity field may name any; omitted
             or empty means every kind. An unknown kind, or kinds on another object's field, is
             refused with a 422.
+        pipeline_ids:
+          type: array
+          items: { type: string, format: uuid }
+          description: >-
+            The pipelines the field applies to. Only a deal field may name any; omitted or empty
+            means every pipeline. An id that is not a live pipeline, or ids on another object's
+            field, is refused with a 422.
       # Deliberately NOT additionalProperties: true — the x-extension
       # catch-all convention is for record schemas (data-model §9); on this
       # admin request an unknown key is a typo and answers the unknown_field
@@ -75294,12 +75592,13 @@ components:
       type: object
       description: >-
         Merge-PATCH of the settings a live field may change: `label`, `label_translations`,
-        `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one
+        `option_translations`, `show_in_create`, `reportable`, `activity_kinds` and `pipeline_ids`. At least one
         is required. `column_name`, `object`,
         and `type` are absent from this request schema entirely (immutable, not just ignored if
         sent). `reportable` true on a field that is not a picklist or boolean is refused.
         `activity_kinds` replaces the kinds an activity field applies to, and an empty array
-        means every kind again; it is refused on another object's field.
+        means every kind again; it is refused on another object's field. `pipeline_ids` does the
+        same for the pipelines a deal field applies to.
       properties:
         label: { type: string, maxLength: 120 }
         label_translations: { $ref: '#/components/schemas/LabelTranslations' }
@@ -75309,6 +75608,9 @@ components:
         activity_kinds:
           type: array
           items: { type: string, enum: [call, email, meeting, message, note, task] }
+        pipeline_ids:
+          type: array
+          items: { type: string, format: uuid }
 
     UpdateCustomFieldOptionsRequest:
       type: object
@@ -75622,6 +75924,7 @@ components:
           description: >-
             Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values).
             A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
+            A total past ±(2^53−1) is null, and the row's `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the report is answered.
         total_rows:
           type: integer
           description: >-
@@ -75687,7 +75990,7 @@ components:
         aggregates:
           type: object
           additionalProperties: true
-          description: The requested aggregates recomputed over exactly these source rows — equals the explained cell.
+          description: The requested aggregates recomputed over exactly these source rows — equals the explained cell. A total past ±(2^53−1) is null and named in `_out_of_range`, as on the report row.
         total_rows: { type: integer, description: Source rows matched (rows is capped at the report row limit). }
         excluded_by_permission: { type: [integer, 'null'], description: 'Visible rows a field mask withheld — the same exclusion the explained report applied, so the drill-through reconciles exactly.' }
         population_narrowed: { $ref: '#/components/schemas/PopulationNarrowed' }
@@ -76330,7 +76633,7 @@ components:
                     format: { type: string }
               if_version: { type: boolean, description: 'Whether it takes if_version: the version you last read.' }
               ask_user_first: { type: boolean, description: Whether the app asks its user to confirm it first. }
-              uploads_a_file: { type: boolean, description: 'Whether it takes filename, content_type and content_base64.' }
+              uploads_a_file: { type: boolean, description: 'Whether it takes filename, content_type and content_base64 or content_text.' }
               body: { type: object, additionalProperties: true, description: The JSON schema of its body argument. }
 
     AgentAdmissionPolicy:
@@ -78493,9 +78796,6 @@ components:
         activated_by: { type: [string, 'null'], readOnly: true, description: 'Who accepted the lead or recorded the win that activated the partner.' }
         activation_lead_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The accepted lead that activated the partner.' }
         activation_deal_id: { type: [string, 'null'], format: uuid, readOnly: true, description: 'The won deal that activated the partner.' }
-        partner_fit_score: { type: [integer, 'null'], minimum: 0, maximum: 100, description: 'Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.' }
-        partner_fit_score_computed: { type: [integer, 'null'], minimum: 0, maximum: 100, readOnly: true, description: 'Retained machine-computed partner-fit value while a Commercial Judgement override is in force.' }
-        partner_fit_override_reason: { type: [string, 'null'], readOnly: true, description: 'Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.' }
         relationship_health: { type: [string, 'null'], deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.' }
         last_contact_at: { type: [string, 'null'], format: date-time, deprecated: true, description: 'Never set; always null. Kept so existing clients keep compiling.' }
         next_step: { type: [string, 'null'], deprecated: true, description: 'Deprecated as stored text: a value sent here is written as a task on the partner''s company, held by the caller (or the human an agent acts for), and is not stored on the partner. Text stored before stays readable.' }
@@ -81999,10 +82299,13 @@ components:
         One thread of the room's conversation, with its comments. Served to both
         sides in the same shape: the buyer and the seller read the same
         conversation, and neither side's ids beyond the thread's own are in it.
-      required: [id, room_id, required_change, state, author, created_at, comments]
+      required: [id, room_id, required_change, state, author, created_at, comments, visible_to_buyer]
       properties:
         id: { type: string, format: uuid }
         room_id: { type: string, format: uuid }
+        # False when the buyer's own list withholds this thread because its file
+        # is no longer shared. Always true on the buyer's side. Room state is not part of it.
+        visible_to_buyer: { type: boolean }
         document_id: { type: [string, 'null'], format: uuid, description: Null for a room-level thread. }
         required_change: { type: boolean }
         state: { type: string, description: '`open` or `resolved`. A plain string, not an inline enum, for the reason `DealRoomParticipantCapability` gives.' }
@@ -82020,6 +82323,14 @@ components:
       required: [data]
       properties:
         data: { type: array, items: { $ref: '#/components/schemas/DealRoomThread' } }
+      additionalProperties: false
+
+    BuyerRoomThreadListResponse:
+      type: object
+      required: [data, hidden_own_conversations]
+      properties:
+        data: { type: array, items: { $ref: '#/components/schemas/DealRoomThread' } }
+        hidden_own_conversations: { type: boolean, description: True when a conversation this buyer wrote in is withheld because its file is no longer shared. No count and no file. }
       additionalProperties: false
 
     OpenDealRoomThreadRequest:
@@ -82171,6 +82482,19 @@ components:
           allOf:
             - $ref: '#/components/schemas/BuyerRoomContent'
           description: Omitted while access is `paused` or `expired`, and when nothing has been published yet.
+        engagement_notice:
+          allOf:
+            - $ref: '#/components/schemas/BuyerEngagementNotice'
+          description: Present on a seat's first sign-in, and on a seller preview so the seller sees what the buyer will see. Tells the buyer that the seller's company can see the sign-in and the downloads. It has no action.
+      additionalProperties: false
+
+    BuyerEngagementNotice:
+      type: object
+      required: [company]
+      properties:
+        company:
+          type: string
+          description: The seller's company, as the invitation mail names it.
       additionalProperties: false
 
     OfferTemplate:
@@ -85039,7 +85363,7 @@ components:
             telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel], x-extensible-enum: true }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel, send_again], x-extensible-enum: true }
           description: |
             What this item offers. `decide` and `merge` mean the verb is irreversible and a
             contact must choose; `complete` and `snooze` are a task's own verbs; `open` is
@@ -85059,12 +85383,27 @@ components:
             domain. Reopening retries identification without settling identity. These verbs route
             to `/capture/domain-questions/{domain}/…`.
 
+            `send_again` is offered on a bounced message that may be sent once more. The reader
+            types a corrected address and the same message goes out to it, through
+            `POST /attention/bounces/{id}/send-again`.
+
             `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
             to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
             to `/notices/{id}/read` — the reader has seen it, and it leaves the lane. `set_aside` rather than reusing `snooze`: a task's
             snooze moves a due date the rep agreed to, while a brief item's hides a
             suggestion until later in the day. One word for both would make a client that
             handles `snooze` generically write the wrong endpoint.
+
+    BounceSendAgainRequest:
+      type: object
+      required: [address]
+      additionalProperties: false
+      properties:
+        address:
+          type: string
+          format: email
+          maxLength: 320
+          description: The corrected address. It replaces the address that refused, and it must differ from it.
 
     AttentionPair:
       type: object
@@ -86955,7 +87294,7 @@ components:
             telling and so has to carry the way back with it.
         actions:
           type: array
-          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel], x-extensible-enum: true }
+          items: { type: string, enum: [decide, merge, complete, snooze, open, act, dismiss, set_aside, acknowledge, retry, reply, undo, keep, keep_as_vendor, discard, reopen, take, cancel, send_again], x-extensible-enum: true }
           description: 'What this item offers, routed to the endpoint that owns the verb.'
         band:
           type: string
@@ -88294,6 +88633,10 @@ components:
           description: A re-embed is in flight; every ask answers not_ready until it finishes.
         coverage: { $ref: '#/components/schemas/KnowledgeCoverage' }
         created_at: { type: string, format: date-time }
+        archived_at:
+          type: [string, 'null']
+          format: date-time
+          description: When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set, and it takes the `knowledge_corpus` delete grant that archives and restores one.
 
     KnowledgeCorpusList:
       type: object
@@ -88381,6 +88724,18 @@ components:
             coverage counts them, so a corpus's documents sum to its own figure.
         embed_state: { $ref: '#/components/schemas/KnowledgeEmbedState' }
         created_at: { type: string, format: date-time }
+        external_id:
+          type: [string, 'null']
+          description: >-
+            The id the document's source gave it (a Google Drive file id), set only on a
+            document an extension keeps in step with that source. Null for an upload.
+        meta:
+          type: object
+          additionalProperties: { type: string }
+          description: >-
+            What the source said about the document (owner, department, country, type,
+            effective and review dates, audience), as the extension read it. A field the
+            source did not state is absent, never guessed. Absent for an upload.
 
     KnowledgeAnswerCorpus:
       type: object
@@ -88463,6 +88818,13 @@ components:
           description: >-
             A verbatim span from the retrieved passages, whitespace-collapsed and
             matched before this claim was allowed to exist.
+        meta:
+          type: object
+          additionalProperties: { type: string }
+          description: >-
+            What the cited document's source said about it (owner, effective date and so
+            on), so a reader sees which version and date the quote comes from. Absent for
+            an uploaded document.
         section:
           $ref: '#/components/schemas/KnowledgeClaimSection'
         opens:

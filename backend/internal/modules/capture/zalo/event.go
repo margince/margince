@@ -90,6 +90,11 @@ type Attachment struct {
 	FileType string
 	// Coordinates is set for a location attachment.
 	Coordinates *Coordinates
+	// UserID and Phone name the customer a business card shares. Zalo user ids
+	// belong to one Official Account, so a card names one only when it was made
+	// on that account.
+	UserID string
+	Phone  string
 }
 
 // Coordinates is a location attachment's position.
@@ -106,6 +111,8 @@ type Message struct {
 	Type        MessageType
 	Text        string
 	Attachments []Attachment
+	// ReplyToID is the id of the message this one quotes.
+	ReplyToID string
 }
 
 // Event is one decoded webhook delivery.

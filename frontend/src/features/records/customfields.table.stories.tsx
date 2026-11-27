@@ -111,6 +111,7 @@ function Table({
           onArchive={noop}
           onSetting={noop}
           onKinds={noop}
+          onPipelines={noop}
         />
       </Panel>
     </StoryProviders>
@@ -209,24 +210,43 @@ const change = (over: Partial<AuditLogEntry>): AuditLogEntry => ({
   ...over,
 });
 
-/** The change trail, one line per change with a hairline between them. */
+/**
+ * The change trail, one line per change with a hairline between them. Each
+ * row names its record type and field, and a change that kept the label says
+ * what it did.
+ */
 export const ChangeTrail: Story = {
   render: () => (
     <StoryProviders>
       <AuditRail
+        fields={new Map([[field().id, field()]])}
         entries={[
-          change({}),
+          change({
+            after: { object: "deal", label: "Renewal date", type: "date" },
+          }),
           change({
             id: "a-2",
             action: "update",
             occurred_at: "2026-07-02T09:30:00Z",
+            before: { show_in_create: true },
+            after: { show_in_create: false },
           }),
           change({
             id: "a-3",
-            action: "archive",
+            action: "update",
             actor_id: "u-2",
             actor_name: "Anna Weber",
             occurred_at: "2026-08-11T16:45:00Z",
+            before: { label_translations: {} },
+            after: { label_translations: { de: "Verlängerung am" } },
+          }),
+          change({
+            id: "a-4",
+            action: "update",
+            entity_id: "01J2Z3K4M5N6P7Q8R9S0T1U2V9",
+            occurred_at: "2026-08-12T08:05:00Z",
+            before: { status: "active" },
+            after: { status: "retired" },
           }),
         ]}
         state="ready"

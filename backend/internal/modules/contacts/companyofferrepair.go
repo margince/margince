@@ -80,7 +80,7 @@ func clearSiteOfferDuplicate(ctx context.Context, tx pgx.Tx, id ids.CompanyID) (
 	err = tx.QueryRow(ctx, `SELECT COALESCE(c.description, ''), COALESCE(f.value, ''),
  COALESCE((SELECT fp.source = 'site_read' AND NOT `+storekit.StampForAUserSQL("fp.captured_by")+`
  FROM field_provenance fp WHERE fp.object_type = 'company' AND fp.object_id = c.id
- AND fp.field_name = 'description' ORDER BY fp.captured_at DESC, fp.id DESC LIMIT 1), false)
+ AND fp.field_name = 'description' AND fp.value IS NULL ORDER BY fp.captured_at DESC, fp.id DESC LIMIT 1), false)
  FROM company c LEFT JOIN company_profile_field f ON f.company_id = c.id AND f.field = 'offer_summary'
  AND f.source = 'site_read' AND NOT `+storekit.StampForAUserSQL("f.captured_by")+`
  WHERE c.id = @companyID`, pgx.NamedArgs{"companyID": id}).Scan(&description, &offer, &siteOwned)

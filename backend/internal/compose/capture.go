@@ -16,6 +16,7 @@ import (
 	"github.com/jackc/pgx/v5/pgxpool"
 
 	"github.com/margince/margince/backend/internal/compose/capturetimeline"
+	"github.com/margince/margince/backend/internal/compose/chatmembers"
 	"github.com/margince/margince/backend/internal/compose/duequestion"
 	"github.com/margince/margince/backend/internal/compose/mailhooks"
 	"github.com/margince/margince/backend/internal/modules/activities"
@@ -222,7 +223,7 @@ func NewCaptureRegistry(pool *pgxpool.Pool, vault keyvault.Vault, cfg CaptureCon
 	// type-asserts the message seam off this map, so an unregistered connector
 	// reads as "this installation has no Telegram integration" and parks every
 	// reply a rep writes.
-	r.Register(telegram.New(telegram.NewAPI(nil, "")))
+	r.Register(capture.TelegramConnector(telegram.NewAPI(nil, "")))
 	// The offline demo connector, registered unconditionally and INERT until a
 	// capture_connection names it — which only the demo seeder and
 	// scripts/seed-dev.sql do. It reaches no network and holds no credential,
@@ -293,6 +294,7 @@ func newCaptureSink(pool *pgxpool.Pool, cfg CaptureConfig) *capture.Sink {
 		// rules a mailbox deletion does.
 		WithChatEditor(activities.ApplyProviderEditTx).
 		WithChatPurger(purgeRemovedChat).
+		WithMemberIdentities(chatmembers.New(pool)).WithChatCodeRedeemer(chatmembers.New(pool)).
 		// The files a captured message carried, written by the module that owns
 		// the attachment table. Built here, from the store, so every role that
 		// composes a sink gets the same one — the worker runs mail capture and

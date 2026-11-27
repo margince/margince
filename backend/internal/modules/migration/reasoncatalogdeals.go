@@ -15,25 +15,28 @@ import (
 
 // Reason codes for deal rows, each with its reasons text in the catalog below.
 const (
-	ReasonCannotReadPipelines    ReasonCode = "cannot_read_pipelines"
-	ReasonStageUnnamed           ReasonCode = "stage_unnamed"
-	ReasonPipelineUnnamed        ReasonCode = "pipeline_unnamed"
-	ReasonPipelineUnknown        ReasonCode = "pipeline_unknown"
-	ReasonStageUnknown           ReasonCode = "stage_unknown"
-	ReasonCurrencyNotACode       ReasonCode = "currency_not_a_code"
-	ReasonAmountNegative         ReasonCode = "amount_negative"
-	ReasonCloseDatePast          ReasonCode = "close_date_past"
-	ReasonCloseDateFuture        ReasonCode = "close_date_future"
-	ReasonLostReasonMissing      ReasonCode = "lost_reason_missing"
-	ReasonDealPipelineFixed      ReasonCode = "deal_pipeline_fixed"
-	ReasonDealAlreadyClosed      ReasonCode = "deal_already_closed"
-	ReasonDealCompanyContracts   ReasonCode = "deal_company_has_contracts"
-	ReasonFxRateMissing          ReasonCode = "fx_rate_missing"
-	ReasonDealLegalGate          ReasonCode = "deal_legal_gate"
-	ReasonPipelineNoOpenStage    ReasonCode = "pipeline_no_open_stage"
-	ReasonCannotLinkStakeholders ReasonCode = "cannot_link_stakeholders"
-	ReasonContactNotFound        ReasonCode = "contact_not_found"
-	ReasonContactNotFoundDropped ReasonCode = "contact_not_found_dropped"
+	ReasonCannotReadPipelines     ReasonCode = "cannot_read_pipelines"
+	ReasonStageUnnamed            ReasonCode = "stage_unnamed"
+	ReasonPipelineUnnamed         ReasonCode = "pipeline_unnamed"
+	ReasonPipelineUnknown         ReasonCode = "pipeline_unknown"
+	ReasonStageUnknown            ReasonCode = "stage_unknown"
+	ReasonCurrencyNotACode        ReasonCode = "currency_not_a_code"
+	ReasonCurrencyNotMoney        ReasonCode = "currency_not_money"
+	ReasonCloseDateFar            ReasonCode = "close_date_far"
+	ReasonAmountNegative          ReasonCode = "amount_negative"
+	ReasonCloseDatePast           ReasonCode = "close_date_past"
+	ReasonCloseDateFuture         ReasonCode = "close_date_future"
+	ReasonLostReasonMissing       ReasonCode = "lost_reason_missing"
+	ReasonDealPipelineFixed       ReasonCode = "deal_pipeline_fixed"
+	ReasonDealAlreadyClosed       ReasonCode = "deal_already_closed"
+	ReasonDealCompanyContracts    ReasonCode = "deal_company_has_contracts"
+	ReasonFxRateMissing           ReasonCode = "fx_rate_missing"
+	ReasonDealFieldNotForPipeline ReasonCode = "deal_field_not_for_pipeline"
+	ReasonDealLegalGate           ReasonCode = "deal_legal_gate"
+	ReasonPipelineNoOpenStage     ReasonCode = "pipeline_no_open_stage"
+	ReasonCannotLinkStakeholders  ReasonCode = "cannot_link_stakeholders"
+	ReasonContactNotFound         ReasonCode = "contact_not_found"
+	ReasonContactNotFoundDropped  ReasonCode = "contact_not_found_dropped"
 )
 
 // withDealReasons adds the deal reasons to the catalog the other objects
@@ -74,10 +77,20 @@ var dealReasons = map[ReasonCode]reasonEntry{
 		textlang.German:     "{value:q} ist kein Währungscode. Schreiben Sie die drei Buchstaben, etwa EUR.",
 		textlang.Vietnamese: "{value:q} không phải mã tiền tệ. Hãy viết ba chữ cái, ví dụ EUR.",
 	}},
+	ReasonCurrencyNotMoney: {params: []string{paramValue}, text: map[textlang.Lang]string{
+		textlang.English:    "“{value}” is the code for no currency or for tests, so it prices no deal. Write the deal’s currency, like EUR.",
+		textlang.German:     "{value:q} ist der Code für keine Währung oder für Tests und gibt keinem Deal einen Preis. Schreiben Sie die Währung des Deals, etwa EUR.",
+		textlang.Vietnamese: "{value:q} là mã cho “không có tiền tệ” hoặc để thử nghiệm, nên không định giá được deal. Hãy viết loại tiền của deal, ví dụ EUR.",
+	}},
+	ReasonCloseDateFar: {params: []string{paramValue, "years"}, text: map[textlang.Lang]string{
+		textlang.English:    "“{value}” is more than {years} years away. Check that this close date is right.",
+		textlang.German:     "{value:q} liegt mehr als {years} Jahre in der Zukunft. Prüfen Sie, ob dieses Abschlussdatum stimmt.",
+		textlang.Vietnamese: "{value:q} cách hơn {years} năm nữa. Hãy kiểm tra lại ngày chốt này.",
+	}},
 	ReasonAmountNegative: {params: []string{paramValue}, text: map[textlang.Lang]string{
-		textlang.English:    "“{value}” is below zero, and a deal’s amount cannot be.",
-		textlang.German:     "{value:q} liegt unter null, und der Betrag eines Deals darf das nicht sein.",
-		textlang.Vietnamese: "{value:q} nhỏ hơn 0, mà số tiền của deal thì không được âm.",
+		textlang.English:    "“{value}” is below zero, and an imported amount cannot be.",
+		textlang.German:     "{value:q} liegt unter null, und ein importierter Betrag darf das nicht sein.",
+		textlang.Vietnamese: "{value:q} nhỏ hơn 0, mà số tiền nhập vào thì không được âm.",
 	}},
 	ReasonCloseDatePast: {params: []string{paramValue}, text: map[textlang.Lang]string{
 		textlang.English:    "“{value}” is in the past, and an open deal’s close date cannot be.",
@@ -98,6 +111,11 @@ var dealReasons = map[ReasonCode]reasonEntry{
 		textlang.English:    "This deal is in another pipeline than the file names. An import does not move a deal between pipelines, so the row is skipped.",
 		textlang.German:     "Dieser Deal liegt in einer anderen Pipeline als in der Datei angegeben. Ein Import verschiebt keinen Deal zwischen Pipelines, daher wird die Zeile übersprungen.",
 		textlang.Vietnamese: "Deal này nằm trong quy trình khác với quy trình trong tệp. Nhập không chuyển deal giữa các quy trình nên hàng bị bỏ qua.",
+	}},
+	ReasonDealFieldNotForPipeline: {params: []string{"field"}, text: map[textlang.Lang]string{
+		textlang.English:    "The custom field {field} does not apply to deals in the pipeline of this deal, so the row is skipped. Empty the cell or import the deal into a pipeline the field applies to.",
+		textlang.German:     "Das benutzerdefinierte Feld {field} gilt nicht für Deals in der Pipeline dieses Deals, daher wird die Zeile übersprungen. Leeren Sie die Zelle oder importieren Sie den Deal in eine Pipeline, für die das Feld gilt.",
+		textlang.Vietnamese: "Trường tùy chỉnh {field} không áp dụng cho deal trong quy trình của deal này nên hàng bị bỏ qua. Hãy để trống ô hoặc nhập deal vào quy trình mà trường áp dụng.",
 	}},
 	ReasonDealAlreadyClosed: {params: nil, text: map[textlang.Lang]string{
 		textlang.English:    "This deal is already closed, so the row is skipped. An import does not reopen a closed deal.",

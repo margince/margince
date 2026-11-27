@@ -23,62 +23,129 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
+// messageReach is the subject's own addresses and chat accounts for the export:
+// the ones no other live contact also holds.
+//
+// A retired address or chat binding stays in the subject's package, but the
+// uniqueness indexes bind only live rows. So an identifier a different live
+// contact holds now belongs to them, and its mail is theirs.
+type messageReach struct {
+	emails, providers, accounts []string
+}
+
+func subjectOwnReach(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, identities []ids.UUID) (messageReach, error) {
+	ownEmails, err := subjectStrings(ctx, tx,
+		`SELECT addr FROM unnest($2::text[]) AS addr EXCEPT `+rivalHeldEmails, contactID, emails)
+	if err != nil {
+		return messageReach{}, fmt.Errorf("reading the subject's own addresses for the export: %w", err)
+	}
+	providers, accounts, err := subjectOwnChannelAccounts(ctx, tx, contactID, identities)
+	if err != nil {
+		return messageReach{}, err
+	}
+	return messageReach{ownEmails, providers, accounts}, nil
+}
+
 // subjectAuthoredMessages resolves, once per export, the activities linked to
 // the subject or WRITTEN by them: the `from` participant, or the inbound sender.
 // A Cc is not the author and does not earn the verdict on another's request.
 //
-// It drops an address or account a different live contact also holds, by the
-// erasure's rival rule. Shared and legally held rows stay in: Art. 15 owes them.
+// Shared and legally held rows stay in: Art. 15 owes them.
 func subjectAuthoredMessages(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, identities []ids.UUID) ([]ids.UUID, error) {
-	ownEmails, err := subjectStrings(ctx, tx,
-		`SELECT addr FROM unnest($2::text[]) AS addr EXCEPT `+rivalHeldEmails, contactID, emails)
-	if err != nil {
-		return nil, fmt.Errorf("reading the subject's own addresses for the export: %w", err)
-	}
-	providers, accounts, err := subjectOwnChannelAccounts(ctx, tx, contactID, identities)
+	reach, err := subjectOwnReach(ctx, tx, contactID, emails, identities)
 	if err != nil {
 		return nil, err
 	}
-	// One arm per index, so each can use its own: the link, the participant's
-	// contact, lower(address), and counterparty_email. No index covers
-	// channel_user_id. That arm scans chat participants, as the
-	// InteractionParticipation section already does on every export.
-	rows, err := tx.Query(ctx, `
+	return reach.activities(ctx, tx, contactID, []string{"from"})
+}
+
+// subjectMessages resolves, once per export, every mail the subject sent or
+// received. That is From, To, Cc or Bcc, matched by their record, address or
+// chat account, plus the activities linked to them.
+//
+// It never reads activity_link.company_id, so a mail filed only on their
+// employer stays out. A mail resolved to their record counts even on an address
+// someone else now holds.
+func subjectMessages(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, identities []ids.UUID) ([]ids.UUID, error) {
+	reach, err := subjectOwnReach(ctx, tx, contactID, emails, identities)
+	if err != nil {
+		return nil, err
+	}
+	return reach.activities(ctx, tx, contactID, subjectMessageRoles)
+}
+
+// subjectHasMessage answers whether subjectMessages would hold a mail from the
+// given source system (any, when empty), and stops at the first one found.
+func subjectHasMessage(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, emails []string, identities []ids.UUID, sourceSystem string) (bool, error) {
+	reach, err := subjectOwnReach(ctx, tx, contactID, emails, identities)
+	if err != nil {
+		return false, err
+	}
+	var found bool
+	err = tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM activity a WHERE a.id IN (`+messageArms+`)
+		AND ($6 = '' OR a.source_system = $6))`,
+		append(reach.args(contactID, subjectMessageRoles), sourceSystem)...).Scan(&found)
+	if err != nil {
+		return false, fmt.Errorf("checking whether the subject has mail: %w", err)
+	}
+	return found, nil
+}
+
+var subjectMessageRoles = []string{"from", "to", "cc", "bcc"}
+
+// messageArms holds the participant arms both selectors share. One arm per
+// index, so each can use its own: the link, the participant's contact,
+// lower(address), and counterparty_email. No index covers channel_user_id. That
+// arm scans chat participants, as the InteractionParticipation section already
+// does on every export. `UNION ALL` lets an existence check stop at the first row.
+const messageArms = `
 		SELECT l.activity_id FROM activity_link l WHERE l.contact_id = $1
-		UNION
-		SELECT ap.activity_id FROM activity_participant ap WHERE ap.role = 'from' AND ap.contact_id = $1
-		UNION
+		UNION ALL
+		SELECT ap.activity_id FROM activity_participant ap WHERE ap.role = ANY($5) AND ap.contact_id = $1
+		UNION ALL
 		SELECT ap.activity_id FROM activity_participant ap
-		 WHERE ap.role = 'from' AND ap.address IS NOT NULL AND lower(ap.address) = ANY($2)
-		UNION
+		 WHERE ap.role = ANY($5) AND ap.address IS NOT NULL AND lower(ap.address) = ANY($2)
+		UNION ALL
 		SELECT ap.activity_id FROM activity_participant ap JOIN activity a ON a.id = ap.activity_id
-		 WHERE ap.role = 'from' AND ap.channel_user_id IS NOT NULL
+		 WHERE ap.role = ANY($5) AND ap.channel_user_id IS NOT NULL
 		   AND (a.channel_provider, ap.channel_user_id) IN (
 		         SELECT provider, account FROM unnest($3::text[], $4::text[]) AS t(provider, account))
-		UNION
+		UNION ALL
 		SELECT m.id FROM activity m
-		 WHERE m.direction = 'inbound' AND m.counterparty_email IS NOT NULL AND m.counterparty_email = ANY($2)`,
-		contactID, ownEmails, providers, accounts)
+		 WHERE m.direction = 'inbound' AND m.counterparty_email IS NOT NULL AND m.counterparty_email = ANY($2)`
+
+func (r messageReach) args(contactID ids.ContactID, roles []string) []any {
+	return []any{contactID, r.emails, r.providers, r.accounts, roles}
+}
+
+func (r messageReach) activities(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, roles []string) ([]ids.UUID, error) {
+	rows, err := tx.Query(ctx, `SELECT DISTINCT activity_id FROM (`+messageArms+`) u(activity_id)`, r.args(contactID, roles)...)
 	if err != nil {
-		return nil, fmt.Errorf("reading the messages the subject wrote for the export: %w", err)
+		return nil, fmt.Errorf("reading the subject's messages for the export: %w", err)
 	}
 	return pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+}
+
+// subjectChannelIdentities reads the chat accounts of every identity the
+// subject is, archived bindings included.
+func subjectChannelIdentities(ctx context.Context, tx pgx.Tx, identities []ids.UUID) ([]channelIdentity, error) {
+	rows, err := tx.Query(ctx,
+		`SELECT provider, channel_user_id, account_scope FROM contact_channel_identity WHERE contact_id = ANY($1)`, identities)
+	if err != nil {
+		return nil, fmt.Errorf("reading the subject's chat accounts for the export: %w", err)
+	}
+	return pgx.CollectRows(rows, pgx.RowToStructByPos[channelIdentity])
 }
 
 // subjectOwnChannelAccounts reads the chat accounts of every identity the
 // subject is, minus any a different live contact also holds.
 func subjectOwnChannelAccounts(ctx context.Context, tx pgx.Tx, contactID ids.ContactID, identities []ids.UUID) ([]string, []string, error) {
-	rows, err := tx.Query(ctx,
-		`SELECT provider, channel_user_id, account_scope FROM contact_channel_identity WHERE contact_id = ANY($1)`, identities)
-	if err != nil {
-		return nil, nil, fmt.Errorf("reading the subject's chat accounts for the export: %w", err)
-	}
-	held, err := pgx.CollectRows(rows, pgx.RowToStructByPos[channelIdentity])
+	held, err := subjectChannelIdentities(ctx, tx, identities)
 	if err != nil {
 		return nil, nil, err
 	}
 	providers, accounts := channelIdentityPairs(held)
-	rows, err = tx.Query(ctx, `
+	rows, err := tx.Query(ctx, `
 		SELECT provider, account, ''::text FROM (
 			SELECT provider, account FROM unnest($2::text[], $3::text[]) AS t(provider, account)
 			EXCEPT `+rivalHeldChannelAccounts+`) kept`, contactID, providers, accounts)

@@ -98,8 +98,15 @@ export const INQUIRY_DEADLINE_PREVIEW: components["schemas"]["WebsiteInquiryHand
 export const INQUIRY_FIRST_SOURCE: components["schemas"]["Activity"] = {
   id: "00000000-0000-4000-8000-000000000021",
   kind: "note",
-  subject: "A website question",
+  subject: "Website form: Website contact",
   body: "Please call",
+  web_form: {
+    full_name: "Lena Vogel",
+    email: "lena@example.test",
+    message: "Please call me about a quote.\nWe need it by Friday.",
+    extra: [],
+    campaign: [],
+  },
   is_done: false,
   offers_email: false,
   occurred_at: "2026-09-01T09:00:00Z",
@@ -113,6 +120,11 @@ export const INQUIRY_FIRST_SOURCE: components["schemas"]["Activity"] = {
 export const INQUIRY_SECOND_SOURCE = {
   ...INQUIRY_FIRST_SOURCE,
   id: "00000000-0000-4000-8000-000000000022",
-  subject: "An older question",
+  web_form: {
+    email: "ops@example.test",
+    message: "\nOur order has not arrived.",
+    extra: [],
+    campaign: [],
+  },
   version: 5,
 };

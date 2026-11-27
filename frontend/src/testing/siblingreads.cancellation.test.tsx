@@ -2,7 +2,6 @@
 import { act, cleanup, render, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
-import { WhichDealChoice } from "../components/whichdealchoice";
 import { ContactDealsTab } from "../features/contacts/contactdeals";
 import { cancellationClient, type HeldRead, holdReads } from "./cancellation";
 
@@ -31,26 +30,8 @@ const contact: components["schemas"]["Contact360"] = {
     page: { has_more: false },
   },
 };
-const question: components["schemas"]["Activity"] = {
-  occurred_precision: "instant",
-  offers_email: false,
-  id: "task-1",
-  kind: "task",
-  subject: "Choose a deal",
-  occurred_at: "2026-09-01T00:00:00Z",
-  is_done: false,
-  source: "which_deal",
-  source_system: "which_deal",
-  source_activity_id: "mail-1",
-  captured_by: "human:sample",
-  created_at: "2026-09-01T00:00:00Z",
-  updated_at: "2026-09-01T00:00:00Z",
-  raw: { offered_deal_ids: ["d-1"] },
-};
-
 it.each([
   { name: "contact deal cards", screen: <ContactDealsTab view={contact} /> },
-  { name: "mail deal choices", screen: <WhichDealChoice task={question} /> },
 ])("aborts the sibling deal reader used by $name", async ({ screen }) => {
   held = holdReads((url) => url.pathname === "/v1/deals/d-1");
   const { client, wrapper } = cancellationClient();

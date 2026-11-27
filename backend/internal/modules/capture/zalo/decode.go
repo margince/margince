@@ -24,6 +24,8 @@ type wireAttachment struct {
 		Size        idString `json:"size"`
 		Checksum    string   `json:"checksum"`
 		Type        string   `json:"type"`
+		UserID      idString `json:"user_id"`
+		Phone       string   `json:"phone"`
 		Coordinates *struct {
 			Latitude  idString `json:"latitude"`
 			Longitude idString `json:"longitude"`
@@ -43,6 +45,7 @@ type wireEvent struct {
 	Message     struct {
 		MsgID       idString         `json:"msg_id"`
 		MsgIDs      []idString       `json:"msg_ids"`
+		QuoteMsgID  idString         `json:"quote_msg_id"`
 		Text        string           `json:"text"`
 		Attachments []wireAttachment `json:"attachments"`
 	} `json:"message"`
@@ -128,6 +131,7 @@ func fillMessage(ev *Event, w *wireEvent, dir Direction, suffix string) {
 		Direction: dir,
 		Type:      typ,
 		Text:      w.Message.Text,
+		ReplyToID: string(w.Message.QuoteMsgID),
 	}
 	for _, a := range w.Message.Attachments {
 		msg.Attachments = append(msg.Attachments, a.decode())
@@ -143,6 +147,8 @@ func (a wireAttachment) decode() Attachment {
 		Name:         a.Payload.Name,
 		Checksum:     a.Payload.Checksum,
 		FileType:     a.Payload.Type,
+		UserID:       string(a.Payload.UserID),
+		Phone:        a.Payload.Phone,
 	}
 	if size, err := strconv.ParseInt(string(a.Payload.Size), 10, 64); err == nil {
 		out.Size = size

@@ -404,21 +404,16 @@ func (e *InvalidAudienceError) FieldFault() (field, code, message string) {
 	return "audience", "invalid_audience", e.Error()
 }
 
-// activityWasImported answers whether a mailbox brought this message in.
+// activityWasImported answers whether any seat has an import row for the
+// message. That is what makes its audience derived: a row with none was
+// hand-logged, and its audience is what somebody set.
 //
-// The test is whether any seat has an import row: that is what makes the
-// audience derived rather than declared. A row with none was hand-logged, and
-// its audience is exactly what somebody set.
-//
-// One definition, because two callers act on it and they must not disagree:
-// refuseCapturedAudienceWrite turns it into the write's refusal, and
-// readEmailAccess turns it into the change_mode the viewer offers. A read that
-// asked the question its own way would offer a control the write then refuses,
-// and the difference would show up as a dialog that does nothing.
+// importRowExistsSQL is shared with the list row's mailbox_imported, so a
+// control is never offered that this write then refuses.
 func activityWasImported(ctx context.Context, tx pgx.Tx, id ids.ActivityID) (bool, error) {
 	var imported bool
 	if err := tx.QueryRow(ctx, `
-		SELECT EXISTS (SELECT 1 FROM capture_import WHERE activity_id = $1)`,
+		SELECT `+importRowExistsSQL("$1"),
 		id.UUID).Scan(&imported); err != nil {
 		return false, fmt.Errorf("activities: reading whether a message was imported: %w", err)
 	}

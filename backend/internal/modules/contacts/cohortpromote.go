@@ -442,6 +442,7 @@ func (s *Store) DomainsOwedTheirContacts(ctx context.Context, limit int) ([]Doma
 			       SELECT 1 FROM relationship held
 			        WHERE held.contact_id = p.id AND held.company_id = od.company_id
 			          AND `+employment.LiveSlotSQL("held")+`)
+			   AND NOT `+employment.EndedAtCompanySQL("p.id", "od.company_id")+`
 			 ORDER BY od.company_id, od.domain
 			 LIMIT $1`, limit)
 		if err != nil {

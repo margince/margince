@@ -79,7 +79,7 @@ func TestNobodyClearsAnEmailSummaryByHand(t *testing.T) {
 // sourcesOf is a package's non-test Go, concatenated.
 func sourcesOf(t *testing.T, pkg string) string {
 	t.Helper()
-	matches, err := filepath.Glob(filepath.Join(pkg, "*.go"))
+	matches, err := gatekit.Glob(filepath.Join(pkg, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s: %v", pkg, err)
 	}

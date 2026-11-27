@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/settings/sharedmailboxes.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/historynarrowing.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering frontend/src/features/settings/internalmailsettings.tsx frontend/src/features/settings/internalmailhistoryscope.tsx frontend/src/features/capture/internalmailhistorychoice.tsx backend/internal/modules/capture/internalmailpolicy.go backend/internal/modules/capture/internalmailcapture.go backend/internal/modules/capture/internalmailhistory.go backend/internal/modules/activities/internalmail.go backend/internal/modules/capture/sharedmailbox.go backend/internal/platform/auth/sharedmailboxreader.go -->
+<!-- describes: frontend/src/features/capture/connection-settings.tsx frontend/src/components/mail-sharing.tsx frontend/src/features/capture/emailaccesseditor.tsx frontend/src/features/records/timelineactions.tsx frontend/src/features/settings/sharedmailboxes.tsx frontend/src/features/capture/held-threads.tsx backend/internal/modules/capture/mailposture.go backend/internal/modules/capture/historynarrowing.go backend/internal/modules/capture/sinkaudience.go backend/internal/modules/activities/audience.go backend/internal/modules/activities/audienceholds.go backend/internal/compose/readerrendering frontend/src/features/settings/internalmailsettings.tsx frontend/src/features/settings/internalmailhistoryscope.tsx frontend/src/features/capture/internalmailhistorychoice.tsx backend/internal/modules/capture/internalmailpolicy.go backend/internal/modules/capture/internalmailcapture.go backend/internal/modules/capture/internalmailhistory.go backend/internal/modules/activities/internalmail.go backend/internal/modules/capture/sharedmailbox.go backend/internal/platform/auth/sharedmailboxreader.go -->
 # Who can see an email
 
 Two things decide who can read an email in Margince, and **a "no" from either is a
@@ -316,9 +316,9 @@ on messages you logged yourself. Mail a mailbox captured does not offer it.
 **It changes one message.** The control says so: "Applies to this message
 only, not to the thread or the contact."
 
-That is how it is different from sharing, above. **Share with the company** on a
-thread "Applies to the whole thread." and lets go of your own hold on all of it.
-Changing a message's visibility changes that one message.
+That is how it is different from sharing, above: **Share with the company** on a
+thread "Applies to the whole thread." A chat your own connection captured offers
+**Visibility**, which also changes the whole conversation and says so.
 
 ### How do I connect a shared mailbox?
 <!-- opens: settings/integrations -->
@@ -371,7 +371,7 @@ mail. For mail from a **Held** mailbox:
 - A reply reminder needs the AI to find a request. Whether it reads held mail is the **Check private mail for requests** setting, see [Your day](your-day.md#what-happens-to-a-request-in-an-email).
 - With that setting off, held mail shows on your Worklist only when you wrote on its conversation first.
 - A follow-up on a promise is never made from held mail.
-- When several open deals fit, the task **Which deal is this about?** goes to that colleague. Only they see it.
+- When several open deals fit, the question **Which deal is this about?** goes to that colleague's **Suggested links** panel. Only they see it.
 
 When you open such an email, the reason under its subject says **In a shared
 mailbox**. The line below it names the mailbox and the team that reads it.

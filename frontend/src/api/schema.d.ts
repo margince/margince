@@ -2919,7 +2919,9 @@ export interface paths {
          *     the company carries it. `linkCompanyContacts` accepts exactly these contacts.
          *
          *     A candidate with no current employer is also attached by the daily link reconcile,
-         *     so the list's lasting use is contacts who work elsewhere today.
+         *     so the list's lasting use is contacts who work elsewhere today. The reconcile does not
+         *     re-make a link somebody removed: a contact whose job at this company was ended or
+         *     archived stays unlinked until a user links them again.
          *
          *     Ordered by name, then id. At most 50 candidates; `truncated` is true when more exist.
          *     Needs read on companies, contacts and relationships. A caller without
@@ -7020,10 +7022,13 @@ export interface paths {
             cookie?: never;
         };
         /**
-         * The records an extension suggests messages belong to, waiting for a reader to decide.
+         * The link suggestions waiting for the caller to decide.
          * @description An extension may suggest which deal, company, contact or project a message belongs to. A
-         *     suggestion attaches nothing. It waits here until a reader accepts or rejects it. Core makes
-         *     none of its own: this queue holds only what an extension proposed.
+         *     suggestion attaches nothing. It waits here until a reader accepts or rejects it. Margince
+         *     itself asks one question here: when several open deals fit a captured mail, it suggests each
+         *     of them to the one colleague the mailbox confirms is responsible. Such a suggestion has no
+         *     `unit`, and only that colleague sees and decides it. An agent acting for a colleague sees
+         *     and decides what that colleague would, and never another colleague's question.
          *
          *     Oldest first, at most 50. A decided suggestion leaves the queue, so asking again shows the
          *     next ones. A suggestion is left out when the caller may not read its message or its target,
@@ -7051,7 +7056,7 @@ export interface paths {
         get?: never;
         put?: never;
         /**
-         * Accept a suggestion, which files the message under the record it names.
+         * Accept a suggestion, filing the message under its record.
          * @description Files the message under the suggested record through the same relink as any other filing,
          *     and closes the suggestion in the same transaction. The caller needs the right to update the
          *     message and to attach to the target. Accepting a suggestion that is already accepted is the
@@ -7081,6 +7086,10 @@ export interface paths {
          * @description Closes the suggestion and attaches nothing. The same target is not proposed for the same
          *     message a second time. Rejecting a suggestion that is already rejected is the same success.
          *     An accepted one answers `409`.
+         *
+         *     Rejecting a deal Margince itself suggested also declines that deal, as `declineActivityDeal`
+         *     does: on the message and on each unfiled message of its conversation, so no automatic pass
+         *     files them there again.
          */
         post: operations["rejectLinkSuggestion"];
         delete?: never;
@@ -7116,9 +7125,10 @@ export interface paths {
          *     as a member's does. `project_kept` says so.
          *
          *     Without `deal_id`, the answer is "none of them" to the open "Which deal is this about?"
-         *     question of the message's conversation. Each deal the question offered is declined on the
-         *     message and on each unfiled message of the conversation, and the question is done. A
-         *     message with no open question answers 422.
+         *     question of the message's conversation: the deals Margince suggested to the caller in the
+         *     link suggestion queue. Each of them is declined on the message and on each unfiled message
+         *     of the conversation, and the suggestions are rejected. A message with no open question for
+         *     the caller answers 422.
          *
          *     Declining a deal already declined is the same success and writes nothing. With `deal_id`,
          *     the caller needs the right to change the deal too, as for `setActivityDealRelevance`.
@@ -8765,7 +8775,7 @@ export interface paths {
         };
         /**
          * The room's conversation as the buyer sees it.
-         * @description Optionally narrowed to one published document. Empty while the room serves no content.
+         * @description Optionally narrowed to one published document. Empty while the room serves no content. `hidden_own_conversations` is true when a thread this buyer wrote in is withheld because its file is no longer shared.
          */
         get: operations["listBuyerRoomThreads"];
         put?: never;
@@ -14749,6 +14759,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/shared-mailboxes/replyable": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * The shared mailboxes the signed-in member may reply as.
+         * @description Each is a live shared mailbox with `reply_enabled` whose reader team has the caller as a
+         *     live member. A mailbox the caller may not reply as is absent, so the answer never shows
+         *     that it exists. The `id` is what a send names as `from_connection_id`.
+         *
+         *     Signed-in session only: an agent never names a shared mailbox.
+         */
+        get: operations["listReplyableSharedMailboxes"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/shared-mailboxes/{id}": {
         parameters: {
             query?: never;
@@ -15308,6 +15342,53 @@ export interface paths {
         get: operations["getAttention"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/attention/bounces/{id}/send-again": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Send a bounced message again to a corrected address.
+         * @description The `send_again` verb of a bounce row. `{id}` is the bounced delivery's id, which is the
+         *     row's `id`. The same message goes to the new address: the same subject, text, files, cc
+         *     and bcc, filed under the same records, under the consent purpose the first send went out
+         *     with. Nothing is inferred and nothing is chosen for the sender.
+         *
+         *     It is the one send. Authorization refuses before the consent gate answers, the gate is
+         *     asked the same question about the same purpose for the corrected address, and a
+         *     withdrawn consent, a suppression or a missing grant refuses the send exactly as it
+         *     refuses any other.
+         *
+         *     In order:
+         *
+         *     * the bounced address on the contact the message is filed under is replaced by `address`,
+         *       keeping its type, and the replaced address is archived. A caller who may not change the
+         *       contact is refused before anything is sent. A contact already holding `address` is
+         *       not written again;
+         *     * the message goes out to `address` wherever the bounced address stood, in To, cc or bcc.
+         *
+         *     A bounce can be sent again once. A repeat that bounces carries no `send_again`, and a
+         *     second request for the same bounce answers 404, as does a bounce of another user's, a
+         *     soft bounce, one filed under no contact the caller can read, and a message sent before
+         *     its text was recorded. `address` equal to the address that refused answers 422.
+         *
+         *     Humans only: it changes a contact's address and sends a message a user wrote, and an
+         *     agent has the `send_email` tool for its own mail.
+         */
+        post: operations["sendBouncedMessageAgain"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16061,7 +16142,10 @@ export interface paths {
          *     conversion rate against it, because changing it would re-mean every roll-up built on
          *     those rates (ADR-0085 §7). Before that point it is freely changeable, which is the
          *     case this serves: an installation that chose wrong in its configuration and noticed
-         *     in week one. Audit-only write (no event stream, EVT-NOEVT-3).
+         *     in week one. The refusal's field error keeps its English `message` and carries
+         *     `params` that mirror `BaseCurrencyLock`: `reason`, `count` as a decimal string, and
+         *     `base_currency` only when the lock names one, so a client words it as it words the
+         *     read's `base_currency_lock`. Audit-only write (no event stream, EVT-NOEVT-3).
          */
         patch: operations["updateInstallationSettings"];
         trace?: never;
@@ -19216,7 +19300,7 @@ export interface paths {
         /**
          * Rename a custom field or change whether create dialogs offer it (not a schema change).
          * @description CUSTOM-FIELDS-WIRE-3. Audited catalog update of `label`, `show_in_create`, `reportable`
-         *     or `activity_kinds`;
+         *     `activity_kinds` or `pipeline_ids`;
          *     `column_name` never moves — the physical column identity is stable across rename.
          *     Merge-PATCH: `column_name`, `object`, and `type` are absent from the request schema
          *     entirely, and a body with neither setting is refused with a 422. A retired field
@@ -26161,6 +26245,57 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/me/chat-identities": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /**
+         * Your own chat accounts that are confirmed, or waiting for their code.
+         * @description One row per network where you have a confirmed account or an unexpired code. The account
+         *     is shown with all but its last digits hidden. A confirmed account lets the company's chat
+         *     accounts recognise you, so a customer message you forward is filed for that customer and
+         *     never for you.
+         */
+        get: operations["listMyChatIdentities"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/me/chat-identities/{network}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                network: "whatsapp" | "telegram" | "zalo";
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Get a code that confirms your account on one chat network.
+         * @description Returns a short code once, valid for ten minutes. Send exactly that code as a message from
+         *     your own account to any connected company account on the same network. A second start
+         *     replaces the first code. The code is stored only as a hash.
+         */
+        post: operations["startMyChatVerification"];
+        /**
+         * Forget your confirmed account and any waiting code on one network.
+         * @description Removing a network where you have nothing is not an error.
+         */
+        delete: operations["removeMyChatIdentity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/me/ai-activity": {
         parameters: {
             query?: never;
@@ -27524,6 +27659,31 @@ export interface paths {
         patch: operations["updateCorpus"];
         trace?: never;
     };
+    "/knowledge/corpora/{id}/restore": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Bring an archived corpus back with everything filed in it.
+         * @description The undo half of `archiveCorpus`. The set, its documents and their passages return in one transaction, and the ask finds the passages again.
+         *     Restoring a set that is not archived succeeds and changes nothing, so a retried call after a lost response answers the same way as the first.
+         *     It does NOT make the set the default again. The default moved elsewhere when the set was archived, and `updateCorpus` says which set the palette asks.
+         */
+        post: operations["restoreCorpus"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/knowledge/corpora/{id}/documents": {
         parameters: {
             query?: never;
@@ -27928,6 +28088,33 @@ export interface paths {
 export type webhooks = Record<string, never>;
 export interface components {
     schemas: {
+        /** @enum {string} */
+        ChatNetwork: "whatsapp" | "telegram" | "zalo";
+        ChatIdentity: {
+            network: components["schemas"]["ChatNetwork"];
+            /** @description The confirmed account with all but its last digits hidden. Absent while only a code waits. */
+            account_hint?: string;
+            /**
+             * Format: date-time
+             * @description When the account was confirmed.
+             */
+            verified_at?: string;
+            /**
+             * Format: date-time
+             * @description When the waiting code stops working.
+             */
+            expires_at?: string;
+        };
+        ChatIdentityList: {
+            data: components["schemas"]["ChatIdentity"][];
+        };
+        ChatVerificationStarted: {
+            network: components["schemas"]["ChatNetwork"];
+            /** @description Shown once. Send it as a message from your own account. */
+            code: string;
+            /** Format: date-time */
+            expires_at: string;
+        };
         DealViability: {
             /** Format: uuid */
             deal_id: string;
@@ -29136,7 +29323,8 @@ export interface components {
             timezone?: string;
             /**
              * @description ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
-             *     rate against the current base.
+             *     rate against the current base. The refusal's `params` mirror `BaseCurrencyLock`:
+             *     `reason`, `count` as a decimal string, and `base_currency` when the lock names one.
              */
             base_currency?: string;
             /**
@@ -30990,6 +31178,11 @@ export interface components {
             /** @description Summary of the connection's backfill run; state `none` when never run. */
             backfill?: components["schemas"]["BackfillStatus"];
             /**
+             * @description A period no sync of this mailbox read: a sync found its provider cursor gone and listed only the newest mail, or a first sync could not reach back to where it was to start. A successful sync since, and a finished import, do not clear it. Only an import whose window reaches back over it, and that failed no message, does. Absent when there is none.
+             *     A recent `last_success_at` and a `backfill` in state `done` say a poll and a scan completed. This period says which mail neither of them read, so the owner knows to import a window that covers it.
+             */
+            unread_period?: components["schemas"]["CaptureUnreadPeriod"];
+            /**
              * @description This mailbox's own answer to reading contact details out of its mail, or null to
              *     follow the tenant default (`CaptureSettings.signature_enrich`). Null is a third state
              *     and not a missing value: a mailbox that never chose moves with the default, and one
@@ -31312,10 +31505,11 @@ export interface components {
             /** @description The ledger's own lifecycle for this sender. */
             status?: string;
             /**
-             * @description What YOU decided instead, absent when you have not.
+             * @description What YOU decided instead, absent when you have not. `personal` is the standing decision a
+             *     private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
              * @enum {string}
              */
-            decision?: "business" | "keep_out";
+            decision?: "business" | "keep_out" | "personal";
             /**
              * @description What your decision overruled. Present so the page can say you corrected something,
              *     rather than showing only the answer that now stands.
@@ -31687,6 +31881,12 @@ export interface components {
              * @description When the provider accepted it. Null unless the state is `sent`.
              */
             delivered_at?: string | null;
+            /**
+             * @description True when the reader may send this bounced message again to a corrected address,
+             *     by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+             *     message that bounced hard qualifies, once, and not one an agent wrote.
+             */
+            can_send_again?: boolean;
             /**
              * @description What the message was staged with, as it was at that moment. Empty when it carried
              *     nothing.
@@ -32370,12 +32570,29 @@ export interface components {
              * @description The reader-team member who gets the follow-up work of mail whose sender no reader owns, and owns the contacts that mail creates. Null when none is named: mail whose sender no reader owns then creates no work and no contact.
              */
             backup_owner_id?: string | null;
+            /** @description True when an admin let the reader team reply as this mailbox. A member then names the mailbox id as `from_connection_id` of a send. Always false for an `imap` mailbox, which only captures. */
+            reply_enabled: boolean;
             /** @description A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none. */
             unread_period?: components["schemas"]["CaptureUnreadPeriod"];
             history_narrowing?: components["schemas"]["MailHistoryNarrowing"];
         };
         SharedMailboxList: {
             items: components["schemas"]["SharedMailbox"][];
+        };
+        /** @description A shared mailbox the signed-in member may reply as. */
+        ReplyableSharedMailbox: {
+            /**
+             * Format: uuid
+             * @description The mailbox id, sent as `from_connection_id`.
+             */
+            id: string;
+            /** @enum {string} */
+            provider: "graph" | "gmail";
+            /** @description The mailbox address, which is the From address of a reply. */
+            address: string;
+        };
+        ReplyableSharedMailboxList: {
+            items: components["schemas"]["ReplyableSharedMailbox"][];
         };
         /**
          * @description The mailbox, its readers, and the provider's credentials. Each provider carries its own
@@ -32437,6 +32654,8 @@ export interface components {
              * @description The backup owner from now on. It must be an active member of the reader team who can hold work (else `422` `backup_owner_not_in_reader_team`). Null removes it; absent leaves it as it is.
              */
             backup_owner_id?: string | null;
+            /** @description True lets every live member of the reader team send mail with this mailbox as its From address. The installation's own grant must already allow it: an application permission to send for a Microsoft mailbox, a delegation that includes the send scope for a Google one. False ends it. An `imap` mailbox is refused with `422` `shared_mailbox_cannot_send`. */
+            reply_enabled?: boolean;
             /** @description Must be true when the readers or the visibility change: such a change moves every message the mailbox captured to other readers. */
             confirm: boolean;
         };
@@ -33678,8 +33897,9 @@ export interface components {
              * @description Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
              */
             switched: number;
-            /** @description The model the provider named most often on those calls; absent when switched is 0. */
+            /** @description The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step's own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read. */
             switched_to?: string;
+            switched_to_certification?: components["schemas"]["AiRouteCertification"];
         };
         AiDeferredWork: {
             carrier: string;
@@ -34542,7 +34762,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_link_ambiguous_will_drop" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "amount_needs_currency" | "amount_too_many_decimals" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_far" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_not_found_will_drop" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_not_money" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_field_not_for_pipeline" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_not_found_will_drop" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_column_empty_will_drop" | "employer_not_found" | "employer_not_found_dropped" | "employer_not_found_will_drop" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_not_found_will_drop" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_ambiguous_will_drop" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_not_found_will_drop" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_row_skipped_will_drop" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_a_phone" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -34793,7 +35013,7 @@ export interface components {
             /** @description A picklist or multiselect field's allowed values, for a caller who may read custom fields. Absent otherwise. */
             options?: string[];
         };
-        /** @description One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line. */
+        /** @description One problem of a row, named by its line so a human can go fix it. A row with several cells at fault has one issue for each, and counts once in `skipped`. A problem of a whole file, such as a tag the file names that does not exist yet, has no line. */
         ImportRowIssue: {
             /** @description The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file. */
             line?: number;
@@ -34978,6 +35198,8 @@ export interface components {
             file_name?: string;
             /** @description The name the run's source is filed under. */
             source_name?: string;
+            /** @description Rows the upload counted in the file, a ZIP's files added together. Present while the run keeps what the upload read of the file, in a list too, so a draft no test has read still says how many rows it holds. */
+            readonly row_count?: number;
             /** @description The files the run imports, in import order. A single CSV is one part. */
             parts?: components["schemas"]["ImportRunPart"][];
             /**
@@ -35079,6 +35301,8 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             /** @description Rows the file holds, once a dry run has read it; 0 before. */
             row_count: number;
+            /** @description Rows of the file the run created or updated. Present once the run has written: `complete`, `failed`, `undoing` or `undone`. */
+            readonly rows_written?: number;
             /** @description `{source column -> target field}` as the run saved it, the shape `updateImportRun` accepts, so a reader restores its edits from the run. Absent while the run holds none. */
             mapping?: {
                 [key: string]: string;
@@ -45065,6 +45289,10 @@ export interface components {
             system_display?: components["schemas"]["SystemDisplay"];
             /** @description Whether this caller may replace selected individual readers of this internal operational message. Absent for ordinary or withheld activities. */
             readonly can_share_internal?: boolean;
+            /** @description Whether an import brought this in; the per-message audience write refuses it. */
+            readonly mailbox_imported?: boolean;
+            /** @description Whether the thread audience write acts on this row for the caller. */
+            readonly thread_audience_yours?: boolean;
             /** @description Whether THIS caller may change THIS activity: the same question the server's write gate answers on a mutation — an `activity:update` grant, plus authorship, assignment or a linked record the caller may change, or an unbounded seat. Server-computed per row, per caller. It is a UX signal, never the enforcement. A client uses it to draw or withhold edit affordances so a reader is not offered a control the save would refuse; the server refuses an unauthorized write with 403 whatever this said. Absent means NOT writable, so a client reading a response from a server too old to send it fails closed. */
             readonly writable?: boolean;
             /** @description Whether THIS caller may archive THIS activity: the row write gate `writable` asks, plus the `activity:delete` grant, or `activity:update` on a note, task, call or meeting the caller logged by hand (under their own stamp or through an agent acting for them) that no provider import backs. Sent and captured correspondence, a calendar-synced meeting and a colleague's entry need the delete grant. A meeting a live invitation holds is never archivable. Server-computed per row, per caller. A UX signal, never the enforcement, exactly like `writable`; absent means NOT archivable. */
@@ -45874,9 +46102,21 @@ export interface components {
             entity_id: string;
             /** @description The name of the suggested record, for the screen. Absent on a decision's answer. */
             entity_name?: string | null;
-            /** @description The extension that proposed it. */
-            unit: string;
-            /** @description One short sentence from the extension on why. */
+            /**
+             * Format: int64
+             * @description For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+             */
+            deal_amount_minor?: number | null;
+            /** @description The currency of `deal_amount_minor`, withheld with it. */
+            deal_currency?: string | null;
+            /**
+             * Format: date
+             * @description For a suggested deal, when it is expected to close. Absent on a decision's answer.
+             */
+            deal_expected_close_date?: string | null;
+            /** @description The extension that proposed it. Null when Margince itself asks which deal a mail is about. */
+            unit: string | null;
+            /** @description One short sentence from the extension on why, or Margince's own question. */
             reason: string;
             score: number;
             /** @enum {string} */
@@ -45942,7 +46182,7 @@ export interface components {
             project_unfiled: boolean;
             /** @description A project link came from a declined deal and stays, because a retention rule keeps it or the caller cannot read the project. */
             project_kept: boolean;
-            /** @description The open deal questions of the conversation this call marked done. */
+            /** @description The messages of the conversation whose open deal question this call closed. */
             questions_closed: number;
         };
         SetActivityDispositionRequest: {
@@ -46175,12 +46415,12 @@ export interface components {
             supersedes_id?: string | null;
             /**
              * Format: uuid
-             * @description The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. A file that came with a captured mail carries none; the account's Documents list reaches it through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
+             * @description The account a file is filed under, worked out when it is read: the company it is filed on, or the company of the deal it is filed on now. A file on any other record names none; the account's Documents list reaches a mail's file through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's.
              */
             readonly company_id?: string | null;
             /**
              * Format: uuid
-             * @description The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
+             * @description The agreement this file is about. A read path rather than a second parent: visibility stays the primary parent's. Set at upload by the member filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
              */
             readonly contract_id?: string | null;
             /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for any row with a `url`, which is a pointer and has no bytes. */
@@ -46693,7 +46933,8 @@ export interface components {
              *     `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
              *     conversation arrived in, and a new message from the sender's default mailbox. A mailbox
              *     that is not the sender's, or cannot send, is refused with 422
-             *     `mailbox_not_send_capable`.
+             *     `mailbox_not_send_capable`. A shared mailbox with `reply_enabled` can be named here by
+             *     its id, and only by a member of its reader team.
              */
             from_connection_id?: string | null;
             /** @description The subject line. Blank or only white space is refused with 422 `required`. */
@@ -53225,7 +53466,10 @@ export interface components {
         AnalyticsAnswer: {
             /** @description What each value in a row means, in order. */
             columns: string[];
-            /** @description One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own. */
+            /**
+             * @description One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
+             *     A number past ±(2^53−1) is null, and `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the row is answered.
+             */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -54716,6 +54960,8 @@ export interface components {
             reportable: boolean;
             /** @description The activity kinds an activity field applies to; null means every kind, and every other object's field is null. A logged or edited activity of another kind refuses a value for the field with `422 field_not_valid_for_kind`. A value stored before the field was narrowed stays readable, and sending null clears it. */
             activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[] | null;
+            /** @description The pipelines a deal field applies to; null means every pipeline, and every other object's field is null. A created or edited deal of another pipeline refuses a value for the field with `422 field_not_valid_for_pipeline`. A pipeline that is archived matches nothing. A value stored before the field was narrowed, or on a deal that moved pipeline, stays stored and readable, and sending null clears it. */
+            pipeline_ids?: string[] | null;
             /** Format: uuid */
             created_by: string;
             /** Format: date-time */
@@ -54781,8 +55027,10 @@ export interface components {
             show_in_create: boolean;
             /** @description The activity kinds the field applies to. Only an activity field may name any; omitted or empty means every kind. An unknown kind, or kinds on another object's field, is refused with a 422. */
             activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];
+            /** @description The pipelines the field applies to. Only a deal field may name any; omitted or empty means every pipeline. An id that is not a live pipeline, or ids on another object's field, is refused with a 422. */
+            pipeline_ids?: string[];
         };
-        /** @description Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. */
+        /** @description Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable`, `activity_kinds` and `pipeline_ids`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. `pipeline_ids` does the same for the pipelines a deal field applies to. */
         RenameCustomFieldRequest: {
             label?: string;
             label_translations?: components["schemas"]["LabelTranslations"];
@@ -54790,6 +55038,7 @@ export interface components {
             show_in_create?: boolean;
             reportable?: boolean;
             activity_kinds?: ("call" | "email" | "meeting" | "message" | "note" | "task")[];
+            pipeline_ids?: string[];
         };
         /** @description CUSTOM-FIELDS-PARAM-5. Replaces the picklist's full allowed-option set (ordered); at least one option is required — an empty array is rejected (422). */
         UpdateCustomFieldOptionsRequest: {
@@ -54986,7 +55235,7 @@ export interface components {
                 [key: string]: unknown;
             };
             columns: string[];
-            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. */
+            /** @description Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. A total past ±(2^53−1) is null, and the row's `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the report is answered. */
             rows: {
                 [key: string]: unknown;
             }[];
@@ -55031,7 +55280,7 @@ export interface components {
             rows: {
                 [key: string]: unknown;
             }[];
-            /** @description The requested aggregates recomputed over exactly these source rows — equals the explained cell. */
+            /** @description The requested aggregates recomputed over exactly these source rows — equals the explained cell. A total past ±(2^53−1) is null and named in `_out_of_range`, as on the report row. */
             aggregates?: {
                 [key: string]: unknown;
             };
@@ -55447,7 +55696,7 @@ export interface components {
                 if_version?: boolean;
                 /** @description Whether the app asks its user to confirm it first. */
                 ask_user_first?: boolean;
-                /** @description Whether it takes filename, content_type and content_base64. */
+                /** @description Whether it takes filename, content_type and content_base64 or content_text. */
                 uploads_a_file?: boolean;
                 /** @description The JSON schema of its body argument. */
                 body?: {
@@ -57198,12 +57447,6 @@ export interface components {
              * @description The won deal that activated the partner.
              */
             readonly activation_deal_id?: string | null;
-            /** @description Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value. */
-            partner_fit_score?: number | null;
-            /** @description Retained machine-computed partner-fit value while a Commercial Judgement override is in force. */
-            readonly partner_fit_score_computed?: number | null;
-            /** @description Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared. */
-            readonly partner_fit_override_reason?: string | null;
             /**
              * @deprecated
              * @description Never set; always null. Kept so existing clients keep compiling.
@@ -60407,6 +60650,7 @@ export interface components {
             id: string;
             /** Format: uuid */
             room_id: string;
+            visible_to_buyer: boolean;
             /**
              * Format: uuid
              * @description Null for a room-level thread.
@@ -60425,6 +60669,11 @@ export interface components {
         };
         DealRoomThreadListResponse: {
             data: components["schemas"]["DealRoomThread"][];
+        };
+        BuyerRoomThreadListResponse: {
+            data: components["schemas"]["DealRoomThread"][];
+            /** @description True when a conversation this buyer wrote in is withheld because its file is no longer shared. No count and no file. */
+            hidden_own_conversations: boolean;
         };
         OpenDealRoomThreadRequest: {
             /**
@@ -60539,6 +60788,12 @@ export interface components {
             steward_name?: string | null;
             /** @description Omitted while access is `paused` or `expired`, and when nothing has been published yet. */
             room?: components["schemas"]["BuyerRoomContent"];
+            /** @description Present on a seat's first sign-in, and on a seller preview so the seller sees what the buyer will see. Tells the buyer that the seller's company can see the sign-in and the downloads. It has no action. */
+            engagement_notice?: components["schemas"]["BuyerEngagementNotice"];
+        };
+        BuyerEngagementNotice: {
+            /** @description The seller's company, as the invitation mail names it. */
+            company: string;
         };
         /** @description A branded, workspace-governed DE/EN PDF layout for offers (data-model §12.6). Mirrors the `offer_template` table. Deliberately carries no source/captured_by — like CustomField, this is workspace-authored config, not a captured record; provenance lives in the audit row, not this schema. */
         OfferTemplate: {
@@ -63203,6 +63458,10 @@ export interface components {
              *     domain. Reopening retries identification without settling identity. These verbs route
              *     to `/capture/domain-questions/{domain}/…`.
              *
+             *     `send_again` is offered on a bounced message that may be sent once more. The reader
+             *     types a corrected address and the same message goes out to it, through
+             *     `POST /attention/bounces/{id}/send-again`.
+             *
              *     `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
              *     to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
              *     to `/notices/{id}/read` — the reader has seen it, and it leaves the lane. `set_aside` rather than reusing `snooze`: a task's
@@ -63210,7 +63469,14 @@ export interface components {
              *     suggestion until later in the day. One word for both would make a client that
              *     handles `snooze` generically write the wrong endpoint.
              */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel" | "send_again")[];
+        };
+        BounceSendAgainRequest: {
+            /**
+             * Format: email
+             * @description The corrected address. It replaces the address that refused, and it must differ from it.
+             */
+            address: string;
         };
         /**
          * @description The two records a duplicate item proposes to merge, with the detection-time
@@ -64925,7 +65191,7 @@ export interface components {
              */
             undo?: components["schemas"]["AppliedUndo"];
             /** @description What this item offers, routed to the endpoint that owns the verb. */
-            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel")[];
+            actions: ("decide" | "merge" | "complete" | "snooze" | "open" | "act" | "dismiss" | "set_aside" | "acknowledge" | "retry" | "reply" | "undo" | "keep" | "keep_as_vendor" | "discard" | "reopen" | "take" | "cancel" | "send_again")[];
             /**
              * @description The heading this row sits under, as an OUTCOME rather than a priority number.
              *
@@ -66006,6 +66272,11 @@ export interface components {
             coverage: components["schemas"]["KnowledgeCoverage"];
             /** Format: date-time */
             created_at: string;
+            /**
+             * Format: date-time
+             * @description When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set, and it takes the `knowledge_corpus` delete grant that archives and restores one.
+             */
+            archived_at?: string | null;
         };
         /** @description Every corpus, unpaged. A workspace defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a promise with no producer behind it. */
         KnowledgeCorpusList: {
@@ -66060,6 +66331,12 @@ export interface components {
             embed_state: components["schemas"]["KnowledgeEmbedState"];
             /** Format: date-time */
             created_at: string;
+            /** @description The id the document's source gave it (a Google Drive file id), set only on a document an extension keeps in step with that source. Null for an upload. */
+            external_id?: string | null;
+            /** @description What the source said about the document (owner, department, country, type, effective and review dates, audience), as the extension read it. A field the source did not state is absent, never guessed. Absent for an upload. */
+            meta?: {
+                [key: string]: string;
+            };
         };
         /** @description The corpus as an ANSWER needs it: enough to name what was searched and to quote the topic statement back in a refusal, and nothing else. It is not KnowledgeCorpus, because that one carries coverage — which the answer already reports at its own top level — and an answer shipping the same counts down two paths is two components rendering different numbers on one screen with nothing to fail when they disagree. The settings a corpus is administered by (min_similarity, default_ask, reindexing) are no business of a reply. */
         KnowledgeAnswerCorpus: {
@@ -66092,6 +66369,10 @@ export interface components {
             end_column?: number;
             /** @description A verbatim span from the retrieved passages, whitespace-collapsed and matched before this claim was allowed to exist. */
             quote: string;
+            /** @description What the cited document's source said about it (owner, effective date and so on), so a reader sees which version and date the quote comes from. Absent for an uploaded document. */
+            meta?: {
+                [key: string]: string;
+            };
             section?: components["schemas"]["KnowledgeClaimSection"];
             opens?: components["schemas"]["KnowledgeClaimOpens"];
         };
@@ -80681,7 +80962,7 @@ export interface operations {
                     [name: string]: unknown;
                 };
                 content: {
-                    "application/json": components["schemas"]["DealRoomThreadListResponse"];
+                    "application/json": components["schemas"]["BuyerRoomThreadListResponse"];
                 };
             };
             401: components["responses"]["Unauthorized"];
@@ -91013,6 +91294,28 @@ export interface operations {
             };
         };
     };
+    listReplyableSharedMailboxes: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The mailboxes the caller may reply as, ordered by address. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ReplyableSharedMailboxList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+        };
+    };
     updateSharedMailbox: {
         parameters: {
             query?: never;
@@ -91653,6 +91956,38 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
+        };
+    };
+    sendBouncedMessageAgain: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["BounceSendAgainRequest"];
+            };
+        };
+        responses: {
+            /** @description Accepted for send (queued); the resulting outbound activity is logged. */
+            202: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["Activity"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["SendRefused"];
+            422: components["responses"]["SendValidationError"];
         };
     };
     getMagic: {
@@ -107056,6 +107391,78 @@ export interface operations {
             404: components["responses"]["NotFound"];
         };
     };
+    listMyChatIdentities: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Your chat accounts. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatIdentityList"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    startMyChatVerification: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                network: "whatsapp" | "telegram" | "zalo";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The code and when it stops working. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatVerificationStarted"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    removeMyChatIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                network: "whatsapp" | "telegram" | "zalo";
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Removed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getMyAiActivity: {
         parameters: {
             query?: {
@@ -108913,7 +109320,10 @@ export interface operations {
     };
     listCorpora: {
         parameters: {
-            query?: never;
+            query?: {
+                /** @description Include soft-deleted (archived) rows. Default false. */
+                include_archived?: components["parameters"]["IncludeArchived"];
+            };
             header?: never;
             path?: never;
             cookie?: never;
@@ -108931,6 +109341,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            422: components["responses"]["ValidationError"];
         };
     };
     createCorpus: {
@@ -109053,6 +109464,34 @@ export interface operations {
         };
         responses: {
             /** @description The corpus. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["KnowledgeCorpus"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["PermissionDenied"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["NameTakenConflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    restoreCorpus: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The restored corpus. */
             200: {
                 headers: {
                     [name: string]: unknown;
@@ -109215,6 +109654,13 @@ export interface operations {
             content: {
                 "application/json": {
                     question: string;
+                    /**
+                     * @description Optional. When present and not empty, only documents whose `meta.audience` is one
+                     *     of these values are searched and cited. Values compare with no case, no accents and
+                     *     `đ` as `d`. A document with no audience is left out. When no document matches, the
+                     *     outcome is `not_covered`. Absent or empty, every document is searched.
+                     */
+                    audiences?: string[];
                 };
             };
         };

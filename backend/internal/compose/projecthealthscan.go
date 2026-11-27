@@ -39,7 +39,7 @@ import (
 
 // projectHealthActor is the principal every reading the job writes names in
 // captured_by.
-const projectHealthActor = "agent:project-health"
+const projectHealthActor = "system:project-health"
 
 // projectHealthNameBound is how much of a project's name the notice subject
 // quotes, well inside the store's 200-character subject.

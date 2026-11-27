@@ -243,13 +243,12 @@ test("an email request is read in the task, with no click to open it", async () 
   // And no button, because there is nothing left for one to open.
   expect(screen.queryByRole("button", { name: "Open original" })).toBeNull();
 
-  // WHERE it sits is the requirement, not merely that it is present: the
-  // message reads under the task's own verbs, so a mail long enough to scroll
-  // cannot push the Done button and the date picker off the panel.
-  const moveTo = screen.getByText("Move to");
+  // Where it sits is the requirement. The message reads under the task's own
+  // verbs, so a long mail cannot push Done off the panel.
+  const done = screen.getByRole("button", { name: en["tasks.complete"] });
   const message = screen.getByText("Please send the report.");
   expect(
-    moveTo.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING,
+    done.compareDocumentPosition(message) & Node.DOCUMENT_POSITION_FOLLOWING,
   ).toBeTruthy();
 });
 
@@ -455,8 +454,11 @@ const describedBy = (control: HTMLElement) =>
     .join(" ");
 const openContact = () =>
   screen.queryByRole("link", { name: en["task.next.openContact"] });
+/** Opens the verbs row's More, where every verb past the first two waits. */
+const openMore = async (user: ReturnType<typeof userEvent.setup>) =>
+  user.click(await screen.findByRole("button", { name: en["tasks.more"] }));
 
-test("reach out offers Draft email, Open contact and an outlined Call", async () => {
+test("reach out offers Draft email, and Call and Open contact under More", async () => {
   const user = userEvent.setup();
   const writeTo = vi.fn();
   stubNextSteps();
@@ -465,6 +467,8 @@ test("reach out offers Draft email, Open contact and an outlined Call", async ()
   const draft = await screen.findByRole("button", {
     name: en["task.next.draftEmail"],
   });
+  expect(call()).toBeNull();
+  await openMore(user);
   expect(openContact()?.getAttribute("href")).toBe("/#/contacts/c-1");
   expect(call()?.classList.contains("btn-primary")).toBe(false);
   await user.click(draft);
@@ -477,10 +481,13 @@ test("reach out offers Draft email, Open contact and an outlined Call", async ()
   });
 });
 
-test("with no composer to open, Email hands the address to the mail client", async () => {
+test("with no composer to open, Call leads and Email under More opens the mail client", async () => {
+  const user = userEvent.setup();
   stubNextSteps();
   openTaskWith();
 
+  await waitFor(() => expect(call()).not.toBeNull());
+  await openMore(user);
   const email = await screen.findByRole("link", {
     name: en["record.verb.email"],
   });
@@ -535,7 +542,8 @@ test("a reach out draws Done only once its contact is read", async () => {
   expect(done.classList.contains("btn-primary")).toBe(false);
 });
 
-test("a reply to a call keeps Email beside Call in its details", async () => {
+test("a reply to a call keeps Email under More in its details", async () => {
+  const user = userEvent.setup();
   stubNextSteps({ taskType: "reply_by_call", mailTarget: true });
   openTaskWith();
 
@@ -543,6 +551,7 @@ test("a reply to a call keeps Email beside Call in its details", async () => {
     name: en["record.verb.call"],
   });
   expect(dial.classList.contains("btn-primary")).toBe(true);
+  await openMore(user);
   const email = await screen.findByRole("link", {
     name: en["record.verb.email"],
   });
@@ -615,6 +624,7 @@ test("a contact with no address gets Draft email refused with the reason", async
 });
 
 test("an archived contact gets a refused Draft email, and can still be opened", async () => {
+  const user = userEvent.setup();
   stubNextSteps({
     contact: { ...ALICE, archived_at: "2026-09-01T00:00:00Z" },
   });
@@ -625,6 +635,7 @@ test("an archived contact gets a refused Draft email, and can still be opened", 
   });
   expect(email.hasAttribute("disabled")).toBe(true);
   expect(describedBy(email)).toBe(en["contact.rail.archivedReadOnly"]);
+  await openMore(user);
   expect(openContact()).not.toBeNull();
 });
 
@@ -649,7 +660,7 @@ test("an archived contact gets no Call on a call task", async () => {
   ).toBeNull();
 });
 
-test("a refused Draft email is said once, after every verb in the row", async () => {
+test("a refused Draft email is said once, in the row of verbs", async () => {
   stubNextSteps({ contact: { ...ALICE, primary_email: null } });
   openTaskWith();
 
@@ -658,9 +669,10 @@ test("a refused Draft email is said once, after every verb in the row", async ()
   });
   const reasons = screen.getAllByText(en["task.next.noAddress"]);
   expect(reasons).toHaveLength(1);
-  const row = email.closest(".task-detail-actions");
+  // The row's CSS orders the reason last, on a line of its own.
+  const row = email.closest(".task-detail-verbs");
+  expect(row).not.toBeNull();
   expect(reasons[0]?.parentElement).toBe(row);
-  expect(row?.lastElementChild).toBe(reasons[0]);
 });
 
 test("a task linking no record offers no next steps", async () => {
@@ -899,4 +911,28 @@ test("Call logs the call inside the dialog, on the task's contact, and leaves th
   expect(screen.getByRole("dialog")).toBeTruthy();
   expect(document.activeElement).toBe(dial);
   expect(patched).toHaveLength(0);
+});
+
+test("Log what happened takes focus into its form, and Back brings it to Done", async () => {
+  const user = userEvent.setup();
+  stubNextSteps();
+  openTaskWith();
+
+  await openMore(user);
+  await user.click(
+    await screen.findByRole("button", { name: en["tasks.log.action"] }),
+  );
+  const back = await screen.findByRole("button", {
+    name: en["tasks.log.back"],
+  });
+  const form = back.closest(".form-stack");
+  await waitFor(() =>
+    expect(form?.contains(document.activeElement)).toBe(true),
+  );
+
+  await user.click(back);
+  const done = await screen.findByRole("button", {
+    name: en["tasks.complete"],
+  });
+  await waitFor(() => expect(document.activeElement).toBe(done));
 });

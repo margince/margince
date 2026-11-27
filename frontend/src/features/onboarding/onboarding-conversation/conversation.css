@@ -168,7 +168,7 @@
   width: 100%;
   padding: var(--space-2) var(--space-3);
   color: var(--textPrimary);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-sm);
   outline: 0;
   background: var(--bgHover);
@@ -182,7 +182,7 @@
 .ob-conv-confirm-missing-row input:focus,
 .ob-conv-confirm-missing-row textarea:focus {
   border-color: var(--aiText);
-  box-shadow: var(--focus-glow-ai);
+  box-shadow: var(--focus-field-ai);
 }
 
 /* The work surface itself. The pane it fills already has its own gutter, but
@@ -774,7 +774,7 @@
 .ob-voice-paste-area {
   width: 100%;
   padding: var(--space-3);
-  border: 1px solid var(--borderSubtle);
+  border: 1px solid var(--borderControl);
   border-radius: var(--r-md);
   background: var(--bgField);
   color: var(--textPrimary);
@@ -788,7 +788,7 @@
    whatever the platform draws rather than a replacement for it. */
 .ob-voice-paste-area:focus-visible {
   border-color: var(--aiText);
-  box-shadow: var(--focus-glow-ai);
+  box-shadow: var(--focus-field-ai);
 }
 
 /* The floor meter: the bar plus the numbers behind it, so the fill is never

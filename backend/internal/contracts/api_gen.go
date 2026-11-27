@@ -3278,6 +3278,7 @@ const (
 	AttentionItemActionsReopen       AttentionItemActions = "reopen"
 	AttentionItemActionsReply        AttentionItemActions = "reply"
 	AttentionItemActionsRetry        AttentionItemActions = "retry"
+	AttentionItemActionsSendAgain    AttentionItemActions = "send_again"
 	AttentionItemActionsSetAside     AttentionItemActions = "set_aside"
 	AttentionItemActionsSnooze       AttentionItemActions = "snooze"
 	AttentionItemActionsTake         AttentionItemActions = "take"
@@ -3314,6 +3315,8 @@ func (e AttentionItemActions) Valid() bool {
 	case AttentionItemActionsReply:
 		return true
 	case AttentionItemActionsRetry:
+		return true
+	case AttentionItemActionsSendAgain:
 		return true
 	case AttentionItemActionsSetAside:
 		return true
@@ -5084,6 +5087,7 @@ func (e CaptureProviderAvailabilityReason) Valid() bool {
 const (
 	CaptureSenderDecisionDecisionBusiness CaptureSenderDecisionDecision = "business"
 	CaptureSenderDecisionDecisionKeepOut  CaptureSenderDecisionDecision = "keep_out"
+	CaptureSenderDecisionDecisionPersonal CaptureSenderDecisionDecision = "personal"
 )
 
 // Valid indicates whether the value is a known member of the CaptureSenderDecisionDecision enum.
@@ -5092,6 +5096,8 @@ func (e CaptureSenderDecisionDecision) Valid() bool {
 	case CaptureSenderDecisionDecisionBusiness:
 		return true
 	case CaptureSenderDecisionDecisionKeepOut:
+		return true
+	case CaptureSenderDecisionDecisionPersonal:
 		return true
 	default:
 		return false
@@ -5473,6 +5479,27 @@ func (e ChannelVerbosity) Valid() bool {
 	case ChannelVerbosityMilestones:
 		return true
 	case ChannelVerbositySilent:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChatNetwork.
+const (
+	ChatNetworkTelegram ChatNetwork = "telegram"
+	ChatNetworkWhatsapp ChatNetwork = "whatsapp"
+	ChatNetworkZalo     ChatNetwork = "zalo"
+)
+
+// Valid indicates whether the value is a known member of the ChatNetwork enum.
+func (e ChatNetwork) Valid() bool {
+	switch e {
+	case ChatNetworkTelegram:
+		return true
+	case ChatNetworkWhatsapp:
+		return true
+	case ChatNetworkZalo:
 		return true
 	default:
 		return false
@@ -15513,135 +15540,150 @@ func (e ImportProblemKind) Valid() bool {
 
 // Defines values for ImportReasonCode.
 const (
-	ImportReasonCodeActivityEmpty                ImportReasonCode = "activity_empty"
-	ImportReasonCodeActivityHeld                 ImportReasonCode = "activity_held"
-	ImportReasonCodeActivityLinkAmbiguous        ImportReasonCode = "activity_link_ambiguous"
-	ImportReasonCodeActivityLinkAmbiguousDropped ImportReasonCode = "activity_link_ambiguous_dropped"
-	ImportReasonCodeActivityTypeUnknown          ImportReasonCode = "activity_type_unknown"
-	ImportReasonCodeActivityTypeUnnamed          ImportReasonCode = "activity_type_unnamed"
-	ImportReasonCodeActivityUnlinked             ImportReasonCode = "activity_unlinked"
-	ImportReasonCodeAddressErased                ImportReasonCode = "address_erased"
-	ImportReasonCodeAddressNotSplit              ImportReasonCode = "address_not_split"
-	ImportReasonCodeAmountNegative               ImportReasonCode = "amount_negative"
-	ImportReasonCodeAuthorTooLong                ImportReasonCode = "author_too_long"
-	ImportReasonCodeCannotCreate                 ImportReasonCode = "cannot_create"
-	ImportReasonCodeCannotCreateTags             ImportReasonCode = "cannot_create_tags"
-	ImportReasonCodeCannotEdit                   ImportReasonCode = "cannot_edit"
-	ImportReasonCodeCannotEditAndTag             ImportReasonCode = "cannot_edit_and_tag"
-	ImportReasonCodeCannotLinkStakeholders       ImportReasonCode = "cannot_link_stakeholders"
-	ImportReasonCodeCannotReadPipelines          ImportReasonCode = "cannot_read_pipelines"
-	ImportReasonCodeCannotReadTags               ImportReasonCode = "cannot_read_tags"
-	ImportReasonCodeCannotWriteType              ImportReasonCode = "cannot_write_type"
-	ImportReasonCodeCloseDateFuture              ImportReasonCode = "close_date_future"
-	ImportReasonCodeCloseDatePast                ImportReasonCode = "close_date_past"
-	ImportReasonCodeCompanyDomainMatched         ImportReasonCode = "company_domain_matched"
-	ImportReasonCodeCompanyDuplicateFound        ImportReasonCode = "company_duplicate_found"
-	ImportReasonCodeCompanyDuplicateSkipped      ImportReasonCode = "company_duplicate_skipped"
-	ImportReasonCodeCompanyLinkOnMeeting         ImportReasonCode = "company_link_on_meeting"
-	ImportReasonCodeCompanyNameEmpty             ImportReasonCode = "company_name_empty"
-	ImportReasonCodeContactChannelMissing        ImportReasonCode = "contact_channel_missing"
-	ImportReasonCodeContactDuplicateFound        ImportReasonCode = "contact_duplicate_found"
-	ImportReasonCodeContactDuplicateSkipped      ImportReasonCode = "contact_duplicate_skipped"
-	ImportReasonCodeContactEmailHeld             ImportReasonCode = "contact_email_held"
-	ImportReasonCodeContactHoldsLead             ImportReasonCode = "contact_holds_lead"
-	ImportReasonCodeContactNotFound              ImportReasonCode = "contact_not_found"
-	ImportReasonCodeContactNotFoundDropped       ImportReasonCode = "contact_not_found_dropped"
-	ImportReasonCodeContactUnnamed               ImportReasonCode = "contact_unnamed"
-	ImportReasonCodeCurrencyNotACode             ImportReasonCode = "currency_not_a_code"
-	ImportReasonCodeCurrencyUnset                ImportReasonCode = "currency_unset"
-	ImportReasonCodeDealAlreadyClosed            ImportReasonCode = "deal_already_closed"
-	ImportReasonCodeDealCompanyHasContracts      ImportReasonCode = "deal_company_has_contracts"
-	ImportReasonCodeDealLegalGate                ImportReasonCode = "deal_legal_gate"
-	ImportReasonCodeDealNotFound                 ImportReasonCode = "deal_not_found"
-	ImportReasonCodeDealNotFoundDropped          ImportReasonCode = "deal_not_found_dropped"
-	ImportReasonCodeDealPipelineFixed            ImportReasonCode = "deal_pipeline_fixed"
-	ImportReasonCodeDescriptionTooLong           ImportReasonCode = "description_too_long"
-	ImportReasonCodeDirectionUnknown             ImportReasonCode = "direction_unknown"
-	ImportReasonCodeDomainHeld                   ImportReasonCode = "domain_held"
-	ImportReasonCodeDuplicateEmail               ImportReasonCode = "duplicate_email"
-	ImportReasonCodeDurationNotValidForKind      ImportReasonCode = "duration_not_valid_for_kind"
-	ImportReasonCodeDurationOutOfRange           ImportReasonCode = "duration_out_of_range"
-	ImportReasonCodeEmailNamesNoContact          ImportReasonCode = "email_names_no_contact"
-	ImportReasonCodeEmployerColumnEmpty          ImportReasonCode = "employer_column_empty"
-	ImportReasonCodeEmployerColumnEmptyDropped   ImportReasonCode = "employer_column_empty_dropped"
-	ImportReasonCodeEmployerNotFound             ImportReasonCode = "employer_not_found"
-	ImportReasonCodeEmployerNotFoundDropped      ImportReasonCode = "employer_not_found_dropped"
-	ImportReasonCodeEmployerRefused              ImportReasonCode = "employer_refused"
-	ImportReasonCodeEmployerWillCreate           ImportReasonCode = "employer_will_create"
-	ImportReasonCodeEmptyPayload                 ImportReasonCode = "empty_payload"
-	ImportReasonCodeFieldInactive                ImportReasonCode = "field_inactive"
-	ImportReasonCodeFxRateMissing                ImportReasonCode = "fx_rate_missing"
-	ImportReasonCodeIdNotACompanyId              ImportReasonCode = "id_not_a_company_id"
-	ImportReasonCodeIdNotARecordId               ImportReasonCode = "id_not_a_record_id"
-	ImportReasonCodeIdNotVisible                 ImportReasonCode = "id_not_visible"
-	ImportReasonCodeIdOnNonCompany               ImportReasonCode = "id_on_non_company"
-	ImportReasonCodeIdRecordNotVisible           ImportReasonCode = "id_record_not_visible"
-	ImportReasonCodeLeadNotFound                 ImportReasonCode = "lead_not_found"
-	ImportReasonCodeLeadNotFoundDropped          ImportReasonCode = "lead_not_found_dropped"
-	ImportReasonCodeLeadStatusNotImportable      ImportReasonCode = "lead_status_not_importable"
-	ImportReasonCodeLeadStatusUnknown            ImportReasonCode = "lead_status_unknown"
-	ImportReasonCodeLinkAmbiguous                ImportReasonCode = "link_ambiguous"
-	ImportReasonCodeLinkAmbiguousDropped         ImportReasonCode = "link_ambiguous_dropped"
-	ImportReasonCodeLinkContactNotImported       ImportReasonCode = "link_contact_not_imported"
-	ImportReasonCodeLinkEdgeUnsupported          ImportReasonCode = "link_edge_unsupported"
-	ImportReasonCodeLinkMalformed                ImportReasonCode = "link_malformed"
-	ImportReasonCodeLinkNotAttachable            ImportReasonCode = "link_not_attachable"
-	ImportReasonCodeLinkNotFound                 ImportReasonCode = "link_not_found"
-	ImportReasonCodeLinkNotFoundDropped          ImportReasonCode = "link_not_found_dropped"
-	ImportReasonCodeLinkRowNotImported           ImportReasonCode = "link_row_not_imported"
-	ImportReasonCodeLinkRowSkipped               ImportReasonCode = "link_row_skipped"
-	ImportReasonCodeLinkRowSkippedDropped        ImportReasonCode = "link_row_skipped_dropped"
-	ImportReasonCodeLinkTypeUnknown              ImportReasonCode = "link_type_unknown"
-	ImportReasonCodeLinkedinHeld                 ImportReasonCode = "linkedin_held"
-	ImportReasonCodeLostReasonMissing            ImportReasonCode = "lost_reason_missing"
-	ImportReasonCodeMeetingNotTakenPlace         ImportReasonCode = "meeting_not_taken_place"
-	ImportReasonCodeMeetingStatusNotValidForKind ImportReasonCode = "meeting_status_not_valid_for_kind"
-	ImportReasonCodeMeetingStatusUnknown         ImportReasonCode = "meeting_status_unknown"
-	ImportReasonCodeMessageNotImportable         ImportReasonCode = "message_not_importable"
-	ImportReasonCodeNaturalKeyTaken              ImportReasonCode = "natural_key_taken"
-	ImportReasonCodeNotADate                     ImportReasonCode = "not_a_date"
-	ImportReasonCodeNotADomain                   ImportReasonCode = "not_a_domain"
-	ImportReasonCodeNotANumber                   ImportReasonCode = "not_a_number"
-	ImportReasonCodeNotAnAmount                  ImportReasonCode = "not_an_amount"
-	ImportReasonCodeNotAnEmail                   ImportReasonCode = "not_an_email"
-	ImportReasonCodeNotYesNo                     ImportReasonCode = "not_yes_no"
-	ImportReasonCodeNoteRepeated                 ImportReasonCode = "note_repeated"
-	ImportReasonCodeOccurredAtFuture             ImportReasonCode = "occurred_at_future"
-	ImportReasonCodeOccurredAtUnnamed            ImportReasonCode = "occurred_at_unnamed"
-	ImportReasonCodeOptionNotAllowed             ImportReasonCode = "option_not_allowed"
-	ImportReasonCodeOptionNotInList              ImportReasonCode = "option_not_in_list"
-	ImportReasonCodeOptionsNeedSemicolons        ImportReasonCode = "options_need_semicolons"
-	ImportReasonCodeOwnerRefused                 ImportReasonCode = "owner_refused"
-	ImportReasonCodeOwnerUnknown                 ImportReasonCode = "owner_unknown"
-	ImportReasonCodePhoneNeedsCountry            ImportReasonCode = "phone_needs_country"
-	ImportReasonCodePipelineNoOpenStage          ImportReasonCode = "pipeline_no_open_stage"
-	ImportReasonCodePipelineUnknown              ImportReasonCode = "pipeline_unknown"
-	ImportReasonCodePipelineUnnamed              ImportReasonCode = "pipeline_unnamed"
-	ImportReasonCodeRecordArchived               ImportReasonCode = "record_archived"
-	ImportReasonCodeRefTakenByAnotherCompany     ImportReasonCode = "ref_taken_by_another_company"
-	ImportReasonCodeRefTakenByAnotherRecord      ImportReasonCode = "ref_taken_by_another_record"
-	ImportReasonCodeRowKeyEmpty                  ImportReasonCode = "row_key_empty"
-	ImportReasonCodeRowKeyRepeated               ImportReasonCode = "row_key_repeated"
-	ImportReasonCodeRunInFlight                  ImportReasonCode = "run_in_flight"
-	ImportReasonCodeSizeBandInvalid              ImportReasonCode = "size_band_invalid"
-	ImportReasonCodeStageUnknown                 ImportReasonCode = "stage_unknown"
-	ImportReasonCodeStageUnnamed                 ImportReasonCode = "stage_unnamed"
-	ImportReasonCodeStoredValuesKept             ImportReasonCode = "stored_values_kept"
-	ImportReasonCodeTagCreated                   ImportReasonCode = "tag_created"
-	ImportReasonCodeTagNameInvalid               ImportReasonCode = "tag_name_invalid"
-	ImportReasonCodeTagNew                       ImportReasonCode = "tag_new"
-	ImportReasonCodeTaskNotImportable            ImportReasonCode = "task_not_importable"
-	ImportReasonCodeTimestampNeedsZone           ImportReasonCode = "timestamp_needs_zone"
-	ImportReasonCodeTooManyLinks                 ImportReasonCode = "too_many_links"
-	ImportReasonCodeUndoEdited                   ImportReasonCode = "undo_edited"
-	ImportReasonCodeUndoFailed                   ImportReasonCode = "undo_failed"
-	ImportReasonCodeUndoGrantLost                ImportReasonCode = "undo_grant_lost"
-	ImportReasonCodeUndoNotVisible               ImportReasonCode = "undo_not_visible"
-	ImportReasonCodeUndoRuleProtects             ImportReasonCode = "undo_rule_protects"
-	ImportReasonCodeUndoStillReferenced          ImportReasonCode = "undo_still_referenced"
-	ImportReasonCodeValueRefused                 ImportReasonCode = "value_refused"
-	ImportReasonCodeValueTooLong                 ImportReasonCode = "value_too_long"
-	ImportReasonCodeValueUnreadable              ImportReasonCode = "value_unreadable"
+	ImportReasonCodeActivityEmpty                 ImportReasonCode = "activity_empty"
+	ImportReasonCodeActivityHeld                  ImportReasonCode = "activity_held"
+	ImportReasonCodeActivityLinkAmbiguous         ImportReasonCode = "activity_link_ambiguous"
+	ImportReasonCodeActivityLinkAmbiguousDropped  ImportReasonCode = "activity_link_ambiguous_dropped"
+	ImportReasonCodeActivityLinkAmbiguousWillDrop ImportReasonCode = "activity_link_ambiguous_will_drop"
+	ImportReasonCodeActivityTypeUnknown           ImportReasonCode = "activity_type_unknown"
+	ImportReasonCodeActivityTypeUnnamed           ImportReasonCode = "activity_type_unnamed"
+	ImportReasonCodeActivityUnlinked              ImportReasonCode = "activity_unlinked"
+	ImportReasonCodeAddressErased                 ImportReasonCode = "address_erased"
+	ImportReasonCodeAddressNotSplit               ImportReasonCode = "address_not_split"
+	ImportReasonCodeAmountNeedsCurrency           ImportReasonCode = "amount_needs_currency"
+	ImportReasonCodeAmountNegative                ImportReasonCode = "amount_negative"
+	ImportReasonCodeAmountTooManyDecimals         ImportReasonCode = "amount_too_many_decimals"
+	ImportReasonCodeAuthorTooLong                 ImportReasonCode = "author_too_long"
+	ImportReasonCodeCannotCreate                  ImportReasonCode = "cannot_create"
+	ImportReasonCodeCannotCreateTags              ImportReasonCode = "cannot_create_tags"
+	ImportReasonCodeCannotEdit                    ImportReasonCode = "cannot_edit"
+	ImportReasonCodeCannotEditAndTag              ImportReasonCode = "cannot_edit_and_tag"
+	ImportReasonCodeCannotLinkStakeholders        ImportReasonCode = "cannot_link_stakeholders"
+	ImportReasonCodeCannotReadPipelines           ImportReasonCode = "cannot_read_pipelines"
+	ImportReasonCodeCannotReadTags                ImportReasonCode = "cannot_read_tags"
+	ImportReasonCodeCannotWriteType               ImportReasonCode = "cannot_write_type"
+	ImportReasonCodeCloseDateFar                  ImportReasonCode = "close_date_far"
+	ImportReasonCodeCloseDateFuture               ImportReasonCode = "close_date_future"
+	ImportReasonCodeCloseDatePast                 ImportReasonCode = "close_date_past"
+	ImportReasonCodeCompanyDomainMatched          ImportReasonCode = "company_domain_matched"
+	ImportReasonCodeCompanyDuplicateFound         ImportReasonCode = "company_duplicate_found"
+	ImportReasonCodeCompanyDuplicateSkipped       ImportReasonCode = "company_duplicate_skipped"
+	ImportReasonCodeCompanyLinkOnMeeting          ImportReasonCode = "company_link_on_meeting"
+	ImportReasonCodeCompanyNameEmpty              ImportReasonCode = "company_name_empty"
+	ImportReasonCodeContactChannelMissing         ImportReasonCode = "contact_channel_missing"
+	ImportReasonCodeContactDuplicateFound         ImportReasonCode = "contact_duplicate_found"
+	ImportReasonCodeContactDuplicateSkipped       ImportReasonCode = "contact_duplicate_skipped"
+	ImportReasonCodeContactEmailHeld              ImportReasonCode = "contact_email_held"
+	ImportReasonCodeContactHoldsLead              ImportReasonCode = "contact_holds_lead"
+	ImportReasonCodeContactNotFound               ImportReasonCode = "contact_not_found"
+	ImportReasonCodeContactNotFoundDropped        ImportReasonCode = "contact_not_found_dropped"
+	ImportReasonCodeContactNotFoundWillDrop       ImportReasonCode = "contact_not_found_will_drop"
+	ImportReasonCodeContactUnnamed                ImportReasonCode = "contact_unnamed"
+	ImportReasonCodeCurrencyNotACode              ImportReasonCode = "currency_not_a_code"
+	ImportReasonCodeCurrencyNotMoney              ImportReasonCode = "currency_not_money"
+	ImportReasonCodeCurrencyUnset                 ImportReasonCode = "currency_unset"
+	ImportReasonCodeDealAlreadyClosed             ImportReasonCode = "deal_already_closed"
+	ImportReasonCodeDealCompanyHasContracts       ImportReasonCode = "deal_company_has_contracts"
+	ImportReasonCodeDealFieldNotForPipeline       ImportReasonCode = "deal_field_not_for_pipeline"
+	ImportReasonCodeDealLegalGate                 ImportReasonCode = "deal_legal_gate"
+	ImportReasonCodeDealNotFound                  ImportReasonCode = "deal_not_found"
+	ImportReasonCodeDealNotFoundDropped           ImportReasonCode = "deal_not_found_dropped"
+	ImportReasonCodeDealNotFoundWillDrop          ImportReasonCode = "deal_not_found_will_drop"
+	ImportReasonCodeDealPipelineFixed             ImportReasonCode = "deal_pipeline_fixed"
+	ImportReasonCodeDescriptionTooLong            ImportReasonCode = "description_too_long"
+	ImportReasonCodeDirectionUnknown              ImportReasonCode = "direction_unknown"
+	ImportReasonCodeDomainHeld                    ImportReasonCode = "domain_held"
+	ImportReasonCodeDuplicateEmail                ImportReasonCode = "duplicate_email"
+	ImportReasonCodeDurationNotValidForKind       ImportReasonCode = "duration_not_valid_for_kind"
+	ImportReasonCodeDurationOutOfRange            ImportReasonCode = "duration_out_of_range"
+	ImportReasonCodeEmailNamesNoContact           ImportReasonCode = "email_names_no_contact"
+	ImportReasonCodeEmployerColumnEmpty           ImportReasonCode = "employer_column_empty"
+	ImportReasonCodeEmployerColumnEmptyDropped    ImportReasonCode = "employer_column_empty_dropped"
+	ImportReasonCodeEmployerColumnEmptyWillDrop   ImportReasonCode = "employer_column_empty_will_drop"
+	ImportReasonCodeEmployerNotFound              ImportReasonCode = "employer_not_found"
+	ImportReasonCodeEmployerNotFoundDropped       ImportReasonCode = "employer_not_found_dropped"
+	ImportReasonCodeEmployerNotFoundWillDrop      ImportReasonCode = "employer_not_found_will_drop"
+	ImportReasonCodeEmployerRefused               ImportReasonCode = "employer_refused"
+	ImportReasonCodeEmployerWillCreate            ImportReasonCode = "employer_will_create"
+	ImportReasonCodeEmptyPayload                  ImportReasonCode = "empty_payload"
+	ImportReasonCodeFieldInactive                 ImportReasonCode = "field_inactive"
+	ImportReasonCodeFxRateMissing                 ImportReasonCode = "fx_rate_missing"
+	ImportReasonCodeIdNotACompanyId               ImportReasonCode = "id_not_a_company_id"
+	ImportReasonCodeIdNotARecordId                ImportReasonCode = "id_not_a_record_id"
+	ImportReasonCodeIdNotVisible                  ImportReasonCode = "id_not_visible"
+	ImportReasonCodeIdOnNonCompany                ImportReasonCode = "id_on_non_company"
+	ImportReasonCodeIdRecordNotVisible            ImportReasonCode = "id_record_not_visible"
+	ImportReasonCodeLeadNotFound                  ImportReasonCode = "lead_not_found"
+	ImportReasonCodeLeadNotFoundDropped           ImportReasonCode = "lead_not_found_dropped"
+	ImportReasonCodeLeadNotFoundWillDrop          ImportReasonCode = "lead_not_found_will_drop"
+	ImportReasonCodeLeadStatusNotImportable       ImportReasonCode = "lead_status_not_importable"
+	ImportReasonCodeLeadStatusUnknown             ImportReasonCode = "lead_status_unknown"
+	ImportReasonCodeLinkAmbiguous                 ImportReasonCode = "link_ambiguous"
+	ImportReasonCodeLinkAmbiguousDropped          ImportReasonCode = "link_ambiguous_dropped"
+	ImportReasonCodeLinkAmbiguousWillDrop         ImportReasonCode = "link_ambiguous_will_drop"
+	ImportReasonCodeLinkContactNotImported        ImportReasonCode = "link_contact_not_imported"
+	ImportReasonCodeLinkEdgeUnsupported           ImportReasonCode = "link_edge_unsupported"
+	ImportReasonCodeLinkMalformed                 ImportReasonCode = "link_malformed"
+	ImportReasonCodeLinkNotAttachable             ImportReasonCode = "link_not_attachable"
+	ImportReasonCodeLinkNotFound                  ImportReasonCode = "link_not_found"
+	ImportReasonCodeLinkNotFoundDropped           ImportReasonCode = "link_not_found_dropped"
+	ImportReasonCodeLinkNotFoundWillDrop          ImportReasonCode = "link_not_found_will_drop"
+	ImportReasonCodeLinkRowNotImported            ImportReasonCode = "link_row_not_imported"
+	ImportReasonCodeLinkRowSkipped                ImportReasonCode = "link_row_skipped"
+	ImportReasonCodeLinkRowSkippedDropped         ImportReasonCode = "link_row_skipped_dropped"
+	ImportReasonCodeLinkRowSkippedWillDrop        ImportReasonCode = "link_row_skipped_will_drop"
+	ImportReasonCodeLinkTypeUnknown               ImportReasonCode = "link_type_unknown"
+	ImportReasonCodeLinkedinHeld                  ImportReasonCode = "linkedin_held"
+	ImportReasonCodeLostReasonMissing             ImportReasonCode = "lost_reason_missing"
+	ImportReasonCodeMeetingNotTakenPlace          ImportReasonCode = "meeting_not_taken_place"
+	ImportReasonCodeMeetingStatusNotValidForKind  ImportReasonCode = "meeting_status_not_valid_for_kind"
+	ImportReasonCodeMeetingStatusUnknown          ImportReasonCode = "meeting_status_unknown"
+	ImportReasonCodeMessageNotImportable          ImportReasonCode = "message_not_importable"
+	ImportReasonCodeNaturalKeyTaken               ImportReasonCode = "natural_key_taken"
+	ImportReasonCodeNotADate                      ImportReasonCode = "not_a_date"
+	ImportReasonCodeNotADomain                    ImportReasonCode = "not_a_domain"
+	ImportReasonCodeNotANumber                    ImportReasonCode = "not_a_number"
+	ImportReasonCodeNotAPhone                     ImportReasonCode = "not_a_phone"
+	ImportReasonCodeNotAnAmount                   ImportReasonCode = "not_an_amount"
+	ImportReasonCodeNotAnEmail                    ImportReasonCode = "not_an_email"
+	ImportReasonCodeNotYesNo                      ImportReasonCode = "not_yes_no"
+	ImportReasonCodeNoteRepeated                  ImportReasonCode = "note_repeated"
+	ImportReasonCodeOccurredAtFuture              ImportReasonCode = "occurred_at_future"
+	ImportReasonCodeOccurredAtUnnamed             ImportReasonCode = "occurred_at_unnamed"
+	ImportReasonCodeOptionNotAllowed              ImportReasonCode = "option_not_allowed"
+	ImportReasonCodeOptionNotInList               ImportReasonCode = "option_not_in_list"
+	ImportReasonCodeOptionsNeedSemicolons         ImportReasonCode = "options_need_semicolons"
+	ImportReasonCodeOwnerRefused                  ImportReasonCode = "owner_refused"
+	ImportReasonCodeOwnerUnknown                  ImportReasonCode = "owner_unknown"
+	ImportReasonCodePhoneNeedsCountry             ImportReasonCode = "phone_needs_country"
+	ImportReasonCodePipelineNoOpenStage           ImportReasonCode = "pipeline_no_open_stage"
+	ImportReasonCodePipelineUnknown               ImportReasonCode = "pipeline_unknown"
+	ImportReasonCodePipelineUnnamed               ImportReasonCode = "pipeline_unnamed"
+	ImportReasonCodeRecordArchived                ImportReasonCode = "record_archived"
+	ImportReasonCodeRefTakenByAnotherCompany      ImportReasonCode = "ref_taken_by_another_company"
+	ImportReasonCodeRefTakenByAnotherRecord       ImportReasonCode = "ref_taken_by_another_record"
+	ImportReasonCodeRowKeyEmpty                   ImportReasonCode = "row_key_empty"
+	ImportReasonCodeRowKeyRepeated                ImportReasonCode = "row_key_repeated"
+	ImportReasonCodeRunInFlight                   ImportReasonCode = "run_in_flight"
+	ImportReasonCodeSizeBandInvalid               ImportReasonCode = "size_band_invalid"
+	ImportReasonCodeStageUnknown                  ImportReasonCode = "stage_unknown"
+	ImportReasonCodeStageUnnamed                  ImportReasonCode = "stage_unnamed"
+	ImportReasonCodeStoredValuesKept              ImportReasonCode = "stored_values_kept"
+	ImportReasonCodeTagCreated                    ImportReasonCode = "tag_created"
+	ImportReasonCodeTagNameInvalid                ImportReasonCode = "tag_name_invalid"
+	ImportReasonCodeTagNew                        ImportReasonCode = "tag_new"
+	ImportReasonCodeTaskNotImportable             ImportReasonCode = "task_not_importable"
+	ImportReasonCodeTimestampNeedsZone            ImportReasonCode = "timestamp_needs_zone"
+	ImportReasonCodeTooManyLinks                  ImportReasonCode = "too_many_links"
+	ImportReasonCodeUndoEdited                    ImportReasonCode = "undo_edited"
+	ImportReasonCodeUndoFailed                    ImportReasonCode = "undo_failed"
+	ImportReasonCodeUndoGrantLost                 ImportReasonCode = "undo_grant_lost"
+	ImportReasonCodeUndoNotVisible                ImportReasonCode = "undo_not_visible"
+	ImportReasonCodeUndoRuleProtects              ImportReasonCode = "undo_rule_protects"
+	ImportReasonCodeUndoStillReferenced           ImportReasonCode = "undo_still_referenced"
+	ImportReasonCodeValueRefused                  ImportReasonCode = "value_refused"
+	ImportReasonCodeValueTooLong                  ImportReasonCode = "value_too_long"
+	ImportReasonCodeValueUnreadable               ImportReasonCode = "value_unreadable"
 )
 
 // Valid indicates whether the value is a known member of the ImportReasonCode enum.
@@ -15655,6 +15697,8 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeActivityLinkAmbiguousDropped:
 		return true
+	case ImportReasonCodeActivityLinkAmbiguousWillDrop:
+		return true
 	case ImportReasonCodeActivityTypeUnknown:
 		return true
 	case ImportReasonCodeActivityTypeUnnamed:
@@ -15665,7 +15709,11 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeAddressNotSplit:
 		return true
+	case ImportReasonCodeAmountNeedsCurrency:
+		return true
 	case ImportReasonCodeAmountNegative:
+		return true
+	case ImportReasonCodeAmountTooManyDecimals:
 		return true
 	case ImportReasonCodeAuthorTooLong:
 		return true
@@ -15684,6 +15732,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeCannotReadTags:
 		return true
 	case ImportReasonCodeCannotWriteType:
+		return true
+	case ImportReasonCodeCloseDateFar:
 		return true
 	case ImportReasonCodeCloseDateFuture:
 		return true
@@ -15713,9 +15763,13 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeContactNotFoundDropped:
 		return true
+	case ImportReasonCodeContactNotFoundWillDrop:
+		return true
 	case ImportReasonCodeContactUnnamed:
 		return true
 	case ImportReasonCodeCurrencyNotACode:
+		return true
+	case ImportReasonCodeCurrencyNotMoney:
 		return true
 	case ImportReasonCodeCurrencyUnset:
 		return true
@@ -15723,11 +15777,15 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeDealCompanyHasContracts:
 		return true
+	case ImportReasonCodeDealFieldNotForPipeline:
+		return true
 	case ImportReasonCodeDealLegalGate:
 		return true
 	case ImportReasonCodeDealNotFound:
 		return true
 	case ImportReasonCodeDealNotFoundDropped:
+		return true
+	case ImportReasonCodeDealNotFoundWillDrop:
 		return true
 	case ImportReasonCodeDealPipelineFixed:
 		return true
@@ -15749,9 +15807,13 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeEmployerColumnEmptyDropped:
 		return true
+	case ImportReasonCodeEmployerColumnEmptyWillDrop:
+		return true
 	case ImportReasonCodeEmployerNotFound:
 		return true
 	case ImportReasonCodeEmployerNotFoundDropped:
+		return true
+	case ImportReasonCodeEmployerNotFoundWillDrop:
 		return true
 	case ImportReasonCodeEmployerRefused:
 		return true
@@ -15777,6 +15839,8 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeLeadNotFoundDropped:
 		return true
+	case ImportReasonCodeLeadNotFoundWillDrop:
+		return true
 	case ImportReasonCodeLeadStatusNotImportable:
 		return true
 	case ImportReasonCodeLeadStatusUnknown:
@@ -15784,6 +15848,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeLinkAmbiguous:
 		return true
 	case ImportReasonCodeLinkAmbiguousDropped:
+		return true
+	case ImportReasonCodeLinkAmbiguousWillDrop:
 		return true
 	case ImportReasonCodeLinkContactNotImported:
 		return true
@@ -15797,11 +15863,15 @@ func (e ImportReasonCode) Valid() bool {
 		return true
 	case ImportReasonCodeLinkNotFoundDropped:
 		return true
+	case ImportReasonCodeLinkNotFoundWillDrop:
+		return true
 	case ImportReasonCodeLinkRowNotImported:
 		return true
 	case ImportReasonCodeLinkRowSkipped:
 		return true
 	case ImportReasonCodeLinkRowSkippedDropped:
+		return true
+	case ImportReasonCodeLinkRowSkippedWillDrop:
 		return true
 	case ImportReasonCodeLinkTypeUnknown:
 		return true
@@ -15824,6 +15894,8 @@ func (e ImportReasonCode) Valid() bool {
 	case ImportReasonCodeNotADomain:
 		return true
 	case ImportReasonCodeNotANumber:
+		return true
+	case ImportReasonCodeNotAPhone:
 		return true
 	case ImportReasonCodeNotAnAmount:
 		return true
@@ -21739,6 +21811,24 @@ func (e ReopenCondition) Valid() bool {
 	case ReopenConditionReopenOnReply:
 		return true
 	case ReopenConditionReopenOnTime:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ReplyableSharedMailboxProvider.
+const (
+	ReplyableSharedMailboxProviderGmail ReplyableSharedMailboxProvider = "gmail"
+	ReplyableSharedMailboxProviderGraph ReplyableSharedMailboxProvider = "graph"
+)
+
+// Valid indicates whether the value is a known member of the ReplyableSharedMailboxProvider enum.
+func (e ReplyableSharedMailboxProvider) Valid() bool {
+	switch e {
+	case ReplyableSharedMailboxProviderGmail:
+		return true
+	case ReplyableSharedMailboxProviderGraph:
 		return true
 	default:
 		return false
@@ -29192,6 +29282,7 @@ const (
 	WorklistItemActionsReopen       WorklistItemActions = "reopen"
 	WorklistItemActionsReply        WorklistItemActions = "reply"
 	WorklistItemActionsRetry        WorklistItemActions = "retry"
+	WorklistItemActionsSendAgain    WorklistItemActions = "send_again"
 	WorklistItemActionsSetAside     WorklistItemActions = "set_aside"
 	WorklistItemActionsSnooze       WorklistItemActions = "snooze"
 	WorklistItemActionsTake         WorklistItemActions = "take"
@@ -29228,6 +29319,8 @@ func (e WorklistItemActions) Valid() bool {
 	case WorklistItemActionsReply:
 		return true
 	case WorklistItemActionsRetry:
+		return true
+	case WorklistItemActionsSendAgain:
 		return true
 	case WorklistItemActionsSetAside:
 		return true
@@ -34166,7 +34259,7 @@ type Activity struct {
 	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
 	// DurationSeconds Meeting/call only.
-	DurationSeconds *int `json:"duration_seconds,omitempty"`
+	DurationSeconds *int `json:"duration_seconds,omitempty" minimum:"0"`
 
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
@@ -34204,6 +34297,9 @@ type Activity struct {
 
 	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
+
+	// MailboxImported Whether an import brought this in; the per-message audience write refuses it.
+	MailboxImported *bool `json:"mailbox_imported,omitempty"`
 
 	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
@@ -34257,6 +34353,9 @@ type Activity struct {
 
 	// TaskType Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`.
 	TaskType *TaskType `json:"task_type,omitempty"`
+
+	// ThreadAudienceYours Whether the thread audience write acts on this row for the caller.
+	ThreadAudienceYours *bool `json:"thread_audience_yours,omitempty"`
 
 	// ThreadKey The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.
 	ThreadKey *string   `json:"thread_key,omitempty"`
@@ -34355,7 +34454,7 @@ type ActivityDealDecline struct {
 	// ProjectUnfiled The project link that came from a declined deal came off the message.
 	ProjectUnfiled bool `json:"project_unfiled"`
 
-	// QuestionsClosed The open deal questions of the conversation this call marked done.
+	// QuestionsClosed The messages of the conversation whose open deal question this call closed.
 	QuestionsClosed int `json:"questions_closed" minimum:"0"`
 
 	// Unlinked Always false. A declined deal link stays on the message, marked `unrelated`; `marked_unrelated` says so.
@@ -35963,9 +36062,12 @@ type AiFlowStep struct {
 	// Switched Calls this step answered with another model than the one bound, by the provider's own report; out of `answered`.
 	Switched int64 `json:"switched"`
 
-	// SwitchedTo The model the provider named most often on those calls; absent when switched is 0.
+	// SwitchedTo The model the provider named most often on those calls; absent when switched is 0. `switched_to_certification` grades it for this task with the step's own binding settings, and is absent on a decision step, when no record measured it, and for a reader without `ai_routing` read.
 	SwitchedTo *string `json:"switched_to,omitempty"`
-	Tier       string  `json:"tier"`
+
+	// SwitchedToCertification What the certification records say about this model for this task, read by the same rule as the feature's `certification` grade, so the lead candidate and the feature never disagree. Absent on a candidate that grade calls not_measured.
+	SwitchedToCertification *AiRouteCertification `json:"switched_to_certification,omitempty"`
+	Tier                    string                `json:"tier"`
 }
 
 // AiHealth defines model for AiHealth.
@@ -36863,6 +36965,7 @@ type AnalyticsAnswer struct {
 	RateDate *time.Time `json:"rate_date,omitempty"`
 
 	// Rows One object per group, marked `_withheld` when the floor kept it back. A row holding a sum over a converted amount that adds only the deals that convert also carries `_coverage` (ReportRowCoverage), naming those sums in its `aggregates` and counting the deals it leaves out: no value, no exchange rate, and the currencies without one. A sum that no deal converts into is null, and its `_coverage` says why. A withheld row carries no `_coverage`. A withheld row carries null for every column INCLUDING its group keys: keeping the keys turned a grouping by identity into a paginated dump of every record's identity with only the measures blanked. The row itself stays so the answer's row count is not a signal of its own.
+	// A number past ±(2^53−1) is null, and `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the row is answered.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// RunId Where this answer was saved, present only when the query asked for it. A report block cites this id plus a cell's coordinates instead of carrying the number.
@@ -37925,11 +38028,11 @@ type Attachment struct {
 	// Checksum sha256 of the bytes, for integrity/dedupe.
 	Checksum *string `json:"checksum,omitempty"`
 
-	// CompanyId The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. A file that came with a captured mail carries none; the account's Documents list reaches it through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
+	// CompanyId The account a file is filed under, worked out when it is read: the company it is filed on, or the company of the deal it is filed on now. A file on any other record names none; the account's Documents list reaches a mail's file through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's.
 	CompanyId   *openapi_types.UUID `json:"company_id,omitempty"`
 	ContentType *string             `json:"content_type,omitempty"`
 
-	// ContractId The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
+	// ContractId The agreement this file is about. A read path rather than a second parent: visibility stays the primary parent's. Set at upload by the member filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
 	ContractId *openapi_types.UUID `json:"contract_id,omitempty"`
 	CreatedAt  time.Time           `json:"created_at"`
 
@@ -38649,6 +38752,10 @@ type AttentionItem struct {
 	// settles the domain as a vendor and creates nothing. Discarding stops the caller's own mailboxes capturing that
 	// domain. Reopening retries identification without settling identity. These verbs route
 	// to `/capture/domain-questions/{domain}/…`.
+	//
+	// `send_again` is offered on a bounced message that may be sent once more. The reader
+	// types a corrected address and the same message goes out to it, through
+	// `POST /attention/bounces/{id}/send-again`.
 	//
 	// `act`, `dismiss` and `set_aside` are the briefing queue's three, and they route
 	// to `/brief/items/{itemId}/…`. `acknowledge` is a notice's one verb and routes
@@ -40113,6 +40220,12 @@ type BoughtField struct {
 	Trigger ProviderRunTrigger `json:"trigger"`
 }
 
+// BounceSendAgainRequest defines model for BounceSendAgainRequest.
+type BounceSendAgainRequest struct {
+	// Address The corrected address. It replaces the address that refused, and it must differ from it.
+	Address openapi_types.Email `json:"address"`
+}
+
 // BriefDelivery What one member wants delivered. Every field is optional in BOTH directions: absent
 // on a read means they have never chosen, absent on a write means leave it alone.
 type BriefDelivery struct {
@@ -40542,6 +40655,12 @@ type BulkUndoRequest struct {
 // `settleConversationClaim` with `outcome: done` does.
 type BulkVerb string
 
+// BuyerEngagementNotice defines model for BuyerEngagementNotice.
+type BuyerEngagementNotice struct {
+	// Company The seller's company, as the invitation mail names it.
+	Company string `json:"company"`
+}
+
 // BuyerRoomAccess Whether the session admits the caller to content right now. `live` — the room
 // is open and the list can be worked. `closed` — the deal is done; everything
 // reads, nothing writes. `paused` — the seller has paused access; the link
@@ -40606,6 +40725,14 @@ type BuyerRoomParticipant struct {
 	Id         openapi_types.UUID            `json:"id"`
 }
 
+// BuyerRoomThreadListResponse defines model for BuyerRoomThreadListResponse.
+type BuyerRoomThreadListResponse struct {
+	Data []DealRoomThread `json:"data"`
+
+	// HiddenOwnConversations True when a conversation this buyer wrote in is withheld because its file is no longer shared. No count and no file.
+	HiddenOwnConversations bool `json:"hidden_own_conversations"`
+}
+
 // BuyerRoomView defines model for BuyerRoomView.
 type BuyerRoomView struct {
 	// Access Whether the session admits the caller to content right now. `live` — the room
@@ -40618,6 +40745,9 @@ type BuyerRoomView struct {
 	// siblings give: the same four words generated as package-scope constants
 	// would collide with the lifecycle's.
 	Access BuyerRoomAccess `json:"access"`
+
+	// EngagementNotice Present on a seat's first sign-in, and on a seller preview so the seller sees what the buyer will see. Tells the buyer that the seller's company can see the sign-in and the downloads. It has no action.
+	EngagementNotice *BuyerEngagementNotice `json:"engagement_notice,omitempty"`
 
 	// Participant The caller, as the room knows them. Nothing about anyone else in the room.
 	Participant BuyerRoomParticipant `json:"participant"`
@@ -40837,7 +40967,11 @@ type CaptureConnection struct {
 
 	// SyncFailingSince When the CURRENT failure streak began, null while healthy. Set on the first failure after a success and left alone until one clears it, so the duration read off it is the outage's — last_synced_at moves on every postponed tick and dates the newest attempt instead.
 	SyncFailingSince *time.Time `json:"sync_failing_since,omitempty"`
-	UpdatedAt        *time.Time `json:"updated_at,omitempty"`
+
+	// UnreadPeriod A period no sync of this mailbox read: a sync found its provider cursor gone and listed only the newest mail, or a first sync could not reach back to where it was to start. A successful sync since, and a finished import, do not clear it. Only an import whose window reaches back over it, and that failed no message, does. Absent when there is none.
+	// A recent `last_success_at` and a `backfill` in state `done` say a poll and a scan completed. This period says which mail neither of them read, so the owner knows to import a window that covers it.
+	UnreadPeriod *CaptureUnreadPeriod `json:"unread_period,omitempty"`
+	UpdatedAt    *time.Time           `json:"updated_at,omitempty"`
 
 	// WatchExpiresAt Push/delta subscription renewal deadline (Gmail Pub/Sub / Graph change-notification), or null.
 	WatchExpiresAt *time.Time `json:"watch_expires_at,omitempty"`
@@ -41257,7 +41391,8 @@ type CaptureSenderDecision struct {
 	// contact. Present exactly when `contact_id` is.
 	ContactName *string `json:"contact_name,omitempty"`
 
-	// Decision What YOU decided instead, absent when you have not.
+	// Decision What YOU decided instead, absent when you have not. `personal` is the standing decision a
+	// private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
 	Decision *CaptureSenderDecisionDecision `json:"decision,omitempty"`
 
 	// DeletesAt When this sender's oldest message is destroyed. Present only for a `personal` verdict
@@ -41296,7 +41431,8 @@ type CaptureSenderDecision struct {
 	Status *string `json:"status,omitempty"`
 }
 
-// CaptureSenderDecisionDecision What YOU decided instead, absent when you have not.
+// CaptureSenderDecisionDecision What YOU decided instead, absent when you have not. `personal` is the standing decision a
+// private verdict leaves; only the classifier writes it, and withdrawing it lifts it.
 type CaptureSenderDecisionDecision string
 
 // CaptureSenderListResponse defines model for CaptureSenderListResponse.
@@ -41793,6 +41929,35 @@ type ChatEpisode struct {
 
 	// Url The first message in the chat.
 	Url string `json:"url"`
+}
+
+// ChatIdentity defines model for ChatIdentity.
+type ChatIdentity struct {
+	// AccountHint The confirmed account with all but its last digits hidden. Absent while only a code waits.
+	AccountHint *string `json:"account_hint,omitempty"`
+
+	// ExpiresAt When the waiting code stops working.
+	ExpiresAt *time.Time  `json:"expires_at,omitempty"`
+	Network   ChatNetwork `json:"network"`
+
+	// VerifiedAt When the account was confirmed.
+	VerifiedAt *time.Time `json:"verified_at,omitempty"`
+}
+
+// ChatIdentityList defines model for ChatIdentityList.
+type ChatIdentityList struct {
+	Data []ChatIdentity `json:"data"`
+}
+
+// ChatNetwork defines model for ChatNetwork.
+type ChatNetwork string
+
+// ChatVerificationStarted defines model for ChatVerificationStarted.
+type ChatVerificationStarted struct {
+	// Code Shown once. Send it as a message from your own account.
+	Code      string      `json:"code"`
+	ExpiresAt time.Time   `json:"expires_at"`
+	Network   ChatNetwork `json:"network"`
 }
 
 // CitedProvision The law a finding or refusal rests on, as a jurisdiction pack binding the message cites it
@@ -47891,7 +48056,7 @@ type CreateActivityRequest struct {
 
 	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	DueIntent       *IntentTime           `json:"due_intent,omitempty"`
-	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
+	DurationSeconds *int                  `json:"duration_seconds,omitempty" minimum:"0"`
 	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
@@ -48231,6 +48396,9 @@ type CreateCustomFieldRequest struct {
 	Label         string                                   `json:"label"`
 	Object        CreateCustomFieldRequestObject           `json:"object"`
 	Options       *[]string                                `json:"options,omitempty"`
+
+	// PipelineIds The pipelines the field applies to. Only a deal field may name any; omitted or empty means every pipeline. An id that is not a live pipeline, or ids on another object's field, is refused with a 422.
+	PipelineIds *[]openapi_types.UUID `json:"pipeline_ids,omitempty"`
 
 	// ShowInCreate Whether the field is offered in create dialogs. Omitted means true. An import that keeps provenance from a previous system creates its field with this off.
 	ShowInCreate *bool                        `json:"show_in_create,omitempty"`
@@ -49260,6 +49428,9 @@ type CustomField struct {
 
 	// Options Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise.
 	Options *[]string `json:"options,omitempty"`
+
+	// PipelineIds The pipelines a deal field applies to; null means every pipeline, and every other object's field is null. A created or edited deal of another pipeline refuses a value for the field with `422 field_not_valid_for_pipeline`. A pipeline that is archived matches nothing. A value stored before the field was narrowed, or on a deal that moved pipeline, stays stored and readable, and sending null clears it.
+	PipelineIds *[]openapi_types.UUID `json:"pipeline_ids,omitempty"`
 
 	// RecordsChanged Only on the answer to `updateCustomFieldOptions`: how many records held a choice the edit removed and had it cleared.
 	RecordsChanged *int `json:"records_changed,omitempty" minimum:"0"`
@@ -50884,7 +51055,8 @@ type DealRoomThread struct {
 	// Echoed back as the `version` field on every mutable entity. To make a write conditional,
 	// send the last-seen value in `If-Match`; a mismatch returns `409 code: version_skew`
 	// (ErrVersionSkew) so the client re-reads before retrying.
-	Version *RowVersion `json:"version,omitempty" minimum:"1"`
+	Version        *RowVersion `json:"version,omitempty" minimum:"1"`
+	VisibleToBuyer bool        `json:"visible_to_buyer"`
 }
 
 // DealRoomThreadListResponse defines model for DealRoomThreadListResponse.
@@ -51998,6 +52170,11 @@ type EmailCalendarInvitationResponse string
 // the bot, or because the credential was rejected rendered exactly like one the provider
 // confirmed. The rep was told their message went.
 type EmailDelivery struct {
+	// CanSendAgain True when the reader may send this bounced message again to a corrected address,
+	// by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+	// message that bounced hard qualifies, once, and not one an agent wrote.
+	CanSendAgain *bool `json:"can_send_again,omitempty"`
+
 	// DeliveredAt When the provider accepted it. Null unless the state is `sent`.
 	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
 
@@ -55189,7 +55366,7 @@ type ImportProblemKind string
 // ImportReasonCode Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
 type ImportReasonCode string
 
-// ImportRowIssue One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line.
+// ImportRowIssue One problem of a row, named by its line so a human can go fix it. A row with several cells at fault has one issue for each, and counts once in `skipped`. A problem of a whole file, such as a tag the file names that does not exist yet, has no line.
 type ImportRowIssue struct {
 	// Column The offending column, when one is to blame.
 	Column *string `json:"column,omitempty"`
@@ -55331,7 +55508,10 @@ type ImportRun struct {
 
 	// RateRowsPerSecond Rows walked per second over the last minute. Absent until enough rows and time have passed to say, and while the run is idle.
 	RateRowsPerSecond *float32 `json:"rate_rows_per_second,omitempty" minimum:"0"`
-	Source            string   `json:"source"`
+
+	// RowCount Rows the upload counted in the file, a ZIP's files added together. Present while the run keeps what the upload read of the file, in a list too, so a draft no test has read still says how many rows it holds.
+	RowCount *int   `json:"row_count,omitempty" minimum:"0"`
+	Source   string `json:"source"`
 
 	// SourceName The name the run's source is filed under.
 	SourceName *string `json:"source_name,omitempty"`
@@ -55468,6 +55648,9 @@ type ImportRunPart struct {
 
 	// RowCount Rows the file holds, once a dry run has read it; 0 before.
 	RowCount int `json:"row_count" minimum:"0"`
+
+	// RowsWritten Rows of the file the run created or updated. Present once the run has written: `complete`, `failed`, `undoing` or `undone`.
+	RowsWritten *int `json:"rows_written,omitempty" minimum:"0"`
 }
 
 // ImportRunPhase What a run is doing. A test run reads, then checks; a commit or an undo reports the rest.
@@ -56930,6 +57113,9 @@ type KnowledgeClaim struct {
 	// Line The 1-based line of the document where this quote begins, so a reader can open the file and land on it. Absent when the quote could not be located in the passage's own text — a line number pointing at the wrong line is worse than none.
 	Line *int `json:"line,omitempty" minimum:"1"`
 
+	// Meta What the cited document's source said about it (owner, effective date and so on), so a reader sees which version and date the quote comes from. Absent for an uploaded document.
+	Meta *map[string]string `json:"meta,omitempty"`
+
 	// Opens The settings page the claim's handbook section is about, from the page's `opens:` marker. The client shows a button to it only when the reader may open that page.
 	Opens *KnowledgeClaimOpens `json:"opens,omitempty"`
 
@@ -56960,8 +57146,10 @@ type KnowledgeClaimSection struct {
 
 // KnowledgeCorpus defines model for KnowledgeCorpus.
 type KnowledgeCorpus struct {
-	Coverage  KnowledgeCoverage `json:"coverage"`
-	CreatedAt time.Time         `json:"created_at"`
+	// ArchivedAt When the set was archived; absent or null while it is live. Only `include_archived` lists an archived set, and it takes the `knowledge_corpus` delete grant that archives and restores one.
+	ArchivedAt *time.Time        `json:"archived_at,omitempty"`
+	Coverage   KnowledgeCoverage `json:"coverage"`
+	CreatedAt  time.Time         `json:"created_at"`
 
 	// DefaultAsk The corpus the command palette's ask lands on. At most one per workspace.
 	DefaultAsk  bool               `json:"default_ask"`
@@ -57035,12 +57223,18 @@ type KnowledgeDocument struct {
 	//   model bound now.
 	// - `complete`: every live passage carries a vector under the model bound now.
 	EmbedState KnowledgeEmbedState `json:"embed_state"`
-	Filename   string              `json:"filename"`
-	Id         openapi_types.UUID  `json:"id"`
+
+	// ExternalId The id the document's source gave it (a Google Drive file id), set only on a document an extension keeps in step with that source. Null for an upload.
+	ExternalId *string            `json:"external_id,omitempty"`
+	Filename   string             `json:"filename"`
+	Id         openapi_types.UUID `json:"id"`
 
 	// IngestDetail Why it failed, in words the uploader can act on. Null unless failed.
 	IngestDetail *string                       `json:"ingest_detail,omitempty"`
 	IngestStatus KnowledgeDocumentIngestStatus `json:"ingest_status"`
+
+	// Meta What the source said about the document (owner, department, country, type, effective and review dates, audience), as the extension read it. A field the source did not state is absent, never guessed. Absent for an upload.
+	Meta *map[string]string `json:"meta,omitempty"`
 
 	// Shipped True for a handbook page that ships with Margince. It cannot be deleted: the next update files it again.
 	Shipped bool `json:"shipped"`
@@ -58381,22 +58575,31 @@ type LinkSuggestion struct {
 	ActivityId openapi_types.UUID `json:"activity_id"`
 
 	// ActivitySubject The subject of the message. Empty when the message has none.
-	ActivitySubject *string            `json:"activity_subject,omitempty"`
-	CreatedAt       time.Time          `json:"created_at"`
-	EntityId        openapi_types.UUID `json:"entity_id"`
+	ActivitySubject *string   `json:"activity_subject,omitempty"`
+	CreatedAt       time.Time `json:"created_at"`
+
+	// DealAmountMinor For a suggested deal, its value in minor units of `deal_currency`, to help pick. Null when the deal has none or the caller's role withholds it. Absent on a decision's answer.
+	DealAmountMinor *int64 `json:"deal_amount_minor,omitempty"`
+
+	// DealCurrency The currency of `deal_amount_minor`, withheld with it.
+	DealCurrency *string `json:"deal_currency,omitempty"`
+
+	// DealExpectedCloseDate For a suggested deal, when it is expected to close. Absent on a decision's answer.
+	DealExpectedCloseDate *openapi_types.Date `json:"deal_expected_close_date,omitempty"`
+	EntityId              openapi_types.UUID  `json:"entity_id"`
 
 	// EntityName The name of the suggested record, for the screen. Absent on a decision's answer.
 	EntityName *string                  `json:"entity_name,omitempty"`
 	EntityType LinkSuggestionEntityType `json:"entity_type"`
 	Id         openapi_types.UUID       `json:"id"`
 
-	// Reason One short sentence from the extension on why.
+	// Reason One short sentence from the extension on why, or Margince's own question.
 	Reason string               `json:"reason"`
 	Score  float32              `json:"score" maximum:"1" minimum:"0"`
 	Status LinkSuggestionStatus `json:"status"`
 
-	// Unit The extension that proposed it.
-	Unit string `json:"unit"`
+	// Unit The extension that proposed it. Null when Margince itself asks which deal a mail is about.
+	Unit *string `json:"unit"`
 }
 
 // LinkSuggestionEntityType defines model for LinkSuggestion.EntityType.
@@ -61933,15 +62136,6 @@ type Partner struct {
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NextStepDueAt *openapi_types.Date `json:"next_step_due_at,omitempty"`
 
-	// PartnerFitOverrideReason Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.
-	PartnerFitOverrideReason *string `json:"partner_fit_override_reason,omitempty"`
-
-	// PartnerFitScore Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.
-	PartnerFitScore *int `json:"partner_fit_score,omitempty" maximum:"100" minimum:"0"`
-
-	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
-	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty" maximum:"100" minimum:"0"`
-
 	// PartnerKinds What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
 	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
 
@@ -64962,7 +65156,7 @@ type RemoveMemberRequest struct {
 	ToUserId     *openapi_types.UUID `json:"to_user_id,omitempty"`
 }
 
-// RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable` and `activity_kinds`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field.
+// RenameCustomFieldRequest Merge-PATCH of the settings a live field may change: `label`, `label_translations`, `option_translations`, `show_in_create`, `reportable`, `activity_kinds` and `pipeline_ids`. At least one is required. `column_name`, `object`, and `type` are absent from this request schema entirely (immutable, not just ignored if sent). `reportable` true on a field that is not a picklist or boolean is refused. `activity_kinds` replaces the kinds an activity field applies to, and an empty array means every kind again; it is refused on another object's field. `pipeline_ids` does the same for the pipelines a deal field applies to.
 type RenameCustomFieldRequest struct {
 	ActivityKinds *[]RenameCustomFieldRequestActivityKinds `json:"activity_kinds,omitempty"`
 	Label         *string                                  `json:"label,omitempty"`
@@ -64977,9 +65171,10 @@ type RenameCustomFieldRequest struct {
 	// stored option stays the value written on records; only its display changes. On a write
 	// the map replaces the stored one, and an option the field does not offer is 422
 	// `invalid_translation`.
-	OptionTranslations *OptionTranslations `json:"option_translations,omitempty"`
-	Reportable         *bool               `json:"reportable,omitempty"`
-	ShowInCreate       *bool               `json:"show_in_create,omitempty"`
+	OptionTranslations *OptionTranslations   `json:"option_translations,omitempty"`
+	PipelineIds        *[]openapi_types.UUID `json:"pipeline_ids,omitempty"`
+	Reportable         *bool                 `json:"reportable,omitempty"`
+	ShowInCreate       *bool                 `json:"show_in_create,omitempty"`
 }
 
 // RenameCustomFieldRequestActivityKinds defines model for RenameCustomFieldRequest.ActivityKinds.
@@ -65112,6 +65307,24 @@ type ReplyRecipient struct {
 	ViewerOnConversation bool `json:"viewer_on_conversation"`
 }
 
+// ReplyableSharedMailbox A shared mailbox the signed-in member may reply as.
+type ReplyableSharedMailbox struct {
+	// Address The mailbox address, which is the From address of a reply.
+	Address string `json:"address"`
+
+	// Id The mailbox id, sent as `from_connection_id`.
+	Id       openapi_types.UUID             `json:"id"`
+	Provider ReplyableSharedMailboxProvider `json:"provider"`
+}
+
+// ReplyableSharedMailboxProvider defines model for ReplyableSharedMailbox.Provider.
+type ReplyableSharedMailboxProvider string
+
+// ReplyableSharedMailboxList defines model for ReplyableSharedMailboxList.
+type ReplyableSharedMailboxList struct {
+	Items []ReplyableSharedMailbox `json:"items"`
+}
+
 // ReportBlock One element of a report. What fields are legal is decided by `kind`.
 type ReportBlock struct {
 	// Cells The figures this block shows, in render order. Required for a block whose purpose is to display a number; refused on one that renders none, where the figure would be silently unshown.
@@ -65169,7 +65382,7 @@ type ReportCell2 = interface{}
 // the exact filter+group+aggregate plus the underlying source rows, which reconcile
 // exactly to the explained aggregate (AC-X1).
 type ReportDerivation struct {
-	// Aggregates The requested aggregates recomputed over exactly these source rows — equals the explained cell.
+	// Aggregates The requested aggregates recomputed over exactly these source rows — equals the explained cell. A total past ±(2^53−1) is null and named in `_out_of_range`, as on the report row.
 	Aggregates *map[string]interface{} `json:"aggregates,omitempty"`
 
 	// AsOf The instant these figures were computed at — the moment any currency conversion read the
@@ -65291,7 +65504,7 @@ type ReportResult struct {
 	PopulationNarrowed *PopulationNarrowed `json:"population_narrowed,omitempty"`
 	Report             string              `json:"report"`
 
-	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum.
+	// Rows Aggregate rows; each carries its own `derivation_url` handle for the exact cell (group keys bound to the row's values). A row holding a sum that adds only the deals that convert also carries `coverage` (ReportRowCoverage), for every plan that asks such a sum. A total past ±(2^53−1) is null, and the row's `_out_of_range` lists the columns it was withheld from: a JSON reader parses every number as a float64, which would turn that total into another number. The rest of the report is answered.
 	Rows []map[string]interface{} `json:"rows"`
 
 	// ScopeHoldsDeals Whether the population this answer measured holds any deal, archived ones included, computed with the same population clause as the figures. Absent when unknown (a stored edition captured before the field existed) or when the answer is not about deals. False means the scope is empty, which is different from a scope with no wins.
@@ -66985,7 +67198,7 @@ type RouterActions struct {
 		// Route The method and route, for example POST /v1/record-grants.
 		Route string `json:"route"`
 
-		// UploadsAFile Whether it takes filename, content_type and content_base64.
+		// UploadsAFile Whether it takes filename, content_type and content_base64 or content_text.
 		UploadsAFile *bool `json:"uploads_a_file,omitempty"`
 	} `json:"actions"`
 
@@ -69127,7 +69340,8 @@ type SendEmailRequest struct {
 	// `CaptureConnection`s that can send. Omitted, a reply goes out from the mailbox the
 	// conversation arrived in, and a new message from the sender's default mailbox. A mailbox
 	// that is not the sender's, or cannot send, is refused with 422
-	// `mailbox_not_send_capable`.
+	// `mailbox_not_send_capable`. A shared mailbox with `reply_enabled` can be named here by
+	// its id, and only by a member of its reader team.
 	FromConnectionId *openapi_types.UUID `json:"from_connection_id,omitempty"`
 
 	// HtmlBody The same message as markup, or omitted for a plain-text send. It never
@@ -69853,7 +70067,10 @@ type SharedMailbox struct {
 	Provider       SharedMailboxProvider       `json:"provider"`
 
 	// ReaderTeamId The team that reads every message this mailbox captured.
-	ReaderTeamId openapi_types.UUID  `json:"reader_team_id"`
+	ReaderTeamId openapi_types.UUID `json:"reader_team_id"`
+
+	// ReplyEnabled True when an admin let the reader team reply as this mailbox. A member then names the mailbox id as `from_connection_id` of a send. Always false for an `imap` mailbox, which only captures.
+	ReplyEnabled bool                `json:"reply_enabled"`
 	Status       SharedMailboxStatus `json:"status"`
 
 	// UnreadPeriod A period no sync read: a first sync failed for longer than its held point, or the mailbox held more mail than one round can read. Importing the mailbox's history over it clears it. Absent when there is none.
@@ -72599,7 +72816,8 @@ type UpdateInstallationSettingsRequest struct {
 	AgentWritesPerWindow *int `json:"agent_writes_per_window,omitempty" maximum:"5000" minimum:"10"`
 
 	// BaseCurrency ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
-	// rate against the current base.
+	// rate against the current base. The refusal's `params` mirror `BaseCurrencyLock`:
+	// `reason`, `count` as a decimal string, and `base_currency` when the lock names one.
 	BaseCurrency *string `json:"base_currency,omitempty"`
 
 	// BaseLanguage The language shared AI writing is written in. Never frozen: changing it re-means
@@ -73210,6 +73428,9 @@ type UpdateSharedMailboxRequest struct {
 
 	// ReaderTeamId The team that reads the mailbox from now on, its whole history included.
 	ReaderTeamId *openapi_types.UUID `json:"reader_team_id,omitempty"`
+
+	// ReplyEnabled True lets every live member of the reader team send mail with this mailbox as its From address. The installation's own grant must already allow it: an application permission to send for a Microsoft mailbox, a delegation that includes the send scope for a Google one. False ends it. An `imap` mailbox is refused with `422` `shared_mailbox_cannot_send`.
+	ReplyEnabled *bool `json:"reply_enabled,omitempty"`
 }
 
 // UpdateSharedMailboxRequestMailVisibility `classified` is refused with `422`.
@@ -82668,6 +82889,12 @@ type ListAgentClientsParams struct {
 	Limit *Limit `form:"limit,omitempty" json:"limit,omitempty" maximum:"200" minimum:"1"`
 }
 
+// ListCorporaParams defines parameters for ListCorpora.
+type ListCorporaParams struct {
+	// IncludeArchived Include soft-deleted (archived) rows. Default false.
+	IncludeArchived *IncludeArchived `form:"include_archived,omitempty" json:"include_archived,omitempty"`
+}
+
 // CreateCorpusJSONBody defines parameters for CreateCorpus.
 type CreateCorpusJSONBody struct {
 	DefaultAsk     *bool    `json:"default_ask,omitempty"`
@@ -82688,7 +82915,12 @@ type UpdateCorpusJSONBody struct {
 
 // AskCorpusJSONBody defines parameters for AskCorpus.
 type AskCorpusJSONBody struct {
-	Question string `json:"question"`
+	// Audiences Optional. When present and not empty, only documents whose `meta.audience` is one
+	// of these values are searched and cited. Values compare with no case, no accents and
+	// `đ` as `d`. A document with no audience is left out. When no document matches, the
+	// outcome is `not_covered`. Absent or empty, every document is searched.
+	Audiences *[]string `json:"audiences,omitempty"`
+	Question  string    `json:"question"`
 }
 
 // UploadCorpusDocumentMultipartBody defines parameters for UploadCorpusDocument.
@@ -87270,6 +87502,9 @@ type FileChatCaptureJSONRequestBody = FileChatCaptureRequest
 // UpdateAttachmentMetadataJSONRequestBody defines body for UpdateAttachmentMetadata for application/json ContentType.
 type UpdateAttachmentMetadataJSONRequestBody = UpdateAttachmentMetadataRequest
 
+// SendBouncedMessageAgainJSONRequestBody defines body for SendBouncedMessageAgain for application/json ContentType.
+type SendBouncedMessageAgainJSONRequestBody = BounceSendAgainRequest
+
 // ChangePasswordJSONRequestBody defines body for ChangePassword for application/json ContentType.
 type ChangePasswordJSONRequestBody ChangePasswordJSONBody
 
@@ -88856,6 +89091,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "links")
 	}
 
+	if raw, found := object["mailbox_imported"]; found {
+		err = json.Unmarshal(raw, &a.MailboxImported)
+		if err != nil {
+			return fmt.Errorf("error reading 'mailbox_imported': %w", err)
+		}
+		delete(object, "mailbox_imported")
+	}
+
 	if raw, found := object["meeting_intent"]; found {
 		err = json.Unmarshal(raw, &a.MeetingIntent)
 		if err != nil {
@@ -89006,6 +89249,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'task_type': %w", err)
 		}
 		delete(object, "task_type")
+	}
+
+	if raw, found := object["thread_audience_yours"]; found {
+		err = json.Unmarshal(raw, &a.ThreadAudienceYours)
+		if err != nil {
+			return fmt.Errorf("error reading 'thread_audience_yours': %w", err)
+		}
+		delete(object, "thread_audience_yours")
 	}
 
 	if raw, found := object["thread_key"]; found {
@@ -89396,6 +89647,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.MailboxImported != nil {
+		object["mailbox_imported"], err = json.Marshal(a.MailboxImported)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'mailbox_imported': %w", err)
+		}
+	}
+
 	if a.MeetingIntent != nil {
 		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
 		if err != nil {
@@ -89518,6 +89776,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["task_type"], err = json.Marshal(a.TaskType)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'task_type': %w", err)
+		}
+	}
+
+	if a.ThreadAudienceYours != nil {
+		object["thread_audience_yours"], err = json.Marshal(a.ThreadAudienceYours)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'thread_audience_yours': %w", err)
 		}
 	}
 
@@ -102824,6 +103089,9 @@ type ServerInterface interface {
 	// Everything waiting on the acting rep, in one read, tiered by whether it needs a decision.
 	// (GET /attention)
 	GetAttention(w http.ResponseWriter, r *http.Request)
+	// Send a bounced message again to a corrected address.
+	// (POST /attention/bounces/{id}/send-again)
+	SendBouncedMessageAgain(w http.ResponseWriter, r *http.Request, id Id)
 	// Read the human+agent-attributable audit log (Settings governance view).
 	// (GET /audit-log)
 	ListAuditLog(w http.ResponseWriter, r *http.Request, params ListAuditLogParams)
@@ -104266,7 +104534,7 @@ type ServerInterface interface {
 	ReplaceIntroRequest(w http.ResponseWriter, r *http.Request, id Id)
 	// The document corpora this workspace has defined.
 	// (GET /knowledge/corpora)
-	ListCorpora(w http.ResponseWriter, r *http.Request)
+	ListCorpora(w http.ResponseWriter, r *http.Request, params ListCorporaParams)
 	// Define a document corpus.
 	// (POST /knowledge/corpora)
 	CreateCorpus(w http.ResponseWriter, r *http.Request)
@@ -104288,6 +104556,9 @@ type ServerInterface interface {
 	// Add a document to this corpus.
 	// (POST /knowledge/corpora/{id}/documents)
 	UploadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
+	// Bring an archived corpus back with everything filed in it.
+	// (POST /knowledge/corpora/{id}/restore)
+	RestoreCorpus(w http.ResponseWriter, r *http.Request, id Id)
 	// Delete a document, its chunks, its vectors and its stored file.
 	// (DELETE /knowledge/documents/{id})
 	DeleteCorpusDocument(w http.ResponseWriter, r *http.Request, id Id)
@@ -104459,10 +104730,10 @@ type ServerInterface interface {
 	// Take back an open request.
 	// (POST /legal-reviews/{id}/withdraw)
 	WithdrawLegalReview(w http.ResponseWriter, r *http.Request, id Id)
-	// The records an extension suggests messages belong to, waiting for a reader to decide.
+	// The link suggestions waiting for the caller to decide.
 	// (GET /link-suggestions)
 	ListLinkSuggestions(w http.ResponseWriter, r *http.Request)
-	// Accept a suggestion, which files the message under the record it names.
+	// Accept a suggestion, filing the message under its record.
 	// (POST /link-suggestions/{id}/accept)
 	AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id)
 	// Reject a suggestion. The message stays where it is, and the suggestion is not offered again.
@@ -104576,6 +104847,15 @@ type ServerInterface interface {
 	// Choose what the product may send you.
 	// (PUT /me/brief-delivery)
 	SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request)
+	// Your own chat accounts that are confirmed, or waiting for their code.
+	// (GET /me/chat-identities)
+	ListMyChatIdentities(w http.ResponseWriter, r *http.Request)
+	// Forget your confirmed account and any waiting code on one network.
+	// (DELETE /me/chat-identities/{network})
+	RemoveMyChatIdentity(w http.ResponseWriter, r *http.Request, network string)
+	// Get a code that confirms your account on one chat network.
+	// (POST /me/chat-identities/{network})
+	StartMyChatVerification(w http.ResponseWriter, r *http.Request, network string)
 	// Change the name colleagues see you by.
 	// (PUT /me/display-name)
 	SaveMyDisplayName(w http.ResponseWriter, r *http.Request)
@@ -105287,6 +105567,9 @@ type ServerInterface interface {
 	// Connect a shared mailbox, or reconnect the one stored for this address.
 	// (POST /shared-mailboxes)
 	ConnectSharedMailbox(w http.ResponseWriter, r *http.Request)
+	// The shared mailboxes the signed-in member may reply as.
+	// (GET /shared-mailboxes/replyable)
+	ListReplyableSharedMailboxes(w http.ResponseWriter, r *http.Request)
 	// Change who reads a shared mailbox, or its mail visibility.
 	// (PATCH /shared-mailboxes/{id})
 	UpdateSharedMailbox(w http.ResponseWriter, r *http.Request, id Id)
@@ -106913,6 +107196,12 @@ func (_ Unimplemented) RequestAttachmentAccess(w http.ResponseWriter, r *http.Re
 // Everything waiting on the acting rep, in one read, tiered by whether it needs a decision.
 // (GET /attention)
 func (_ Unimplemented) GetAttention(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Send a bounced message again to a corrected address.
+// (POST /attention/bounces/{id}/send-again)
+func (_ Unimplemented) SendBouncedMessageAgain(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -109798,7 +110087,7 @@ func (_ Unimplemented) ReplaceIntroRequest(w http.ResponseWriter, r *http.Reques
 
 // The document corpora this workspace has defined.
 // (GET /knowledge/corpora)
-func (_ Unimplemented) ListCorpora(w http.ResponseWriter, r *http.Request) {
+func (_ Unimplemented) ListCorpora(w http.ResponseWriter, r *http.Request, params ListCorporaParams) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -109841,6 +110130,12 @@ func (_ Unimplemented) ListCorpusDocuments(w http.ResponseWriter, r *http.Reques
 // Add a document to this corpus.
 // (POST /knowledge/corpora/{id}/documents)
 func (_ Unimplemented) UploadCorpusDocument(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Bring an archived corpus back with everything filed in it.
+// (POST /knowledge/corpora/{id}/restore)
+func (_ Unimplemented) RestoreCorpus(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -110186,13 +110481,13 @@ func (_ Unimplemented) WithdrawLegalReview(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// The records an extension suggests messages belong to, waiting for a reader to decide.
+// The link suggestions waiting for the caller to decide.
 // (GET /link-suggestions)
 func (_ Unimplemented) ListLinkSuggestions(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Accept a suggestion, which files the message under the record it names.
+// Accept a suggestion, filing the message under its record.
 // (POST /link-suggestions/{id}/accept)
 func (_ Unimplemented) AcceptLinkSuggestion(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -110417,6 +110712,24 @@ func (_ Unimplemented) GetMyBriefDelivery(w http.ResponseWriter, r *http.Request
 // Choose what the product may send you.
 // (PUT /me/brief-delivery)
 func (_ Unimplemented) SaveMyBriefDelivery(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Your own chat accounts that are confirmed, or waiting for their code.
+// (GET /me/chat-identities)
+func (_ Unimplemented) ListMyChatIdentities(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Forget your confirmed account and any waiting code on one network.
+// (DELETE /me/chat-identities/{network})
+func (_ Unimplemented) RemoveMyChatIdentity(w http.ResponseWriter, r *http.Request, network string) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Get a code that confirms your account on one chat network.
+// (POST /me/chat-identities/{network})
+func (_ Unimplemented) StartMyChatVerification(w http.ResponseWriter, r *http.Request, network string) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -111839,6 +112152,12 @@ func (_ Unimplemented) ListSharedMailboxes(w http.ResponseWriter, r *http.Reques
 // Connect a shared mailbox, or reconnect the one stored for this address.
 // (POST /shared-mailboxes)
 func (_ Unimplemented) ConnectSharedMailbox(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The shared mailboxes the signed-in member may reply as.
+// (GET /shared-mailboxes/replyable)
+func (_ Unimplemented) ListReplyableSharedMailboxes(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -122179,6 +122498,38 @@ func (siw *ServerInterfaceWrapper) GetAttention(w http.ResponseWriter, r *http.R
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.GetAttention(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SendBouncedMessageAgain operation middleware
+func (siw *ServerInterfaceWrapper) SendBouncedMessageAgain(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendBouncedMessageAgain(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -142798,6 +143149,9 @@ func (siw *ServerInterfaceWrapper) ReplaceIntroRequest(w http.ResponseWriter, r 
 // ListCorpora operation middleware
 func (siw *ServerInterfaceWrapper) ListCorpora(w http.ResponseWriter, r *http.Request) {
 
+	var err error
+	_ = err
+
 	ctx := r.Context()
 
 	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
@@ -142806,8 +143160,24 @@ func (siw *ServerInterfaceWrapper) ListCorpora(w http.ResponseWriter, r *http.Re
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListCorporaParams
+
+	// ------------- Optional query parameter "include_archived" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "include_archived", r.URL.Query(), &params.IncludeArchived, runtime.BindQueryParameterOptions{Type: "boolean", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "include_archived"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "include_archived", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListCorpora(w, r)
+		siw.Handler.ListCorpora(w, r, params)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -143034,6 +143404,40 @@ func (siw *ServerInterfaceWrapper) UploadCorpusDocument(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.UploadCorpusDocument(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RestoreCorpus operation middleware
+func (siw *ServerInterfaceWrapper) RestoreCorpus(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RestoreCorpus(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -145719,6 +146123,8 @@ func (siw *ServerInterfaceWrapper) ListLinkSuggestions(w http.ResponseWriter, r 
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -145751,6 +146157,8 @@ func (siw *ServerInterfaceWrapper) AcceptLinkSuggestion(w http.ResponseWriter, r
 
 	ctx := r.Context()
 
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
+
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
 	r = r.WithContext(ctx)
@@ -145782,6 +146190,8 @@ func (siw *ServerInterfaceWrapper) RejectLinkSuggestion(w http.ResponseWriter, r
 	}
 
 	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, BearerAuthScopes, []string{})
 
 	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
 
@@ -147190,6 +147600,90 @@ func (siw *ServerInterfaceWrapper) SaveMyBriefDelivery(w http.ResponseWriter, r 
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.SaveMyBriefDelivery(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMyChatIdentities operation middleware
+func (siw *ServerInterfaceWrapper) ListMyChatIdentities(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMyChatIdentities(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RemoveMyChatIdentity operation middleware
+func (siw *ServerInterfaceWrapper) RemoveMyChatIdentity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "network" -------------
+	var network string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "network", chi.URLParam(r, "network"), &network, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "network", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RemoveMyChatIdentity(w, r, network)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// StartMyChatVerification operation middleware
+func (siw *ServerInterfaceWrapper) StartMyChatVerification(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "network" -------------
+	var network string
+
+	err = runtime.BindStyledParameterWithOptions("simple", "network", chi.URLParam(r, "network"), &network, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "network", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.StartMyChatVerification(w, r, network)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -157423,6 +157917,26 @@ func (siw *ServerInterfaceWrapper) ConnectSharedMailbox(w http.ResponseWriter, r
 	handler.ServeHTTP(w, r)
 }
 
+// ListReplyableSharedMailboxes operation middleware
+func (siw *ServerInterfaceWrapper) ListReplyableSharedMailboxes(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListReplyableSharedMailboxes(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // UpdateSharedMailbox operation middleware
 func (siw *ServerInterfaceWrapper) UpdateSharedMailbox(w http.ResponseWriter, r *http.Request) {
 
@@ -164299,6 +164813,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/attention", wrapper.GetAttention)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/attention/bounces/{id}/send-again", wrapper.SendBouncedMessageAgain)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/audit-log", wrapper.ListAuditLog)
 	})
 	r.Group(func(r chi.Router) {
@@ -165763,6 +166280,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/knowledge/corpora/{id}/documents", wrapper.UploadCorpusDocument)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/knowledge/corpora/{id}/restore", wrapper.RestoreCorpus)
+	})
+	r.Group(func(r chi.Router) {
 		r.Delete(options.BaseURL+"/knowledge/documents/{id}", wrapper.DeleteCorpusDocument)
 	})
 	r.Group(func(r chi.Router) {
@@ -166049,6 +166569,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/brief-delivery", wrapper.SaveMyBriefDelivery)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/me/chat-identities", wrapper.ListMyChatIdentities)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/me/chat-identities/{network}", wrapper.RemoveMyChatIdentity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/me/chat-identities/{network}", wrapper.StartMyChatVerification)
 	})
 	r.Group(func(r chi.Router) {
 		r.Put(options.BaseURL+"/me/display-name", wrapper.SaveMyDisplayName)
@@ -166760,6 +167289,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/shared-mailboxes", wrapper.ConnectSharedMailbox)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/shared-mailboxes/replyable", wrapper.ListReplyableSharedMailboxes)
 	})
 	r.Group(func(r chi.Router) {
 		r.Patch(options.BaseURL+"/shared-mailboxes/{id}", wrapper.UpdateSharedMailbox)

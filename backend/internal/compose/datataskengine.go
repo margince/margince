@@ -25,6 +25,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/importscopes"
 	"github.com/margince/margince/backend/internal/compose/initiativeenrolment"
 	"github.com/margince/margince/backend/internal/compose/invitationsenders"
+	"github.com/margince/margince/backend/internal/compose/languages"
 	"github.com/margince/margince/backend/internal/compose/meetingrosters"
 	"github.com/margince/margince/backend/internal/compose/offernetdeals"
 	"github.com/margince/margince/backend/internal/compose/participantaddresses"
@@ -133,6 +134,7 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		initiativeenrolment.Task(NewInitiativeStore(pool)),
 		heldContactsDataTask(pool),
 		technicalAddressDataTask(pool),
+		capture.PersonalStandingDataTask(),
 		gmailDedupeScanDataTask(),
 		retiredReviewsDataTask(pool),
 		viabilitytasks.DataTask(activities.NewStore(InstallationDB(pool))),
@@ -154,11 +156,12 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		erasedseattraces.DataTask(),
 		newslettersDataTask(pool),
 		dealclockrefold.DataTask(), dealclockrefold.PersonalMeetingsTask(),
-		companyclockrefold.DataTask(), companyclockrefold.PersonalMailTask(), strengthdates.DataTask(),
+		companyclockrefold.DataTask(), companyclockrefold.PersonalMailTask(), strengthdates.DataTask(), strengthdates.DirectionlessSendersTask(),
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
 		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(), recordsources.SignalDataTask(), recordsources.PartyDataTask(), rolemailboxseats.DataTask(), participantaddresses.DataTask(),
-		activities.TeamLinksDataTask(activities.NewStore(InstallationDB(pool)).WithTeamRequestNotice(teamRequestNotice{}), now),
+		activities.TeamLinksDataTask(activities.NewStore(InstallationDB(pool)).WithTeamRequestNotice(teamRequestNotice{}), now), contacts.LegacyEvidenceDataTask(),
+		leadArrivalOriginDataTask(), languages.DataTask(),
 	}
 }

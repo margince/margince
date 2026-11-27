@@ -37,7 +37,6 @@ package compose
 import (
 	"context"
 	"encoding/json"
-	"errors"
 	"fmt"
 	"strings"
 	"unicode/utf8"
@@ -56,7 +55,6 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database/textbounds"
 	"github.com/margince/margince/backend/internal/shared/kernel/draftfloor"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptfence"
 	"github.com/margince/margince/backend/internal/shared/kernel/promptref"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -225,16 +223,10 @@ func (d offerDrafter) DraftOfferLines(ctx context.Context, offerID ids.OfferID) 
 		return DraftResult{Offer: before}, nil
 	}
 
-	decider, ok := principal.Actor(ctx)
-	if !ok {
-		return DraftResult{}, errors.New("compose: offer draft without a deciding principal")
+	execCtx, err := agentForActor(ctx, offerDraftAgentID)
+	if err != nil {
+		return DraftResult{}, err
 	}
-	execCtx := principal.WithActor(ctx, principal.Principal{
-		Type:       principal.PrincipalSystem,
-		ID:         offerDraftAgentID,
-		UserID:     decider.UserID,
-		OnBehalfOf: decider.UserID,
-	})
 	if _, err := d.deals.AddStagedOfferLines(execCtx, offerID, lines); err != nil {
 		return DraftResult{}, err
 	}

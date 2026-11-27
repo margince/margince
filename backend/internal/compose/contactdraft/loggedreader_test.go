@@ -6,14 +6,14 @@ package contactdraft_test
 import (
 	"context"
 	"errors"
-	"github.com/margince/margince/backend/internal/compose/draftvoice"
-	"github.com/margince/margince/backend/internal/modules/ai"
 	"testing"
 	"time"
 
 	"github.com/margince/margince/backend/internal/compose/contactdraft"
 	"github.com/margince/margince/backend/internal/compose/draftcore"
+	"github.com/margince/margince/backend/internal/compose/draftvoice"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )

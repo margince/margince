@@ -1989,7 +1989,7 @@ type Activity struct {
 	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
 	// DurationSeconds Meeting/call only.
-	DurationSeconds *int `json:"duration_seconds,omitempty"`
+	DurationSeconds *int `json:"duration_seconds,omitempty" minimum:"0"`
 
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
@@ -2027,6 +2027,9 @@ type Activity struct {
 
 	// Links Every record this activity is filed under that the caller may read; a link to a record they cannot read is left out. One activity may link to several, a contact and a deal say. Every read that returns an activity answers the same links: the list, one activity, and a contact's 360.
 	Links *[]ActivityLink `json:"links,omitempty"`
+
+	// MailboxImported Whether an import brought this in; the per-message audience write refuses it.
+	MailboxImported *bool `json:"mailbox_imported,omitempty"`
 
 	// MeetingIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	MeetingIntent *IntentTime `json:"meeting_intent,omitempty"`
@@ -2080,6 +2083,9 @@ type Activity struct {
 
 	// TaskType Task only, absent on every other kind. The type a human, an agent or the AI gave the task when it was made. A task made before types existed, or by a product rule that sets none, reads the type of its rule: an answer owed to a request is `reply`, a lead to qualify is `review`, a mail to file is `decide`. A task with neither reads `reach_out` when a human or an agent made it, else `do`. `offers_email` is false for every type but `reply` and `reach_out`.
 	TaskType *TaskType `json:"task_type,omitempty"`
+
+	// ThreadAudienceYours Whether the thread audience write acts on this row for the caller.
+	ThreadAudienceYours *bool `json:"thread_audience_yours,omitempty"`
 
 	// ThreadKey The provider's own conversation id (Gmail threadId, Graph conversationId, the RFC822 References root), stamped by capture. It is what makes a thread a thread: grouping by subject would merge two unrelated "Re: Update" exchanges and split one that was renamed mid-conversation. Null on anything capture did not thread — a note, a task, a message whose provider offered none.
 	ThreadKey *string   `json:"thread_key,omitempty"`
@@ -2611,7 +2617,7 @@ type CreateActivityRequest struct {
 
 	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	DueIntent       *IntentTime           `json:"due_intent,omitempty"`
-	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
+	DurationSeconds *int                  `json:"duration_seconds,omitempty" minimum:"0"`
 	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
@@ -3045,6 +3051,11 @@ type EmailCalendarInvitationResponse string
 // the bot, or because the credential was rejected rendered exactly like one the provider
 // confirmed. The rep was told their message went.
 type EmailDelivery struct {
+	// CanSendAgain True when the reader may send this bounced message again to a corrected address,
+	// by the same rule as the Worklist bounce row's `send_again`. Only the sender's own
+	// message that bounced hard qualifies, once, and not one an agent wrote.
+	CanSendAgain *bool `json:"can_send_again,omitempty"`
+
 	// DeliveredAt When the provider accepted it. Null unless the state is `sent`.
 	DeliveredAt *time.Time `json:"delivered_at,omitempty"`
 
@@ -3316,15 +3327,6 @@ type Partner struct {
 	// NextStepDueAt Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NextStepDueAt *string `json:"next_step_due_at,omitempty"`
-
-	// PartnerFitOverrideReason Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.
-	PartnerFitOverrideReason *string `json:"partner_fit_override_reason,omitempty"`
-
-	// PartnerFitScore Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.
-	PartnerFitScore *int `json:"partner_fit_score,omitempty" maximum:"100" minimum:"0"`
-
-	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
-	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty" maximum:"100" minimum:"0"`
 
 	// PartnerKinds What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
 	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
@@ -4225,6 +4227,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 		delete(object, "links")
 	}
 
+	if raw, found := object["mailbox_imported"]; found {
+		err = json.Unmarshal(raw, &a.MailboxImported)
+		if err != nil {
+			return fmt.Errorf("error reading 'mailbox_imported': %w", err)
+		}
+		delete(object, "mailbox_imported")
+	}
+
 	if raw, found := object["meeting_intent"]; found {
 		err = json.Unmarshal(raw, &a.MeetingIntent)
 		if err != nil {
@@ -4375,6 +4385,14 @@ func (a *Activity) UnmarshalJSON(b []byte) error {
 			return fmt.Errorf("error reading 'task_type': %w", err)
 		}
 		delete(object, "task_type")
+	}
+
+	if raw, found := object["thread_audience_yours"]; found {
+		err = json.Unmarshal(raw, &a.ThreadAudienceYours)
+		if err != nil {
+			return fmt.Errorf("error reading 'thread_audience_yours': %w", err)
+		}
+		delete(object, "thread_audience_yours")
 	}
 
 	if raw, found := object["thread_key"]; found {
@@ -4765,6 +4783,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		}
 	}
 
+	if a.MailboxImported != nil {
+		object["mailbox_imported"], err = json.Marshal(a.MailboxImported)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'mailbox_imported': %w", err)
+		}
+	}
+
 	if a.MeetingIntent != nil {
 		object["meeting_intent"], err = json.Marshal(a.MeetingIntent)
 		if err != nil {
@@ -4887,6 +4912,13 @@ func (a Activity) MarshalJSON() ([]byte, error) {
 		object["task_type"], err = json.Marshal(a.TaskType)
 		if err != nil {
 			return nil, fmt.Errorf("error marshaling 'task_type': %w", err)
+		}
+	}
+
+	if a.ThreadAudienceYours != nil {
+		object["thread_audience_yours"], err = json.Marshal(a.ThreadAudienceYours)
+		if err != nil {
+			return nil, fmt.Errorf("error marshaling 'thread_audience_yours': %w", err)
 		}
 	}
 

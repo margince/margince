@@ -29,13 +29,12 @@ package gates
 
 import (
 	"bufio"
+	"bytes"
 	"go/ast"
 	"go/token"
-	"os"
 	"path/filepath"
 	"regexp"
 	"slices"
-	"sort"
 	"strconv"
 	"strings"
 	"testing"
@@ -59,7 +58,7 @@ import (
 var erasureColumnBaseline = map[string][]string{
 	"legal_review": {"captured_by", "packet", "status"},
 	// Raw originals are deleted in full after their positive subject match is recorded; the preparatory metadata write leaves these columns for that deletion.
-	"raw_capture": {"channel_subjects", "parts_slim_outcome", "payload", "source_id", "source_system"},
+	"raw_capture": {"ask_message_ids", "channel_subjects", "parts_slim_outcome", "payload", "source_id", "source_system"},
 	// Audit identity and authority remain immutable when retained payloads are removed.
 	"audit_log": {"action", "actor_id", "actor_type", "authorization_rule", "entity_type"},
 	// Closed vocabularies, actor stamps and opaque thread keys survive the personal text.
@@ -272,6 +271,9 @@ var erasureColumnBaseline = map[string][]string{
 		"thread_key",
 	},
 	"lead": {
+		// The lead_origin key it arrived with, or empty for none: a code of a
+		// closed list, which names no one, like origin below.
+		"arrival_origin",
 		"captured_by",
 		// A code of the closed industry list, which names no one.
 		"industry",
@@ -332,18 +334,16 @@ var catalogColumnRe = regexp.MustCompile(`^public\.([a-z_][a-z0-9_]*)\.([a-z_][a
 func catalogTextColumns(t *testing.T) map[string]map[string]string {
 	t.Helper()
 	const catalog = "migrations/testdata/head_catalog.txt"
-	file, err := os.Open(catalog)
+	body, err := gatekit.ReadFile(catalog)
 	if err != nil {
-		t.Fatalf("opening %s: %v", catalog, err)
+		t.Fatalf("reading %s: %v", catalog, err)
 	}
-	//craft:ignore swallowed-errors a read-only close on a file this test is finished with; the read itself is asserted above
-	defer func() { _ = file.Close() }()
 	// Keyed to the column's TYPE, not merely its presence: both text and jsonb
 	// are collected here, and a failure that calls a jsonb column a text one
 	// sends the reader to check the wrong thing and to doubt the finding while
 	// they do it.
 	out := map[string]map[string]string{}
-	scanner := bufio.NewScanner(file)
+	scanner := bufio.NewScanner(bytes.NewReader(body))
 	scanner.Buffer(make([]byte, 0, 64*1024), 4*1024*1024)
 	for scanner.Scan() {
 		m := catalogColumnRe.FindStringSubmatch(scanner.Text())
@@ -830,20 +830,6 @@ func assignsColumn(statement, column string) bool {
 		}
 	}
 	return false
-}
-
-// redactedTables are the registered PII tables the cascade REDACTS — the ones
-// this census has something to say about. A table the cascade only deletes
-// from loses the whole row, so there is no column set to account for.
-func redactedTables(redacted map[string]map[string]bool) []string {
-	out := make([]string, 0, len(redacted))
-	for table := range redacted {
-		if _, registered := piiTables[table]; registered {
-			out = append(out, table)
-		}
-	}
-	sort.Strings(out)
-	return out
 }
 
 // The reader that places a write, driven over the shapes the cascade actually

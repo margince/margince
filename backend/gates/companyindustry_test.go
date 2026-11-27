@@ -12,8 +12,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
@@ -202,7 +200,7 @@ func schemaEnums(t testing.TB, doc, schema map[string]any, where string, followi
 func TestTheIndustryEnumWalkStopsAtARefCycleAndNotAtASharedRef(t *testing.T) {
 	t.Parallel()
 	var doc map[string]any
-	if err := yaml.Unmarshal([]byte(`
+	if err := unmarshalYAML([]byte(`
 components:
   schemas:
     Loop: { allOf: [{ $ref: '#/components/schemas/Loop' }] }

@@ -57,6 +57,7 @@
     "acceptAppliedDealChange": "business",
     "acceptAttachmentExtraction": "business",
     "acceptDealSuggestion": "business",
+    "acceptLinkSuggestion": "business",
     "acceptOffer": "business",
     "acceptPartnerLead": "business",
     "acceptTagSuggestion": "business",
@@ -580,6 +581,7 @@
     "listLegalEntityMembers": "workspace_settings",
     "listLegalHolds": "compliance",
     "listLegalReviews": "business",
+    "listLinkSuggestions": "business",
     "listLinkTypes": "business",
     "listListHistory": "business",
     "listListMembers": "business",
@@ -738,6 +740,7 @@
     "regenerateOffer": "business",
     "rejectApproval": "agent_governance",
     "rejectApprovalBundle": "agent_governance",
+    "rejectLinkSuggestion": "business",
     "rejectOffer": "business",
     "rejectVoiceProfileVersion": "business",
     "relinkActivities": "business",
@@ -786,6 +789,7 @@
     "restoreCompanySuggestion": "business",
     "restoreContactMoment": "business",
     "restoreContactProfileField": "business",
+    "restoreCorpus": "business",
     "restoreDealMove": "business",
     "restoreList": "business",
     "restorePipeline": "admin_settings",
@@ -1621,6 +1625,7 @@
     "listMeetingProposals": "scheduling",
     "listMyAgentGrants": "agent_limits",
     "listMyCaptureActivity": "capture_triage",
+    "listMyChatIdentities": "own_profile",
     "listMySessions": "own_security",
     "listNoticeCaseReviews": "privacy_notices",
     "listNoticeCases": "privacy_notices",
@@ -1647,6 +1652,7 @@
     "listRecordLinks": "search",
     "listRecordRoles": "members",
     "listRelationships": "contacts",
+    "listReplyableSharedMailboxes": "connectors",
     "listReportRuns": "reports",
     "listReportingEditions": "reports",
     "listReportingExecutions": "reports",
@@ -1829,6 +1835,7 @@
     "removeFxRate": "rates",
     "removeListMember": "lists",
     "removeMember": "members",
+    "removeMyChatIdentity": "own_profile",
     "removeOfferLineItem": "offers",
     "removeProjectCompany": "projects",
     "removeProjectStakeholder": "projects",
@@ -1884,6 +1891,7 @@
     "restoreCompanySuggestion": "companies",
     "restoreContactMoment": "contacts",
     "restoreContactProfileField": "contacts",
+    "restoreCorpus": "knowledge",
     "restoreDealMove": "deals",
     "restoreList": "lists",
     "restoreListMember": "lists",
@@ -1940,6 +1948,7 @@
     "search": "search",
     "searchContext": "search",
     "searchReportEvidence": "reports",
+    "sendBouncedMessageAgain": "worklist",
     "sendCompanyEmail": "activities",
     "sendEmail": "activities",
     "sendMessage": "activities",
@@ -1983,6 +1992,7 @@
     "startAnchorCompanySiteRead": "company_profile",
     "startConnectorBackfill": "connectors",
     "startForecastAssuranceRun": "forecast",
+    "startMyChatVerification": "own_profile",
     "startMyTotpEnrolment": "own_security",
     "startOidcSignIn": "sign_in",
     "startSharedMailboxHistoryImport": "connectors",
@@ -2111,6 +2121,9 @@
     ],
     "accept_deal_suggestion": [
       "deals"
+    ],
+    "accept_link_suggestion": [
+      "activities"
     ],
     "accept_offer": [
       "offers"
@@ -3231,6 +3244,9 @@
     "list_legal_reviews": [
       "legal_reviews"
     ],
+    "list_link_suggestions": [
+      "activities"
+    ],
     "list_meeting_proposals": [
       "scheduling"
     ],
@@ -3719,6 +3735,9 @@
     "regenerate_offer": [
       "offers"
     ],
+    "reject_link_suggestion": [
+      "activities"
+    ],
     "reject_offer": [
       "offers"
     ],
@@ -3844,6 +3863,9 @@
     ],
     "restore_contact_profile_field": [
       "contacts"
+    ],
+    "restore_corpus": [
+      "knowledge"
     ],
     "restore_deal_move": [
       "deals"
@@ -4275,6 +4297,9 @@
       "business"
     ],
     "accept_deal_suggestion": [
+      "business"
+    ],
+    "accept_link_suggestion": [
       "business"
     ],
     "accept_offer": [
@@ -5383,6 +5408,9 @@
     "list_legal_reviews": [
       "business"
     ],
+    "list_link_suggestions": [
+      "business"
+    ],
     "list_meeting_proposals": [
       "business"
     ],
@@ -5831,6 +5859,9 @@
     "regenerate_offer": [
       "business"
     ],
+    "reject_link_suggestion": [
+      "business"
+    ],
     "reject_offer": [
       "business"
     ],
@@ -5955,6 +5986,9 @@
       "business"
     ],
     "restore_contact_profile_field": [
+      "business"
+    ],
+    "restore_corpus": [
       "business"
     ],
     "restore_deal_move": [

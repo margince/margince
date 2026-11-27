@@ -146,8 +146,6 @@ func (f entityField) cleaned(isDefault bool) (value *string, sent bool, err erro
 	return &text, true, nil
 }
 
-var entityLanguageShape = regexp.MustCompile(`^[a-z]{2}$`)
-
 // cleanEntityCountry stores the lower-case spelling installation.country uses.
 func cleanEntityCountry(raw string) (string, error) {
 	if _, ok := assignedCountry[strings.ToUpper(raw)]; !ok {
@@ -181,6 +179,8 @@ func (in LegalEntityInput) withDefaultJurisdiction() LegalEntityInput {
 	}
 	return in
 }
+
+var entityLanguageShape = regexp.MustCompile(`^[a-z]{2}$`)
 
 func cleanEntityLanguage(raw string) (string, error) {
 	lower := strings.ToLower(raw)

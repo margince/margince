@@ -365,21 +365,32 @@ func (s *Store) ReadCorpus(ctx context.Context, id ids.UUID) (crmcontracts.Knowl
 	return out, err
 }
 
-// ListCorpora returns the workspace's live corpora, newest first.
+// ListCorpora returns the workspace's corpora, newest first: the live ones, and
+// the archived ones too under storekit.IncludeArchived.
 //
 // No cursor: a workspace defines corpora by hand, in ones and twos, and the
 // screen shows all of them. A page envelope here would be a contract promise
 // with no producer behind it.
-func (s *Store) ListCorpora(ctx context.Context) ([]crmcontracts.KnowledgeCorpus, error) {
+func (s *Store) ListCorpora(ctx context.Context, archived storekit.ArchivedFilter) ([]crmcontracts.KnowledgeCorpus, error) {
 	if err := auth.Require(ctx, "knowledge_corpus", principal.ActionRead); err != nil {
 		return nil, err
 	}
+	// The archived sets are listed for restoring them, so they take the grant
+	// that archives and restores.
+	if archived == storekit.IncludeArchived {
+		if err := auth.Require(ctx, "knowledge_corpus", principal.ActionDelete); err != nil {
+			return nil, err
+		}
+	}
 	out := []crmcontracts.KnowledgeCorpus{}
 	identity := s.embedIdentity()
+	live := ` WHERE archived_at IS NULL`
+	if archived == storekit.IncludeArchived {
+		live = ``
+	}
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx,
-			`SELECT `+corpusColumns+` FROM knowledge_corpus c
-			 WHERE archived_at IS NULL ORDER BY created_at DESC, id DESC`)
+			`SELECT `+corpusColumns+` FROM knowledge_corpus c`+live+` ORDER BY created_at DESC, id DESC`)
 		if err != nil {
 			return fmt.Errorf("list knowledge corpora: %w", err)
 		}
@@ -401,7 +412,7 @@ func (s *Store) ListCorpora(ctx context.Context) ([]crmcontracts.KnowledgeCorpus
 // Not a GROUP BY join: it drops a corpus with no documents, which must stay in
 // the list reporting zeros.
 var corpusColumns = `c.id, c.name, c.description, c.topic_statement, c.min_similarity,
-	c.default_ask, c.reindexing, c.created_at, c.archived_at, c.managed_source IS NOT NULL,
+	c.default_ask, c.reindexing, c.created_at, c.archived_at, c.managed_source IS NOT DISTINCT FROM '` + HandbookSource + `',
 	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL),
 	(SELECT count(*) FROM knowledge_document d WHERE d.corpus_id = c.id AND d.archived_at IS NULL
 	    AND ` + ingestInFlight + `),
@@ -426,6 +437,7 @@ func (r corpusRow) wire(identity string) crmcontracts.KnowledgeCorpus {
 	overridden := r.override != nil
 	out.MinSimilarityOverridden = &overridden
 	out.Coverage.EmbedState = r.passages.state(identity)
+	out.ArchivedAt = r.archivedAt
 	return out
 }
 

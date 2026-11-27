@@ -51,7 +51,25 @@ const (
 	captureDir        = "internal/modules/capture"
 	activitiesDir     = "internal/modules/activities"
 	chatSendResolver  = "internal/compose/commschannel.go"
+	// senderResolver holds ChatSenders.For, which resolves a provider's
+	// connector.MessageSender and credential.
+	// Held by: TestChatNetworksShareOneReceiveFileChangeAndSendPath (backend/gates/chatonepath_test.go)
+	senderResolver = "internal/modules/capture/chatsenders.go"
 )
+
+// isSenderResolveSeam reports a file besides the resolver that may return a
+// connector.MessageSender. Each hands on what the resolver answered, or answers
+// for a transport no core provider owns.
+func isSenderResolveSeam(file string) bool {
+	switch file {
+	case "internal/modules/capture/channelsend.go": // the workspace bot's lookup, which the resolver calls, and the registry's entry to the resolver
+	case "internal/compose/commschannel.go": // the comms send path's entry, which calls the resolver
+	case "internal/compose/extchannelsend.go": // the transport an extension unit declares
+	default:
+		return false
+	}
+	return true
+}
 
 var activityWriterPrefixes = []string{"Create", "Insert", "Update", "Delete", "Archive", "Edit", "Remove", "Set"}
 
@@ -140,6 +158,26 @@ func TestChatOnePathGateFailsOnAForkedPath(t *testing.T) {
 				"fork.go": "package signal\nfunc (c *C) Fork() { _, _ = c.do(nil) }\n",
 			},
 		},
+		{
+			name: "a second function that resolves a MessageSender", want: "resolves a connector.MessageSender", path: modulePath + "/internal/compose/forkresolver",
+			files: map[string]string{"a.go": "package forkresolver\n" + imp + "func pick() connector.MessageSender { return nil }\n"},
+		},
+		{
+			name: "a provider's sender built by a constructor of any name", want: "builds a provider's sender", path: modulePath + "/internal/compose/forkbuilder",
+			files: map[string]string{"a.go": "package forkbuilder\nimport \"" + modulePath + "/internal/modules/capture/telegram\"\n" +
+				"func build() { _ = telegram.New(nil) }\n"},
+		},
+		{
+			name: "a sender built by a struct literal", want: "literal builds a provider's sender", path: modulePath + "/internal/compose/forkliteral",
+			files: map[string]string{"a.go": "package forkliteral\nimport (\n\"context\"\n\"" + modulePath + "/internal/shared/ports/connector\"\n)\n" +
+				"type mine struct{}\nfunc (mine) SendMessage(context.Context, connector.Auth, connector.ChannelMessage) (connector.SendReceipt, error) { return connector.SendReceipt{}, nil }\n" +
+				"var _ = mine{}\n"},
+		},
+		{
+			name: "a factory of a concrete sender", want: "resolves a connector.MessageSender", path: modulePath + "/internal/compose/forkfactory",
+			files: map[string]string{"a.go": "package forkfactory\nimport \"" + modulePath + "/internal/modules/capture/whatsapp\"\n" +
+				"func factory() *whatsapp.Sender { return nil }\n"},
+		},
 	}
 	for _, tc := range cases {
 		t.Run(tc.name, func(t *testing.T) {
@@ -153,6 +191,9 @@ func TestChatOnePathGateFailsOnAForkedPath(t *testing.T) {
 		})
 	}
 	clean := map[string]map[string]string{
+		"a caller of the one resolver": {"a.go": "package cleanresolve\n" +
+			"import \"" + modulePath + "/internal/modules/capture\"\n" +
+			"func f(c capture.ChatSenders) { _, _, _ = c.For(nil, \"whatsapp\", [16]byte{}) }\n"},
 		"a file that files through FileChatMessage": {"a.go": "package cleanentry\n" + imp +
 			"import \"" + modulePath + "/internal/modules/capture\"\n" +
 			"func f(s connector.Sink, b connector.ChatBinding, m connector.ChatMessage) { _, _ = capture.FileChatMessage(nil, s, b, m) }\n"},
@@ -208,6 +249,15 @@ func (p plantImporter) Import(importPath string) (*types.Package, error) {
 	for _, pkg := range p.module {
 		if pkg.path == importPath {
 			return pkg.types, nil
+		}
+	}
+	// A standard package a module package already imported is that one, so a
+	// planted type that names context.Context is identical to the module's.
+	for _, pkg := range p.module {
+		for _, imported := range pkg.types.Imports() {
+			if imported.Path() == importPath {
+				return imported, nil
+			}
 		}
 	}
 	return p.std.Import(importPath)
@@ -395,8 +445,7 @@ func (c *chatPackages) markInterfaceSends(p *typedPackage, names map[string][]ty
 		if !ok {
 			continue
 		}
-		for i := range iface.NumExplicitMethods() {
-			m := iface.ExplicitMethod(i)
+		for m := range iface.ExplicitMethods() {
 			if strings.HasPrefix(strings.ToLower(m.Name()), "send") && !takesChannelMessage(m) &&
 				slices.ContainsFunc(names[p.path+"."+m.Name()], func(o types.Object) bool { return c.ioFuncs[o] }) {
 				c.sends[m] = true
@@ -407,8 +456,8 @@ func (c *chatPackages) markInterfaceSends(p *typedPackage, names map[string][]ty
 
 func takesChannelMessage(fn *types.Func) bool {
 	params := fn.Type().(*types.Signature).Params()
-	for i := range params.Len() {
-		if n, ok := params.At(i).Type().(*types.Named); ok && n.Obj().Name() == "ChannelMessage" {
+	for param := range params.Variables() {
+		if n, ok := param.Type().(*types.Named); ok && n.Obj().Name() == "ChannelMessage" {
 			return true
 		}
 	}
@@ -431,8 +480,8 @@ func (c *chatPackages) deriveWriters() {
 		return
 	}
 	ms := types.NewMethodSet(types.NewPointer(store.Type()))
-	for i := range ms.Len() {
-		fn, ok := ms.At(i).Obj().(*types.Func)
+	for sel := range ms.Methods() {
+		fn, ok := sel.Obj().(*types.Func)
 		if ok && fn.Exported() && slices.ContainsFunc(activityWriterPrefixes, func(pre string) bool { return strings.HasPrefix(fn.Name(), pre) }) {
 			c.writers[fn.Origin()] = true
 		}
@@ -576,6 +625,7 @@ func (c *chatPackages) findings() []string {
 			out = append(out, c.activityFindings(p, f)...)
 			out = append(out, c.sendFindings(p, f)...)
 		}
+		out = append(out, c.resolverFindings(p)...)
 	}
 	sort.Strings(out)
 	return slices.Compact(out)
@@ -723,4 +773,108 @@ func chatLiterals(p typedPackage, f *ast.File) []string {
 		return true
 	})
 	return out
+}
+
+// senderInterface is the connector's MessageSender interface.
+func (c *chatPackages) senderInterface() *types.Interface {
+	p := c.pkgAt(connectorDir)
+	if p == nil {
+		return nil
+	}
+	obj, ok := p.types.Scope().Lookup("MessageSender").(*types.TypeName)
+	if !ok {
+		return nil
+	}
+	iface, _ := obj.Type().Underlying().(*types.Interface)
+	return iface
+}
+
+// isSenderType reports a type that is a connector.MessageSender or implements it,
+// itself or through a pointer.
+func (c *chatPackages) isSenderType(t types.Type) bool {
+	iface := c.senderInterface()
+	if iface == nil || t == nil {
+		return false
+	}
+	return types.Implements(t, iface) || types.Implements(types.NewPointer(t), iface)
+}
+
+// isConcreteSender reports a built value of a type that implements MessageSender.
+// An interface value is a sender somebody resolved, which the other rule judges.
+func (c *chatPackages) isConcreteSender(t types.Type) bool {
+	if tuple, ok := t.(*types.Tuple); ok {
+		if tuple.Len() == 0 {
+			return false
+		}
+		t = tuple.At(0).Type()
+	}
+	return t != nil && !types.IsInterface(t) && c.isSenderType(t)
+}
+
+// resolverFindings fails a second place that resolves or builds a
+// connector.MessageSender. It judges by type, so a constructor of any name, a
+// struct literal and a factory all count. A function that returns a sender is a
+// second resolver, and so is an expression that builds one. Neither counts in
+// the resolver, a listed seam or a provider package. A call to a function the
+// resolver file declares is the resolver answering.
+func (c *chatPackages) resolverFindings(p typedPackage) []string {
+	if _, provider := c.providers[pkgDir(p)]; provider {
+		return nil
+	}
+	var out []string
+	for _, f := range p.files {
+		name := c.file(f)
+		if name == senderResolver || isSenderResolveSeam(name) {
+			continue
+		}
+		for _, d := range f.Decls {
+			if fd, ok := d.(*ast.FuncDecl); ok && c.returnsSender(p, fd) {
+				out = append(out, name+": "+fd.Name.Name+" resolves a connector.MessageSender; resolve it through capture.ChatSenders.For")
+			}
+		}
+		ast.Inspect(f, func(n ast.Node) bool {
+			switch x := n.(type) {
+			case *ast.CompositeLit:
+				if c.isConcreteSender(p.info.Types[x].Type) {
+					out = append(out, name+": a literal builds a provider's sender, which only capture.ChatSenders may do")
+				}
+			case *ast.CallExpr:
+				if c.isConcreteSender(p.info.Types[x].Type) && !c.callsResolverFile(p, x) {
+					out = append(out, name+": a call builds a provider's sender, which only capture.ChatSenders may do")
+				}
+			}
+			return true
+		})
+	}
+	return out
+}
+
+// callsResolverFile reports a call to a function the resolver file declares.
+func (c *chatPackages) callsResolverFile(p typedPackage, call *ast.CallExpr) bool {
+	var id *ast.Ident
+	switch fun := call.Fun.(type) {
+	case *ast.Ident:
+		id = fun
+	case *ast.SelectorExpr:
+		id = fun.Sel
+	}
+	if id == nil {
+		return false
+	}
+	fn := funcOf(p.info.Uses[id])
+	return fn != nil && c.fset.Position(fn.Pos()).Filename == senderResolver
+}
+
+func (c *chatPackages) returnsSender(p typedPackage, fd *ast.FuncDecl) bool {
+	obj, ok := p.info.Defs[fd.Name].(*types.Func)
+	if !ok {
+		return false
+	}
+	results := obj.Type().(*types.Signature).Results()
+	for result := range results.Variables() {
+		if c.isSenderType(result.Type()) {
+			return true
+		}
+	}
+	return false
 }

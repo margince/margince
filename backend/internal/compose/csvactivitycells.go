@@ -51,18 +51,21 @@ type cellClock struct {
 }
 
 // checkActivityCells reads an activity row's type, timestamp, duration, meeting
-// status and direction into typed. The first problem wins.
-func checkActivityCells(fields map[string]string, typed map[string]any, clock cellClock) (map[string]any, *cellProblem) {
+// status and direction into typed, or answers each cell the store would
+// refuse. The kind rules hold only the cells that read.
+func checkActivityCells(fields map[string]string, typed map[string]any, clock cellClock) (map[string]any, []*cellProblem) {
 	if typed == nil {
 		typed = map[string]any{}
 	}
 	steps := []func(map[string]string, map[string]any, cellClock) *cellProblem{
 		checkActivityType, checkOccurredAt, checkDuration, checkMeetingStatus, checkDirection, checkKindFields,
 	}
+	var problems cellProblems
 	for _, step := range steps {
-		if problem := step(fields, typed, clock); problem != nil {
-			return nil, problem
-		}
+		problems.add(step(fields, typed, clock))
+	}
+	if len(problems) > 0 {
+		return nil, problems
 	}
 	return typed, nil
 }

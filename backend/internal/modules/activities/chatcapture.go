@@ -128,7 +128,7 @@ type ChatFiled struct {
 
 // FileChatCapture writes the message activity and moves the image onto it, in
 // one transaction. The gates run under the caller's own principal, before
-// WriteAs is applied, because the reader's principal passes every RBAC check.
+// WriteAs is applied, so the refusal names the user and not the reader.
 func (s *Store) FileChatCapture(ctx context.Context, in ChatCaptureFiling) (ChatFiled, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return ChatFiled{}, err
@@ -312,7 +312,7 @@ func refileAttachment(ctx context.Context, tx pgx.Tx, attachmentID, activityID i
 		return err
 	}
 	if _, err := tx.Exec(ctx,
-		`UPDATE attachment SET entity_type = $2, entity_id = $3, company_id = NULL WHERE id = $1`,
+		`UPDATE attachment SET entity_type = $2, entity_id = $3 WHERE id = $1`,
 		attachmentID, linkEntityActivity, activityID); err != nil {
 		return err
 	}

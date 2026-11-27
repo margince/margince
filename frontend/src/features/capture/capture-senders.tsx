@@ -261,7 +261,8 @@ function SenderMenu({
   const offersBusiness =
     !admitted.has(row.kind ?? "") && row.decision !== "business";
   const offersKeepOut = row.decision !== "keep_out";
-  if (!offersBusiness && !offersKeepOut && !row.overruled) {
+  const liftable = row.overruled || row.decision === "personal";
+  if (!offersBusiness && !offersKeepOut && !liftable) {
     return null;
   }
   return (
@@ -282,12 +283,14 @@ function SenderMenu({
             {t("senders.keepOut")}
           </Button>
         )}
-        {row.overruled && (
+        {liftable && (
           <Button
             disabled={withdraw.isPending}
             onClick={() => withdraw.mutate(row.address)}
           >
-            {t("senders.withdraw")}
+            {row.decision === "personal"
+              ? t("senders.liftPrivate")
+              : t("senders.withdraw")}
           </Button>
         )}
       </OverflowMenu>
@@ -310,6 +313,14 @@ function DecisionCell({ row }: Readonly<{ row: SenderDecision }>) {
             : t("senders.kind.keptOut")}
         </Badge>
         <span className="t-caption">{t("senders.byYou")}</span>
+      </CellStack>
+    );
+  }
+  if (row.decision === "personal") {
+    return (
+      <CellStack>
+        <Badge>{t("senders.kind.private")}</Badge>
+        <span className="t-caption">{t("senders.privateStands")}</span>
       </CellStack>
     );
   }

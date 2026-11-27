@@ -330,7 +330,7 @@ func (s *Service) recordDirectoryCheck(ctx context.Context, fingerprint, outcome
 			}
 		}
 		_, err := storekit.LogSystem(writeCtx, tx, directoryLogAction,
-			map[string]any{"outcome": outcome, "reason": string(reason), "credential": fingerprint})
+			map[string]any{"outcome": outcome, evidenceKeyReason: string(reason), "credential": fingerprint})
 		return err
 	}); err != nil {
 		slog.ErrorContext(ctx, "recording a Google directory check", "err", err)

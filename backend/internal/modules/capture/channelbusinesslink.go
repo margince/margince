@@ -103,6 +103,7 @@ func scanBusinessLink(row pgx.Row) (ids.UUID, connector.ChatLink, error) {
 	if err := row.Scan(&id, &link.AccountID, &ownership, &owner, &seat); err != nil {
 		return ids.Nil, connector.ChatLink{}, err
 	}
+	link.ConnectionID = id
 	link.Ownership = connector.ChatOwnership(ownership)
 	if owner != nil {
 		link.OwnerUserID = *owner

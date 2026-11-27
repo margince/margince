@@ -6,7 +6,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity
 
-93 columns · primary key `(id)` · referenced by 49 foreign keys
+93 columns · primary key `(id)` · referenced by 50 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -113,6 +113,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `host_user_id` | `app_user` | deleting the parent keeps this row and clears the link |
 | `invitation_sender` | `app_user` | deleting the parent keeps this row and clears the link |
 | `kind` | `activity_kind` | the parent cannot be deleted while this row points at it |
+| `language` | `language` | the parent cannot be deleted while this row points at it |
 | `legal_entity_id` | `legal_entity` | the parent cannot be deleted while this row points at it |
 | `raw_capture_id` | `raw_capture` | deleting the parent keeps this row and clears the link |
 | `sent_by_colleague` | `app_user` | deleting the parent keeps this row and clears the link |
@@ -137,7 +138,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 - `activity_exact_booking_duration`: `CHECK (((NOT booking_interval_exact) OR ((duration_seconds IS NOT NULL) AND (duration_seconds > 0))))`
 - `activity_guests_left_out_check`: `CHECK ((guests_left_out >= 0))`
 - `activity_internal_mail_remains_restricted`: `CHECK (((internal_mail_authorization IS NULL) OR ((kind = 'email') AND (audience = ANY (ARRAY['participants', 'selected'])) AND (jsonb_typeof(internal_mail_authorization) = 'object') AND (internal_mail_authorization ?& ARRAY['connection_id', 'owner_user_id', 'provider', 'generation', 'enrolled_at', 'enrolled_by', 'policy_since']))))`
-- `activity_language_check`: `CHECK (((language IS NULL) OR (language = ANY (ARRAY['de', 'en', 'vi']))))`
 - `activity_meeting_host`: `CHECK (((host_user_id IS NULL) OR (kind = 'meeting')))`
 - `activity_meeting_intent_kind`: `CHECK (((meeting_wall IS NULL) OR ((kind = 'meeting') AND (occurred_precision = 'instant'))))`
 - `activity_meeting_intent_pair`: `CHECK (valid_intent_time(meeting_wall, meeting_zone))`
@@ -435,7 +435,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## activity_link_suggestion
 
-14 columns · primary key `(id)` · referenced by 0 foreign keys
+15 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -445,10 +445,11 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `decided_by` | `text` |  |  |
 | `entity_id` | `uuid` | yes |  |
 | `entity_type` | `text` | yes | One of `contact`, `company`, `deal`, `project`. |
+| `for_user` | `uuid` |  | Points at `app_user.id`. |
 | `reason` | `text` | yes | At most 200 characters. |
 | `score` | `numeric(5,4)` | yes |  |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `accepted`, `rejected`. |
-| `unit` | `text` | yes |  |
+| `unit` | `text` |  |  |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |
@@ -459,11 +460,13 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | Columns | Table | When the parent goes |
 |---|---|---|
 | `activity_id` | `activity` | deleting the parent deletes this row |
+| `for_user` | `app_user` | deleting the parent deletes this row |
 
 **Rules**
 
 - `activity_link_suggestion_decided`: `CHECK ((((status = 'pending') AND (decided_at IS NULL) AND (decided_by IS NULL)) OR ((status <> 'pending') AND (decided_at IS NOT NULL) AND (decided_by IS NOT NULL))))`
 - `activity_link_suggestion_entity_type_check`: `CHECK ((entity_type = ANY (ARRAY['contact', 'company', 'deal', 'project'])))`
+- `activity_link_suggestion_producer`: `CHECK (((unit IS NULL) = (for_user IS NOT NULL)))`
 - `activity_link_suggestion_reason_check`: `CHECK (((char_length(reason) >= 1) AND (char_length(reason) <= 200)))`
 - `activity_link_suggestion_score_check`: `CHECK (((score >= (0)::numeric) AND (score <= (1)::numeric)))`
 - `activity_link_suggestion_status_check`: `CHECK ((status = ANY (ARRAY['pending', 'accepted', 'rejected'])))`
@@ -472,8 +475,11 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 **Indexes**
 
 - `activity_link_suggestion_pkey`: `unique, btree (id)`
+- `idx_activity_link_suggestion_activity`: `btree (activity_id)`
+- `idx_activity_link_suggestion_for_user`: `btree (for_user) WHERE (for_user IS NOT NULL)`
 - `idx_activity_link_suggestion_pending`: `btree (created_at, id) WHERE (status = 'pending')`
-- `uq_activity_link_suggestion_target`: `unique, btree (activity_id, entity_type, entity_id)`
+- `uq_activity_link_suggestion_question`: `unique, btree (activity_id, entity_type, entity_id, for_user) WHERE (for_user IS NOT NULL)`
+- `uq_activity_link_suggestion_unit_target`: `unique, btree (activity_id, entity_type, entity_id) WHERE (unit IS NOT NULL)`
 
 **Triggers**
 
@@ -935,7 +941,7 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 ## attachment
 
-28 columns · primary key `(id)` · referenced by 6 foreign keys
+27 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -945,9 +951,8 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 | `bytes_withheld` | `boolean`, default `false` | yes | True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. |
 | `category` | `text`, default `'other'::text` | yes | What kind of document this is. |
 | `checksum` | `text` |  | sha256 of the bytes, for integrity/dedupe. |
-| `company_id` | `uuid` |  | The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. |
 | `content_type` | `text` |  |  |
-| `contract_id` | `uuid` |  | The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. |
+| `contract_id` | `uuid` |  | The agreement this file is about. |
 | `deal_id` | `uuid` |  |  |
 | `declared_type` | `text` |  |  |
 | `doc_state` | `text`, default `'current'::text` | yes | ASSERTED, never inferred. |
@@ -987,7 +992,6 @@ The 32 tables owned by `activities`, as the migrations build them. [Back to the 
 
 **Indexes**
 
-- `attachment_account_ix`: `btree (company_id, pinned DESC, created_at DESC) WHERE (archived_at IS NULL)`
 - `attachment_activity_ix`: `btree (activity_id) WHERE (activity_id IS NOT NULL)`
 - `attachment_contract_ix`: `btree (contract_id, created_at DESC) WHERE ((contract_id IS NOT NULL) AND (archived_at IS NULL))`
 - `attachment_external_part_key`: `unique, btree (external_source_id, external_part_id) WHERE (external_source_id IS NOT NULL)`

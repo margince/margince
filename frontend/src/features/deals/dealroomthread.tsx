@@ -145,8 +145,13 @@ function ThreadRow({
           {about}
         </span>
       ) : null}
-      {thread.required_change || resolved ? (
+      {thread.required_change ||
+      resolved ||
+      thread.visible_to_buyer === false ? (
         <div className="thread-head">
+          {thread.visible_to_buyer === false ? (
+            <Badge tone="warning">{t("threads.hiddenFromBuyer")}</Badge>
+          ) : null}
           {thread.required_change ? (
             <Badge tone="warning">{t("threads.requiredChange")}</Badge>
           ) : null}

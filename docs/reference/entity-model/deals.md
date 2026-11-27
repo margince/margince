@@ -800,6 +800,11 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `to_currency` | `currency_code` | yes | The workspace base currency. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
+**Rules**
+
+- `fx_rate_pair_distinct`: `CHECK (((from_currency) <> (to_currency)))`
+- `fx_rate_rate_positive`: `CHECK ((rate > (0)::numeric))`
+
 **Indexes**
 
 - `fx_rate_current_pair_day`: `unique, btree (from_currency, to_currency, rate_date) WHERE (superseded_at IS NULL)`
@@ -905,6 +910,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 |---|---|---|
 | `buyer_company_id` | `company` | deleting the parent keeps this row and clears the link |
 | `deal_id` | `deal` | the parent cannot be deleted while this row points at it |
+| `language` | `language` | the parent cannot be deleted while this row points at it |
 | `legal_entity_id` | `legal_entity` | the parent cannot be deleted while this row points at it |
 | `template_id` | `offer_template` | deleting the parent keeps this row and clears the link |
 
@@ -1025,6 +1031,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 **Rules**
 
+- `offer_template_locale_shape`: `CHECK ((locale ~ '^[a-z]{2}(-[A-Z]{2})?$')) NOT VALID`
 - `offer_template_version_js_safe`: `CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))`
 
 **Indexes**
@@ -1141,6 +1148,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 
 | Columns | Table | When the parent goes |
 |---|---|---|
+| `language` | `language` | the parent cannot be deleted while this row points at it |
 | `product_id` | `product` | deleting the parent deletes this row |
 
 **Rules**

@@ -27,7 +27,6 @@ package gates
 import (
 	"go/ast"
 	"go/token"
-	"path/filepath"
 	"regexp"
 	"slices"
 	"sort"
@@ -167,7 +166,7 @@ func valueSpecsNamed(file *ast.File, name string) []*ast.ValueSpec {
 // the files that own each vocabulary — so this reads the package, not one file.
 func composeStringConstants(t *testing.T) map[string]string {
 	t.Helper()
-	sources, err := filepath.Glob("internal/compose/*.go")
+	sources, err := gatekit.Glob("internal/compose/*.go")
 	if err != nil {
 		t.Fatalf("listing compose sources: %v", err)
 	}

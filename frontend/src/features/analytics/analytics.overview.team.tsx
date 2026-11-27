@@ -8,8 +8,6 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { Field, PendingBody } from "../../design-system/atoms";
 import { Callout } from "../../design-system/callout";
-import { FilterBar } from "../../design-system/filterbar";
-import { OverflowMenu } from "../../design-system/overflowmenu";
 import { QueryGate } from "../../design-system/querystates";
 import { Select } from "../../design-system/select";
 import { StatStrip } from "../../design-system/statstrip";
@@ -24,8 +22,9 @@ import { type AnalyticsScope, scopeKey } from "./analytics.context";
 import { ReportingEvidenceDrawer } from "./analytics.drawers";
 import type { HandoffScope } from "./analytics.outcomes.handoffpages";
 import { TEAM_PERIODS } from "./analytics.overview.context";
+import { OverviewHead } from "./analytics.overview.head";
 import { useOverviewNavigation } from "./analytics.overview.navigation";
-import { QualificationNote } from "./analytics.overview.prospecting";
+import { QualificationWorkflow } from "./analytics.overview.prospecting";
 import { teamPeriod, teamQuestion } from "./analytics.overview.questions";
 import {
   MetricReading,
@@ -35,6 +34,7 @@ import {
   TeamStanding,
   useTeamSummary,
 } from "./analytics.overview.team.standing";
+import { OverviewViewMenu } from "./analytics.overview.viewmenu";
 import { AssessmentPanel, MemberTable } from "./analytics.overview.work";
 import { periodCaption } from "./analytics.period";
 import { useSelectionEvidence } from "./reporting.evidenceselection";
@@ -136,37 +136,41 @@ export function TeamProspecting({
       (review.data?.workflow === "handoff" ? "sdr" : undefined)) === "sdr";
   return (
     <>
-      <FilterBar
-        label={t("analytics.filters")}
-        quiet
-        labels="inside"
+      <OverviewHead
+        switcher={switcher}
+        dials={
+          <>
+            {scopeControl}
+            <Field label={t("reporting.period")}>
+              {(field) => (
+                <Select
+                  {...field}
+                  value={period}
+                  options={TEAM_PERIODS.map((value) => ({
+                    value,
+                    label: t(`reporting.${value}`),
+                  }))}
+                  onChange={(next) => replaceDial("period", teamPeriod(next))}
+                />
+              )}
+            </Field>
+          </>
+        }
         caption={periodCaption(query.data, locale, t)}
-      >
-        {switcher}
-        {scopeControl}
-        <Field label={t("reporting.period")}>
-          {(field) => (
-            <Select
-              {...field}
-              value={period}
-              options={TEAM_PERIODS.map((value) => ({
-                value,
-                label: t(`reporting.${value}`),
-              }))}
-              onChange={(next) => replaceDial("period", teamPeriod(next))}
+      />
+      <OverviewViewMenu
+        footer={
+          <>
+            <OverviewSaveActions
+              selection={
+                query.data ? { ...query.data.selection, blocks } : undefined
+              }
+              scope={scopeKey(scope)}
             />
-          )}
-        </Field>
-        <OverflowMenu label={t("analytics.overview.more")}>
-          <OverviewSaveActions
-            selection={
-              query.data ? { ...query.data.selection, blocks } : undefined
-            }
-            scope={scopeKey(scope)}
-          />
-          {query.data && <ReportingExportButton evaluation={query.data} />}
-        </OverflowMenu>
-      </FilterBar>
+            {query.data && <ReportingExportButton evaluation={query.data} />}
+          </>
+        }
+      />
       {team ? (
         <TeamBody
           query={query}
@@ -270,6 +274,11 @@ function TeamBody({
                     <MemberTable
                       review={data}
                       zone={zone}
+                      workflowNote={
+                        data.workflow === "qualification" && (
+                          <QualificationWorkflow />
+                        )
+                      }
                       onOpen={(id, owner) => {
                         const metric = query.data?.metrics.find(
                           (metric) => metric.id === id,
@@ -282,7 +291,6 @@ function TeamBody({
                       }}
                     />
                   </Suspense>
-                  {data.workflow === "qualification" && <QualificationNote />}
                   {data.handoffs && data.handoffs.unattributed > 0 && (
                     <Unattributed count={data.handoffs.unattributed} />
                   )}
@@ -338,7 +346,7 @@ function TeamReadings({
   const { interval, evaluated_at, timezone } = evaluation.context;
   const span = reportingPeriodLabel(interval, timezone, locale);
   return (
-    <StatStrip label={t("analytics.overview.readings")} density="plate">
+    <StatStrip label={t("analytics.overview.readings")} density="plate" lead>
       {readings.map((id) => (
         <MetricReading
           key={id}

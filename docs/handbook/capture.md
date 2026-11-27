@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/stakeholderbackfill.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/activities/dealdecline.go frontend/src/features/records/dealdecline.tsx frontend/src/components/whichdealdecline.tsx backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/modules/capture/dealtopic.go backend/internal/modules/capture/dealrecheck.go backend/internal/compose/capturedealtopic.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go backend/internal/modules/activities/sendthreading.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go frontend/src/components/dealstakeholderoffer.tsx -->
+<!-- describes: frontend/src/features/capture backend/internal/compose/capturejobs.go backend/internal/modules/capture/stakeholderbackfill.go backend/internal/modules/capture/pending.go backend/internal/modules/capture/senderoverride.go backend/internal/modules/capture/exclusionstore.go backend/internal/modules/capture/sinkproject.go backend/internal/modules/activities/activityrelink.go backend/internal/modules/activities/dealdecline.go frontend/src/features/records/dealdecline.tsx backend/internal/modules/capture/sinkensure.go backend/internal/modules/capture/sinkdealdecide.go backend/internal/modules/capture/dealrefile.go backend/internal/modules/capture/dealtopic.go backend/internal/modules/capture/dealrecheck.go backend/internal/compose/capturedealtopic.go backend/internal/compose/dealrefiletrigger.go backend/internal/compose/jobs_dealrefile.go backend/internal/modules/capture/threadboundary.go backend/internal/modules/activities/sendthreading.go frontend/src/features/worklist/worklist.domainquestion.tsx frontend/src/features/worklist/worklist.domainreview.tsx backend/internal/modules/contacts/domainquestioncontext.go frontend/src/features/mail/dealstakeholderoffer.tsx -->
 # Capture: how conversations get into Margince
 
 Nobody should have to copy an email into a CRM by hand. **Capture** is the part of Margince that connects to your mailbox, your calendar and your chat. It files what arrives against the right contacts, their companies and projects. Connecting a mailbox or calendar, and importing your older mail, is its own page: [Connecting your mailbox and calendar](connecting-mail-and-calendars.md).
@@ -144,8 +144,7 @@ sender unshared is a valid outcome and needs no action.
 
 Margince holds at most **500 open sender questions** per company, and at
 most **50 from any one sender domain**. When either limit is reached, the log
-records *which* one. So you can tell "the queue is full" from "one domain is
-filling it".
+records *which* one. So you can tell "the queue is full" from "one domain is filling it".
 
 ### Why was my email not linked to a deal?
 Margince puts a captured email on a deal by itself only when one deal, and no other, fits it:
@@ -158,15 +157,15 @@ Margince puts a captured email on a deal by itself only when one deal, and no ot
 
 An email stays on no deal when nothing picks one of several open deals, or the AI check is not sure. It also stays off when its contacts work at two companies, or when a colleague said it is not about the deal that fits. An email already on a deal keeps it, and a deal you chose by hand is never changed.
 
-When several deals fit, the AI check reads the email first. A sure pick files it, and a sure "none" files nothing. Only when it is not sure does one colleague get one task per thread: "Which deal is this about?".
+When several deals fit, the AI check reads the email first. A sure pick files it, and a sure "none" files nothing. Only when it is not sure is one colleague asked once per thread: "Which deal is this about?". The question waits in their **Suggested links** panel on **Home**, one row for each deal that fits, see [Suggested links](suggested-links.md).
 
 That is the colleague who sent the email, or the one colleague it was addressed to. Nobody else is asked. If no colleague is named that way, nobody is asked. An email older than the waiting horizon asks nobody, even when it is captured today.
 
-To answer, use **Relink** on any email of that conversation and pick the deal. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The task is then done. If it is about none of them, choose **None of these deals** on the task. Margince then never files that conversation on those deals.
+To answer, choose **File it there** on the row of the right deal. **Relink** on any email of that conversation works too. The other emails of the conversation with the same contact go on that deal too, with the promises read from them. An email already on a deal keeps it. The other rows of the question then leave the panel.
+
+Choose **Not there** on each deal the conversation is not about. Margince then never files that conversation on those deals. When an extension filed an email on a deal, its row says **Filed here by**, the extension's name and its reason. **Undo** beside it marks the email **Not about this deal**, so the extension cannot file it there again.
 
 To say an email or a meeting is not about a deal, choose **Not about this deal** under **More actions** on its row. It stays on the deal with that mark, and no longer counts as activity on the deal. Margince never files it on that deal again, or moves it to another deal, by itself; **Relink** still files it on any record. A project link that came with that deal comes off too, unless its retention rules keep it. **About this deal** takes the mark back. This holds when an agent marks the deal for you as well.
-
-When an extension filed an email on a deal, its row says **Filed here by**, the extension's name and its reason. **Undo** beside it marks the email **Not about this deal**, so the extension cannot file it there again.
 
 Meetings use the same contact and company rules. They never follow an email thread or ask you to choose a deal. If several deals fit, the meeting stays off them.
 
@@ -187,8 +186,7 @@ If you use projects, a captured message is filed against one by three fixed rule
 
 **3. The key in the subject.** Every project gets a short key. A subject
 carrying `[ERP-27]` is filed under that project. The brackets are required. `ERP-27`
-alone does not count, so a project with the key `RE` does not match every
-reply in your mailbox.
+alone does not count, so a project with the key `RE` does not match every reply in your mailbox.
 
 A message may point two ways: two different keys in one subject, or two deals
 in two different projects. Then that rule files nothing, and the next one is tried.
@@ -227,8 +225,7 @@ choices:
 - **Move rest of thread**: "Every message in this thread that you can edit
   moves in one step."
 
-Relinking *to a project* asks for confirmation first, because of the retention
-rule above.
+Relinking *to a project* asks for confirmation first, because of the retention rule above.
 
 ### How do I see all emails with a contact?
 To see every email with a contact in Margince, open the contact and choose its **History** tab. There is no Mail tab of its own.
@@ -346,6 +343,8 @@ To correct what Margince decided about a sender, open **Settings → Connections
 2. Find the address; the **Decision** column shows what was decided. **Contact** opens the contact that holds the address. **Messages** counts your stored mail with it. **Last seen** is when the newest of those arrived or went out.
 3. Open its **…** (**Actions**) menu and choose **Mark as business**, or choose **Exclude** and confirm **Exclude and destroy**.
 **Exclude** creates no contact and destroys the mail that sender sent into your mailbox; copies a colleague imported stay theirs. Margince still receives their later mail, but hides and destroys it, so it never shows. **Capture exclusions** work earlier: they stop new mail before it is stored. What Margince sorts by itself never writes over a decision you make.
+
+A sender Margince judged personal shows as **Private**. No contact is made for that address again, whoever writes. To undo it, choose **Lift: allow contacts again** in its **…** menu. Their mail stays in your mailbox. A colleague who works with the same address keeps their own contact.
 Also called: mark as not spam, whitelist a sender.
 
 ## Things you control yourself

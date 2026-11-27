@@ -91,7 +91,7 @@ type dealScoutWorker struct{ scoutWorker }
 
 func (w *dealScoutWorker) Work(ctx context.Context, _ *river.Job[DealScoutArgs]) error {
 	return jobs.FaultContext(ctx, runPerWorkspace(ctx, w.pool, func(ctx context.Context, workspace ids.UUID) error {
-		return scoutWorkspace(ctx, &w.scoutWorker, "agent:deal-scout", workspace)
+		return scoutWorkspace(ctx, &w.scoutWorker, "system:deal-scout", workspace)
 	}))
 }
 

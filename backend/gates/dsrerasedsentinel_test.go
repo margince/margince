@@ -14,7 +14,6 @@ package gates
 
 import (
 	"go/ast"
-	"go/parser"
 	"go/token"
 	"strconv"
 	"strings"
@@ -47,7 +46,7 @@ func TestBothErasureWritersLeaveTheSameWordInPlaceOfTheAnswer(t *testing.T) {
 // holds the writer to the owner instead of keeping its own copy of the word.
 func erasedResolutionConst(t *testing.T) string {
 	t.Helper()
-	file, err := parser.ParseFile(token.NewFileSet(), consentSentinelFile, nil, 0)
+	file, err := gatekit.ParseFile(consentSentinelFile, 0)
 	if err != nil {
 		t.Fatalf("parsing consent's request file: %v", err)
 	}

@@ -35,6 +35,7 @@ package gates
 
 import (
 	"bufio"
+	"bytes"
 	"fmt"
 	"os"
 	"path/filepath"
@@ -130,17 +131,11 @@ const generatedDocMarker = "do not edit by hand"
 
 func isGeneratedDoc(t *testing.T, path string) bool {
 	t.Helper()
-	f, err := os.Open(path)
+	body, err := gatekit.ReadFile(path)
 	if err != nil {
-		t.Fatalf("open %s: %v", path, err)
+		t.Fatalf("read %s: %v", path, err)
 	}
-	defer func() {
-		if cerr := f.Close(); cerr != nil {
-			t.Errorf("close %s: %v", path, cerr)
-		}
-	}()
-
-	scanner := bufio.NewScanner(f)
+	scanner := bufio.NewScanner(bytes.NewReader(body))
 	scanner.Buffer(make([]byte, 0, 64*1024), 1024*1024)
 	for i := 0; scanner.Scan() && i < 5; i++ {
 		line := strings.ToLower(strings.TrimSpace(scanner.Text()))

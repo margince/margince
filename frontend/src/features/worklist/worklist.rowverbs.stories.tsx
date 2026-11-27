@@ -2,7 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
-import { fn, userEvent, within } from "storybook/test";
+import { expect, fn, userEvent, within } from "storybook/test";
 import { Button } from "../../design-system/atoms";
 import { Panel, PanelRow } from "../../design-system/panel";
 import { useT } from "../../i18n";
@@ -13,8 +13,10 @@ import {
   meRoute,
   StoryProviders,
 } from "../../testing/story-utils";
+import { useBriefAnswer } from "./worklist.briefverbs";
 import type { WorklistItem } from "./worklist.queries";
 import { WaitingReply } from "./worklist.reply";
+import { rowAnswer } from "./worklist.row.answer";
 import { RowActs } from "./worklist.rowverbs";
 // The line's own sheet. `.worklist-row-acts` is where its trailing alignment,
 // its wrapping and its `--gapActions` interval live, so a story without it
@@ -447,5 +449,59 @@ export const ThePreparedReplyIsTheAnswer: Story = {
         }
       />
     );
+  },
+};
+
+function bounceRow(actions: WorklistItem["actions"]): WorklistItem {
+  return {
+    occurred_precision: "instant",
+    id: "01a05500-0000-7000-8000-0000000000b2",
+    source: "bounce",
+    category: "customer_waiting",
+    level: 3,
+    consequence: "buyer_waits",
+    title: "Retrofit quote",
+    because: [],
+    actions,
+  };
+}
+
+// The line with the row's own answer. The story shows what the server's verbs
+// make of a bounce, not a button handed in by hand.
+function BounceLine({ item }: Readonly<{ item: WorklistItem }>) {
+  const brief = useBriefAnswer(item);
+  return (
+    <RowActs
+      item={item}
+      title="Retrofit quote"
+      href={undefined}
+      owner=""
+      primary={rowAnswer(item, brief).primary}
+    />
+  );
+}
+
+/** A bounce that may be sent once more: Send again opens the address field. */
+export const ABounceThatMayBeSentAgain: Story = {
+  render: () => <BounceLine item={bounceRow(["open", "send_again"])} />,
+  play: async ({ canvasElement }) => {
+    await userEvent.click(
+      await within(canvasElement).findByRole("button", { name: "Send again" }),
+    );
+    await expect(
+      await within(document.body).findByRole("textbox", {
+        name: "Corrected address",
+      }),
+    ).toBeVisible();
+  },
+};
+
+/** A bounce already sent again, or a repeat that bounced, keeps no button. */
+export const ABounceAlreadySentAgain: Story = {
+  render: () => <BounceLine item={bounceRow(["open"])} />,
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).queryByRole("button", { name: "Send again" }),
+    ).toBeNull();
   },
 };

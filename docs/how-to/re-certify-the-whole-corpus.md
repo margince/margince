@@ -195,6 +195,9 @@ For example, `enrich` failed 3/3 with `no surviving title`. The model filed the
 title under `role`, a key that the prompt gave next to `title`, with nothing to
 choose between them. And no column holds a copy of that key.
 
+A band that does not move after a fix may come from two rules in the prompt that disagree. See
+[hunt-for-prompt-conflicts.md](hunt-for-prompt-conflicts.md).
+
 ## 4. Fix, or flag
 
 **Fix it in the same change** when the cause is in reach. Examples are a prompt that gives

@@ -98,21 +98,36 @@ const SKIP_REASONS: Readonly<Record<BulkSkipReason, MessageKey>> = {
 };
 
 // `no_change` means what the verb could not change: the owner, the Shortlist
-// membership, the tag or the done state was already as asked.
-function noChangeReason(verb: BulkVerb): MessageKey {
-  if (verb === "complete") {
-    return "bulk.reason.no_change_done";
+// membership, the tag or the done state was already as asked. An undo skips a
+// record the change it takes back never reached.
+const NO_CHANGE: Readonly<Partial<Record<BulkVerb, MessageKey>>> = {
+  complete: "bulk.reason.no_change_done",
+  add_to_list: "bulk.reason.no_change_listed",
+  remove_from_list: "bulk.reason.no_change_unlisted",
+  add_tag: "bulk.reason.no_change_tagged",
+  remove_tag: "bulk.reason.no_change_untagged",
+  move_stage: "bulk.reason.no_change_stage",
+};
+
+function noChangeReason(verb: BulkVerb, undo: boolean): MessageKey {
+  if (undo) {
+    return "bulk.reason.no_change_undo";
   }
-  if (isListVerb(verb)) {
-    return "bulk.reason.no_change_list";
+  return NO_CHANGE[verb] ?? "bulk.reason.no_change";
+}
+
+/**
+ * The toast's words for a change and for its undo. A task verb counts the
+ * tasks it made; every other verb counts the records it changed.
+ */
+export function outcomeWords(
+  kind: RecordKind,
+  verb: BulkVerb,
+): Readonly<{ done: PluralBase; undone: PluralBase }> {
+  if (verb === "create_task") {
+    return { done: "bulk.doneTasks", undone: "bulk.undoneTasks" };
   }
-  if (isTagVerb(verb)) {
-    return "bulk.reason.no_change_tag";
-  }
-  if (verb === "move_stage") {
-    return "bulk.reason.no_change_stage";
-  }
-  return "bulk.reason.no_change";
+  return kind;
 }
 
 // The single-record rules a `refused` skip names by code. A code missing here
@@ -129,10 +144,16 @@ const REFUSAL_CODES: Readonly<Record<string, MessageKey>> = {
 export function SkipReason({
   skip,
   verb,
-}: Readonly<{ skip: BulkSkip; verb: BulkVerb }>) {
+  undo = false,
+}: Readonly<{
+  skip: BulkSkip;
+  verb: BulkVerb;
+  /** The preview is of an undo, which runs the verb the other way. */
+  undo?: boolean;
+}>) {
   const t = useT();
   if (skip.reason === "no_change") {
-    return <span>{t(noChangeReason(verb))}</span>;
+    return <span>{t(noChangeReason(verb, undo))}</span>;
   }
   if (skip.reason !== "refused") {
     return <span>{t(labelFor(SKIP_REASONS, skip.reason))}</span>;

@@ -48,6 +48,8 @@ func replacedModelRate(ctx context.Context, tx pgx.Tx, p preparedModelRate, effD
 
 // modelRateImage renders one audit image of a price row. Before and after
 // share it, so the pair diffs to the buckets that moved, not to spelling.
+//
+//nolint:goconst // the image keys name the ai_model_rate columns they record, not the wire field of the same spelling
 func modelRateImage(r preparedModelRate, effDate time.Time) map[string]any {
 	return bandImage(map[string]any{
 		"provider": r.provider, "model_id": r.modelID,

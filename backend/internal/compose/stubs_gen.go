@@ -815,6 +815,10 @@ func (stubs) GetAttention(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "GetAttention")
 }
 
+func (stubs) SendBouncedMessageAgain(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "SendBouncedMessageAgain")
+}
+
 func (stubs) ListAuditLog(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListAuditLogParams) {
 	httperr.NotImplemented(w, r, "ListAuditLog")
 }
@@ -2735,7 +2739,7 @@ func (stubs) ReplaceIntroRequest(w nethttp.ResponseWriter, r *nethttp.Request, i
 	httperr.NotImplemented(w, r, "ReplaceIntroRequest")
 }
 
-func (stubs) ListCorpora(w nethttp.ResponseWriter, r *nethttp.Request) {
+func (stubs) ListCorpora(w nethttp.ResponseWriter, r *nethttp.Request, params crmcontracts.ListCorporaParams) {
 	httperr.NotImplemented(w, r, "ListCorpora")
 }
 
@@ -2765,6 +2769,10 @@ func (stubs) ListCorpusDocuments(w nethttp.ResponseWriter, r *nethttp.Request, i
 
 func (stubs) UploadCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
 	httperr.NotImplemented(w, r, "UploadCorpusDocument")
+}
+
+func (stubs) RestoreCorpus(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
+	httperr.NotImplemented(w, r, "RestoreCorpus")
 }
 
 func (stubs) DeleteCorpusDocument(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {
@@ -3149,6 +3157,18 @@ func (stubs) GetMyBriefDelivery(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) SaveMyBriefDelivery(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "SaveMyBriefDelivery")
+}
+
+func (stubs) ListMyChatIdentities(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListMyChatIdentities")
+}
+
+func (stubs) RemoveMyChatIdentity(w nethttp.ResponseWriter, r *nethttp.Request, network string) {
+	httperr.NotImplemented(w, r, "RemoveMyChatIdentity")
+}
+
+func (stubs) StartMyChatVerification(w nethttp.ResponseWriter, r *nethttp.Request, network string) {
+	httperr.NotImplemented(w, r, "StartMyChatVerification")
 }
 
 func (stubs) SaveMyDisplayName(w nethttp.ResponseWriter, r *nethttp.Request) {
@@ -4097,6 +4117,10 @@ func (stubs) ListSharedMailboxes(w nethttp.ResponseWriter, r *nethttp.Request) {
 
 func (stubs) ConnectSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request) {
 	httperr.NotImplemented(w, r, "ConnectSharedMailbox")
+}
+
+func (stubs) ListReplyableSharedMailboxes(w nethttp.ResponseWriter, r *nethttp.Request) {
+	httperr.NotImplemented(w, r, "ListReplyableSharedMailboxes")
 }
 
 func (stubs) UpdateSharedMailbox(w nethttp.ResponseWriter, r *nethttp.Request, id crmcontracts.Id) {

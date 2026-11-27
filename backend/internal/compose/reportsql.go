@@ -257,6 +257,7 @@ func scanReportRows(pgRows pgx.Rows, columns []string) ([]map[string]any, error)
 		for i, col := range columns {
 			row[col] = rowvalue.Document(values[i])
 		}
+		withholdBeyondExactRange(row, columns)
 		rows = append(rows, row)
 	}
 	return rows, pgRows.Err()
