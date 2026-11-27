@@ -1,26 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-package compose
+package vocabularyparity
 
-// The filter-vocabulary read tells a caller which operators a field admits and
-// which type it has (LVS-EXT-8). Both answers travel as contract enums while the
-// authority for both lives in the predicate engine, so the two can drift — and
-// the drift is silent in the worst way. The handler casts the engine's string
-// straight into the enum, so a newly admitted operator would reach a client as a
-// value its generated types cannot represent, and a newly REMOVED one would sit
-// in the contract advertising something the engine refuses.
-//
-// Neither side is restated. The contract side is read out of the authoritative
-// document, the engine side out of storekit's own matrix, and the test compares
-// them in both directions — each with the consequence of that direction, because
-// the two failures are different bugs with different fixes.
-//
-// It lives in compose rather than beside the handler because this is the one
-// place that may hold both halves: the root fitness package may not import
-// platform (go-arch-lint says so, and widening that for a test would trade an
-// architectural boundary for a convenience), while compose already reads this
-// contract and already depends on the engine.
+// Filter types and operators must match the predicate engine in both directions.
+// Compose may read the contract and platform code in the same test.
 
 import (
 	"testing"
@@ -36,7 +20,7 @@ import (
 // the property itself (`type`) or on its array items (`operators`).
 func vocabularyFieldEnum(t *testing.T, property string, itemsLevel bool) map[string]bool {
 	t.Helper()
-	doc, err := openapi3.NewLoader().LoadFromFile(contractFile)
+	doc, err := openapi3.NewLoader().LoadFromFile("../../../api/crm.yaml")
 	if err != nil {
 		t.Fatalf("load contract: %v", err)
 	}

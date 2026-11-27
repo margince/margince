@@ -12,6 +12,7 @@ import (
 	"fmt"
 	"strings"
 	"time"
+	"unicode"
 
 	"github.com/jackc/pgx/v5"
 
@@ -59,18 +60,19 @@ func impersonationSign(displayName, domain string) string {
 	if strings.HasPrefix(domain, "xn--") || strings.Contains(domain, ".xn--") {
 		return impersonationPunycodeDomain
 	}
-	_, embedded, ok := strings.Cut(strings.ToLower(displayName), "@")
-	if !ok {
-		return ""
+	parts := strings.Split(strings.ToLower(displayName), "@")
+	for _, embedded := range parts[1:] {
+		if end := strings.IndexFunc(embedded, func(r rune) bool {
+			return !unicode.IsLetter(r) && !unicode.IsDigit(r) && !unicode.IsMark(r) && r != '.' && r != '-'
+		}); end >= 0 {
+			embedded = embedded[:end]
+		}
+		embedded = strings.Trim(embedded, ".")
+		if embedded != "" && embedded != strings.ToLower(domain) {
+			return impersonationDisplayNameOtherDomain
+		}
 	}
-	if end := strings.IndexAny(embedded, " >,;"); end >= 0 {
-		embedded = embedded[:end]
-	}
-	embedded = strings.Trim(embedded, ".")
-	if embedded == "" || embedded == strings.ToLower(domain) {
-		return ""
-	}
-	return impersonationDisplayNameOtherDomain
+	return ""
 }
 
 // impersonationWarningOf is the wire warning for a scanned verdict, or nil when

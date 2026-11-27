@@ -135,7 +135,7 @@ var Definitions = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	"partner_activity": {
 		En: "The number of active partners right now, out of all partners not archived: a partner is active when it is certified and an activity was logged on its company within the past 90 days, credited to the owner of the partner's company. Example: 12 partners, of which 8 are certified and had an activity in the last 90 days, show 8 of 12.",
 		De: "Die Zahl der aktiven Partnerunternehmen gerade jetzt, von allen nicht archivierten: aktiv ist ein Partnerunternehmen, wenn es zertifiziert ist und in den letzten 90 Tagen eine Aktivität beim Unternehmen erfasst wurde, gutgeschrieben der Person, die das Unternehmen verantwortet. Beispiel: Von 12 Partnerunternehmen sind 8 zertifiziert und hatten in den letzten 90 Tagen eine Aktivität, also zeigt die Zahl 8 von 12.",
-		Vi: "Số đối tác đang hoạt động ngay lúc này, trên tổng số đối tác chưa lưu trữ: đối tác đang hoạt động khi đã được chứng nhận và công ty của đối tác có hoạt động được ghi nhận trong 90 ngày qua, tính cho người phụ trách công ty của đối tác. Ví dụ: có 12 đối tác, 8 đối tác đã chứng nhận và có hoạt động trong 90 ngày qua, nên hiển thị 8 trên 12.",
+		Vi: "Số đối tác đang hoạt động ngay lúc này, trên tổng số đối tác chưa chuyển vào kho lưu trữ: đối tác đang hoạt động khi đã được chứng nhận và công ty của đối tác có hoạt động được ghi nhận trong 90 ngày qua, tính cho người phụ trách công ty của đối tác. Ví dụ: có 12 đối tác, 8 đối tác đã chứng nhận và có hoạt động trong 90 ngày qua, nên hiển thị 8 trên 12.",
 	},
 	"stage_conversion": {
 		En: "Of the deals that entered a stage during the period you picked, the share that next moved to a later stage or was won, out of those that have left the stage since. Deals still in the stage are shown apart and never count as lost. Example: 10 deals entered Demo in May, 4 moved on, 1 was won, 3 were lost and 2 are still in Demo, so Demo shows 5 of 8.",
@@ -371,7 +371,7 @@ var Incomplete = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	"leads_created": {
 		En: "Only leads you may see are counted; merged duplicates and leads archived without being qualified or disqualified do not count, and with a pipeline chosen there is no figure.",
 		De: "Gezählt werden nur Leads, die du sehen darfst; zusammengeführte Duplikate und Leads, die ohne Qualifizierung oder Disqualifizierung archiviert wurden, zählen nicht, und mit einer gewählten Pipeline gibt es keine Zahl.",
-		Vi: "Chỉ tính các lead bạn được phép xem; lead trùng đã gộp và lead đã lưu trữ mà không đủ điều kiện hay bị loại không được tính, và khi chọn một pipeline thì không có số liệu.",
+		Vi: "Chỉ tính các lead bạn được phép xem; lead trùng đã gộp và lead trong kho lưu trữ mà không đủ điều kiện hay bị loại không được tính, và khi chọn một pipeline thì không có số liệu.",
 	},
 	"lead_status_moves": {
 		En: "Only leads you may see are counted, and with a pipeline chosen there is no figure.",
@@ -381,17 +381,17 @@ var Incomplete = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	"leads_promoted": {
 		En: "Only leads you may see are counted; merged duplicates and leads archived without being qualified or disqualified do not count, and with a pipeline chosen there is no figure.",
 		De: "Gezählt werden nur Leads, die du sehen darfst; zusammengeführte Duplikate und Leads, die ohne Qualifizierung oder Disqualifizierung archiviert wurden, zählen nicht, und mit einer gewählten Pipeline gibt es keine Zahl.",
-		Vi: "Chỉ tính các lead bạn được phép xem; lead trùng đã gộp và lead đã lưu trữ mà không đủ điều kiện hay bị loại không được tính, và khi chọn một pipeline thì không có số liệu.",
+		Vi: "Chỉ tính các lead bạn được phép xem; lead trùng đã gộp và lead trong kho lưu trữ mà không đủ điều kiện hay bị loại không được tính, và khi chọn một pipeline thì không có số liệu.",
 	},
 	"lead_first_response": {
 		En: "Leads not answered yet, imported leads, merged duplicates and leads archived without being qualified or disqualified are left out; no figure is shown with fewer than 5 answered leads, or with a pipeline chosen.",
 		De: "Noch nicht beantwortete und importierte Leads, zusammengeführte Duplikate und Leads, die ohne Qualifizierung oder Disqualifizierung archiviert wurden, bleiben außen vor; bei weniger als 5 beantworteten Leads oder mit einer gewählten Pipeline wird keine Zahl angezeigt.",
-		Vi: "Lead chưa được phản hồi, lead nhập từ hệ thống khác, lead trùng đã gộp và lead đã lưu trữ mà không đủ điều kiện hay bị loại không được tính; không hiển thị số liệu khi có ít hơn 5 lead đã được phản hồi hoặc khi chọn một pipeline.",
+		Vi: "Lead chưa được phản hồi, lead nhập từ hệ thống khác, lead trùng đã gộp và lead trong kho lưu trữ mà không đủ điều kiện hay bị loại không được tính; không hiển thị số liệu khi có ít hơn 5 lead đã được phản hồi hoặc khi chọn một pipeline.",
 	},
 	"leads_awaiting_response": {
 		En: "Only leads you may see are counted; a lead counts only once an email from it came in, imported leads, merged duplicates and archived leads are left out, and with a pipeline chosen there is no figure.",
 		De: "Gezählt werden nur Leads, die du sehen darfst; ein Lead zählt erst, wenn eine E-Mail von ihm eingegangen ist, importierte Leads, zusammengeführte Duplikate und archivierte Leads bleiben außen vor, und mit einer gewählten Pipeline gibt es keine Zahl.",
-		Vi: "Chỉ tính các lead bạn được phép xem; lead chỉ được tính khi đã có email từ lead gửi đến, lead nhập từ hệ thống khác, lead trùng đã gộp và lead đã lưu trữ không được tính, và khi chọn một pipeline thì không có số liệu.",
+		Vi: "Chỉ tính các lead bạn được phép xem; lead chỉ được tính khi đã có email từ lead gửi đến, lead nhập từ hệ thống khác, lead trùng đã gộp và lead trong kho lưu trữ không được tính, và khi chọn một pipeline thì không có số liệu.",
 	},
 	"partner_pipeline": {
 		En: "Only deals you may see are counted; a deal with no amount or exchange rate adds nothing and marks the figure as partial, and partners you cannot see share one group without a name.",
@@ -421,17 +421,17 @@ var Incomplete = map[crmcontracts.ReportingMetricID]langcopy.Phrase{
 	"lead_cohort_outcomes": {
 		En: "Only leads you may see are counted; imported leads, merged duplicates and leads archived without being qualified or disqualified are left out, there is no rate with fewer than 5 leads with an outcome, and with a pipeline chosen there is no figure.",
 		De: "Gezählt werden nur Leads, die du sehen darfst; importierte Leads, zusammengeführte Duplikate und Leads, die ohne Qualifizierung oder Disqualifizierung archiviert wurden, bleiben außen vor, bei weniger als 5 Leads mit einem Ergebnis gibt es keine Quote, und mit einer gewählten Pipeline gibt es keine Zahl.",
-		Vi: "Chỉ tính các lead bạn được phép xem; lead nhập từ hệ thống khác, lead trùng đã gộp và lead đã lưu trữ mà không đủ điều kiện hay bị loại không được tính, không có tỷ lệ khi có ít hơn 5 lead đã có kết quả, và khi chọn một pipeline thì không có số liệu.",
+		Vi: "Chỉ tính các lead bạn được phép xem; lead nhập từ hệ thống khác, lead trùng đã gộp và lead trong kho lưu trữ mà không đủ điều kiện hay bị loại không được tính, không có tỷ lệ khi có ít hơn 5 lead đã có kết quả, và khi chọn một pipeline thì không có số liệu.",
 	},
 	"account_progression": {
 		En: "Only companies and leads you may see are counted; imported leads, merged duplicates, leads without a company and leads archived without being qualified or disqualified are left out, there is no rate with fewer than 5 companies with an outcome, and with a pipeline chosen there is no figure.",
 		De: "Gezählt werden nur Unternehmen und Leads, die du sehen darfst; importierte Leads, zusammengeführte Duplikate, Leads ohne Unternehmen und Leads, die ohne Qualifizierung oder Disqualifizierung archiviert wurden, bleiben außen vor, bei weniger als 5 Unternehmen mit einem Ergebnis gibt es keine Quote, und mit einer gewählten Pipeline gibt es keine Zahl.",
-		Vi: "Chỉ tính các công ty và lead bạn được phép xem; lead nhập từ hệ thống khác, lead trùng đã gộp, lead không có công ty và lead đã lưu trữ mà không đủ điều kiện hay bị loại không được tính, không có tỷ lệ khi có ít hơn 5 công ty đã có kết quả, và khi chọn một pipeline thì không có số liệu.",
+		Vi: "Chỉ tính các công ty và lead bạn được phép xem; lead nhập từ hệ thống khác, lead trùng đã gộp, lead không có công ty và lead trong kho lưu trữ mà không đủ điều kiện hay bị loại không được tính, không có tỷ lệ khi có ít hơn 5 công ty đã có kết quả, và khi chọn một pipeline thì không có số liệu.",
 	},
 	"source_quality": {
 		En: "Only leads you may see are counted; imported leads, merged duplicates and leads archived without being qualified or disqualified are left out, a lead with no origin counts under No origin, there is no rate with fewer than 5 leads from an origin, and with a pipeline chosen there is no figure.",
 		De: "Gezählt werden nur Leads, die du sehen darfst; importierte Leads, zusammengeführte Duplikate und Leads, die ohne Qualifizierung oder Disqualifizierung archiviert wurden, bleiben außen vor, ein Lead ohne Herkunft zählt unter Keine Herkunft, bei weniger als 5 Leads einer Herkunft gibt es keine Quote, und mit einer gewählten Pipeline gibt es keine Zahl.",
-		Vi: "Chỉ tính các lead bạn được phép xem; lead nhập từ hệ thống khác, lead trùng đã gộp và lead đã lưu trữ mà không đủ điều kiện hay bị loại không được tính, lead không có nguồn được tính vào Chưa có nguồn gốc, không có tỷ lệ khi một nguồn có ít hơn 5 lead, và khi chọn một pipeline thì không có số liệu.",
+		Vi: "Chỉ tính các lead bạn được phép xem; lead nhập từ hệ thống khác, lead trùng đã gộp và lead trong kho lưu trữ mà không đủ điều kiện hay bị loại không được tính, lead không có nguồn được tính vào Chưa có nguồn gốc, không có tỷ lệ khi một nguồn có ít hơn 5 lead, và khi chọn một pipeline thì không có số liệu.",
 	},
 	"bookings_mix": {
 		En: "Only deals you may see are counted; a won deal with no accepted offer and no products set by hand counts whole as unallocated, an allocation in another currency than the deal's has no value, and a deal whose amount is unknown adds nothing.",
