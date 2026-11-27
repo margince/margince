@@ -86,8 +86,10 @@ func stagedMergeReview(t *testing.T) mergeReview {
 	if err != nil || len(rows) != 1 {
 		t.Fatalf("the importer's pending reviews = %d (err %v), want 1", len(rows), err)
 	}
-	return mergeReview{e: e, svc: svc, decider: decider, candidate: candidateID,
-		approval: ids.From[ids.ApprovalKind](ids.UUID(rows[0].Id))}
+	return mergeReview{
+		e: e, svc: svc, decider: decider, candidate: candidateID,
+		approval: ids.From[ids.ApprovalKind](ids.UUID(rows[0].Id)),
+	}
 }
 
 // mergeChoice is the staged payload with the decider's box ticked, as the card

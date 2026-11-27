@@ -17,7 +17,7 @@ import (
 // MergeVCardIntoTx writes a reviewed card onto the contact it resembled, in
 // the caller's transaction, after a human chose "merge" over "keep separate".
 //
-// The deciding person must be able to read and change that contact. A refusal
+// The decider must be able to read and change that contact. A refusal
 // says only "not found", so a decider who cannot see the contact learns
 // nothing about whether it exists. Creating a separate contact asks nothing of
 // the resembled one, so the create's gate is a different one.
