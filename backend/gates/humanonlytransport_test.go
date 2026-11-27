@@ -62,6 +62,7 @@ const theHumanSessionScheme = "cookieAuth"
 // Joining this set is a decision about who may reach an endpoint holding no
 // seat, and it should cost somebody an edit here.
 var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
+	"confirmMemberMerge":            "the single-use, expiring, hashed confirmation mailed to the account's own address authenticates its holder; it signs nobody in and changes nothing but the confirmation",
 	"changePublicMeetingInvitation": "the expiring, hashed management capability authenticates a guest without a seat",
 	"acceptPublicMeetingProposal":   "an expiring recipient-bound capability authorizes one atomic acceptance without a seat",
 	// The public booking page, opened by somebody who has never been here.
@@ -75,6 +76,11 @@ var humanOnlyWithoutASession = gatekit.Waive(map[string]string{
 	"submitWebForm": "a website visitor holds no seat; the form key names the form, and its allowed origins or signature admit the post",
 	// A connected chat's push, which the chat itself sends.
 	"receiveDispactChannelEvent": "Dispact's signed notice: the Standard Webhooks signature with the events secret sealed on the connected bot authenticates it, and the chat itself sends it",
+	// Meta's webhook for a connected WhatsApp number.
+	"verifyWhatsAppWebhook": "Meta's subscription check: the verify token sealed on a connected number authenticates it, and Meta itself sends it",
+	// Zalo's webhook for a connected Official Account.
+	"receiveZaloOAWebhook":   "Zalo's event: the X-ZEvent-Signature MAC with the OA secret key sealed on a connected Official Account authenticates it, and Zalo itself sends it",
+	"receiveWhatsAppWebhook": "Meta's delivery: the X-Hub-Signature-256 HMAC with the app secret sealed on a connected number authenticates it, and Meta itself sends it",
 
 	// Pages a buyer opens from a link, holding no seat here. The token in the
 	// URL is the capability, and requiring a session would make the page

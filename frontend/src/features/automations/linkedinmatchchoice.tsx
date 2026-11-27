@@ -11,6 +11,9 @@ import { useCanWrite } from "../../lib/capability";
 import { contactQuery } from "../../lib/contact.queries";
 import { useMe } from "../../lib/session";
 
+// The choices a card offers beside Accept. The vCard review's one box is at
+// the end of this file.
+//
 // The two boxes on a LinkedIn match card. One takes the export's position as
 // the contact's job title. The other takes the company the import placed the
 // connection at as their current employer. The server stages a box ticked only
@@ -161,6 +164,67 @@ export function LinkedInMatchChoice({
           {t("approval.linkedin.employerNow", { company: offer.employerNow })}
         </p>
       )}
+    </div>
+  );
+}
+
+type VCardMergeOffer = Readonly<{
+  candidateName: string;
+  merge: boolean;
+  setMerge: (next: boolean) => void;
+  // The edit to send on accept, or undefined to keep the card separate.
+  edited: Record<string, unknown> | undefined;
+}>;
+
+/**
+ * The box on a `vcard_create` card that merges the card into the contact it
+ * resembled instead of creating a new one. Undefined for any other kind.
+ * Also undefined for a card staged before the box existed, which takes no
+ * edit. Also undefined for a candidate this reader cannot see, which the
+ * server answers not-found.
+ */
+export function useVCardMergeChoice(
+  approval: Approval,
+): VCardMergeOffer | undefined {
+  const change = approval.proposed_change ?? {};
+  const candidateId =
+    approval.kind === "vcard_create" &&
+    typeof change.merge_into_candidate === "boolean"
+      ? text(change.candidate_contact_id)
+      : undefined;
+  const candidate = useEntityName("contact", candidateId);
+  const [held, setHeld] = useState<{ id: string; merge: boolean } | undefined>(
+    undefined,
+  );
+  if (candidateId === undefined || candidate.name === null) return undefined;
+  const merge = held?.id === approval.id ? held.merge : false;
+  return {
+    candidateName: candidate.name,
+    merge,
+    setMerge: (next) => setHeld({ id: approval.id, merge: next }),
+    edited: merge ? { ...change, merge_into_candidate: true } : undefined,
+  };
+}
+
+export function VCardMergeChoice({
+  offer,
+  decided,
+  disabled,
+}: Readonly<{
+  offer: VCardMergeOffer | undefined;
+  decided?: boolean;
+  disabled?: boolean;
+}>) {
+  const t = useT();
+  if (decided || !offer) return null;
+  return (
+    <div className="linkedin-match-choice">
+      <Checkbox
+        checked={offer.merge}
+        disabled={disabled}
+        onChange={(event) => offer.setMerge(event.currentTarget.checked)}
+        label={t("approval.vcard.mergeInto", { contact: offer.candidateName })}
+      />
     </div>
   );
 }

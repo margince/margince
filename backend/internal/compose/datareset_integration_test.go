@@ -684,7 +684,7 @@ func TestResetKeepsTheSealedSettingsItsRowsStillName(t *testing.T) {
 func TestAResetLeavesNoFactRevision(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	company := technicalUndoCompany(t, e, "Reset Lookup GmbH")
+	company := mergeTestCompany(t, e, "Reset Lookup GmbH")
 	applyUndoLookup(t, e, company, undoObservation("mail_provider", "mail", "Mail"))
 	if got := e.WsCount(t, "SELECT count(*) FROM company_fact_revision"); got == 0 {
 		t.Fatal("the lookup left no fact revision to clear; the fixture proves nothing")

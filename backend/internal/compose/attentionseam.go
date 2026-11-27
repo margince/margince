@@ -235,7 +235,7 @@ func newAttentionService(pool *pgxpool.Pool, svc *approvals.Service, now attenti
 		attentionDSRs{store: consent.NewStore(db)},
 		attentionCaptureHealth{registry: captureHealthRegistry(db)},
 		attentionAIWork{store: aiactivity.NewStore(db)},
-		attentionBounces{store: comms.NewStore(db, time.Now, activities.NewStore(db))},
+		comms.NewStore(db, time.Now, activities.NewStore(db)),
 		attentionAutomations{store: automation.NewAutomationStore(db)},
 		attentionNotices{store: notices.NewStore(db), users: identity.NewService(db.Pool())},
 		newAttentionNames(db),

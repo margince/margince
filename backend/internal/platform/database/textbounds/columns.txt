@@ -170,6 +170,13 @@ public.analytics_share.target document
 public.analytics_share.token_hash document
 public.app_user.avatar_object_key document
 public.app_user.avatar_origin document
+public.app_user.chat_telegram_code_hash document
+public.app_user.chat_telegram_user_id document
+public.app_user.chat_whatsapp_code_hash document
+public.app_user.chat_whatsapp_phone document
+public.app_user.chat_zalo_code_hash document
+public.app_user.chat_zalo_oa_id document
+public.app_user.chat_zalo_user_id document
 public.app_user.display_name exempt provider names and earlier account names retain their identity contract
 public.app_user.email document
 public.app_user.email_domain_folded document
@@ -248,6 +255,7 @@ public.audit_log.actor_id exempt system-written rows on the write path of every 
 public.audit_log.actor_type exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.audit_log.authorization_rule exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.audit_log.entity_type exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
+public.auth_token.purpose document
 public.auth_token.token_hash document
 public.automation.key document
 public.automation.name label
@@ -792,6 +800,7 @@ public.extension_ingest_position.source_system document
 public.extension_ingest_position.unit document
 public.extension_ingest_refusal.refusal document
 public.extension_ingest_refusal.unit document
+public.extension_object_usage.unit document
 public.extension_secret.extension_name label
 public.extension_secret.key document
 public.extension_secret.vault_ref document
@@ -862,6 +871,8 @@ public.geocode_cache.query document checked: joined from bounded address columns
 public.geocode_country_cache.country_codes document
 public.geocode_country_cache.provider document
 public.geocode_country_cache.query document checked: joined from bounded address columns
+public.graph_contact_edge.last_precision exempt a CHECK holds it to day or instant
+public.graph_interaction_edge.last_precision exempt a CHECK holds it to day or instant
 public.home_read_cache.read document
 public.home_read_cache.request_key document
 public.home_read_fence_pending.fence document
@@ -917,6 +928,7 @@ public.knowledge_document.ingest_status document
 public.knowledge_document.managed_source document
 public.knowledge_document.storage_key document
 public.lawful_basis_confirmation.country document
+public.lead.arrival_origin document
 public.lead.candidate_company_key document
 public.lead.captured_by document
 public.lead.company_name label
@@ -938,6 +950,9 @@ public.lead.source_system document
 public.lead.status document
 public.lead.status_set_by document
 public.lead.title label
+public.language.code exempt bounded by a two-letter shape CHECK
+public.language.label label
+public.language.source document
 public.lead_disqualify_reason.label label
 public.lead_disqualify_reason.label_key exempt generated from independently checked source columns
 public.lead_disqualify_reason.shipped_label label
@@ -1192,6 +1207,8 @@ public.provider_run.trigger document
 public.provider_run_category.category document
 public.provider_run_category.provider document
 public.provider_run_reservation.pool document
+public.raw_capture.ask_message_ids exempt system-written thread-qualified provider message keys for clarification questions, with legacy unqualified ids; a guard would serialize each whole row
+public.raw_capture.channel_subjects exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.raw_capture.parts_slim_outcome exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.raw_capture.source_id exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row
 public.raw_capture.source_system exempt system-written rows on the write path of every change or capture; a guard would serialize each whole row

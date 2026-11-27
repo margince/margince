@@ -103,6 +103,7 @@ type Server struct {
 	backfillHandlers
 	aiRoutingHandlers
 	aiAdminHandlers
+	teamRulesHandlers
 	captureSettingsHandlers
 	integrationsSettingsHandlers
 	ownDomainHandlers
@@ -129,6 +130,7 @@ type Server struct {
 	channelHandlers
 	chatLinkHandlers
 	chatEventHandlers
+	whatsAppEventHandlers
 	traceHandlers
 	pipelineTraceHandlers
 	filteredExportHandlers
@@ -255,7 +257,6 @@ type Server struct {
 	dispactCalls *dispactapp.Edge
 	// chatPulls queues a chat_pull for a Dispact notice; WithChatLinks sets it.
 	chatPulls *jobs.Runner
-
 	// metricsToken gates /metrics, from --metrics-token. Empty refuses every
 	// scrape unless metricsOpen is set, because the exposition names routes and
 	// per-workspace job telemetry. It is checked over plain HTTP, so it holds
@@ -265,7 +266,6 @@ type Server struct {
 	// believes, from WithTrustedProxies. The zero value trusts nobody.
 	trustedProxies httpserver.TrustedProxies
 	apiBaseURL     string // --api-base-url, from WithAPIBaseURL; empty where the public origin serves the API
-
 	// metricsOpen serves /metrics to any caller, set by WithOpenMetrics from an
 	// explicit --metrics-access=open for a deployment whose network boundary
 	// already contains the port.

@@ -103,7 +103,9 @@ func (s *Service) Rewrite(ctx context.Context, ask Ask) (Result, error) {
 	}
 	var voice draftvoice.Context
 	if in.Envelope == EnvelopeEmail {
-		voice = draftvoice.Load(ctx, s.voice, nil)
+		if voice, err = draftvoice.Load(ctx, s.voice, nil); err != nil {
+			return Result{}, err
+		}
 	}
 	res, err := ai.Ask(ai.WithSubject(ctx, ask.About, in.Subject), s.lane, Request(in, about, voice), func(raw string) error {
 		reply, err := Parse(raw)

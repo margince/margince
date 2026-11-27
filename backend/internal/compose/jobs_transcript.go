@@ -17,6 +17,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/compose/modelfailure"
 	"github.com/margince/margince/backend/internal/modules/activities"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/jobs"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -67,25 +68,41 @@ func transcriptProposeInsertOpts() *river.InsertOpts {
 	})
 }
 
-// withTranscriptReader stamps the principal every write of this reading is
-// attributed to: the reader as the acting agent, the human who asked as the
-// owner of what it produces.
-//
-// It does NOT reuse deep read's withClaimedRequester, which names agent:deepread.
-// Borrowing it stamped every transcript proposal as proposed by the site
-// crawler — so the inbox told the contact deciding a proposal that something
-// which never ran had read it. Provenance is written once and never
-// re-derived, which is exactly why it cannot be borrowed from a neighbour.
+// withTranscriptReader binds the reading's bookkeeping: system:transcript_read,
+// on behalf of the human who asked. The principals are the reading's own,
+// never deep read's. Borrowing those once told the colleague deciding a proposal
+// that the site crawler had read their meeting.
 func withTranscriptReader(ctx context.Context, requestedBy string, readID ids.UUID) context.Context {
 	requester := requestedByUserID(requestedBy)
 	ctx = principal.WithActor(ctx, principal.Principal{
 		Type:       principal.PrincipalSystem,
-		ID:         transcriptProposalActor,
+		ID:         transcriptReadSystemID,
 		UserID:     requester,
 		OnBehalfOf: requester,
 	})
 	return principal.WithCorrelationID(ctx, readID)
 }
+
+// readerFor binds the reading's work onto its bookkeeping. The reading, and
+// what it files for the requester, runs as agent:transcript-proposer under the
+// requester's live grants. The run row, and what it files for other
+// colleagues, stays the system's (runBooks). live is false when the requester
+// left or lost their seat; the reading is then closed as the system's.
+func (w *transcriptProposeWorker) readerFor(ctx context.Context, requestedBy string, readID ids.UUID) (reader context.Context, live bool, err error) {
+	books := withTranscriptReader(ctx, requestedBy, readID)
+	work, err := agentFor(books, w.users, requestedByUserID(requestedBy), transcriptProposalActor)
+	if workRefused(err) {
+		return books, false, nil
+	}
+	if err != nil {
+		return nil, false, err
+	}
+	return withRunBooks(work, books), true, nil
+}
+
+// transcriptReadSystemID keeps the reading's run row, and files what the
+// reading found for colleagues other than the one who asked.
+const transcriptReadSystemID = "system:transcript_read"
 
 // transcriptProposeWorker runs one queued reading. It is always registered on
 // the worker role — with no model lane it FAILS the reading with a reason the
@@ -98,6 +115,7 @@ type transcriptProposeWorker struct {
 	language   baselanguage.Resolver
 	activities transcriptReadStore
 	proposer   *TranscriptProposer
+	users      *identity.Service
 	log        *slog.Logger
 }
 
@@ -107,9 +125,16 @@ func (w *transcriptProposeWorker) Work(ctx context.Context, job *river.Job[Trans
 	if err != nil {
 		return jobs.FaultContext(ctx, err)
 	}
-	wsCtx = withTranscriptReader(wsCtx, args.RequestedBy, args.TranscriptReadID)
 	if w.proposer == nil {
-		return jobs.FaultContext(ctx, w.declineUnread(wsCtx, args))
+		return jobs.FaultContext(ctx, w.declineUnread(withTranscriptReader(wsCtx, args.RequestedBy, args.TranscriptReadID), args))
+	}
+	wsCtx, live, err := w.readerFor(wsCtx, args.RequestedBy, args.TranscriptReadID)
+	if err != nil {
+		return jobs.FaultContext(ctx, err)
+	}
+	if !live {
+		_, err := w.closeUnread(wsCtx, args, activities.TranscriptFailureDenied)
+		return jobs.FaultContext(ctx, err)
 	}
 	err = w.proposer.Read(wsCtx, w.activities, args.TranscriptReadID, ids.From[ids.ActivityKind](args.ActivityID))
 	if errors.Is(err, apperrors.ErrConflict) {
@@ -151,6 +176,7 @@ func (w *transcriptProposeWorker) declineUnread(ctx context.Context, args Transc
 // reports whether it did. To the rep, a queued row nobody picks up looks the
 // same as one being worked. A claim refused means another claim holds it.
 func (w *transcriptProposeWorker) closeUnread(ctx context.Context, args TranscriptProposeArgs, code string) (bool, error) {
+	ctx = runBooks(ctx)
 	if _, err := w.activities.BeginTranscriptRead(ctx, args.TranscriptReadID, activities.TranscriptReadLease); err != nil {
 		if errors.Is(err, apperrors.ErrConflict) {
 			return false, nil
@@ -183,6 +209,7 @@ func newTranscriptProposeWorker(pool *pgxpool.Pool, brain completer, log *slog.L
 	worker := &transcriptProposeWorker{
 		language:   installationLanguage(pool),
 		activities: activities.NewStore(InstallationDB(pool)),
+		users:      identity.NewService(pool),
 		log:        log,
 	}
 	if brain != nil {

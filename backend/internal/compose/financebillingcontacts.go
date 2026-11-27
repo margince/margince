@@ -31,12 +31,16 @@ type financeBillingContacts struct{ contacts *contacts.Store }
 
 func (f financeBillingContacts) BillingContactsFor(
 	ctx context.Context, tx pgx.Tx, companyID ids.CompanyID,
-) ([]crmcontracts.BillingContact, error) {
+) ([]crmcontracts.BillingContact, crmcontracts.HiddenRecords, error) {
 	rows, err := f.contacts.BillingContactsFor(ctx, tx, companyID)
 	if err != nil {
-		return nil, err
+		return nil, crmcontracts.HiddenRecords{}, err
 	}
-	return company360.BillingContactPayload(rows), nil
+	hidden, err := f.contacts.HiddenBillingContactsFor(ctx, tx, companyID)
+	if err != nil {
+		return nil, crmcontracts.HiddenRecords{}, err
+	}
+	return company360.BillingContactPayload(rows), hidden.Wire(), nil
 }
 
 // newFinanceHandlers builds the invoicing transport over the two edges it cannot

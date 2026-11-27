@@ -52,6 +52,7 @@ var allowed = gatekit.Waive(map[string]string{
 	"internal/compose/attention/dayboundary.go":               override,
 	"internal/compose/attentionlanesseam.go":                  "relationship quiet days count in the installation zone, as the contact record shows them",
 	"internal/compose/attentionseam.go":                       override,
+	"internal/modules/projects/quiet.go":                      "the gone-quiet rule is one installation-wide predicate that the report, the signal and the digest share",
 	"internal/compose/automaticwork.go":                       combined,
 	"internal/compose/automaticworksql.go":                    combined,
 	"internal/compose/commitmentadmission.go":                 "a promise's due day is admitted on the seat's own working-hours zone",

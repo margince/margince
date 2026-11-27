@@ -42,7 +42,7 @@ func TestAnAccountAskNamesTheFunctionAndNoConnection(t *testing.T) {
 
 	it := crmcontracts.LinkedInReachFunctionIt
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
-	draft, err := svc.IntroRequestDraft(reader, nil, ids.CompanyID{UUID: company},
+	draft, err := svc.IntroRequestDraft(reader, nil, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{ViaUserID: ids.From[ids.UserKind](e.Rep2), Function: &it})
 	if err != nil {
 		t.Fatalf("an ask at the account was refused: %v", err)
@@ -67,14 +67,14 @@ func TestAnAccountAskRefusesAColleagueWithNoReachThere(t *testing.T) {
 	connectedAt(t, e, e.Rep2, company, "Abbas Fawaz", "Head of IT")
 
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
-	_, err := svc.IntroRequestDraft(reader, nil, ids.CompanyID{UUID: company},
+	_, err := svc.IntroRequestDraft(reader, nil, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{ViaUserID: ids.From[ids.UserKind](e.Rep3)})
 	if !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("an ask of a colleague with no reach answered %v, want not found", err)
 	}
 	// The same caller asking the colleague who has reach is drafted, so the
 	// refusal above is about the colleague rather than about the caller.
-	if _, err := svc.IntroRequestDraft(reader, nil, ids.CompanyID{UUID: company},
+	if _, err := svc.IntroRequestDraft(reader, nil, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{ViaUserID: ids.From[ids.UserKind](e.Rep2)}); err != nil {
 		t.Fatalf("an ask of the colleague with reach was refused: %v", err)
 	}
@@ -92,7 +92,7 @@ func TestAnAccountAskRefusesAFunctionTheReachAnswerDoesNotShow(t *testing.T) {
 
 	hr := crmcontracts.LinkedInReachFunctionHr
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
-	_, err := svc.IntroRequestDraft(reader, nil, ids.CompanyID{UUID: company},
+	_, err := svc.IntroRequestDraft(reader, nil, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{ViaUserID: ids.From[ids.UserKind](e.Rep2), Function: &hr})
 	if !errors.Is(err, apperrors.ErrInvalidArgument) {
 		t.Fatalf("an ask for a function held by one connection answered %v, want invalid", err)
@@ -106,7 +106,7 @@ func TestAnAccountAskRefusesTheReaderAsTheirOwnIntroducer(t *testing.T) {
 	connectedAt(t, e, e.Rep1, company, "Abbas Fawaz", "Head of IT")
 
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
-	_, err := svc.IntroRequestDraft(reader, nil, ids.CompanyID{UUID: company},
+	_, err := svc.IntroRequestDraft(reader, nil, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{ViaUserID: ids.From[ids.UserKind](e.Rep1)})
 	if !errors.Is(err, apperrors.ErrInvalidArgument) {
 		t.Fatalf("a reader drafted an ask of themselves: %v", err)
@@ -124,7 +124,7 @@ func TestAFunctionWithANamedContactIsRefused(t *testing.T) {
 
 	it := crmcontracts.LinkedInReachFunctionIt
 	reader := e.As(e.Rep1, []ids.UUID{e.Team1}, company360NoDealPerms)
-	_, err := svc.IntroRequestDraft(reader, nil, ids.CompanyID{UUID: company},
+	_, err := svc.IntroRequestDraft(reader, nil, nil, ids.CompanyID{UUID: company},
 		company360svc.IntroRequest{
 			ContactID: new(ids.From[ids.ContactKind](contact)),
 			ViaUserID: ids.From[ids.UserKind](e.Rep2),

@@ -18,6 +18,7 @@ package contacts
 
 import (
 	"context"
+	"errors"
 	"fmt"
 	"time"
 
@@ -142,6 +143,23 @@ func recordHumanDomainAdmissionTx(
 	// surface exists to answer. Without it admission_source says "human"
 	// but never WHICH human, and admission_at is overwritten on every
 	// change.
+	//
+	// A decision that repeats the stored one changes nothing. Writing it would
+	// restamp admission_at and, for an unblock, ask about the domain again.
+	// The lock is taken first and held through the write below, so the
+	// decision compared is the one the write would replace.
+	if err := lockDomainAdmissionTx(ctx, tx, domain); err != nil {
+		return BlockedDomain{}, err
+	}
+	current, err := readDomainAdmissionTx(ctx, tx, domain)
+	switch {
+	case errors.Is(err, pgx.ErrNoRows):
+	case err != nil:
+		return BlockedDomain{}, err
+	case current.Admission == admission && current.Source == DomainDecisionSource(ctx) &&
+		current.Reason == reason.Text && current.ReasonCode == string(reason.Code):
+		return current, nil
+	}
 	before, applied, err := setDomainAdmissionTx(ctx, tx, domain, admission, reason, DomainDecisionSource(ctx))
 	if err != nil {
 		return BlockedDomain{}, err
@@ -345,13 +363,18 @@ func reopenAdmittedDomainTx(ctx context.Context, tx pgx.Tx, domain string, owner
 func readDomainAdmissionTx(ctx context.Context, tx pgx.Tx, domain string) (BlockedDomain, error) {
 	var d BlockedDomain
 	var company standingCompany
+	// A domain seen but never decided has no admission_at; it reads as no decision.
+	var decidedAt *time.Time
 	err := tx.QueryRow(ctx, `
 		SELECT d.id, d.domain, COALESCE(d.admission, ''), COALESCE(d.admission_reason, ''),
 		       COALESCE(d.admission_source, ''), d.admission_at, d.company_id, c.display_name, `+domainReasonCodeColumns+`
 		  FROM `+domainStandingFrom+` WHERE d.domain = $1`, domain).
-		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &d.DecidedAt, &company.id, &company.name, &d.ReasonCode, &d.SenderKind)
+		Scan(&d.ID, &d.Domain, &d.Admission, &d.Reason, &d.Source, &decidedAt, &company.id, &company.name, &d.ReasonCode, &d.SenderKind)
 	if err != nil {
 		return BlockedDomain{}, fmt.Errorf("contacts: reading back the admission of %s: %w", domain, err)
+	}
+	if decidedAt != nil {
+		d.DecidedAt = *decidedAt
 	}
 	if err := withVisibleCompanyTx(ctx, tx, &d, company); err != nil {
 		return BlockedDomain{}, err

@@ -32,7 +32,7 @@ type reader struct {
 // readers lists the tables whose blocking rows the preview may name. Each entry
 // asks what its store's list asks, so the preview names no row that list hides.
 var readers = map[string]reader{
-	"deal_room.steward_user_id": {objects: []string{"deal_room"}, name: "b.title", rows: dealRoomRows, pageType: dealPage, pageID: "b.deal_id"},
+	"deal_room.steward_user_id": {objects: []string{"deal_room", dealPage}, name: "b.title", rows: dealRoomRows, pageType: dealPage, pageID: "b.deal_id"},
 	"automation.owner_id":       {objects: []string{"automation"}, name: nameCol},
 	"web_form.owner_id":         {objects: []string{"integrations"}, name: nameCol},
 	// A target address can carry a token in its query, so only the rest names it.
@@ -47,14 +47,7 @@ var readers = map[string]reader{
 
 // dealRoomRows is the Deal Room list's rule: the room's deal is in the reader's scope.
 func dealRoomRows(ctx context.Context, arg func(any) int) (string, error) {
-	scope, err := auth.ScopeClauseFor(ctx, dealPage, "d", arg)
-	if err != nil {
-		return "", err
-	}
-	if scope == "" {
-		scope = sqlTrue
-	}
-	return "EXISTS (SELECT 1 FROM deal d WHERE d.id = b.deal_id AND " + scope + ")", nil
+	return auth.DealChildScopeClause(ctx, "b", arg)
 }
 
 func initiativeRows(ctx context.Context, arg func(any) int) (string, error) {

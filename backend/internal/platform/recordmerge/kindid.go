@@ -111,7 +111,8 @@ func moveKindIDOwned(ctx context.Context, tx pgx.Tx, entityType string, sourceID
 		`DELETE FROM activity_link_suggestion a
 		  WHERE a.entity_type = $3 AND a.entity_id = $1 AND EXISTS (
 		    SELECT 1 FROM activity_link_suggestion b
-		     WHERE b.entity_type = $3 AND b.entity_id = $2 AND b.activity_id = a.activity_id)`,
+		     WHERE b.entity_type = $3 AND b.entity_id = $2 AND b.activity_id = a.activity_id
+		       AND b.for_user IS NOT DISTINCT FROM a.for_user)`,
 		`UPDATE activity_link_suggestion SET entity_id = $2 WHERE entity_type = $3 AND entity_id = $1`,
 	} {
 		if _, err := tx.Exec(ctx, stmt, sourceID, targetID, entityType); err != nil {

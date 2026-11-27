@@ -7,6 +7,9 @@
 ### What can I import?
 You can import companies, contacts, leads, deals and activities, from one CSV file or from one ZIP of CSV files.
 
+### What happens to a vCard that matches a contact I already have?
+**Import vCards** on **Contacts** does not write a card that only looks like a contact you can see. It marks the card **Possible duplicate**, and the card waits in your **Worklist** as **Create contact from card**. Accept it to keep the card as a separate contact. Or tick **Merge into** first, and the card's job title, company, address, link and phone numbers are filed on that contact. A merge needs you to see and change that contact, and without that the card keeps waiting. A card nobody answers expires after 30 days, and Margince deletes its data.
+
 In a ZIP the file name gives the record type: `companies.csv`, `contacts.csv`, `leads.csv`, `deals.csv` or `activities.csv`. Each type takes one file. A ZIP holds at most 20 files and cannot have a password.
 
 Margince imports the files in that order, companies first and activities last. So a contact can name a company from the same ZIP, and a deal can name a company or a contact. An activity can name any of them.

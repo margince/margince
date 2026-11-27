@@ -2,7 +2,8 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
-import { translate, useLocale, useT } from "../../i18n";
+import { useLocale, useT } from "../../i18n";
+import { unitWords } from "../../lib/extensions";
 
 // Who filed a message on its deal, and why. The actor is `core` or the name of
 // an extension. An extension's reason is a key it declared, and its label is in
@@ -30,35 +31,6 @@ const CORE_BASES = [
   "named_stakeholder",
   "ambiguous",
 ] as const;
-
-/**
- * The copy namespace a unit's translations live in: `crm-hello` is
- * `extCrmHello.`. Core cannot import the generator's rule, so this restates it,
- * and the test beside it holds the two together.
- */
-export function unitCopyPrefix(unit: string): string {
-  const camel = unit
-    .split("-")
-    .filter((part) => part !== "")
-    .map((part) =>
-      /^\d/.test(part)
-        ? `_${part}`
-        : part.charAt(0).toUpperCase() + part.slice(1),
-    )
-    .join("");
-  return `ext${camel}.`;
-}
-
-/** A unit's own wording for a key, or the key itself when it has none. */
-function unitWords(
-  locale: Parameters<typeof translate>[0],
-  unit: string,
-  key: string,
-): string {
-  const full = `${unitCopyPrefix(unit)}${key}` as `ext${string}`;
-  const words = translate(locale, full);
-  return words === full ? "" : words;
-}
 
 export function FilingLine({ filing }: Readonly<{ filing: Filing }>) {
   const t = useT();

@@ -76,14 +76,10 @@ const (
 // pack with deadlines of its own. Its source_id names the request's act.
 const PrivacyRequestTaskSource = "privacy_request"
 
-// WhichDealSource names the one "Which deal is this about?" task capture raises
-// for a mail several open deals fit. Its source_id is the mail's thread, so a
-// thread is asked about once.
+// WhichDealSource is the source stored on old "Which deal is this about?"
+// tasks. No code writes it, since the question waits in the link suggestion
+// queue. It stays reserved so no caller can spell it.
 const WhichDealSource = "which_deal"
-
-// WhichDealOfferedKey names, in the raw of a WhichDealSource task, the ids of
-// the deals the question offered.
-const WhichDealOfferedKey = "offered_deal_ids"
 
 // WebsiteLeadSource names a lead read off a company's website and accepted by
 // a human. Only that accept writes it. A lead under it is sent an Art. 14
@@ -219,6 +215,18 @@ func SystemTaskSources() []string {
 
 // EngineTaskSource reports whether source is one of EngineTaskSources.
 func EngineTaskSource(source string) bool { return slices.Contains(EngineTaskSources(), source) }
+
+// RoutedTaskSource reports whether the writer that filed a task of this source
+// system routes it. It goes to a privacy operator, a lead's owner, a promise's
+// claim or an assurance bundle. Nobody else may take such a task.
+func RoutedTaskSource(source string) bool {
+	switch source {
+	case PrivacyRequestTaskSource, LeadSLATaskSource, LeadQualifyTaskSource, AssuranceTaskSource,
+		OvernightReconcileSource, LeadRepliedSource, CommitmentTaskSource:
+		return true
+	}
+	return EngineTaskSource(source)
+}
 
 // RetiredTaskSources are automatic task families whose writers were removed.
 // Their rows remain current until a user completes them.

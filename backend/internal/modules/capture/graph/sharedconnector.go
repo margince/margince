@@ -100,6 +100,34 @@ func (a *httpAPI) userID(ctx context.Context, access string) (string, error) {
 //
 //nolint:ireturn // implements connector.SharedMailboxReader, whose contract returns the Connector seam
 func (c *Connector) OpenShared(auth connector.Auth) (connector.Connector, connector.Auth, error) {
+	return c.openSharedGranted(auth, nil)
+}
+
+// SharedSendScope is Microsoft's name for the permission to send as a shared
+// mailbox: the same Mail.Send, held by the customer's app as an application
+// permission.
+func (c *Connector) SharedSendScope() string { return SendScope }
+
+// OpenSharedSender returns the opened shared mailbox as a sender. Its state
+// names the send permission as granted, which the send path checks before it
+// reaches Microsoft. Microsoft refuses a send the app was never consented to,
+// and that refusal parks the delivery with the reason.
+//
+//nolint:ireturn // implements connector.SharedMailboxSender, whose contract returns the EmailSender seam
+func (c *Connector) OpenSharedSender(auth connector.Auth) (connector.EmailSender, connector.Auth, error) {
+	opened, state, err := c.openSharedGranted(auth, []string{SendScope})
+	if err != nil {
+		return nil, nil, err
+	}
+	sender, ok := opened.(connector.EmailSender)
+	if !ok {
+		return nil, nil, errNoSharedReader
+	}
+	return sender, state, nil
+}
+
+//nolint:ireturn // returns the Connector seam, as OpenShared does
+func (c *Connector) openSharedGranted(auth connector.Auth, granted []string) (connector.Connector, connector.Auth, error) {
 	if c.shared == nil {
 		return nil, nil, errNoSharedReader
 	}
@@ -112,7 +140,7 @@ func (c *Connector) OpenShared(auth connector.Auth) (connector.Connector, connec
 		return nil, nil, err
 	}
 	state, err := graphconn.Seal(connectorName, graphconn.AuthState{
-		Owner: api.names[0], Scopes: graphconn.ScopeStrings(c.Descriptor().Scopes),
+		Owner: api.names[0], Scopes: graphconn.ScopeStrings(c.Descriptor().Scopes), Granted: granted,
 	})
 	if err != nil {
 		return nil, nil, err

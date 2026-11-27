@@ -26,6 +26,7 @@ function kindLabels(t: Translator): Record<KindOption, string> {
     contact: t(SEARCH_FILTER_KEY.contact),
     company: t(SEARCH_FILTER_KEY.company),
     deal: t(SEARCH_FILTER_KEY.deal),
+    deal_room: t(SEARCH_FILTER_KEY.deal_room),
     lead: t(SEARCH_FILTER_KEY.lead),
     project: t(SEARCH_FILTER_KEY.project),
     product: t(SEARCH_FILTER_KEY.product),

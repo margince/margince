@@ -101,3 +101,23 @@ export const RetiredAllocation: Story = {
     );
   },
 };
+
+export const SetColleagueTarget: Story = {
+  render: () => {
+    installFetchStub({
+      ...reportingStoryRoutes(),
+      "GET /analytics/targets": () => jsonResponse({ data: [] }),
+    });
+    answerGoalRosters(goalRoster, nextGoalRoster);
+    return (
+      <StoryProviders>
+        <ReportingTargets />
+      </StoryProviders>
+    );
+  },
+  play: async () => {
+    await userEvent.click(
+      await screen.findByRole("button", { name: "Set target" }),
+    );
+  },
+};

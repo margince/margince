@@ -33,16 +33,15 @@ func TestARowTheReaderMayNotChangeOffersNoVerbThatWrites(t *testing.T) {
 	}
 }
 
-func TestOnlyATaskNobodyHoldsThatTheReaderMayChangeOffersTake(t *testing.T) {
+func TestATaskIsOfferedTakeExactlyWhenItIsTakeable(t *testing.T) {
 	asOf := time.Date(2026, 9, 1, 9, 0, 0, 0, time.UTC)
-	holder := ids.NewV7()
 	for name, tc := range map[string]struct {
 		task Task
 		take bool
 	}{
-		"nobody holds it and they may change it": {Task{ID: ids.NewV7()}, true},
-		"nobody holds it and they may only read": {Task{ID: ids.NewV7(), ReadOnly: true}, false},
-		"a colleague holds it":                   {Task{ID: ids.NewV7(), AssigneeID: &holder}, false},
+		"takeable and the reader may only read":                  {Task{ID: ids.NewV7(), ReadOnly: true, Takeable: true}, true},
+		"takeable and changeable":                                {Task{ID: ids.NewV7(), Takeable: true}, true},
+		"not takeable (a held, routed or view-only seat's task)": {Task{ID: ids.NewV7()}, false},
 	} {
 		item := taskItem(tc.task, asOf, asOf, time.UTC)
 		if got := slices.Contains(item.Actions, crmcontracts.AttentionItemActionsTake); got != tc.take {

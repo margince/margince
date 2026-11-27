@@ -16,14 +16,14 @@ import (
 
 func renewClaimDeadline(ctx context.Context, tx pgx.Tx, in ClaimInput, claim crmcontracts.ConversationClaim, by string) (crmcontracts.ConversationClaim, error) {
 	actor, ok := principal.Actor(ctx)
-	if !ok || actor.Type != principal.PrincipalSystem || claim.Status != crmcontracts.ConversationClaimStatusOpen || claim.CorrectedAt != nil || claim.NeedsReview || in.DueAt == nil {
+	if !ok || storekit.StampIsForAUser(actor.ID) || claim.Status != crmcontracts.ConversationClaimStatusOpen || claim.CorrectedAt != nil || claim.NeedsReview || in.DueAt == nil {
 		return claim, nil
 	}
 	var args []any
 	arg := func(value any) int { args = append(args, value); return len(args) }
 	query := fmt.Sprintf(`UPDATE conversation_claim SET due_at = $%[1]d
- WHERE id = $%[2]d AND archived_at IS NULL AND captured_by = $%[3]d AND due_at IS DISTINCT FROM $%[1]d`,
-		arg(in.DueAt), arg(claim.Id), arg(by))
+ WHERE id = $%[2]d AND archived_at IS NULL AND captured_by = ANY($%[3]d::text[]) AND due_at IS DISTINCT FROM $%[1]d`,
+		arg(in.DueAt), arg(claim.Id), arg(append([]string{by}, in.SameFilers...)))
 	tag, err := tx.Exec(ctx, query, args...)
 	if err != nil {
 		return claim, fmt.Errorf("renew the claim's deadline: %w", err)

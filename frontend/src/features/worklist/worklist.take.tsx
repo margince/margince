@@ -4,14 +4,13 @@
 import { Button } from "../../design-system/atoms";
 import { useToast } from "../../design-system/toast";
 import { useT } from "../../i18n";
-import { useMe } from "../../lib/session";
 import { InquiryTakeButton } from "./worklist.inquiryassignment";
 import type { WorklistItem } from "./worklist.queries";
-import { useReassignTask } from "./worklist.writes";
+import { useTakeTask } from "./worklist.writes";
 
 /**
- * Takes a task nobody holds: the hand-off's own write, with the reader as the
- * assignee. Drawn only where the server offers `take`.
+ * Takes a task nobody holds, through the endpoint that admits a reader who may
+ * only see it. Drawn only where the server offers `take`.
  */
 export function TakeVerb({ item }: Readonly<{ item: WorklistItem }>) {
   if (
@@ -32,11 +31,7 @@ export function TakeVerb({ item }: Readonly<{ item: WorklistItem }>) {
 function TakeButton({ item }: Readonly<{ item: WorklistItem }>) {
   const t = useT();
   const toast = useToast();
-  const reader = useMe().data?.user?.id;
-  const take = useReassignTask();
-  if (reader === undefined) {
-    return null;
-  }
+  const take = useTakeTask();
   return (
     <Button
       pending={take.isPending}
@@ -48,7 +43,6 @@ function TakeButton({ item }: Readonly<{ item: WorklistItem }>) {
           .mutateAsync({
             activityId: item.id,
             version: item.version,
-            assigneeId: reader,
           })
           .then(
             () => toast.show(t("worklist.take.done")),

@@ -84,7 +84,9 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"mail_draft.communication_context": {"internal/contracts", "CommunicationContext"},
 	// How to read an activity's time. A precision the contract admits and the
 	// CHECK refuses would be a 500 on a valid create.
-	"activity.occurred_precision": {"internal/contracts", "OccurredPrecision"},
+	"activity.occurred_precision":           {"internal/contracts", "OccurredPrecision"},
+	"graph_contact_edge.last_precision":     {"internal/contracts", "OccurredPrecision"},
+	"graph_interaction_edge.last_precision": {"internal/contracts", "OccurredPrecision"},
 
 	// What an approval names as its target, and what acquisition evidence cites.
 	// An approval's CHECK also admits a unit's own table, which extensionArm sets
@@ -193,7 +195,6 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"ai_feedback.verdict":                          {"internal/contracts", "AIFeedbackInputVerdict"},
 	"analytics_share.kind":                         {"internal/contracts", "ForecastShareKind"},
 	"analytics_share.scope_kind":                   {"internal/contracts", "ForecastCallScopeKind"},
-	"app_user.locale":                              {"internal/contracts", "SaveMyLocaleRequestLocale"},
 	"app_user.morning_brief_delivery":              {"internal/contracts", "BriefDeliveryMorningBriefDelivery"},
 	"app_user.routine_mail_scope":                  {"internal/contracts", "BriefDeliveryRoutineMailScope"},
 	"app_user.seat_type":                           {"internal/shared/kernel/principal", "SeatType"},

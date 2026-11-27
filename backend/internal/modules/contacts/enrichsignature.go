@@ -387,14 +387,15 @@ const auditKeyConfirmed = "confirmed"
 func signatureImages(appliedFields []string) (before, after map[string]any) {
 	before, after = map[string]any{}, map[string]any{}
 	for _, name := range appliedFields {
-		before[name], after[name] = nil, signatureFieldFilled
+		before[name], after[name] = nil, auditFilledMarker
 	}
 	return before, after
 }
 
-// signatureFieldFilled marks a field this pass answered. The image says WHICH
-// field moved and does not carry what it moved to.
-const signatureFieldFilled = "filled"
+// auditFilledMarker stands for the value of a field a provider or signature
+// filled. The image says which field moved and never what it moved to. The
+// History list reads it as a word (frontend/src/components/changelist.tsx).
+const auditFilledMarker = "filled"
 
 // applySignatureField lands one single-answer field and reports whether it did.
 // A value that is only whitespace is a skipped field, not a failure.

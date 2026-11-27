@@ -6,7 +6,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 
 ## comms_outbound
 
-47 columns · primary key `(id)` · referenced by 5 foreign keys
+51 columns · primary key `(id)` · referenced by 6 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -15,6 +15,8 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 | `answers_activity_id` | `uuid` |  | Points at `activity.id`. |
 | `attachments` | `jsonb`, default `'[]'::jsonb` | yes |  |
 | `attempts` | `integer`, default `0` | yes |  |
+| `authored_body_len` | `integer` |  |  |
+| `authored_html_len` | `integer` |  |  |
 | `bcc` | `jsonb` |  |  |
 | `body` | `text` | yes |  |
 | `bounce_kind` | `text` |  | One of `hard`, `soft`. |
@@ -48,6 +50,8 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 | `recipients` | `jsonb` |  |  |
 | `redacted_fields` | `text[]`, default `'{}'::text[]` | yes |  |
 | `references_chain` | `jsonb`, default `'[]'::jsonb` |  |  |
+| `resent_from` | `uuid` |  | Points at `comms_outbound.id`. |
+| `send_claims` | `jsonb` |  |  |
 | `sender_kind` | `text`, default `'user'::text` | yes | One of `user`, `controller`. |
 | `sent_at` | `timestamp with time zone` |  |  |
 | `status` | `text`, default `'pending'::text` | yes | One of `pending`, `sent`, `parked`. |
@@ -67,6 +71,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 | `connection_id` | `capture_connection` | deleting the parent keeps this row and clears the link |
 | `instruction_id` | `communication_instruction` | the parent cannot be deleted while this row points at it |
 | `link_id` | `confirm_token` | deleting the parent keeps this row and clears the link |
+| `resent_from` | `comms_outbound` | deleting the parent keeps this row and clears the link |
 | `user_id` | `app_user` | the parent cannot be deleted while this row points at it |
 
 **Rules**
@@ -103,6 +108,7 @@ The 1 table owned by `comms`, as the migrations build them. [Back to the entity 
 - `comms_outbound_party_admission`: `btree (activity_id, user_id) WHERE (party_admission_pending AND (status = 'sent') AND (sender_kind = 'user') AND (channel_user_id IS NULL))`
 - `comms_outbound_pkey`: `unique, btree (id)`
 - `comms_outbound_provider_message`: `btree (user_id, provider, provider_message_id) WHERE (provider_message_id IS NOT NULL)`
+- `comms_outbound_resent_from_uq`: `unique, btree (resent_from) WHERE (resent_from IS NOT NULL)`
 - `comms_outbound_workspace_activity_ix`: `btree (activity_id, id)`
 - `idx_comms_outbound_addressed`: `gin (comms_outbound_addressed(recipients, cc)) WHERE ((sender_kind = 'user') AND (status = 'sent') AND (user_id IS NOT NULL) AND (channel_user_id IS NULL))`
 - `idx_comms_outbound_connection`: `btree (connection_id) WHERE (connection_id IS NOT NULL)`

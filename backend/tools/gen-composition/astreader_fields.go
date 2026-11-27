@@ -21,6 +21,8 @@ func (r *unitReader) readDeclaredField(name string, kv *ast.KeyValueExpr, file *
 		m.Settings, err = r.readSettings(kv.Value, file)
 	case "CompanyTypes":
 		m.CompanyTypes, err = r.readCompanyTypes(kv.Value, file)
+	case "Languages":
+		m.Languages, err = r.readLanguages(kv.Value, file)
 	case "RecordKinds":
 		m.RecordKinds, err = r.readRecordKindDecls(kv.Value, file, extension.Name(r.unit))
 	case "LinkTypes":

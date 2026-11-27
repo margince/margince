@@ -16,17 +16,37 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/modules/webhooks"
+	"github.com/margince/margince/backend/internal/platform/agentvolume"
+	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/ports/mcp"
 )
 
 // capturingApprovals records the StageRequest so a test can inspect what the
-// gate actually staged.
-type capturingApprovals struct{ last agents.StageRequest }
+// gate actually staged, and counts the step-ups put to a human.
+type capturingApprovals struct {
+	last  agents.StageRequest
+	asked int
+}
 
-// StageVolumeRelease satisfies the seam; a step-up never reaches these tests.
 func (c *capturingApprovals) StageVolumeRelease(_ context.Context, _ agents.VolumeReleaseRequest) (ids.ApprovalID, bool, error) {
+	c.asked++
 	return ids.ApprovalID{}, false, nil
+}
+
+// A spent write allowance on a /v1 route asks the agent's human, as the tool door does.
+func TestASpentWriteAllowanceOnTheRESTDoorAsksTheConnectingHuman(t *testing.T) {
+	staging := &capturingApprovals{}
+	ctx := principal.WithActor(agentRequestCtx(context.Background()), principal.Principal{Type: principal.PrincipalAgent, ID: "agent:rest", OnBehalfOf: ids.NewV7(), PassportID: ids.NewV7()})
+	refusal := &auth.VolumeExceededError{Tool: "update_record", Reading: agentvolume.Reading{Counter: agentvolume.Writes, Exceeded: true}}
+	answered := httptest.NewRecorder()
+	admitAgentCall(answered, httptest.NewRequest(http.MethodPatch, "/v1/leads/x", nil).WithContext(ctx), http.NotFoundHandler(),
+		admissionOutcome{spec: mcp.ToolSpec{Name: "update_record"}, registry: agents.NewRegistry(staging, auth.NewGate(fullSeat{})), err: refusal})
+	if staging.asked != 1 || answered.Code != http.StatusTooManyRequests {
+		t.Errorf("the REST door asked %d times and answered %d, want one question and a 429", staging.asked, answered.Code)
+	}
 }
 
 func (c *capturingApprovals) ReleasableByCaller(context.Context, agents.StageRequest) bool {

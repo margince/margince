@@ -12,9 +12,8 @@ package contacts
 // a client. The single enum could hold one of those and silently erased the
 // rest.
 //
-// The rows are an owned child of the company, written only through the
-// company's own gated paths — the patch below and the partner upsert —
-// which is the visibility decision the schema fitness gate records.
+// These rows belong to the company. Its gated patch, partner upsert and
+// EndPartnerProgram are their only writers. The schema gate records that boundary.
 
 import (
 	"context"
@@ -210,10 +209,10 @@ func partnerRowMissingMessage() string {
 		"action set_up_partner, and a human approves it."
 }
 
-// partnerRowExistsMessage states what ends a partner program: archiving the company.
+// partnerRowExistsMessage sends a company editor to the program lifecycle.
 func partnerRowExistsMessage() string {
 	return "this company has a partner program, so it stays a partner. " +
-		"A partner program ends only when the company is archived."
+		"End the partner program on the Partner tab before removing the partner relationship type."
 }
 
 // hasPartnerRow reports whether the company carries the partner program

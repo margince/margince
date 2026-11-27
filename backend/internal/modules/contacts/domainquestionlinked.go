@@ -29,6 +29,8 @@ func domainEmploymentCandidateSQL(contact, domain string) string {
 // countLinkedContactsTx counts, per domain, the contacts the reader may see
 // that plantDomainEmployment would employ on a confirm. It asks the planter's
 // questions: the same candidates, less seats and current primary employments.
+// Where the question points at an existing company, it also drops contacts
+// whose job there ended.
 func countLinkedContactsTx(ctx context.Context, tx pgx.Tx, domains []string, out map[string]DomainQuestionContext) error {
 	var args []any
 	bind := func(value any) int { args = append(args, value); return len(args) }
@@ -38,16 +40,25 @@ func countLinkedContactsTx(ctx context.Context, tx pgx.Tx, domains []string, out
 	}
 	domainsArg := fmt.Sprintf("$%d::text[]", bind(domains))
 	foldedArg := fmt.Sprintf("$%d::text[]", bind(folded))
+	targets := make([]*string, len(domains))
+	for i, domain := range domains {
+		if suggestion := out[domain].Suggestion; suggestion != nil {
+			target := suggestion.CompanyID.String()
+			targets[i] = &target
+		}
+	}
+	targetsArg := fmt.Sprintf("$%d::uuid[]", bind(targets))
 	visible, err := contactVisibleSQL(ctx, bind)
 	if err != nil {
 		return err
 	}
 	query := `SELECT q.domain, c.id, lower(e.email)
-   FROM unnest(` + domainsArg + `, ` + foldedArg + `) AS q(domain, folded)
+   FROM unnest(` + domainsArg + `, ` + foldedArg + `, ` + targetsArg + `) AS q(domain, folded, target)
    JOIN contact c ON ` + domainEmploymentCandidateSQL("c", "q.folded") + `
    JOIN contact_email e ON e.contact_id = c.id AND e.archived_at IS NULL
   WHERE ` + visible + `
-    AND NOT EXISTS (SELECT 1 FROM relationship r WHERE r.contact_id = c.id AND ` + employment.CurrentPrimarySlotSQL("r") + `)`
+    AND NOT EXISTS (SELECT 1 FROM relationship r WHERE r.contact_id = c.id AND ` + employment.CurrentPrimarySlotSQL("r") + `)
+    AND NOT (q.target IS NOT NULL AND ` + employment.EndedAtCompanySQL("c.id", "q.target") + `)`
 	rows, err := tx.Query(ctx, query, args...)
 	if err != nil {
 		return fmt.Errorf("contacts: counting the contacts a confirm would employ: %w", err)

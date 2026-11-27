@@ -11,6 +11,7 @@ import { SurfaceState } from "../../design-system/surfacestate";
 import type { TimelineEntry } from "../../design-system/timelineentry";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
+import { useProviderLabel } from "../../lib/channelproviders";
 import type { EntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import type { HistoryValueCtx } from "../../lib/historyvalues";
@@ -19,6 +20,7 @@ import {
   TIMELINE_FILTERS,
   type TimelineFilter,
 } from "../../lib/timelinefilter";
+import { useChatNames } from "./chatnames";
 import { extensionTimeline, useExtensionHistory } from "./extensionhistory";
 import { changeTimeline, useFieldHistory } from "./history";
 
@@ -169,6 +171,8 @@ export function useRecordChronology({
 }>): RecordChronology {
   const t = useT();
   const viewerId = useViewerId();
+  const channelName = useProviderLabel();
+  const nameChat = useChatNames(activities, t, values.locale);
   // Only the Changes cut reads the change feed. The kind, word and date dials
   // narrow the exchanges, so they never hide a change.
   const wantsChanges =
@@ -194,9 +198,11 @@ export function useRecordChronology({
         : undefined,
       t,
       locale: values.locale,
+      channelName,
     },
-  ).map((entry) => {
-    const activity = byId.get(entry.id);
+  ).map((built) => {
+    const activity = byId.get(built.id);
+    const entry = nameChat(built, activity);
     // Only an email has a drawer to open, and only when the caller has one to
     // open it in.
     const opened =

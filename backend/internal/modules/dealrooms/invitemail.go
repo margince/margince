@@ -12,6 +12,8 @@ import (
 	"sync"
 	"time"
 
+	"github.com/jackc/pgx/v5"
+
 	"github.com/margince/margince/backend/internal/platform/httpserver"
 	"github.com/margince/margince/backend/internal/platform/mailcopy"
 	"github.com/margince/margince/backend/internal/platform/mailer"
@@ -83,9 +85,17 @@ func (h Handlers) sendInvite(ctx context.Context, issued IssuedInvitation) error
 	}
 	words := mailcopy.For(language)
 	inviter, company := "", ""
+	var err error
 	if h.inviteContext != nil {
-		var err error
-		inviter, company, err = h.inviteContext(ctx)
+		if inviter, err = h.inviteContext(ctx); err != nil {
+			slog.WarnContext(ctx, "invitation attribution unavailable; sending the access link", "cause", err)
+		}
+	}
+	if h.companyName != nil && h.store != nil {
+		err = h.store.tx(ctx, func(tx pgx.Tx) (err error) {
+			company, err = h.companyName(ctx, tx)
+			return err
+		})
 		if err != nil {
 			slog.WarnContext(ctx, "invitation attribution unavailable; sending the access link", "cause", err)
 		}
@@ -217,8 +227,14 @@ func (h Handlers) WithMailLanguage(reader func(context.Context) string) Handlers
 	return h
 }
 
-// WithInviteContext identifies the contact and company sharing the documents.
-func (h Handlers) WithInviteContext(reader func(context.Context) (string, string, error)) Handlers {
+// WithCompanyName supplies the company the buyer's engagement notice names.
+func (h Handlers) WithCompanyName(reader func(context.Context, pgx.Tx) (string, error)) Handlers {
+	h.companyName = reader
+	return h
+}
+
+// WithInviteContext names the colleague sharing the documents.
+func (h Handlers) WithInviteContext(reader func(context.Context) (string, error)) Handlers {
 	h.inviteContext = reader
 	return h
 }

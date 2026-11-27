@@ -53,6 +53,10 @@ type ClaimInput struct {
 	// claim. Empty for a human's claim, which is keyed on its exact quote.
 	Locator string
 	Renewal bool
+	// SameFilers are the other ids the same job filed claims under. A renewal
+	// renews a claim any of them filed, so a job whose id changed still keeps
+	// the deadlines of what it filed before.
+	SameFilers []string
 }
 
 // RecordConversationClaim writes one claim through the audited write shape.

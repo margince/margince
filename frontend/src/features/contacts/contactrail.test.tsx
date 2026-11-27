@@ -251,6 +251,7 @@ function mount(
           display_name: "Brandt Automotive GmbH",
           contact_count: 2,
           open_deal_count: 0,
+          hidden_contact_holders: [{ user_id: "u-1", display_name: "Dana" }],
           logo_url: null,
         });
       }
@@ -354,7 +355,9 @@ describe("the sibling sections governed by their own grants", () => {
     mount(granted);
 
     const companies = section("Work history");
-    await within(companies).findByText("2 contacts · no open deals");
+    await within(companies).findByText(
+      "2 contacts · no open deals · Dana has contacts here you cannot see. Ask for an introduction.",
+    );
   });
 });
 
@@ -761,7 +764,7 @@ describe("which employer is the current one", () => {
     // "N contacts" must not keep the figure from before the end.
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     mount(granted);
-    await screen.findByText("2 contacts · no open deals");
+    await screen.findByText(/^2 contacts · no open deals/);
     const companyReads = () =>
       vi
         .mocked(fetch)

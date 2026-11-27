@@ -25,7 +25,7 @@ import (
 )
 
 func TestPasswordLinkKeepsTheTokenOutOfTheServerVisibleURL(t *testing.T) {
-	link := passwordLink("https://crm.example.test", "raw-token-value")
+	link := passwordLink("https://crm.example.test", resetPasswordRoute, "raw-token-value")
 
 	// Everything before the '#' is what a server, a proxy and an access log get
 	// to see. The token must not be in it.

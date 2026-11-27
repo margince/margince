@@ -56,6 +56,16 @@ var ErrSendOutcomeUnknown = errors.New("connector: the provider never reported t
 // Only a seam that can TELL the two apart may report it.
 var ErrRecipientUnreachable = errors.New("connector: the provider will not deliver to this recipient")
 
+// ErrOutsideReplyWindow marks a message to someone the provider only lets the
+// sender answer within a window after they last wrote, when that window has
+// passed. The provider gave a definite answer and nothing was transmitted, and
+// no retry helps until they write again.
+var ErrOutsideReplyWindow = errors.New("connector: the recipient last wrote outside the provider's reply window")
+
+// ErrClarificationRecipient refuses a question to someone who is no verified
+// member of the workspace. A company account asks only its own colleagues.
+var ErrClarificationRecipient = errors.New("a company account asks only a verified colleague who wrote the messages they forwarded")
+
 // ErrCursorGone marks a stored sync watermark the provider no longer honors
 // (e.g. Gmail 404 on an old historyId): the connector recovers with its
 // bounded re-list; the registry records the class, nothing more.
