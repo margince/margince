@@ -6,6 +6,7 @@
 package gates
 
 import (
+	"errors"
 	"fmt"
 	"path"
 	"regexp"
@@ -45,6 +46,8 @@ type tsReader struct {
 	cut int
 	// spawned counts the reads subprocess calls make, for the subprocess floor.
 	spawned int
+	load    func(file string) (string, error)
+	unread  map[string]error
 }
 
 var (
@@ -56,11 +59,24 @@ var (
 
 var pathModules = []string{"path", "node:path", "path/posix", "node:path/posix", "url", "node:url"}
 
-func newTSReader(tree repoTree, sources map[string]string) (*tsReader, error) {
+func newTSReader(tree repoTree, sources map[string]string, load func(string) (string, error)) (*tsReader, error) {
 	r := &tsReader{tree: tree, files: map[string]*jsFile{}, imports: map[string][]jsImport{},
-		importers: map[string][]jsImport{}, names: map[string][]pathValue{}, working: map[string]bool{}}
+		importers: map[string][]jsImport{}, names: map[string][]pathValue{}, working: map[string]bool{},
+		unread: map[string]error{}}
+	r.load = func(file string) (string, error) {
+		if source, ok := sources[file]; ok {
+			return source, nil
+		}
+		if load == nil {
+			return "", errors.New("no source to load it from")
+		}
+		return load(file)
+	}
 	var failed []string
 	for _, file := range sortedKeys(sources) {
+		if r.files[file] != nil {
+			continue
+		}
 		if err := r.add(file, sources[file]); err != nil {
 			failed = append(failed, fmt.Sprintf("%s: %v", file, err))
 		}
@@ -78,8 +94,13 @@ func (r *tsReader) add(file, source string) error {
 		return err
 	}
 	r.files[file] = parsed
+	var failed []error
+	stated := parsed.specifiers()
 	for _, imported := range tsImports(parsed.code) {
-		r.addImport(file, imported.local, imported.original, imported.from)
+		// The pattern also matches import text inside a string, which imports nothing.
+		if slices.Contains(stated, imported.from) {
+			failed = append(failed, r.addImport(file, imported.local, imported.original, imported.from))
+		}
 	}
 	for _, call := range parsed.calls {
 		if call.callee != "require" {
@@ -87,20 +108,47 @@ func (r *tsReader) add(file, source string) error {
 		}
 		if local, ok := parsed.declaredBefore(call.at); ok {
 			if specifier, ok := jsStringLiteral(strings.TrimSpace(parsed.arg(call.at, 0))); ok {
-				r.addImport(file, local, "*", specifier)
+				failed = append(failed, r.addImport(file, local, "*", specifier))
 			}
 		}
 	}
-	return nil
+	return errors.Join(append(failed, r.loadImported(file))...)
 }
 
-func (r *tsReader) addImport(file, local, original, specifier string) {
+// loadImported reads each script file imports before any name in it is worked
+// out. A module it cannot read fails the census instead of holding no paths.
+func (r *tsReader) loadImported(file string) error {
+	var failed []error
+	for _, imported := range r.imports[file] {
+		module := imported.module
+		if module == "" || r.files[module] != nil || r.unread[module] != nil || readerKinds[path.Ext(module)] != scriptReader {
+			continue
+		}
+		source, err := r.load(module)
+		if err == nil {
+			err = r.add(module, source)
+		}
+		if err != nil {
+			r.unread[module] = err
+			failed = append(failed, fmt.Errorf("cannot load %s, which it imports: %w", module, err))
+		}
+	}
+	return errors.Join(failed...)
+}
+
+// addImport fails on a relative import that names no tracked file. Such an import
+// would otherwise hold no paths without a word.
+func (r *tsReader) addImport(file, local, original, specifier string) error {
 	module, _ := r.module(file, specifier)
+	if module == "" && strings.HasPrefix(specifier, ".") {
+		return fmt.Errorf("imports %q, which names no tracked module", specifier)
+	}
 	imported := jsImport{file, local, original, specifier, module}
 	r.imports[file] = append(r.imports[file], imported)
 	if module != "" {
 		r.importers[module] = append(r.importers[module], imported)
 	}
+	return nil
 }
 
 func (r *tsReader) importOf(file, local string) (jsImport, bool) {
@@ -305,7 +353,9 @@ func (r *tsReader) evalJoin(file string, args []string, depth int) []pathValue {
 	for i, arg := range args {
 		segments := []string{arg}
 		if spread, ok := strings.CutPrefix(strings.TrimSpace(arg), "..."); ok {
-			if segments, ok = r.spreadElements(file, spread, depth); !ok {
+			if segments, ok = r.spreadElements(file, spread, depth); ok && len(segments) == 0 {
+				continue
+			} else if !ok {
 				segments = nil
 			}
 		}

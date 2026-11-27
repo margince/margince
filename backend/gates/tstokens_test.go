@@ -321,7 +321,26 @@ func (l *tsLexer) opensTypeParameters() bool {
 		end++
 	}
 	rest := strings.TrimLeft(l.src[end:], " \t")
-	return strings.HasPrefix(rest, ",") || strings.HasPrefix(rest, "extends ")
+	constraint, extends := strings.CutPrefix(rest, "extends ")
+	return strings.HasPrefix(rest, ",") || extends && closesBeforeParameters(constraint)
+}
+
+// A constraint's list closes on a ">" that a "(" follows. A JSX attribute named
+// extends, as in <Widget extends />, has none.
+func closesBeforeParameters(constraint string) bool {
+	depth := 0
+	for i := 0; i < len(constraint); i++ {
+		switch {
+		case constraint[i] == '<':
+			depth++
+		case constraint[i] != '>' || i > 0 && constraint[i-1] == '=':
+		case depth > 0:
+			depth--
+		default:
+			return strings.HasPrefix(strings.TrimLeft(constraint[i+1:], " \t"), "(")
+		}
+	}
+	return false
 }
 
 // element reads one JSX element, its attributes and its children. Text is

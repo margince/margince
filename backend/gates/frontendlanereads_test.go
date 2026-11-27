@@ -49,10 +49,11 @@ func newRepoTree(files []string) repoTree {
 	return tree
 }
 
-// An import may name x.js for x.ts, as TypeScript resolves it.
+// An import may name x.js for x.ts, or x.mjs for x.mts, as TypeScript resolves it.
 func (tree repoTree) trackedModule(base string) (string, bool) {
-	for _, candidate := range []string{base, strings.TrimSuffix(base, ".js") + ".ts", base + ".ts", base + ".tsx",
-		base + ".mts", base + ".js", base + ".mjs", base + ".json", base + "/index.ts"} {
+	for _, candidate := range []string{base, strings.TrimSuffix(base, ".js") + ".ts", strings.TrimSuffix(base, ".mjs") + ".mts",
+		base + ".ts", base + ".tsx", base + ".d.ts", base + ".mts", base + ".js", base + ".mjs", base + ".json",
+		base + "/index.ts", base + "/index.tsx"} {
 		if tree.files[candidate] {
 			return candidate, true
 		}
@@ -336,65 +337,31 @@ func frontendLaneReads(t *testing.T, workflow workflowFile) laneCensus {
 		workflowReads: len(jobs.reads), recipeReader: len(recipes.reads), subMakeReads: recipes.subMakes,
 	}}
 	census.reads = slices.Concat(jobs.reads, recipes.reads)
-	sources := map[string]string{}
-	var queue []string
-	enqueue := func(file string) {
-		if _, read := sources[file]; read || !tree.files[file] {
-			return
-		}
-		body, err := gatekit.ReadFile(filepath.Join(repoRoot, file))
-		if err != nil {
-			t.Fatalf("reading %s: %v", file, err)
-		}
-		if readerKindOf(file, string(body)) != notAReader {
-			sources[file] = string(body)
-			queue = append(queue, file)
-		}
-	}
+	queue := laneQueue{tree: tree, open: openTracked, sources: map[string]string{}}
 	for _, file := range paths {
 		if laneReaderTree.MatchString(file) && (readerKinds[path.Ext(file)] != notAReader || path.Ext(file) == "") {
-			enqueue(file)
+			queue.enqueue(t, file)
 		}
 	}
 	for _, lane := range lanes {
 		for _, input := range lane.inputs {
-			enqueue(input)
+			queue.enqueue(t, input)
 		}
 	}
 	for _, read := range census.reads {
-		enqueue(read.path)
+		queue.enqueue(t, read.path)
 	}
 	scripts := map[string]string{}
-	for file, source := range sources {
+	for file, source := range queue.sources {
 		if readerKindOf(file, source) == scriptReader {
 			scripts[file] = source
 		}
 	}
-	ts, err := newTSReader(tree, scripts)
+	ts, err := newTSReader(tree, scripts, openTracked)
 	if err != nil {
 		t.Error(err)
 	}
-	laneText := slices.Concat(recipes.lines, jobs.runs)
-	for len(queue) > 0 {
-		file := queue[0]
-		queue = queue[1:]
-		kind := readerKindOf(file, sources[file])
-		if _, added := ts.files[file]; !added && kind == scriptReader {
-			if err := ts.add(file, sources[file]); err != nil {
-				t.Errorf("the census cannot read %s, so it cannot see its reads: %v", file, err)
-			}
-		}
-		if kind == shellReader {
-			laneText = append(laneText, sources[file])
-		}
-		for _, read := range readsOf(ts, file, sources[file]) {
-			census.reads = append(census.reads, laneRead{file, read})
-			census.byKind[kind]++
-			if kind := readerKinds[path.Ext(read)]; kind == scriptReader || kind == shellReader {
-				enqueue(read)
-			}
-		}
-	}
+	laneText := slices.Concat(recipes.lines, jobs.runs, queue.drain(t, ts, &census))
 	census.byKind[subprocessReads] = ts.spawned
 	census.reads = narrowWholeTree(t, tree, ts, strings.Join(laneText, "\n"), census.reads)
 	slices.SortFunc(census.reads, func(a, b laneRead) int {
@@ -402,6 +369,61 @@ func frontendLaneReads(t *testing.T, workflow workflowFile) laneCensus {
 	})
 	census.reads = slices.Compact(census.reads)
 	return census
+}
+
+func openTracked(file string) (string, error) {
+	body, err := gatekit.ReadFile(filepath.Join(repoRoot, file))
+	return string(body), err
+}
+
+// laneQueue holds the readers the census has yet to read, and each one's source.
+type laneQueue struct {
+	tree    repoTree
+	open    func(file string) (string, error)
+	sources map[string]string
+	files   []string
+}
+
+func (q *laneQueue) enqueue(t *testing.T, file string) {
+	t.Helper()
+	if _, read := q.sources[file]; read || !q.tree.files[file] {
+		return
+	}
+	source, err := q.open(file)
+	if err != nil {
+		t.Fatalf("reading %s: %v", file, err)
+	}
+	if readerKindOf(file, source) != notAReader {
+		q.sources[file] = source
+		q.files = append(q.files, file)
+	}
+}
+
+// drain reads each queued reader into census, and answers the shell text the lane
+// runs. A read that is itself a reader joins the queue.
+func (q *laneQueue) drain(t *testing.T, ts *tsReader, census *laneCensus) (shellText []string) {
+	t.Helper()
+	for len(q.files) > 0 {
+		file := q.files[0]
+		q.files = q.files[1:]
+		kind := readerKindOf(file, q.sources[file])
+		if _, added := ts.files[file]; !added && kind == scriptReader {
+			if err := ts.add(file, q.sources[file]); err != nil {
+				t.Errorf("the census cannot read %s, so it cannot see its reads: %v", file, err)
+			}
+		}
+		if kind == shellReader {
+			shellText = append(shellText, q.sources[file])
+		}
+		for _, read := range readsOf(ts, file, q.sources[file]) {
+			census.reads = append(census.reads, laneRead{file, read})
+			census.byKind[kind]++
+			if kind := readerKinds[path.Ext(read)]; kind == scriptReader || kind == shellReader || kind == configReader {
+				q.enqueue(t, read)
+			}
+		}
+	}
+	return shellText
 }
 
 func uncoveredReads(reads []laneRead, scope []string) []laneRead {
@@ -451,7 +473,7 @@ func TestAReadTheFrontendScopeMissesIsReported(t *testing.T) {
 	t.Parallel()
 	const reader = "frontend/src/i18n/r.test.ts"
 	source := `readFileSync(resolve(import.meta.dirname, "../../../docs/reference/copy.md"));`
-	ts, err := newTSReader(plantedTree(), map[string]string{reader: source})
+	ts, err := newTSReader(plantedTree(), map[string]string{reader: source}, nil)
 	if err != nil {
 		t.Fatal(err)
 	}

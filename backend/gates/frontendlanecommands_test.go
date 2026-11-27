@@ -7,6 +7,7 @@ package gates
 
 import (
 	"cmp"
+	"fmt"
 	"path"
 	"path/filepath"
 	"regexp"
@@ -108,8 +109,8 @@ func scriptCommands(source string) []string {
 	return commands
 }
 
-// What echo and printf print, what a write command such as mkdir is handed, and
-// an output redirection are no reads.
+// What echo and printf print and what a write command such as mkdir is handed are
+// no reads. Neither are a copy's destination and an output redirection.
 func commandPaths(command string) []string {
 	words := strings.Fields(command)
 	var candidates []string
@@ -119,7 +120,10 @@ func commandPaths(command string) []string {
 		}
 		words = words[1:]
 	}
-	if len(words) > 0 && !slices.Contains(shellPrint, words[0]) && !slices.Contains(writeCommands, words[0]) {
+	if len(words) > 2 && slices.Contains(copyCommands, words[0]) {
+		words = withoutIndices(words, copyDestination(words))
+	}
+	if len(words) > 0 && !slices.Contains(shellPrint, words[0]) && !writesOnly(words) {
 		for i, word := range words {
 			if strings.HasPrefix(word, ">") || i > 0 && (words[i-1] == "-o" || bareRedirection.MatchString(words[i-1]) && strings.HasPrefix(words[i-1], ">")) {
 				continue
@@ -157,11 +161,10 @@ func commandLines(lines []string) []string {
 	return joined
 }
 
-// recipeReads reads one command line run in dir. A path is relative to where the
-// last cd left the shell, a subshell's cd ends with it, and $(CURDIR) is dir.
-func recipeReads(tree repoTree, dir, line string) []string {
-	var found []string
-	cwd := dir
+// shellLine reads one command line run from cwd, and answers where it leaves the
+// shell. A path is relative to the last cd, a subshell's cd ends with it, and
+// $(CURDIR) is the Makefile's dir. A cd it cannot follow fails the census.
+func shellLine(tree repoTree, dir, cwd, line string) (found []string, calls []makeCall, end string, err error) {
 	var subshells []string
 	for _, command := range simpleCommands(strings.TrimLeft(line, " \t@+-")) {
 		text := strings.TrimSpace(command)
@@ -178,24 +181,44 @@ func recipeReads(tree repoTree, dir, line string) []string {
 		} else if err == nil {
 			text = strings.ReplaceAll(text, "$(CURDIR)", filepath.ToSlash(rel))
 		}
-		if words := strings.Fields(text); len(words) == 2 && words[0] == "cd" {
-			cwd = path.Join(cwd, words[1])
+		words := strings.Fields(text)
+		if len(words) > 0 && (words[0] == "pushd" || words[0] == "popd") {
+			return nil, nil, cwd, fmt.Errorf("%q: the census follows cd, not the directory stack", line)
+		}
+		if len(words) > 0 && words[0] == "cd" {
+			if cwd, err = cdTarget(cwd, words); err != nil {
+				return nil, nil, cwd, fmt.Errorf("%q: %w", line, err)
+			}
 		} else {
 			for _, rel := range commandPaths(text) {
 				if read, ok := tree.resolveRead(rel, []string{cwd}); ok {
 					found = append(found, read)
 				}
 			}
+			calls = append(calls, makeCalls(cwd, text)...)
 		}
 		for ; closes > 0 && len(subshells) > 0; closes-- {
 			cwd, subshells = subshells[len(subshells)-1], subshells[:len(subshells)-1]
 		}
 	}
-	return found
+	if len(subshells) > 0 {
+		return nil, nil, cwd, fmt.Errorf("%q opens a subshell a later line closes, and the census reads a line at a time", line)
+	}
+	return found, calls, cwd, nil
+}
+
+// cdTarget refuses a cd the census cannot place: to home, back, an absolute path,
+// or a name the shell expands.
+func cdTarget(cwd string, words []string) (string, error) {
+	if len(words) != 2 || words[1] == "-" || strings.HasPrefix(words[1], "/") || strings.HasPrefix(words[1], "~") ||
+		strings.ContainsAny(words[1], "$\"'`*?[") {
+		return cwd, fmt.Errorf("the census cannot follow %q, so it cannot place what the shell reads after it", strings.Join(words, " "))
+	}
+	return path.Join(cwd, words[1]), nil
 }
 
 var (
-	includeLine = regexp.MustCompile(`(?m)^-?include\s+(.+)$`)
+	includeLine = regexp.MustCompile(`(?m)^(-?)include\s+(.+)$`)
 	forwardRule = regexp.MustCompile(`(?m)^%:.*\n\t\$\(MAKE\) -C (\S+) \$@[ \t]*$`)
 )
 
@@ -208,7 +231,7 @@ type makefile struct {
 	forward string
 }
 
-func loadMakefile(t *testing.T, dir string) makefile {
+func loadMakefile(t *testing.T, tree repoTree, dir string) makefile {
 	t.Helper()
 	main := path.Join(dir, "Makefile")
 	body, err := gatekit.ReadFile(filepath.Join(repoRoot, main))
@@ -216,11 +239,9 @@ func loadMakefile(t *testing.T, dir string) makefile {
 		t.Fatalf("reading %s: %v", main, err)
 	}
 	loaded := makefile{targets: map[string]*recipeTarget{}, vars: map[string]string{}}
-	var files []string
-	for _, include := range includeLine.FindAllStringSubmatch(string(body), -1) {
-		for _, word := range strings.Fields(include[1]) {
-			files = append(files, path.Join(dir, word))
-		}
+	files, err := makefileIncludes(dir, string(body), func(file string) bool { return tree.files[file] })
+	if err != nil {
+		t.Fatal(err)
 	}
 	for _, file := range append(files, main) {
 		targets, vars := parseRecipes(t, filepath.Join(repoRoot, file))
@@ -244,6 +265,25 @@ func loadMakefile(t *testing.T, dir string) makefile {
 
 type makeCall struct {
 	dir, target string
+}
+
+// GNU Make skips an absent -include file and fails on an absent plain include.
+func makefileIncludes(dir, body string, exists func(string) bool) ([]string, error) {
+	var files []string
+	for _, include := range includeLine.FindAllStringSubmatch(body, -1) {
+		for _, word := range strings.Fields(include[2]) {
+			file := path.Join(dir, word)
+			switch {
+			case strings.ContainsAny(word, "$*?["):
+				return nil, fmt.Errorf("%s includes %s, a name the census cannot spell out to tell absent from present", path.Join(dir, "Makefile"), word)
+			case exists(file):
+				files = append(files, file)
+			case include[1] == "":
+				return nil, fmt.Errorf("%s includes %s, which is not in the tree", path.Join(dir, "Makefile"), file)
+			}
+		}
+	}
+	return files, nil
 }
 
 // makeCalls reads both make and $(MAKE), and -C moves the directory a call runs in.
@@ -284,7 +324,7 @@ func laneRecipes(t *testing.T, tree repoTree, starts []makeCall) recipeWalk {
 	var walk func(dir, name string)
 	walk = func(dir, name string) {
 		if _, loaded := makefiles[dir]; !loaded {
-			makefiles[dir] = loadMakefile(t, dir)
+			makefiles[dir] = loadMakefile(t, tree, dir)
 			for _, file := range makefiles[dir].files {
 				walked.reads = append(walked.reads, laneRead{"make", file})
 			}
@@ -310,13 +350,17 @@ func laneRecipes(t *testing.T, tree repoTree, starts []makeCall) recipeWalk {
 		for _, recipe := range commandLines(target.recipes) {
 			command := strings.ReplaceAll(expandRefs(recipe, makefiles[dir].vars), "$@", name)
 			walked.lines = append(walked.lines, command)
-			for _, read := range recipeReads(tree, dir, command) {
+			reads, calls, _, err := shellLine(tree, dir, dir, command)
+			if err != nil {
+				t.Errorf("%s: %v", reader, err)
+			}
+			for _, read := range reads {
 				walked.reads = append(walked.reads, laneRead{reader, read})
 				if dir != "." {
 					walked.subMakes++
 				}
 			}
-			for _, call := range makeCalls(dir, command) {
+			for _, call := range calls {
 				walk(call.dir, call.target)
 			}
 		}
@@ -414,13 +458,22 @@ func (jobs *laneJobs) walkSteps(t *testing.T, tree repoTree, reader string, step
 			}
 			jobs.walkSteps(t, tree, reader, composite.Runs.Steps, ".")
 		}
+		// One run: block is one shell, so a cd holds until the step ends.
 		workdir := cmp.Or(step.WorkingDirectory, dir)
+		cwd := workdir
 		for _, line := range commandLines(strings.Split(step.Run, "\n")) {
 			jobs.runs = append(jobs.runs, line)
-			for _, read := range recipeReads(tree, workdir, line) {
+			var reads []string
+			var calls []makeCall
+			var err error
+			if reads, calls, cwd, err = shellLine(tree, workdir, cwd, line); err != nil {
+				t.Errorf("%s: %v", reader, err)
+				break
+			}
+			for _, read := range reads {
 				jobs.reads = append(jobs.reads, laneRead{reader, read})
 			}
-			jobs.makes = append(jobs.makes, makeCalls(workdir, line)...)
+			jobs.makes = append(jobs.makes, calls...)
 		}
 	}
 }

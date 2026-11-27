@@ -176,11 +176,19 @@ func (f *jsFile) specifiers() []string {
 		if word := tr.word(i); word != "import" && word != "export" || tr.is(i+1, "(") || tr.is(i-1, ".") {
 			continue
 		}
-		for j := i + 1; j < len(tr.tokens) && j < i+400 && !tr.is(j, ";"); j++ {
-			if tr.tokens[j].kind == tkString && (j == i+1 || tr.word(j-1) == "from") {
+	clause:
+		for j := i + 1; j < len(tr.tokens); j++ {
+			switch {
+			case tr.tokens[j].kind == tkString && (j == i+1 || tr.word(j-1) == "from"):
 				found = append(found, tr.tokens[j].text)
-				break
+				break clause
+			case tr.is(j, "{"):
+				j = tr.match[j]
+				continue
+			case tr.word(j) != "" || tr.is(j, "*") || tr.is(j, ","):
+				continue
 			}
+			break clause
 		}
 	}
 	return found

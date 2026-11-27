@@ -11,7 +11,9 @@ package gates
 // that only looks like a read is not.
 
 import (
+	"fmt"
 	"slices"
+	"strings"
 	"testing"
 )
 
@@ -23,9 +25,13 @@ func plantedTree() repoTree {
 		"backend/internal/a/one.go",
 		"backend/internal/a/two.go",
 		"scripts/check.sh",
+		"frontend/scripts/r.ts",
 		"frontend/census/tree.ts",
 		"frontend/src/testing/docs.ts",
 		"frontend/src/testing/paths.ts",
+		"frontend/src/testing/index.tsx",
+		"frontend/src/testing/root.mts",
+		"frontend/src/testing/schema.d.ts",
 		"frontend/src/x.ts",
 	})
 }
@@ -44,7 +50,9 @@ type readFormCase struct {
 	source string
 	// others are the further sources the reader imports or is imported by.
 	others map[string]string
-	want   []string
+	// disk holds modules the census loads on first import, outside its seed.
+	disk map[string]string
+	want []string
 }
 
 func readFormCases() []readFormCase {
@@ -201,9 +209,86 @@ fs.writeFileSync(path.join(dir, "copy.md"), text);`},
 	}
 }
 
+// readFormCornerCases are forms whose reading turns on one detail.
+func readFormCornerCases() []readFormCase {
+	copyMD := []string{"docs/reference/copy.md"}
+	return []readFormCase{
+		{name: "a dynamic ?raw import", reader: "frontend/src/a/r.test.ts",
+			source: `await import("../../../docs/reference/copy.md?raw");`, want: copyMD},
+		{name: "an empty spread in a join", reader: "frontend/src/a/r.test.ts",
+			source: rootFromSrcA + `readFileSync(join(repoRoot, ...[], "docs/reference/copy.md"));`, want: copyMD},
+		{name: "a spread of Array(0)", reader: "frontend/src/a/r.test.ts",
+			source: `readFileSync(join(import.meta.dirname, ...Array(0).fill(".."), "../../../docs/reference/copy.md"));`, want: copyMD},
+		{name: "cp in a shell script reads its source", reader: "frontend/scripts/r.sh",
+			source: "cp ../docs/reference/copy.md ../docs/handbook/a.md\n", want: copyMD},
+		{name: "cp a subprocess runs reads its source", reader: "frontend/scripts/r.ts",
+			source: spawnImport + rootFromScripts + `execFileSync("cp", [join(repoRoot, "docs/reference/copy.md"), join(repoRoot, "docs/handbook/a.md")]);`, want: copyMD},
+		{name: "each command a loop hands execSync", reader: "frontend/scripts/r.ts",
+			source: spawnImport + rootFromScripts + `for (const command of ["git ls-files docs/handbook", "cat docs/reference/copy.md"]) execSync(command, { cwd: repoRoot });`,
+			want:   []string{".", "docs/handbook", "docs/reference/copy.md"}},
+		{name: "a JSX element with an extends attribute", reader: "frontend/src/a/r.test.tsx",
+			source: `const view = <Widget extends />;
+readFileSync(join(import.meta.dirname, "../../../docs/reference/copy.md"));`, want: copyMD},
+		{name: "a generic arrow with a constraint in a .tsx file", reader: "frontend/src/a/r.test.tsx",
+			source: `const pick = <T extends Array<string>>(value: T) => value;
+readFileSync(join(import.meta.dirname, "../../../docs/reference/copy.md"));`, want: copyMD},
+		{name: "a command the census cannot spell, run in a directory", reader: "frontend/scripts/r.ts",
+			source: spawnImport + rootFromScripts + `execSync(process.env.CMD, { cwd: repoRoot });`, want: []string{"."}},
+		{name: "a command the census cannot spell, handed a path", reader: "frontend/scripts/r.ts",
+			source: spawnImport + rootFromScripts + `execFileSync(process.execPath, [join(repoRoot, "docs/reference/copy.md")]);`, want: copyMD},
+		{name: "a command the census cannot spell, handed a path and a directory", reader: "frontend/scripts/r.ts",
+			source: spawnImport + rootFromScripts + `execFileSync(process.execPath, [join(repoRoot, "docs/reference/copy.md")], { cwd: join(repoRoot, "docs/handbook") });`,
+			want:   []string{"docs/handbook", "docs/reference/copy.md"}},
+		{name: "each command a loop hands execFileSync", reader: "frontend/scripts/r.ts",
+			source: spawnImport + rootFromScripts + `for (const tool of ["mkdir", "cat"]) execFileSync(tool, [join(repoRoot, "docs/reference/copy.md")]);`, want: copyMD},
+		{name: "cp -t names its destination first", reader: "frontend/scripts/r.sh",
+			source: "cp -t ../docs/handbook ../docs/reference/copy.md\n", want: copyMD},
+		{name: "cp --target-directory names its destination", reader: "frontend/scripts/r.sh",
+			source: "cp --target-directory ../docs/handbook ../docs/reference/copy.md\n", want: copyMD},
+		{name: "cp -t with its destination attached", reader: "frontend/scripts/r.sh",
+			source: "cp -t../docs/handbook ../docs/reference/copy.md\n", want: copyMD},
+		{name: "cp -rt with its destination attached", reader: "frontend/scripts/r.sh",
+			source: "cp -rt../docs/handbook ../docs/reference/copy.md\n", want: copyMD},
+		{name: "cp -tr reads r as its destination", reader: "frontend/scripts/r.sh",
+			source: "cp -tr ../docs/reference/copy.md\n", want: copyMD},
+		{name: "a default import beside named ones", reader: "frontend/src/a/r.test.ts",
+			source: `import paths, { repoRoot } from "../testing/paths";
+readFileSync(join(repoRoot, "docs/reference/copy.md"));`,
+			others: map[string]string{"frontend/src/testing/paths.ts": `export const repoRoot = join(import.meta.dirname, "..", "..", "..");`}, want: copyMD},
+		{name: "cp -rt names its destination in a cluster", reader: "frontend/scripts/r.sh",
+			source: "cp -rt ../docs/handbook ../docs/reference/copy.md\n", want: copyMD},
+		{name: "cp --target-directory= names its destination", reader: "frontend/scripts/r.sh",
+			source: "cp --target-directory=../docs/handbook ../docs/reference/copy.md\n", want: copyMD},
+		{name: "cp -t a subprocess runs", reader: "frontend/scripts/r.ts",
+			source: spawnImport + rootFromScripts + `execFileSync("cp", ["-t", join(repoRoot, "docs/handbook"), join(repoRoot, "docs/reference/copy.md")]);`, want: copyMD},
+		{name: "install -d makes directories", reader: "frontend/scripts/r.sh",
+			source: "install -d ../docs/handbook ../docs/reference\n"},
+		{name: "each command a loop hands execFileSync, ending on a write", reader: "frontend/scripts/r.ts",
+			source: spawnImport + rootFromScripts + `for (const tool of ["cat", "mkdir"]) execFileSync(tool, [join(repoRoot, "docs/reference/copy.md")]);`, want: copyMD},
+		{name: "a script a subprocess runs as its command", reader: "frontend/scripts/r.ts",
+			source: spawnImport + rootFromScripts + `execFileSync(join(repoRoot, "scripts/check.sh"), []);`, want: []string{"scripts/check.sh"}},
+		{name: "an import clause of many names", reader: "frontend/src/a/r.test.ts",
+			source: "import { " + strings.Repeat("unused, ", 300) + `repoRoot } from "../testing/paths";
+readFileSync(join(repoRoot, "docs/reference/copy.md"));`,
+			others: map[string]string{"frontend/src/testing/paths.ts": `export const repoRoot = join(import.meta.dirname, "..", "..", "..");`}, want: copyMD},
+		{name: "a directory import of an index.tsx", reader: "frontend/src/a/r.test.ts",
+			source: `import { docsRoot } from "../testing";
+readFileSync(join(docsRoot, "reference/copy.md"));`,
+			others: map[string]string{"frontend/src/testing/index.tsx": `export const docsRoot = join(import.meta.dirname, "..", "..", "..", "docs");`}, want: copyMD},
+		{name: "an .mjs import of an .mts module", reader: "frontend/src/a/r.test.ts",
+			source: `import { docsRoot } from "../testing/root.mjs";
+readFileSync(join(docsRoot, "reference/copy.md"));`,
+			others: map[string]string{"frontend/src/testing/root.mts": `export const docsRoot = join(import.meta.dirname, "..", "..", "..", "docs");`}, want: copyMD},
+		{name: "a helper outside the seed, loaded on import", reader: "frontend/src/a/r.test.ts",
+			source: `import { docsRoot } from "../testing/docs";
+readFileSync(join(docsRoot, "reference/copy.md"));`,
+			disk: map[string]string{"frontend/src/testing/docs.ts": `export const docsRoot = join(import.meta.dirname, "..", "..", "..", "docs");`}, want: copyMD},
+	}
+}
+
 func TestTheFrontendReadCensusSeesEachReadForm(t *testing.T) {
 	t.Parallel()
-	for _, c := range readFormCases() {
+	for _, c := range slices.Concat(readFormCases(), readFormCornerCases()) {
 		sources := map[string]string{"frontend/census/tree.ts": plantedCensusTree}
 		if readerKindOf(c.reader, c.source) == scriptReader {
 			sources[c.reader] = c.source
@@ -211,7 +296,7 @@ func TestTheFrontendReadCensusSeesEachReadForm(t *testing.T) {
 		for file, source := range c.others {
 			sources[file] = source
 		}
-		ts, err := newTSReader(plantedTree(), sources)
+		ts, err := newTSReader(plantedTree(), sources, plantedDisk(c.disk))
 		if err != nil {
 			t.Errorf("%s: %v", c.name, err)
 			continue
@@ -229,8 +314,9 @@ func TestAJobReadsItsActionsAndTheCommandsItRuns(t *testing.T) {
 	var jobs laneJobs
 	steps := []laneStep{
 		{Uses: "./.github/actions/probe"},
-		{Run: "cd frontend && \\\n  cat ../docs/reference/copy.md\nmake -k -C backend lint", WorkingDirectory: "."},
+		{Run: "cd frontend\ncat ../docs/reference/copy.md\nmake -k -C ../backend lint", WorkingDirectory: "."},
 		{Run: "cat ../docs/handbook/a.md"},
+		{Run: "cat ../scripts/check.sh", WorkingDirectory: "."},
 	}
 	jobs.walkSteps(t, plantedTree(), "job probe", steps, "backend")
 	var reads []string
@@ -260,20 +346,132 @@ func TestARecipeReadIsPlacedOnTheDirectoryItsCdLeft(t *testing.T) {
 		{"frontend", "\tcat $(CURDIR)/../docs/reference/copy.md", []string{"docs/reference/copy.md"}},
 		{".", "\tcd frontend && $(MAKE) -C .. x && cat $(CURDIR)/scripts/check.sh", []string{"scripts/check.sh"}},
 		{".", "\tmkdir -p docs/handbook && rm -f docs/reference/copy.md", nil},
+		{".", "\tinstall -m 0644 docs/reference/copy.md docs/handbook/a.md", []string{"docs/reference/copy.md"}},
 		{".", "\tcd frontend && pnpm exec vitest run src/x.ts", nil},
 	}
 	for _, c := range cases {
-		got := recipeReads(plantedTree(), c.dir, c.line)
+		got, _, _, err := shellLine(plantedTree(), c.dir, c.dir, c.line)
 		slices.Sort(got)
-		if !slices.Equal(got, c.want) {
-			t.Errorf("recipeReads(%q, %q) = %v, want %v", c.dir, c.line, got, c.want)
+		if err != nil || !slices.Equal(got, c.want) {
+			t.Errorf("shellLine(%q, %q) = %v, %v; want %v", c.dir, c.line, got, err, c.want)
 		}
 	}
 	joined := commandLines([]string{"\tcd frontend && \\", "\t  cat ../docs/reference/copy.md"})
-	if got := recipeReads(plantedTree(), ".", joined[0]); len(joined) != 1 || !slices.Equal(got, []string{"docs/reference/copy.md"}) {
+	if got, _, _, _ := shellLine(plantedTree(), ".", ".", joined[0]); len(joined) != 1 || !slices.Equal(got, []string{"docs/reference/copy.md"}) {
 		t.Errorf("a cd carried over a backslash continuation read %v from %q, want [docs/reference/copy.md]", got, joined)
 	}
 	if calls := makeCalls(".", "\tPHASE=1 make -k -C backend lint FE=1 && $(MAKE) fe-unit"); !slices.Equal(calls, []makeCall{{"backend", "lint"}, {".", "fe-unit"}}) {
 		t.Errorf("makeCalls read %v, want backend lint and fe-unit", calls)
+	}
+	if _, calls, _, _ := shellLine(plantedTree(), ".", ".", "\tcd frontend && $(MAKE) -C ../backend lint"); !slices.Equal(calls, []makeCall{{"backend", "lint"}}) {
+		t.Errorf("a make after cd read %v, want backend lint", calls)
+	}
+}
+
+func TestACdTheCensusCannotFollowFailsIt(t *testing.T) {
+	t.Parallel()
+	for _, line := range []string{
+		`cd "$GITHUB_WORKSPACE/frontend" && cat ../docs/reference/copy.md`,
+		`cd "frontend" && cat ../docs/reference/copy.md`,
+		"cd -P frontend",
+		"cd frontend src",
+		"cd ~",
+		"cd -",
+		"cd /tmp",
+		"cd fron*",
+		"cd fron?",
+		"cd fr[o]ntend",
+		"cd $DIR",
+		"cd `pwd`",
+		"pushd frontend",
+		"popd",
+		"(",
+	} {
+		if _, _, _, err := shellLine(plantedTree(), ".", ".", line); err == nil {
+			t.Errorf("shellLine read %q without a failure, want one", line)
+		}
+	}
+}
+
+// plantedDisk stands in for the repository a census loads an imported module from.
+func plantedDisk(files map[string]string) func(string) (string, error) {
+	return func(file string) (string, error) {
+		if source, ok := files[file]; ok {
+			return source, nil
+		}
+		return "", fmt.Errorf("%s is not on the planted disk", file)
+	}
+}
+
+func TestAnImportThatNamesNoTrackedModuleFailsTheCensus(t *testing.T) {
+	t.Parallel()
+	for _, specifier := range []string{"./lib", "./lib.cts", "../testing/missing.mjs", "./missing.queries", "./missing.fixtures", "./missing.md?raw"} {
+		source := "import { root } from \"" + specifier + "\";\n"
+		if _, err := newTSReader(plantedTree(), map[string]string{"frontend/src/a/r.test.ts": source}, nil); err == nil {
+			t.Errorf("an import of %q that names no tracked module passed, want a failure", specifier)
+		}
+	}
+	declared := map[string]string{
+		"frontend/src/a/r.test.ts":         `import type { Row } from "../testing/schema";`,
+		"frontend/src/testing/schema.d.ts": "export type Row = string;",
+	}
+	if _, err := newTSReader(plantedTree(), declared, nil); err != nil {
+		t.Errorf("an import of a declaration file failed: %v", err)
+	}
+	fixture := "const planted = 'import { root } from \"./lib\";';\n"
+	if _, err := newTSReader(plantedTree(), map[string]string{"frontend/src/a/r.test.ts": fixture}, nil); err != nil {
+		t.Errorf("import text inside a string failed the census: %v", err)
+	}
+}
+
+func TestAnImportTheCensusCannotLoadFailsIt(t *testing.T) {
+	t.Parallel()
+	reader := "frontend/src/a/r.test.ts"
+	source := `import { docsRoot } from "../testing/docs";
+readFileSync(join(docsRoot, "reference/copy.md"));`
+	_, err := newTSReader(plantedTree(), map[string]string{reader: source}, plantedDisk(nil))
+	if err == nil || !strings.Contains(err.Error(), "frontend/src/testing/docs.ts") {
+		t.Errorf("a module the census cannot load answered %v, want a failure naming frontend/src/testing/docs.ts", err)
+	}
+}
+
+func TestAConfigAScriptReadsIsReadInTurn(t *testing.T) {
+	t.Parallel()
+	disk := map[string]string{
+		"frontend/scripts/r.ts":         rootFromScripts + `readFileSync(join(repoRoot, "backend/internal/a/cases.json"));`,
+		"backend/internal/a/cases.json": `{"page": "../../../docs/reference/copy.md"}`,
+	}
+	queue := laneQueue{tree: plantedTree(), open: plantedDisk(disk), sources: map[string]string{}}
+	queue.enqueue(t, "frontend/scripts/r.ts")
+	ts, err := newTSReader(plantedTree(), map[string]string{}, plantedDisk(disk))
+	if err != nil {
+		t.Fatal(err)
+	}
+	census := laneCensus{byKind: map[readerKind]int{}}
+	queue.drain(t, ts, &census)
+	var reads []string
+	for _, read := range census.reads {
+		reads = append(reads, read.path)
+	}
+	slices.Sort(reads)
+	if want := []string{"backend/internal/a/cases.json", "docs/reference/copy.md"}; !slices.Equal(reads, want) {
+		t.Errorf("the planted script and its config read %v, want %v", reads, want)
+	}
+}
+
+func TestAnAbsentOptionalIncludeIsSkipped(t *testing.T) {
+	t.Parallel()
+	exists := func(file string) bool { return file == "backend/present.mk" }
+	files, err := makefileIncludes("backend", "-include present.mk absent.mk\n", exists)
+	if err != nil || !slices.Equal(files, []string{"backend/present.mk"}) {
+		t.Errorf("an optional include read %v, %v; want [backend/present.mk] and no error", files, err)
+	}
+	if _, err := makefileIncludes("backend", "include absent.mk\n", exists); err == nil {
+		t.Error("an absent required include passed, want a failure")
+	}
+	for _, body := range []string{"-include $(wildcard *.mk)\n", "-include local*.mk\n", "-include $(LOCAL_MK)\n", "-include local?.mk\n", "-include local[12].mk\n"} {
+		if _, err := makefileIncludes("backend", body, exists); err == nil {
+			t.Errorf("an optional include the census cannot spell out passed: %q", body)
+		}
 	}
 }
