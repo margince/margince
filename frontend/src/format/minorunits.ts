@@ -210,7 +210,17 @@ export function typedMinorUnits(
       refused: { key: "record.amountTooPrecise", params: { currency } },
     };
   }
-  return { refused: { key: "amount.refused.tooLarge", params: {} } };
+  // The bound is the largest minor-unit count a JSON number holds without
+  // rounding, written as the reader would type it back.
+  const largest = toMajorUnits(Number.MAX_SAFE_INTEGER, currency).toFixed(
+    digits,
+  );
+  return {
+    refused: {
+      key: "amount.refused.tooLarge",
+      params: { max: writtenDecimal(largest, locale) },
+    },
+  };
 }
 
 /**
