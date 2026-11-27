@@ -68,7 +68,7 @@ func TestTheContractReachesTheFrontendLane(t *testing.T) {
 			} `yaml:"steps"`
 		} `yaml:"jobs"`
 	}
-	if err := yaml.Unmarshal(raw, &workflow); err != nil {
+	if err := unmarshalYAML(raw, &workflow); err != nil {
 		t.Fatalf("parsing %s: %v", ciWorkflowForContractLane, err)
 	}
 
@@ -90,7 +90,7 @@ func TestTheContractReachesTheFrontendLane(t *testing.T) {
 	// that, and failing to read the file this test takes its obligation from is
 	// indistinguishable from the obligation being met.
 	var parsed map[string]yaml.Node
-	if err := yaml.Unmarshal([]byte(filters), &parsed); err != nil {
+	if err := unmarshalYAML([]byte(filters), &parsed); err != nil {
 		t.Fatalf("parsing the classifier's filters block: %v", err)
 	}
 	declared, isDeclared := parsed[theFrontendFilter]

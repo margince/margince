@@ -55,7 +55,7 @@ func TestEveryRelativeLinkUnderDocsResolves(t *testing.T) {
 	const docsRoot = "../docs"
 	// A pack's shipped documents are docs a reader follows links in too, so
 	// every extensions/<unit>/documents tree is walked beside docs/.
-	packDocs, globErr := filepath.Glob("../extensions/*/documents")
+	packDocs, globErr := gatekit.Glob("../extensions/*/documents")
 	if globErr != nil {
 		t.Fatalf("finding the packs' document trees: %v", globErr)
 	}

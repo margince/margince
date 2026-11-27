@@ -23,8 +23,6 @@ import (
 	"strings"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
@@ -48,7 +46,7 @@ var siblingScript = regexp.MustCompile(`\$\{?SCRIPT_DIR\}?/([\w.-]+)`)
 // releaseTests lists the release script tests in the tree, repository-relative.
 func releaseTests(t *testing.T) []string {
 	t.Helper()
-	paths, err := filepath.Glob(releaseTestGlob)
+	paths, err := gatekit.Glob(releaseTestGlob)
 	if err != nil {
 		t.Fatalf("listing %s: %v", releaseTestGlob, err)
 	}
@@ -124,7 +122,7 @@ func releaseLaneInputs(t *testing.T, lane filteredLane) []string {
 // releaseWorkflows lists the workflows whose text calls a release script.
 func releaseWorkflows(t *testing.T) []string {
 	t.Helper()
-	paths, err := filepath.Glob(workflowGlob)
+	paths, err := gatekit.Glob(workflowGlob)
 	if err != nil {
 		t.Fatalf("listing %s: %v", workflowGlob, err)
 	}
@@ -251,7 +249,7 @@ func TestEveryReleaseWorkflowTestsItsScriptsBeforeItCallsThem(t *testing.T) {
 		var parsed struct {
 			Jobs map[string]releaseJob `yaml:"jobs"`
 		}
-		if err := yaml.Unmarshal(body, &parsed); err != nil {
+		if err := unmarshalYAML(body, &parsed); err != nil {
 			t.Fatalf("parsing %s: %v", path, err)
 		}
 		untested, found := untestedReleaseJobs(parsed.Jobs)

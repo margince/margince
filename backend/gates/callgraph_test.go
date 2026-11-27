@@ -230,7 +230,7 @@ func includeBindingReads(entry *graphFunc, bindings map[string]map[string]bool) 
 // parsePackageFiles reads a package's product files once.
 func parsePackageFiles(t *testing.T, dir string) []*ast.File {
 	t.Helper()
-	sources, err := filepath.Glob(filepath.Join(dir, "*.go"))
+	sources, err := gatekit.Glob(filepath.Join(dir, "*.go"))
 	if err != nil {
 		t.Fatalf("listing %s: %v", dir, err)
 	}

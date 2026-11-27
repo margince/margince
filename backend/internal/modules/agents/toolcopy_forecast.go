@@ -29,9 +29,9 @@ var forecastReadingsCopy = toolCopy{
 	// contract's own phrasing and the payload carries five money fields, so a
 	// caller told a number has to guess which one is not a reading — and
 	// `weighted` is the one that goes unreported when it guesses.
-	Purpose: "Answer what a period is expected to close — `won`, `evidence` (Likely) and " +
-		"`open`, plus `weighted` — under the installation's own fiscal calendar and base " +
-		"currency. `landing` is where the period finishes: won plus the measure it names, or " +
+	Purpose: "Answer what a period is expected to close under the installation's own fiscal " +
+		"calendar and base currency: `won`, `evidence` (Likely) and `open`, plus `weighted`. " +
+		"`landing` is where the period finishes: won plus the measure it names, or " +
 		"the manager's call.",
 	Limits: "`won` counts deals by the day they ACTUALLY closed, not the day they were " +
 		"expected to. `evidence` is Likely: open deals at `likely_threshold` percent or more whose close date somebody confirmed, counted in full; a " +
@@ -43,13 +43,13 @@ var forecastReadingsCopy = toolCopy{
 	Instead: "run_report's forecast report and a hand-summed query_workspace also produce a " +
 		"number, and NEITHER is the forecast: only this applies the fiscal calendar, the base " +
 		"currency conversion and the weighting. These figures also cannot be cited in a " +
-		"composed document — for a board-pack section or anything a reader keeps, " +
+		"composed document. For a board-pack section or anything a reader keeps, use " +
 		"run_analytics_query with save and compose_analytics_report from the run id. Ask " +
 		"forecast_input_checks whether the inputs behind these numbers were read. `snapshots` " +
 		"lists this period's frozen states, newest first: the ids forecast_movement takes. " +
 		"Empty means nothing was frozen for this population, which includes managed teams.",
-	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number — a total placed " +
-		"in the reader's own zone is a different total — and `eligible_count`, `priced_count` " +
+	Retain: "Quote `as_of`, `timezone` and `base_currency` with the number (a total placed " +
+		"in the reader's own zone is a different total), and `eligible_count`, `priced_count` " +
 		"and `fx_missing_count` are the counts `coverage_note` is written from. A `_display` sits " +
 		"beside a `_minor` figure wherever its object names the unit: `base_currency`, or " +
 		"`current_call`'s own `currency`. Quote the `_display`, never the `_minor` integer.",
@@ -71,20 +71,20 @@ var forecastMovementCopy = toolCopy{
 		"Reading forecast_readings twice and subtracting is NOT the same answer and must not " +
 		"be reported as one: the difference between two reads is a number with no account of " +
 		"where it went.",
-	Retain: "`reopened_or_archived` carries a deal that left the population entirely — " +
-		"archived, or no longer visible to this caller — with its whole prior contribution, so " +
+	Retain: "`reopened_or_archived` carries a deal that left the population entirely " +
+		"(archived, or no longer visible to this caller) with its whole prior contribution, so " +
 		"no money disappears without a row that says where it went. Every `_minor` figure has a " +
 		"`_display` beside it in major units of `base_currency`. Quote the `_display`, never " +
 		"the `_minor` integer.",
 }
 
 var forecastInputChecksCopy = toolCopy{
-	Purpose: "Answer whether the forecast's inputs are sound enough to quote — a verdict, and " +
+	Purpose: "Answer whether the forecast's inputs are sound enough to quote: a verdict, and " +
 		"how much of the pipeline last night's check reached.",
 	Limits: "A forecast is only as good as its inputs, and the failures are mundane: a close " +
 		"date that went by, an amount that disagrees with the offer that was sent, a deal " +
 		"nobody has heard from in ninety days. `checks_incomplete` is NOT a worse " +
-		"`needs_review` — one says the pipeline has problems, the other says we could not " +
+		"`needs_review`: one says the pipeline has problems, the other says the check could not " +
 		"look, and reporting the first when the second is true tells somebody their pipeline " +
 		"is sound when nobody read the mailbox.",
 	Instead: "This is the VERDICT. list_input_checks is the findings themselves, one row per " +
@@ -92,7 +92,7 @@ var forecastInputChecksCopy = toolCopy{
 		"question and the one this cannot answer: whether the CONNECTORS were readable at " +
 		"all, which is what makes a clean verdict trustworthy rather than merely clean.",
 	Retain: "Read `readiness` before quoting any forecast figure. `sources` says why: each " +
-		"carries the state the run reached, and only a `checked` source has a date — an absent " +
+		"carries the state the run reached, and only a `checked` source has a date. An absent " +
 		"or unread source means the run could not confirm anything from it, which is different " +
 		"from finding nothing there. `eligible_deals` is how much there was to check.",
 }
@@ -102,10 +102,10 @@ var listInputChecksCopy = toolCopy{
 		"can be fixed.",
 	Limits: "A close date that went by, or an amount that disagrees with the offer that was " +
 		"sent, makes a total wrong without making the arithmetic wrong. Scoped to what this " +
-		"caller can open, with no count of what was withheld — a count of what somebody may " +
+		"caller can open, with no count of what was withheld, because a count of what somebody may " +
 		"not read is itself a statement about how much there is.",
-	Instead: "forecast_input_checks answers the VERDICT — whether the numbers are quotable at " +
-		"all — which is the question before this one and the cheaper call. data_coverage " +
+	Instead: "forecast_input_checks answers the VERDICT (whether the numbers are quotable at " +
+		"all), which is the question before this one and the cheaper call. data_coverage " +
 		"answers whether the sources were readable, which an empty list here cannot " +
 		"distinguish from a clean pipeline.",
 	Retain: "`affected_minor` absent means the money at stake cannot be said, not that " +
@@ -113,22 +113,22 @@ var listInputChecksCopy = toolCopy{
 }
 
 var dataCoverageCopy = toolCopy{
-	Purpose: "Answer how much of what is going on this workspace can actually SEE — which " +
+	Purpose: "Answer how much of what is going on this workspace can actually SEE: which " +
 		"connectors the nightly check could read, and how far back each reaches.",
-	Limits: "Needs the data_coverage grant, which operators hold and sellers do not — a " +
+	Limits: "Needs the data_coverage grant, which operators hold and sellers do not: a " +
 		"refusal here is a seat boundary, not a missing run. Only a `checked` source carries a " +
 		"date; on any other state nothing was read, and a quiet week is indistinguishable from " +
 		"a broken connector until somebody looks.",
 	Instead: "forecast_input_checks and list_input_checks answer what the check FOUND, and " +
-		"both are silent on whether it could look — a clean set of findings over sources " +
+		"both are silent on whether it could look: a clean set of findings over sources " +
 		"nobody opened reads as good news and is not. Ask this one when the question is " +
 		"whether to trust the other two.",
 }
 
 var readForecastCopy = toolCopy{
 	Purpose: "Read the forecast under the installation's fiscal calendar and base currency. " +
-		"readings: what a period is expected to close — `won`, `evidence` (Likely), `open` and " +
-		"`weighted` — and `snapshots`, the period's frozen states, newest first. movement: why " +
+		"readings: the `won`, `evidence` (Likely), `open` and `weighted` amounts a period is " +
+		"expected to close, and `snapshots`, the period's frozen states, newest first. movement: why " +
 		"the forecast changed between two snapshots, as named causes that sum to the whole " +
 		"difference. input_summary: whether the inputs are sound enough to quote, and how much " +
 		"of the pipeline last night's check reached. input_exceptions: the open input problems, " +

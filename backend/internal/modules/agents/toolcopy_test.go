@@ -18,15 +18,15 @@ func TestToolCopyRendersTheWrittenPartsInOrder(t *testing.T) {
 	full := toolCopy{
 		Purpose: "Does the thing.",
 		Limits:  "Not the other thing.",
-		Instead: "Use the neighbour for that.",
+		Instead: "Use the neighbor for that.",
 		Retain:  "Keep the id.",
 	}
-	want := "Does the thing. Not the other thing. Use the neighbour for that. Keep the id."
+	want := "Does the thing. Not the other thing. Use the neighbor for that. Keep the id."
 	if got := full.render(); got != want {
 		t.Errorf("render() = %q, want %q", got, want)
 	}
 
-	// A tool with no confusable neighbour and nothing to carry forward says so
+	// A tool with no confusable neighbor and nothing to carry forward says so
 	// by omission. The result must still be exactly its purpose: an entry that
 	// rendered as "Does the thing.   " would put trailing whitespace on the
 	// wire for every such tool.

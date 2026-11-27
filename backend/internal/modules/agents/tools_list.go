@@ -340,7 +340,7 @@ func refuseUnaskableOperand(filter listFilter, operand string) error {
 // that it has none rather than printing an empty list.
 func describeNames(filters []listFilter) string {
 	if len(filters) == 0 {
-		return "nothing — it can only be listed whole"
+		return "nothing; it can only be listed whole"
 	}
 	names := make([]string, 0, len(filters))
 	for _, filter := range filters {

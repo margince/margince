@@ -8,6 +8,8 @@ package gates
 // A record's source channel is spelled three times: provenance.RecordSources(),
 // the table's CHECK and the contract's enum. A value in Go and not in the CHECK
 // fails the write at run time; one in the contract and not in Go is refused 422.
+// enumsync_test.go compares each held table's CHECK with the list. This file
+// holds the trigger, the mapping function and the contract to it.
 
 import (
 	"bufio"
@@ -21,7 +23,7 @@ import (
 )
 
 // recordSourceHeld maps a table whose source is held to the list onto the
-// create request that carries it. A partner has no source on the wire.
+// create request that carries it.
 //
 // gatekit:fixture the held tables and the request each one's source arrives on
 var recordSourceHeld = map[string]string{
@@ -29,7 +31,6 @@ var recordSourceHeld = map[string]string{
 	"contact": "CreateContactRequest",
 	"deal":    "CreateDealRequest",
 	"offer":   "CreateOfferRequest",
-	"partner": "",
 	"project": "CreateProjectRequest",
 	"signal":  "CreateSignalRequest",
 }
@@ -115,18 +116,12 @@ func recordSourceFindings(vocabulary []string, checks, triggers, requests map[st
 	var findings []string
 	held := map[string]bool{}
 	for table, request := range recordSourceHeld {
-		check, ok := checks[table]
-		switch {
-		case !ok:
+		// A held table with no check means recordSourceLists stopped reading one.
+		if _, ok := checks[table]; !ok {
 			findings = append(findings, table+": no "+table+"_source_check in the head catalog")
-		case !equalSets(vocabulary, check):
-			findings = append(findings, table+": the CHECK allows "+strings.Join(check, ", "))
 		}
 		if trigger, ok := triggers[table]; ok && !equalSets(vocabulary, trigger) {
 			findings = append(findings, table+": the update trigger lists "+strings.Join(trigger, ", "))
-		}
-		if request == "" {
-			continue
 		}
 		held[request] = true
 		if !equalSets(vocabulary, requests[request]) {
@@ -191,9 +186,7 @@ func TestTheRecordSourceGateSeesEachWayTheListCanDrift(t *testing.T) {
 		checks, triggers, requests = map[string][]string{}, map[string][]string{}, map[string][]string{}
 		for table, request := range recordSourceHeld {
 			checks[table], triggers[table] = vocabulary, vocabulary
-			if request != "" {
-				requests[request] = vocabulary
-			}
+			requests[request] = vocabulary
 		}
 		for request := range recordSourceFree.Reasons() {
 			requests[request] = nil
@@ -205,8 +198,7 @@ func TestTheRecordSourceGateSeesEachWayTheListCanDrift(t *testing.T) {
 		t.Fatalf("an agreeing tree was reported: %v", findings)
 	}
 	for name, drift := range map[string]func(checks, triggers, requests map[string][]string){
-		"a check with one more value":     func(checks, _, _ map[string][]string) { checks["deal"] = []string{"api", "manual", "seed"} },
-		"a held table with no check":      func(checks, _, _ map[string][]string) { delete(checks, "partner") },
+		"a held table with no check":      func(checks, _, _ map[string][]string) { delete(checks, "company") },
 		"a trigger that is shorter":       func(_, triggers, _ map[string][]string) { triggers["offer"] = []string{"manual"} },
 		"a contract enum that is shorter": func(_, _, requests map[string][]string) { requests["CreateOfferRequest"] = []string{"manual"} },
 		"a held request with no enum":     func(_, _, requests map[string][]string) { requests["CreateProjectRequest"] = nil },

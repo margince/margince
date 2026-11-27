@@ -304,7 +304,7 @@ func markSynced(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
 	// The connection row is held for the same reason the invoice rows are: two
 	// sweeps finishing at once must not interleave their status writes and
 	// leave the row saying `error` after the later one succeeded.
-	if _, err := storekit.LockRow(ctx, tx, entityConnection, connectionID, storekit.LiveOnly); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, entityConnection, connectionID, storekit.NoArchiveColumn); err != nil {
 		return err
 	}
 	before, err := readConnectionState(ctx, tx, connectionID)
@@ -431,7 +431,7 @@ const failureRecordTimeout = 15 * time.Second
 // `last_success_at` is untouched here, which is the whole point of the state:
 // the reader keeps the date of the last figures they can trust.
 func markSyncFailed(ctx context.Context, tx pgx.Tx, connectionID ids.UUID) error {
-	if _, err := storekit.LockRow(ctx, tx, entityConnection, connectionID, storekit.LiveOnly); err != nil {
+	if _, err := storekit.LockRow(ctx, tx, entityConnection, connectionID, storekit.NoArchiveColumn); err != nil {
 		return err
 	}
 	before, err := readConnectionState(ctx, tx, connectionID)

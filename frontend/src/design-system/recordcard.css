@@ -40,14 +40,37 @@
   text-decoration: none;
 }
 
-a.record-card-open:hover .record-card-name {
+.record-card-open:hover .record-card-name {
   text-decoration: underline;
 }
 
-a.record-card-open:focus-visible {
+.record-card-open:focus-visible {
   outline: var(--focus-ring);
   outline-offset: 2px;
   border-radius: var(--r-sm);
+}
+
+/* A record with no page opens a panel, so its way in is a button that must read
+   exactly as the link beside its neighbours does. */
+button.record-card-open {
+  padding: 0;
+  border: 0;
+  background: none;
+  font: inherit;
+  cursor: pointer;
+}
+
+/* A faceless record's mark: its kind's icon on the avatar's disc and size. */
+.record-card-icon {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  flex: none;
+  width: 28px;
+  height: 28px;
+  border-radius: var(--r-full);
+  background: var(--groundHover);
+  color: var(--textSecondary);
 }
 
 .record-card-name {

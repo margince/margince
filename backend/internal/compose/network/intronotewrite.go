@@ -49,7 +49,7 @@ func writeIntroNote(
 	if lane == nil {
 		return wireIntroNote(floor, crmcontracts.WrittenByDeterministic, facts)
 	}
-	written, err := noteFromModel(ctx, lane, facts)
+	written, err := noteFromModel(ai.WithFloor(ctx), lane, facts)
 	if err != nil {
 		return wireIntroNote(floor, crmcontracts.WrittenByDeterministic, facts)
 	}

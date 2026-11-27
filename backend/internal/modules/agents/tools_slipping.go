@@ -113,7 +113,7 @@ type whatsSlippingThisWeek struct {
 
 func (t whatsSlippingThisWeek) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: "whats_slipping_this_week", Title: "What's slipping this week", Version: toolVersionV1,
+		Name: "whats_slipping_this_week", Title: "What is slipping this week", Version: toolVersionV1,
 		ProductMadeAnswer: true,
 		Description:       whatsSlippingCopy.render(),
 		Instead:           whatsSlippingCopy.Instead,

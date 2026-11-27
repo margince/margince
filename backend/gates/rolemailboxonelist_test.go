@@ -181,7 +181,7 @@ func roleMailboxListsIn(t *testing.T, roots ...string) []string {
 	scanned := 0
 	for _, root := range roots {
 		if _, err := os.Stat(root); err != nil {
-			continue
+			t.Fatalf("root %s is missing (%v): a root that moved narrows this census without a word", root, err)
 		}
 		for _, path := range goSourceFiles(t, root) {
 			if strings.Contains(filepath.ToSlash(path), roleMailboxOwner) {

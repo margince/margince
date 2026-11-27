@@ -250,7 +250,7 @@ func (e *UnservableBindingError) Unwrap() error { return e.Cause }
 // router's ai_call tracing (ai.NewRouter) — the deployment's
 // AI.CapturePayloads posture and the process logger, never a stand-in.
 func NewModelPath(ctx context.Context, cfg ai.RoutingConfig, pool *pgxpool.Pool, capturePayloads bool, log *slog.Logger) (ModelPath, error) {
-	meter, calls := ai.NewMeter(InstallationDB(pool)), ai.NewCallMeter(InstallationDB(pool)).WithLogger(log)
+	meter, calls := ai.NewMeter(InstallationDB(pool)).WithLogger(log), ai.NewCallMeter(InstallationDB(pool)).WithLogger(log)
 	// No binding yet still gets a Router; the watcher binds it when one is saved.
 	var router *ai.Router
 	if cfg.Unconfigured() {

@@ -88,7 +88,7 @@ func readQueueWorkflow(t *testing.T, path string) queueWorkflow {
 		t.Fatalf("reading %s: %v", path, err)
 	}
 	var wf queueWorkflow
-	if err := yaml.Unmarshal(raw, &wf); err != nil {
+	if err := unmarshalYAML(raw, &wf); err != nil {
 		t.Fatalf("%s: %v", path, err)
 	}
 	if len(wf.triggers()) == 0 {

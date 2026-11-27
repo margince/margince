@@ -74,7 +74,9 @@ it("renders the server focus even when the queue page contains different rows", 
     ),
   ).toEqual(rows.slice(1, 6).map((row) => row.title));
   expect(container.querySelectorAll(".brief-triage > li")).toHaveLength(6);
-  expect(container.querySelector(".brief-first-count")?.textContent).toBe("6");
+  expect(container.querySelector(".brief-first-count")?.textContent).toBe(
+    "6 of 9 shown",
+  );
 });
 
 it("opens a waiting card where it stands when it is pressed", async () => {

@@ -145,7 +145,7 @@ func validateRetentionAction(scope RetentionScope, action string) error {
 }
 
 // RetainDaysCeiling is a century, in days, mirrored by the frontend's
-// RETAIN_DAYS.max (gates/frontendretaindays_test.go).
+// RETAIN_DAYS.max (gates/frontendlimits_test.go).
 //
 // The selectors read a policy as `now() - make_interval(days => retain_days)`,
 // and Postgres answers "timestamp out of range" somewhere past two million
