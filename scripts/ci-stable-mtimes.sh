@@ -83,3 +83,7 @@ git ls-files -s -z | perl -0 -MDigest::SHA=sha1_hex -MTime::HiRes=utime -ne '
 		utime($time, $time, $path) or die "ci-stable-mtimes: $path: $!\n";
 	}
 '
+
+# The new times leave every index entry stat-dirty, and a blob-less clone's
+# git diff segfaults when it must refresh them all itself.
+if [ "$MODE" = stamp ]; then git update-index -q --refresh; fi

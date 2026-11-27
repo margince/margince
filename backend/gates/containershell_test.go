@@ -99,7 +99,7 @@ jobs:
         working-directory: .
 `
 	var wf containerWorkflow
-	if err := yaml.Unmarshal([]byte(workflow), &wf); err != nil {
+	if err := unmarshalYAML([]byte(workflow), &wf); err != nil {
 		t.Fatalf("parsing the planted workflow: %v", err)
 	}
 	want := map[string]string{"inherits": "bash", "replaces": "", "restates": "bash"}
