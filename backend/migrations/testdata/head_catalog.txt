@@ -10828,6 +10828,7 @@ public.standing_line.fingerprint text NOT NULL gen=- def=-
 public.standing_line.language text NOT NULL gen=- def=-
 public.standing_line.standing_line_cites_something CHECK ((cardinality(evidence) > 0))
 public.standing_line.standing_line_entity_type_check CHECK ((entity_type = ANY (ARRAY['contact'::text, 'company'::text, 'project'::text])))
+public.standing_line.standing_line_language_fkey FOREIGN KEY (language) REFERENCES language(code) ON UPDATE RESTRICT ON DELETE RESTRICT NOT VALID
 public.standing_line.standing_line_pkey PRIMARY KEY (entity_type, entity_id)
 public.standing_line.text text NOT NULL gen=- def=-
 public.standing_line.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.standing_line FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"text": 2000, "language": 20000, "entity_type": 20000, "fingerprint": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"entity_type":20000,"fingerprint":20000,"language":20000,"text":2000}')

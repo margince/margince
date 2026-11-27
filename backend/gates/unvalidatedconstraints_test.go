@@ -65,6 +65,7 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 		"precision data task fills in only the rows the noon repair's audit proves; the rest stay " +
 		"unknown on purpose, and the rule binds every row written since",
 	"confirm_token.confirm_token_question_locale_fkey":            unlistedLanguage,
+	"standing_line.standing_line_language_fkey":                   unlistedLanguage,
 	"activity.activity_language_fkey":                             largeTableLanguage,
 	"consent_text_version.consent_text_version_locale_fkey":       unlistedLanguage,
 	"legal_entity.legal_entity_default_language_fkey":             unlistedLanguage,

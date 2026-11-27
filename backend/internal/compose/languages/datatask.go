@@ -51,6 +51,9 @@ var columns = []column{
 	{table: "team_weekly_review", name: "summary_language", id: "id"},
 	{table: "legal_entity", name: "default_language", id: "id"},
 	{table: "offer", name: "language", id: "id"},
+	// A status line is keyed by the record it describes, so that record is
+	// what a reader is pointed to.
+	{table: "standing_line", name: "language", id: "entity_id"},
 	// A product's translations have no row id of their own, so the product is
 	// what a reader is pointed to.
 	{table: "product_translation", name: "language", id: "product_id"},
