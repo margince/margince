@@ -27,7 +27,7 @@ var readContextCopy = toolCopy{
 	Purpose: "Get the story so far. catch_up tells what has been happening on one contact, " +
 		"company, deal or project. meeting prepares for a meeting: who is coming, the open " +
 		"threads and what was promised. brief reads this morning's brief for the seat.",
-	Limits: "It reads and writes nothing. catch_up summarises the timeline; a field's current " +
+	Limits: "It reads and writes nothing. catch_up summarizes the timeline; a field's current " +
 		"value is read_record's. brief answers the brief already made, never a fresh one.",
 	Instead: "Use read_attention for what is at risk across the whole pipeline, and read_details " +
 		"for a company's dossier, growth fit, scan or brief.",

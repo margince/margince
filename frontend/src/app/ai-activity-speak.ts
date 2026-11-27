@@ -13,7 +13,12 @@ import type { components } from "../api/schema";
 import type { MessageKey } from "../i18n/en";
 import { ENTITY, isEntityKind } from "../lib/entity";
 import type { Route } from "../lib/router";
-import { ACTIVITY_LINE, type LineSet, NAMED_LINE } from "./ai-activity-lines";
+import {
+  ACTIVITY_LINE,
+  type LineSet,
+  NAMED_LINE,
+  SUBJECT_NAMED_LINE,
+} from "./ai-activity-lines";
 
 type ActivityKind = components["schemas"]["AiActivityItem"]["kind"];
 
@@ -93,7 +98,7 @@ export function speak(
   const name = item.subject_label ?? "";
   if (name !== "") {
     const named: Readonly<Partial<Record<string, MessageKey>>> =
-      NAMED_LINE[item.kind] ?? {};
+      namedLines(item.kind, item.subject_type ?? "") ?? {};
     const namedKey = named[item.state];
     if (namedKey !== undefined) {
       return aroundTheName(t(namedKey), name, subjectRoute(item));
@@ -102,6 +107,21 @@ export function speak(
   const byState: Readonly<Partial<Record<string, MessageKey>>> = entry;
   const key = byState[item.state];
   return key === undefined ? null : plain(t(key));
+}
+
+/**
+ * The named lines for a kind, by the subject's type where the kind says more
+ * than one thing. An own-key check, since the type is free text from the wire.
+ */
+function namedLines(
+  kind: ActivityKind,
+  subjectType: string,
+): LineSet | undefined {
+  const bySubject = SUBJECT_NAMED_LINE[kind];
+  if (bySubject !== undefined && Object.hasOwn(bySubject, subjectType)) {
+    return bySubject[subjectType];
+  }
+  return NAMED_LINE[kind];
 }
 
 /**

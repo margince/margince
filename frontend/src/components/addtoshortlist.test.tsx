@@ -8,6 +8,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 
+import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { en } from "../i18n/en";
 import { recordListsKey } from "../lib/activitykeys";
 import {
@@ -34,7 +35,10 @@ afterEach(() => {
 function action(client = storyQueryClient()) {
   return render(
     <StoryProviders client={client}>
-      <AddToShortlistAction entityType="company" entityId={MEMBER_ID} />
+      <ToastProvider>
+        <AddToShortlistAction entityType="company" entityId={MEMBER_ID} />
+        <ToastRegion />
+      </ToastProvider>
     </StoryProviders>,
   );
 }
@@ -120,7 +124,7 @@ describe("Add to Shortlist on a record page", () => {
     expect(await offeredShortlists(mayOnlyAdd)).toEqual([shortlist.name]);
   });
 
-  it("adds the record to the chosen Shortlist with its note", async () => {
+  it("adds the record to the chosen Shortlist with its note, and says so", async () => {
     const posted: unknown[] = [];
     installFetchStub({
       "GET /me": listsMe(true),
@@ -161,6 +165,9 @@ describe("Add to Shortlist on a record page", () => {
       entity_id: MEMBER_ID,
       note: "reference",
     });
+    expect(
+      await screen.findByText(`Added to “${shortlist.name}”`),
+    ).toBeInTheDocument();
   });
 });
 

@@ -87,6 +87,9 @@ func buildComposeWith(t *testing.T, body string) (string, bool) {
 
 func TestGeneratedRegistrationChecksTheArgsAndWorkerTypes(t *testing.T) {
 	t.Parallel()
+	// The control runs alone first: it fills the build cache, so the probes
+	// below recompile only internal/compose instead of each compiling its
+	// dependencies at once.
 	if out, ok := buildComposeWith(t, ""); !ok {
 		t.Fatalf("compose control does not build:\n%s", out)
 	}
@@ -98,19 +101,22 @@ func TestGeneratedRegistrationChecksTheArgsAndWorkerTypes(t *testing.T) {
 		{"undeclaredProbeArgs", "undeclaredProbeArgs", false},
 		{"VoiceBuildArgs", "SendEmailArgs", false},
 	} {
-		source := fmt.Sprintf(jobKindProbeSource, probe.args, probe.worker)
-		out, ok := buildComposeWith(t, source)
-		if ok != probe.accepted {
-			t.Errorf("args=%s worker=%s: accepted=%v:\n%s", probe.args, probe.worker, ok, out)
-		}
-		if !ok {
-			expected := "jobKindProbeWorker"
-			if probe.args == "undeclaredProbeArgs" {
-				expected = "does not satisfy declaredJobArgs[undeclaredProbeArgs]"
+		t.Run(probe.args+"_into_"+probe.worker, func(t *testing.T) {
+			t.Parallel()
+			source := fmt.Sprintf(jobKindProbeSource, probe.args, probe.worker)
+			out, ok := buildComposeWith(t, source)
+			if ok != probe.accepted {
+				t.Errorf("args=%s worker=%s: accepted=%v:\n%s", probe.args, probe.worker, ok, out)
 			}
-			if !strings.Contains(out, expected) {
-				t.Errorf("refused outside registration (%s): %s", expected, out)
+			if !ok {
+				expected := "jobKindProbeWorker"
+				if probe.args == "undeclaredProbeArgs" {
+					expected = "does not satisfy declaredJobArgs[undeclaredProbeArgs]"
+				}
+				if !strings.Contains(out, expected) {
+					t.Errorf("refused outside registration (%s): %s", expected, out)
+				}
 			}
-		}
+		})
 	}
 }

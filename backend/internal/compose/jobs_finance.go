@@ -155,7 +155,7 @@ func (w *financeSyncSweepWorker) providerFor(
 	err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT provider, id::text, created_at FROM finance_connection
-			 WHERE archived_at IS NULL AND status <> 'disconnected'
+			 WHERE status <> 'disconnected'
 			 ORDER BY created_at DESC
 			 LIMIT 1`).Scan(&name, &conn.ID, &conn.ConnectedAt)
 	})

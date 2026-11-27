@@ -334,3 +334,41 @@
   display: grid;
   gap: var(--space-3);
 }
+
+/* Two panels side by side under the chart; one alone takes the row, and below
+   the board's fold they stack. */
+.analytics-duo {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(min(100%, 20rem), 1fr));
+  gap: var(--gapCards);
+}
+.analytics-duo:empty,
+.analytics-sheet:empty {
+  display: none;
+}
+/* A half-width chart's foot: what it covers runs on its own line above the
+   table door and the records door, rather than in a column of stubs. */
+.analytics-board-main .analytics-duo .panel-foot:has(> .reporting-context) {
+  flex-wrap: wrap;
+  /* ds:ignore the wrapped foot's lines need a step between them */
+  row-gap: var(--space-2);
+}
+.analytics-duo .panel-foot > .reporting-context {
+  flex-basis: 100%;
+  order: -1;
+  row-gap: 0;
+}
+.analytics-duo .panel-foot > .btn {
+  margin-inline-start: auto;
+}
+
+/* At half width a head's reading moves under its title, and the details
+   trigger keeps the title's line at the far end. */
+.analytics-duo .panel-head-flat > .reporting-meta {
+  order: 1;
+  flex-basis: 100%;
+  text-align: start;
+}
+.analytics-duo .panel-head-flat > .reporting-details {
+  margin-inline-start: auto;
+}

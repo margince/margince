@@ -6,6 +6,7 @@ package gates
 import (
 	"go/ast"
 	"go/token"
+	"slices"
 	"strconv"
 	"strings"
 
@@ -26,6 +27,14 @@ type lineLockFlow struct {
 }
 
 func lineLocksOf(files []*ast.File) *lineLockFlow {
+	flow := unsettledLineFlow(files)
+	flow.settle()
+	return flow
+}
+
+// unsettledLineFlow reads every function and its exposure, without the fixed
+// point that traces values. A flow nobody asks origins of needs no more.
+func unsettledLineFlow(files []*ast.File) *lineLockFlow {
 	flow := &lineLockFlow{corpus: files, methods: map[string][]string{}, functions: map[string]*ast.FuncDecl{}, files: map[string]*ast.File{}, values: map[string]map[string]map[string]bool{}, constants: stringConstants(files), locals: map[string]map[string]bool{}, external: map[string]bool{}, texts: map[ast.Expr]string{}}
 	for _, file := range files {
 		functions, literals := lineFunctions(file)
@@ -45,15 +54,51 @@ func lineLocksOf(files []*ast.File) *lineLockFlow {
 			}
 		}
 	}
-	for flow.changed = true; flow.changed; {
-		flow.changed = false
-		for name, fn := range flow.functions {
-			flow.readFunction(name, fn)
+	return flow
+}
+
+// settle runs the fixed point that traces each value to its tables. It drops
+// the text memo after, so a built flow is never written and readers may share it.
+func (f *lineLockFlow) settle() {
+	for f.changed = true; f.changed; {
+		f.changed = false
+		for name, fn := range f.functions {
+			f.readFunction(name, fn)
 		}
 	}
-	// Dropped, so a built flow is never written and readers may share it.
-	flow.texts = nil
-	return flow
+	f.texts = nil
+}
+
+// linePatchMethods are the storekit patch primitives whose table argument a
+// flow traces. Only a call to one reads the values settle computes.
+var linePatchMethods = []string{"ApplyLocked", "ApplyWithVersion", "ApplyGuarded", "ApplyGuardedIn"}
+
+func patchMethod(call *ast.CallExpr) (string, bool) {
+	method, ok := call.Fun.(*ast.SelectorExpr)
+	if !ok || len(call.Args) < 3 || !slices.Contains(linePatchMethods, method.Sel.Name) {
+		return "", false
+	}
+	return method.Sel.Name, true
+}
+
+// callsAPatch reports whether any call in files reaches a patch primitive, the
+// only place outside the deals package that reads a settled flow.
+func callsAPatch(files []*ast.File) bool {
+	for _, file := range files {
+		found := false
+		ast.Inspect(file, func(node ast.Node) bool {
+			if call, ok := node.(*ast.CallExpr); ok {
+				if _, patch := patchMethod(call); patch {
+					found = true
+				}
+			}
+			return !found
+		})
+		if found {
+			return true
+		}
+	}
+	return false
 }
 
 // text is exprText, held per node while the fixed point runs, because that reads
@@ -224,21 +269,15 @@ func (f *lineLockFlow) readFunction(name string, fn *ast.FuncDecl) {
 }
 
 func (f *lineLockFlow) patchTables(name string, call *ast.CallExpr) (map[string]bool, bool) {
-	method, ok := call.Fun.(*ast.SelectorExpr)
-	if !ok || len(call.Args) < 3 {
+	method, ok := patchMethod(call)
+	if !ok {
 		return nil, false
 	}
-	switch method.Sel.Name {
-	case "ApplyLocked":
-		return f.origins(name, call.Args[2], 0), true
-	case "ApplyWithVersion", "ApplyGuarded", "ApplyGuardedIn":
-		tables := f.origins(name, call.Args[2], 0)
-		if len(tables) == 0 {
-			tables = map[string]bool{"?": true}
-		}
-		return tables, true
+	tables := f.origins(name, call.Args[2], 0)
+	if method != "ApplyLocked" && len(tables) == 0 {
+		tables = map[string]bool{"?": true}
 	}
-	return nil, false
+	return tables, true
 }
 
 type linePatchSite struct {
@@ -264,11 +303,8 @@ func (f *lineLockFlow) dealPatchSites(table string) []linePatchSite {
 		})
 		ast.Inspect(fn.Body, func(node ast.Node) bool {
 			selector, ok := node.(*ast.SelectorExpr)
-			if ok && !called[selector] {
-				switch selector.Sel.Name {
-				case "ApplyLocked", "ApplyGuarded", "ApplyGuardedIn", "ApplyWithVersion":
-					found = append(found, linePatchSite{name, &ast.CallExpr{Fun: selector}, map[string]bool{"?": true}})
-				}
+			if ok && !called[selector] && slices.Contains(linePatchMethods, selector.Sel.Name) {
+				found = append(found, linePatchSite{name, &ast.CallExpr{Fun: selector}, map[string]bool{"?": true}})
 			}
 			return true
 		})

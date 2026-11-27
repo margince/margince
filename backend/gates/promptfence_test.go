@@ -29,6 +29,7 @@ import (
 	"os"
 	"path/filepath"
 	"regexp"
+	"slices"
 	"sort"
 	"strings"
 	"testing"
@@ -53,6 +54,19 @@ var boundaryClaim = regexp.MustCompile(`never instructions|not instructions|neve
 // so only this package's constructors count. An earlier spelling also accepted a
 // bare ".Rule(", which any unrelated method of that name satisfies — the matcher
 // has to prove a fence exists, not that some identifier looked familiar.
+// boundaryClaimWords holds the longest space-free word of each phrase
+// boundaryClaim spells, so reflowed whitespace between words cannot hide a claim.
+var boundaryClaimWords = longestTokens(requiredWords(boundaryClaim))
+
+func longestTokens(phrases []string) []string {
+	tokens := make([]string, 0, len(phrases))
+	for _, phrase := range phrases {
+		fields := strings.Fields(phrase)
+		tokens = append(tokens, slices.MaxFunc(fields, func(a, b string) int { return len(a) - len(b) }))
+	}
+	return tokens
+}
+
 var buildsAFence = regexp.MustCompile(`promptfence\.(New|FromMarker)\(`)
 
 // claimWithoutFence names the files allowed to promise a boundary without
@@ -82,8 +96,10 @@ func sourceWithoutComments(t *testing.T, path string) string {
 	return out.String()
 }
 
-// goFilesUnderTree yields every non-test Go file in the tree, with its code.
-func goFilesUnderTree(t *testing.T, visit func(path, code string)) {
+// goFilesUnderTree yields every non-test Go file in the tree whose source holds
+// one of needles, with its code. Dropping comments only removes text, so a file
+// without a needle cannot hold one after the strip either.
+func goFilesUnderTree(t *testing.T, needles []string, visit func(path, code string)) {
 	t.Helper()
 	err := gatekit.WalkDir(".", func(path string, d fs.DirEntry, err error) error {
 		if err != nil {
@@ -93,6 +109,13 @@ func goFilesUnderTree(t *testing.T, visit func(path, code string)) {
 		// fixed fence are fixtures now, and a test that could not write one could
 		// not prove the boundary holds.
 		if d.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
+			return nil
+		}
+		raw, err := gatekit.ReadFile(path)
+		if err != nil {
+			return err
+		}
+		if !slices.ContainsFunc(needles, func(needle string) bool { return bytes.Contains(raw, []byte(needle)) }) {
 			return nil
 		}
 		visit(filepath.ToSlash(path), sourceWithoutComments(t, path))
@@ -106,7 +129,7 @@ func goFilesUnderTree(t *testing.T, visit func(path, code string)) {
 func TestNoPromptDeclaresAFixedDataBoundary(t *testing.T) {
 	t.Parallel()
 	var offenders []string
-	goFilesUnderTree(t, func(path, body string) {
+	goFilesUnderTree(t, []string{fixedBoundaryMarker}, func(path, body string) {
 		if strings.HasPrefix(path, promptfencePackage) {
 			return
 		}
@@ -143,9 +166,12 @@ func TestNoPromptDeclaresAFixedDataBoundary(t *testing.T) {
 // case like that states itself rather than being admitted silently.
 func TestEveryPromptThatPromisesADataBoundaryBuildsOne(t *testing.T) {
 	t.Parallel()
+	// The waivers are asked only about an unfenced claim, so an entry whose
+	// file now builds its fence, or no longer claims, is reported stale.
+	defer claimWithoutFence.AssertAllMatched(t)
 	var offenders []string
 	claimants := 0
-	goFilesUnderTree(t, func(path, body string) {
+	goFilesUnderTree(t, boundaryClaimWords, func(path, body string) {
 		if strings.HasPrefix(path, promptfencePackage) {
 			return
 		}
@@ -181,21 +207,6 @@ func TestEveryPromptThatPromisesADataBoundaryBuildsOne(t *testing.T) {
 		t.Errorf("these prompts tell a model that some region is data rather than instructions, without minting the boundary that makes it true anywhere on their own call chain — fence the region with promptfence and let Fence.Rule write the sentence:\n  %s",
 			strings.Join(offenders, "\n  "))
 	}
-}
-
-// An entry naming a file that no longer claims a data boundary reads stale
-// here: this is the sweep that reaches every non-test Go file with no further
-// filter, so it is the one that owns AssertAllMatched. It holds that each entry
-// still names a claim, not that the claim still needs waiving — a file that now
-// mints its fence as well still matches, and stays matched.
-func TestEveryBoundaryClaimWaiverIsStillReachable(t *testing.T) {
-	t.Parallel()
-	defer claimWithoutFence.AssertAllMatched(t)
-	goFilesUnderTree(t, func(path, body string) {
-		if boundaryClaim.MatchString(body) {
-			claimWithoutFence.Waived(t, path)
-		}
-	})
 }
 
 // claimantsIn counts the functions in one file that make the boundary claim, and

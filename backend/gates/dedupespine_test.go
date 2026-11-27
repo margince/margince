@@ -99,7 +99,7 @@ func TestEveryIdentityInsertGoesThroughTheChokepoint(t *testing.T) {
 // caller's row scope (FindLeadByLinkedInURL): showing someone the record they
 // are allowed to see is a different question from deciding whether a key is
 // free, and the two correctly have different queries.
-var leadClaimCheckSQL = regexp.MustCompile(`(?is)SELECT\s+id\s+FROM\s+lead\s+WHERE\s+(email|linkedin_url)`)
+var leadClaimCheckSQL = regexp.MustCompile(`(?is)SELECT\s+(?:\w+\.)?id\s+FROM\s+lead(?:\s+(?:AS\s+)?\w+)?\s+WHERE\s+(?:lower\(\s*)?(?:\w+\.)?(email|linkedin_url)\b`)
 
 // TestLeadIdentityProbesAreSingleSourced keeps the two lead write shapes asking
 // ONE question. They answer a claimed identity differently on purpose — the
@@ -107,6 +107,22 @@ var leadClaimCheckSQL = regexp.MustCompile(`(?is)SELECT\s+id\s+FROM\s+lead\s+WHE
 // probe they drifted: the LinkedIn key had a probe written for it that nothing
 // ever called, so two imports of one contact under different addresses both
 // landed.
+func TestTheLeadProbeCensusRecognisesACopy(t *testing.T) {
+	t.Parallel()
+	for _, copied := range []string{
+		"SELECT id FROM lead WHERE email = $1",
+		"select l.id from lead l where l.linkedin_url = any($1)",
+		"SELECT id FROM lead AS l WHERE lower(l.email) = lower($1)",
+	} {
+		if !leadClaimCheckSQL.MatchString(copied) {
+			t.Errorf("a hand-written claim probe passes unseen: %q", copied)
+		}
+	}
+	if leadClaimCheckSQL.MatchString("SELECT id FROM lead WHERE id = $1") {
+		t.Error("a read of a lead by id is not a claim probe, and the census calls it one")
+	}
+}
+
 func TestLeadIdentityProbesAreSingleSourced(t *testing.T) {
 	t.Parallel()
 	const home = "internal/platform/database/storekit/leadidentity.go"

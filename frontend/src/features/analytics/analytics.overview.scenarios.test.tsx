@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { stable } from "../../format/collate";
 import { forgetSeat } from "../../lib/storage";
+import { openViewStep } from "../../testing/listview.testkit";
 import { reportingFixtureFrames } from "../../testing/reporting.fixtures";
 import { backlogFindings } from "./analytics.overview.scenariodata";
 import {
@@ -371,11 +372,9 @@ const SIGNATURES: Readonly<
   twoPipelines: {
     sales: async () => {
       const user = userEvent.setup({ delay: null });
-      await user.click(screen.getByRole("button", { name: "Filters" }));
-      await user.click(screen.getByRole("combobox", { name: "Pipeline" }));
-      const listbox = await screen.findByRole("listbox");
+      const choices = await openViewStep(user, "Pipeline");
       expect(
-        within(listbox).getByRole("option", { name: "Renewals" }),
+        within(choices).getByRole("radio", { name: "Renewals" }),
       ).toBeVisible();
     },
   },
