@@ -13,6 +13,7 @@ package contacts
 import (
 	"context"
 	"errors"
+	"slices"
 
 	"github.com/jackc/pgx/v5"
 
@@ -54,6 +55,11 @@ func (s *Store) activeColumnsIn(ctx context.Context, tx pgx.Tx, object string) (
 // The zero value is the honest empty answer: core columns only.
 type CustomColumns struct {
 	cols []fieldcatalog.Column
+}
+
+// Has reports whether name is an active custom column.
+func (c CustomColumns) Has(name string) bool {
+	return slices.ContainsFunc(c.cols, func(col fieldcatalog.Column) bool { return col.Name == name })
 }
 
 // ActiveContactColumns is the caller-side half of GetContactTx. A caller that

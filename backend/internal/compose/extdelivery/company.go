@@ -48,6 +48,11 @@ func (d CompanyDoor) SetCustomFields(ctx context.Context, id string, values map[
 	if err != nil {
 		return nil, d.Refuse(err)
 	}
+	for key := range values {
+		if !cols.Has(key) {
+			return nil, fmt.Errorf("%w: %q is not an active custom field", extension.ErrInvalid, key)
+		}
+	}
 	current, err := d.Store.GetCompanyTx(ctx, d.Tx, companyID, storekit.LiveOnly, cols)
 	if err != nil {
 		return nil, d.Refuse(err)
