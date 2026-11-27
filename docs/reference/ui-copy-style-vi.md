@@ -123,7 +123,9 @@ của bạn" or no pronoun, never chúng ta or chúng tôi.
 
 - **Tone marks kiểu cũ**: on the first vowel of an open oa, oe or uy (hòa, xóa, khóa, tùy, hủy, khỏe). Before
   a final consonant it goes on the second, in both styles (hoàn, khuyên). "quý" and "quỹ" are qu and y.
-- **NFC only**: an NFD value looks identical and breaks search and length.
+- **NFC only**: an NFD value looks identical and breaks search and length. Go copy is stricter and holds no combining mark at all, because
+  every Vietnamese letter has a precomposed form. The Go style check holds this as `vi.combining-mark` (variation selectors aside), and
+  `backend/gates/stringliteralnfc_test.go` holds every shipped literal to full NFC.
 - **Sentence case**: a capital on the first word and on proper nouns only, never "Cài Đặt Tài Khoản". A named
   screen keeps its nav capital mid-sentence ("trong Cài đặt"). deal, lead and pipeline are lowercase
   mid-sentence.
@@ -387,14 +389,12 @@ surface. Nor do they see the register (Không thể, bị, a status line led by 
 and edge spaces against the English, sentence case, hand-formatted numbers, length, or the plain words of the Never
 column. Those are the author's and the reviewer's judgement.
 
-In Go, `langcopytest.Census` holds the Vietnamese of every `langcopy.Phrase` table, and `VietnameseText` a table of
-another shape. They hold tone marks, NFC, quotes, no dashes, no !, no "nhé", "nha" or "ạ", the three Never rows, formal
-and outsider address and retired vocabulary. The retired words and the patterns of `copy-style-vi.census.ts` come from a
-snapshot a test holds to both; formal address is a hand port pinned to its census pattern. A table is member copy unless
-its test names another register with a reason. Agent allows tôi. Outsider allows quý khách and vui lòng and fails bạn.
-Controller also allows chúng tôi. Own voice keeps only tone marks, NFC, quotes, dashes and !, and Verbatim none.
-`langcopytest/stylebaseline.txt` lists the findings to rewrite and only shrinks: `make style-baseline-shrinks` fails a
-line its copy at the merge base with `main` lacks, a swap included. `wantStyleWaivers` and `wantStyleDigest` pin its count
-and SHA-256, and the [recut](ui-copy-style.md#copy-the-server-writes) only drops passing or gone lines. Not reached: a member's own draft (`draftfloor`, intro
-notes), the demo mail of `capture/offlinedemo`, the word lists of `draftcheck`, `salutation` and `searchplan`, text
-returned from a `switch`, and strings outside a table: problem details, `crm.yaml` and MCP tool copy (#13561, #13562).
+In Go, `langcopytest.Census` holds the Vietnamese of every `langcopy.Phrase` table, and `VietnameseText` a table of another shape. They hold tone marks, no combining
+mark, quotes, no dashes, no !, no "nhé", "nha" or "ạ", the three Never rows, formal and outsider address and retired vocabulary. The retired words and the patterns
+of `copy-style-vi.census.ts` come from a snapshot a test holds to both; formal address is a hand port pinned to its census pattern. A table is member copy unless its
+test names another register with a reason. Agent allows tôi. Outsider allows quý khách and vui lòng and fails bạn. Controller also allows chúng tôi. Own voice keeps
+only tone marks, NFC, quotes, dashes and !, and Verbatim none. `langcopytest/stylebaseline.txt` lists the findings to rewrite and only shrinks:
+`make style-baseline-shrinks` fails a line its copy at the merge base with `main` lacks, a swap included. `wantStyleWaivers` and `wantStyleDigest` pin its count and
+SHA-256, and the [recut](ui-copy-style.md#copy-the-server-writes) only drops passing or gone lines. Not reached: a member's own draft (`draftfloor`, intro notes),
+the demo mail of `capture/offlinedemo`, the word lists of `draftcheck`, `salutation` and `searchplan`, text returned from a `switch`, and strings outside a table:
+problem details, `crm.yaml` and MCP tool copy (#13561, #13562).
