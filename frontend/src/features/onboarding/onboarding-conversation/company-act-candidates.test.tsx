@@ -103,7 +103,7 @@ function renderClarify(): void {
     {
       [`GET /company/site-reads/${READ_ID}`]: () => jsonResponse(READ),
       "GET /onboarding/company/proposal": () =>
-        jsonResponse({ title: "not ready", code: "not_found" }, 404),
+        new Response(null, { status: 204 }),
     },
     {},
   );

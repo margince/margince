@@ -77,13 +77,12 @@ const OPENS_BUT_CANNOT_EDIT = planner(["read", "create"]);
 
 describe("the week ahead", () => {
   // The rep has not planned yet. A read that created a plan would put an empty
-  // week in everyone's history the first time they opened the page, so the
-  // server answers 404 and the panel offers rather than assumes.
+  // week in everyone's history on first open. So the server answers 204 and
+  // the panel offers a plan.
   it("offers to open a plan when there is none, and opening one is the only write", async () => {
     const calls = stubApi({
       ...KEEPS_A_PLAN,
-      "GET /weekly-plans/current": () =>
-        jsonResponse({ title: "Not Found" }, 404),
+      "GET /weekly-plans/current": () => new Response(null, { status: 204 }),
       "POST /weekly-plans/current": () =>
         jsonResponse(plan({ commitments: [] })),
     });
@@ -379,8 +378,7 @@ describe("the week ahead", () => {
   it("offers a seat that may not plan no way to start one, and says why", async () => {
     const calls = stubApi({
       ...READS_ONLY,
-      "GET /weekly-plans/current": () =>
-        jsonResponse({ title: "Not Found" }, 404),
+      "GET /weekly-plans/current": () => new Response(null, { status: 204 }),
     });
     render(<PlanSection />);
 
@@ -464,8 +462,7 @@ describe("the week ahead", () => {
   it("says so to a seat that may edit a week but not open one", async () => {
     stubApi({
       ...planner(["read", "update"]),
-      "GET /weekly-plans/current": () =>
-        jsonResponse({ title: "Not Found" }, 404),
+      "GET /weekly-plans/current": () => new Response(null, { status: 204 }),
     });
     render(<PlanSection />);
 

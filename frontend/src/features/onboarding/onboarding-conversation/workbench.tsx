@@ -106,8 +106,8 @@ function useSetupRuntime(shown: boolean): AiRunSummary | undefined {
               { params: { path: { readId } } },
             );
             if (error) {
-              // A read the server no longer serves costs the band its figure,
-              // not the screen: the chip says it has nothing, nothing throws.
+              // absent-404: a read the server no longer serves costs the band
+              // its figure, not the screen; the chip says it has nothing.
               if (response.status === 404) {
                 return null;
               }
