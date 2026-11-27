@@ -18,6 +18,7 @@ import (
 	"encoding/json"
 	"errors"
 	"fmt"
+	"log/slog"
 
 	"github.com/jackc/pgx/v5"
 
@@ -214,6 +215,11 @@ func portRefusal(err error) error {
 	if _, ok := errors.AsType[apperrors.FieldFault](err); ok {
 		return extension.ErrInvalid
 	}
+	// A write that refuses several keys at once, such as the custom fields of
+	// a record, carries the plural form of the same refusal.
+	if _, ok := errors.AsType[apperrors.FieldFaults](err); ok {
+		return extension.ErrInvalid
+	}
 	// A list's own refusals (an unknown custom field, a bad sort or cursor) are
 	// not FieldFaults, and each is the caller's mistake.
 	if _, ok := errors.AsType[*storekit.PredicateError](err); ok {
@@ -230,7 +236,8 @@ func portRefusal(err error) error {
 	}
 	// A fault with no class is the core's own — a broken connection, a
 	// constraint nobody mapped. The unit is told the write failed and nothing
-	// about how; the detail belongs in the core's logs, where it is already.
+	// about how; the detail goes to the core's log, so an operator can find it.
+	slog.Warn("extension core: a refusal with no published class", "error", err)
 	return errCoreRefused
 }
 

@@ -146,8 +146,10 @@ func (s *systemReadEnv) onDelivery(t *testing.T, fn func(context.Context, extens
 	sub := ComposedSubscription{Unit: "dealmirror", Version: "1.0.0", Sub: extension.Subscription{
 		Name: "mirror", Events: []string{string(crmcontracts.DealUpdated)},
 		Handle: func(ctx context.Context, rt extension.Runtime, d extension.Delivery) error {
-			if rt.Caller() != (extension.Caller{}) {
-				return fmt.Errorf("the delivery runs as %+v, want nobody", rt.Caller())
+			// The fixture's unit may hold a service member, and then the delivery
+			// names it. The system reads below stay unattended either way.
+			if caller := rt.Caller(); caller.Type != extension.CallerSystem && caller.Type != extension.CallerHuman {
+				return fmt.Errorf("the delivery runs as %+v, want nobody or the service member", caller)
 			}
 			return fn(ctx, rt)
 		},

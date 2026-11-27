@@ -14,6 +14,7 @@ import (
 	openapi_types "github.com/oapi-codegen/runtime/types"
 
 	"github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
@@ -58,6 +59,9 @@ func TestThePortMapsRefusalsAndLeaksNoDetail(t *testing.T) {
 		"conflict":          {apperrors.ErrConflict, extension.ErrConflict},
 		"a field the contract refuses": {
 			&activityFieldFault{}, extension.ErrInvalid,
+		},
+		"several custom fields refused": {
+			storekit.CustomFieldErrors{{Field: "cf_a", Code: storekit.CustomFieldUnknown, Message: "no"}}, extension.ErrInvalid,
 		},
 	} {
 		t.Run(name, func(t *testing.T) {
