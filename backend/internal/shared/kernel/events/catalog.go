@@ -186,12 +186,9 @@ var catalog = map[string]struct {
 	"lead.merged":       {leadStreamEntity, 1},
 	"lead.sla_breached": {leadStreamEntity, 1},
 	"lead.disqualified": {leadStreamEntity, 1},
-	// The two lead vocabularies, on the lead stream because their entries are
-	// values every lead carries: a subscriber that groups by source or reports
-	// on why leads were disqualified has to re-read the catalog when one
-	// changes. A change to the workspace's own configuration is a fact a
-	// subscriber needs, which is the reason pipeline.created is published too.
-	"lead_source.changed":            {leadStreamEntity, 1},
+	// The disqualification reasons ride the lead stream, because a disqualified
+	// lead carries one. A subscriber reporting on them re-reads the catalog on
+	// a change, as pipeline.created serves for pipelines.
 	"lead_disqualify_reason.changed": {leadStreamEntity, 1},
 
 	// A list groups customer records of one type, so its lifecycle and its
