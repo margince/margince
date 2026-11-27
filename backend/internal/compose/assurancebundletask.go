@@ -89,7 +89,7 @@ func mintBundleTask(
 	in := activities.LogActivityInput{
 		DueAt:        dueAt,
 		Kind:         activityKindTask,
-		Source:       systemActor,
+		Source:       provenance.RecordSourceAutomation,
 		SourceSystem: &bundleTaskSource,
 		SourceID:     &sourceID,
 		// system_remediation, and the whole feature depends on it.

@@ -133,13 +133,13 @@ func (s *Store) AlignSystemTaskAssigneeToLead(ctx context.Context, leadID ids.Le
 		rows, err := tx.Query(ctx, `
 			SELECT a.id, a.version FROM activity a
 			JOIN activity_link l ON l.activity_id = a.id
-			WHERE l.lead_id = $1 AND a.kind = $2 AND a.source = $3
+			WHERE l.lead_id = $1 AND a.kind = $2 AND `+systemWorkSQL("a", "$3")+`
 			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
 			  AND a.is_done = false AND a.archived_at IS NULL
 			  AND a.assignee_id IS DISTINCT FROM $6
 			  AND NOT `+provenance.WebsiteInquiryTaskSQL("a")+`
 			ORDER BY a.id`,
-			leadID, string(crmcontracts.ActivityKindTask), systemSource,
+			leadID, string(crmcontracts.ActivityKindTask), systemTaskSources,
 			systemCapturedBy, systemCapturedByPattern, owner)
 		if err != nil {
 			return err
@@ -289,10 +289,10 @@ func (s *Store) FollowSystemTaskOwner(
 	err := s.tx(ctx, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT a.version, a.assignee_id FROM activity a
-			WHERE a.id = $1 AND a.kind = $2 AND a.source = $3
+			WHERE a.id = $1 AND a.kind = $2 AND `+systemWorkSQL("a", "$3")+`
 			  AND (a.captured_by = $4 OR a.captured_by LIKE $5)
 			  AND a.is_done = false AND a.archived_at IS NULL`,
-			id, string(crmcontracts.ActivityKindTask), systemSource,
+			id, string(crmcontracts.ActivityKindTask), systemTaskSources,
 			systemCapturedBy, systemCapturedByPattern).Scan(&version, &assignee)
 	})
 	if errors.Is(err, pgx.ErrNoRows) {
