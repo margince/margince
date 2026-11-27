@@ -113,6 +113,33 @@ class EvidenceTest(unittest.TestCase):
         evidence = calllog.evidence(calls)
         self.assertLessEqual(evidence.count("x"), calllog.EVIDENCE_TOTAL)
         self.assertIn("[read_record -> ok]\n" + "x" * calllog.EVIDENCE_PER_CALL + "\n", evidence)
+        self.assertTrue(evidence.startswith("[4 earlier calls are not shown;"))
+
+    def test_a_write_after_many_reads_is_shown(self):
+        reads = [{"tool": "find_records", "outcome": "ok", "answer": "r" * calllog.EVIDENCE_PER_CALL}] * 12
+        write = {"tool": "change_activities", "action": "attach", "outcome": "ok", "answer": '{"data":{"id":"a1"}}'}
+        check_back = {"tool": "list_documents", "outcome": "ok", "answer": '{"data":{"documents":[{"id":"a1"}]}}'}
+        evidence = calllog.evidence(reads + [write, check_back])
+        self.assertIn('[change_activities attach -> ok]\n{"data":{"id":"a1"}}', evidence)
+        self.assertTrue(evidence.endswith('[list_documents -> ok]\n{"data":{"documents":[{"id":"a1"}]}}'))
+        self.assertLess(evidence.index("[find_records"), evidence.index("[change_activities"))
+
+    def test_the_envelope_is_dropped_and_a_real_warning_kept(self):
+        answer = json.dumps({
+            "schema_version": "1.0.0", "trace_id": "t", "freshness": {"authoritative": True}, "trust": "t2",
+            "warnings": [{"code": "untrusted_content", "message": "stock"}, {"code": "truncated", "message": "more"}],
+            "data": {"id": "a1"},
+        })
+        shown = calllog.compact(answer)
+        for gone in ("schema_version", "trace_id", "freshness", "untrusted_content"):
+            self.assertNotIn(gone, shown)
+        self.assertIn('"truncated"', shown)
+        self.assertIn('"data":{"id":"a1"}', shown)
+        self.assertNotIn("warnings", calllog.compact('{"warnings":[{"code":"untrusted_content"}],"data":1}'))
+
+    def test_an_answer_that_is_not_a_json_object_is_kept_as_sent(self):
+        for answer in (PREVIEW, "[1, 2]", ""):
+            self.assertEqual(calllog.compact(answer), answer)
 
     def test_a_routed_call_names_its_action(self):
         evidence = calllog.evidence([{"tool": "change_activities", "action": "relink", "outcome": "tool_error",

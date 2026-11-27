@@ -28,7 +28,7 @@ import { ActivityBodyField } from "./activitybodyfield";
 import { useActivityGate } from "./activitygate";
 import { TaskAssigneeField } from "./assigneepicker";
 import { LogActivityEntries } from "./extensionentries";
-import { dueBoundsOf, latestDayOf } from "./logactivity.days";
+import { dueBoundsOf, earliestDayOf, latestDayOf } from "./logactivity.days";
 import { ActivityKindField } from "./logactivity.kindfield";
 import {
   completeLoggedTask,
@@ -314,6 +314,7 @@ export function LogActivityForm({
               {...control}
               value={isoOrBlank(draft.day)}
               // Match occurredFields so the picker and submission accept the same days.
+              min={earliestDayOf(draft.kind, recordZone)}
               max={latestDayOf(draft.kind, recordZone)}
               {...dueBoundsOf(draft.kind, recordZone)}
               today={isoOrBlank(todayDay(draft.kind, recordZone)) || undefined}

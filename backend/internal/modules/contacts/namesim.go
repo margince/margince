@@ -6,6 +6,7 @@ package contacts
 import (
 	"slices"
 	"strings"
+	"unicode"
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/namematch"
@@ -110,6 +111,8 @@ func contactNameSimilarity(a, b string) float64 {
 type contactNameForms struct {
 	folded, digraphs []rune
 	given, family    string
+	// numbers are the name's runs of digits, sorted, without leading zeros.
+	numbers []string
 	// noDigraph says the digraph form is the folded one.
 	noDigraph bool
 }
@@ -118,15 +121,35 @@ func contactNameFormsOf(name string) contactNameForms {
 	given, family := namematch.SplitName(name)
 	forms := contactNameForms{
 		folded: namematch.ScoringRunes(namematch.Fold(name)), digraphs: namematch.ScoringRunes(namematch.Fold(namematch.Digraphs(name))),
-		given: given, family: family,
+		given: given, family: family, numbers: nameNumbers(name),
 	}
 	forms.noDigraph = slices.Equal(forms.folded, forms.digraphs)
 	return forms
 }
 
+// nameNumbers are the digit runs of a name, "01" and "1" one number.
+func nameNumbers(name string) []string {
+	runs := strings.FieldsFunc(name, func(r rune) bool { return !unicode.IsDigit(r) })
+	for i, run := range runs {
+		if trimmed := strings.TrimLeft(run, "0"); trimmed != "" {
+			runs[i] = trimmed
+		} else {
+			runs[i] = "0"
+		}
+	}
+	slices.Sort(runs)
+	return runs
+}
+
 // contactFormsSimilarity is contactNameSimilarity over forms. Two names with
 // no umlaut have digraph forms equal to their folded ones, scored once.
+//
+// Names that both carry numbers and disagree on them ("Bulk 01", "Bulk 02") are
+// two numbered records. One digit barely moves Jaro-Winkler, so they score 0.
 func contactFormsSimilarity(a, b contactNameForms) float64 {
+	if len(a.numbers) > 0 && len(b.numbers) > 0 && !slices.Equal(a.numbers, b.numbers) {
+		return 0
+	}
 	plain := namematch.JaroWinklerRunes(a.folded, b.folded)
 	if a.noDigraph && b.noDigraph {
 		return plain

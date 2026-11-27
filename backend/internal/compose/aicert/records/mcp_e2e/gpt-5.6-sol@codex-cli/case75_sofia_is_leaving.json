@@ -3,7 +3,7 @@
   "criteria": [
     1
   ],
-  "passed": 0,
+  "passed": 2,
   "runs": 2,
   "pass_at": 2,
   "driver": "gpt:cli",
@@ -12,28 +12,44 @@
   "search": "semantic",
   "self_judged": false,
   "stamp": {
-    "scenario": "c18314eef9aea15e",
-    "tools": "6e82141203cec7ea",
-    "instructions": "c5c644eee9719be0",
+    "scenario": "87bf361416fe5a25",
+    "tools": "a21108d85bf3f67d",
+    "instructions": "d707a123fe53827f",
     "judge": "",
-    "harness": "024566e70b0c3db3",
-    "commit": "0fbb56525a64e3a0d67dce27557b9284616654eb",
-    "ran_at": "2026-11-22T04:31:01Z",
-    "graded_commit": "a5805302daaf514720917d1768dd8ecc376bee69",
-    "graded_at": "2026-11-22T09:56:43Z"
+    "harness": "0fe690d35efcc703",
+    "parsers": {
+      "gemini:cli": "fa1db64bc14e971b",
+      "gpt:cli": "d48ca27c983f8b3f"
+    },
+    "commit": "ad96834804cdd040c8f582fe5c8d31b0fa53f1ab",
+    "ran_at": "2026-11-26T10:21:16Z",
+    "graded_commit": "ad96834804cdd040c8f582fe5c8d31b0fa53f1ab",
+    "graded_at": "2026-11-26T10:21:16Z"
   },
   "usage": {
-    "input_tokens": 42031,
-    "output_tokens": 2490,
+    "input_tokens": 44844,
+    "output_tokens": 2327,
     "cache_creation_input_tokens": 0,
-    "cache_read_input_tokens": 184320,
+    "cache_read_input_tokens": 313344,
     "runs_measured": 2,
     "runs_costed": 0,
     "cost_usd": null
   },
   "tools_by_run": [
     {
-      "passed": false,
+      "passed": true,
+      "tools": [
+        "describe_router_actions",
+        "list_colleagues",
+        "preview_member_retirement",
+        "read_workspace"
+      ],
+      "refused": [
+        "read_workspace"
+      ]
+    },
+    {
+      "passed": true,
       "tools": [
         "describe_router_actions",
         "get_member",
@@ -41,16 +57,8 @@
         "list_colleagues",
         "preview_member_retirement",
         "read_workspace"
-      ]
-    },
-    {
-      "passed": false,
-      "tools": [
-        "describe_router_actions",
-        "get_member",
-        "get_user_handover",
-        "list_colleagues",
-        "preview_member_retirement",
+      ],
+      "refused": [
         "read_workspace"
       ]
     }
@@ -58,8 +66,8 @@
   "efficiency": {
     "runs": 2,
     "calls": {
-      "median": 7.5,
-      "min": 6,
+      "median": 6.5,
+      "min": 4,
       "max": 9
     },
     "refused": {
@@ -67,15 +75,25 @@
       "min": 1,
       "max": 2
     },
+    "retries": {
+      "median": 1.5,
+      "min": 1,
+      "max": 2
+    },
+    "client_refused": {
+      "median": 0,
+      "min": 0,
+      "max": 0
+    },
     "prompt_tokens": {
-      "median": 113175.5,
-      "min": 101647,
-      "max": 124704
+      "median": 179094,
+      "min": 135851,
+      "max": 222337
     },
     "output_tokens": {
-      "median": 1245,
-      "min": 1058,
-      "max": 1432
+      "median": 1163.5,
+      "min": 919,
+      "max": 1408
     }
   }
 }

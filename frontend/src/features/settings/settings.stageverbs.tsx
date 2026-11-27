@@ -113,6 +113,9 @@ function stageFields(
       label: "stage.winProb",
       type: "number",
       limit: chance.limit,
+      // A blank would be stored as 0%, which the forecast reads as a stage that
+      // never wins. A closing stage's chance is fixed by its type.
+      requiredWhen: (values) => stageSemantic(values.semantic) === "open",
       validate: (value) => winProbabilityFault(value, locale, chance),
     },
   ];

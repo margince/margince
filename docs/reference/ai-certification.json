@@ -11781,7 +11781,7 @@
       "usable_with_care": 2,
       "not_reliable_yet": 0,
       "too_few_runs": 16,
-      "recheck_pending": 3,
+      "recheck_pending": 4,
       "judges": [
         "gemini-3.1-flash-lite"
       ],
@@ -11793,9 +11793,9 @@
             "env": "cloud_frontier"
           },
           "sites": 48,
-          "sites_current": 45,
+          "sites_current": 44,
           "sites_partial": 0,
-          "sites_stale": 3,
+          "sites_stale": 4,
           "runs": 1236,
           "passed": 1216,
           "reliability": 0.9838187702265372,
@@ -11818,9 +11818,9 @@
             "env": "cloud_frontier"
           },
           "sites": 45,
-          "sites_current": 42,
+          "sites_current": 41,
           "sites_partial": 0,
-          "sites_stale": 3,
+          "sites_stale": 4,
           "runs": 900,
           "passed": 882,
           "reliability": 0.98,
@@ -12262,7 +12262,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 27,
           "passed": 27,
           "records": 2,
@@ -14281,9 +14281,9 @@
         "env": "cloud_frontier"
       },
       "sites": 55,
-      "sites_current": 52,
+      "sites_current": 51,
       "sites_partial": 0,
-      "sites_stale": 3,
+      "sites_stale": 4,
       "runs": 1341,
       "passed": 1313,
       "reliability": 0.9791200596569725,
@@ -14306,9 +14306,9 @@
         "env": "cloud_frontier"
       },
       "sites": 52,
-      "sites_current": 49,
+      "sites_current": 48,
       "sites_partial": 0,
-      "sites_stale": 3,
+      "sites_stale": 4,
       "runs": 993,
       "passed": 974,
       "reliability": 0.9808660624370594,
@@ -29027,10 +29027,10 @@
             "model": "claude-haiku-5-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "supported_degraded",
           "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 9,
+          "scenarios_measured": 0,
           "scenarios_total": 9,
           "runs": 60,
           "passed": 60,
@@ -29047,7 +29047,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "9 scenarios it scored have changed since (how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more",
+          "stale_cause": {
+            "grader_changed": [
+              "nl_search_bounds_a_score_and_a_start_date",
+              "nl_search_keeps_an_or_across_two_fields",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_a_custom_field_by_its_label",
+              "nl_search_reads_a_list_of_countries_as_membership",
+              "nl_search_reads_german_input",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_reads_vietnamese_input",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {
@@ -29055,10 +29068,10 @@
             "model": "claude-sonnet-5-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 9,
+          "scenarios_measured": 0,
           "scenarios_total": 9,
           "runs": 27,
           "passed": 27,
@@ -29075,7 +29088,20 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "9 scenarios it scored have changed since (how a run is graded): nl_search_bounds_a_score_and_a_start_date, nl_search_keeps_an_or_across_two_fields, nl_search_names_back_a_prediction_it_cannot_express, nl_search_reads_a_custom_field_by_its_label, nl_search_reads_a_list_of_countries_as_membership, nl_search_reads_german_input and 3 more",
+          "stale_cause": {
+            "grader_changed": [
+              "nl_search_bounds_a_score_and_a_start_date",
+              "nl_search_keeps_an_or_across_two_fields",
+              "nl_search_names_back_a_prediction_it_cannot_express",
+              "nl_search_reads_a_custom_field_by_its_label",
+              "nl_search_reads_a_list_of_countries_as_membership",
+              "nl_search_reads_german_input",
+              "nl_search_reads_not_as_a_negation",
+              "nl_search_reads_vietnamese_input",
+              "nl_search_refuses_a_value_outside_a_picklist"
+            ]
+          }
         },
         {
           "binding": {
@@ -29095,8 +29121,8 @@
             "lower": 0.942655,
             "upper": 1
           },
-          "latency_p50_ms": 1271,
-          "latency_p95_ms": 1979,
+          "latency_p50_ms": 1259,
+          "latency_p95_ms": 1699,
           "reported": {
             "accepted": 27,
             "wrong_answer": 0,
@@ -29287,8 +29313,8 @@
             "lower": 0.942655,
             "upper": 1
           },
-          "latency_p50_ms": 3461,
-          "latency_p95_ms": 7255,
+          "latency_p50_ms": 3246,
+          "latency_p95_ms": 6509,
           "reported": {
             "accepted": 27,
             "wrong_answer": 0,
@@ -29922,8 +29948,8 @@
             "lower": 0.849719,
             "upper": 0.971961
           },
-          "latency_p50_ms": 1271,
-          "latency_p95_ms": 1979,
+          "latency_p50_ms": 1259,
+          "latency_p95_ms": 1699,
           "reported": {
             "accepted": 28,
             "wrong_answer": 2,
@@ -29951,8 +29977,8 @@
             "lower": 0.729377,
             "upper": 0.902684
           },
-          "latency_p50_ms": 3461,
-          "latency_p95_ms": 7255,
+          "latency_p50_ms": 3246,
+          "latency_p95_ms": 6509,
           "reported": {
             "accepted": 25,
             "wrong_answer": 5,
