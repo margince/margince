@@ -160,6 +160,9 @@ type callSite struct {
 // loadImportCallGraph type-checks the packages under dirs, the first dir's
 // package before the rest, so a call into migration resolves to its body.
 // The arch gates keep every importer of migration in compose or cmd.
+//
+// It is not typedModule: it also reads the integration-tagged files under
+// migration, compose and cmd, which the default build leaves out.
 func loadImportCallGraph(t *testing.T, dirs ...string) *importCallGraph {
 	t.Helper()
 	var groups [][]*ast.File

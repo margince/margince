@@ -18570,6 +18570,12 @@ export const en = {
   "operations.technical.label": "Technical lookup sweep",
   "operations.technical.help":
     "How often domains without technical facts are looked up. 0 switches it off.",
+  "operations.captureCounterparty.label": "New sender checks",
+  "operations.captureCounterparty.help":
+    "How often new senders are judged by the model.",
+  "operations.captureConfidentiality.label": "Thread confidentiality checks",
+  "operations.captureConfidentiality.help":
+    "How often captured threads are judged for whether colleagues may read them.",
   "operations.gmailWatchScan.label": "Gmail push check",
   "operations.gmailWatchScan.help":
     "How often Gmail push subscriptions are checked for renewal.",

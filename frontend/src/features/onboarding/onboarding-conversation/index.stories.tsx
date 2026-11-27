@@ -98,8 +98,8 @@ export const AFirstRun: Story = {
   // the conversation at its beginning rather than resuming anybody.
   render: () =>
     shell({
-      "GET /onboarding/state": () => jsonResponse({ detail: "none" }, 404),
-      "GET /company": () => jsonResponse({ detail: "no company yet" }, 404),
+      "GET /onboarding/state": () => new Response(null, { status: 204 }),
+      "GET /company": () => new Response(null, { status: 204 }),
     }),
 };
 

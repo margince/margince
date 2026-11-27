@@ -124,6 +124,7 @@ func (e *InvalidMailDraftError) FieldFault() (field, code, message string) {
 // GetMailDraft reads the caller's draft for one anchor. No draft, somebody
 // else's, and an anchor the caller can no longer see are all ErrNotFound, as
 // is a draft resting on a record they can no longer see, which is discarded.
+// Only no draft on a visible anchor is ErrNothingYet.
 func (s *Store) GetMailDraft(ctx context.Context, anchor MailDraftAnchor) (MailDraft, error) {
 	if err := auth.Require(ctx, "activity", principal.ActionRead); err != nil {
 		return MailDraft{}, err
@@ -151,7 +152,11 @@ func (s *Store) GetMailDraft(ctx context.Context, anchor MailDraftAnchor) (MailD
 			 WHERE author_id = $%d AND anchor_type = $%d AND anchor_id = $%d`,
 			arg(author), arg(string(anchor.Type)), arg(anchor.ID))
 		row := tx.QueryRow(ctx, query, args...)
-		if out, err = scanMailDraft(row); err != nil {
+		out, err = scanMailDraft(row)
+		if errors.Is(err, apperrors.ErrNotFound) {
+			return apperrors.ErrNothingYet
+		}
+		if err != nil {
 			return err
 		}
 		// The discard returns nil so it commits; the refusal is answered below.

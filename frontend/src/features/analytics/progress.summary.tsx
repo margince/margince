@@ -50,7 +50,7 @@ function useProgressSummary(ask: ProgressAsk, progress: SalesProgress) {
         },
         signal,
       });
-      // A server from before this route answers 404, and has no summary.
+      // absent-404: a server from before this route has no summary.
       if (result.response.status === 404) return null;
       return unwrap(result);
     },

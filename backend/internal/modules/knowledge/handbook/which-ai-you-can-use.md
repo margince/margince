@@ -15,14 +15,14 @@ AI works with Margince in two ways. **Margince AI** is the AI inside the product
 | How we test it | Each feature, on the product's real prompts, many tries | Everyday jobs, done from start to end, several tries |
 
 ### Which AI model should I choose for Margince?
-For Margince AI, choose the model setup with the most features ready. Today that is **Anthropic Claude**, with 33 of its 38 features ready. A model setup says which model does which kind of work, and the table below shows each one we tested. Your administrator sets it up under **Settings**, then **AI models**.
+For Margince AI, choose the model setup with the most features ready. Today that is **Anthropic Claude**, with 34 of its 38 features ready. A model setup says which model does which kind of work, and the table below shows each one we tested. Your administrator sets it up under **Settings**, then **AI models**.
 Also called: which model should I use, best model, recommended model, which LLM, which provider, model tiers.
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
 | Google Gemini | global cloud | 27 | 10 | 0 | 1 |
 | Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 27 | 10 | 0 | 1 |
-| Anthropic Claude | global cloud | 33 | 4 | 0 | 1 |
+| Anthropic Claude | global cloud | 34 | 3 | 0 | 1 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 7 | 7 |
 | Gemma 4 you could run yourself, through OpenRouter | global cloud | 1 | 0 | 4 | 33 |
@@ -30,7 +30,7 @@ Also called: which model should I use, best model, recommended model, which LLM,
 | Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 38 |
 | Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 38 |
 
-[92 of these 197 grades](https://github.com/margince/margince/blob/main/docs/reference/ai-certification.md#stale-records-and-why) were measured on an older version of Margince and wait for a re-check.
+[91 of these 197 grades](https://github.com/margince/margince/blob/main/docs/reference/ai-certification.md#stale-records-and-why) were measured on an older version of Margince and wait for a re-check.
 
 ### What does a grade of a Margince AI feature mean?
 A grade of a Margince AI feature says how often it was right. **Ready** means right in at least 90 of every 100 tries: turn it on. **Usable with care** means right in most tries: have someone look over what it makes. **Not reliable yet** means wrong too often: leave it off. **Not measured** means nobody has tested that feature on that model yet.

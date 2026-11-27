@@ -208,7 +208,7 @@ func caseOwners(c contactCase) []crmcontracts.ContactCaseOwner {
 }
 
 // resolvedContactCase answers for a contact in no open case. It is resolved
-// when a merge took it into another contact, and not found otherwise.
+// when a merge took it into another contact, and nothing yet otherwise.
 func resolvedContactCase(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (crmcontracts.ContactCase, error) {
 	if err := auth.Require(ctx, contactEntity, principal.ActionRead); err != nil {
 		return crmcontracts.ContactCase{}, err
@@ -220,8 +220,11 @@ func resolvedContactCase(ctx context.Context, tx pgx.Tx, contactID ids.UUID) (cr
 	var archivedAt *time.Time
 	err := tx.QueryRow(ctx, `SELECT merged_into_id, archived_at FROM contact WHERE id = @id`,
 		pgx.NamedArgs{"id": contactID}).Scan(&survivor, &archivedAt)
-	if errors.Is(err, pgx.ErrNoRows) || (err == nil && (survivor == nil || archivedAt == nil)) {
+	if errors.Is(err, pgx.ErrNoRows) {
 		return crmcontracts.ContactCase{}, apperrors.ErrNotFound
+	}
+	if err == nil && (survivor == nil || archivedAt == nil) {
+		return crmcontracts.ContactCase{}, apperrors.ErrNothingYet
 	}
 	if err != nil {
 		return crmcontracts.ContactCase{}, fmt.Errorf("contacts: reading where the contact went: %w", err)

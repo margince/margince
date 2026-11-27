@@ -79,7 +79,7 @@ function story(
       "GET /me": meRoute(allow),
       "GET /company/context/capabilities": () => jsonResponse(capabilities),
       "GET /company": () =>
-        company ? jsonResponse(company) : jsonResponse({}, 404),
+        company ? jsonResponse(company) : new Response(null, { status: 204 }),
     });
     return (
       <StoryProviders>
