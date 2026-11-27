@@ -5,7 +5,6 @@ package compose
 
 import (
 	"bytes"
-	"fmt"
 	"go/ast"
 	"go/parser"
 	"go/token"
@@ -17,7 +16,6 @@ import (
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/migration"
-	"github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 	"github.com/margince/margince/backend/internal/shared/kernel/textlang"
 )
 
@@ -272,14 +270,5 @@ func TestAnUnresolvedLinkAndAnUndoRefusalCarryTheirCodes(t *testing.T) {
 	})
 	if c := undo.Errored[0].ReasonCode; c == nil || string(*c) != string(migration.ReasonUndoFailed) {
 		t.Errorf("undo errored code = %v, want %s", c, migration.ReasonUndoFailed)
-	}
-}
-
-func TestTheImportProblemHeadingsFollowTheStylePages(t *testing.T) {
-	for i, heading := range importProblemsHeaders[textlang.English] {
-		langcopytest.EnglishText(t, fmt.Sprintf("importProblemsHeaders[%d]", i), heading)
-	}
-	for i, heading := range importProblemsHeaders[textlang.Vietnamese] {
-		langcopytest.VietnameseText(t, fmt.Sprintf("importProblemsHeaders[%d]", i), heading)
 	}
 }

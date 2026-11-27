@@ -43,30 +43,37 @@ func TestTheStyleBaselineHoldsItsPinnedLines(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := pinsHold(waivers); err != nil {
+	if err := pinsHold(waivers, wantStyleWaivers, wantStyleDigest); err != nil {
 		t.Error(err)
 	}
 }
 
+// syntheticWaivers stand in for the baseline, which may shrink to no line.
+var syntheticWaivers = []Waiver{
+	{Rule: ruleEnDash, Text: "Saved — for now."},
+	{Rule: ruleEnWe, Text: "We saved it."},
+	{Rule: ruleViToi, Text: "Giao cho tôi", English: "Assign"},
+}
+
 func TestASwappedStyleWaiverBreaksTheDigestPin(t *testing.T) {
 	t.Parallel()
-	waivers, err := StyleBaseline()
-	if err != nil {
+	count, digest := len(syntheticWaivers), styleDigest(syntheticWaivers)
+	if err := pinsHold(syntheticWaivers, count, digest); err != nil {
 		t.Fatal(err)
 	}
-	swapped := slices.Clone(waivers)
-	swapped[0] = Waiver{Rule: "en.dash", Text: "A sentence no rewrite has reached — yet."}
-	if pinsHold(swapped) == nil {
+	swapped := slices.Clone(syntheticWaivers)
+	swapped[0] = Waiver{Rule: ruleEnDash, Text: "A sentence no rewrite has reached — yet."}
+	if pinsHold(swapped, count, digest) == nil {
 		t.Error("a baseline with one line swapped for another still matches both pins")
 	}
 }
 
-func pinsHold(waivers []Waiver) error {
-	if digest := styleDigest(waivers); len(waivers) != wantStyleWaivers || digest != wantStyleDigest {
+func pinsHold(waivers []Waiver, wantCount int, wantDigest string) error {
+	if digest := styleDigest(waivers); len(waivers) != wantCount || digest != wantDigest {
 		return fmt.Errorf("%s holds %d waivers with digest %s, and the pins say %d and %s. "+
 			"The recut rewrites both pins when it drops lines, and a line dropped by hand sets both in the same change. "+
 			"A line added or swapped fails make style-baseline-shrinks: rewrite the sentence instead",
-			baselinePath, len(waivers), digest, wantStyleWaivers, wantStyleDigest)
+			baselinePath, len(waivers), digest, wantCount, wantDigest)
 	}
 	return nil
 }
@@ -233,11 +240,7 @@ func TestRecutStyleBaseline(t *testing.T) {
 
 func TestTheRecutRewritesBothPinsToTheLinesItKept(t *testing.T) {
 	t.Parallel()
-	waivers, err := StyleBaseline()
-	if err != nil {
-		t.Fatal(err)
-	}
-	kept, dir := waivers[1:4], t.TempDir()
+	kept, dir := syntheticWaivers, t.TempDir()
 	pins, baseline := filepath.Join(dir, "pin_test.go"), filepath.Join(dir, "stylebaseline.txt")
 	stale := "package x\n\nconst wantStyleWaivers = 160\n\nconst wantStyleDigest = \"" + strings.Repeat("0", 64) + "\"\n"
 	if err := os.WriteFile(pins, []byte(stale), 0o600); err != nil {

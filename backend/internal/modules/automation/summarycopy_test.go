@@ -59,12 +59,7 @@ func TestEveryShippedLanguageWritesItsOwnAutomationSummaries(t *testing.T) {
 }
 
 func TestTheSummariesFollowTheEnglishAndVietnameseStylePages(t *testing.T) {
-	for name, text := range langcopytest.Sentences(t, summaryByLang[textlang.English]) {
-		langcopytest.EnglishText(t, name, text)
-	}
-	for name, text := range langcopytest.Sentences(t, summaryByLang[textlang.Vietnamese]) {
-		langcopytest.VietnameseText(t, name, text)
-	}
+	langcopytest.StyleByLanguage(t, summaryByLang)
 }
 
 // An unshipped language answers English rather than an empty set, because the

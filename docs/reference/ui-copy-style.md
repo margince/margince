@@ -223,8 +223,9 @@ outside its list. And `you` used where no one needed it.
 ### Copy the server writes
 
 The Go copy tables answer to part of this page. `langcopytest.Census` checks the
-English of every `langcopy.Phrase` table, and `langcopytest.EnglishText` checks a
-table of another shape from its own test. Both live in
+English of every `langcopy.Phrase` table, and `langcopytest.StyleByLanguage` a
+table keyed by language. `langcopytest.EnglishText` checks a table of another
+shape from its own test. All three live in
 `backend/internal/shared/kernel/langcopy/langcopytest/`.
 
 They fail a dash as punctuation: an em dash, an en dash, `--` or a spaced
@@ -257,9 +258,9 @@ pins in `stylebaseline_test.go` hold its lines: `wantStyleWaivers` is how many
 there are, and `wantStyleDigest` the SHA-256 of them sorted, comments left out.
 A test fails when either differs, so `go test` shows an edit before CI does.
 
-The command below only drops the lines that fail, and rewrites both pins to
-match. A line dropped by hand sets both pins in the same change. Run it from
-`backend/`:
+The command below only drops the lines whose sentence now passes or that no Go
+string spells any more, and rewrites both pins to match. A line dropped by hand
+sets both pins in the same change. Run it from `backend/`:
 
 ```sh
 go test ./internal/shared/kernel/langcopy/langcopytest -run TestRecutStyleBaseline -recut

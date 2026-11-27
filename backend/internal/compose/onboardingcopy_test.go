@@ -149,12 +149,10 @@ func TestTheGermanOnboardingFollowsTheGermanStylePage(t *testing.T) {
 	}
 }
 
-func TestTheOnboardingCopyFollowsTheEnglishAndVietnameseStylePages(t *testing.T) {
-	agent := langcopytest.Agent("the onboarding conversation is an agent speaking in a chat bubble, which may say I")
-	for name, text := range langcopytest.Sentences(t, onboardingCopyByLang[textlang.English]) {
-		agent.EnglishText(t, name, text)
-	}
-	for name, text := range langcopytest.Sentences(t, onboardingCopyByLang[textlang.Vietnamese]) {
-		agent.VietnameseText(t, name, text)
-	}
+func TestTheLanguageKeyedCopyFollowsTheStylePages(t *testing.T) {
+	langcopytest.StyleByLanguage(t, signalSummaryByLang)
+	langcopytest.StyleByLanguage(t, technicalSummaryByLang)
+	langcopytest.StyleByLanguage(t, projectHealthByLang)
+	langcopytest.StyleByLanguage(t, importProblemsHeaders)
+	langcopytest.StyleByLanguage(t, onboardingCopyByLang, langcopytest.Agent("the onboarding conversation is an agent speaking in a chat bubble, which may say I"))
 }

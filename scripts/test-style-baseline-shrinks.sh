@@ -85,6 +85,25 @@ mkdir -p "$work/recreated/$(dirname "$BASELINE")"
 printf '%s' "$BASE_TEXT" >"$work/recreated/$BASELINE"
 expect recreated "$work/recreated" fail 'en.dash	"one — two"'
 
+merged="$work/merged-deletion"
+repo "$merged"
+git -C "$merged" add scripts
+git -C "$merged" commit -qm root
+git -C "$merged" branch -q side
+printf '%s' "$BASE_TEXT" >"$merged/$BASELINE"
+git -C "$merged" add -A
+git -C "$merged" commit -qm first
+git -C "$merged" switch -q side
+git -C "$merged" commit -q --allow-empty -m side
+git -C "$merged" switch -q -
+git -C "$merged" merge -q --no-ff --no-commit side >/dev/null 2>&1
+git -C "$merged" rm -q "$BASELINE"
+git -C "$merged" commit -qm merge
+git -C "$merged" branch -q base
+mkdir -p "$merged/$(dirname "$BASELINE")"
+printf '%s' "$BASE_TEXT" >"$merged/$BASELINE"
+expect merged-deletion "$merged" fail 'en.dash	"one — two"'
+
 repo "$work/no-base"
 git -C "$work/no-base" commit -q --allow-empty -m head
 expect no-base-skips "$work/no-base" pass 'skip check-style-baseline-shrinks'

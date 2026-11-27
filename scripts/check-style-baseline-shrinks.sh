@@ -39,7 +39,7 @@ if [[ -n "$(git ls-tree "$fork" -- "$BASELINE")" ]]; then
   base_text="$(git show "$fork:$BASELINE")"
   base_lines="$(waiver_lines <<<"$base_text")"
 else
-  deleted_in="$(git log -1 --format=%h "$fork" -- "$BASELINE")"
+  deleted_in="$(git log -1 --full-history --format=%h "$fork" -- "$BASELINE")"
   if [[ -z "$deleted_in" ]]; then
     echo "OK: check-style-baseline-shrinks — $BASELINE is not on $BASE_REF at $fork, so this is its first cut; once merged it only shrinks"
     exit 0

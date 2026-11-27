@@ -65,7 +65,10 @@ const (
 // map may sit in, whose literals elide its type.
 const containerPrefix = `(?:map\[[^\[\]]*\]|\[[^\[\]]*\]|\*)*`
 
-var languageMapType = regexp.MustCompile(`type\s+(\w+)\s+` + containerPrefix + `map\[textlang\.Lang\]`)
+var (
+	languageMapType = regexp.MustCompile(`type\s+(\w+)\s+` + containerPrefix + `map\[textlang\.Lang\]`)
+	namedType       = regexp.MustCompile(`(?m)type\s+(\w+)\s+(?:=\s*)?(\w+)[ \t]*(?:$|;|//)`)
+)
 
 // languageLiteral matches a literal of a language map, of a named type that
 // holds one, or of a container whose elements are either.
@@ -79,11 +82,11 @@ func languageLiteral(mapTypes []string) *regexp.Regexp {
 
 func TestEveryLanguageKeyedCopyTableIsHeldToTheStylePages(t *testing.T) {
 	t.Parallel()
-	packages := languagePackages(t, ".")
+	packages, checks := languagePackages(t, "."), langcopytestChecks(t)
 	tables, read := 0, map[string]bool{}
 	for _, dir := range slices.Sorted(maps.Keys(packages)) {
 		pkg := packages[dir]
-		held := pkg.held()
+		held := pkg.held(checks)
 		waived := unstyledLanguageTables[dir]
 		for _, name := range slices.Sorted(maps.Keys(pkg.tables)) {
 			tables++
@@ -93,9 +96,9 @@ func TestEveryLanguageKeyedCopyTableIsHeldToTheStylePages(t *testing.T) {
 				t.Errorf("%s is named unstyled in this gate, and a test now holds it to the style pages; "+
 					"delete its entry", pkg.tables[name])
 			case !held[name] && !isWaived:
-				t.Errorf("%s is a copy table keyed by language, and no test that calls langcopytest names it. "+
-					"Walk it with langcopytest.CensusByLanguage, EnglishText and VietnameseText in its "+
-					"register, or, if no reader sees it, name it in unstyledLanguageTables with why", pkg.tables[name])
+				t.Errorf("%s is a copy table keyed by language, and no test that calls a langcopytest style check names it. "+
+					"Walk it with langcopytest.StyleByLanguage or CensusByLanguage in its register, "+
+					"or, if no reader sees it, name it in unstyledLanguageTables with why", pkg.tables[name])
 			}
 		}
 		for name := range waived {
@@ -127,7 +130,7 @@ func TestEveryLanguageKeyedCopyTableIsHeldToTheStylePages(t *testing.T) {
 // and skips no directory, so a directory the arm stops reading fails.
 func languageLiteralFiles(t *testing.T, root string) []string {
 	t.Helper()
-	texts, mapTypes := map[string][]byte{}, map[string][]string{}
+	texts := map[string][]byte{}
 	err := gatekit.WalkDir(root, func(path string, entry fs.DirEntry, walkErr error) error {
 		if walkErr != nil || entry.IsDir() || !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") {
 			return walkErr
@@ -136,16 +139,13 @@ func languageLiteralFiles(t *testing.T, root string) []string {
 		if err != nil {
 			return err
 		}
-		path = filepath.ToSlash(path)
-		texts[path] = text
-		for _, declared := range languageMapType.FindAllSubmatch(text, -1) {
-			mapTypes[filepath.Dir(path)] = append(mapTypes[filepath.Dir(path)], string(declared[1]))
-		}
+		texts[filepath.ToSlash(path)] = text
 		return nil
 	})
 	if err != nil {
 		t.Fatalf("reading the module as text for language-keyed literals: %v", err)
 	}
+	mapTypes := languageMapTypes(texts)
 	literals := map[string]*regexp.Regexp{}
 	var flagged []string
 	for path, text := range texts {
@@ -161,10 +161,44 @@ func languageLiteralFiles(t *testing.T, root string) []string {
 	return flagged
 }
 
-// TestTheLanguageTableArmSeesATableAndItsWalk is the vacuity check. Shown five
-// tables, two of which elide a language map's type, the arm finds all five and
-// the three walked. A style test's local named like a table does not hold one,
-// nor does a helper no Test runs.
+func languageMapTypes(texts map[string][]byte) map[string][]string {
+	keyed, namedAs := map[string]map[string]bool{}, map[string]map[string]string{}
+	for path, text := range texts {
+		dir := filepath.Dir(path)
+		if keyed[dir] == nil {
+			keyed[dir], namedAs[dir] = map[string]bool{}, map[string]string{}
+		}
+		for _, declared := range languageMapType.FindAllSubmatch(text, -1) {
+			keyed[dir][string(declared[1])] = true
+		}
+		for _, declared := range namedType.FindAllSubmatch(text, -1) {
+			namedAs[dir][string(declared[1])] = string(declared[2])
+		}
+	}
+	names := map[string][]string{}
+	for dir := range keyed {
+		withNamedChains(keyed[dir], namedAs[dir])
+		names[dir] = slices.Sorted(maps.Keys(keyed[dir]))
+	}
+	return names
+}
+
+// withNamedChains runs to a fixed point, so a cycle of names ends and stays unkeyed.
+func withNamedChains(keyed map[string]bool, namedAs map[string]string) {
+	for grew := true; grew; {
+		grew = false
+		for name, underlying := range namedAs {
+			if keyed[underlying] && !keyed[name] {
+				keyed[name], grew = true, true
+			}
+		}
+	}
+}
+
+// TestTheLanguageTableArmSeesATableAndItsWalk is the vacuity check. Shown six
+// tables, two eliding a language map's type and one of a renamed one, the arm
+// finds all six and the four walked. A local named like a table holds none, nor
+// does a helper no Test runs, nor a test that calls no style check.
 func TestTheLanguageTableArmSeesATableAndItsWalk(t *testing.T) {
 	t.Parallel()
 	source := `package copy
@@ -177,13 +211,20 @@ func buildShown() map[string]spellings { return map[string]spellings{"x": spelli
 var unwalked = struct{ text map[tl.Lang]string }{text: map[tl.Lang]string{}}
 var nested = map[string]map[tl.Lang]string{"saved": {tl.English: "We saved it"}}
 var orphaned = []*byKey{{"saved": {tl.English: "We saved it"}}}
+type raw map[tl.Lang]string
+type copyTable raw
+var messages = copyTable{tl.English: "We saved it"}
+type looped looping
+type looping looped
+var cycled = looped{}
 `
 	walk := `package copy
 import "github.com/margince/margince/backend/internal/shared/kernel/langcopy/langcopytest"
 func check(t langcopytest.T) { langcopytest.EnglishText(t, "x", "y") }
 func TestWalked(t *testing.T) { check(t); _ = walked; _ = shown; t.Run("x", checkNested) }
 func checkNested(t *testing.T) { langcopytest.EnglishText(t, "x", nested["saved"]["en"]) }
-func TestUnwalked(t *testing.T) { _ = unwalked }
+func TestUnwalked(t *testing.T) { _ = langcopytest.Sentences(t, unwalked); var _ langcopytest.Register }
+func TestMessages(t *testing.T) { langcopytest.Outsider("x").VietnameseText(t, "x", messages["vi"]) }
 func TestShadowed(t *testing.T) { check(t); unwalked := struct{ unwalked int }{unwalked: 1}; _ = unwalked.unwalked }
 func unusedCheck(t langcopytest.T) { langcopytest.EnglishText(t, "x", orphaned[0]) }
 func TestLocal(t *testing.T) { unusedCheck := func() {}; unusedCheck(); _ = orphaned }
@@ -197,12 +238,17 @@ func TestLocal(t *testing.T) { unusedCheck := func() {}; unusedCheck(); _ = orph
 		pkg.add(name, file)
 	}
 	pkg.resolve()
-	want := []string{"buildShown", "nested", "orphaned", "unwalked", "walked"}
+	want := []string{"buildShown", "messages", "nested", "orphaned", "unwalked", "walked"}
 	if got := slices.Sorted(maps.Keys(pkg.tables)); !slices.Equal(got, want) {
 		t.Errorf("the arm read the tables %v, want %v", got, want)
 	}
-	if held := pkg.held(); !held["walked"] || !held["buildShown"] || !held["nested"] || held["unwalked"] || held["orphaned"] {
+	held := pkg.held(langcopytestChecks(t))
+	if !held["walked"] || !held["buildShown"] || !held["nested"] || !held["messages"] || held["unwalked"] || held["orphaned"] {
 		t.Errorf("the arm read the walked tables as %v", held)
+	}
+	chained := []byte("type raw map[textlang.Lang]string\ntype copyTable raw\ntype looped looping\ntype looping looped\n")
+	if got := languageMapTypes(map[string][]byte{"copy/copy.go": chained})["copy"]; !slices.Equal(got, []string{"copyTable", "raw"}) {
+		t.Errorf("the text census reads the language map types %v, want [copyTable raw]", got)
 	}
 	literal := languageLiteral([]string{"byKey"})
 	for _, line := range []string{"var nested = map[string]map[textlang.Lang]string{", "return []*byKey{"} {
@@ -276,16 +322,21 @@ func (p *languagePackage) add(path string, file *ast.File) {
 // named map type and its literals may sit in different files.
 func (p *languagePackage) resolve() {
 	p.mapTypes, p.typeSpecs = map[string]bool{}, map[string]ast.Expr{}
+	namedAs := map[string]string{}
 	for _, file := range p.files {
 		lang := textlangQualifier(file)
 		ast.Inspect(file, func(node ast.Node) bool {
 			if spec, ok := node.(*ast.TypeSpec); ok {
 				p.typeSpecs[spec.Name.Name] = spec.Type
 				p.mapTypes[spec.Name.Name] = languageKeyed(spec.Type, lang, nil)
+				if underlying, named := ast.Unparen(spec.Type).(*ast.Ident); named {
+					namedAs[spec.Name.Name] = underlying.Name
+				}
 			}
 			return true
 		})
 	}
+	withNamedChains(p.mapTypes, namedAs)
 	for i, file := range p.files {
 		lang := textlangQualifier(file)
 		for _, decl := range file.Decls {
@@ -358,7 +409,7 @@ func (p *languagePackage) elementTypes(container ast.Expr) (keyType, elementType
 
 // held answers the tables a test that reaches langcopytest names, directly or
 // through a variable whose value is built from them.
-func (p *languagePackage) held() map[string]bool {
+func (p *languagePackage) held(checks styleChecks) map[string]bool {
 	built, funcs := map[string][]string{}, map[string]bool{}
 	for _, file := range p.files {
 		for _, decl := range file.Decls {
@@ -384,7 +435,7 @@ func (p *languagePackage) held() map[string]bool {
 			follow(next, !funcs[name])
 		}
 	}
-	for _, name := range namedByStyleTests(p.tests) {
+	for _, name := range namedByStyleTests(p.tests, checks) {
 		follow(name, false)
 	}
 	return held
@@ -512,9 +563,9 @@ func textlangQualifier(file *ast.File) string {
 }
 
 // namedByStyleTests answers every name spelled by a test function that a Test
-// runs and that reaches langcopytest, following calls to the directory's own
-// test helpers. A helper no Test runs checks nothing.
-func namedByStyleTests(tests []*ast.File) []string {
+// runs and that calls a langcopytest style check. It follows calls to the
+// directory's own test helpers. A helper no Test runs checks nothing.
+func namedByStyleTests(tests []*ast.File, checks styleChecks) []string {
 	reaches, calls, names := map[string]bool{}, map[string][]string{}, map[string][]string{}
 	spelled := map[string][]string{}
 	for _, file := range tests {
@@ -532,13 +583,12 @@ func namedByStyleTests(tests []*ast.File) []string {
 					if !local[n.Name] {
 						spelled[fn.Name.Name] = append(spelled[fn.Name.Name], n.Name)
 					}
-				case *ast.SelectorExpr:
-					if x, isIdent := n.X.(*ast.Ident); isIdent && qualifier != "" && x.Name == qualifier {
-						reaches[fn.Name.Name] = true
-					}
 				case *ast.CallExpr:
 					if callee, isIdent := n.Fun.(*ast.Ident); isIdent && !local[callee.Name] {
 						calls[fn.Name.Name] = append(calls[fn.Name.Name], callee.Name)
+					}
+					if checks.calledBy(n, qualifier) {
+						reaches[fn.Name.Name] = true
 					}
 				}
 				return true
@@ -582,4 +632,65 @@ func runByTests(spelled map[string][]string) map[string]bool {
 		}
 	}
 	return run
+}
+
+// styleChecks are read from langcopytest, so a new check counts with no edit here.
+type styleChecks struct{ funcs, methods map[string]bool }
+
+// langcopytestChecks reads a check as an exported function or method that takes
+// the reporter and returns nothing. Sentences returns what it read, so it is none.
+func langcopytestChecks(t *testing.T) styleChecks {
+	t.Helper()
+	checks := styleChecks{funcs: map[string]bool{}, methods: map[string]bool{}}
+	paths, err := gatekit.Glob(langcopyTree + "/langcopytest/*.go")
+	if err != nil {
+		t.Fatalf("listing langcopytest for its style checks: %v", err)
+	}
+	for _, path := range paths {
+		if strings.HasSuffix(path, "_test.go") {
+			continue
+		}
+		file, err := gatekit.ParseFile(path, parser.SkipObjectResolution)
+		if err != nil {
+			t.Fatalf("reading langcopytest for its style checks: %v", err)
+		}
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || !fn.Name.IsExported() || fn.Type.Results != nil || len(fn.Type.Params.List) == 0 {
+				continue
+			}
+			if first, named := fn.Type.Params.List[0].Type.(*ast.Ident); !named || first.Name != "reporter" {
+				continue
+			}
+			if fn.Recv == nil {
+				checks.funcs[fn.Name.Name] = true
+			} else {
+				checks.methods[fn.Name.Name] = true
+			}
+		}
+	}
+	if !checks.funcs["EnglishText"] || !checks.methods["VietnameseText"] {
+		t.Fatalf("langcopytest declares no EnglishText function or VietnameseText method, so this gate reads no style check")
+	}
+	return checks
+}
+
+// calledBy reports whether call runs a style check: a langcopytest function, or
+// a method of a value it returns, such as a Register.
+func (c styleChecks) calledBy(call *ast.CallExpr, qualifier string) bool {
+	callee := ast.Unparen(call.Fun)
+	switch generic := callee.(type) {
+	case *ast.IndexExpr:
+		callee = generic.X
+	case *ast.IndexListExpr:
+		callee = generic.X
+	}
+	selector, ok := callee.(*ast.SelectorExpr)
+	if !ok || qualifier == "" {
+		return false
+	}
+	if x, isIdent := selector.X.(*ast.Ident); isIdent && x.Name == qualifier {
+		return c.funcs[selector.Sel.Name]
+	}
+	return c.methods[selector.Sel.Name]
 }
