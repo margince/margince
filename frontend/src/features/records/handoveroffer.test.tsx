@@ -84,9 +84,7 @@ function serve(offered = false) {
         return new Response(null, { status: 204 });
       }
       if (key === `GET ${path}`) {
-        return open
-          ? json(openOffer)
-          : json({ status: 404, title: "Not found" }, 404);
+        return open ? json(openOffer) : new Response(null, { status: 204 });
       }
       return json({});
     }),

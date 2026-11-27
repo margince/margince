@@ -48,10 +48,10 @@ function report(over: Partial<SiteReadReport> = {}): SiteReadReport {
 const LATEST = `GET /companies/${COMPANY}/site-reads/latest`;
 const REPORT = `GET /companies/${COMPANY}/site-reads/${READ}`;
 
-// 404 is the honest "never read": a read id lives only in the tab that started
-// the crawl, so the panel asks the server rather than its own memory.
+// 204 means "never read". A read id lives only in the tab that started the
+// crawl, so the panel asks the server rather than its own memory.
 const NEVER_READ: RouteMap = {
-  [LATEST]: () => new Response(null, { status: 404 }),
+  [LATEST]: () => new Response(null, { status: 204 }),
 };
 
 function panel(routes: RouteMap) {

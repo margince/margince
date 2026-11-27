@@ -213,7 +213,7 @@ func (h Handlers) WithRun(read RunFunc) Handlers {
 }
 
 // GetForecastAssurance answers the most recent completed run.
-func (h Handlers) GetForecastAssurance(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) GetForecastAssurance(w http.ResponseWriter, r *http.Request, _ crmcontracts.GetForecastAssuranceParams) {
 	run, coverage, err := h.run(r.Context())
 	if err != nil {
 		httperr.Write(w, r, err)
@@ -323,7 +323,7 @@ func derefString(s *string) string {
 // Gated on `data_coverage` rather than on `forecast`: reading the pipeline's
 // numbers and reading the installation's connector health are different jobs,
 // and every seat that does the first does not do the second.
-func (h Handlers) GetDataCoverage(w http.ResponseWriter, r *http.Request) {
+func (h Handlers) GetDataCoverage(w http.ResponseWriter, r *http.Request, _ crmcontracts.GetDataCoverageParams) {
 	if err := auth.Require(r.Context(), "data_coverage", principal.ActionRead); err != nil {
 		httperr.Write(w, r, err)
 		return

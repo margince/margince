@@ -356,11 +356,10 @@ export function TranscriptReadCard({
   const t = useT();
   const queryClient = useQueryClient();
   const [readId, setReadId] = useState<string | null>(null);
-  // A read id lives only in the tab that started the reading, so one that
-  // finished after the rep navigated away would be unfindable — and a
-  // transcript nobody had read would look exactly like one whose reading
-  // failed. 404 is the honest "never read" and leaves the card offering a
-  // first reading.
+  // A read id lives only in the tab that started the reading. One that
+  // finished after the rep navigated away would be unfindable, and the
+  // transcript would look like one whose reading failed. A 204 means "never
+  // read" and leaves the card offering a first reading.
   const latest = useLatestTranscriptRead(activityId);
   const shownReadId = readId ?? latest.data?.read_id ?? null;
   const aiGate = useConnectAiGate(`transcript-ai-${activityId}`);
@@ -410,7 +409,7 @@ export function TranscriptReadCard({
       className="transcript-card"
     >
       {latest.isPending && <Skeleton width="40%" />}
-      {/* A 404 is "never read" and resolves to null; anything else means we do
+      {/* A 204 is "never read" and resolves to null; anything else means we do
           not KNOW whether this transcript has been read. Saying so beats an
           empty card, which reads as a confident "not yet". */}
       <ErrorLine error={latest.error} />
@@ -433,7 +432,7 @@ export function useLatestTranscriptRead(activityId: string) {
         "/activities/{id}/transcript-proposals/latest",
         { params: { path: { id: activityId } } },
       );
-      if (response.status === 404) {
+      if (response.status === 204) {
         return null;
       }
       if (error) {

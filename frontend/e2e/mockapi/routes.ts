@@ -49,7 +49,7 @@ import * as insight from "./insight";
 import * as lists from "./lists";
 import * as records from "./records";
 import { recordReferences } from "./references";
-import { type MockRoute, notFound, page, reply } from "./server";
+import { type MockRoute, nothingYet, page, reply } from "./server";
 import * as session from "./session";
 import * as work from "./work";
 
@@ -188,7 +188,7 @@ export const routes: readonly MockRoute[] = [
   {
     path: "/company",
     when: (state) => state.undescribed,
-    handle: reply(notFound, 404),
+    handle: nothingYet,
   },
   { method: "GET", path: "/onboarding/state", handle: session.onboardingState },
   { path: "/company", handle: reply(session.company) },
@@ -444,7 +444,7 @@ export const routes: readonly MockRoute[] = [
   {
     method: "GET",
     path: (path) => path.endsWith("/partner"),
-    handle: reply({ code: "not_found", title: "no partner" }, 404),
+    handle: nothingYet,
   },
   {
     path: (path) => path.endsWith("/hierarchy-rollup"),

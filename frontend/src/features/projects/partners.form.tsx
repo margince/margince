@@ -56,7 +56,7 @@ async function fetchPartner(companyId: string): Promise<Partner | null> {
   const { data, error, response } = await api.GET("/companies/{id}/partner", {
     params: { path: { id: companyId } },
   });
-  if (response.status === 404) {
+  if (response.status === 204) {
     return null;
   }
   if (error) {
@@ -407,7 +407,7 @@ function PartnerDetail({
   );
 }
 
-// The Partner tab. A company is a partner when it has a `partner` row, so a 404
+// The Partner tab. A company is a partner when it has a `partner` row, so a 204
 // from GET /companies/{id}/partner means "not a partner yet", not an error. It
 // renders the setup form instead of the shared error state. Setup and edit
 // both PUT the same UpsertPartnerRequest. The first creation carries no

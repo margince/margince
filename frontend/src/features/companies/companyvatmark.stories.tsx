@@ -120,13 +120,13 @@ export const StatusFromAnOlderBuild: Story = {
   },
 };
 
-/** Never consulted. The server answers 404 and the mark offers the honest
- * absence rather than reporting a failure nobody caused. */
+/** Never consulted. The server answers 204 and the mark shows the absence
+ * rather than reporting a failure nobody caused. */
 export const NeverConsulted: Story = {
   render: () => {
     installFetchStub({
       "GET /me": CAN_WRITE,
-      [ROUTE]: () => jsonResponse({ title: "not found" }, 404),
+      [ROUTE]: () => new Response(null, { status: 204 }),
       [ASK]: () => new Response(null, { status: 202 }),
     });
     return inRow(NUMBER);
