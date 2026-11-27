@@ -43,7 +43,7 @@ type tsReader struct {
 	// cut counts evaluations a cycle or the depth bound stopped short. A name worked
 	// out across one is not kept, so no result depends on the order of files.
 	cut int
-	// spawned counts the reads a subprocess call made.
+	// spawned counts the reads subprocess calls make, for the subprocess floor.
 	spawned int
 }
 
@@ -71,7 +71,7 @@ func newTSReader(tree repoTree, sources map[string]string) (*tsReader, error) {
 	return r, nil
 }
 
-// add takes in one more source. A name already worked out stays as it was.
+// add keeps each name already worked out as it was.
 func (r *tsReader) add(file, source string) error {
 	parsed, err := parseJSFile(file, source)
 	if err != nil {
@@ -112,8 +112,7 @@ func (r *tsReader) importOf(file, local string) (jsImport, bool) {
 	return jsImport{}, false
 }
 
-// importedFrom reports whether a local name is the module itself, or one of its
-// exports, imported from any of the given specifiers.
+// importedFrom matches a namespace or default binding as well as a named export.
 func (r *tsReader) importedFrom(file, local string, specifiers []string) (original string, ok bool) {
 	imported, found := r.importOf(file, local)
 	if !found || !slices.Contains(specifiers, imported.specifier) {
@@ -215,8 +214,7 @@ func (r *tsReader) union(file string, exprs []string, depth int) []pathValue {
 	return out[:min(len(out), maxPathValues)]
 }
 
-// spell joins pieces of text into each value they can take together, as a
-// template literal or a + chain does.
+// spell crosses each value with each piece, as a template literal or a + chain does.
 func spell(values []pathValue, parts []pathValue) []pathValue {
 	var next []pathValue
 	for _, value := range values {
@@ -243,8 +241,7 @@ func (r *tsReader) concat(file string, operands []string, depth int) []pathValue
 	return values
 }
 
-// evalTemplate spells a template literal once for each value its substitutions
-// can take, or not at all when one of them cannot be evaluated.
+// A substitution that cannot be evaluated leaves the template with no value.
 func (r *tsReader) evalTemplate(file, inner string, depth int) []pathValue {
 	values := []pathValue{{}}
 	for inner != "" {
@@ -363,7 +360,6 @@ func partialValues(values []pathValue) []pathValue {
 	return out
 }
 
-// spreadElements is the element expressions a spread argument stands for, in order.
 func (r *tsReader) spreadElements(file, expr string, depth int) ([]string, bool) {
 	expr = strings.TrimSpace(expr)
 	if fill := arrayFill.FindStringSubmatch(expr); fill != nil {
@@ -420,8 +416,7 @@ func jsStringLiteral(expr string) (string, bool) {
 	return inner, true
 }
 
-// callArgs returns the top-level items of the bracket opened at open, and the
-// offset of the bracket that closes it (-1 when none does).
+// callArgs answers -1 for the end when no bracket closes the one at open.
 func callArgs(code string, open int) ([]string, int) {
 	inner, ok := tsBalanced(code[open:])
 	if !ok {

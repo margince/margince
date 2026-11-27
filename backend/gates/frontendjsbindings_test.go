@@ -12,8 +12,6 @@ import (
 	"strings"
 )
 
-// jsFile is one source read through tokenizeTS, for the census to find calls and
-// the bindings of names in.
 type jsFile struct {
 	code  string
 	tree  *tsTree
@@ -58,8 +56,7 @@ func parseJSFile(file, source string) (*jsFile, error) {
 	return parsed, nil
 }
 
-// start is the offset token i starts at; a regular expression's token sits at
-// its end.
+// A regular expression's token sits at its end, so raw moves it back.
 func (f *jsFile) start(i int) int {
 	if i >= len(f.tree.tokens) {
 		return len(f.code)
@@ -68,7 +65,6 @@ func (f *jsFile) start(i int) int {
 	return token.pos - len(token.raw)
 }
 
-// text is the source of tokens from up to to.
 func (f *jsFile) text(from, to int) string {
 	if from >= to {
 		return ""
@@ -76,8 +72,7 @@ func (f *jsFile) text(from, to int) string {
 	return f.code[f.start(from):f.start(to)]
 }
 
-// calleeBefore is the dotted name a "(" at token i calls, receivers included, and
-// the index of its first token.
+// calleeBefore keeps the receivers, as in path.posix.join.
 func (f *jsFile) calleeBefore(i int) (string, int) {
 	tr := f.tree
 	first := i - 1
@@ -100,7 +95,6 @@ func (f *jsFile) calleeBefore(i int) (string, int) {
 	return strings.TrimSpace(f.text(first, i)), first
 }
 
-// arg is the source of the call's argument at position.
 func (f *jsFile) arg(open, position int) string {
 	parts := f.tree.split(open)
 	if position >= len(parts) {
@@ -190,7 +184,6 @@ func (f *jsFile) specifiers() []string {
 	return found
 }
 
-// regexSources is the body of every regular expression literal in the file.
 func (f *jsFile) regexSources() []string {
 	var found []string
 	for _, token := range f.tree.tokens {
@@ -201,8 +194,7 @@ func (f *jsFile) regexSources() []string {
 	return found
 }
 
-// paramIndex is the position of name among the parameters inside the bracket
-// at open, or -1.
+// paramIndex answers -1 when name is not among the parameters.
 func (f *jsFile) paramIndex(open int, name string) int {
 	tr := f.tree
 	for position, part := range tr.split(open) {

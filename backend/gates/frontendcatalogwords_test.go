@@ -181,7 +181,6 @@ type tsBoundImport struct {
 
 var tsImportStatement = regexp.MustCompile(`\bimport\s+(?:type\s+)?([^;"']*?)\s*\bfrom\s*["']([^"']+)["']`)
 
-// tsImports returns the names the import statements of source bind.
 func tsImports(source string) []tsBoundImport {
 	var found []tsBoundImport
 	for _, m := range tsImportStatement.FindAllStringSubmatch(source, -1) {

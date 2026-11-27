@@ -66,8 +66,8 @@ var (
 	shellAssignment = regexp.MustCompile(`^[A-Za-z_][A-Za-z0-9_]*=`)
 )
 
-// scriptCommands is each simple command of a script. A case pattern names the
-// paths it matches, and a heredoc that no shell runs is data: both are dropped.
+// A case pattern names the paths it matches, and a heredoc no shell runs is
+// data: both are dropped.
 func scriptCommands(source string) []string {
 	var commands []string
 	depth, pattern, heredoc := 0, false, ""
@@ -108,9 +108,8 @@ func scriptCommands(source string) []string {
 	return commands
 }
 
-// commandPaths is the path-shaped words of one simple command. What echo and
-// printf print, what a write command such as mkdir is handed, and an output
-// redirection are no reads.
+// What echo and printf print, what a write command such as mkdir is handed, and
+// an output redirection are no reads.
 func commandPaths(command string) []string {
 	words := strings.Fields(command)
 	var candidates []string
@@ -141,8 +140,6 @@ func commandPaths(command string) []string {
 	return rels
 }
 
-// commandLines joins each line a backslash continues onto the next, so one
-// shell command is read whole.
 func commandLines(lines []string) []string {
 	var joined []string
 	pending := ""
@@ -245,13 +242,11 @@ func loadMakefile(t *testing.T, dir string) makefile {
 	return loaded
 }
 
-// makeCall is one target a job or a recipe makes, in the directory it runs make in.
 type makeCall struct {
 	dir, target string
 }
 
-// makeCalls is the targets one command line makes, with make or $(MAKE), -C
-// included, in the directory it runs in.
+// makeCalls reads both make and $(MAKE), and -C moves the directory a call runs in.
 func makeCalls(dir, line string) []makeCall {
 	var calls []makeCall
 	for _, command := range simpleCommands(strings.TrimLeft(line, " \t@+-")) {
@@ -271,8 +266,8 @@ func makeCalls(dir, line string) []makeCall {
 	return calls
 }
 
-// recipeWalk is what the walk from the lane's make calls read: each read by the
-// target that names it, and the recipe lines it walked.
+// reads names each read by the target whose recipe reads it, and lines holds each
+// recipe line walked. subMakes counts the reads of recipes outside the root Makefile.
 type recipeWalk struct {
 	reads    []laneRead
 	lines    []string
@@ -332,7 +327,6 @@ func laneRecipes(t *testing.T, tree repoTree, starts []makeCall) recipeWalk {
 	return walked
 }
 
-// laneStep is a workflow step as the census reads it.
 type laneStep struct {
 	Uses             string `yaml:"uses"`
 	Run              string `yaml:"run"`

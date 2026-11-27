@@ -9,11 +9,11 @@ package gates
 
 // The frontend lane runs on a change to every path outside frontend/ it reads.
 //
-// The readers are the frontend trees, the frontend-scoped jobs' workflows and
-// actions, the scripts those run or source, and the recipes they make. Out of
-// reach: process.cwd(), an environment variable, a loop's arithmetic, a
-// subprocess built at run time, and a call inside a template's substitution.
-// wholeTreeReaders declares what a regular expression keeps from a listing.
+// Readers: the frontend trees, the frontend-scoped jobs' workflows and actions,
+// scripts those run or source, and recipes they make. A read is a path built from
+// literals, imports, parameters and the module's own location. It reaches an fs
+// call, an import, a glob, a subprocess, a config escape, a markup reference or a
+// command. wholeTreeReaders declares what a regular expression keeps from a listing.
 
 import (
 	"fmt"
@@ -49,8 +49,7 @@ func newRepoTree(files []string) repoTree {
 	return tree
 }
 
-// trackedModule resolves a module specifier written without its ending. An import
-// may name x.js for x.ts, as TypeScript resolves it.
+// An import may name x.js for x.ts, as TypeScript resolves it.
 func (tree repoTree) trackedModule(base string) (string, bool) {
 	for _, candidate := range []string{base, strings.TrimSuffix(base, ".js") + ".ts", base + ".ts", base + ".tsx",
 		base + ".mts", base + ".js", base + ".mjs", base + ".json", base + "/index.ts"} {
@@ -169,8 +168,8 @@ func readsOf(ts *tsReader, file, source string) []string {
 
 var frontendGuard = regexp.MustCompile(`outputs\s*(?:\.\s*frontend\b|\[\s*['"]frontend['"]\s*\])`)
 
-// frontendLanes returns the jobs the frontend scope gates. A spelling of the
-// scope that filteredLanes does not parse fails here: the census would lose the job.
+// A spelling of the scope that filteredLanes does not parse fails here: the
+// census would lose the job.
 func frontendLanes(t *testing.T, workflow workflowFile) []filteredLane {
 	t.Helper()
 	lanes, unparsed, gated := frontendGatedJobs(t, workflow)
@@ -184,8 +183,8 @@ func frontendLanes(t *testing.T, workflow workflowFile) []filteredLane {
 	return lanes
 }
 
-// frontendGatedJobs returns the lanes on the frontend scope, and in unparsed each
-// job that names the scope in a spelling filteredLanes misses.
+// gated counts the jobs whose condition names the frontend scope. unparsed is each
+// of them that spells the scope in a way filteredLanes misses.
 func frontendGatedJobs(t *testing.T, workflow workflowFile) (lanes []filteredLane, unparsed []string, gated int) {
 	t.Helper()
 	parsed := map[string]bool{}
@@ -287,8 +286,7 @@ func narrowWholeTree(t *testing.T, tree repoTree, ts *tsReader, laneText string,
 	return narrowed
 }
 
-// wholeTreeProblems holds the reader's regular expressions to the ones declared
-// for it, both ways.
+// An undeclared regular expression and a stale declaration are both problems.
 func wholeTreeProblems(reader string, found []string, declared wholeTreeReader) []string {
 	var problems []string
 	named := slices.Concat(declared.keeps, slices.Collect(maps.Keys(declared.others)))
@@ -317,7 +315,6 @@ func TestAWholeTreeReaderNamesEachOfItsExpressions(t *testing.T) {
 
 var laneReaderTree = regexp.MustCompile(`^(frontend|extensions/(.+/)?frontend)/`)
 
-// laneCensus holds the outside reads, and how many each kind of reader makes.
 type laneCensus struct {
 	reads  []laneRead
 	byKind map[readerKind]int
