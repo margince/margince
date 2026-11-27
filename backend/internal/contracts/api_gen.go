@@ -42580,6 +42580,9 @@ type Company360NextStep struct {
 	// Subject The task's subject. A task Margince wrote is named in the reader's language, as its History row names it; a task typed by hand reads as written.
 	Subject string `json:"subject"`
 
+	// TaskType The type the task reads, by the rule `Activity.task_type` states, so this row names the same kind of work the task details do.
+	TaskType *TaskType `json:"task_type,omitempty"`
+
 	// Version The task's version, carried so the tick and the snooze beside this row can write with
 	// `If-Match`. The same reason `EmailSummary` carries one: a projection a reader can act
 	// from has to name the row it will act on, or every press is last-write-wins.

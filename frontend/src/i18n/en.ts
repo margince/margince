@@ -2058,7 +2058,6 @@ export const en = {
   "dealSuggestion.hint.proposal_sent": "proposal sent",
   "dealSuggestion.hint.opportunity_signalled": "buying signals",
   "dealSuggestion.hint.meeting_held": "meeting held",
-  "dealSuggestion.companyTitle": "Suggested deal",
   "dealSuggestion.open": "Open this deal",
   "dealSuggestion.dismiss": "Not a deal",
   "dealSuggestion.dismissed":
@@ -4571,6 +4570,8 @@ export const en = {
   "co.section.restricted": "Hidden for your role",
   // The same word the tab strip uses (`tab.tasks`): a tab called Tasks
   // opening a card called Next steps reads as a wrong turn.
+  "co.tasks.open": "Open",
+  "co.tasks.suggested": "Suggested next steps",
   "co.next.title": "Tasks",
   "co.next.empty": "No open tasks for this company.",
   "co.next.overdue": "Overdue",
@@ -4655,11 +4656,6 @@ export const en = {
   "deal.commitments.differs": "Differs from the deal value ({amount})",
   "co.next.due": "Due {when}",
   "co.next.undated": "No due date",
-  "co.next.col.task": "Task",
-  "co.next.col.due": "Due",
-  "co.next.col.owner": "Owner",
-  "co.next.col.state": "State",
-  "co.next.col.verbs": "Actions",
   "co.next.daysLate_one": "{days} day late",
   "co.next.daysLate_other": "{days} days late",
   "promise.late.today": "Due earlier today and still open.",
@@ -4671,7 +4667,6 @@ export const en = {
   "co.next.dueToday": "Due today",
   "co.next.inDays_one": "In {days} day",
   "co.next.inDays_other": "In {days} days",
-  "co.next.proposed": "Proposed by Margince",
   "commitment.dismiss": "Dismiss",
   // The reader's own promise, said by pressing it: only shown on a promise
   // nobody was asked to keep.
@@ -4970,7 +4965,6 @@ export const en = {
   // Said plainly, because the reader's next move depends on it: a step they
   // believe was written is a step nobody goes looking for again.
   "co.suggest.addTaskFailed": "Next step was not saved. Retry.",
-  "co.suggest.viewTasks": "View tasks",
   "co.suggest.commitment.overdueCount": "{count} overdue",
   "co.suggest.commitment.openCount": "{count} open",
   "co.suggest.commitment.overdueAtLeast": "{count}+ overdue",
@@ -7896,7 +7890,6 @@ export const en = {
   "co.spine.lastSpoke": "Last contact",
   "co.spine.overdue": "Overdue",
   "co.spine.expectedClose": "Expected close",
-  "today.title": "Needs attention",
   "today.failed":
     "This section did not load. The rest of the page is unaffected.",
   "today.quiet": "Nothing needs attention right now.",

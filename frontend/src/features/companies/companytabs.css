@@ -7,15 +7,68 @@
   min-width: 0;
 }
 
-/* The tick leads the task's name on one line, the linked records under it. */
-.co-tasktable-task {
-  display: flex;
-  align-items: center;
-  gap: var(--space-2);
-  min-width: 0;
+/* An open task as a row of the Tasks list, shaped like a Worklist row: the
+   tick, then the task and its chips, then its verbs opposite. */
+.co-taskrow {
+  display: grid;
+  grid-template-columns: var(--space-6) minmax(0, 1fr) auto;
+  column-gap: var(--space-3);
+  align-items: start;
 }
-.co-tasktable-name {
+.co-taskrow-tick {
+  display: flex;
+  justify-content: center;
+  padding-block-start: var(--space-1);
+}
+.co-taskrow-text {
   display: flex;
   flex-direction: column;
+  align-items: flex-start;
+  gap: var(--space-1);
   min-width: 0;
+}
+.co-taskrow-title {
+  all: unset;
+  font: var(--fontHeadingXSmall);
+  color: var(--textPrimary);
+  text-wrap: pretty;
+}
+button.co-taskrow-title {
+  cursor: pointer;
+}
+button.co-taskrow-title:hover {
+  text-decoration: underline;
+  text-underline-offset: 3px;
+}
+button.co-taskrow-title:focus-visible {
+  outline: var(--focus-ring);
+  outline-offset: 2px;
+}
+/* The task's own words, two lines at most: the details hold the rest. */
+.co-taskrow-why {
+  display: -webkit-box;
+  -webkit-box-orient: vertical;
+  -webkit-line-clamp: 2;
+  overflow: hidden;
+  max-width: 68ch;
+  margin: 0;
+}
+.co-taskrow-acts {
+  display: flex;
+  align-items: center;
+  gap: var(--space-1);
+}
+/* A group with nothing in it says so in one quiet line, never an empty box. */
+.co-tasklist-none {
+  margin: 0;
+  color: var(--textSecondary);
+}
+@media (max-width: 720px) {
+  .co-taskrow {
+    grid-template-columns: var(--space-6) minmax(0, 1fr);
+  }
+  .co-taskrow-acts {
+    grid-column: 2;
+    margin-block-start: var(--space-2);
+  }
 }

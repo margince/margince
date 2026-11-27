@@ -34757,6 +34757,11 @@ components:
             instead of printing an id.
         linked_deal_id: {type: [string, 'null'], format: uuid}
         linked_contact_id: {type: [string, 'null'], format: uuid}
+        task_type:
+          allOf: [{$ref: '#/components/schemas/TaskType'}]
+          readOnly: true
+          description: >-
+            The type the task reads, by the rule `Activity.task_type` states, so this row names the same kind of work the task details do.
         may_be_done:
           $ref: '#/components/schemas/WorklistMayBeDone'
           description: |-

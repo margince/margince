@@ -310,17 +310,12 @@
    two left edges to follow. No hover fill either: the row is not one press
    target, its verbs are, and a fill behind them claims a hit area the row does
    not have. */
+/* No ground of its own: the byline's indigo spark is the authorship claim, and
+   a tinted row beside the account's own tasks read as a second card. */
 .co-move {
   display: flex;
   gap: var(--space-4);
   align-items: flex-start;
-  /* Indigo, because the agent wrote this row — and a GROUND rather than a
-     rule, because the list mixes what Margince proposed with the account's own
-     open tasks, and a hairline of a different hue is the whole difference
-     between them. The tint is the same claim the band above it makes: this
-     part was written for you, the rest was already yours. Edge to edge, so
-     what it claims is the ROW. */
-  background: linear-gradient(160deg, var(--aiLight), transparent 80%);
 }
 
 /* Who wrote the row, over what it says. An eyebrow rather than a badge beside
@@ -393,7 +388,7 @@
   align-items: center;
   gap: var(--space-1) var(--space-2);
   /* NO top margin, and the absence is the decision: the move lays this block
-     out as one row of its own grid (`.co-lead .co-move-body`), whose row gap is
+     out as one row of its own grid (`.co-tasklist .co-move-body`), whose row gap is
      the whole step between the reason and the records it rests on. A margin
      here is a second opinion about that step, and the two together stand the
      evidence further from its reason than the reason stands from the ask it
@@ -1103,13 +1098,13 @@
    which held four moves in less height and cost the reader the thing that
    makes a list of asks scannable — every ask starting at the same margin,
    with its reason beneath rather than beside it. */
-.co-lead .co-move {
-  align-items: center;
+.co-tasklist .co-move {
+  align-items: flex-start;
 }
 /* The ask carries a little more air under it than the rest of the column: it
    names the move, and the two lines below it are the case FOR that move, so
    they belong closer to each other than to the thing they argue for. */
-.co-lead .co-move-ask {
+.co-tasklist .co-move-ask {
   margin-bottom: var(--space-1);
 }
 /* Two columns for the whole row: the left is what the move CLAIMS — ask,
@@ -1119,11 +1114,11 @@
 /* One rhythm down the left column: the reason and the provenance under it sit
    at the same interval, so the case for the move reads as one block rather
    than as a line with a footnote. */
-.co-lead .co-move-body {
+.co-tasklist .co-move-body {
   display: grid;
   grid-template-columns: minmax(0, 1fr) auto;
   grid-template-rows: auto;
-  align-items: center;
+  align-items: start;
   gap: var(--space-3) var(--space-4);
 }
 /* The rows the verbs span have to be EXPLICIT rows. `grid-row: 1 / -1` counts
@@ -1135,17 +1130,17 @@
    byline too: left out of the count, the verbs spanned two rows while the
    column had three, and the two they spanned stretched to the verbs' height,
    opening a button's worth of air between the byline and the ask. */
-.co-lead .co-move-body:has(.co-move-by),
-.co-lead .co-move-body:has(.co-move-reason),
-.co-lead .co-move-body:has(.co-move-basis) {
+.co-tasklist .co-move-body:has(.co-move-by),
+.co-tasklist .co-move-body:has(.co-move-reason),
+.co-tasklist .co-move-body:has(.co-move-basis) {
   grid-template-rows: auto auto;
 }
-.co-lead .co-move-body:has(.co-move-by):has(.co-move-reason),
-.co-lead .co-move-body:has(.co-move-by):has(.co-move-basis),
-.co-lead .co-move-body:has(.co-move-reason):has(.co-move-basis) {
+.co-tasklist .co-move-body:has(.co-move-by):has(.co-move-reason),
+.co-tasklist .co-move-body:has(.co-move-by):has(.co-move-basis),
+.co-tasklist .co-move-body:has(.co-move-reason):has(.co-move-basis) {
   grid-template-rows: auto auto auto;
 }
-.co-lead
+.co-tasklist
   .co-move-body:has(.co-move-by):has(.co-move-reason):has(.co-move-basis) {
   grid-template-rows: auto auto auto auto;
 }
@@ -1155,25 +1150,35 @@
    gap is set. Trimming the leading makes the box end where the letters do, so
    the gap above is the whole distance a reader sees. A browser that does not
    support it falls back to the leading it always had. */
-.co-lead .co-move-ask,
-.co-lead .co-move-reason {
+.co-tasklist .co-move-ask,
+.co-tasklist .co-move-reason {
   text-box: trim-both cap alphabetic;
 }
-.co-lead .co-move-by,
-.co-lead .co-move-ask,
-.co-lead .co-move-reason,
-.co-lead .co-move-basis {
+.co-tasklist .co-move-by,
+.co-tasklist .co-move-ask,
+.co-tasklist .co-move-reason,
+.co-tasklist .co-move-basis {
   grid-column: 1;
 }
 /* The wrapper stops being a box of its own so its two halves can land in the
    row's own two columns: the evidence belongs under the reason it supports,
    and the verbs opposite all of it. */
-.co-lead .co-move-do {
+.co-tasklist .co-move-do {
   display: contents;
 }
-.co-lead .today-actions {
+/* The verbs read as one line opposite the claim, the way a Worklist row's do,
+   rather than a column of full-width buttons stacked beside it. */
+.co-tasklist .today-actions {
   grid-column: 2;
   grid-row: 1 / -1;
+  flex-direction: row;
+  flex-wrap: wrap;
+  justify-content: flex-end;
+  align-items: flex-start;
+  min-inline-size: 0;
+}
+.co-tasklist .today-verb > .btn {
+  width: auto;
 }
 /* Under the fold the two columns become one, and the verbs move from opposite
    the claim to under it. That is the whole collapse: the verb column is a
@@ -1185,12 +1190,13 @@
    `grid-row: auto` and not the span: with one column the span would lay the
    verbs over the very lines they are meant to follow. */
 @media (max-width: 900px) {
-  .co-lead .co-move-body {
+  .co-tasklist .co-move-body {
     grid-template-columns: minmax(0, 1fr);
   }
-  .co-lead .today-actions {
+  .co-tasklist .today-actions {
     grid-column: 1;
     grid-row: auto;
+    justify-content: flex-start;
   }
 }
 /* Putting a move off is not a second verb. Stripped of its border it reads as
@@ -1211,7 +1217,7 @@
    and the head's link are the three things in this pane a reader aims at; the
    sources under a reason are an inline run inside a sentence, and a 44px floor
    there spaces a citation row like a list of buttons. Naming the three rather
-   than the pane is what keeps that distinction — `.co-lead .btn` reaches every
+   than the pane is what keeps that distinction — `.co-tasklist .btn` reaches every
    chip in the basis as well.
    Each selector is three classes deep, which also settles the head: the link
    variant declares `min-block-size: 0` at two, so these outrank it on
@@ -1221,9 +1227,9 @@
    everywhere is the design system's to say, and a screen sheet answering it a
    second time is how two heights of one control ship. */
 @media (pointer: coarse) {
-  .co-lead .today-verb .btn,
-  .co-lead .co-todo .btn,
-  .co-lead .panel-head .btn {
+  .co-tasklist .today-verb .btn,
+  .co-tasklist .co-todo .btn,
+  .co-tasklist .panel-head .btn {
     min-block-size: 44px;
   }
 }

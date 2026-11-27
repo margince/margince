@@ -63,9 +63,6 @@ type TodayReadingInputs = Readonly<{
   // advice replaces the 360's own rows, and a read in flight draws the pending
   // row. The foot says who read what and when.
   scan?: AccountScan;
-  // Narrows which suggestions the list draws, for a surface that already
-  // shows the rest in a panel of its own.
-  keep?: Parameters<typeof useSuggestionsBody>[0]["keep"];
 }>;
 
 export function useTodayReading({
@@ -80,7 +77,6 @@ export function useTodayReading({
   onOpenEmail,
   onPerform,
   scan,
-  keep,
 }: TodayReadingInputs): TodayReading {
   const t = useT();
   const plural = usePlural();
@@ -93,7 +89,6 @@ export function useTodayReading({
     onOpenReceipt,
     onOpenEmail,
     onPerform,
-    keep,
     advice: scan
       ? { findings: scan.findings, dropped: scan.findings_dropped }
       : undefined,

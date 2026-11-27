@@ -37272,6 +37272,8 @@ export interface components {
             linked_deal_id?: string | null;
             /** Format: uuid */
             linked_contact_id?: string | null;
+            /** @description The type the task reads, by the rule `Activity.task_type` states, so this row names the same kind of work the task details do. */
+            readonly task_type?: components["schemas"]["TaskType"];
             /**
              * @description Present on a promise task when we wrote to one of its recipients on its thread after the
              *     promise. The task then asks whether that mail kept it, as the Worklist does, with the

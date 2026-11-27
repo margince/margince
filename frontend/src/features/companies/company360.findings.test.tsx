@@ -17,7 +17,7 @@ import {
   stub,
   view,
 } from "./company360.testkit";
-import { CompanyTaskTable } from "./companytaskstable";
+import { CompanyTaskRows } from "./companytaskrows";
 
 beforeEach(() => {
   globalThis.localStorage.setItem("margince.workspaceSlug", "acme");
@@ -35,7 +35,7 @@ afterEach(() => {
 function NextStepsWithVerbs({ three60 }: Readonly<{ three60: Company360 }>) {
   const update = useTaskUpdate(taskWriteKeys("company", "o-1"));
   return (
-    <CompanyTaskTable
+    <CompanyTaskRows
       view={three60}
       onOpenTask={() => {}}
       renderAction={(step) => (
@@ -317,7 +317,7 @@ describe("company view — an open task can be acted on", () => {
   it("draws no checkbox when the caller has no write path for it", async () => {
     const three60 = view({ next_steps: { data: [step], page: emptyPage } });
     stub(three60);
-    render(<CompanyTaskTable view={three60} />);
+    render(<CompanyTaskRows view={three60} />);
     await waitFor(() =>
       expect(screen.getByText("Send the retrofit proposal")).toBeTruthy(),
     );

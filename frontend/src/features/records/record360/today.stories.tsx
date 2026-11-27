@@ -3,39 +3,26 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { Badge, Button } from "../../../design-system/atoms";
+import { Panel } from "../../../design-system/panel";
 import { StoryProviders } from "../../../testing/story-utils";
 import { MomentEvidence } from "./momentevidence";
-import { FoundMove, TodayPanel, TodoRow } from "./today";
+import { FoundMove, TodoRow } from "./today";
 
 // WHAT NEEDS A CONTACT TODAY, on its own — the pane four record pages draw, so
 // what it claims has to be right on all four at once.
 //
-// The claim is authorship, and the pane's indigo is where it is made. What the
-// stories are for is the DIVIDE inside it — a found move at the pane's loudest
-// weight, carrying its own byline, and under it the record's own to-dos, where
-// only the verb the agent performs takes the hue. A to-do somebody else owes is
-// the account's, not the machine's, and its verb is a plain outlined one; the
-// two rows side by side are the only way to see that the tint still means
-// something, and that nothing on the head claims both.
-//
-// The head is `Panel`'s own: a title and the way to the record's own list, with
-// what the day counts down to and what it was read from in the band UNDER the
-// rows. The fixture below carries that full foot rather than a single chip,
-// because three blocks wedged beside the title left none of them whole.
-//
-// Check both themes. Every indigo here is a color-mix() that lifts on dark, the
-// foot's badges and the tinted verb included. Check the phone story too: the
-// pane draws at 390px on four record pages, and it is the only width where the
-// move's verbs sit under its claim rather than beside it.
+// The stories show the two row shapes: a found move with its own byline, and
+// the record's own to-dos. The rows sit in the Tasks list (`co-tasklist`).
+// Check both themes, since every indigo is a color-mix() that lifts on dark.
 
-const meta: Meta<typeof TodayPanel> = {
+const meta: Meta<typeof FoundMove> = {
   title: "Records/Record 360/What needs you",
-  component: TodayPanel,
+  component: FoundMove,
   parameters: { layout: "padded" },
 };
 export default meta;
 
-type Story = StoryObj<typeof TodayPanel>;
+type Story = StoryObj<typeof FoundMove>;
 
 // What the day counts down to and what it was read from, exactly as
 // companytoday.tsx assembles it: a commitment badge, then the read's own
@@ -62,7 +49,7 @@ function Pane({
   return (
     <StoryProviders>
       <div style={{ maxWidth: width }}>
-        <TodayPanel onOpenTasks={() => {}} footer={foot}>
+        <Panel title="Tasks" className="co-tasklist" footer={foot}>
           <FoundMove
             when="06:52"
             kicker={kicker}
@@ -106,7 +93,7 @@ function Pane({
             due={{ label: "in 3 days" }}
             verb={{ label: "Open", onAct: () => {} }}
           />
-        </TodayPanel>
+        </Panel>
       </div>
     </StoryProviders>
   );
@@ -155,7 +142,7 @@ export const FoundMoveRefused: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
-        <TodayPanel onOpenTasks={() => {}}>
+        <Panel title="Tasks" className="co-tasklist">
           <FoundMove
             when="06:52"
             title="Send the breakdown Lena promised on 5 August."
@@ -171,7 +158,7 @@ export const FoundMoveRefused: Story = {
               </span>
             }
           />
-        </TodayPanel>
+        </Panel>
       </div>
     </StoryProviders>
   ),
@@ -193,7 +180,7 @@ export const FoundMoveNarrowRefusedAndLongBasis: Story = {
   tags: ["uat-phone"],
   render: () => (
     <StoryProviders>
-      <TodayPanel onOpenTasks={() => {}}>
+      <Panel title="Tasks" className="co-tasklist">
         <FoundMove
           when="06:52"
           kicker="Gone quiet"
@@ -227,7 +214,7 @@ export const FoundMoveNarrowRefusedAndLongBasis: Story = {
             </>
           }
         />
-      </TodayPanel>
+      </Panel>
     </StoryProviders>
   ),
 };
@@ -238,7 +225,7 @@ export const FoundMoveOneVerb: Story = {
   render: () => (
     <StoryProviders>
       <div style={{ maxWidth: 720 }}>
-        <TodayPanel onOpenTasks={() => {}}>
+        <Panel title="Tasks" className="co-tasklist">
           <FoundMove
             when="06:52"
             title="Send the breakdown Lena promised on 5 August."
@@ -249,39 +236,7 @@ export const FoundMoveOneVerb: Story = {
               </span>
             }
           />
-        </TodayPanel>
-      </div>
-    </StoryProviders>
-  ),
-};
-
-export const NothingNeedsYou: Story = {
-  // The honest quiet answer, which is a reading rather than an empty list —
-  // and still the machine's, which is why the head keeps its claim.
-  render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <TodayPanel onOpenTasks={() => {}} />
-      </div>
-    </StoryProviders>
-  ),
-};
-
-export const StillReading: Story = {
-  render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <TodayPanel state="loading" />
-      </div>
-    </StoryProviders>
-  ),
-};
-
-export const ReadFailed: Story = {
-  render: () => (
-    <StoryProviders>
-      <div style={{ maxWidth: 720 }}>
-        <TodayPanel state="failed" />
+        </Panel>
       </div>
     </StoryProviders>
   ),

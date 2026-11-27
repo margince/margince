@@ -33,5 +33,5 @@ export { basisAddsARecord } from "./moment";
 export { MomentEvidence } from "./momentevidence";
 export { RecordReadingPair } from "./reading";
 export { useSetAside } from "./setaside";
-export { FoundMove, TodayPanel, TodoRow, WithheldNotice } from "./today";
+export { FoundMove, TodoRow, WithheldNotice } from "./today";
 export { type Signal, SignalStrip, type SignalTone } from "./verdict";

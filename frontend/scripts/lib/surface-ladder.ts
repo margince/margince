@@ -62,7 +62,6 @@ export const UNDERLAY_HOSTS = [
   ".arphead",
   ".avatar-mesh",
   ".brief-triage-frame",
-  ".co-move",
   ".core-glass",
   ".core-glow",
   ".core-rim",

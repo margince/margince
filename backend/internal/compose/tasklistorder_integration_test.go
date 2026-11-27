@@ -70,6 +70,12 @@ func TestBothPagesRankTwoPromisesTheSameWay(t *testing.T) {
 			"two lists of one task set that disagree teach the reader that neither order means anything",
 			got, older)
 	}
+	// Both pages name the same kind of work for one task. Otherwise one task
+	// reads as two kinds of work.
+	contactType, companyType := contactPage.NextSteps.Data[0].TaskType, companyPage.NextSteps.Data[0].TaskType
+	if contactType == nil || companyType == nil || *contactType != *companyType {
+		t.Errorf("the account reads the task as %v and the contact as %v, want one type on both", companyType, contactType)
+	}
 }
 
 // seedEmployerOf gives a contact an employer, so the account's any-link task

@@ -10,128 +10,19 @@
 // already carries, which a reader scans. At one weight the two read as five
 // equal asks and the one worth doing first stops leading.
 //
-// The panel and its rows came out of the company page's daily brief. The
-// contact page had a card of its own for the moment and the deal page a
-// paragraph inside its briefing, and a rep who reads three records met three
-// spellings of "here is the move" — so the chrome, the empty answer and the
-// two row shapes are one component each, and a record hands in its rows.
+// Each row shape is one component. The list the rows sit in is the record's
+// own.
 
 import { Sparkles } from "lucide-react";
-import { Children, type ReactNode } from "react";
-import {
-  Avatar,
-  Button,
-  EmptyState,
-  Skeleton,
-} from "../../../design-system/atoms";
-import { Panel, PanelBody, PanelRow } from "../../../design-system/panel";
+import type { ReactNode } from "react";
+import { Avatar, Button } from "../../../design-system/atoms";
+import { PanelRow } from "../../../design-system/panel";
 import { QuietVerbs } from "../../../design-system/verbvolume";
 import { useT } from "../../../i18n";
 import "../../companies/company360.css";
 // The verb column: `.today-actions` and `.today-verb`, drawn here rather than
 // left to whichever page mounts a row that needs them.
 import "./record360.css";
-
-/**
- * TodayPanel is the panel: its head, the rows a caller hands in, and the one
- * honest sentence for a day with no rows.
- *
- * `state` is the read the rows come from. Neither the pending read nor the
- * failed one draws rows — and neither may draw the quiet sentence, which is a
- * claim about the record ("nothing needs you") that a read still in flight
- * has no basis for.
- *
- * Indigo in every state, because the pane's answer is a machine's whichever
- * one it is giving: the moves are what the agent found, and "nothing needs
- * you" is its reading too.
- */
-export function TodayPanel({
-  state = "ready",
-  onOpenTasks,
-  tasksLabel,
-  footer,
-  notice,
-  complete = true,
-  children,
-}: Readonly<{
-  state?: "ready" | "loading" | "failed";
-  // Where the head's link leads. Absent for a record with no task list of its
-  // own to open.
-  onOpenTasks?: () => void;
-  tasksLabel?: string;
-  // The band under the rows: what the day counts down to, and what the day was
-  // read from. It is a band and not a line in the head — a caller hands in a
-  // commitment badge, a truncation count and the read's own provenance, and
-  // three blocks wedged beside the title left nothing whole.
-  footer?: ReactNode;
-  // A sentence about what the rows could NOT be assembled from — a withheld
-  // section — drawn under them whatever else is there. A brief assembled from
-  // some of its sources is not the same brief, and the reader is the only one
-  // who can judge whether the missing one mattered.
-  notice?: ReactNode;
-  // False when a source the rows are read from was withheld: an empty list is
-  // then no basis for "nothing needs you", so it draws nothing but the notice.
-  complete?: boolean;
-  children?: ReactNode;
-}>) {
-  const t = useT();
-  // Counted rather than tested for truthiness: a caller hands in arrays, and
-  // an empty array is truthy.
-  const rows = Children.toArray(children);
-  // Panel's own head, rather than one this pane stacks for itself: the title,
-  // and the way to the record's own list at the far end.
-  //
-  // The band carries no authorship mark. The pane is already indigo, which IS
-  // the claim, and the rows under it are of two kinds: what the agent found
-  // says so in its own byline, while a to-do is a commitment the record
-  // already carried. A mark over the head claims both, and the reader it
-  // reaches is the one deciding whether a machine wrote the promise somebody
-  // else made.
-  //
-  // Stated ONCE for all three states rather than per branch: a skeleton or an
-  // error under a different head is a reader unable to tell whether they are
-  // looking at the same pane.
-  return (
-    <Panel
-      tone="ai"
-      // `co-lead` sets the claim left and the verbs opposite it.
-      className="co-lead"
-      title={t("today.title")}
-      titleAction={
-        onOpenTasks ? (
-          <Button variant="link" onClick={onOpenTasks}>
-            {tasksLabel ?? t("co.suggest.viewTasks")}
-          </Button>
-        ) : undefined
-      }
-      footer={footer}
-    >
-      {state === "loading" && (
-        <PanelBody>
-          <Skeleton width="100%" height={64} />
-        </PanelBody>
-      )}
-      {state === "failed" && (
-        <PanelBody>
-          <EmptyState>{t("today.failed")}</EmptyState>
-        </PanelBody>
-      )}
-      {state === "ready" && rows}
-      {/* Not "nothing to do": the brief read everything it can read and found
-          nothing that needs a contact today. That is a real answer and it is
-          different from the record being empty. */}
-      {state === "ready" && rows.length === 0 && complete && (
-        <PanelBody>
-          <EmptyState>{t("today.quiet")}</EmptyState>
-        </PanelBody>
-      )}
-      {/* Under whatever the read produced, and only once it has settled: a
-          withheld-sources line over a skeleton describes a reading that does
-          not exist yet. */}
-      {state === "ready" && notice}
-    </Panel>
-  );
-}
 
 /**
  * WithheldNotice names the sources the day's work could NOT be assembled from

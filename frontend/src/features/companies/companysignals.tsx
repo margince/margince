@@ -6,7 +6,7 @@ import { api } from "../../api/client";
 import type { components } from "../../api/schema";
 import { AppLink } from "../../design-system/applink";
 import { OffsiteLink } from "../../design-system/offsitelink";
-import { Panel, PanelBody, PanelRow } from "../../design-system/panel";
+import { PanelBody, PanelGroupHead, PanelRow } from "../../design-system/panel";
 import {
   type SectionState,
   SurfaceState,
@@ -62,15 +62,12 @@ function SourcePageLink({ signal }: Readonly<{ signal: Signal }>) {
 }
 
 /**
- * SignalsSection reads the account-filtered signals, same endpoint and same
- * withheld/failed handling SignalsCard used. Signals are a separately
- * governed surface, not a 360 section, so this runs its own query rather
- * than reading a slice of `view`.
+ * SignalsSection is the Signals group of the account's Tasks list. Signals
+ * are a separately governed surface, not a 360 section, so this runs its own
+ * query rather than reading a slice of `view`.
  */
 export function SignalsSection({ companyId }: Readonly<{ companyId: string }>) {
   const t = useT();
-  const { locale } = useLocale();
-  const readerZone = useViewerZone();
   const query = useQuery({
     queryKey: ["signals", "company", companyId],
     queryFn: async () => {
@@ -97,51 +94,26 @@ export function SignalsSection({ companyId }: Readonly<{ companyId: string }>) {
   } else if (signals.length === 0) {
     state = "empty";
   }
+  // An account with no signal says so in one line, never a box. The line
+  // tells a reader what the group would carry.
   return (
-    <Panel title={t("co.signals.title")}>
-      {state === "ready" ? (
-        signals.map((signal) => (
-          <PanelRow key={signal.id} className="co-signal-row">
-            <span
-              className={`co-dot${signalTone(signal.severity) ? ` co-dot-${signalTone(signal.severity)}` : ""}`}
-              aria-hidden="true"
-            />
-            <span className="co-signal-body">
-              <span className="co-signal-title">
-                {signalKindLabel(signal.kind, t)}
-              </span>
-              <span className="co-signal-summary">{signal.summary}</span>
-              {/* A signal ABOUT one of the account's projects sends the
-                  reader to that project: the summary names it, the link
-                  opens it. An account- or contact-subject signal already
-                  sits on the page it is about. */}
-              {signal.entity_type === "project" && signal.entity_id && (
-                <AppLink
-                  className="co-rowlink co-signal-link"
-                  href={routeHash({ screen: "projects", id: signal.entity_id })}
-                >
-                  {t("co.signals.openProject")}
-                </AppLink>
-              )}
-              {/* The page the claim was read off. A newsroom signal cites the
-                  article rather than copying it, so the headline on this row
-                  is the whole of what we hold — without the address, a reader
-                  who wants the announcement itself has nowhere to go and the
-                  citation proves nothing. */}
-              <SourcePageLink signal={signal} />
-            </span>
-            <span className="co-row-meta t-caption">
-              {formatDateAbbrev(signal.detected_at, locale, readerZone)}
-            </span>
-          </PanelRow>
-        ))
-      ) : (
+    <>
+      <PanelGroupHead title={t("co.signals.title")} level="h3" />
+      {state === "ready" &&
+        signals.map((signal) => <SignalRow key={signal.id} signal={signal} />)}
+      {state === "empty" && (
+        <PanelBody>
+          <p className="co-tasklist-none">
+            {t("co.signals.empty")} {t("co.signals.emptyDetail")}
+          </p>
+        </PanelBody>
+      )}
+      {state !== "ready" && state !== "empty" && (
         <PanelBody>
           <SurfaceState
             loadingLabel={t("co.signals.title")}
-            state={state}
             emptyLabel={t("co.signals.empty")}
-            emptyDetail={t("co.signals.emptyDetail")}
+            state={state}
             detail={
               state === "failed" ? { onRetry: () => void query.refetch() } : {}
             }
@@ -150,6 +122,44 @@ export function SignalsSection({ companyId }: Readonly<{ companyId: string }>) {
           </SurfaceState>
         </PanelBody>
       )}
-    </Panel>
+    </>
+  );
+}
+
+function SignalRow({ signal }: Readonly<{ signal: Signal }>) {
+  const t = useT();
+  const { locale } = useLocale();
+  const readerZone = useViewerZone();
+  return (
+    <PanelRow className="co-signal-row">
+      <span
+        className={`co-dot${signalTone(signal.severity) ? ` co-dot-${signalTone(signal.severity)}` : ""}`}
+        aria-hidden="true"
+      />
+      <span className="co-signal-body">
+        <span className="co-signal-title">
+          {signalKindLabel(signal.kind, t)}
+        </span>
+        <span className="co-signal-summary">{signal.summary}</span>
+        {/* A signal ABOUT one of the account's projects sends the reader to
+            that project: the summary names it, the link opens it. An account-
+            or contact-subject signal already sits on the page it is about. */}
+        {signal.entity_type === "project" && signal.entity_id && (
+          <AppLink
+            className="co-rowlink co-signal-link"
+            href={routeHash({ screen: "projects", id: signal.entity_id })}
+          >
+            {t("co.signals.openProject")}
+          </AppLink>
+        )}
+        {/* The page the claim was read off. A newsroom signal cites the article
+            rather than copying it, so without the address the citation proves
+            nothing. */}
+        <SourcePageLink signal={signal} />
+      </span>
+      <span className="co-row-meta t-caption">
+        {formatDateAbbrev(signal.detected_at, locale, readerZone)}
+      </span>
+    </PanelRow>
   );
 }

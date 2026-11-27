@@ -230,7 +230,7 @@ func readNextSteps(ctx context.Context, tx pgx.Tx, companyID ids.CompanyID, now 
 		       (SELECT pl.contact_id FROM activity_link pl
 		         WHERE pl.activity_id = a.id AND pl.entity_type = 'contact' AND %[4]s
 		         ORDER BY pl.id LIMIT 1), `+storekit.IntentWireSQL("a", "due")+`,
-		       coalesce(`+storekit.TaskDueBeforeSQL("a", "$%[9]d")+`, false)
+		       coalesce(`+storekit.TaskDueBeforeSQL("a", "$%[9]d")+`, false), `+storekit.TaskTypeSQL("a")+`
 		FROM activity a
 		LEFT JOIN app_user u ON u.id = a.assignee_id AND %[8]s
 		WHERE a.kind = 'task' AND NOT a.is_done AND a.archived_at IS NULL AND %[1]s
@@ -297,8 +297,9 @@ func scanNextStep(row pgx.CollectableRow, reader textlang.Lang) (crmcontracts.Co
 	var version int64
 	var source taskSource
 	var dueHasTime bool
+	var taskType string
 	if err := row.Scan(&id, &step.Subject, &written, &step.Body, &step.DueAt, &dueHasTime, &assignee, &assigneeName, &occurredAt, &version,
-		&source.activity, &source.system, &dealID, &contactID, &step.DueIntent, &step.Overdue); err != nil {
+		&source.activity, &source.system, &dealID, &contactID, &step.DueIntent, &step.Overdue, &taskType); err != nil {
 		return step, occurredAt, source, err
 	}
 	step.Subject = written.SubjectIn(step.Subject, reader)
@@ -309,5 +310,6 @@ func scanNextStep(row pgx.CollectableRow, reader textlang.Lang) (crmcontracts.Co
 	step.AssigneeName = namedOrNobody(assigneeName)
 	step.LinkedDealId = uuidPtr(dealID)
 	step.LinkedContactId = uuidPtr(contactID)
+	step.TaskType = new(crmcontracts.TaskType(taskType))
 	return step, occurredAt, source, nil
 }
