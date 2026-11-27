@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -133,7 +134,9 @@ export const BuilderCurrency: Story = {
       "Ceiling",
     );
     await pickType(canvasElement, "Currency");
-    await canvas.findByRole("textbox", { name: "Currency code" });
+    await canvas.findByRole("textbox", {
+      name: englishCopy["cf.currencyCode"],
+    });
   },
 };
 
@@ -158,11 +161,15 @@ export const BuilderPicklist: Story = {
       "Stage reason",
     );
     await pickType(canvasElement, "Picklist");
-    const [first] = await canvas.findAllByLabelText("Option label");
+    const [first] = await canvas.findAllByLabelText(
+      englishCopy["cf.optionPlaceholder"],
+    );
     if (first === undefined) throw new Error("the picklist drew no option");
     await userEvent.type(first, "Budget");
     await userEvent.click(canvas.getByRole("button", { name: "Add option" }));
-    const added = (await canvas.findAllByLabelText("Option label")).at(-1);
+    const added = (
+      await canvas.findAllByLabelText(englishCopy["cf.optionPlaceholder"])
+    ).at(-1);
     if (added === undefined) throw new Error("Add option drew no option");
     await userEvent.type(added, "Timing");
   },
@@ -193,7 +200,7 @@ export const BuilderRefusal: Story = {
     // how a reader learns to ignore every notice on a page. What holds it is
     // the claim itself and the verb it keeps dead, which is what the co-located
     // test asserts too.
-    await canvas.findByText("This looks like a new object or relationship");
+    await canvas.findByText(englishCopy["cf.refuse.title"]);
     await expect(
       canvas.getByRole("button", { name: "Add field" }),
     ).toBeDisabled();
@@ -389,7 +396,9 @@ const chooseMultiple: Story["play"] = async ({ canvasElement }) => {
     "Capabilities",
   );
   await pickType(canvasElement, "Multiple choice");
-  const [first] = await canvas.findAllByLabelText("Option label");
+  const [first] = await canvas.findAllByLabelText(
+    englishCopy["cf.optionPlaceholder"],
+  );
   if (first === undefined) throw new Error("the choice list drew no option");
   await userEvent.type(first, "Fit, scope");
 };

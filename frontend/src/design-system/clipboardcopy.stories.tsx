@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { StoryProviders } from "../testing/story-utils";
 import { Button } from "./atoms";
 import { holdClipboard, stubClipboard } from "./clipboard-testing";
@@ -84,7 +85,7 @@ export const Refused: Story = {
     try {
       const canvas = within(canvasElement);
       await user.click(canvas.getByRole("button", { name: "Copy link" }));
-      await screen.findByText("Clipboard access denied");
+      await screen.findByText(englishCopy["clipboard.copyFailedTitle"]);
       // The remedy says to copy by hand, so the keyboard must reach the text.
       await user.tab({ shift: true });
       const link = canvas.getByRole("textbox", { name: "Room link" });
@@ -120,11 +121,11 @@ export const Glyph: Story = {
     try {
       await userEvent.click(
         within(canvasElement).getByRole("button", {
-          name: "Copy email address",
+          name: englishCopy["contactLink.copyEmail"],
         }),
       );
       await within(canvasElement).findByRole("button", {
-        name: "Email address copied",
+        name: englishCopy["contactLink.emailCopied"],
       });
     } finally {
       clipboard.restore();

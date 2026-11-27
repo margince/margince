@@ -387,7 +387,7 @@ describe("the contact's files tab", () => {
     // No category was set: the row leaves the cell empty rather than printing
     // an "uncategorised" placeholder for a fact the record never asserted.
     const table = within(screen.getByRole("list"));
-    expect(table.queryByText("SOW/Contract")).toBeNull();
+    expect(table.queryByText(en["docs.category.contract"])).toBeNull();
     expect(table.queryByText("Other")).toBeNull();
   });
 
@@ -402,7 +402,7 @@ describe("the contact's files tab", () => {
     stub({ error: "boom" }, 500);
     show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
-    expect(await screen.findByText("This section did not load.")).toBeTruthy();
+    expect(await screen.findByText(en["state.failed"])).toBeTruthy();
     expect(
       screen.getByRole("button", { name: en["state.retry"] }),
     ).toBeTruthy();
@@ -417,7 +417,7 @@ describe("the contact's files tab", () => {
     show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     expect(await screen.findByRole("link", { name: "one.pdf" })).toBeTruthy();
-    expect(screen.getByText("Showing part of the list")).toBeTruthy();
+    expect(screen.getByText(en["state.partial"])).toBeTruthy();
   });
 
   it("reads the older files behind the first page when the reader asks for more", async () => {
@@ -426,7 +426,7 @@ describe("the contact's files tab", () => {
     show(<ContactFilesTab contactId="p-1" contactName="Dana Buyer" />);
 
     await screen.findByRole("link", { name: "newest.pdf" });
-    expect(screen.getByText("Showing part of the list")).toBeTruthy();
+    expect(screen.getByText(en["state.partial"])).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Load more" }));
 
@@ -451,7 +451,7 @@ describe("the contact's files tab", () => {
 
     // Silence is the difference between "all of them" and "the first twenty",
     // so the truncation sentence and the button both go once the walk ends.
-    expect(screen.queryByText("Showing part of the list")).toBeNull();
+    expect(screen.queryByText(en["state.partial"])).toBeNull();
     expect(screen.queryByRole("button", { name: "Load more" })).toBeNull();
   });
 
@@ -493,7 +493,7 @@ describe("the contact's files tab", () => {
     // The failure belongs to one page, not to the library: the rows stay, and
     // the button is still there to try the same page again.
     expect(screen.getByRole("link", { name: "newest.pdf" })).toBeTruthy();
-    expect(screen.queryByText("This section did not load.")).toBeNull();
+    expect(screen.queryByText(en["state.failed"])).toBeNull();
   });
 
   it("files an uploaded document against this contact, from this tab", async () => {
@@ -527,7 +527,7 @@ describe("the contact's files tab", () => {
     // The verb the tab shipped without: a reader who wants a CV on a contact
     // had to reach the upload from the account's library and change its parent.
     await user.click(
-      await screen.findByRole("button", { name: "Add document" }),
+      await screen.findByRole("button", { name: en["docs.add.action"] }),
     );
     await user.upload(
       screen.getByLabelText(/File/),

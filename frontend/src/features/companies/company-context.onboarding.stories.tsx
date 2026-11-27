@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -50,15 +51,19 @@ export const ManualSetupSaveFailed: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.type(
-      canvas.getByRole("textbox", { name: "Company name" }),
+      canvas.getByRole("textbox", {
+        name: englishCopy["ob.field.display_name"],
+      }),
       "Havbris AS",
     );
     await userEvent.type(
-      canvas.getByRole("textbox", { name: "Products and services" }),
+      canvas.getByRole("textbox", {
+        name: englishCopy["ob.field.offer_summary"],
+      }),
       "Coastal ferry maintenance contracts.",
     );
     await userEvent.type(
-      canvas.getByRole("textbox", { name: "Ideal customer" }),
+      canvas.getByRole("textbox", { name: englishCopy["ob.field.icp"] }),
       "Municipal ferry operators.",
     );
     await userEvent.click(

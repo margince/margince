@@ -31,6 +31,7 @@ import { problemMessageOf, throwProblem, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { useViewerZone } from "../../lib/viewerzone";
 import { searchCompanyCandidates } from "../contacts/contactemployers";
+import { PaymentAgeSettings } from "./paymentage";
 
 // Settings → Integrations: the accounting source the finance card reads. The
 // core ships none; every source on offer is an extension unit. Margince only
@@ -89,29 +90,32 @@ export function FinanceSourceCard() {
     void queryClient.invalidateQueries({ queryKey: CUSTOMERS_KEY });
   }, [attempt, queryClient]);
   return (
-    <Panel title={t("financeSource.title")}>
-      <PanelBody>
-        <PanelIntro>{t("financeSource.sub")}</PanelIntro>
-        {readOnly && <PanelIntro>{t("financeSource.readOnly")}</PanelIntro>}
-        <QueryGate pendingLabel={t("financeSource.title")} query={query}>
-          {(state) =>
-            state.connection ? (
-              <>
-                <ConnectedSource
-                  connection={state.connection}
-                  onSyncQueued={() =>
-                    setAwaiting(state.connection?.last_attempt_at ?? null)
-                  }
-                />
-                <CustomerDirectory connectionId={state.connection.id} />
-              </>
-            ) : (
-              <ConnectSource state={state} />
-            )
-          }
-        </QueryGate>
-      </PanelBody>
-    </Panel>
+    <>
+      <PaymentAgeSettings />
+      <Panel title={t("financeSource.title")}>
+        <PanelBody>
+          <PanelIntro>{t("financeSource.sub")}</PanelIntro>
+          {readOnly && <PanelIntro>{t("financeSource.readOnly")}</PanelIntro>}
+          <QueryGate pendingLabel={t("financeSource.title")} query={query}>
+            {(state) =>
+              state.connection ? (
+                <>
+                  <ConnectedSource
+                    connection={state.connection}
+                    onSyncQueued={() =>
+                      setAwaiting(state.connection?.last_attempt_at ?? null)
+                    }
+                  />
+                  <CustomerDirectory connectionId={state.connection.id} />
+                </>
+              ) : (
+                <ConnectSource state={state} />
+              )
+            }
+          </QueryGate>
+        </PanelBody>
+      </Panel>
+    </>
   );
 }
 

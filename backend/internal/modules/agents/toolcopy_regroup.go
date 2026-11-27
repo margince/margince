@@ -26,7 +26,7 @@ var findRecordsCopy = toolCopy{
 var readContextCopy = toolCopy{
 	Purpose: "Get the story so far. catch_up tells what has been happening on one contact, " +
 		"company, deal or project. meeting prepares for a meeting: who is coming, the open " +
-		"threads and what was promised. brief reads this morning's brief for the seat.",
+		"threads and commitments made. brief reads this morning's brief for the seat.",
 	Limits: "It reads and writes nothing. catch_up summarizes the timeline; a field's current " +
 		"value is read_record's. brief answers the brief already made, never a fresh one.",
 	Instead: "Use read_attention for what is at risk across the whole pipeline, and read_details " +
@@ -37,7 +37,7 @@ var readContextCopy = toolCopy{
 var readAttentionCopy = toolCopy{
 	Purpose: "See what needs attention. slipping lists deals at risk this week and why. at_risk " +
 		"lists the open deals that rest on a single contact or whose contacts have gone quiet. " +
-		"commitments lists promises made to customers that are still open.",
+		"commitments lists commitments made to customers that are still open.",
 	Limits:  "Each view covers only what you may see, and says why each item is on it.",
 	Instead: "Use read_context to dig into one item.",
 	Retain:  "Keep each item's record id to act on it.",
@@ -93,7 +93,7 @@ var changeActivitiesCopy = toolCopy{
 var scheduleMeetingCopy = toolCopy{
 	Purpose: "Put a meeting on the host's calendar. invite creates the calendar event and the " +
 		"provider sends the invitation to every attendee: the contact, and any further addresses.",
-	Limits: "invite reaches attendees outside the workspace. The call queues it and returns it " +
+	Limits: "invite reaches attendees outside the company. The call queues it and returns it " +
 		"pending, so name them and the time and get the user's yes first, unless they asked for " +
 		"this invite themselves. Read check_availability " +
 		"before choosing a time. A start_intent (the user's local time) replaces start, and end " +
@@ -124,7 +124,7 @@ var changeStateCopy = toolCopy{
 }
 
 var readWorkspaceCopy = toolCopy{
-	Purpose: "Read how this workspace is set up. colleagues: the seats that can receive work, " +
+	Purpose: "Read how this company is set up. colleagues: the seats that can receive work, " +
 		"not the contacts stored as records; q narrows by name. pipelines: every pipeline with " +
 		"its stages, each open, won or lost. channel_providers: the messaging transports. The " +
 		"other topics name what a tool accepts: query (find_records engine query), analytics " +

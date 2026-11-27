@@ -12,6 +12,7 @@ import {
 } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { reportingStoryReport } from "../../testing/reporting.fixtures";
 import {
   installFetchStub,
@@ -81,7 +82,9 @@ it("lets an editor preview, then publish, an open draft", async () => {
   renderReport();
 
   await user.click(
-    await screen.findByRole("button", { name: "Preview draft" }),
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.previewDraft"],
+    }),
   );
   await waitFor(() =>
     expect(
@@ -92,8 +95,12 @@ it("lets an editor preview, then publish, an open draft", async () => {
       ),
     ).toBe(true),
   );
-  expect(screen.getByRole("button", { name: "Save snapshot" })).toBeDisabled();
-  await user.click(screen.getByRole("button", { name: "Publish draft" }));
+  expect(
+    screen.getByRole("button", { name: englishCopy["reporting.freeze"] }),
+  ).toBeDisabled();
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["reporting.publishDraft"] }),
+  );
   await waitFor(() => expect(publish).toHaveBeenCalledOnce());
   expect(
     sent().find((r) => r.url.pathname.endsWith("/draft/publish"))?.ifMatch,
@@ -115,7 +122,9 @@ it("saves an edit as a draft, sending the charts alone", async () => {
   const sent = sentRequests();
   renderReport();
   await user.click(
-    await screen.findByRole("button", { name: "Report actions" }),
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.actions"],
+    }),
   );
   await user.click(screen.getByRole("button", { name: "Edit report" }));
   const dialog = await screen.findByRole("dialog", { name: "Edit report" });
@@ -127,7 +136,9 @@ it("saves an edit as a draft, sending the charts alone", async () => {
   if (!dropped) throw new Error("the dialog shows no chosen chart to drop");
   await user.click(dropped);
   await user.click(
-    within(dialog).getByRole("button", { name: "Save as draft" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["reporting.saveDraft"],
+    }),
   );
   await waitFor(() => expect(body).toBeDefined());
   expect(Object.keys(body ?? {})).toEqual(["selection"]);
@@ -146,7 +157,9 @@ it("keeps a rename out of a draft, which holds charts alone", async () => {
   });
   renderReport();
   await user.click(
-    await screen.findByRole("button", { name: "Report actions" }),
+    await screen.findByRole("button", {
+      name: englishCopy["reporting.actions"],
+    }),
   );
   await user.click(screen.getByRole("button", { name: "Edit report" }));
   const dialog = await screen.findByRole("dialog", { name: "Edit report" });
@@ -155,7 +168,9 @@ it("keeps a rename out of a draft, which holds charts alone", async () => {
     "!",
   );
   expect(
-    within(dialog).getByRole("button", { name: "Save as draft" }),
+    within(dialog).getByRole("button", {
+      name: englishCopy["reporting.saveDraft"],
+    }),
   ).toBeDisabled();
 });
 
@@ -181,7 +196,7 @@ it("restores an earlier revision from the version list", async () => {
     "POST /analytics/reports/report/revisions/2/restore": restore,
   });
   renderReport();
-  await user.click(await screen.findByText("History and schedules"));
+  await user.click(await screen.findByText(englishCopy["reporting.history"]));
   await user.click(
     await screen.findByRole("button", { name: "Restore version 2" }),
   );
@@ -200,7 +215,11 @@ it("shows a reader no draft and no version list", async () => {
   const sent = sentRequests();
   renderReport();
   await screen.findByRole("heading", { name: reportingStoryReport.name });
-  expect(screen.queryByRole("button", { name: "Preview draft" })).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: englishCopy["reporting.previewDraft"],
+    }),
+  ).toBeNull();
   expect(sent().some((r) => r.url.pathname.endsWith("/revisions"))).toBe(false);
 });
 
@@ -243,8 +262,12 @@ it("opens the draft of a report with nothing published", async () => {
     ).toBe(true),
   );
   expect(
-    screen.queryByRole("button", { name: "Show published report" }),
+    screen.queryByRole("button", {
+      name: englishCopy["reporting.showPublished"],
+    }),
   ).not.toBeInTheDocument();
-  await user.click(screen.getByRole("button", { name: "Publish draft" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["reporting.publishDraft"] }),
+  );
   await waitFor(() => expect(publish).toHaveBeenCalledOnce());
 });

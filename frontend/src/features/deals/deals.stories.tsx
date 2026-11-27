@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   emptyPage,
@@ -208,12 +209,14 @@ export const HeaderMenu: Story = {
     // FOUND, not got: the screen renders its pending skeleton first, so a
     // synchronous read runs against a `role="status"` with no verbs in it.
     await userEvent.click(
-      await canvas.findByRole("button", { name: "More actions" }),
+      await canvas.findByRole("button", {
+        name: englishCopy["list.headActions"],
+      }),
     );
     // The panel is portalled to the body — a Panel clips its own overflow —
     // so the frame is settled when an ITEM is in the document, not the canvas.
     await within(canvasElement.ownerDocument.body).findByRole("button", {
-      name: "Archive deal",
+      name: englishCopy["deal.archive"],
     });
   },
   render: () => {

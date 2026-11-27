@@ -148,7 +148,7 @@ describe("which members the review ticks", () => {
     );
     mount({ chosen: false });
     const preview = await screen.findByRole("button", {
-      name: "Preview merge",
+      name: en["contactCase.previewVerb"],
     });
     expect(preview).toBeDisabled();
     for (const box of screen.getAllByRole("checkbox")) {
@@ -164,7 +164,7 @@ describe("which members the review ticks", () => {
     const user = userEvent.setup();
     mount();
     const preview = await screen.findByRole("button", {
-      name: "Preview merge",
+      name: en["contactCase.previewVerb"],
     });
     expect(screen.getAllByRole("checkbox", { checked: true })).toEqual([
       member(/Mira Kovac\b/),
@@ -210,7 +210,7 @@ describe("a reader who may change one end of a pair", () => {
     ).toBeChecked();
     expect(member(/Mira Kovač/)).not.toBeChecked();
     expect(
-      screen.getByRole("button", { name: "Preview merge" }),
+      screen.getByRole("button", { name: en["contactCase.previewVerb"] }),
     ).toBeDisabled();
 
     await user.click(member(/Mira Kovač/));
@@ -226,7 +226,9 @@ describe("a reader who may change one end of a pair", () => {
     expect(offered).toEqual(["Ben Seller"]);
     await user.keyboard("{Escape}");
 
-    await user.click(screen.getByRole("button", { name: "Preview merge" }));
+    await user.click(
+      screen.getByRole("button", { name: en["contactCase.previewVerb"] }),
+    );
     await waitFor(() =>
       expect(previews).toEqual([
         {
@@ -308,7 +310,9 @@ describe("a reader who may change one end of a pair", () => {
     );
     mount();
     expect(
-      await screen.findByRole("button", { name: "Preview merge" }),
+      await screen.findByRole("button", {
+        name: en["contactCase.previewVerb"],
+      }),
     ).toBeDisabled();
     for (const box of screen.getAllByRole("checkbox")) {
       expect(box).not.toBeChecked();
@@ -431,14 +435,14 @@ describe("the two choices", () => {
     mount();
     await screen.findByRole("checkbox", { name: /Mira Kovac\b/ });
     expect(screen.getAllByRole("radio")).toHaveLength(1);
-    const group = screen.getByRole("group", { name: "Which contact stays?" });
+    const group = screen.getByRole("group", {
+      name: en["contactCase.survivor.legend"],
+    });
     expect(
       within(group).getByRole("radio", { name: "Mira Kovac stays" }),
     ).toBeChecked();
     expect(
-      within(group).getByText(
-        "The other ticked contacts merge into it and are archived.",
-      ),
+      within(group).getByText(en["contactCase.survivor.hint"]),
     ).toBeVisible();
     expect(screen.queryByText(/Keep this record/)).toBeNull();
 
@@ -491,7 +495,9 @@ describe("the two choices", () => {
     await user.click(member(/M\. Kovac/));
     await user.click(member(/M\. Kovac/));
     await user.click(screen.getByRole("radio", { name: "M. Kovac stays" }));
-    await user.click(screen.getByRole("button", { name: "Preview merge" }));
+    await user.click(
+      screen.getByRole("button", { name: en["contactCase.previewVerb"] }),
+    );
     const preview = await screen.findByTestId("contact-case-preview");
     expect(previews[0]).toMatchObject({
       survivor_id: CLEO,
@@ -517,7 +523,7 @@ describe("the two choices", () => {
     );
     const user = userEvent.setup();
     mount({ chosen: false });
-    await screen.findByRole("button", { name: "Preview merge" });
+    await screen.findByRole("button", { name: en["contactCase.previewVerb"] });
     await user.click(member(/Mira Kovač/));
     expect(
       screen.getByRole("radio", { name: "Mira Kovač stays" }),
@@ -559,14 +565,16 @@ describe("the preview", () => {
       await screen.findByRole("checkbox", { name: /Mira Kovač/ }),
     );
     await user.click(member(/M\. Kovac/));
-    await user.click(screen.getByRole("button", { name: "Preview merge" }));
+    await user.click(
+      screen.getByRole("button", { name: en["contactCase.previewVerb"] }),
+    );
     const preview = await screen.findByTestId("contact-case-preview");
     expect(within(preview).getByText("Cleo Reader, can view")).toBeVisible();
     expect(
       within(preview).getByText("Ben Seller: account is inactive"),
     ).toBeVisible();
     expect(
-      within(preview).getByText("A merge cannot be undone."),
+      within(preview).getByText(en["contactCase.preview.final"]),
     ).toBeVisible();
     expect(
       screen.getByRole("button", { name: "Merge 3 contacts" }),
@@ -602,12 +610,10 @@ describe("the preview", () => {
     await user.click(
       await screen.findByRole("checkbox", { name: /Mira Kovač/ }),
     );
-    await user.click(screen.getByRole("button", { name: "Preview merge" }));
-    expect(
-      await screen.findByText(
-        "The duplicates changed while you reviewed them. Check the selection again.",
-      ),
-    ).toBeVisible();
+    await user.click(
+      screen.getByRole("button", { name: en["contactCase.previewVerb"] }),
+    );
+    expect(await screen.findByText(en["contactCase.stale"])).toBeVisible();
     await waitFor(() => expect(reads).toBe(2));
   });
 });
@@ -636,15 +642,13 @@ describe("a case already settled", () => {
     await user.click(
       await screen.findByRole("checkbox", { name: /Mira Kovač/ }),
     );
-    await user.click(screen.getByRole("button", { name: "Preview merge" }));
+    await user.click(
+      screen.getByRole("button", { name: en["contactCase.previewVerb"] }),
+    );
     expect(
-      await screen.findByText(
-        "A colleague already settled these duplicates. This contact remains.",
-      ),
+      await screen.findByText(en["contactCase.settledElsewhere"]),
     ).toBeVisible();
-    expect(
-      screen.queryByText("This contact has no open duplicates."),
-    ).toBeNull();
+    expect(screen.queryByText(en["contactCase.none"])).toBeNull();
   });
 
   it("does not credit a colleague with a pair the reviewer merged here", async () => {
@@ -669,9 +673,7 @@ describe("a case already settled", () => {
       }),
     );
     await user.click(screen.getByRole("button", { name: "Keep Mira Kovač" }));
-    expect(
-      await screen.findByText("This contact has no open duplicates."),
-    ).toBeVisible();
+    expect(await screen.findByText(en["contactCase.none"])).toBeVisible();
     expect(screen.queryByText(/A colleague already settled/)).toBeNull();
   });
 
@@ -684,9 +686,7 @@ describe("a case already settled", () => {
       {},
     );
     mount();
-    expect(
-      await screen.findByText("This contact has no open duplicates."),
-    ).toBeVisible();
+    expect(await screen.findByText(en["contactCase.none"])).toBeVisible();
   });
 
   it("says who merged it, and into which contact", async () => {
@@ -697,7 +697,9 @@ describe("a case already settled", () => {
     mount();
     expect(await screen.findByText("Merged by Ben Seller")).toBeVisible();
     expect(screen.queryByRole("checkbox")).toBeNull();
-    expect(screen.queryByRole("button", { name: "Preview merge" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["contactCase.previewVerb"] }),
+    ).toBeNull();
   });
 
   it("explains why a reader without authority cannot merge", async () => {
@@ -719,7 +721,9 @@ describe("a case already settled", () => {
       await screen.findByText(/an administrator can turn on shared merge/),
     ).toBeVisible();
     expect(member(/Mira Kovač/)).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "Preview merge" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["contactCase.previewVerb"] }),
+    ).toBeNull();
   });
 });
 
@@ -791,7 +795,7 @@ describe("deciding one pair inside the review", () => {
         ]),
       ),
     );
-    expect(screen.queryByText("The pair was not saved. Retry.")).toBeNull();
+    expect(screen.queryByText(en["contactCase.pair.failed"])).toBeNull();
   });
 
   it("offers a pair the reader may dismiss but not merge only the dismissal", async () => {
@@ -856,9 +860,7 @@ describe("deciding one pair inside the review", () => {
       }),
     );
     expect(
-      await screen.findByText(
-        "You cannot decide this pair. Ask an owner of these contacts or an administrator.",
-      ),
+      await screen.findByText(en["contactCase.pair.refused"]),
     ).toBeVisible();
     expect(screen.queryByText(/Retry\./)).toBeNull();
   });

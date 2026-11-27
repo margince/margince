@@ -60,7 +60,7 @@ func Certify(ctx context.Context, cfg Config, sc agentloope2e.Scenario, attempt 
 		if err != nil {
 			return agentloope2e.Verdict{}, fmt.Errorf("live: %s run %d of %d: %w", sc.Name, i, cfg.Runs, err)
 		}
-		run := agentloope2e.Run{Failures: agentloope2e.Check(sc, seen.Snapshot)}
+		run := agentloope2e.Run{Recovery: seen.Snapshot.Recovery, Failures: agentloope2e.Check(sc, seen.Snapshot)}
 		if run.ChecksPassed() {
 			if run.Criteria, err = cfg.Judge.Grade(ctx, sc.Criteria, agentloope2e.Answer(sc, seen.SeededAt, seen.Snapshot.Writes)); err != nil {
 				return agentloope2e.Verdict{}, fmt.Errorf("live: %s run %d of %d: %w", sc.Name, i, cfg.Runs, err)

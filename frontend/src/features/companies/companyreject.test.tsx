@@ -13,13 +13,14 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { useMe } from "../../lib/session";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { CompanyRejectAction } from "./companyreject";
 
 const confirmButton = () =>
   within(screen.getByRole("dialog")).getByRole("button", {
-    name: "Not a company",
+    name: englishCopy["company.reject"],
   });
 
 // Every capability predicate reads false while /me is in flight, so an absence

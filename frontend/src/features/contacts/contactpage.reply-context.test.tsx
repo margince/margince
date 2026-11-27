@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { mount, quietMoment, view } from "../../testing/contactpage.testkit";
 import { jsonResponse } from "../../testing/story-utils";
 
@@ -119,9 +120,11 @@ it.each([true, false])(
     );
     if (related) {
       await waitFor(() => expect(replied).toHaveBeenCalledTimes(1));
-      expect(screen.queryByText("Thread cannot be answered")).toBeNull();
+      expect(
+        screen.queryByText(englishCopy["compose.threadGoneTitle"]),
+      ).toBeNull();
     } else {
-      await screen.findByText("Thread cannot be answered");
+      await screen.findByText(englishCopy["compose.threadGoneTitle"]);
       expect(replied).not.toHaveBeenCalled();
     }
     expect(newMail).not.toHaveBeenCalled();
@@ -139,7 +142,7 @@ it("plain Email does not generate even while a recommendation is visible", async
     "GET /mail-drafts": () => jsonResponse({ code: "not_found" }, 404),
   });
   await user.click(await screen.findByRole("button", { name: "Email" }));
-  await screen.findByLabelText("Purpose of the email");
+  await screen.findByLabelText(englishCopy["compose.newIntent"]);
   expect(
     screen
       .getByRole("button", { name: "Draft email" })

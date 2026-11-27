@@ -14,6 +14,7 @@ import {
   useToast,
 } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   PICTURE_MAX_BYTES,
@@ -84,10 +85,12 @@ function show(user: User = ME) {
   );
 }
 
-const picker = () => screen.getByLabelText("Profile picture");
+const picker = () => screen.getByLabelText(englishCopy["account.pictureLabel"]);
 
 const openEdit = (user: UserEvent) =>
-  user.click(screen.getByRole("button", { name: "Edit profile picture" }));
+  user.click(
+    screen.getByRole("button", { name: englishCopy["account.pictureEdit"] }),
+  );
 
 it("opens the file chooser from the Edit menu's Upload", async () => {
   serve(() => json(ME));
@@ -101,7 +104,9 @@ it("opens the file chooser from the Edit menu's Upload", async () => {
     });
 
   await openEdit(user);
-  await user.click(screen.getByRole("button", { name: "Upload picture" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["account.pictureAdd"] }),
+  );
 
   expect(opened).toEqual([picker()]);
   click.mockRestore();
@@ -116,9 +121,7 @@ it("refuses a file that is not PNG, JPEG or WebP before it is sent", async () =>
     new File(["gif"], "me.gif", { type: "image/gif" }),
   );
   expect(
-    await screen.findByText(
-      "Picture not uploaded. Use a PNG, JPEG or WebP file.",
-    ),
+    await screen.findByText(englishCopy["account.pictureWrongType"]),
   ).toBeInTheDocument();
   expect(sent).toEqual([]);
 });
@@ -132,7 +135,7 @@ it("refuses a file still over the server's ceiling when the browser cannot shrin
   });
   await user.upload(picker(), big);
   expect(
-    await screen.findByText("Picture not uploaded. Use a file up to 5 MB."),
+    await screen.findByText(englishCopy["account.pictureTooLarge"]),
   ).toBeInTheDocument();
   expect(sent).toEqual([]);
 });
@@ -153,7 +156,9 @@ it("uploads the picked file and reads every chip of the seat again", async () =>
   const file = new File(["png"], "me.png", { type: "image/png" });
   await user.upload(picker(), file);
 
-  expect(await screen.findByText("Picture saved")).toBeInTheDocument();
+  expect(
+    await screen.findByText(englishCopy["account.pictureSaved"]),
+  ).toBeInTheDocument();
   expect(sent.map(({ method, path }) => `${method} ${path}`)).toEqual([
     "POST /v1/me/avatar",
   ]);
@@ -168,9 +173,13 @@ it("removes the picture on one press, with no question first", async () => {
   const user = userEvent.setup();
   show({ ...ME, avatar_url: PICTURE });
   await openEdit(user);
-  await user.click(screen.getByRole("button", { name: "Remove picture" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["account.pictureRemove"] }),
+  );
 
-  expect(await screen.findByText("Picture removed")).toBeInTheDocument();
+  expect(
+    await screen.findByText(englishCopy["account.pictureRemoved"]),
+  ).toBeInTheDocument();
   expect(screen.queryByRole("dialog")).toBeNull();
   expect(sent.map(({ method, path }) => `${method} ${path}`)).toEqual([
     "DELETE /v1/me/avatar",
@@ -183,8 +192,14 @@ it("offers no removal while the seat shows initials", async () => {
   const user = userEvent.setup();
   show();
   await openEdit(user);
-  expect(screen.getByRole("button", { name: "Upload picture" })).toBeVisible();
-  expect(screen.queryByRole("button", { name: "Remove picture" })).toBeNull();
+  expect(
+    screen.getByRole("button", { name: englishCopy["account.pictureAdd"] }),
+  ).toBeVisible();
+  expect(
+    screen.queryByRole("button", {
+      name: englishCopy["account.pictureRemove"],
+    }),
+  ).toBeNull();
 });
 
 it("holds the Edit pill busy while an upload is out", async () => {
@@ -196,7 +211,9 @@ it("holds the Edit pill busy while an upload is out", async () => {
     new File(["png"], "me.png", { type: "image/png" }),
   );
 
-  const pill = screen.getByRole("button", { name: "Edit profile picture" });
+  const pill = screen.getByRole("button", {
+    name: englishCopy["account.pictureEdit"],
+  });
   await waitFor(() => expect(pill).toHaveAttribute("aria-busy", "true"));
   expect(picker()).toBeDisabled();
 });
@@ -216,9 +233,7 @@ it("says in words that the installation cannot store pictures", async () => {
     new File(["png"], "me.png", { type: "image/png" }),
   );
   expect(
-    await screen.findByText(
-      "This installation has no file storage for pictures. Contact your system administrator.",
-    ),
+    await screen.findByText(englishCopy["account.pictureNoStorage"]),
   ).toBeInTheDocument();
   expect(client.getQueryState(["me"])?.isInvalidated).toBe(false);
 });
@@ -255,7 +270,9 @@ it("sends a phone photo past the server's pixel bound as its shrunk centre squar
   const photo = new File(["jpeg"], "me.jpg", { type: "image/jpeg" });
   await user.upload(picker(), photo);
 
-  expect(await screen.findByText("Picture saved")).toBeInTheDocument();
+  expect(
+    await screen.findByText(englishCopy["account.pictureSaved"]),
+  ).toBeInTheDocument();
   expect(drawImage).toHaveBeenCalledWith(
     expect.anything(),
     504,
@@ -284,7 +301,9 @@ it("sends a picture at the server's pixel bound as picked", async () => {
   const photo = new File(["jpeg"], "me.jpg", { type: "image/jpeg" });
   await user.upload(picker(), photo);
 
-  expect(await screen.findByText("Picture saved")).toBeInTheDocument();
+  expect(
+    await screen.findByText(englishCopy["account.pictureSaved"]),
+  ).toBeInTheDocument();
   expect(drawImage).not.toHaveBeenCalled();
   expect(sentFile()).toBe(photo);
 });
@@ -304,12 +323,10 @@ it("names the pixel bound when the server refuses a picture for its pixels", asy
     new File(["jpeg"], "me.jpg", { type: "image/jpeg" }),
   );
   expect(
-    await screen.findByText(
-      "Picture not uploaded. Use a picture of up to 8 megapixels.",
-    ),
+    await screen.findByText(englishCopy["account.pictureTooManyPixels"]),
   ).toBeInTheDocument();
   expect(
-    screen.queryByText("Picture not uploaded. Use a PNG, JPEG or WebP file."),
+    screen.queryByText(englishCopy["account.pictureWrongType"]),
   ).toBeNull();
 });
 
@@ -323,7 +340,9 @@ it("sends a phone photo over the server's byte ceiling as its shrunk centre squa
   });
   await user.upload(picker(), photo);
 
-  expect(await screen.findByText("Picture saved")).toBeInTheDocument();
+  expect(
+    await screen.findByText(englishCopy["account.pictureSaved"]),
+  ).toBeInTheDocument();
   expect(drawImage).toHaveBeenCalled();
   expect(await sentFile()?.text()).toBe("shrunk");
 });
@@ -338,7 +357,9 @@ it("shrinks a picture within the pixel bound when its file is over the byte ceil
   });
   await user.upload(picker(), scan);
 
-  expect(await screen.findByText("Picture saved")).toBeInTheDocument();
+  expect(
+    await screen.findByText(englishCopy["account.pictureSaved"]),
+  ).toBeInTheDocument();
   expect(drawImage).toHaveBeenCalledWith(
     expect.anything(),
     0,
@@ -364,7 +385,7 @@ it("refuses a file past what the browser decodes before it reads a pixel", async
   await user.upload(picker(), huge);
 
   expect(
-    await screen.findByText("Picture not uploaded. Use a file up to 5 MB."),
+    await screen.findByText(englishCopy["account.pictureTooLarge"]),
   ).toBeInTheDocument();
   expect(createImageBitmap).not.toHaveBeenCalled();
   expect(sent).toEqual([]);

@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { sessionOptions } from "../../lib/session";
 import {
   installFetchStub,
@@ -65,9 +66,13 @@ it("names the follow-up it created and opens that task, not the deal", async () 
     </StoryProviders>,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Create follow-up" }),
+    await screen.findByRole("button", {
+      name: englishCopy["deal360.createTask"],
+    }),
   );
-  expect(await screen.findByText("Follow-up created")).toBeVisible();
+  expect(
+    await screen.findByText(englishCopy["deal360.followUpCreated"]),
+  ).toBeVisible();
   await user.click(screen.getByRole("button", { name: "Open task" }));
   expect(await screen.findByRole("dialog")).toHaveTextContent(
     "Agree the next step",
@@ -114,7 +119,7 @@ it("draws the follow-up the server refused as off, with its reason, and writes n
 
   expect(await screen.findByText("Agree the next step")).toBeVisible();
   const button = await screen.findByRole("button", {
-    name: "Create follow-up",
+    name: englishCopy["deal360.createTask"],
   });
   expect(button).toBeDisabled();
   expect(button).toHaveAccessibleDescription(reason);
@@ -199,6 +204,6 @@ it("offers the follow-up the server did not refuse, whatever the session says", 
     expect(client.getQueryData(sessionOptions.queryKey)).toBeDefined(),
   );
   expect(
-    screen.getByRole("button", { name: "Create follow-up" }),
+    screen.getByRole("button", { name: englishCopy["deal360.createTask"] }),
   ).toBeEnabled();
 });

@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { jsonResponse, renderSettings } from "../../testing/settings.testkit";
 
@@ -93,7 +94,7 @@ describe("SettingsScreen connections and integrations tabs", () => {
     // the calling human server-side, and the LinkedIn panel reads /me.
     expect(
       await screen.findByRole("heading", {
-        name: "Mail and calendar",
+        name: englishCopy["settings.part.connections.mail"],
       }),
     ).toBeTruthy();
     // And nothing workspace-wide: a key everybody spends from, the
@@ -118,10 +119,14 @@ describe("SettingsScreen connections and integrations tabs", () => {
     );
     renderSettings("connections", "linkedin");
     expect(
-      await screen.findByRole("heading", { name: "LinkedIn network" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["linkedinReach.title"],
+      }),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "Mail and calendar" }),
+      screen.queryByRole("heading", {
+        name: englishCopy["settings.part.connections.mail"],
+      }),
     ).toBeNull();
   });
 
@@ -130,11 +135,13 @@ describe("SettingsScreen connections and integrations tabs", () => {
     renderSettings("connections", "activity");
     expect(
       await screen.findByRole("heading", {
-        name: "What your connections found",
+        name: englishCopy["connectionOutcomes.title"],
       }),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("heading", { name: "Mail and calendar" }),
+      screen.queryByRole("heading", {
+        name: englishCopy["settings.part.connections.mail"],
+      }),
     ).toBeNull();
   });
 
@@ -145,7 +152,9 @@ describe("SettingsScreen connections and integrations tabs", () => {
     );
     renderSettings("integrations");
     expect(
-      await screen.findByRole("heading", { name: "Contact data" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["settings.part.integrations.contact"],
+      }),
     ).toBeTruthy();
     for (const heading of ["Mail and calendar", "LinkedIn network"]) {
       expect(screen.queryByRole("heading", { name: heading })).toBeNull();
@@ -163,6 +172,10 @@ describe("SettingsScreen connections and integrations tabs", () => {
     );
     renderSettings("integrations", tab);
     expect(await screen.findByRole("heading", { name: heading })).toBeTruthy();
-    expect(screen.queryByRole("heading", { name: "Contact data" })).toBeNull();
+    expect(
+      screen.queryByRole("heading", {
+        name: englishCopy["settings.part.integrations.contact"],
+      }),
+    ).toBeNull();
   });
 });

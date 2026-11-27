@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { draftButton, pressDraft } from "../../testing/composedraft.testkit";
 import {
   type Activity,
@@ -111,9 +112,7 @@ describe("ComposeWindow started from an account", () => {
     const drafting = draftButton();
     expect(drafting).toHaveProperty("disabled", true);
     expect(
-      screen.getByText(
-        "To draft with AI, add a contact from this company to To.",
-      ),
+      screen.getByText(englishCopy["compose.draftNeedsRecipient"]),
     ).toBeTruthy();
     expect(sent.some((r) => r.key.includes("draft-email"))).toBe(false);
     // Undraftable is not unsendable: the rep writes it themselves and sends.

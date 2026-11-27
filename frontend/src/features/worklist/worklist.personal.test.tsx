@@ -1,6 +1,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { day, renderWorklist, stub } from "../../testing/worklist.testkit";
 
 afterEach(() => {
@@ -11,7 +12,7 @@ afterEach(() => {
 it("does not fetch team oversight underneath an empty personal queue for a manager", async () => {
   stub(day({ scope: "mine", scope_options: ["mine", "team", "all"] }));
   renderWorklist();
-  await screen.findByText("Nothing is waiting on you.");
+  await screen.findByText(englishCopy["worklist.clear"]);
   const urls = vi
     .mocked(fetch)
     .mock.calls.map(([input]) =>

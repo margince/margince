@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ViewerZoneProvider } from "../lib/viewerzone";
 import { FIXTURE_TIMEZONE, meFixture } from "../testing/mefixture";
 import { type ReminderTask, TaskRemindMenu } from "./taskreminder";
@@ -104,19 +105,25 @@ describe("TaskRemindMenu", () => {
         name: /^Remind me \(reminder set for .+\)$/,
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Remove reminder" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["tasks.remind.remove"] }),
+    );
     await waitFor(() => expect(patches()).toHaveLength(1));
     expect(patches()[0]?.body).toEqual({ remind_at: null });
-    expect(await screen.findByText("Reminder removed.")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["tasks.remind.removed"]),
+    ).toBeTruthy();
   });
 
   it("draws no Remove on a task without a reminder", async () => {
     const user = userEvent.setup();
     renderMenu();
     await user.click(screen.getByRole("button", { name: "Remind me" }));
-    expect(screen.queryByRole("button", { name: "Remove reminder" })).toBe(
-      null,
-    );
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["tasks.remind.remove"],
+      }),
+    ).toBe(null);
   });
 
   it("is not offered on a colleague's task, whose reminder reaches only them", () => {
@@ -134,15 +141,19 @@ describe("TaskRemindMenu", () => {
     await user.type(day, "2026-03-03{Enter}");
     const time = screen.getByRole("textbox", { name: "Time" });
     await user.type(time, "09:00{Enter}");
-    await user.click(screen.getByRole("button", { name: "Set reminder" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["tasks.remind.save"] }),
+    );
     expect(
-      await screen.findByText("Pick a time that is still ahead."),
+      await screen.findByText(englishCopy["tasks.remind.past"]),
     ).toBeTruthy();
     expect(patches()).toHaveLength(0);
 
     await user.clear(time);
     await user.type(time, "16:30{Enter}");
-    await user.click(screen.getByRole("button", { name: "Set reminder" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["tasks.remind.save"] }),
+    );
     await waitFor(() => expect(patches()).toHaveLength(1));
     expect(patches()[0]?.body).toEqual({
       remind_at: "2026-03-03T15:30:00.000Z",

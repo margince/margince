@@ -8,6 +8,7 @@ import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { CompanyHoldSection } from "./companyhold";
@@ -47,12 +48,16 @@ it("holds the company's domain and never an invented address", async () => {
   const posted = renderSection({
     website_url: "https://www.example.com",
   } as Company);
-  fireEvent.click(await screen.findByText("Private correspondence"));
+  fireEvent.click(await screen.findByText(englishCopy["hold.sectionTitle"]));
   expect(screen.queryByText(/with this address/)).toBeNull();
   fireEvent.click(
     await screen.findByRole("button", { name: /everyone at example\.com/ }),
   );
-  fireEvent.click(await screen.findByRole("button", { name: "Keep private" }));
+  fireEvent.click(
+    await screen.findByRole("button", {
+      name: englishCopy["hold.confirmVerb"],
+    }),
+  );
   await vi.waitFor(() =>
     expect(posted).toEqual([{ kind: "domain", value: "example.com" }]),
   );
@@ -61,7 +66,7 @@ it("holds the company's domain and never an invented address", async () => {
 
 it("renders nothing for a company with no website", () => {
   renderSection({ website_url: null } as Company);
-  expect(screen.queryByText("Private correspondence")).toBeNull();
+  expect(screen.queryByText(englishCopy["hold.sectionTitle"])).toBeNull();
 });
 
 it("offers the hold from the primary domain row when website_url is absent", async () => {
@@ -69,5 +74,7 @@ it("offers the hold from the primary domain row when website_url is absent", asy
     website_url: null,
     domains: [{ domain: "example.com", is_primary: true }],
   } as Company);
-  expect(await screen.findByText("Private correspondence")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["hold.sectionTitle"]),
+  ).toBeTruthy();
 });

@@ -206,9 +206,9 @@ describe("ForecastView", () => {
       }),
     );
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
-    expect(await screen.findByText("Won + Likely deals")).toBeTruthy();
+    expect(await screen.findByText(en["forecast.basis.likely"])).toBeTruthy();
     const model = screen
-      .getByText("Modelled quarter finish")
+      .getByText(en["analytics.hero.chart.range"])
       .closest("section");
     expect(model?.textContent).toContain(
       `${formatAnalyticsMoney(90_000, "EUR", "en")} to ${formatAnalyticsMoney(210_000, "EUR", "en")}`,
@@ -235,7 +235,7 @@ describe("ForecastView", () => {
       }),
     );
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
-    const records = await screen.findByText("From the deal records");
+    const records = await screen.findByText(en["forecast.landingRecords"]);
     const strip = records.closest<HTMLElement>("[style*='--stat-strip-slots']");
     // The call, the records and the modelled finish: three slots, none added.
     expect(strip?.style.getPropertyValue("--stat-strip-slots")).toBe("3");
@@ -576,8 +576,8 @@ describe("ForecastView", () => {
       forecastStub({ readings: readings({ fx_missing_count: 2 }) }),
     );
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
-    expect(await screen.findByText("Eligible deals")).toBeTruthy();
-    expect(screen.getByText("Exchange rate missing")).toBeTruthy();
+    expect(await screen.findByText(en["forecast.eligible"])).toBeTruthy();
+    expect(screen.getByText(en["forecast.fxMissing"])).toBeTruthy();
     expect(screen.getByText("2")).toBeTruthy();
   });
 
@@ -586,7 +586,9 @@ describe("ForecastView", () => {
     render(<ForecastView selection={WORKSPACE_SELECTION} canSubmit />);
 
     expect(
-      await screen.findByRole("button", { name: "Start checking" }),
+      await screen.findByRole("button", {
+        name: en["review.firstCheck.start"],
+      }),
     ).toBeTruthy();
     expect(screen.queryByText(/Nothing checked yet/)).toBeNull();
     expect(screen.queryByText(/Couldn't load this view/)).toBeNull();
@@ -697,8 +699,8 @@ describe("SharedForecastView", () => {
         remaining_minor: 120_000,
       },
     });
-    expect(await screen.findByText("Won + Likely deals")).toBeTruthy();
-    expect(screen.getByText("Modelled quarter finish")).toBeTruthy();
+    expect(await screen.findByText(en["forecast.basis.likely"])).toBeTruthy();
+    expect(screen.getByText(en["analytics.hero.chart.range"])).toBeTruthy();
     expect(
       screen.getByText(
         /^Live report · .+ · Central European Summer Time · UTC\+2$/,
@@ -708,10 +710,10 @@ describe("SharedForecastView", () => {
 
   it("says a snapshot from before the landing was kept has no recorded basis", async () => {
     share("snapshot", {});
-    expect(await screen.findByText("Basis not recorded")).toBeTruthy();
-    expect(screen.getByText("Not recorded")).toBeTruthy();
+    expect(await screen.findByText(en["forecast.basis.unknown"])).toBeTruthy();
+    expect(screen.getByText(en["forecast.landingUnrecorded"])).toBeTruthy();
     const model = screen
-      .getByText("Modelled quarter finish")
+      .getByText(en["analytics.hero.chart.range"])
       .closest("section");
     expect(model?.textContent).toContain(
       `${formatAnalyticsMoney(90_000, "EUR", "en")} to ${formatAnalyticsMoney(210_000, "EUR", "en")}`,
@@ -747,8 +749,10 @@ describe("SharedForecastView", () => {
 
   it("keeps the modelled finish on a live share that carries a range alone", async () => {
     share("live", {});
-    expect(await screen.findByText("Modelled quarter finish")).toBeTruthy();
-    expect(screen.queryByText("Basis not recorded")).toBeNull();
+    expect(
+      await screen.findByText(en["analytics.hero.chart.range"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(en["forecast.basis.unknown"])).toBeNull();
   });
 });
 

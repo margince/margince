@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { messageText } from "../../design-system/richtext-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse, render, stubRoutes } from "./compose.testkit";
 import { ComposeWindow } from "./composewindow";
 
@@ -47,10 +48,12 @@ it("restores the purpose and AI attribution without generating again", async () 
       onClose={vi.fn()}
     />,
   );
-  await screen.findByText("Saved draft restored");
+  await screen.findByText(englishCopy["compose.savedDraftRestored"]);
   expect(messageText("Body")).toBe(body);
   expect(
-    await screen.findByRole("heading", { name: "AI-assisted draft" }),
+    await screen.findByRole("heading", {
+      name: englishCopy["compose.aiDisclosureTitle"],
+    }),
   ).toBeTruthy();
   expect(
     await screen.findByDisplayValue("Ask about the new term"),
@@ -127,7 +130,7 @@ it("does not fill a draft that answered an earlier subject", async () => {
       ai_generated: true,
     }),
   );
-  await screen.findByText("Your edits were kept. Draft again when ready.");
+  await screen.findByText(englishCopy["compose.draftKept"]);
   expect(messageText("Body")).toBe("");
   expect(screen.getByDisplayValue("A different request")).toBeTruthy();
 });
@@ -168,7 +171,5 @@ it("keeps a response when only the project tag changes", async () => {
   await waitFor(() =>
     expect(messageText("Body")).toBe("Hello Dana, does the renewal work?"),
   );
-  expect(
-    screen.queryByText("Your edits were kept. Draft again when ready."),
-  ).toBeNull();
+  expect(screen.queryByText(englishCopy["compose.draftKept"])).toBeNull();
 });

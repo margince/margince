@@ -7,6 +7,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   changeDraftField,
   EMPTY_DRAFT,
@@ -401,7 +402,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     it("names a question the reader declined", () => {
       renderWithDismissal(false);
       expect(screen.getByText(/You skipped:/)).toHaveTextContent(
-        "Registered address",
+        englishCopy["ob.field.registered_address"],
       );
     });
 
@@ -441,7 +442,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     // 2 of the 3 required fields (offer_summary, icp) are filled; the other
     // 13 profile fields on the board — settled or not — play no part.
     const bar = screen.getByRole("progressbar", {
-      name: "Required fields completed",
+      name: englishCopy["ob.conv.review.progressLabel"],
     });
     expect(bar).toHaveProperty("value", 2);
     expect(bar).toHaveProperty("max", 3);
@@ -454,7 +455,7 @@ describe("CompanyConfirmCard as a triage surface", () => {
     renderTriage([]);
 
     expect(
-      screen.getByText("Nothing more needed. You can continue."),
+      screen.getByText(englishCopy["ob.conv.review.requiredDone"]),
     ).toBeInTheDocument();
   });
 
@@ -522,7 +523,9 @@ describe("CompanyConfirmCard as a triage surface", () => {
   it("presents a section as blocking exactly when it holds a required-and-empty field, never for advisory ones alone", () => {
     renderTriage(["icp"]);
 
-    const nav = screen.getByRole("navigation", { name: "Jump to a section" });
+    const nav = screen.getByRole("navigation", {
+      name: englishCopy["ob.conv.triage.mapLabel"],
+    });
     // Identity carries display_name (required, empty) alongside four merely
     // empty-and-optional fields — it must read as blocking.
     const identityLink = within(nav).getByRole("button", {

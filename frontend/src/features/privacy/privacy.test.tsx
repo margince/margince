@@ -31,9 +31,13 @@ describe("ConsentPurposesCard", () => {
     stubRoutes();
     render(<ConsentPurposesCard />);
     const marketing = await screen.findByRole("row", { name: /Marketing/ });
-    expect(within(marketing).getByText("Double opt-in")).toBeInTheDocument();
+    expect(
+      within(marketing).getByText(en["privacy.purposeDoiBadge"]),
+    ).toBeInTheDocument();
     const transactional = screen.getByRole("row", { name: /Deal messages/ });
-    expect(within(transactional).queryByText("Double opt-in")).toBeNull();
+    expect(
+      within(transactional).queryByText(en["privacy.purposeDoiBadge"]),
+    ).toBeNull();
   });
 
   // G-3

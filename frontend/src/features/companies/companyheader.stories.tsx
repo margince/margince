@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
 import type { components } from "../../api/schema";
 import { useActivityGate } from "../../components/activitygate";
+import { en as englishCopy } from "../../i18n/en";
 import { company360 } from "../../testing/company.fixtures";
 import {
   installFetchStub,
@@ -240,7 +241,9 @@ export const MenuOpen: Story = {
   play: async () => {
     // The panel portals to document.body, so it is reached through `screen`.
     await userEvent.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", {
+        name: englishCopy["record.moreActions"],
+      }),
     );
   },
 };
@@ -262,7 +265,9 @@ export const ArchivedAccount: Story = {
     // The panel portals to document.body, so it is reached through `screen`
     // rather than a canvas-scoped query that would find nothing.
     await userEvent.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", {
+        name: englishCopy["record.moreActions"],
+      }),
     );
   },
 };

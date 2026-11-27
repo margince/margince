@@ -5,6 +5,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { ModelPricesCard } from "./ai-price-sync";
 
@@ -98,9 +99,11 @@ describe("ModelPricesCard", () => {
   it("says it has not synced before the first run", async () => {
     backend(ADMIN, { auto_sync: true });
     mount();
-    expect(await screen.findByText("Not synced yet")).toBeInTheDocument();
     expect(
-      screen.getByText("Sources: models.dev · OpenRouter"),
+      await screen.findByText(englishCopy["aiPriceSync.never"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["aiPriceSync.sources"]),
     ).toBeInTheDocument();
   });
 
@@ -121,7 +124,9 @@ describe("ModelPricesCard", () => {
     const user = userEvent.setup();
     mount();
     await user.click(
-      await screen.findByRole("switch", { name: "Auto-sync daily" }),
+      await screen.findByRole("switch", {
+        name: englishCopy["aiPriceSync.autoSync.label"],
+      }),
     );
     await waitFor(() => expect(puts).toEqual([{ auto_sync: false }]));
   });
@@ -130,14 +135,16 @@ describe("ModelPricesCard", () => {
     backend(READER, { auto_sync: true });
     mount();
     const toggle = await screen.findByRole("switch", {
-      name: "Auto-sync daily",
+      name: englishCopy["aiPriceSync.autoSync.label"],
     });
     expect(toggle).toBeDisabled();
     expect(
-      screen.getByText("Your role cannot change this."),
+      screen.getByText(englishCopy["aiPriceSync.adminOnly"]),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Refresh model prices" }),
+      screen.queryByRole("button", {
+        name: englishCopy["aiRates.refresh.button"],
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -146,9 +153,13 @@ describe("ModelPricesCard", () => {
   it("offers Refresh now only to a seat that may both add and update prices", async () => {
     backend({ ai_model_rate: ["read", "update"] }, { auto_sync: true });
     mount();
-    await screen.findByRole("switch", { name: "Auto-sync daily" });
+    await screen.findByRole("switch", {
+      name: englishCopy["aiPriceSync.autoSync.label"],
+    });
     expect(
-      screen.queryByRole("button", { name: "Refresh model prices" }),
+      screen.queryByRole("button", {
+        name: englishCopy["aiRates.refresh.button"],
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -184,10 +195,14 @@ describe("ModelPricesCard", () => {
     expect(summary?.getAttribute("aria-expanded")).toBe("false");
     expect(summary?.textContent).toBe("Anthropic, 1");
     expect(
-      screen.getByRole("button", { name: "Add model rate" }),
+      screen.getByRole("button", {
+        name: englishCopy["settings.rates.modelAdd"],
+      }),
     ).toBeInTheDocument();
     expect(
-      screen.getAllByRole("button", { name: "Refresh model prices" }),
+      screen.getAllByRole("button", {
+        name: englishCopy["aiRates.refresh.button"],
+      }),
     ).toHaveLength(1);
   });
 
@@ -257,7 +272,7 @@ describe("ModelPricesCard", () => {
     backend({}, { auto_sync: true });
     mount();
     expect(
-      await screen.findByText("Model prices are not yours to see."),
+      await screen.findByText(englishCopy["aiPriceSync.withheld"]),
     ).toBeInTheDocument();
   });
 });

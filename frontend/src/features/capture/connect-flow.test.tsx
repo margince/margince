@@ -16,6 +16,7 @@ import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { locationDouble } from "../../testing/locationdouble";
 import { ConnectFlow } from "./connect-flow";
 
@@ -85,12 +86,16 @@ describe("ConnectFlow from a vendor the page already picked", () => {
   it("opens on what to bring in, with Mail, Calendar and six months chosen", async () => {
     render({ startFrom: "google" });
     expect(
-      screen.getByRole("heading", { name: "Connect Google" }),
+      screen.getByRole("heading", {
+        name: englishCopy["scheduling.connectGoogle"],
+      }),
     ).toBeTruthy();
     expect(screen.getByRole("checkbox", { name: /^Mail/ })).toBeChecked();
     expect(screen.getByRole("checkbox", { name: /^Calendar/ })).toBeChecked();
     expect(
-      screen.getByRole("combobox", { name: "Import past email" }).textContent,
+      screen.getByRole("combobox", {
+        name: englishCopy["connectFlow.importLabel"],
+      }).textContent,
     ).toContain("6 months");
     const steps = within(
       screen.getByRole("list", { name: "Steps" }),
@@ -98,7 +103,9 @@ describe("ConnectFlow from a vendor the page already picked", () => {
     const current = steps.find(
       (step) => step.getAttribute("aria-current") === "step",
     );
-    expect(current?.textContent).toContain("What to bring in");
+    expect(current?.textContent).toContain(
+      englishCopy["connectFlow.stepBringIn"],
+    );
     // The state reaches a screen reader as a word beside the title.
     expect(steps[0]?.textContent).toBe("Account Done");
   });
@@ -159,7 +166,9 @@ describe("ConnectFlow from a vendor the page already picked", () => {
     await user.click(screen.getByRole("checkbox", { name: /^Calendar/ }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.queryByText(/asks twice/)).toBeNull();
-    expect(screen.queryByText("See and edit calendar events")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["connectFlow.permCalendar"]),
+    ).toBeNull();
     await user.click(
       screen.getByRole("button", { name: "Continue to Google" }),
     );
@@ -175,7 +184,9 @@ describe("ConnectFlow from a vendor the page already picked", () => {
     const requests = stubConnect(consent);
     render({ startFrom: "google" });
     await user.click(
-      screen.getByRole("combobox", { name: "Import past email" }),
+      screen.getByRole("combobox", {
+        name: englishCopy["connectFlow.importLabel"],
+      }),
     );
     await user.click(
       within(screen.getByRole("listbox")).getByRole("option", {
@@ -199,7 +210,9 @@ describe("ConnectFlow from a vendor the page already picked", () => {
     render({ startFrom: "google" });
     await user.click(screen.getByRole("checkbox", { name: /^Mail/ }));
     expect(
-      screen.queryByRole("combobox", { name: "Import past email" }),
+      screen.queryByRole("combobox", {
+        name: englishCopy["connectFlow.importLabel"],
+      }),
     ).toBeNull();
     await user.click(screen.getByRole("button", { name: "Continue" }));
     await user.click(
@@ -218,7 +231,9 @@ describe("ConnectFlow from a vendor the page already picked", () => {
     await user.click(screen.getByRole("checkbox", { name: /^Mail/ }));
     await user.click(screen.getByRole("checkbox", { name: /^Calendar/ }));
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
-    expect(screen.getByText("Tick Mail, Calendar or both.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["connectFlow.pickService"]),
+    ).toBeTruthy();
   });
 
   it("offers only the calendar when the mailbox is already on the roster", () => {
@@ -266,13 +281,15 @@ describe("ConnectFlow from the start", () => {
     const user = userEvent.setup();
     render();
     expect(
-      screen.getByRole("heading", { name: "Connect mail and calendar" }),
+      screen.getByRole("heading", { name: englishCopy["connectFlow.title"] }),
     ).toBeTruthy();
     expect(screen.getByRole("button", { name: "Continue" })).toBeDisabled();
     await user.click(screen.getByRole("radio", { name: /^Microsoft 365/ }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(
-      screen.getByRole("heading", { name: "Connect Microsoft 365" }),
+      screen.getByRole("heading", {
+        name: englishCopy["scheduling.connectMicrosoft"],
+      }),
     ).toBeTruthy();
   });
 
@@ -293,7 +310,9 @@ describe("ConnectFlow from the start", () => {
     );
     const imap = screen.getByRole("radio", { name: /^Another mail host/ });
     expect(imap).toBeDisabled();
-    expect(imap.closest("label")?.textContent).toContain("Already connected.");
+    expect(imap.closest("label")?.textContent).toContain(
+      englishCopy["connectFlow.alreadyConnected"],
+    );
   });
 
   it("hands another mail host to the IMAP form, closing itself first", async () => {
@@ -303,9 +322,13 @@ describe("ConnectFlow from the start", () => {
     await user.click(screen.getByRole("radio", { name: /^Another mail host/ }));
     await user.click(screen.getByRole("button", { name: "Continue" }));
     expect(screen.getByRole("checkbox", { name: /^Calendar/ })).toBeDisabled();
-    expect(screen.getByText("Not available over IMAP.")).toBeTruthy();
     expect(
-      screen.queryByRole("combobox", { name: "Import past email" }),
+      screen.getByText(englishCopy["connectFlow.calendarImap"]),
+    ).toBeTruthy();
+    expect(
+      screen.queryByRole("combobox", {
+        name: englishCopy["connectFlow.importLabel"],
+      }),
     ).toBeNull();
     expect(screen.getByText(/cannot import old emails/)).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -344,7 +367,9 @@ describe("ConnectFlow from the start", () => {
     setOpen(false);
     setOpen(true);
     expect(
-      await screen.findByRole("heading", { name: "Connect mail and calendar" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["connectFlow.title"],
+      }),
     ).toBeTruthy();
     expect(screen.getByRole("radio", { name: /^Google/ })).not.toBeChecked();
   });

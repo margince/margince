@@ -124,7 +124,9 @@ describe("a live Google mailbox", () => {
     expect(container.querySelectorAll(".btn-primary")).toHaveLength(1);
     // The ask is answered: no account picker and no skip beside a mailbox.
     expect(screen.queryByRole("radio", { name: /Google/ })).toBeNull();
-    expect(screen.queryByRole("button", { name: "Skip for now" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: en["ob.conv.voice.skipped"] }),
+    ).toBeNull();
   });
 
   // Setup asks whether the mailbox is connected at all. A sync the sweep keeps
@@ -179,7 +181,9 @@ describe("a live Google mailbox", () => {
     const { dispatch, persist } = renderConnectAct();
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Continue without importing" }),
+      await screen.findByRole("button", {
+        name: en["ob.conv.connect.continueNoImport"],
+      }),
     );
 
     await waitFor(() =>
@@ -248,7 +252,9 @@ describe("a live Google mailbox", () => {
       await screen.findByText(en["ob.conv.connect.calendarNotConnected"]),
     ).toBeInTheDocument();
     await userEvent.click(
-      screen.getByRole("button", { name: "Connect calendar" }),
+      screen.getByRole("button", {
+        name: en["ob.conv.connect.connectCalendar"],
+      }),
     );
     await waitFor(() => expect(bodies).toEqual([{ return_to: "onboarding" }]));
     expect(
@@ -302,7 +308,9 @@ describe("a live Google mailbox", () => {
       screen.getByText(en["ob.conv.connect.calendarNotConnected"]),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Connect calendar" }),
+      screen.getByRole("button", {
+        name: en["ob.conv.connect.connectCalendar"],
+      }),
     ).toBeInTheDocument();
     await screen.findByRole("button", { name: IMPORT });
     expect(container.querySelectorAll(".btn-primary")).toHaveLength(1);
@@ -331,7 +339,9 @@ describe("a live Google mailbox", () => {
       expect(screen.getByRole("button", { name: IMPORT })).toBeDisabled(),
     );
     expect(
-      screen.getByRole("button", { name: "Continue without importing" }),
+      screen.getByRole("button", {
+        name: en["ob.conv.connect.continueNoImport"],
+      }),
     ).toBeDisabled();
     deferred.resolve?.(jsonResponse({}));
     await waitFor(() =>
@@ -356,7 +366,11 @@ it("offers no import for an IMAP mailbox", async () => {
     await screen.findByRole("button", { name: "Continue" }),
   ).toBeInTheDocument();
   expect(screen.queryByText(en["ob.conv.connect.importTitle"])).toBeNull();
-  expect(screen.queryByRole("button", { name: "Connect calendar" })).toBeNull();
+  expect(
+    screen.queryByRole("button", {
+      name: en["ob.conv.connect.connectCalendar"],
+    }),
+  ).toBeNull();
   expect(previews).toEqual([]);
 });
 
@@ -407,7 +421,9 @@ describe("a live mailbox whose member cannot capture", () => {
 
       expect(await screen.findByText(says)).toBeInTheDocument();
       expect(
-        screen.queryByRole("button", { name: "Connect calendar" }),
+        screen.queryByRole("button", {
+          name: en["ob.conv.connect.connectCalendar"],
+        }),
       ).toBeNull();
     },
   );
@@ -454,10 +470,12 @@ describe("the LinkedIn row", () => {
     expect(await screen.findByRole("dialog")).toBeTruthy();
     expect(screen.getByText(en["ob.conv.linkedin.importLater"])).toBeTruthy();
     await userEvent.type(
-      screen.getByLabelText("Your LinkedIn profile URL"),
+      screen.getByLabelText(en["ob.conv.linkedin.profileLabel"]),
       "https://www.linkedin.com/in/lars",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["ob.conv.linkedin.save"] }),
+    );
 
     await waitFor(() =>
       expect(dispatch).toHaveBeenCalledWith({
@@ -476,7 +494,7 @@ describe("the LinkedIn row", () => {
     const { dispatch } = renderConnectAct();
     await userEvent.click(screen.getByRole("button", { name: "Add profile" }));
     await userEvent.click(
-      screen.getByRole("button", { name: "Skip LinkedIn for now" }),
+      screen.getByRole("button", { name: en["ob.conv.linkedin.skip"] }),
     );
     expect(dispatch).toHaveBeenCalledWith({ type: "LINKEDIN_SKIPPED" });
   });
@@ -484,13 +502,15 @@ describe("the LinkedIn row", () => {
   it("says what was settled and offers nothing more", () => {
     stub({ "GET /connectors": roster() });
     renderConnectAct("saved");
-    expect(screen.getByText("Profile saved")).toBeTruthy();
+    expect(screen.getByText(en["ob.conv.connect.linkedinSaved"])).toBeTruthy();
     // A saved address is not a connected integration.
     expect(screen.getByText("Saved")).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Add profile" })).toBeNull();
     cleanup();
     renderConnectAct("skipped");
-    expect(screen.getByText("Skipped: add it later in Settings")).toBeTruthy();
+    expect(
+      screen.getByText(en["ob.conv.connect.linkedinSkippedNote"]),
+    ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Add profile" })).toBeNull();
   });
 
@@ -508,7 +528,7 @@ describe("the LinkedIn row", () => {
     const user = userEvent.setup();
     renderConnectAct();
     await user.click(screen.getByRole("button", { name: "Add profile" }));
-    const field = screen.getByLabelText("Your LinkedIn profile URL");
+    const field = screen.getByLabelText(en["ob.conv.linkedin.profileLabel"]);
     expect(field).toHaveValue("");
 
     answer(
@@ -545,10 +565,12 @@ describe("the LinkedIn row", () => {
     const { client } = renderConnectAct();
     await user.click(screen.getByRole("button", { name: "Add profile" }));
     await user.type(
-      screen.getByLabelText("Your LinkedIn profile URL"),
+      screen.getByLabelText(en["ob.conv.linkedin.profileLabel"]),
       "https://www.linkedin.com/in/qa-new",
     );
-    await user.click(screen.getByRole("button", { name: "Save profile" }));
+    await user.click(
+      screen.getByRole("button", { name: en["ob.conv.linkedin.save"] }),
+    );
     expect(
       await screen.findByText("linkedin.com/in/qa-new"),
     ).toBeInTheDocument();
@@ -585,14 +607,16 @@ describe("the LinkedIn row", () => {
     expect(screen.queryByRole("button", { name: "Add profile" })).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Change" }));
-    const field = screen.getByLabelText("Your LinkedIn profile URL");
+    const field = screen.getByLabelText(en["ob.conv.linkedin.profileLabel"]);
     expect(field).toHaveValue("https://www.linkedin.com/in/qa-onboarding");
     expect(
-      screen.queryByRole("button", { name: "Skip LinkedIn for now" }),
+      screen.queryByRole("button", { name: en["ob.conv.linkedin.skip"] }),
     ).toBeNull();
     await user.clear(field);
     await user.type(field, "https://www.linkedin.com/in/qa-fixed");
-    await user.click(screen.getByRole("button", { name: "Save profile" }));
+    await user.click(
+      screen.getByRole("button", { name: en["ob.conv.linkedin.save"] }),
+    );
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(saves).toEqual([
@@ -618,10 +642,12 @@ describe("the LinkedIn row", () => {
     const user = userEvent.setup();
     const { dispatch } = renderConnectAct("saved");
     await user.click(await screen.findByRole("button", { name: "Change" }));
-    const field = screen.getByLabelText("Your LinkedIn profile URL");
+    const field = screen.getByLabelText(en["ob.conv.linkedin.profileLabel"]);
     await user.clear(field);
     await user.type(field, "https://www.linkedin.com/in/lars-j");
-    await user.click(screen.getByRole("button", { name: "Save profile" }));
+    await user.click(
+      screen.getByRole("button", { name: en["ob.conv.linkedin.save"] }),
+    );
 
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(saves).toHaveLength(1);
@@ -637,10 +663,12 @@ describe("the LinkedIn row", () => {
     renderConnectAct();
     await userEvent.click(screen.getByRole("button", { name: "Add profile" }));
     await userEvent.type(
-      screen.getByLabelText("Your LinkedIn profile URL"),
+      screen.getByLabelText(en["ob.conv.linkedin.profileLabel"]),
       "https://www.linkedin.com/in/lars",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["ob.conv.linkedin.save"] }),
+    );
 
     expect(
       await screen.findByText("LinkedIn refused the profile."),
@@ -675,10 +703,12 @@ describe("the LinkedIn row", () => {
     renderConnectAct();
     await user.click(screen.getByRole("button", { name: "Add profile" }));
     await user.type(
-      screen.getByLabelText("Your LinkedIn profile URL"),
+      screen.getByLabelText(en["ob.conv.linkedin.profileLabel"]),
       "https://example.com/in/qa",
     );
-    await user.click(screen.getByRole("button", { name: "Save profile" }));
+    await user.click(
+      screen.getByRole("button", { name: en["ob.conv.linkedin.save"] }),
+    );
 
     expect(
       await screen.findByText(en["common.linkedinProfileInvalid"]),
@@ -701,13 +731,15 @@ describe("the LinkedIn row", () => {
     const { dispatch } = renderConnectAct();
     await userEvent.click(screen.getByRole("button", { name: "Add profile" }));
     await userEvent.type(
-      screen.getByLabelText("Your LinkedIn profile URL"),
+      screen.getByLabelText(en["ob.conv.linkedin.profileLabel"]),
       "https://www.linkedin.com/in/lars",
     );
-    await userEvent.click(screen.getByRole("button", { name: "Save profile" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["ob.conv.linkedin.save"] }),
+    );
     await waitFor(() =>
       expect(
-        screen.getByRole("button", { name: "Skip LinkedIn for now" }),
+        screen.getByRole("button", { name: en["ob.conv.linkedin.skip"] }),
       ).toBeDisabled(),
     );
 
@@ -732,7 +764,7 @@ describe("the overnight question", () => {
   it("is not offered while no mailbox is connected", async () => {
     stub({ "GET /connectors": roster() });
     renderConnectAct();
-    await screen.findByRole("button", { name: "Skip for now" });
+    await screen.findByRole("button", { name: en["ob.conv.voice.skipped"] });
     expect(screen.queryByTestId("overnight-grant-choice")).toBeNull();
   });
 

@@ -478,7 +478,7 @@ describe("restore into the conversational shell", () => {
     render(<OnboardingScreen />);
 
     expect(
-      await screen.findByText("Connect your mail and calendar"),
+      await screen.findByText(en["ob.conv.connect.sceneTitle"]),
     ).toBeTruthy();
     expect(screen.getByRole("radio", { name: /Google/ })).toBeTruthy();
     // Microsoft is a live OAuth path, held until the roster read verifies
@@ -534,7 +534,7 @@ describe("restore into the conversational shell", () => {
     render(<OnboardingScreen />);
 
     expect(
-      await screen.findByText("Connect your mail and calendar"),
+      await screen.findByText(en["ob.conv.connect.sceneTitle"]),
     ).toBeTruthy();
     expect(screen.queryByText(/Train your writing voice/)).toBeNull();
     expect(screen.getByText(/Step 1 of 1/)).toBeTruthy();
@@ -552,7 +552,7 @@ describe("restore into the conversational shell", () => {
     render(<OnboardingScreen />);
 
     expect(
-      await screen.findByText("Connect your mail and calendar"),
+      await screen.findByText(en["ob.conv.connect.sceneTitle"]),
     ).toBeTruthy();
     expect(requestsTo(calls, "/voice-profiles", "GET")).toHaveLength(0);
   });
@@ -569,7 +569,7 @@ describe("restore into the conversational shell", () => {
     render(<OnboardingScreen />);
 
     expect(
-      await screen.findByText("Connect your mail and calendar"),
+      await screen.findByText(en["ob.conv.connect.sceneTitle"]),
     ).toBeTruthy();
   });
 
@@ -582,7 +582,7 @@ describe("restore into the conversational shell", () => {
 
     expect(
       await screen.findByRole("heading", {
-        name: "Will you work in Margince yourself?",
+        name: en["ob.conv.invite.title"],
       }),
     ).toBeTruthy();
     // Both answers are on the page, and reopening the question records
@@ -637,7 +637,7 @@ describe("restore into the conversational shell", () => {
     );
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
 
-    expect(await screen.findByText("Invite the first user")).toBeTruthy();
+    expect(await screen.findByText(en["ob.conv.team.title"])).toBeTruthy();
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
     });
@@ -664,7 +664,7 @@ describe("restore into the conversational shell", () => {
     render(<OnboardingScreen />);
 
     await userEvent.click(
-      await screen.findByRole("button", { name: "Skip for now" }),
+      await screen.findByRole("button", { name: en["ob.conv.voice.skipped"] }),
     );
 
     await waitFor(() => {
@@ -676,7 +676,7 @@ describe("restore into the conversational shell", () => {
     expect(body.step).toBe("complete");
     // The handoff scene has the surface.
     await waitFor(() =>
-      expect(screen.queryByText("Invite the first user")).toBeNull(),
+      expect(screen.queryByText(en["ob.conv.team.title"])).toBeNull(),
     );
   });
 
@@ -690,7 +690,7 @@ describe("restore into the conversational shell", () => {
     render(<OnboardingScreen />);
 
     expect(
-      await screen.findByText("Connect your mail and calendar"),
+      await screen.findByText(en["ob.conv.connect.sceneTitle"]),
     ).toBeTruthy();
   });
 
@@ -709,11 +709,11 @@ describe("restore into the conversational shell", () => {
     );
 
     expect(
-      await screen.findByText("Connect your mail and calendar"),
+      await screen.findByText(en["ob.conv.connect.sceneTitle"]),
     ).toBeTruthy();
     // The LinkedIn card is on this same screen, unopened until asked for.
     expect(
-      screen.queryByRole("button", { name: "Skip LinkedIn for now" }),
+      screen.queryByRole("button", { name: en["ob.conv.linkedin.skip"] }),
     ).toBeNull();
     await waitFor(() => {
       expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
@@ -741,11 +741,11 @@ describe("restore into the conversational shell", () => {
 
     await user.click(screen.getByRole("button", { name: "Add profile" }));
     await user.click(
-      await screen.findByRole("button", { name: "Skip LinkedIn for now" }),
+      await screen.findByRole("button", { name: en["ob.conv.linkedin.skip"] }),
     );
 
     expect(
-      await screen.findByText("Skipped: add it later in Settings"),
+      await screen.findByText(en["ob.conv.connect.linkedinSkippedNote"]),
     ).toBeTruthy();
     // LinkedIn's own resolution never writes wizard state; only mail does.
     expect(requestsTo(calls, "/onboarding/state", "PUT").length).toBe(1);
@@ -775,7 +775,7 @@ describe("reload adoption of a persisted read", () => {
     // narrate into no longer renders at all — the deck's own heading is
     // what proves the reload landed on the review.
     expect(
-      await screen.findByRole("button", { name: "Confirm profile" }),
+      await screen.findByRole("button", { name: en["ob.deck.confirm"] }),
     ).toBeTruthy();
   });
 
@@ -827,7 +827,7 @@ describe("reload adoption of a persisted read", () => {
     await userEvent.click(screen.getByRole("button", { name: "Continue" }));
 
     expect(
-      await screen.findByRole("button", { name: "Confirm profile" }),
+      await screen.findByRole("button", { name: en["ob.deck.confirm"] }),
     ).toBeTruthy();
   });
 
@@ -849,7 +849,7 @@ describe("reload adoption of a persisted read", () => {
     expect(
       await screen.findByRole(
         "button",
-        { name: "Confirm profile" },
+        { name: en["ob.deck.confirm"] },
         {
           timeout: 8000,
         },
@@ -899,7 +899,7 @@ describe("finishing the connect act", () => {
     render(<OnboardingScreen />);
 
     const without = await screen.findByRole("button", {
-      name: "Skip for now",
+      name: en["ob.conv.voice.skipped"],
     });
     await waitFor(() => expect(without).not.toBeDisabled());
     await userEvent.click(without);
@@ -916,7 +916,9 @@ describe("finishing the connect act", () => {
     // The retry succeeds: how the step was left lands as the completion
     // itself, THEN the shell navigates.
     options.putStatus = undefined;
-    await userEvent.click(screen.getByRole("button", { name: "Skip for now" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["ob.conv.voice.skipped"] }),
+    );
     await waitFor(() => {
       expect(window.location.hash).toBe("#/home");
     });

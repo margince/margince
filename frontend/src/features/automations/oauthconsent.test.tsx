@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { stable } from "../../format/collate";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { locationDouble } from "../../testing/locationdouble";
 import { OAuthConsent } from "./oauthconsent";
 
@@ -273,10 +274,16 @@ describe("OAuthConsent", () => {
   it("narrows the grant to reading and drafting in one press, and back", async () => {
     renderConsent({ scopes: ["read", "draft", "write", "send", "enrich"] });
     const user = userEvent.setup();
-    const full = await screen.findByRole("button", { name: "Full assistant" });
+    const full = await screen.findByRole("button", {
+      name: englishCopy["consent.preset.full"],
+    });
     expect(full).toHaveAttribute("aria-pressed", "true");
 
-    await user.click(screen.getByRole("button", { name: "Read and draft" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["consent.preset.readDraft"],
+      }),
+    );
     expect(approveForm().querySelector('input[name="scopes"]')).toHaveValue(
       "read draft",
     );
@@ -297,7 +304,9 @@ describe("OAuthConsent", () => {
       await screen.findByRole("checkbox", { name: /Use AI and buy data/ }),
     );
     expect(
-      screen.getByRole("button", { name: "Pick your own" }),
+      screen.getByRole("button", {
+        name: englishCopy["consent.preset.custom"],
+      }),
     ).toHaveAttribute("aria-pressed", "true");
   });
 
@@ -356,7 +365,7 @@ describe("OAuthConsent", () => {
     renderConsent({ scopes: ["read"], areas: ["business"] });
     const authorize = await screen.findByRole("button", { name: /authorize/i });
     expect(
-      screen.queryByRole("group", { name: "Where it may work" }),
+      screen.queryByRole("group", { name: englishCopy["workArea.legend"] }),
     ).toBeNull();
     await userEvent.click(authorize);
     expect(posted.body.get("areas")).toBe("all");
@@ -388,7 +397,9 @@ describe("OAuthConsent", () => {
     await user.click(screen.getByRole("checkbox", { name: /Sales work/ }));
     await user.click(screen.getByRole("checkbox", { name: /My account/ }));
     expect(screen.getByRole("button", { name: /authorize/i })).toBeDisabled();
-    expect(screen.getByText("Tick at least one area.")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["workArea.pickOne"]),
+    ).toBeInTheDocument();
   });
 
   it("posts the deny marker when the human refuses the connection", async () => {
@@ -507,7 +518,7 @@ describe("OAuthConsent — one pane on the sign-in surface", () => {
     globalThis.location.hash = hashWithoutNonce();
     stubSession(false);
     render(<OAuthConsent />);
-    const notice = await screen.findByText("Reconnecting…");
+    const notice = await screen.findByText(englishCopy["consent.reentering"]);
     const panes = document.querySelectorAll(".auth-surface .card");
     expect(panes).toHaveLength(1);
     expect(panes[0]).toContainElement(notice);
@@ -519,12 +530,10 @@ describe("OAuthConsent — a way of connecting the admin turned off", () => {
     globalThis.location.hash = hashWithError("method_off");
     stubConsentUnavailable();
     render(<OAuthConsent />);
-    expect(await screen.findByText("This AI tool cannot connect")).toBeTruthy();
     expect(
-      screen.getByText(
-        "Your admin has turned off this way of connecting AI tools. Ask them to let this tool connect, or to register it for your company.",
-      ),
+      await screen.findByText(englishCopy["consent.methodOffTitle"]),
     ).toBeTruthy();
+    expect(screen.getByText(englishCopy["consent.methodOffBody"])).toBeTruthy();
     expect(screen.queryByRole("button", { name: /authorize/i })).toBeNull();
     expect(
       screen.getByRole("button", { name: /back to margince/i }),

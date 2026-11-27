@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import {
   LIVE_ID,
   listsMe,
@@ -81,7 +82,9 @@ export const WithoutListGrant: Story = {
       await canvas.findByRole("link", { name: "All lists" }),
     ).toBeVisible();
     await expect(
-      canvas.queryByRole("button", { name: "Add to Shortlist" }),
+      canvas.queryByRole("button", {
+        name: englishCopy["lists.addToShortlist"],
+      }),
     ).not.toBeInTheDocument();
   },
 };
@@ -173,7 +176,7 @@ const pressTakeOff: Story["play"] = async ({ canvasElement }) => {
   const user = userEvent.setup();
   await user.click(
     await within(canvasElement).findByRole("button", {
-      name: "Take off the Shortlist",
+      name: englishCopy["lists.remove"],
     }),
   );
 };

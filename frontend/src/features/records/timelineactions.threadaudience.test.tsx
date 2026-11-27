@@ -7,6 +7,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   jsonResponse,
   StoryProviders,
@@ -80,7 +81,11 @@ it("narrows a captured chat thread from its row", async () => {
     screen.getByText(/whole conversation, not one message/i),
   ).toBeInTheDocument();
   await user.click(screen.getByLabelText(/participants only/i));
-  await user.click(screen.getByRole("button", { name: "Save visibility" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["compose.audienceConfirm"],
+    }),
+  );
   await vi.waitFor(() => expect(posts).toEqual([{ share: false }]));
 });
 
@@ -102,7 +107,7 @@ it("keeps the per-message control on a connector row no import row backs", async
     writable: true,
   });
   expect(
-    screen.getByRole("button", { name: "Change visibility" }),
+    screen.getByRole("button", { name: englishCopy["compose.audience"] }),
   ).toBeInTheDocument();
 });
 

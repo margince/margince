@@ -14,6 +14,7 @@ import "./App.settings";
 import "./features/settings/settings";
 import "./features/sign-in/forcedmfa";
 import "./features/voice-knowledge/search";
+import { en as englishCopy } from "./i18n/en";
 
 // The reset link reaches its form ahead of the session gate; the shell's
 // own boundary states are in App.test.tsx.
@@ -84,7 +85,9 @@ describe("password-reset deep link", () => {
     );
     window.location.hash = "#/reset-password?token=live-session-token";
     mount();
-    expect(await screen.findByLabelText("New password")).toBeTruthy();
+    expect(
+      await screen.findByLabelText(englishCopy["auth.newPassword"]),
+    ).toBeTruthy();
   });
 
   it("keeps a signed-in browser in the app on a bare reset link", async () => {
@@ -116,7 +119,9 @@ describe("password-reset deep link", () => {
     mount();
 
     expect(
-      await screen.findByRole("navigation", { name: "Primary navigation" }),
+      await screen.findByRole("navigation", {
+        name: englishCopy["shell.railAria"],
+      }),
     ).toBeTruthy();
     await waitFor(() =>
       expect(window.location.hash).not.toContain("reset-password"),
@@ -161,7 +166,9 @@ describe("password-reset deep link", () => {
       ),
     );
 
-    expect(await screen.findByLabelText("New password")).toBeTruthy();
+    expect(
+      await screen.findByLabelText(englishCopy["auth.newPassword"]),
+    ).toBeTruthy();
   });
 
   it("reaches the Brief on the sign-in that follows a completed reset", async () => {
@@ -216,11 +223,13 @@ describe("password-reset deep link", () => {
     mount();
 
     await user.type(
-      await screen.findByLabelText("New password"),
+      await screen.findByLabelText(englishCopy["auth.newPassword"]),
       "an entirely new password{enter}",
     );
     await user.click(
-      await screen.findByRole("button", { name: "Back to sign in" }),
+      await screen.findByRole("button", {
+        name: englishCopy["auth.backToLogin"],
+      }),
     );
     await waitFor(() =>
       expect(window.location.hash).not.toContain("reset-password"),
@@ -233,7 +242,9 @@ describe("password-reset deep link", () => {
     // The rail proves the app reached the Brief. A stale reset hash would
     // leave the login form on screen instead.
     expect(
-      await screen.findByRole("navigation", { name: "Primary navigation" }),
+      await screen.findByRole("navigation", {
+        name: englishCopy["shell.railAria"],
+      }),
     ).toBeTruthy();
   });
 
@@ -293,7 +304,9 @@ describe("password-reset deep link", () => {
     // The rail proves the sign-in reached the app. LoginForm keeps a non-empty
     // hash, so "#/reset-password" could otherwise hold the login form.
     expect(
-      await screen.findByRole("navigation", { name: "Primary navigation" }),
+      await screen.findByRole("navigation", {
+        name: englishCopy["shell.railAria"],
+      }),
     ).toBeTruthy();
   });
 });

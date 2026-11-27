@@ -16,6 +16,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture } from "../../testing/mefixture";
@@ -360,7 +361,9 @@ describe("the deal form's project picker", () => {
     await pickCompany(user, "Brandt Automotive");
     await pickOption(user, screen.getByLabelText("Project"), "New project…");
     await user.type(screen.getByLabelText("Project name *"), "Born here");
-    await user.click(inForm().getByLabelText("Project owner"));
+    await user.click(
+      inForm().getByLabelText(englishCopy["deal.newProjectOwner"]),
+    );
     await screen.findByRole("option", { name: "Jane Doe" });
     expect(screen.queryByRole("option", { name: "Runner Bot" })).toBeNull();
     await user.click(screen.getByRole("option", { name: "Jane Doe" }));
@@ -505,7 +508,9 @@ describe("the deal page", () => {
     });
     render(<DealScreen id="d1" />);
     await screen.findByRole("heading", { name: "Fleet retrofit" });
-    expect(await screen.findByLabelText("Masked value")).toBeTruthy();
+    expect(
+      await screen.findByLabelText(englishCopy["rbac.masked"]),
+    ).toBeTruthy();
     expect(screen.queryByText("CRM rollout")).toBeNull();
   });
 

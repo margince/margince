@@ -5,6 +5,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { healthScope } from "../../lib/healthscope";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { EmbedReindexCard } from "./embedreindex";
@@ -141,10 +142,12 @@ it("shows the estimate + utilization disclosure and disables confirm until the e
     "GET /embeddings/reindex/preview": () => previewPromise,
   });
 
-  await userEvent.click(await screen.findByText("Review and reindex"));
+  await userEvent.click(
+    await screen.findByText(englishCopy["embedreindex.reviewCta"]),
+  );
 
   const confirmButton = await screen.findByRole("button", {
-    name: "Start reindex",
+    name: englishCopy["embedreindex.confirmCta"],
   });
   expect(confirmButton).toBeDisabled();
 
@@ -174,7 +177,9 @@ it("states a failed estimate as the dialog's own refusal rather than as red text
       ),
   });
 
-  await userEvent.click(await screen.findByText("Review and reindex"));
+  await userEvent.click(
+    await screen.findByText(englishCopy["embedreindex.reviewCta"]),
+  );
 
   // The server's own sentence, and it is what the dialog says ABOUT ITSELF —
   // the reason Confirm is refused — so it is spoken as an alert rather than
@@ -184,7 +189,9 @@ it("states a failed estimate as the dialog's own refusal rather than as red text
   );
   expect(refusal.closest('[role="alert"]')).not.toBeNull();
   expect(
-    await screen.findByRole("button", { name: "Start reindex" }),
+    await screen.findByRole("button", {
+      name: englishCopy["embedreindex.confirmCta"],
+    }),
   ).toBeDisabled();
 });
 
@@ -196,9 +203,11 @@ it("posts previewed_identity from the status read and force:false on a plain con
       json({ ...STATUS_NEEDED, status: "reembedding" }, 202),
   });
 
-  await userEvent.click(await screen.findByText("Review and reindex"));
+  await userEvent.click(
+    await screen.findByText(englishCopy["embedreindex.reviewCta"]),
+  );
   const confirmButton = await screen.findByRole("button", {
-    name: "Start reindex",
+    name: englishCopy["embedreindex.confirmCta"],
   });
   await waitFor(() => expect(confirmButton).toBeEnabled());
   await userEvent.click(confirmButton);
@@ -238,19 +247,27 @@ it("Rebuild index stays available even when no reindex is needed, and posts forc
     "POST /embeddings/reindex": () => json({ ...STATUS_IDLE }, 202),
   });
 
-  expect(await screen.findByText("Rebuild index")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["embedreindex.rebuildCta"]),
+  ).toBeTruthy();
   // The naming of the row the button answers, not only the button: an action
   // row is a label, a help line and a verb, and a verb standing in the list
   // without the two says nothing about what it will do.
-  expect(screen.getByText("Rebuild entire index")).toBeTruthy();
+  expect(
+    screen.getByText(englishCopy["embedreindex.rebuildLabel"]),
+  ).toBeTruthy();
   // The "Review and reindex" trigger only appears when a reindex is actually
   // needed — Rebuild is the always-available affordance instead. Its whole ROW
   // goes with it: a naming line left behind would offer an action nothing can
   // start.
-  expect(screen.queryByText("Review and reindex")).toBeNull();
-  expect(screen.queryByText("Reindex changes")).toBeNull();
+  expect(screen.queryByText(englishCopy["embedreindex.reviewCta"])).toBeNull();
+  expect(
+    screen.queryByText(englishCopy["embedreindex.reindexLabel"]),
+  ).toBeNull();
 
-  await userEvent.click(screen.getByText("Rebuild index"));
+  await userEvent.click(
+    screen.getByText(englishCopy["embedreindex.rebuildCta"]),
+  );
   const confirmButton = await screen.findByRole("button", {
     name: "Rebuild now",
   });
@@ -317,7 +334,7 @@ it("F2: a stuck reembedding marker shows the age of the last progress and keeps 
     // The Rebuild action stays enabled (not disabled) while reembedding —
     // that's the re-kick affordance (force:true), not blocked by isRunning.
     const rebuildButton = screen.getByRole("button", {
-      name: "Rebuild index",
+      name: englishCopy["embedreindex.rebuildCta"],
     });
     expect(rebuildButton).toBeEnabled();
   } finally {
@@ -341,17 +358,25 @@ it("renders the status but no rebuild actions on the read grant alone", async ()
   // controls alone would pass just as well on the withheld card — which is what
   // a broken READ binding produces, and is exactly the case this test exists to
   // distinguish.
-  expect(await screen.findByText("Reindex needed")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["embedreindex.statusNeeded"]),
+  ).toBeTruthy();
   // The status row keeps its own naming, so the reading is still labelled for a
   // seat that may only read it.
-  expect(screen.getByText("Index status")).toBeTruthy();
-  expect(screen.queryByText("Review and reindex")).toBeNull();
+  expect(
+    screen.getByText(englishCopy["embedreindex.statusLabel"]),
+  ).toBeTruthy();
+  expect(screen.queryByText(englishCopy["embedreindex.reviewCta"])).toBeNull();
   expect(screen.queryByRole("button", { name: /Rebuild/ })).toBeNull();
   // Both ACTION rows go whole. A naming line whose control the update grant
   // withheld would describe a rebuild this reader cannot start, which reads as a
   // broken card rather than as a boundary.
-  expect(screen.queryByText("Reindex changes")).toBeNull();
-  expect(screen.queryByText("Rebuild entire index")).toBeNull();
+  expect(
+    screen.queryByText(englishCopy["embedreindex.reindexLabel"]),
+  ).toBeNull();
+  expect(
+    screen.queryByText(englishCopy["embedreindex.rebuildLabel"]),
+  ).toBeNull();
 });
 
 // Withheld, not absent: the card shares the maintenance page with sections a
@@ -371,15 +396,21 @@ it("says the search index is withheld, and asks the server for nothing", async (
       /only an administrator or operations user can see the search index/i,
     ),
   ).toBeTruthy();
-  expect(screen.getByText("Search index")).toBeTruthy();
+  expect(screen.getByText(englishCopy["embedreindex.title"])).toBeTruthy();
   // No status and no actions — and the half of the old behaviour worth keeping:
   // the denial is already known, so the status query never fires rather than
   // turning it into an "unavailable" the reader cannot act on.
-  expect(screen.queryByText("Reindex needed")).toBeNull();
-  expect(screen.queryByText("Index status")).toBeNull();
-  expect(screen.queryByText("Review and reindex")).toBeNull();
-  expect(screen.queryByText("Rebuild index")).toBeNull();
-  expect(screen.queryByText("Rebuild entire index")).toBeNull();
+  expect(
+    screen.queryByText(englishCopy["embedreindex.statusNeeded"]),
+  ).toBeNull();
+  expect(
+    screen.queryByText(englishCopy["embedreindex.statusLabel"]),
+  ).toBeNull();
+  expect(screen.queryByText(englishCopy["embedreindex.reviewCta"])).toBeNull();
+  expect(screen.queryByText(englishCopy["embedreindex.rebuildCta"])).toBeNull();
+  expect(
+    screen.queryByText(englishCopy["embedreindex.rebuildLabel"]),
+  ).toBeNull();
   expect(requests.some((r) => r.url === "/embeddings/reindex/status")).toBe(
     false,
   );
@@ -399,10 +430,14 @@ it("says no embeddings model is bound, links to AI settings, and asks for no sta
     await screen.findByText(/No embedding model is bound/),
   ).toBeInTheDocument();
   expect(
-    screen.getByRole("link", { name: "Open AI settings" }),
+    screen.getByRole("link", { name: englishCopy["embedreindex.unboundLink"] }),
   ).toHaveAttribute("href", "/#/settings/models/tiers");
-  expect(screen.getByText("Search index")).toBeInTheDocument();
-  expect(screen.queryByText("Index status")).toBeNull();
+  expect(
+    screen.getByText(englishCopy["embedreindex.title"]),
+  ).toBeInTheDocument();
+  expect(
+    screen.queryByText(englishCopy["embedreindex.statusLabel"]),
+  ).toBeNull();
   expect(screen.queryByRole("button", { name: /Rebuild/ })).toBeNull();
   expect(requests.some((r) => r.url === "/embeddings/reindex/status")).toBe(
     false,
@@ -438,7 +473,9 @@ it("names both models when the last reindex ran with another one, and drops a ze
     "GET /embeddings/reindex/status": () =>
       json({ ...STATUS_NEEDED, entities_pending: 0 }),
   });
-  expect(await screen.findByText("Reindex needed")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["embedreindex.statusNeeded"]),
+  ).toBeTruthy();
   expect(
     screen.getByText(
       "The last reindex ran with anthropic/voyage-2@1024. Search now uses anthropic/voyage-3@1024.",
@@ -451,7 +488,9 @@ it("names no model when the index matches the configured one", async () => {
   mount(REINDEX_OPERATOR, {
     "GET /embeddings/reindex/status": () => json(STATUS_IDLE),
   });
-  expect(await screen.findByText("Index status")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["embedreindex.statusLabel"]),
+  ).toBeTruthy();
   await waitFor(() =>
     expect(screen.queryByText(/The last reindex ran with/)).toBeNull(),
   );

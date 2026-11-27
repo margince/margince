@@ -3,6 +3,7 @@ import { useState } from "react";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ImportWindowPicker } from "./window-picker";
 
 type ImportWindow = components["schemas"]["StartBackfillRequest"]["window"];
@@ -44,7 +45,9 @@ export const TenYearsDark: Story = { ...TenYears, globals: { theme: "dark" } };
 // spread; nothing is keyed on it.
 const openTheList: Story["play"] = async ({ canvasElement }) => {
   await userEvent.click(
-    within(canvasElement).getByRole("combobox", { name: "How far back" }),
+    within(canvasElement).getByRole("combobox", {
+      name: englishCopy["backfill.windowLabel"],
+    }),
   );
   await within(canvasElement.ownerDocument.body).findByRole("option", {
     name: "10 years",

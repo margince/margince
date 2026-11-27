@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { ContactRail } from "./contactrail";
 
@@ -195,7 +196,9 @@ describe("the About column's employer", () => {
     const user = driver();
     await changeEmployer(user);
     await user.click(
-      screen.getByRole("checkbox", { name: "No current employer" }),
+      screen.getByRole("checkbox", {
+        name: englishCopy["contact.employer.none"],
+      }),
     );
     await user.click(
       screen.getByRole("radio", {
@@ -259,7 +262,7 @@ describe("the About column's employer", () => {
     await changeEmployer(user);
     expect(
       await screen.findByRole("checkbox", {
-        name: "This is their primary employer",
+        name: englishCopy["contact.rail.isPrimaryEmployer"],
       }),
     ).toHaveProperty("checked", true);
   });

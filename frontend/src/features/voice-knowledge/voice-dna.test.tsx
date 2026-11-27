@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { candidateVersion } from "../../testing/voice-candidate";
 import {
@@ -108,11 +109,13 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     stubApi();
     render(<VoiceDnaCard />);
     // The row names the sample; the zone under it is the control.
-    expect(await screen.findByLabelText("First writing sample")).toBe(
-      fileInput(),
-    );
+    expect(
+      await screen.findByLabelText(englishCopy["settings.voice.addFirstLabel"]),
+    ).toBe(fileInput());
     // What to add and how much, as onboarding says it.
-    expect(screen.getByText("Best samples")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["settings.voice.worksTitle"]),
+    ).toBeTruthy();
     expect(screen.getByText(/at least 800 words/)).toBeTruthy();
     expect(screen.getByText(/which only you can see/)).toBeTruthy();
     // A paste box beside the files, for text whose file will not open.
@@ -122,7 +125,7 @@ describe("the Settings Voice DNA card with no profile yet", () => {
   it("mints exactly one profile on the first add and then shows the build control", async () => {
     const calls = stubApi();
     render(<VoiceDnaCard />);
-    await screen.findByLabelText("First writing sample");
+    await screen.findByLabelText(englishCopy["settings.voice.addFirstLabel"]);
     await userEvent.upload(
       fileInput(),
       new File(["Short sentences. Concrete nouns."], "letter.txt", {
@@ -161,7 +164,7 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     });
     const user = userEvent.setup();
     render(<VoiceDnaCard />);
-    await screen.findByLabelText("First writing sample");
+    await screen.findByLabelText(englishCopy["settings.voice.addFirstLabel"]);
     await user.upload(fileInput(), [
       new File(["First sample, plain sentences."], "first.txt", {
         type: "text/plain",
@@ -188,7 +191,9 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     expect(
       await screen.findByText(/Your role cannot change Voice DNA/i),
     ).toBeTruthy();
-    expect(screen.queryByLabelText("First writing sample")).toBeNull();
+    expect(
+      screen.queryByLabelText(englishCopy["settings.voice.addFirstLabel"]),
+    ).toBeNull();
     expect(document.querySelector('input[type="file"]')).toBeNull();
   });
 
@@ -199,13 +204,17 @@ describe("the Settings Voice DNA card with no profile yet", () => {
     render(<VoiceDnaCard />);
     expect(
       await screen.findByRole("heading", {
-        name: "Your writing voice",
+        name: englishCopy["settings.voice.start.title"],
       }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Add your writing" }),
+      screen.getByRole("heading", {
+        name: englishCopy["settings.voice.start.addTitle"],
+      }),
     ).toBeTruthy();
-    expect(screen.getByRole("list", { name: "What works best" })).toBeTruthy();
+    expect(
+      screen.getByRole("list", { name: englishCopy["voice.kinds.label"] }),
+    ).toBeTruthy();
     for (const absent of ["Writing samples", "Builds"]) {
       expect(screen.queryByRole("heading", { name: absent })).toBeNull();
     }
@@ -250,7 +259,9 @@ describe("the Settings Voice DNA card with a profile", () => {
     stubProfile();
     render(<VoiceDnaCard tab={tab} />);
     expect(await screen.findByRole("heading", { name: heading })).toBeTruthy();
-    expect(screen.getByText("Only you can see your Voice DNA.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["settings.voice.privacy"]),
+    ).toBeTruthy();
   });
 
   // Settings remounts a tab on every switch; the host above the tabs is what
@@ -261,7 +272,9 @@ describe("the Settings Voice DNA card with a profile", () => {
     globalThis.location.hash = "#/settings/voice/builds";
     render(<VoiceDnaCard tab="builds" />);
     await user.click(
-      await screen.findByRole("button", { name: "Go to Your voice" }),
+      await screen.findByRole("button", {
+        name: englishCopy["settings.voice.firstBuildGo"],
+      }),
     );
     expect(globalThis.location.hash).toMatch(/^#\/settings\/voice(?![/\w])/);
   });
@@ -280,7 +293,9 @@ describe("the Settings Voice DNA card with a profile", () => {
       throw new Error("the rules heading is not inside a card");
     }
     expect(within(rules).getByText("Preferences")).toBeTruthy();
-    expect(within(rules).getByText("Derived voice")).toBeTruthy();
+    expect(
+      within(rules).getByText(englishCopy["settings.voice.derivedLabel"]),
+    ).toBeTruthy();
   });
 
   it("keeps the corpus and the way to add to it in one card", async () => {
@@ -292,15 +307,17 @@ describe("the Settings Voice DNA card with a profile", () => {
     // are here, so the reader who just read "420 of 30,000 words" can act on
     // it without moving.
     const corpus = (
-      await screen.findByRole("heading", { name: "Make it sharper" })
+      await screen.findByRole("heading", {
+        name: englishCopy["settings.voice.sharpenTitle"],
+      })
     ).closest("section");
     if (!corpus) {
       throw new Error("the corpus heading is not inside a card");
     }
     expect(await within(corpus).findByText(/420 of 30,000 words/)).toBeTruthy();
-    expect(within(corpus).getByLabelText("Add writing samples")).toBe(
-      fileInput(),
-    );
+    expect(
+      within(corpus).getByLabelText(englishCopy["settings.voice.addSource"]),
+    ).toBe(fileInput());
   });
 
   // Every box on this card is a real form control with a real name. A
@@ -320,9 +337,9 @@ describe("the Settings Voice DNA card with a profile", () => {
   it("names the file control from the row above the zone", async () => {
     stubProfile();
     render(<VoiceDnaCard tab="samples" />);
-    expect(await screen.findByLabelText("Add writing samples")).toBe(
-      fileInput(),
-    );
+    expect(
+      await screen.findByLabelText(englishCopy["settings.voice.addSource"]),
+    ).toBe(fileInput());
   });
 });
 
@@ -373,7 +390,7 @@ describe("a build that fails", () => {
     await pressRebuild();
 
     expect(
-      await screen.findByText("The request failed. No cause reported."),
+      await screen.findByText(englishCopy["common.errorNoCause"]),
     ).toBeTruthy();
     // Our own internals never become the reader's sentence.
     expect(screen.queryByText(/Cannot read properties/)).toBeNull();
@@ -386,7 +403,7 @@ describe("a build that fails", () => {
     await pressRebuild();
 
     expect(
-      await screen.findByText("The request failed. No cause reported."),
+      await screen.findByText(englishCopy["common.errorNoCause"]),
     ).toBeTruthy();
     // Our own internals never become the reader's sentence.
     expect(screen.queryByText(/Cannot read properties/)).toBeNull();
@@ -581,7 +598,9 @@ describe("what the build button is called", () => {
   it("offers the first build in the hero, not at the foot of the page", async () => {
     stubWith({ ...PROFILE, maturity: "provisional" });
     render(<VoiceDnaCard />);
-    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    const hero = await screen.findByRole("region", {
+      name: englishCopy["settings.voice.heroLabel"],
+    });
     const build = await within(hero).findByRole("button", {
       name: /Build Voice DNA/,
     });
@@ -589,7 +608,9 @@ describe("what the build button is called", () => {
     expect(screen.getAllByRole("button", { name: /Build Voice DNA/ })).toEqual([
       build,
     ]);
-    expect(screen.queryByText("Build from samples")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["settings.voice.buildRowLabel"]),
+    ).toBeNull();
   });
 
   // Below the floor the next step is more writing: the hero leads with adding
@@ -597,12 +618,14 @@ describe("what the build button is called", () => {
   it("leads with adding writing while the corpus is too thin to build", async () => {
     stubWith(PROFILE);
     render(<VoiceDnaCard />);
-    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    const hero = await screen.findByRole("region", {
+      name: englishCopy["settings.voice.heroLabel"],
+    });
     expect(
       await within(hero).findByText(/A first build needs about 380 more words/),
     ).toBeTruthy();
     const steps = within(hero).getByRole("list", {
-      name: "How Margince learns your voice",
+      name: englishCopy["settings.voice.start.stepsLabel"],
     });
     expect(within(steps).getAllByRole("listitem")).toHaveLength(3);
     expect(
@@ -659,7 +682,9 @@ describe("what the build button is called", () => {
       }),
     );
     render(<VoiceDnaCard />);
-    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    const hero = await screen.findByRole("region", {
+      name: englishCopy["settings.voice.heroLabel"],
+    });
 
     await userEvent.click(
       await within(hero).findByRole("button", { name: /Build Voice DNA/ }),
@@ -706,16 +731,22 @@ describe("a version awaiting review", () => {
   it("asks about a first version from the hero, with its portrait drawn", async () => {
     stubWith([candidateVersion([])]);
     render(<VoiceDnaCard />);
-    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    const hero = await screen.findByRole("region", {
+      name: englishCopy["settings.voice.heroLabel"],
+    });
     expect(
       await within(hero).findByText("Direct, concrete, few adjectives."),
     ).toBeTruthy();
     expect(within(hero).getByText("Voice v1 ready for review")).toBeTruthy();
     expect(
-      within(hero).getByRole("button", { name: "Use this version" }),
+      within(hero).getByRole("button", {
+        name: englishCopy["voice.candidate.apply"],
+      }),
     ).toBeTruthy();
     expect(
-      within(hero).getByRole("button", { name: "Discard this version" }),
+      within(hero).getByRole("button", {
+        name: englishCopy["voice.candidate.discard"],
+      }),
     ).toBeTruthy();
     expect(
       within(hero).queryByRole("button", { name: /Build Voice DNA/ }),
@@ -727,9 +758,13 @@ describe("a version awaiting review", () => {
     stubWith([{ ...candidateVersion([]), id: "v-1", status: "active" }]);
     globalThis.location.hash = "#/settings/voice";
     render(<VoiceDnaCard />);
-    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    const hero = await screen.findByRole("region", {
+      name: englishCopy["settings.voice.heroLabel"],
+    });
     await user.click(
-      await within(hero).findByRole("button", { name: "Edit your rules" }),
+      await within(hero).findByRole("button", {
+        name: englishCopy["settings.voice.editRules"],
+      }),
     );
     expect(globalThis.location.hash).toMatch(/^#\/settings\/voice\/rules\b/);
   });
@@ -750,7 +785,9 @@ describe("a version awaiting review", () => {
     };
     stubWith([next, active]);
     render(<VoiceDnaCard />);
-    const hero = await screen.findByRole("region", { name: "Your Voice DNA" });
+    const hero = await screen.findByRole("region", {
+      name: englishCopy["settings.voice.heroLabel"],
+    });
     expect(await within(hero).findByText("The active voice.")).toBeTruthy();
     const title = await screen.findByText("Voice v2 ready for review");
     expect(hero.contains(title)).toBe(false);
@@ -758,7 +795,9 @@ describe("a version awaiting review", () => {
       hero.compareDocumentPosition(title) & Node.DOCUMENT_POSITION_FOLLOWING,
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Keep current voice" }),
+      screen.getByRole("button", {
+        name: englishCopy["voice.candidate.reject"],
+      }),
     ).toBeTruthy();
   });
 });

@@ -106,7 +106,9 @@ type User = ReturnType<typeof userEvent.setup>;
 
 /** The list's industry, changed from Manufacturing to Retail. */
 async function changeIndustry(user: User) {
-  const industry = await screen.findByDisplayValue("Manufacturing");
+  const industry = await screen.findByDisplayValue(
+    en["industry.manufacturing"],
+  );
   await user.clear(industry);
   await user.type(industry, "Retail");
 }
@@ -160,7 +162,7 @@ describe("opening a Live List's filter", () => {
     open();
 
     expect(
-      await screen.findByDisplayValue("Manufacturing"),
+      await screen.findByDisplayValue(en["industry.manufacturing"]),
     ).toBeInTheDocument();
     expect(
       screen.getByRole("heading", { level: 1, name: liveList.name }),
@@ -185,7 +187,9 @@ describe("opening a Live List's filter", () => {
       screen.getByRole("button", { name: en["filters.discardChanges"] }),
     );
 
-    expect(screen.getByDisplayValue("Manufacturing")).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue(en["industry.manufacturing"]),
+    ).toBeInTheDocument();
     expect(screen.getByText(en["filters.noChanges"])).toBeInTheDocument();
     expect(firstRowField()).toHaveFocus();
   });
@@ -366,7 +370,7 @@ describe("saving to the list", () => {
   it("offers saving as a new view in the band, and the exports beside the count", async () => {
     open();
     const user = userEvent.setup();
-    await screen.findByDisplayValue("Manufacturing");
+    await screen.findByDisplayValue(en["industry.manufacturing"]);
     expect(
       await screen.findByRole("button", { name: en["filters.exportCsv"] }),
     ).toBeInTheDocument();
@@ -418,7 +422,9 @@ describe("saving to the list", () => {
     expect(
       await screen.findByRole("heading", { level: 1, name: "My copy" }),
     ).toBeInTheDocument();
-    expect(screen.getByDisplayValue("Manufacturing")).toBeInTheDocument();
+    expect(
+      screen.getByDisplayValue(en["industry.manufacturing"]),
+    ).toBeInTheDocument();
   });
 
   it("exports JSON as the file the server rendered, under its name", async () => {
@@ -441,7 +447,7 @@ describe("saving to the list", () => {
     });
     const { written } = open();
     const user = userEvent.setup();
-    await screen.findByDisplayValue("Manufacturing");
+    await screen.findByDisplayValue(en["industry.manufacturing"]);
     await user.click(
       await screen.findByRole("button", { name: en["filters.exportJson"] }),
     );

@@ -36,11 +36,11 @@ var draftFollowUpsForCopy = toolCopy{
 }
 
 var sendEmailCopy = toolCopy{
-	Purpose: "Put a mail on the wire to a real recipient, from this workspace, and record it on " +
+	Purpose: "Put a mail on the wire to a real recipient, from this company, and record it on " +
 		"the thread it belongs to.",
 	Limits: "It sends EXACTLY the subject and body it is given and composes nothing, so it is " +
 		"not the tool to reach for when the message does not exist yet. Every recipient must " +
-		"have granted the consent purpose the call names. A message leaving the workspace cannot " +
+		"have granted the consent purpose the call names. A message leaving the company cannot " +
 		"be recalled, and by default nothing holds it: where an installation has raised this verb " +
 		"to confirm first, the answer is a staged approval instead of a send.",
 	Instead: "Use draft_email first to produce the message and let it be read, and send_message " +
@@ -51,7 +51,7 @@ var sendEmailCopy = toolCopy{
 }
 
 var sendCompanyEmailCopy = toolCopy{
-	Purpose: "Put a mail on the wire to a real recipient, from this workspace, starting a new " +
+	Purpose: "Put a mail on the wire to a real recipient, from this company, starting a new " +
 		"conversation rather than answering one, and file it on the records it is about.",
 	Limits: "Sends EXACTLY the subject and body given; composes nothing. Needs at least one link " +
 		"naming the records it belongs to. Every recipient must have granted the named consent " +
@@ -65,7 +65,7 @@ var sendCompanyEmailCopy = toolCopy{
 }
 
 var sendMessageCopy = toolCopy{
-	Purpose: "Reply on a captured chat conversation (the channels this workspace has connected) " +
+	Purpose: "Reply on a captured chat conversation (the channels this company has connected) " +
 		"on the thread it was captured from.",
 	Limits: "It replies to an existing conversation named by activity_id; it cannot start one, " +
 		"and it cannot choose a channel. The recipient must have granted the consent purpose the " +
@@ -87,12 +87,12 @@ var checkAvailabilityCopy = toolCopy{
 var enrichCopy = toolCopy{
 	Purpose: "Learn about a company by reading its public website, and propose what was " +
 		"found for a human to accept onto the record.",
-	Limits: "It reaches OUTSIDE the workspace, and what it returns is a PROPOSAL: nothing " +
+	Limits: "It reaches OUTSIDE the company, and what it returns is a PROPOSAL: nothing " +
 		"lands on the record until someone accepts it, which is the review that guards this, not " +
 		"an approval on the call. " +
 		"Reading one page answers immediately; reading a whole site is queued and answers with a " +
 		"read id rather than the content. What it finds is captured text from a third party, not " +
-		"a fact this workspace has verified.",
+		"a fact this company has verified.",
 	Instead: "Use qualify_lead to qualify a lead when the missing values are already " +
 		"derivable from the record itself, which costs no external read and needs no approval.",
 	Retain: "Keep the company_id you enriched, and the read id when a whole-site read was " +

@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { PageAsideProvider, PageAsideToggle, usePageAside } from "./pageaside";
 
 const KEY = "margince.pageAside.collapsed";
@@ -64,10 +65,14 @@ describe("the details pane is open until folded", () => {
   it("remembers a fold and an unfold, and says which it offers", async () => {
     const user = userEvent.setup();
     const { pane, getByRole } = record();
-    await user.click(getByRole("button", { name: "Hide details" }));
+    await user.click(
+      getByRole("button", { name: englishCopy["record.panel.hideDetails"] }),
+    );
     expect(pane()).toBeNull();
     expect(localStorage.getItem(KEY)).toBe("1");
-    await user.click(getByRole("button", { name: "Show details" }));
+    await user.click(
+      getByRole("button", { name: englishCopy["record.panel.showDetails"] }),
+    );
     expect(pane()).not.toBeNull();
     expect(localStorage.getItem(KEY)).toBe("0");
   });

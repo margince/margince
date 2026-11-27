@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { standardViews } from "../../components/recordlist";
+import { en as englishCopy } from "../../i18n/en";
 import { UNNARROWED_LIST_QUERY } from "../../testing/listquery.fixture";
 import {
   installFetchStub,
@@ -454,10 +455,12 @@ export const LeadPromotedDemoting: Story = {
   play: async ({ canvasElement }) => {
     const body = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await body.findByRole("button", { name: "More actions" }),
+      await body.findByRole("button", {
+        name: englishCopy["record.moreActions"],
+      }),
     );
     await userEvent.click(
-      await body.findByRole("button", { name: "Reverse qualification" }),
+      await body.findByRole("button", { name: englishCopy["lead.demote"] }),
     );
     await body.findByRole("dialog");
   },

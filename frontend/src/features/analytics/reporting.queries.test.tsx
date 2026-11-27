@@ -4,6 +4,7 @@ import { cleanup, renderHook } from "@testing-library/react";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { reportingStoryCatalog } from "../../testing/reporting.fixtures";
 import { storyQueryClient } from "../../testing/story-utils";
 import {
@@ -43,12 +44,16 @@ describe("useMetricNames", () => {
     const name = namesUnder({
       open_pipeline: "Open pipeline closing this quarter",
     });
-    expect(name("open_pipeline")).toBe("Open pipeline closing this quarter");
-    expect(name("stage_age")).toBe("Time in current stage");
+    expect(name("open_pipeline")).toBe(
+      englishCopy["analytics.overview.openClosing"],
+    );
+    expect(name("stage_age")).toBe(englishCopy["reporting.stage_age"]);
   });
 
   it("names a metric the catalog withholds as unavailable, whatever the view calls it", () => {
     const name = namesUnder({ bookings_won: "Sales won this quarter" });
-    expect(name("bookings_won")).toBe("Metric no longer available");
+    expect(name("bookings_won")).toBe(
+      englishCopy["reporting.metricUnavailable"],
+    );
   });
 });

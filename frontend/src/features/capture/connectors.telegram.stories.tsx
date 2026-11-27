@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   jsonResponse,
   type RouteMap,
@@ -101,12 +102,12 @@ export const TelegramReadOnly: Story = {
   ),
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByText(
-      "Only an administrator or operations user can connect or change the bot.",
-    );
+    await canvas.findByText(englishCopy["connectors.telegramReadOnly"]);
     const row = within(canvas.getByTestId("telegram-connection"));
     await expect(
-      row.queryByRole("button", { name: "Replace token" }),
+      row.queryByRole("button", {
+        name: englishCopy["connectors.telegramEditToken"],
+      }),
     ).toBeNull();
     await expect(row.queryByRole("button", { name: "Disconnect" })).toBeNull();
   },

@@ -2,6 +2,7 @@
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   agentClientList,
   BOTH_METHODS_ON,
@@ -45,9 +46,13 @@ describe("How MCP clients may connect", () => {
     expect(switchNamed(PUBLISHED).checked).toBe(true);
     expect(switchNamed(DYNAMIC).checked).toBe(false);
     expect(switchNamed(DYNAMIC).disabled).toBe(false);
-    expect(screen.getByText("Clients an admin registers")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["agentClients.methods.admin"]),
+    ).toBeTruthy();
     expect(screen.getByText("Always on")).toBeTruthy();
-    expect(screen.queryByText("Only an admin can change these.")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["agentClients.methods.readOnly"]),
+    ).toBeNull();
   });
 
   it("links each automatic way to its section of the MCP specification", async () => {
@@ -167,7 +172,9 @@ describe("How MCP clients may connect", () => {
     await screen.findByRole("switch", { name: PUBLISHED });
     expect(switchNamed(PUBLISHED).disabled).toBe(true);
     expect(switchNamed(DYNAMIC).disabled).toBe(true);
-    expect(screen.getByText("Only an admin can change these.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["agentClients.methods.readOnly"]),
+    ).toBeTruthy();
   });
 
   it("says when a save was refused", async () => {
@@ -179,7 +186,9 @@ describe("How MCP clients may connect", () => {
     });
     renderWithClient(<AgentClientMethodsCard />);
     await user.click(await screen.findByRole("switch", { name: DYNAMIC }));
-    expect(await screen.findByText("The change was not saved")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["agentClients.methods.saveFailed"]),
+    ).toBeTruthy();
   });
 
   it("draws nothing and asks nothing for a reader without the grant", async () => {

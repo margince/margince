@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { MissingTranslationsLine } from "./labeltranslations";
 
 afterEach(cleanup);
@@ -23,7 +24,9 @@ function line(
 
 describe("a stage with no name in a language the team reads", () => {
   it("is marked for that language", () => {
-    expect(line({}, ["vi"])?.textContent).toBe("No name in Vietnamese");
+    expect(line({}, ["vi"])?.textContent).toBe(
+      englishCopy["translation.missing.vi"],
+    );
   });
 
   it("is not marked once the name is given", () => {

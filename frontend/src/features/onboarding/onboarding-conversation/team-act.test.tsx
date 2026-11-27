@@ -83,7 +83,7 @@ describe("TeamAct", () => {
   it("shows the settings invite form under its own title, and a skip while nobody is invited", async () => {
     renderTeam();
     expect(
-      await screen.findByText("Invite the first user"),
+      await screen.findByText(en["ob.conv.team.title"]),
     ).toBeInTheDocument();
     expect(screen.getByLabelText(/^Email/)).toBeInTheDocument();
     // One address is enough here; the name is derived from it.
@@ -92,7 +92,7 @@ describe("TeamAct", () => {
     // title has already said it.
     expect(screen.queryByText(en["users.inviteTitle"])).not.toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Skip for now" }),
+      screen.getByRole("button", { name: en["ob.conv.team.skip"] }),
     ).toBeInTheDocument();
   });
 
@@ -101,7 +101,7 @@ describe("TeamAct", () => {
     const user = userEvent.setup();
 
     await user.click(
-      await screen.findByRole("button", { name: "Skip for now" }),
+      await screen.findByRole("button", { name: en["ob.conv.team.skip"] }),
     );
 
     await waitFor(() =>
@@ -117,7 +117,7 @@ describe("TeamAct", () => {
     const user = userEvent.setup();
 
     await user.click(
-      await screen.findByRole("button", { name: "Skip for now" }),
+      await screen.findByRole("button", { name: en["ob.conv.team.skip"] }),
     );
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
@@ -139,7 +139,7 @@ describe("TeamAct", () => {
       await screen.findByText("Ada Byron is invited."),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("button", { name: "Finish setup" }),
+      screen.getByRole("button", { name: en["ob.conv.team.finish"] }),
     ).toBeInTheDocument();
     // The set-password link, in the same dialog the roster hands it over in.
     expect((await screen.findByTestId("password-link-url")).textContent).toBe(

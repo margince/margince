@@ -5,7 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
-
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -211,7 +211,9 @@ export const Merged: Story = {
   play: async ({ canvasElement }) => {
     const body = await pressRowVerb(canvasElement, "Merge");
     await userEvent.click(
-      await body.findByRole("combobox", { name: "Keep this tag" }),
+      await body.findByRole("combobox", {
+        name: englishCopy["tagAdmin.mergeIntoLabel"],
+      }),
     );
     await userEvent.click(
       await body.findByRole("option", { name: "Key Account" }),
@@ -243,6 +245,6 @@ export const AddingTakenName: Story = {
       "Churn Risk",
     );
     await userEvent.click(dialog.getByRole("button", { name: "Add" }));
-    await dialog.findByText("A tag with this name already exists.");
+    await dialog.findByText(englishCopy["tags.nameTaken"]);
   },
 };

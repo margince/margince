@@ -193,11 +193,11 @@ async function renderCard(
       }),
     );
     await screen.findByRole("dialog", {
-      name: "Mail not shared with the team",
+      name: en["heldThreads.title"],
     });
     if (browse)
       await user.click(
-        screen.getByRole("button", { name: "Browse recent conversations" }),
+        screen.getByRole("button", { name: en["heldThreads.browse"] }),
       );
   }
   return user;
@@ -226,7 +226,7 @@ describe("mail sharing corrections", () => {
     await renderCard([PENDING, JUDGED]);
     expect(await screen.findByText("Legal")).toBeInTheDocument();
     expect(
-      screen.getAllByRole("button", { name: "Preview and change sharing" }),
+      screen.getAllByRole("button", { name: en["heldThreads.preview"] }),
     ).toHaveLength(2);
     expect(
       screen.queryByRole("button", { name: /share with the team/i }),
@@ -239,13 +239,13 @@ describe("mail sharing corrections", () => {
     ]);
     expect(screen.queryByText("Legal")).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Preview and change sharing" }),
+      screen.queryByRole("button", { name: en["heldThreads.preview"] }),
     ).toBeNull();
   });
   it("opens the selected message for preview and its existing access editor", async () => {
     const user = await renderCard([JUDGED]);
     await user.click(
-      screen.getByRole("button", { name: "Preview and change sharing" }),
+      screen.getByRole("button", { name: en["heldThreads.preview"] }),
     );
     await waitFor(() =>
       expect(
@@ -266,10 +266,10 @@ describe("mail sharing corrections", () => {
       activity_ids: [],
     });
     await user.click(
-      screen.getByRole("button", { name: "Preview and change sharing" }),
+      screen.getByRole("button", { name: en["heldThreads.preview"] }),
     );
     await user.click(
-      await screen.findByRole("button", { name: "Share with the company" }),
+      await screen.findByRole("button", { name: en["compose.threadShare"] }),
     );
     expect(
       await screen.findByText("2 other seats have not shared this thread"),

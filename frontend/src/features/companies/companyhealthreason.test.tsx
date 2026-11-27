@@ -7,6 +7,7 @@ import type { ReactNode } from "react";
 import { describe, expect, it } from "vitest";
 import { useHealthReason } from "../../components/companylookups";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 
 // The server rates relationship and commercial health and names a reason code
@@ -71,9 +72,7 @@ describe("useHealthReason", () => {
         reason_code: "single_threaded",
         reason_params: { count },
       });
-    expect(say(1)).toBe(
-      "In contact, but one contact carries the whole company relationship.",
-    );
+    expect(say(1)).toBe(englishCopy["co.health.reason.singleThreaded_one"]);
     expect(say(2)).toBe(
       "In contact, but only 2 contacts carry the whole company relationship.",
     );

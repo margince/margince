@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   permissionDenied,
@@ -43,7 +44,7 @@ export const PunycodeDomain: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      canvas.getByText("This sender may be pretending to be someone else"),
+      canvas.getByText(englishCopy["contact.impersonation.title"]),
     ).toBeVisible();
     await expect(
       canvas.getByRole("button", { name: "Looks fine" }),

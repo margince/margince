@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import type { ComponentProps } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import type { ComposeThread } from "./composeanchor";
 import type { Conversation } from "./composethread";
 import { ThreadBar, threadCards } from "./composethreadbar";
@@ -109,7 +110,7 @@ it("keeps the threads on screen as a failure when the record's mail could not be
   render(bar({ conversations: [], failed: true, retry }));
 
   const menu = await openMenu(user);
-  expect(menu.getByText("This section did not load.")).toBeTruthy();
+  expect(menu.getByText(englishCopy["state.failed"])).toBeTruthy();
   await user.click(menu.getByRole("button", { name: "Retry" }));
   expect(retry).toHaveBeenCalledTimes(1);
 });
@@ -120,7 +121,7 @@ it("draws a failed read of the answered message as a failure with a retry", asyn
   render(bar({ anchorFailed: true, retryAnchor: retry }, { answering: "a1" }));
 
   const menu = await openMenu(user);
-  expect(menu.getByText("This section did not load.")).toBeTruthy();
+  expect(menu.getByText(englishCopy["state.failed"])).toBeTruthy();
   await user.click(menu.getByRole("button", { name: "Retry" }));
   expect(retry).toHaveBeenCalledTimes(1);
 });
@@ -135,7 +136,7 @@ it("offers each thread and the way back as design-system buttons", async () => {
 
   expect(screen.getByText("New thread")).toBeTruthy();
   let menu = await openMenu(user);
-  expect(menu.getByText("Recent threads")).toBeTruthy();
+  expect(menu.getByText(englishCopy["compose.threadsRecent"])).toBeTruthy();
   expect(
     menu.getByRole("searchbox", { name: "Search threads with Ada Brandt" }),
   ).toBeTruthy();
@@ -220,7 +221,7 @@ it("offers older mail when the page read so far holds no thread to offer", async
 
   const menu = await openMenu(user);
 
-  expect(menu.queryByText("No thread matches these words.")).toBeNull();
+  expect(menu.queryByText(englishCopy["compose.threadSearchNone"])).toBeNull();
   expect(menu.getByRole("button", { name: "Show more" })).toBeTruthy();
 });
 
@@ -231,11 +232,7 @@ it("keeps the threads read so far when an older page fails", async () => {
   const menu = await openMenu(user);
 
   expect(menu.getByRole("button", { name: /Pricing for Q4/ })).toBeTruthy();
-  expect(
-    menu.getByText(
-      "Older threads could not be loaded. Press Show more to try again.",
-    ),
-  ).toBeTruthy();
+  expect(menu.getByText(englishCopy["compose.threadsMoreFailed"])).toBeTruthy();
   expect(menu.getByRole("button", { name: "Show more" })).toBeTruthy();
 });
 
@@ -263,7 +260,9 @@ it("reads the floor as plural when one thread is read so far", () => {
 it("says earlier threads may exist when the mail read so far holds none", () => {
   render(bar({ conversations: [], more: true }));
 
-  expect(screen.getByText("Earlier threads may exist")).toBeTruthy();
+  expect(
+    screen.getByText(englishCopy["compose.earlierThreadsMayExist"]),
+  ).toBeTruthy();
 });
 
 it("counts the threads exactly once every page is read", () => {

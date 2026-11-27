@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, expect, it, vi } from "vitest";
 import { type Locale, LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { labelsIn } from "../testing/shippedlabels.testkit";
 import { useRecordRoles } from "./recordassignments.queries";
 import { RecordTeam } from "./recordteam";
@@ -131,7 +132,7 @@ it("draws no panel of its own when a section already names it", async () => {
   // The company rail is one pane of headed slices and names this one itself;
   // a second heading and a titled region inside it would be a card in a card.
   expect(
-    screen.queryByRole("heading", { name: "Responsibilities" }),
+    screen.queryByRole("heading", { name: englishCopy["assignments.title"] }),
   ).toBeNull();
   expect(screen.queryByRole("region")).toBeNull();
   // The verb still stands: the shape changed, not what a writer may do.

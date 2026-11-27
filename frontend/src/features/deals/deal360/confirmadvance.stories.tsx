@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../../api/schema";
+import { en as englishCopy } from "../../../i18n/en";
 import { ProblemError } from "../../../lib/problem";
 import {
   installFetchStub,
@@ -236,7 +237,7 @@ const winWithoutContract = advance({
 // start, and Confirm waits for the answer instead of being refused for it.
 async function askedBeforeConfirm() {
   const dialog = within(await screen.findByRole("dialog"));
-  await dialog.findByRole("combobox", { name: "How was it won?" });
+  await dialog.findByRole("combobox", { name: englishCopy["deals.winReason"] });
   expect(
     dialog.getByRole("button", { name: "Confirm" }),
   ).toHaveAccessibleDescription("Pick how the deal was won.");

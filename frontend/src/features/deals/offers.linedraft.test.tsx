@@ -14,6 +14,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse } from "../../testing/story-utils";
 import { OfferScreen } from "./offers";
 
@@ -285,7 +286,7 @@ describe.each(KINDS)(
 
       const row = screen.getByTestId("line-row-li-1");
       expect(await within(row).findByText(REFUSAL)).toBeTruthy();
-      expect(screen.queryByText("Change was not saved")).toBeNull();
+      expect(screen.queryByText(englishCopy["lead.writeRefused"])).toBeNull();
       expect(cell.value).toBe(kind.left ?? kind.shown);
       expect(screen.getByTestId(kind.testId)).toBe(cell);
       expect(state.line).toMatchObject(kind.patches[0]);
@@ -302,7 +303,7 @@ describe("an offer line cell", () => {
     await answer(held[0]);
     await waitFor(() => expect(cell.value).toBe("Consulting!"));
     expect(held).toHaveLength(1);
-    expect(screen.queryByText("Change was not saved")).toBeNull();
+    expect(screen.queryByText(englishCopy["lead.writeRefused"])).toBeNull();
   });
 });
 
@@ -332,7 +333,7 @@ describe("the billing cell", () => {
 
     const row = screen.getByTestId("line-row-li-1");
     expect(await within(row).findByText(REFUSAL)).toBeTruthy();
-    expect(screen.queryByText("Change was not saved")).toBeNull();
+    expect(screen.queryByText(englishCopy["lead.writeRefused"])).toBeNull();
     expect(screen.getByRole("spinbutton", { name: "Periods, line 1" })).toBe(
       term,
     );

@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ACCEPTED_ATTACHMENT_ATTR } from "../../lib/attachmentupload";
 import { ProblemError } from "../../lib/problem";
 import { ContractForm } from "./contractform";
@@ -273,7 +274,7 @@ describe("the signed document on the contract form", () => {
       />,
     );
 
-    expect(await screen.findByText("Showing part of the list")).toBeTruthy();
+    expect(await screen.findByText(englishCopy["state.partial"])).toBeTruthy();
   });
 
   it("says the answer is withheld rather than showing an empty field", async () => {
@@ -307,12 +308,12 @@ describe("the signed document on the contract form", () => {
       />,
     );
 
-    expect(await screen.findByText("Hidden for your role")).toBeTruthy();
+    expect(await screen.findByText(englishCopy["state.withheld"])).toBeTruthy();
     // And the picker must not restate the absence the panel just declined to
     // claim: "Drop a file here" is the sentence for a field that KNOWS nothing
     // is filed.
     expect(
-      screen.queryByText("Drop a file here or click to choose"),
+      screen.queryByText(englishCopy["contracts.form.fileEmpty"]),
     ).toBeNull();
   });
 
@@ -320,7 +321,9 @@ describe("the signed document on the contract form", () => {
     stub([]);
     show(<ContractForm companyId="o-1" open onClose={() => {}} />);
 
-    const picker = await screen.findByLabelText("Signed document");
+    const picker = await screen.findByLabelText(
+      englishCopy["contracts.form.file"],
+    );
     expect(picker.getAttribute("accept")).toBe(ACCEPTED_ATTACHMENT_ATTR);
   });
 
@@ -338,7 +341,9 @@ describe("the signed document on the contract form", () => {
     // documents" would be a request about a record that does not exist.
     show(<ContractForm companyId="o-1" open onClose={() => {}} />);
 
-    await screen.findByRole("heading", { name: "Record contract" });
+    await screen.findByRole("heading", {
+      name: englishCopy["contracts.form.save"],
+    });
     await waitFor(() => {
       expect(asked.filter((url) => url.includes("/documents"))).toHaveLength(0);
     });

@@ -10,6 +10,7 @@ import {
   overviewAddress,
 } from "./features/analytics/analytics.overview.scenarios.fixtures";
 import { installOverviewServer } from "./features/analytics/analytics.overview.server.fixtures";
+import { en as englishCopy } from "./i18n/en";
 import type { CoreFeature } from "./lib/corefeatures";
 import { routeHash } from "./lib/router";
 import { meFixture, READS_RECORDS } from "./testing/mefixture";
@@ -52,7 +53,7 @@ export const Onboarding: Story = {
   },
   play: async ({ canvasElement }) => {
     const name = await within(canvasElement).findByRole("textbox", {
-      name: "Company name",
+      name: englishCopy["co.profileField.display_name"],
     });
     await waitFor(() => expect(name).toBeVisible());
   },
@@ -77,7 +78,7 @@ export const InitialAnalytics: Story = {
   },
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByRole("region", {
-      name: "Opening readings",
+      name: englishCopy["analytics.overview.readings"],
     });
   },
 };

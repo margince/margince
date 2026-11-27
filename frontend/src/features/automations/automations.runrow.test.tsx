@@ -8,6 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { type Locale, LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { TRACED_RUNS } from "./automations.fixtures";
 import { RunRow } from "./automations.runrow";
 
@@ -68,7 +69,7 @@ describe("a traced run", () => {
   it("keeps its event id behind technical details", async () => {
     const user = userEvent.setup();
     const row = draw(traced("r-task"));
-    const summary = within(row).getByText("Technical details");
+    const summary = within(row).getByText(englishCopy["auto.runs.technical"]);
     expect(summary.closest("details")).not.toHaveAttribute("open");
     await user.click(summary);
     expect(
@@ -109,6 +110,8 @@ describe("a run this client cannot word", () => {
     );
     expect(row).toHaveTextContent("Target deal:BÄR Pharma");
     expect(row).toHaveTextContent("Result created follow-up task");
-    expect(within(row).queryByText("Technical details")).toBeNull();
+    expect(
+      within(row).queryByText(englishCopy["auto.runs.technical"]),
+    ).toBeNull();
   });
 });

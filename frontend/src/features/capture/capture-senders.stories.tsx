@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { heldThreadList } from "../../testing/heldthreads.fixtures";
 import { linkedInReachFixture } from "../../testing/reachfixture";
 import {
@@ -183,7 +184,9 @@ async function openList(canvasElement: HTMLElement, name: string) {
   );
   if (name === "Sender decisions")
     await userEvent.click(
-      within(dialog).getByRole("button", { name: "Browse recent senders" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["senders.browse"],
+      }),
     );
   return within(dialog);
 }
@@ -224,7 +227,7 @@ export const LastSeenOnADay: Story = {
     const drawer = within(canvasElement.ownerDocument.body).getByRole(
       "dialog",
       {
-        name: "Sender decisions",
+        name: englishCopy["senders.title"],
       },
     );
     await expect(drawer.textContent).not.toMatch(/\d:\d\d/);
@@ -284,7 +287,7 @@ export const RowMenu: Story = {
     const page = within(canvasElement.ownerDocument.body);
     await waitFor(() =>
       expect(
-        page.getByRole("button", { name: "Withdraw my answer" }),
+        page.getByRole("button", { name: englishCopy["senders.withdraw"] }),
       ).toBeVisible(),
     );
   },

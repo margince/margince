@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider, translate } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import {
   decidingRecipient,
   SendPermission,
@@ -641,15 +642,13 @@ describe("one status for the message", () => {
       </LocaleProvider>,
     );
     expect(
-      screen.getByText("This message needs one more detail"),
+      screen.getByText(englishCopy["sendPermission.missingContext"]),
     ).toBeInTheDocument();
     expect(
-      screen.getByText(
-        "No open deal with this recipient supports this follow-up.",
-      ),
+      screen.getByText(englishCopy["sendPermission.reason.dealFact"]),
     ).toBeInTheDocument();
     expect(
-      screen.queryByText("No recorded reason to contact this recipient"),
+      screen.queryByText(englishCopy["sendPermission.unproven"]),
     ).toBeNull();
   });
 
@@ -672,9 +671,7 @@ describe("one status for the message", () => {
       </LocaleProvider>,
     );
     expect(
-      screen.getByText(
-        "No open deal with this recipient supports this follow-up.",
-      ),
+      screen.getByText(englishCopy["sendPermission.reason.dealFact"]),
     ).toBeInTheDocument();
   });
 

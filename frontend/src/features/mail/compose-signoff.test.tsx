@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   allowedPreview,
@@ -146,7 +147,7 @@ describe("the sign-off under the composer's body", () => {
     expect(block.textContent).toContain(CLOSING_HINT);
     expect(
       screen
-        .getByRole("link", { name: "Set your signature" })
+        .getByRole("link", { name: englishCopy["compose.signOffSet"] })
         .getAttribute("href"),
     ).toBe("/#/settings/account");
   });
@@ -210,7 +211,7 @@ describe("the sign-off under the composer's body", () => {
       />,
     );
 
-    await screen.findByRole("combobox", { name: "Reason for contact" });
+    await screen.findByRole("combobox", { name: englishCopy["compose.why"] });
     await waitFor(() => expect(asked).toContain("GET /me"));
     expect(screen.queryByRole("region", { name: REGION_NAME })).toBeNull();
     expect(asked).not.toContain("POST /emails:sign-off");
@@ -228,7 +229,7 @@ describe("the sign-off under the composer's body", () => {
     );
     renderComposer();
 
-    await screen.findByText("Could not load the sign-off a send adds.");
+    await screen.findByText(englishCopy["compose.signOffFailed"]);
     expect(screen.queryByRole("region", { name: REGION_NAME })).toBeNull();
   });
 });

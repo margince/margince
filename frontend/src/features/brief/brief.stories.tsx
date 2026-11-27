@@ -212,7 +212,7 @@ async function openDecision(canvasElement: HTMLElement) {
   await userEvent.click(await canvas.findByRole("button", { name: "Decide" }));
   return within(
     await within(canvasElement.ownerDocument.body).findByRole("dialog", {
-      name: "Your decision",
+      name: en["worklist.decision.title"],
     }),
   );
 }

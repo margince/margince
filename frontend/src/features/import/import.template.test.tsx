@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { ImportCard } from "./import";
 import {
   formatFixture,
@@ -28,7 +29,9 @@ describe("the template preview", () => {
     expect(await screen.findByText("companies.csv")).toBeVisible();
     expect(screen.getByRole("button", { name: "Tier" })).toBeVisible();
     expect(
-      screen.getByRole("link", { name: "Download template" }),
+      screen.getByRole("link", {
+        name: englishCopy["import.template.download"],
+      }),
     ).toHaveAttribute("href", "/v1/imports/template");
   });
 
@@ -54,7 +57,7 @@ describe("the template preview", () => {
     render(<ImportCard subpage="template" />);
     await screen.findByText("companies.csv");
     expect(sent.map((s) => s.path)).toContain("GET /imports/format");
-    await user.click(screen.getByText("How rows are matched"));
+    await user.click(screen.getByText(englishCopy["import.template.rules"]));
     expect(screen.getByText(formatFixture.key_rules[0] ?? "")).toBeVisible();
   });
 

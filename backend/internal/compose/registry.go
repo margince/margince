@@ -20,6 +20,7 @@ import (
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
 	"github.com/margince/margince/backend/internal/compose/assurancetools"
 	"github.com/margince/margince/backend/internal/compose/dealclosetasks"
+	"github.com/margince/margince/backend/internal/compose/loopfault"
 	"github.com/margince/margince/backend/internal/compose/partnersteps"
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/agents"
@@ -62,6 +63,7 @@ func NewRegistryFor(db *database.DB, send SendPath) *agents.Registry {
 // after the registry is built still reach draft_email. served is the Server
 // whose object store the document tools write to; without one they store nothing.
 type registryFeatures struct {
+	readFailure  loopfault.Failure
 	lists        bool
 	coreFeatures corefeatures.Availability
 	firstDrafts  *firstMessageEngines
@@ -103,7 +105,7 @@ func registryWithGate(db *database.DB, gate *auth.Gate, drafter activities.Email
 		agents.WithChangeWords(agentChangeWords(db)),
 		agents.WithContactCaseMerger(contactCaseMergerSeam(db)),
 		agents.WithDealTaskSettler(dealclosetasks.New(activities.NewStore(db), db)),
-		agents.WithRecordSidecars(recordSidecars(db)))
+		agents.WithRecordSidecars(recordSidecars(db)), agents.WithReadRecordFailure(features.readFailure))
 	// Approval decisions need the same registered effects as the HTTP path.
 	approvalsSvc := decidingApprovalsService(pool, send, log)
 	registry := agents.NewRegistry(approvalsAdapter{svc: approvalsSvc}, gate, opts...)

@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -78,7 +79,7 @@ const openThePlan = async ({
   const user = userEvent.setup();
   const canvas = within(canvasElement);
   await user.click(
-    await canvas.findByRole("button", { name: "Review current plan" }),
+    await canvas.findByRole("button", { name: englishCopy["brief.team.plan"] }),
   );
   await within(canvasElement.ownerDocument.body).findByRole("dialog");
 };

@@ -58,7 +58,7 @@ async function approveIntoSkew(staged: Approval) {
   await screen.findByText(staged.summary ?? "");
   await user.click(screen.getByRole("button", { name: "Approve" }));
   await user.click(
-    screen.getByRole("button", { name: "Send staged decisions" }),
+    screen.getByRole("button", { name: en["brief.deck.commit"] }),
   );
 }
 
@@ -106,7 +106,7 @@ describe("ApprovalTray — the deck stages, and only the commit sends", () => {
     expect(screen.getByText(/1 skipped/)).toBeTruthy();
 
     await user.click(
-      screen.getByRole("button", { name: "Send staged decisions" }),
+      screen.getByRole("button", { name: en["brief.deck.commit"] }),
     );
     await waitFor(() =>
       expect(writeRoutes(calls)).toEqual([
@@ -168,7 +168,7 @@ describe("ApprovalTray — the deck stages, and only the commit sends", () => {
     await user.click(screen.getByRole("button", { name: "Approve" }));
     expect(writes(calls)).toEqual([]);
     await user.click(
-      screen.getByRole("button", { name: "Send staged decisions" }),
+      screen.getByRole("button", { name: en["brief.deck.commit"] }),
     );
     await waitFor(() =>
       expect(writeRoutes(calls)).toEqual([
@@ -185,7 +185,7 @@ describe("ApprovalTray — the deck stages, and only the commit sends", () => {
     // behind this plate, so clearing the queue could never show the one state
     // clearing it exists to reach. The sections carry keys for this reason.
     expect(await screen.findByText("Deck clear")).toBeTruthy();
-    expect(screen.getByText("1 decision sent")).toBeTruthy();
+    expect(screen.getByText(en["brief.deck.cleared_one"])).toBeTruthy();
   });
 
   // A bundle whose members somebody else answered first. Deciding a bundle is
@@ -221,7 +221,7 @@ describe("ApprovalTray — the deck stages, and only the commit sends", () => {
 
     await user.click(await screen.findByRole("button", { name: "Approve" }));
     await user.click(
-      screen.getByRole("button", { name: "Send staged decisions" }),
+      screen.getByRole("button", { name: en["brief.deck.commit"] }),
     );
     expect(await screen.findByText(/already/i)).toBeTruthy();
   });
@@ -294,12 +294,10 @@ describe("ApprovalTray — the deck stages, and only the commit sends", () => {
     await screen.findByText("Advance the PIM deal");
     await user.click(screen.getByRole("button", { name: "Approve" }));
     await user.click(
-      screen.getByRole("button", { name: "Send staged decisions" }),
+      screen.getByRole("button", { name: en["brief.deck.commit"] }),
     );
 
-    expect(
-      await screen.findByText("Already decided. Nothing left to do."),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["decision.alreadyDecided"])).toBeTruthy();
     // The refusal on the first item did not swallow the second one.
     expect(writeRoutes(calls)).toEqual([
       "POST /approvals/ap-1/approve",
@@ -351,7 +349,7 @@ describe("ApprovalTray — the deck stages, and only the commit sends", () => {
     await screen.findByText("Send the Weber follow-up");
     await user.click(screen.getByRole("button", { name: "Approve" }));
     await user.click(
-      screen.getByRole("button", { name: "Send staged decisions" }),
+      screen.getByRole("button", { name: en["brief.deck.commit"] }),
     );
 
     await waitFor(() =>
@@ -386,7 +384,7 @@ describe("ApprovalTray — a bundle says only what its members agree on", () => 
     // Neither agent's name — and not the unnamed tag either, which would still
     // claim one agent produced the whole act.
     expect(screen.queryByText("Automated by Website reader")).toBeNull();
-    expect(screen.queryByText("Automated by an agent")).toBeNull();
+    expect(screen.queryByText(en["trust.agentUnnamed"])).toBeNull();
     // The KIND is every member's, so the chip that says what this act is stays:
     // the rule drops the fact that diverged, not the card's meta line.
     expect(screen.getByText("Send email")).toBeTruthy();

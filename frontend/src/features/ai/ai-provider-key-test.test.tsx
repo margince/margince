@@ -12,6 +12,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { keyTestReasonKey } from "../../components/ai-provider-key-test";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 
@@ -220,7 +221,7 @@ describe("testing a provider key", () => {
 
     expect(await within(row).findByText("Connected")).toBeTruthy();
     expect(
-      within(row).getByText("The provider accepted the key."),
+      within(row).getByText(englishCopy["aiProviderKeys.accepted"]),
     ).toBeTruthy();
     expect(within(row).queryByText(/models available/)).toBeNull();
   });
@@ -239,7 +240,9 @@ describe("testing a provider key", () => {
 
     const row = await testRow(user, "jev_compatible");
 
-    expect(await within(row).findByText("The server answered.")).toBeTruthy();
+    expect(
+      await within(row).findByText(englishCopy["aiProviderKeys.answered"]),
+    ).toBeTruthy();
     expect(within(row).queryByText(/accepted the key/)).toBeNull();
   });
 

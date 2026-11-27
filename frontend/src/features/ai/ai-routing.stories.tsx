@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { status } from "../../testing/ai-admin.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
@@ -344,7 +345,7 @@ export const UnkeyedAndFailing: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await canvas.findByRole("table");
-    await canvas.findByText("Some tiers cannot answer");
+    await canvas.findByText(englishCopy["aiRouting.unkeyed.title"]);
   },
 };
 
@@ -368,7 +369,7 @@ export const AnsweringFromTestProvider: Story = {
   ),
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByText(
-      "Tiers answer from the test provider",
+      englishCopy["aiRouting.standIn.title"],
     );
   },
 };

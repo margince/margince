@@ -224,7 +224,7 @@ describe("BlockedDomainsCard", () => {
     expect(sent[0]).toEqual({
       domain: "mail.expensify.example",
       admission: "suppressed",
-      reason: "Supplier, not a customer",
+      reason: en["blockedDomains.reasonPlaceholder"],
     });
     // The server normalizes the domain and the write REPLACES any decision
     // already on it, so what landed is named: without it a sub-domain silently

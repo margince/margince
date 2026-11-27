@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../../design-system/toast";
+import { en as englishCopy } from "../../i18n/en";
 import { UsersAdminCard } from "./users-admin";
 import {
   backend,
@@ -28,7 +29,9 @@ describe("handing over a member's work", () => {
     await waitFor(() => expect(screen.getByText("Otto Off")).toBeTruthy());
 
     await user.click(
-      (await rowMenu(user, "Otto Off")).getByText("Hand over work"),
+      (await rowMenu(user, "Otto Off")).getByText(
+        englishCopy["users.handover.action"],
+      ),
     );
     const dialog = await screen.findByRole("dialog");
     await waitFor(() =>
@@ -96,7 +99,9 @@ describe("handing over a member's work", () => {
     );
     await waitFor(() => expect(screen.getByText("Otto Off")).toBeTruthy());
     await user.click(
-      (await rowMenu(user, "Otto Off")).getByText("Hand over work"),
+      (await rowMenu(user, "Otto Off")).getByText(
+        englishCopy["users.handover.action"],
+      ),
     );
     const dialog = await screen.findByRole("dialog");
     await waitFor(() =>
@@ -142,7 +147,9 @@ describe("handing over a member's work", () => {
       ).toBeTruthy(),
     );
     expect(
-      within(dialog).getByRole("button", { name: "Hand over work" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["users.handover.action"],
+      }),
     ).toBeTruthy();
   });
 });

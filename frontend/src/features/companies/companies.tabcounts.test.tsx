@@ -7,6 +7,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   company360,
   companyBackstop,
@@ -96,7 +97,9 @@ describe("CompanyScreen: what the tab strip counts", () => {
     });
 
     expect(
-      await screen.findByRole("button", { name: "Deals and projects" }),
+      await screen.findByRole("button", {
+        name: englishCopy["tab.dealsProjects"],
+      }),
     ).toBeTruthy();
   });
 });

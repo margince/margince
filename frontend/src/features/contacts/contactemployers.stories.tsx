@@ -9,6 +9,7 @@ import {
 } from "../../testing/story-utils";
 import { Employers } from "./contactemployers";
 import "./contact360.css";
+import { en as englishCopy } from "../../i18n/en";
 
 const view: components["schemas"]["Contact360"] = {
   as_of: "2026-09-01T00:00:00Z",
@@ -133,7 +134,9 @@ export const OnlyImportedEpisodes: Story = {
     await expect(
       await panel.findByText("Bought History Company"),
     ).toBeVisible();
-    await expect(panel.queryByText("No work history recorded yet.")).toBeNull();
+    await expect(
+      panel.queryByText(englishCopy["contact.rail.noEmployment"]),
+    ).toBeNull();
     await expect(
       await panel.findByRole("button", { name: "Add company" }),
     ).toBeVisible();

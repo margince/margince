@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { writeMessage } from "../../design-system/richtext-testing";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import type { Transport } from "../../lib/contacttransports";
 import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
@@ -266,7 +267,7 @@ describe("the composer's transport dial", () => {
     writeMessage("Body", "Body content");
     await pickOption(
       user,
-      screen.getByLabelText("Reason for contact"),
+      screen.getByLabelText(englishCopy["compose.why"]),
       "Open deal",
     );
     await pressSend(user);

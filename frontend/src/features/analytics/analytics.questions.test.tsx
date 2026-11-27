@@ -8,6 +8,7 @@ import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { Button } from "../../design-system/atoms";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { AnalyticsScreen } from "./analytics";
 import type { AnalyticsScope } from "./analytics.context";
@@ -96,7 +97,7 @@ describe("the Questions section", () => {
     stubServer({ "GET /analytics/runs": () => jsonResponse(SAVED_RUNS) });
     renderView();
     const list = await screen.findByRole("table", {
-      name: "Your saved questions",
+      name: englishCopy["analytics.q.savedListTitle"],
     });
     const rows = within(list).getAllByRole("button");
     expect(rows).toHaveLength(3);
@@ -116,13 +117,17 @@ describe("the Questions section", () => {
     vi.stubGlobal("fetch", reportsStub());
     render(<AnalyticsScreen />);
     const tabs = await screen.findByRole("group", {
-      name: "Analytics sections",
+      name: englishCopy["analytics.sections"],
     });
     expect(
-      within(tabs).queryByRole("button", { name: "Custom reports" }),
+      within(tabs).queryByRole("button", {
+        name: englishCopy["analytics.sectionQuestions"],
+      }),
     ).toBeNull();
     expect(
-      await screen.findByRole("button", { name: "Custom reports" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.sectionQuestions"],
+      }),
     ).toBeTruthy();
   });
 
@@ -133,9 +138,7 @@ describe("the Questions section", () => {
     });
     renderView();
     expect(
-      await screen.findByText(
-        "No report data is readable with your role. An administrator can grant access.",
-      ),
+      await screen.findByText(englishCopy["analytics.q.noEntities"]),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Run report" })).toBeNull();
   });
@@ -166,7 +169,9 @@ describe("the Questions section", () => {
     });
     renderView();
     await chooseDeals(user);
-    await user.click(screen.getByRole("button", { name: "Save question" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["analytics.q.save"] }),
+    );
     await vi.waitFor(() =>
       expect(globalThis.location.hash).toBe("#/analytics/questions/run-9"),
     );
@@ -192,11 +197,11 @@ describe("a saved question", () => {
     stubServer({ "GET /analytics/runs/run-1": () => jsonResponse(run) });
     renderView();
     expect(
-      await screen.findByText(
-        "Answered under your own access, so figures can differ from what was seen when it was saved.",
-      ),
+      await screen.findByText(englishCopy["analytics.q.readerAccess"]),
     ).toBeTruthy();
-    expect(screen.getByText("All deals by stage")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["analytics.reportDealsByStage"]),
+    ).toBeTruthy();
     expect(screen.getByText("Count, Sum (Amount)")).toBeTruthy();
     expect(screen.getByText("Currency is EUR")).toBeTruthy();
     expect(await screen.findByText("Qualified")).toBeTruthy();
@@ -209,7 +214,9 @@ describe("a saved question", () => {
     const chosen: AnalyticsScope[] = [];
     renderView((scope) => chosen.push(scope));
     await user.click(
-      await screen.findByRole("button", { name: "Edit question" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.q.edit"],
+      }),
     );
     await act(async () => {
       globalThis.dispatchEvent(new HashChangeEvent("hashchange"));
@@ -217,7 +224,7 @@ describe("a saved question", () => {
     expect(globalThis.location.hash).toBe("#/analytics/questions");
     expect(
       (await screen.findByRole("combobox", { name: "Report" })).textContent,
-    ).toBe("All deals by stage");
+    ).toBe(englishCopy["analytics.reportDealsByStage"]);
     expect(chosen).toEqual([CONTEXT.default_scope]);
   });
 
@@ -229,7 +236,11 @@ describe("a saved question", () => {
     });
     renderView();
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.getByRole("button", { name: "New question" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["analytics.q.newQuestion"],
+      }),
+    ).toBeTruthy();
   });
 });
 
@@ -241,10 +252,14 @@ describe("an answer and the question on screen", () => {
     await chooseDeals(user);
     await user.click(screen.getByRole("button", { name: "Run report" }));
     await screen.findByRole("columnheader", { name: "Stage" });
-    expect(screen.queryByText("Report is out of date")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["analytics.q.staleTitle"]),
+    ).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Add measure" }));
-    expect(await screen.findByText("Report is out of date")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["analytics.q.staleTitle"]),
+    ).toBeTruthy();
     expect(screen.getByRole("columnheader", { name: "Stage" })).toBeTruthy();
   });
 
@@ -307,7 +322,9 @@ describe("a saved question the reader cannot ask as saved", () => {
     const chosen: AnalyticsScope[] = [];
     renderView((scope) => chosen.push(scope));
     await user.click(
-      await screen.findByRole("button", { name: "Edit question" }),
+      await screen.findByRole("button", {
+        name: englishCopy["analytics.q.edit"],
+      }),
     );
     await act(async () => {
       globalThis.dispatchEvent(new HashChangeEvent("hashchange"));
@@ -342,7 +359,9 @@ describe("a refused save", () => {
     });
     renderView();
     await chooseDeals(user);
-    await user.click(screen.getByRole("button", { name: "Save question" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["analytics.q.save"] }),
+    );
     expect(await screen.findByText("group by stage")).toBeTruthy();
 
     await user.click(screen.getByRole("button", { name: "Add measure" }));
@@ -359,11 +378,13 @@ describe("a saved question that cannot be opened", () => {
     });
     renderView();
     expect(
-      await screen.findByText(
-        "This question does not exist, or it is not shared with you.",
-      ),
+      await screen.findByText(englishCopy["analytics.q.gone"]),
     ).toBeTruthy();
-    expect(screen.getByRole("button", { name: "New question" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["analytics.q.newQuestion"],
+      }),
+    ).toBeTruthy();
   });
 
   it("keeps a 400 the server's own refusal, since the question was found", async () => {
@@ -390,10 +411,6 @@ describe("a saved question that cannot be opened", () => {
         "vocabulary: field outside yours — ask its owner",
       ),
     ).toBeTruthy();
-    expect(
-      screen.queryByText(
-        "This question does not exist, or it is not shared with you.",
-      ),
-    ).toBeNull();
+    expect(screen.queryByText(englishCopy["analytics.q.gone"])).toBeNull();
   });
 });

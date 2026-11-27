@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -104,7 +105,7 @@ export const LimitRefused: Story = {
     const cap = await canvas.findByTestId("capture-daily-cap");
     await userEvent.clear(cap);
     await userEvent.type(cap, "5000{Enter}");
-    await canvas.findByText("Setting not changed");
+    await canvas.findByText(englishCopy["captureSettings.updateFailed"]);
     await expect(cap).toHaveAccessibleDescription(
       expect.stringContaining("Setting not changed"),
     );

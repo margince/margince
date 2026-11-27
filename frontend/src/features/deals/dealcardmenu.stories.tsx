@@ -7,6 +7,7 @@ import { DealCard } from "../../design-system/dealcard";
 import type { BoardDeal } from "../../design-system/pipelineboard";
 import { useOwnToast } from "../../design-system/toast";
 import { browserZone } from "../../format/timezone";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -158,9 +159,7 @@ export const WonDeal: Story = {
       screen.getByRole("button", { name: "Mark lost" }),
     ).toBeDisabled();
     await expect(
-      screen.getByText(
-        "This deal is closed. Reopen it on its page to move it.",
-      ),
+      screen.getByText(englishCopy["deal.card.closedReopen"]),
     ).toBeVisible();
   },
 };
@@ -172,10 +171,10 @@ export const ArchivedDeal: Story = {
   play: async (context) => {
     await openMenuShowing("Copy link")(context);
     await expect(
-      screen.queryByRole("button", { name: "Move to stage" }),
+      screen.queryByRole("button", { name: englishCopy["deals.bulkStage"] }),
     ).toBeNull();
     await expect(
-      screen.queryByRole("button", { name: "Archive deal" }),
+      screen.queryByRole("button", { name: englishCopy["deal.archive"] }),
     ).toBeNull();
   },
 };
@@ -196,7 +195,9 @@ function ownedBy(routes?: RouteMap) {
 
 async function openOwnerList(context: { canvasElement: HTMLElement }) {
   await openMenuShowing("Change owner")(context);
-  await userEvent.click(screen.getByRole("button", { name: "Change owner" }));
+  await userEvent.click(
+    screen.getByRole("button", { name: englishCopy["ownerPick.change"] }),
+  );
   return within(await screen.findByRole("dialog"));
 }
 
@@ -338,16 +339,24 @@ function closingOn(extra: Partial<Deal>, routes?: RouteMap) {
 async function openCloseDate(context: { canvasElement: HTMLElement }) {
   await openMenuShowing("Change close date")(context);
   await userEvent.click(
-    screen.getByRole("button", { name: "Change close date" }),
+    screen.getByRole("button", {
+      name: englishCopy["deal.card.changeCloseDate"],
+    }),
   );
-  return within(await screen.findByRole("dialog", { name: "Expected close" }));
+  return within(
+    await screen.findByRole("dialog", {
+      name: englishCopy["create.expectedClose"],
+    }),
+  );
 }
 
 async function typeCloseDate(
   dialog: ReturnType<typeof within>,
   day: string,
 ): Promise<void> {
-  const box = dialog.getByRole("textbox", { name: "Expected close" });
+  const box = dialog.getByRole("textbox", {
+    name: englishCopy["create.expectedClose"],
+  });
   await userEvent.clear(box);
   await userEvent.type(box, day);
   await userEvent.click(dialog.getByRole("button", { name: "Save" }));
@@ -359,7 +368,9 @@ const closeDate = {
   play: async (context: { canvasElement: HTMLElement }) => {
     const dialog = await openCloseDate(context);
     await expect(
-      dialog.getByRole("textbox", { name: "Expected close" }),
+      dialog.getByRole("textbox", {
+        name: englishCopy["create.expectedClose"],
+      }),
     ).not.toHaveValue("");
   },
 };
@@ -441,7 +452,9 @@ const closeDateClosedDeal = {
   play: async (context: { canvasElement: HTMLElement }) => {
     await openMenuShowing("Change owner")(context);
     await expect(
-      screen.queryByRole("button", { name: "Change close date" }),
+      screen.queryByRole("button", {
+        name: englishCopy["deal.card.changeCloseDate"],
+      }),
     ).toBeNull();
   },
 };

@@ -15,6 +15,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { ToastProvider, ToastRegion } from "../design-system/toast";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { workEmailAddress } from "./contactformfields";
 import { NewContactAction } from "./newcontact";
@@ -184,9 +185,7 @@ describe("New contact’s Company field", () => {
       ),
     );
     expect(
-      screen.getByText(
-        "Matched to an existing company by the work email domain.",
-      ),
+      screen.getByText(englishCopy["create.companyPrefilled"]),
     ).toBeInTheDocument();
     await user.click(screen.getByRole("button", { name: "Create" }));
 
@@ -320,7 +319,7 @@ it("requires an email, phone or LinkedIn URL before creating a contact", async (
   const { posted } = stubApi();
   const user = await openNewContact(undefined, false);
   expect(
-    screen.getByText("Add at least one email, phone or LinkedIn URL."),
+    screen.getByText(englishCopy["create.contactChannelRequired"]),
   ).toBeVisible();
   await user.click(screen.getByRole("button", { name: "Create" }));
   expect(posted).toHaveLength(0);

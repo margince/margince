@@ -66,7 +66,7 @@ it.each([
     example.label,
   );
   await user.click(save);
-  expect(dialog.getAllByText("This field is required.")).toHaveLength(2);
+  expect(dialog.getAllByText(en["record.fieldRequired"])).toHaveLength(2);
   expect(document.activeElement).toBe(
     dialog.getByRole("checkbox", { name: "Company" }),
   );
@@ -77,7 +77,7 @@ it.each([
   for (const name of example.kinds) {
     await user.click(dialog.getByRole("checkbox", { name }));
   }
-  expect(dialog.queryByText("This field is required.")).toBeNull();
+  expect(dialog.queryByText(en["record.fieldRequired"])).toBeNull();
   await user.click(save);
   await waitFor(() =>
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument(),
@@ -233,7 +233,7 @@ it("renames a role through its menu's dialog and retires one through its switch"
   await waitFor(() =>
     expect(
       patched(calls, "/record-roles/role-delivery_lead", {
-        label: "Project lead",
+        label: en["project.role.project_lead"],
       }),
     ).toBe(true),
   );

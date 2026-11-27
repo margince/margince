@@ -219,7 +219,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     stubGrants({});
     renderActions();
 
-    const log = await screen.findByRole("button", { name: "Log activity" });
+    const log = await screen.findByRole("button", { name: en["log.title"] });
     const email = screen.getByRole("button", {
       name: en["contact.action.email"],
     });
@@ -236,7 +236,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     renderActions();
     const why = en["record.roleReadsOnly"];
 
-    const log = await screen.findByRole("button", { name: "Log activity" });
+    const log = await screen.findByRole("button", { name: en["log.title"] });
     const email = screen.getByRole("button", {
       name: en["contact.action.email"],
     });
@@ -268,7 +268,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const user = userEvent.setup();
     renderActions();
 
-    const log = await screen.findByRole("button", { name: "Log activity" });
+    const log = await screen.findByRole("button", { name: en["log.title"] });
     const task = await findAddTask(user);
     expect(log.hasAttribute("disabled")).toBe(true);
     expect(task.hasAttribute("disabled")).toBe(true);
@@ -308,7 +308,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
           ?.textContent,
       ).toBe(en["record.attachRefused"]),
     );
-    const log = screen.getByRole("button", { name: "Log activity" });
+    const log = screen.getByRole("button", { name: en["log.title"] });
     expect(log.getAttribute("aria-describedby")).toBe(
       book.getAttribute("aria-describedby"),
     );
@@ -318,7 +318,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     stubGrants({ activity: ["read"], company: ["read", "update"] });
     renderInApp(<ActionsHost filesOnto={COMPANY} />);
 
-    const log = await screen.findByRole("button", { name: "Log activity" });
+    const log = await screen.findByRole("button", { name: en["log.title"] });
     await waitFor(() =>
       expect(
         document.getElementById(log.getAttribute("aria-describedby") ?? "")
@@ -336,7 +336,7 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const user = userEvent.setup();
     renderActions();
 
-    const log = await screen.findByRole("button", { name: "Log activity" });
+    const log = await screen.findByRole("button", { name: en["log.title"] });
     const task = await findAddTask(user);
     expect(log.hasAttribute("disabled")).toBe(false);
     expect(task.hasAttribute("disabled")).toBe(false);
@@ -352,18 +352,14 @@ describe("Log activity and Add task, gated on the create grant", () => {
     const user = userEvent.setup();
     renderActions();
 
-    const log = await screen.findByRole("button", { name: "Log activity" });
+    const log = await screen.findByRole("button", { name: en["log.title"] });
     const task = await findAddTask(user);
     expect(log.hasAttribute("disabled")).toBe(true);
     expect(task.hasAttribute("disabled")).toBe(true);
     expect(
       screen.getByRole("button", { name: BOOK_NAME }).hasAttribute("disabled"),
     ).toBe(true);
-    expect(
-      screen.queryByText(
-        "Your role can only read. Ask an administrator for another role.",
-      ),
-    ).toBeNull();
+    expect(screen.queryByText(en["record.roleReadsOnly"])).toBeNull();
 
     // Settled before the test ends, or the mocked request outlives it.
     for (const resolve of answer) {
@@ -490,7 +486,7 @@ describe("Add task writes only tasks", () => {
     renderActions();
 
     await user.click(
-      await screen.findByRole("button", { name: "Log activity" }),
+      await screen.findByRole("button", { name: en["log.title"] }),
     );
     const drawer = await screen.findByRole("dialog");
     expect(within(drawer).getByLabelText(en["log.kind"])).toBeTruthy();

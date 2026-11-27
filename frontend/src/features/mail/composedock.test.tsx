@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { useContext } from "react";
 import { afterEach, beforeEach, expect, it, vi } from "vitest";
 import { UnsavedExits, useExitAsking } from "../../components/unsaved";
+import { en as englishCopy } from "../../i18n/en";
 import { installComposeClock } from "./compose.testkit";
 import { render, stubRoutes } from "./compose-saveddraft.testkit";
 import { ComposeDockProvider } from "./composedock";
@@ -70,7 +71,7 @@ it("asks before Sign out drops words in the docked composer", async () => {
   await user.click(screen.getByRole("button", { name: "sign out" }));
 
   expect(
-    await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
+    await screen.findByRole("dialog", { name: englishCopy["unsaved.title"] }),
   ).toBeTruthy();
   expect(signOut).not.toHaveBeenCalled();
 });

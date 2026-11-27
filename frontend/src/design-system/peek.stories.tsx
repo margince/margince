@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { type PeekContent, usePeek } from "./peek";
 
 // A peek is the card a count opens: which deals "4 open" counts, who "3 in
@@ -68,7 +69,7 @@ export const OpensOnPress: Story = {
     );
     await expect(
       within(document.body).getByRole("region", {
-        name: "Open deals on this company",
+        name: englishCopy["co.standing.peek.openDeals"],
       }),
     ).toBeVisible();
   },

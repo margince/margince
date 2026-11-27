@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, screen, userEvent, waitFor } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import { SaveReportingDialog } from "./reporting.save";
 import {
@@ -44,7 +45,7 @@ export const Customize: Story = {
   play: async () => {
     const dialog = await screen.findByRole("dialog");
     const toggle = await screen.findByRole("button", {
-      name: "Customize report",
+      name: englishCopy["reporting.customize"],
     });
     await userEvent.click(toggle);
     await screen.findByRole("group", { name: "Metrics" });
@@ -66,10 +67,14 @@ export const ChartsAndOrder: Story = {
   play: async () => {
     await screen.findByRole("dialog");
     await userEvent.click(
-      await screen.findByRole("button", { name: "Customize report" }),
+      await screen.findByRole("button", {
+        name: englishCopy["reporting.customize"],
+      }),
     );
     await userEvent.click(
-      screen.getByText("Charts and order", { selector: ".disclosure-label" }),
+      screen.getByText(englishCopy["reporting.blocks"], {
+        selector: ".disclosure-label",
+      }),
     );
     await expect(
       (await screen.findAllByRole("button", { name: /^Move .*, 1 of / }))

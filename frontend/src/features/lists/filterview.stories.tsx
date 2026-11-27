@@ -136,7 +136,7 @@ function opened(answer?: Answer) {
 /** Edit conditions, then the city changed: the view no longer says what it saved. */
 async function changeCity(canvas: Canvas) {
   await userEvent.click(
-    await canvas.findByRole("button", { name: "Edit conditions" }),
+    await canvas.findByRole("button", { name: en["filters.editConditions"] }),
   );
   const city = canvas.getByDisplayValue("Berlin");
   await userEvent.clear(city);
@@ -157,7 +157,7 @@ export const EditingUnchanged: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Edit conditions" }),
+      await canvas.findByRole("button", { name: en["filters.editConditions"] }),
     );
   },
 };
@@ -168,7 +168,7 @@ export const EditingChanged: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await changeCity(canvas);
-    await canvas.findByText("Unsaved changes");
+    await canvas.findByText(en["filters.unsavedChanges"]);
   },
 };
 
@@ -179,10 +179,10 @@ export const VersionConflict: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await changeCity(canvas);
-    await userEvent.click(canvas.getByRole("button", { name: "Save changes" }));
-    await canvas.findByText(
-      "This view changed since you opened it. Reload it to see the latest version.",
+    await userEvent.click(
+      canvas.getByRole("button", { name: en["filters.saveChanges"] }),
     );
+    await canvas.findByText(en["filters.view.conflict"]);
   },
 };
 

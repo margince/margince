@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useLayoutEffect, useRef } from "react";
 import { expect, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { lastEmailAgo } from "../testing/dealmail";
 import { AnsweredSearch } from "./answeredsearch";
 import { Button, SegmentedControl } from "./atoms";
@@ -421,7 +422,7 @@ export const WithAWithheldCount: Story = {
       name: "Qualified",
     });
     await expect(qualified).toHaveTextContent(
-      "No count while a score filter is on.",
+      englishCopy["lead.boardCountsNoScoreFilter"],
     );
     await expect(
       qualified.querySelector(".board-col-count:not([hidden])"),

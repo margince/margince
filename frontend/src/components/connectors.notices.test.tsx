@@ -96,7 +96,7 @@ describe("the OAuth return note", () => {
   it("names the vendor and both services once a chain lands on its calendar", () => {
     mount("ok", "gcal", [connection("gmail"), connection("gcal")]);
     expect(screen.getByText("Google connected")).toBeTruthy();
-    expect(screen.getByText("Mail and Calendar are syncing.")).toBeTruthy();
+    expect(screen.getByText(en["connectors.oauthBoth"])).toBeTruthy();
   });
 
   it("says the import keeps going while the mailbox's import is running", () => {
@@ -111,7 +111,7 @@ describe("the OAuth return note", () => {
 
   it("never claims a mailbox when only the calendar was connected", () => {
     mount("ok", "gcal", []);
-    expect(screen.getByText("Calendar is syncing.")).toBeTruthy();
+    expect(screen.getByText(en["connectors.oauthCalendarOnly"])).toBeTruthy();
     expect(screen.queryByText(/Mail/)).toBeNull();
   });
 
@@ -123,22 +123,18 @@ describe("the OAuth return note", () => {
       error: null,
     });
     expect(
-      screen.getByText(
-        "Mail is connected. Calendar was not, because access to it was not allowed.",
-      ),
+      screen.getByText(en["connectors.oauthCalendarDeclined"]),
     ).toBeTruthy();
-    expect(screen.queryByText("Nothing was connected")).toBeNull();
+    expect(screen.queryByText(en["connectors.oauthNotConnected"])).toBeNull();
     await userEvent.click(
-      screen.getByRole("button", { name: "Connect calendar" }),
+      screen.getByRole("button", { name: en["connectors.connectCalendar"] }),
     );
     expect(onConnect).toHaveBeenCalledWith("gcal");
   });
 
   it("keeps the failure's own remedy when the calendar leg broke another way", () => {
     mount("bad_client", "graphcal", [connection("graph")]);
-    expect(
-      screen.getByText("Mail is connected. Calendar was not."),
-    ).toBeTruthy();
+    expect(screen.getByText(en["connectors.oauthCalendarFailed"])).toBeTruthy();
     expect(
       screen.getByText(/refused this installation’s app credentials/),
     ).toBeTruthy();
@@ -157,9 +153,9 @@ describe("the OAuth return note", () => {
 
   it("says nothing was connected when the calendar was declined with no mailbox", () => {
     mount("denied", "gcal", []);
-    expect(screen.getByText("Nothing was connected")).toBeTruthy();
+    expect(screen.getByText(en["connectors.oauthNotConnected"])).toBeTruthy();
     expect(
-      screen.queryByRole("button", { name: "Connect calendar" }),
+      screen.queryByRole("button", { name: en["connectors.connectCalendar"] }),
     ).toBeNull();
   });
 
@@ -178,7 +174,7 @@ describe("the OAuth return note", () => {
         />
       </LocaleProvider>,
     );
-    expect(screen.getByText("Nothing was connected")).toBeTruthy();
+    expect(screen.getByText(en["connectors.oauthNotConnected"])).toBeTruthy();
     expect(screen.getByText(says)).toBeTruthy();
   });
 

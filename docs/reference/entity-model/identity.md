@@ -652,7 +652,7 @@ The 22 tables owned by `identity`, as the migrations build them. [Back to the en
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `is_system` | `boolean`, default `false` | yes | True for a role the workspace bootstrap seeded and the RBAC migrations top up. |
+| `is_system` | `boolean`, default `false` | yes | True for a role your company bootstrap seeded and the RBAC migrations top up. |
 | `key` | `text` | yes | The stable key a role assignment and every refusal names (`admin`, `rep`, …). |
 | `name` | `text` | yes | The operator-facing label. |
 | `permissions` | `jsonb`, default `'{}'::jsonb` | yes |  |

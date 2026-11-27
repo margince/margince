@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import type { SavedView } from "../../lib/savedviews.queries";
 import {
   installFetchStub,
@@ -49,7 +50,7 @@ export const ManageViewsOpen: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("button", { name: "Manage views" }),
+      await canvas.findByRole("button", { name: englishCopy["views.manage"] }),
     );
     await within(document.body).findByRole("dialog");
   },

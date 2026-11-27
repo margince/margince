@@ -17,6 +17,7 @@ import type { components } from "../../api/schema";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { WriteToProvider } from "../../lib/writeto";
 import {
   type GrantSpec,
@@ -174,7 +175,9 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     const listed = window.location.hash;
 
     await user.click(
-      await screen.findByRole("button", { name: "Copy email address" }),
+      await screen.findByRole("button", {
+        name: englishCopy["contactLink.copyEmail"],
+      }),
     );
 
     expect(clipboard.written).toEqual(["anna.weber@brandt.example"]);
@@ -291,9 +294,7 @@ describe("ContactsScreen (B-EP09.10a)", () => {
     );
     render(<ContactsScreen />);
     await waitFor(() =>
-      expect(
-        screen.getByText("Could not load this view. Reload the page."),
-      ).toBeTruthy(),
+      expect(screen.getByText(englishCopy["common.error"])).toBeTruthy(),
     );
     expect(screen.getByText("missing scope contacts:read")).toBeTruthy();
   });
@@ -567,9 +568,9 @@ describe("ContactsScreen — dedupe view-existing link (P-16)", () => {
     await userEvent.click(screen.getByRole("button", { name: "Create" }));
 
     await waitFor(() =>
-      expect(screen.getByText("View existing record")).toBeTruthy(),
+      expect(screen.getByText(englishCopy["dedupe.viewExisting"])).toBeTruthy(),
     );
-    await userEvent.click(screen.getByText("View existing record"));
+    await userEvent.click(screen.getByText(englishCopy["dedupe.viewExisting"]));
     expect(window.location.hash).toBe("#/contacts/01X");
   });
 });
@@ -603,19 +604,17 @@ describe("ContactsScreen — a colleague holds the contact", () => {
     await createHeld(true);
     await waitFor(() =>
       expect(
-        screen.getByText(
-          "A colleague already has this contact. Margince asked them to share it with you.",
-        ),
+        screen.getByText(englishCopy["common.heldByColleague.asked"]),
       ).toBeTruthy(),
     );
-    expect(screen.queryByText("View existing record")).toBeNull();
+    expect(screen.queryByText(englishCopy["dedupe.viewExisting"])).toBeNull();
   });
 
   it("drops the request once the colleague declined it", async () => {
     await createHeld(false);
     await waitFor(() =>
       expect(
-        screen.getByText("A colleague already has this contact."),
+        screen.getByText(englishCopy["common.heldByColleague"]),
       ).toBeTruthy(),
     );
   });

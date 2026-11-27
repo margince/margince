@@ -9,6 +9,7 @@ import {
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { PartnerDeals } from "./partnerdeals";
@@ -120,7 +121,9 @@ describe("the deals a partner brought", () => {
     render(<PartnerDeals companyId="o-1" />);
     const panel = await screen.findByTestId("partner-deals");
 
-    expect(within(panel).getByLabelText("Masked value")).toBeTruthy();
+    expect(
+      within(panel).getByLabelText(englishCopy["rbac.masked"]),
+    ).toBeTruthy();
     expect(within(panel).queryByText("—")).toBeNull();
   });
 
@@ -143,7 +146,7 @@ describe("the deals a partner brought", () => {
       (cell) => cell.textContent,
     );
 
-    expect(cells[2]).toBe("Sourced the deal (earns commission)");
+    expect(cells[2]).toBe(englishCopy["deal.attributionSourced"]);
     expect(cells[3]).toBe("€48,000.00");
     expect(cells[4]).toContain("Open");
   });
@@ -168,7 +171,7 @@ describe("the deals a partner brought", () => {
 
     expect(rows).toHaveLength(2);
     expect(rows[1]?.textContent).toContain(
-      "Influenced an existing deal (no commission)",
+      englishCopy["deal.attributionInfluenced"],
     );
   });
 
@@ -211,7 +214,9 @@ describe("the deals a partner brought", () => {
 
     render(<PartnerDeals companyId="o-1" />);
 
-    expect(await screen.findByText("No partner deals yet")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["partnerDeals.none"]),
+    ).toBeTruthy();
     expect(screen.queryByTestId("partner-deals")).toBeNull();
   });
 });

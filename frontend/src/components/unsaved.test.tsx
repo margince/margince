@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { navigate, useHash } from "../lib/router";
 import {
   BesidePage,
@@ -131,7 +132,9 @@ describe("UnsavedGuard", () => {
     render(<Page inDialog />);
     await user.type(screen.getByRole("textbox", { name: /Signature/ }), "Jane");
     await user.keyboard("{Escape}");
-    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["unsaved.discard"] }),
+    );
     await user.click(screen.getByRole("button", { name: "go second" }));
 
     expect(screen.getByText("Second page")).toBeInTheDocument();
@@ -159,7 +162,9 @@ describe("UnsavedGuard", () => {
     render(<Page />);
     await user.type(screen.getByRole("textbox", { name: /Signature/ }), "Jane");
     await user.click(screen.getByRole("button", { name: "go second" }));
-    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["unsaved.discard"] }),
+    );
 
     expect(screen.getByText("Second page")).toBeInTheDocument();
     expect(dialog()).toBeNull();
@@ -309,7 +314,7 @@ describe("UnsavedGuard with a save", () => {
 
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Discard changes" }),
+      screen.getByRole("button", { name: englishCopy["unsaved.discard"] }),
     ).toBeVisible();
   });
 });
@@ -391,7 +396,7 @@ describe("useGuardedLeave", () => {
     await user.click(screen.getByRole("button", { name: "keep it" }));
 
     expect(
-      await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
+      await screen.findByRole("dialog", { name: englishCopy["unsaved.title"] }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Arrived at #/lists/L1")).toBeNull();
   });
@@ -402,7 +407,7 @@ describe("useGuardedLeave", () => {
     render(<Routed page={<TwoDrafts />} />);
     await user.click(screen.getByRole("button", { name: "keep it" }));
     // The other draft still asks, and Escape keeps it, page and all.
-    await screen.findByRole("dialog", { name: "Discard unsaved changes?" });
+    await screen.findByRole("dialog", { name: englishCopy["unsaved.title"] });
     await user.keyboard("{Escape}");
     await waitFor(() =>
       expect(window.location.hash).toBe("#/filters/contacts"),
@@ -411,7 +416,7 @@ describe("useGuardedLeave", () => {
     await user.click(screen.getByRole("button", { name: "save the other" }));
     await user.click(screen.getByRole("button", { name: "go plainly" }));
     expect(
-      await screen.findByRole("dialog", { name: "Discard unsaved changes?" }),
+      await screen.findByRole("dialog", { name: englishCopy["unsaved.title"] }),
     ).toBeInTheDocument();
     expect(screen.queryByText("Arrived at #/lists/L1")).toBeNull();
   });
@@ -525,7 +530,9 @@ describe("useExitAsking", () => {
     render(<SignOutBeside signOut={signOut} />);
     await user.type(screen.getByRole("textbox", { name: /Signature/ }), "Jane");
     await user.click(screen.getByRole("button", { name: "sign out" }));
-    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["unsaved.discard"] }),
+    );
 
     expect(signOut).toHaveBeenCalledTimes(1);
   });
@@ -554,7 +561,9 @@ describe("useExitAsking", () => {
     await user.type(screen.getByRole("textbox", { name: /Message/ }), "Hi");
     await user.click(screen.getByRole("button", { name: "sign out" }));
     expect(dialog()).not.toBeNull();
-    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["unsaved.discard"] }),
+    );
     expect(signOut).toHaveBeenCalledTimes(2);
   });
 
@@ -588,7 +597,9 @@ describe("useExitAsking", () => {
     dockFills();
 
     expect(screen.queryByRole("button", { name: "Save" })).toBeNull();
-    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["unsaved.discard"] }),
+    );
     expect(signOut).toHaveBeenCalledTimes(1);
   });
 
@@ -611,7 +622,9 @@ describe("useExitAsking", () => {
     written(true);
 
     expect(
-      await screen.findByRole("button", { name: "Discard changes" }),
+      await screen.findByRole("button", {
+        name: englishCopy["unsaved.discard"],
+      }),
     ).toBeVisible();
     expect(save).toHaveBeenCalledTimes(1);
     expect(signOut).not.toHaveBeenCalled();
@@ -651,7 +664,9 @@ describe("useExitAsking", () => {
     await user.type(screen.getByRole("textbox", { name: /Message/ }), "Hi");
     await user.click(screen.getByRole("button", { name: "sign out" }));
     expect(signOut).not.toHaveBeenCalled();
-    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["unsaved.discard"] }),
+    );
     expect(signOut).toHaveBeenCalledTimes(1);
   });
 

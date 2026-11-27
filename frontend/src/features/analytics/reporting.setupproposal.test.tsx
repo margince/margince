@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -91,16 +92,18 @@ it("asks for a proposal from the description and applies it to the builder", asy
     </StoryProviders>,
   );
   const suggest = await screen.findByRole("button", {
-    name: "Suggest filters and charts",
+    name: englishCopy["reporting.setup.suggestReport"],
   });
   expect(suggest).toBeDisabled();
   await user.type(
-    screen.getByRole("textbox", { name: "What would you like to understand?" }),
+    screen.getByRole("textbox", {
+      name: englishCopy["reporting.whatToUnderstand"],
+    }),
     "Sales in Germany this quarter over time",
   );
   await user.click(suggest);
   expect(
-    await screen.findByText("Proposed from your words"),
+    await screen.findByText(englishCopy["reporting.setup.proposedTitle"]),
   ).toBeInTheDocument();
   expect(asked).toEqual([
     {
@@ -116,17 +119,21 @@ it("asks for a proposal from the description and applies it to the builder", asy
     screen.getByText("“discount per rep”: No metric holds a discount."),
   ).toBeInTheDocument();
 
-  await user.click(screen.getByRole("button", { name: "Use proposal" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["reporting.setup.apply"] }),
+  );
   await waitFor(() =>
     expect(screen.getByRole("textbox", { name: "Report name" })).toHaveValue(
       "Germany this quarter",
     ),
   );
   expect(
-    screen.queryByText("Proposed from your words"),
+    screen.queryByText(englishCopy["reporting.setup.proposedTitle"]),
   ).not.toBeInTheDocument();
   // The preview carries what the proposal filled in.
-  const preview = screen.getByRole("button", { name: "Preview report" });
+  const preview = screen.getByRole("button", {
+    name: englishCopy["reporting.previewReport"],
+  });
   await waitFor(() => expect(preview).toBeEnabled());
   await user.click(preview);
   const held = heldCustomReport(VIEWER);
@@ -162,12 +169,14 @@ it("tells the reader when no model is bound and leaves the builder usable", asyn
   );
   await user.type(
     await screen.findByRole("textbox", {
-      name: "What would you like to understand?",
+      name: englishCopy["reporting.whatToUnderstand"],
     }),
     "Sales in Germany",
   );
   await user.click(
-    screen.getByRole("button", { name: "Suggest filters and charts" }),
+    screen.getByRole("button", {
+      name: englishCopy["reporting.setup.suggestReport"],
+    }),
   );
   expect(
     await screen.findByText(/needs an AI model configured/),

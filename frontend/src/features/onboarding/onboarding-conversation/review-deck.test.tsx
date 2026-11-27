@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it } from "vitest";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import type { CompanyFieldName } from "../onboarding";
 import { type DeckCard, ReviewDeck } from "./review-deck";
 
@@ -92,7 +93,7 @@ it("drops a field the read settled ahead of the cursor, and keeps one behind it"
   expect(screen.getByText("3 of 3 left")).toBeInTheDocument();
 
   await user.click(screen.getByRole("button", { name: "Next" }));
-  expect(screen.getByText("Ideal customer")).toBeInTheDocument();
+  expect(screen.getByText(englishCopy["ob.field.icp"])).toBeInTheDocument();
 
   // BEHIND the cursor: the reader has already been shown this card, so the read
   // answering it now must not renumber the one in front of them. The

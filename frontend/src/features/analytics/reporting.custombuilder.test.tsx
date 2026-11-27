@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import {
   CustomReportDrawer,
@@ -40,20 +41,28 @@ it("previews only a named report, with the assessment and the question it was gi
     </StoryProviders>,
   );
   const preview = await screen.findByRole("button", {
-    name: "Preview report",
+    name: englishCopy["reporting.previewReport"],
   });
   expect(preview).toBeDisabled();
 
   await user.click(screen.getByRole("button", { name: "Use example" }));
   expect(
-    screen.getByRole("textbox", { name: "What would you like to understand?" }),
+    screen.getByRole("textbox", {
+      name: englishCopy["reporting.whatToUnderstand"],
+    }),
   ).toHaveValue(
     "Margince sales in Germany this quarter: bookings, lead conversion and open pipeline by country.",
   );
   await user.click(
-    screen.getByRole("checkbox", { name: "Include the assessment" }),
+    screen.getByRole("checkbox", {
+      name: englishCopy["reporting.includeAssessment"],
+    }),
   );
-  await user.click(screen.getByRole("button", { name: "Add this question" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["reporting.addQuestionCard"],
+    }),
+  );
   await waitFor(() => expect(preview).toBeEnabled());
   const name = screen.getByRole("textbox", { name: "Report name" });
   await user.click(preview);
@@ -104,5 +113,9 @@ it("cannot preview a report with no card, whatever its name", async () => {
     await screen.findByRole("textbox", { name: "Report name" }),
     "Empty",
   );
-  expect(screen.getByRole("button", { name: "Preview report" })).toBeDisabled();
+  expect(
+    screen.getByRole("button", {
+      name: englishCopy["reporting.previewReport"],
+    }),
+  ).toBeDisabled();
 });

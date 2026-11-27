@@ -8,6 +8,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { dueInstant } from "../format/calendarday";
 import { dueTimeOf } from "../format/timezone";
+import { en as englishCopy } from "../i18n/en";
 import { ViewerZoneProvider } from "../lib/viewerzone";
 import { renderWithQueryClient } from "../testing/queryrender";
 import { installFetchStub, jsonResponse } from "../testing/story-utils";
@@ -37,7 +38,7 @@ it("dates a bulk task at the end of the picked day on the picker's clock", async
   );
   await user.click(screen.getByRole("button", { name: "Create task" }));
   await user.type(
-    screen.getByRole("textbox", { name: "What has to be done" }),
+    screen.getByRole("textbox", { name: englishCopy["bulk.taskSubject"] }),
     "Call back",
   );
   await user.type(

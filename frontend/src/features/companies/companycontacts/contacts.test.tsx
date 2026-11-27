@@ -54,8 +54,8 @@ test("names each engagement state in its own words", async () => {
   // those collapses.
   expect(await screen.findByText("Needs reply")).not.toBeNull();
   expect(screen.getByText("Answered")).not.toBeNull();
-  expect(screen.getByText("No reply recorded")).not.toBeNull();
-  expect(screen.getByText("Not contacted")).not.toBeNull();
+  expect(screen.getByText(en["co.reach.silent"])).not.toBeNull();
+  expect(screen.getByText(en["co.reach.untried"])).not.toBeNull();
   expect(screen.getByText("Went quiet")).not.toBeNull();
 });
 
@@ -70,7 +70,9 @@ test("a contact who went quiet is never called never approached", async () => {
   const row = (await screen.findByText("Annabelle Malherbe")).closest("tr");
   expect(row).not.toBeNull();
   expect(within(row as HTMLElement).getByText("Went quiet")).not.toBeNull();
-  expect(within(row as HTMLElement).queryByText("Not contacted")).toBeNull();
+  expect(
+    within(row as HTMLElement).queryByText(en["co.reach.untried"]),
+  ).toBeNull();
   expect(within(row as HTMLElement).getByText(/They wrote/)).not.toBeNull();
 });
 
@@ -81,7 +83,7 @@ test("says which side the conversation is owed, not just when it moved", async (
   // A date alone reads the same whoever sent it. The direction is the fact.
   expect((await screen.findAllByText(/They wrote/)).length).toBeGreaterThan(0);
   expect(screen.getAllByText(/Your team wrote/).length).toBeGreaterThan(0);
-  expect(screen.getByText("No exchange yet")).not.toBeNull();
+  expect(screen.getByText(en["co.contacts.neverInTouch"])).not.toBeNull();
 });
 
 // Two day entries on one date share one stored noon. The server's engagement

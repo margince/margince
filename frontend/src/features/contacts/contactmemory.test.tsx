@@ -12,6 +12,7 @@ import type { components } from "../../api/schema";
 import { telUri } from "../../format/contacturi";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { CompanyZoneProvider } from "../../lib/companyzone";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { ContactMemory } from "./contactmemory";
@@ -306,7 +307,7 @@ describe("the What was said card", () => {
     expect(screen.queryByText(WHOLE_BODY)).toBeNull();
     // The row stays, saying it is not shared: drawn as absent, a private
     // conversation would read as one that never was.
-    expect(screen.getByText("Not shared with you")).toBeTruthy();
+    expect(screen.getByText(englishCopy["email.withheldSubject"])).toBeTruthy();
   });
 
   it("draws the latest two and leaves the rest to Full history", async () => {
@@ -318,7 +319,11 @@ describe("the What was said card", () => {
     expect(screen.getByText("Note 2")).toBeTruthy();
     expect(screen.queryByText("Note 3")).toBeNull();
 
-    await user.click(screen.getByRole("button", { name: "Full history" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["contact.card.fullHistory"],
+      }),
+    );
     expect(onFullHistory).toHaveBeenCalledOnce();
   });
 
@@ -340,7 +345,9 @@ describe("the What was said card", () => {
     expect(screen.getByText("Meeting · 20 Aug")).toBeTruthy();
     expect(screen.queryByText(/both sides/)).toBeNull();
     // An entry states no author or page role, so the duty it carries stands.
-    expect(screen.getByText("Waiting on them")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["contact.card.awaitingThem"]),
+    ).toBeTruthy();
     expect(screen.queryByText("Re: the renewal quote")).toBeNull();
   });
 
@@ -413,7 +420,9 @@ describe("the What was said card", () => {
           /they wrote|you wrote|they called|you called|both sides/,
         ),
       ).toBeNull();
-      expect(screen.getByText("Waiting on them")).toBeTruthy();
+      expect(
+        screen.getByText(englishCopy["contact.card.awaitingThem"]),
+      ).toBeTruthy();
     },
   );
 
@@ -433,7 +442,9 @@ describe("the What was said card", () => {
 
   it("says nothing was said rather than drawing an empty card", () => {
     renderCard(viewWith([]));
-    expect(screen.getByText("No conversation captured yet.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["contact.card.saidEmpty"]),
+    ).toBeTruthy();
   });
 
   it("says the conversations are hidden when both reads are withheld", () => {
@@ -443,7 +454,7 @@ describe("the What was said card", () => {
         sections_omitted: ["activities", "conversation_memory"],
       }),
     );
-    expect(screen.getByText("Hidden for your role")).toBeTruthy();
+    expect(screen.getByText(englishCopy["state.withheld"])).toBeTruthy();
   });
 });
 

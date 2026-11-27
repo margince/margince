@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   REFRESH_CEILING_MS,
   REFRESH_FLOOR_MS,
@@ -126,7 +127,9 @@ describe("WhoCanSeePanel", () => {
     const team = screen.getByTestId("who-can-see-team_shared");
     expect(within(team).getByText("Mor Adler")).toBeTruthy();
     // A reader outside member administration is not told which team.
-    expect(within(team).getByText("Through a team share")).toBeTruthy();
+    expect(
+      within(team).getByText(englishCopy["whoCanSee.reason.teamShare"]),
+    ).toBeTruthy();
   });
 
   it("folds everyone else into one closed row that counts them", async () => {
@@ -163,9 +166,11 @@ describe("WhoCanSeePanel", () => {
 
     const you = await screen.findByTestId("who-can-see-you");
     expect(you.textContent).toContain(
-      "You can view this contact but not edit it.",
+      englishCopy["whoCanSee.you.open.contact"],
     );
-    expect(you.textContent).toContain("Open to all users");
+    expect(you.textContent).toContain(
+      englishCopy["whoCanSee.reason.workspace"],
+    );
   });
 
   it("names a team and roles only when the server sent them", async () => {

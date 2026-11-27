@@ -9,6 +9,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { AvailabilityCard } from "./meeting-availability";
 
@@ -92,7 +93,7 @@ describe("a refused save of the working hours", () => {
     // Brought out from under the bar, with focus on it.
     await waitFor(() => expect(until).toHaveFocus());
     // The bar keeps to its short line rather than repeating the sentence.
-    expect(screen.getByText("Fix the marked fields to save.")).not.toBeNull();
+    expect(screen.getByText(englishCopy["saveBar.invalid"])).not.toBeNull();
     expect(
       screen.getAllByText(/working day must end after it starts/i),
     ).toHaveLength(1);
@@ -102,7 +103,7 @@ describe("a refused save of the working hours", () => {
     await saveRefused("days", "choose at least one day");
 
     expect(await screen.findByText("Choose at least one day.")).not.toBeNull();
-    expect(screen.queryByText("Fix the marked fields to save.")).toBeNull();
+    expect(screen.queryByText(englishCopy["saveBar.invalid"])).toBeNull();
     expect(screen.getByLabelText("Until")).not.toHaveAttribute("aria-invalid");
   });
 
@@ -146,14 +147,14 @@ describe("hours the user never chose", () => {
     );
 
     expect(
-      await screen.findAllByText("Save to make these yours."),
+      await screen.findAllByText(englishCopy["saveBar.offered"]),
     ).not.toHaveLength(0);
-    expect(screen.queryByText("Unsaved changes")).toBeNull();
+    expect(screen.queryByText(englishCopy["saveBar.unsaved"])).toBeNull();
     expect(screen.queryByText(/installation timezone/i)).toBeNull();
 
     await userEvent.setup().click(screen.getByLabelText("Saturday"));
     expect(
-      (await screen.findAllByText("Unsaved changes")).length,
+      (await screen.findAllByText(englishCopy["saveBar.unsaved"])).length,
     ).toBeGreaterThan(0);
   });
 });

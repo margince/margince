@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { LeadHistoryTab } from "./leadhistory";
 
@@ -90,7 +91,9 @@ describe("LeadHistoryTab", () => {
     withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
 
     expect(await screen.findByText("Fleet renewal")).toBeTruthy();
-    const cuts = screen.getByRole("combobox", { name: "Timeline filter" });
+    const cuts = screen.getByRole("combobox", {
+      name: englishCopy["chronology.label"],
+    });
     expect(cuts.textContent).toBe("All");
     const user = userEvent.setup();
     await user.click(cuts);
@@ -101,7 +104,9 @@ describe("LeadHistoryTab", () => {
     ).toEqual(["All", "Email", "Meetings", "Calls", "Notes", "Changes"]);
     await user.keyboard("{Escape}");
     // The search and date row waits behind its toggle.
-    expect(screen.queryByLabelText("Activity kind")).toBeNull();
+    expect(
+      screen.queryByLabelText(englishCopy["timeline.filters.kind"]),
+    ).toBeNull();
   });
 
   // A kind cut is a server parameter: the list is read again for that kind,
@@ -129,7 +134,9 @@ describe("LeadHistoryTab", () => {
     withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
 
     await screen.findByText("Fleet renewal");
-    const cuts = screen.getByRole("combobox", { name: "Timeline filter" });
+    const cuts = screen.getByRole("combobox", {
+      name: englishCopy["chronology.label"],
+    });
     await pickOption(userEvent.setup(), cuts, "Calls");
 
     await waitFor(() => expect(kinds).toContainEqual(["call"]));
@@ -153,7 +160,9 @@ describe("LeadHistoryTab", () => {
     await userEvent.click(toggle);
 
     expect(toggle.getAttribute("aria-expanded")).toBe("true");
-    expect(screen.getByLabelText("Activity kind")).toBeTruthy();
+    expect(
+      screen.getByLabelText(englishCopy["timeline.filters.kind"]),
+    ).toBeTruthy();
   });
 
   // Changes is the one cut with no exchanges to narrow, and it swaps the rows
@@ -174,7 +183,7 @@ describe("LeadHistoryTab", () => {
     await screen.findByText("Fleet renewal");
     await pickOption(
       userEvent.setup(),
-      screen.getByRole("combobox", { name: "Timeline filter" }),
+      screen.getByRole("combobox", { name: englishCopy["chronology.label"] }),
       "Changes",
     );
 
@@ -182,7 +191,9 @@ describe("LeadHistoryTab", () => {
     expect(screen.queryByText("Fleet renewal")).toBeNull();
     // The narrowing row stands down with the exchanges it would have
     // narrowed — a reader who picked Changes has no kind left to filter.
-    expect(screen.queryByLabelText("Activity kind")).toBeNull();
+    expect(
+      screen.queryByLabelText(englishCopy["timeline.filters.kind"]),
+    ).toBeNull();
     // The panel this swaps in carries its own by-change / by-field switch.
     expect(screen.getByRole("button", { name: "By field" })).toBeTruthy();
   });
@@ -196,7 +207,9 @@ describe("LeadHistoryTab", () => {
 
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Capture a chat" }),
+      await screen.findByRole("button", {
+        name: englishCopy["chatCapture.action"],
+      }),
     );
     expect(await screen.findByLabelText("Screenshot")).toBeTruthy();
   });
@@ -206,9 +219,11 @@ describe("LeadHistoryTab", () => {
     withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
 
     expect(
-      await screen.findByText("No activity logged on this lead yet."),
+      await screen.findByText(englishCopy["lead.timeline.empty"]),
     ).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Capture a chat" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["chatCapture.action"] }),
+    ).toBeNull();
   });
 
   it("says there is nothing yet rather than drawing an empty list silently", async () => {
@@ -216,7 +231,7 @@ describe("LeadHistoryTab", () => {
     withProviders(<LeadHistoryTab lead={LEAD} onOpenEmail={() => {}} />);
 
     expect(
-      await screen.findByText("No activity logged on this lead yet."),
+      await screen.findByText(englishCopy["lead.timeline.empty"]),
     ).toBeTruthy();
   });
 });

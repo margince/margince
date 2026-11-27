@@ -14,6 +14,7 @@ import "./features/brief/brief";
 import "./features/onboarding/onboarding";
 import "./App.settings";
 import "./features/settings/settings";
+import { en as englishCopy } from "./i18n/en";
 
 // What a member held on onboarding asks of the server, split from the gate's
 // own cases in App.onboardinggate.test.tsx.
@@ -133,7 +134,9 @@ describe("the reads of a member held on onboarding", () => {
     const api = memberApi(row);
     renderApp();
     await user.click(
-      await screen.findByRole("button", { name: "Skip for now" }),
+      await screen.findByRole("button", {
+        name: englishCopy["ob.conv.team.skip"],
+      }),
     );
     await waitFor(() => expect(api.count("PUT /onboarding/state")).toBe(1));
     await restLong();
@@ -145,7 +148,9 @@ describe("the reads of a member held on onboarding", () => {
     window.location.hash = BRIEF;
     const api = memberApi(wizardRow("voice"));
     renderApp();
-    await screen.findByRole("button", { name: "Skip for now" });
+    await screen.findByRole("button", {
+      name: englishCopy["ob.conv.team.skip"],
+    });
     // The gate's own address, which the voice step then names as its own.
     expect(window.location.hash).toBe("#/onboarding/voice");
     await restLong();
@@ -164,7 +169,9 @@ describe("the reads of a member held on onboarding", () => {
 
     act(() => window.history.pushState(null, "", GATE_TARGET));
     act(() => window.dispatchEvent(new PopStateEvent("popstate")));
-    const skip = await screen.findByRole("button", { name: "Skip for now" });
+    const skip = await screen.findByRole("button", {
+      name: englishCopy["ob.conv.team.skip"],
+    });
     await waitFor(() => expect(skip).toHaveProperty("disabled", false));
     await user.click(skip);
     await waitFor(() => expect(window.location.hash).toBe(BRIEF));
@@ -178,7 +185,9 @@ describe("the reads of a member held on onboarding", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     const api = memberApi(wizardRow("connect"));
     renderApp();
-    const skip = await screen.findByRole("button", { name: "Skip for now" });
+    const skip = await screen.findByRole("button", {
+      name: englishCopy["ob.conv.team.skip"],
+    });
     await waitFor(() => expect(skip).toHaveProperty("disabled", false));
     await restLong();
     expect(api.sideReads()).toEqual([]);

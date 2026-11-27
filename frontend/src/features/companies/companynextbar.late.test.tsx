@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { ViewerZoneProvider } from "../../lib/viewerzone";
 import { installFetchStub, meRoute } from "../../testing/story-utils";
 import { CompanyHowItStands } from "./companyhowitstands";
@@ -67,7 +68,9 @@ describe("the Next bar's late promise", () => {
     expect(screen.getByText("2 days late")).toBeTruthy();
     // The bar's line opens with who holds the task.
     expect(screen.getByText(/Due 2 days ago and still open\./)).toBeTruthy();
-    expect(screen.queryByText("Due one day ago and still open.")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["promise.late.sentence_one"]),
+    ).toBeNull();
   });
 
   it("gives How it stands the bar's sentence, not the server's", async () => {
@@ -90,7 +93,9 @@ describe("the Next bar's late promise", () => {
     expect(
       await screen.findByText("Due 2 days ago and still open."),
     ).toBeTruthy();
-    expect(screen.queryByText("Due one day ago and still open.")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["promise.late.sentence_one"]),
+    ).toBeNull();
     vi.unstubAllGlobals();
   });
 });

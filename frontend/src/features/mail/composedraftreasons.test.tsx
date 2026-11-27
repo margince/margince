@@ -3,6 +3,7 @@ import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { describe, expect, it } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { DraftReasons } from "./composedraftcontext";
 
 // What a draft stands on is one press away: the band shows the hint, and the
@@ -19,7 +20,9 @@ function renderReasons() {
       <DraftReasons reasons={REASONS} />
     </LocaleProvider>,
   );
-  const hint = screen.getByText("Why this draft").closest("summary");
+  const hint = screen
+    .getByText(englishCopy["compose.whyThisDraft"])
+    .closest("summary");
   if (hint === null) {
     throw new Error("the hint is not a disclosure summary");
   }

@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   FieldHistoryTimeline,
   RecordHistory,
@@ -153,7 +154,7 @@ describe("RecordHistory", () => {
     expect(screen.getByText("Via zalo-oa")).toBeTruthy();
     // Only the row that IS an agent reads as one.
     expect(screen.getAllByText(/Automated by/)).toHaveLength(1);
-    expect(screen.getByText("Automated by an agent")).toBeTruthy();
+    expect(screen.getByText(englishCopy["trust.agentUnnamed"])).toBeTruthy();
   });
 
   it("prints no identifier it cannot turn into a name", async () => {
@@ -170,7 +171,9 @@ describe("RecordHistory", () => {
       ),
     );
     render(<RecordHistory kind="deal" id="d1" />);
-    expect(await screen.findByText("Automated by an agent")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["trust.agentUnnamed"]),
+    ).toBeTruthy();
     expect(screen.queryByText(new RegExp(OPAQUE))).toBeNull();
   });
 
@@ -209,8 +212,10 @@ describe("RecordHistory", () => {
       ),
     );
     render(<RecordHistory kind="deal" id="d1" />);
-    expect(await screen.findByText("Typed by a buyer")).toBeTruthy();
-    expect(screen.queryByText("Source not recorded")).toBeNull();
+    expect(
+      await screen.findByText(englishCopy["trust.typedByBuyer"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(englishCopy["trust.sourceUnknown"])).toBeNull();
     // A participant uuid resolves to no name on this side, and no tag prints
     // an identifier a reader cannot look up.
     expect(screen.queryByText(new RegExp(OPAQUE))).toBeNull();

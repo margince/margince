@@ -10,6 +10,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse } from "../../testing/story-utils";
 import {
   CustomFieldChoices,
@@ -74,11 +75,15 @@ describe("the choices editor", () => {
         </LocaleProvider>
       </QueryClientProvider>,
     );
-    fireEvent.click(screen.getByRole("button", { name: "Edit choices" }));
+    fireEvent.click(
+      screen.getByRole("button", { name: englishCopy["cf.choices.edit"] }),
+    );
     expect(await screen.findByText("12 records")).toBeInTheDocument();
     expect(screen.queryByText(/Saving clears/)).not.toBeInTheDocument();
     fireEvent.click(
-      screen.getAllByRole("button", { name: "Remove option" })[0],
+      screen.getAllByRole("button", {
+        name: englishCopy["cf.removeOption"],
+      })[0],
     );
     expect(
       await screen.findByText(

@@ -798,7 +798,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `rate` | `numeric(20,10)` | yes | Decimal rate (from -> base), always positive. |
 | `rate_date` | `date` | yes |  |
 | `superseded_at` | `timestamp with time zone` |  |  |
-| `to_currency` | `currency_code` | yes | The workspace base currency. |
+| `to_currency` | `currency_code` | yes | The company base currency. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 
 **Rules**
@@ -889,13 +889,13 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `language` | `text` |  | The language the offer's new lines take product names in (ISO 639-1). |
 | `legal_entity_id` | `uuid` |  | The legal entity that issues the offer: its name, address, VAT ID, bank details and logo are printed on the PDF. |
 | `net_minor` | `bigint`, default `0` | yes | Σ line nets; derived, never client-set. |
-| `offer_number` | `text` | yes | Human-facing Angebot number, minted server-side, unique per workspace (with revision). |
+| `offer_number` | `text` | yes | Human-facing Angebot number, minted server-side, unique per company (with revision). |
 | `pdf_asset_ref` | `text` |  | Rendered PDF ref, set by renderOffer. |
 | `revision` | `integer`, default `1` | yes | Bumped when a sent offer is regenerated; the prior revision becomes superseded. |
 | `source_commercial_revision` | `bigint` |  | The deal's `commercial_revision` the lines were copied from. |
 | `status` | `text`, default `'draft'::text` | yes | One of `draft`, `sent`, `accepted`, `rejected`, `expired`, `superseded`. |
 | `tax_minor` | `bigint`, default `0` | yes | Σ line taxes; derived, never client-set. |
-| `template_id` | `uuid` |  | The offer_template used for locale/layout at render time; unset falls back to the workspace's default template for the offer's locale. |
+| `template_id` | `uuid` |  | The offer_template used for locale/layout at render time; unset falls back to your company's default template for the offer's locale. |
 | `terms_text` | `text` |  |  |
 | `valid_until` | `date` |  |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -1024,7 +1024,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `is_default` | `boolean`, default `false` | yes | At most one default template per locale (partial unique index). |
 | `layout` | `jsonb` | yes | Logo/header/footer/terms-block refs: bounded params rather than a CMS. |
 | `locale` | `text`, default `'de-DE'::text` | yes | DE/EN at launch (de-DE, en-US); drives the rendered PDF label set. |
-| `name` | `text` | yes | Unique per workspace among live (non-archived) templates. |
+| `name` | `text` | yes | Unique per company among live (non-archived) templates. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `search_tsv` | `tsvector`, generated as `(setweight(to_tsvector('simple'::regconfig, f_unaccent(COALESCE(name, ''::text))), 'A'::"char") \|\| setweight(to_tsvector('simple'::regconfig, f_fold_apostrophes(COALESCE(name, ''::text))), 'A'::"char"))` |  | Computed by the database. It cannot be written directly. |
@@ -1056,7 +1056,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
-| `is_default` | `boolean`, default `false` | yes | At most one default per workspace. |
+| `is_default` | `boolean`, default `false` | yes | At most one default per company. |
 | `name` | `text` | yes |  |
 | `position` | `integer`, default `0` | yes |  |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
@@ -1095,7 +1095,7 @@ The 26 tables owned by `deals`, as the migrations build them. [Back to the entit
 | `default_tax_rate` | `numeric(5,2)`, default `0` | yes | Percent, e.g. 19.00 (DE USt.); per-line override allowed. |
 | `description` | `text` |  |  |
 | `name` | `text` | yes |  |
-| `sku` | `text` |  | Optional; unique per workspace while live. |
+| `sku` | `text` |  | Optional; unique per company while live. |
 | `tax_category` | `text` |  | Which tax rate an offer line for the product takes: the standard or reduced rate of the country it is sold from, or none for exempt. |
 | `unit` | `text`, default `'unit'::text` | yes | A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. |
 | `unit_price_minor` | `bigint` | yes | Integer minor units (P11); no float money. |

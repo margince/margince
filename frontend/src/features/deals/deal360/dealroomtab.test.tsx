@@ -20,6 +20,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider, translate } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import { jsonResponse, stubWithSession } from "../../../testing/story-utils";
 import { DealRoomTab } from "./dealroomtab";
 
@@ -107,7 +108,9 @@ describe("DealRoomTab", () => {
     );
 
     expect(
-      await screen.findByRole("button", { name: "Open a Deal Room" }),
+      await screen.findByRole("button", {
+        name: englishCopy["room.create.open"],
+      }),
     ).toBeInTheDocument();
   });
 
@@ -122,7 +125,9 @@ describe("DealRoomTab", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "Open a Deal Room" }),
+      await screen.findByRole("button", {
+        name: englishCopy["room.create.open"],
+      }),
     );
     expect(await screen.findByLabelText(/Room title/)).toHaveAttribute(
       "data-character-limit",
@@ -145,7 +150,9 @@ describe("DealRoomTab", () => {
     );
 
     await user.click(
-      await screen.findByRole("button", { name: "Open a Deal Room" }),
+      await screen.findByRole("button", {
+        name: englishCopy["room.create.open"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     const title = within(dialog).getByLabelText(/Room title/);
@@ -192,7 +199,7 @@ describe("DealRoomTab on a deal the reader may not change", () => {
 
     await waitFor(() => expect(container).toBeEmptyDOMElement());
     expect(
-      screen.queryByRole("button", { name: "Open a Deal Room" }),
+      screen.queryByRole("button", { name: englishCopy["room.create.open"] }),
     ).toBeNull();
   });
 });
@@ -250,7 +257,9 @@ describe("Manage room opens the room's settings", () => {
     await user.clear(title);
     await user.type(title, "Rollout");
     await user.click(screen.getByRole("radio", { name: /Paused/ }));
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["roomtab.manage.save"] }),
+    );
 
     await waitFor(() =>
       expect(calls).toEqual([
@@ -615,7 +624,9 @@ describe("the settings dialog's access changes", () => {
       "31/12/2026{Tab}",
     );
     await user.click(screen.getByRole("radio", { name: /Closed/ }));
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["roomtab.manage.save"] }),
+    );
 
     await waitFor(() =>
       expect(calls).toEqual([
@@ -655,7 +666,9 @@ describe("an expired room takes a later end date", () => {
       screen.getByRole("textbox", { name: /Access ends on/ }),
       "31/12/2026{Tab}",
     );
-    await user.click(screen.getByRole("button", { name: "Save changes" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["roomtab.manage.save"] }),
+    );
 
     await waitFor(() =>
       expect(calls).toEqual(['PUT {"expires_at":"2026-12-31T23:59:59.000Z"}']),
@@ -715,6 +728,8 @@ it.each([true, false])(
       <DealRoomTab dealWritable dealId="deal-1" dealName="Acme Expansion" />,
     );
     await screen.findByRole("heading", { name: "Acme Expansion — Deal Room" });
-    expect(screen.queryByText("New contact needed") !== null).toBe(writable);
+    expect(
+      screen.queryByText(englishCopy["room.stewardNeeded.title"]) !== null,
+    ).toBe(writable);
   },
 );

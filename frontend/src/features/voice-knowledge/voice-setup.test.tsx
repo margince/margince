@@ -15,6 +15,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { SetupSteps } from "../../components/setup-steps";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { settingsReach } from "../../lib/settingscatalog";
 import { useSetupChecklist } from "../../lib/setup-checklist";
 import { STORAGE_KEYS, writeStored } from "../../lib/storage";
@@ -258,9 +259,7 @@ describe("finishing setup with a trained voice awaiting review", () => {
 
     const setup = await setupPanel();
     expect(
-      await within(setup).findByText(
-        "Your voice is trained and ready to review.",
-      ),
+      await within(setup).findByText(englishCopy["setup.caption.voiceReview"]),
     ).toBeTruthy();
     expect(within(setup).queryByText(/more words you wrote/)).toBeNull();
     expect(
@@ -271,7 +270,9 @@ describe("finishing setup with a trained voice awaiting review", () => {
     for (let press = 0; press < 2; press++) {
       (document.activeElement as HTMLElement | null)?.blur();
       await user.click(
-        within(setup).getByRole("button", { name: "Review voice" }),
+        within(setup).getByRole("button", {
+          name: englishCopy["setup.action.voiceReview"],
+        }),
       );
       await waitFor(() =>
         expect(document.activeElement?.id).toBe("vdna-review"),
@@ -279,12 +280,14 @@ describe("finishing setup with a trained voice awaiting review", () => {
       expect(globalThis.location.hash).not.toContain("focus=");
     }
     const review = document.getElementById("vdna-review");
-    expect(review?.textContent).toContain("Why this version needs review");
+    expect(review?.textContent).toContain(
+      englishCopy["voice.candidate.concernsLabel"],
+    );
     // Opening the review activates nothing.
     expect(server.profile.profile_version).toBe(0);
     expect(
       within(review as HTMLElement).getByRole("button", {
-        name: "Discard this version",
+        name: englishCopy["voice.candidate.discard"],
       }),
     ).toBeTruthy();
     expect(review?.textContent).toContain(
@@ -297,11 +300,13 @@ describe("finishing setup with a trained voice awaiting review", () => {
     const user = userEvent.setup();
     renderBoth();
     await within(await setupPanel()).findByRole("button", {
-      name: "Review voice",
+      name: englishCopy["setup.action.voiceReview"],
     });
 
     await user.click(
-      await screen.findByRole("button", { name: "Use this version" }),
+      await screen.findByRole("button", {
+        name: englishCopy["voice.candidate.apply"],
+      }),
     );
 
     expect(
@@ -315,15 +320,21 @@ describe("finishing setup with a trained voice awaiting review", () => {
     const user = userEvent.setup();
     renderBoth();
     const setup = await setupPanel();
-    await within(setup).findByRole("button", { name: "Review voice" });
+    await within(setup).findByRole("button", {
+      name: englishCopy["setup.action.voiceReview"],
+    });
 
     await user.click(
-      await screen.findByRole("button", { name: "Use this version" }),
+      await screen.findByRole("button", {
+        name: englishCopy["voice.candidate.apply"],
+      }),
     );
 
     expect(await screen.findByText("The version changed.")).toBeTruthy();
     expect(
-      within(setup).getByRole("button", { name: "Review voice" }),
+      within(setup).getByRole("button", {
+        name: englishCopy["setup.action.voiceReview"],
+      }),
     ).toBeTruthy();
     expect(within(setup).queryByText("Setup complete")).toBeNull();
   });
@@ -354,11 +365,13 @@ describe("finishing setup with a trained voice awaiting review", () => {
     const setup = await setupPanel();
     expect(
       await within(setup).findByText(
-        "Building your voice. It continues if you leave.",
+        englishCopy["setup.caption.voiceBuilding"],
       ),
     ).toBeTruthy();
     expect(
-      within(setup).getByRole("button", { name: "View progress" }),
+      within(setup).getByRole("button", {
+        name: englishCopy["setup.action.voiceProgress"],
+      }),
     ).toBeTruthy();
     first.unmount();
 
@@ -380,7 +393,7 @@ describe("finishing setup with a trained voice awaiting review", () => {
 
     expect(
       await within(await setupPanel()).findByRole("button", {
-        name: "Review voice",
+        name: englishCopy["setup.action.voiceReview"],
       }),
     ).toBeTruthy();
     expect(await screen.findByText("Voice v1 ready for review")).toBeTruthy();
@@ -411,7 +424,7 @@ describe("finishing setup with a trained voice awaiting review", () => {
     renderBoth();
     const setup = await setupPanel();
     expect(
-      within(setup).getByText("Needs writing samples of your own."),
+      within(setup).getByText(englishCopy["setup.caption.voiceSamples"]),
     ).toBeTruthy();
 
     await user.click(

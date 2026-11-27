@@ -175,9 +175,9 @@ function requestsTo(calls: Request[], suffix: string, method: string) {
 // the dialog first and scopes its queries to it.
 async function openAddDialog() {
   await userEvent.click(
-    await screen.findByRole("button", { name: "Add another mailbox" }),
+    await screen.findByRole("button", { name: en["connectors.addOpen"] }),
   );
-  return screen.getByRole("dialog", { name: "Connect mail and calendar" });
+  return screen.getByRole("dialog", { name: en["connectFlow.title"] });
 }
 
 /** Opens an account's overflow menu and chooses one of its verbs. */
@@ -228,10 +228,10 @@ describe("the connected-inboxes card", () => {
       screen.getByRole("button", { name: "More actions for Google" }),
     );
     expect(
-      screen.queryByRole("button", { name: "Change what it brings in" }),
+      screen.queryByRole("button", { name: en["connectors.menu.bringsIn"] }),
     ).toBeNull();
     expect(
-      screen.queryByRole("button", { name: "Import older email" }),
+      screen.queryByRole("button", { name: en["connectors.menu.importOlder"] }),
     ).toBeNull();
     expect(screen.getByRole("button", { name: "Disconnect" })).toBeEnabled();
   });
@@ -253,8 +253,10 @@ describe("the connected-inboxes card", () => {
   it("carries neither the Telegram bot nor the public address", async () => {
     const calls = stubApi([gmailConnected]);
     render(<ConnectorsCard />);
-    await screen.findByRole("heading", { name: "Mail and calendar" });
-    expect(screen.queryByRole("heading", { name: "Telegram bot" })).toBeNull();
+    await screen.findByRole("heading", { name: en["connectors.title"] });
+    expect(
+      screen.queryByRole("heading", { name: en["connectors.telegramTitle"] }),
+    ).toBeNull();
     expect(screen.queryByTestId("public-origin")).toBeNull();
     expect(requestsTo(calls, "/channel-connections", "GET")).toHaveLength(0);
   });
@@ -267,9 +269,13 @@ describe("the connected-inboxes card", () => {
     const calls = stubApi([{ ...gmailConnected, backfill: { state: "none" } }]);
     render(<ConnectorsCard />);
     const pastEmail = await screen.findByTestId("connector-gmail-past-email");
-    expect(within(pastEmail).getByText("Not imported")).toBeInTheDocument();
     expect(
-      within(pastEmail).getByRole("button", { name: "Import past email" }),
+      within(pastEmail).getByText(en["connectors.svc.notImported"]),
+    ).toBeInTheDocument();
+    expect(
+      within(pastEmail).getByRole("button", {
+        name: en["connectFlow.importLabel"],
+      }),
     ).toBeInTheDocument();
     expect(requestsTo(calls, "/backfill/preview", "POST")).toHaveLength(0);
   });
@@ -352,17 +358,21 @@ describe("the connected-inboxes card", () => {
     // The dialog gives way rather than stacking behind the form: two overlays
     // deep, Escape and the focus restore both answer to the wrong layer.
     expect(
-      await screen.findByRole("dialog", { name: "Connect IMAP mailbox" }),
+      await screen.findByRole("dialog", {
+        name: en["connectors.imapModalTitle"],
+      }),
     ).toBeTruthy();
     expect(
-      screen.queryByRole("dialog", { name: "Connect mail and calendar" }),
+      screen.queryByRole("dialog", { name: en["connectFlow.title"] }),
     ).toBeNull();
   });
 
   it("offers reconnect only for a connection that needs re-auth", async () => {
     stubApi([gmailStale]);
     render(<ConnectorsCard />);
-    expect(await screen.findByText("Needs reconnect")).toBeTruthy();
+    expect(
+      await screen.findByText(en["connectors.health.reconnect"]),
+    ).toBeTruthy();
     expect(screen.getByRole("button", { name: /Reconnect/ })).toBeTruthy();
   });
 
@@ -377,7 +387,9 @@ describe("the connected-inboxes card", () => {
       },
     ]);
     render(<ConnectorsCard />);
-    await screen.findByRole("heading", { name: "Microsoft 365" });
+    await screen.findByRole("heading", {
+      name: en["connectors.vendorMicrosoft"],
+    });
     const [first, second] = screen.getAllByRole("button", {
       name: "Reconnect",
     });
@@ -388,7 +400,7 @@ describe("the connected-inboxes card", () => {
   it("says a Gmail mailbox cannot send before the rep discovers it at send time", async () => {
     stubApi([gmailNoSendGrant]);
     render(<ConnectorsCard />);
-    expect(await screen.findByText("Capture only, no sending")).toBeTruthy();
+    expect(await screen.findByText(en["connectors.cannotSend"])).toBeTruthy();
     expect(
       screen.getByText(/Reconnect this mailbox to send from it/),
     ).toBeTruthy();
@@ -400,15 +412,15 @@ describe("the connected-inboxes card", () => {
     stubApi([gmailConnected]);
     render(<ConnectorsCard />);
     expect(await screen.findByText("Up to date")).toBeTruthy();
-    expect(screen.queryByText("Capture only, no sending")).toBeNull();
+    expect(screen.queryByText(en["connectors.cannotSend"])).toBeNull();
     expect(screen.queryByRole("button", { name: /Reconnect/ })).toBeNull();
   });
 
   it("never claims a non-Gmail mailbox cannot send — its scopes are not Google's", async () => {
     stubApi([imapConnected]);
     render(<ConnectorsCard />);
-    expect(await screen.findByText("IMAP mailbox")).toBeTruthy();
-    expect(screen.queryByText("Capture only, no sending")).toBeNull();
+    expect(await screen.findByText(en["connectors.provImap"])).toBeTruthy();
+    expect(screen.queryByText(en["connectors.cannotSend"])).toBeNull();
   });
 
   it("shows an honest waiting line for a connection that has never synced", async () => {
@@ -425,7 +437,7 @@ describe("the connected-inboxes card", () => {
     expect(
       await screen.findByText(/Successful sync time unavailable/),
     ).toBeTruthy();
-    expect(screen.queryByText("No successful sync recorded")).toBeNull();
+    expect(screen.queryByText(en["connectors.neverSynced"])).toBeNull();
   });
 
   it("surfaces a load failure without crashing the card", async () => {
@@ -484,7 +496,9 @@ describe("the connected-inboxes card", () => {
     await userEvent.click(
       await screen.findByRole("button", { name: /Reconnect/ }),
     );
-    expect(await screen.findByText("Connect IMAP mailbox")).toBeTruthy();
+    expect(
+      await screen.findByText(en["connectors.imapModalTitle"]),
+    ).toBeTruthy();
   });
 
   it("surfaces a failed reconnect instead of redirecting", async () => {
@@ -628,7 +642,7 @@ describe("the OAuth return outcome", () => {
       await within(pastEmail).findByText("8,200 emails in that time."),
     ).toBeInTheDocument();
     expect(
-      within(pastEmail).getByRole("button", { name: "Start import" }),
+      within(pastEmail).getByRole("button", { name: en["backfill.startCta"] }),
     ).toBeInTheDocument();
   });
 
@@ -642,9 +656,13 @@ describe("the OAuth return outcome", () => {
     });
     render(<ConnectorsCard />);
     const pastEmail = await screen.findByTestId("connector-gmail-past-email");
-    expect(within(pastEmail).getByText("Not imported")).toBeInTheDocument();
     expect(
-      within(pastEmail).queryByRole("button", { name: "Start import" }),
+      within(pastEmail).getByText(en["connectors.svc.notImported"]),
+    ).toBeInTheDocument();
+    expect(
+      within(pastEmail).queryByRole("button", {
+        name: en["backfill.startCta"],
+      }),
     ).toBeNull();
   });
 
@@ -818,7 +836,7 @@ describe("add an account", () => {
     render(<ConnectorsCard />);
     await screen.findByTestId("connector-graphcal"); // a roster service
     expect(
-      screen.getByRole("button", { name: "Add another mailbox" }),
+      screen.getByRole("button", { name: en["connectors.addOpen"] }),
     ).toBeEnabled();
   });
 });
@@ -826,7 +844,9 @@ describe("add an account", () => {
 it("offers reconnect for a healthy read-only calendar", async () => {
   stubApi([gcalConnected]);
   render(<ConnectorsCard />);
-  expect(await screen.findByText("Read-only calendar")).toBeInTheDocument();
+  expect(
+    await screen.findByText(en["scheduling.readOnlyBadge"]),
+  ).toBeInTheDocument();
   expect(screen.getByRole("button", { name: "Reconnect" })).toBeEnabled();
 });
 
@@ -875,7 +895,9 @@ describe("two mailboxes of one provider", () => {
     });
     await userEvent.click(menus[0]);
     expect(
-      screen.queryByRole("button", { name: "Send new mail from this mailbox" }),
+      screen.queryByRole("button", {
+        name: en["connectors.menu.useForNewMail"],
+      }),
     ).toBeNull();
   });
 

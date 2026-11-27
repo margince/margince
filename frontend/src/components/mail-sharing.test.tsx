@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider, translate } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { permissionDenied } from "../testing/story-utils";
 import { MailSharingCard, MailSharingPlate } from "./mail-sharing";
@@ -174,7 +175,9 @@ describe("MailSharingCard", () => {
     );
     await userEvent.click(toggle);
 
-    expect(await screen.findByText("Setting not saved")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["mailSharing.saveFailed"]),
+    ).toBeTruthy();
     await waitFor(() =>
       expect(toggle.getAttribute("aria-checked")).toBe("true"),
     );
@@ -350,10 +353,12 @@ describe("MailSharingPlate", () => {
         /^Test Workspace shares newly captured mail with colleagues/,
       ),
     ).toBeTruthy();
-    expect(screen.getByText("Whole company")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["mailSharing.plate.scope"]),
+    ).toBeTruthy();
     expect(
       screen
-        .getByRole("link", { name: "Change in Mail capture" })
+        .getByRole("link", { name: englishCopy["mailSharing.posture.where"] })
         .getAttribute("href"),
     ).toBe("/#/settings/capture");
   });

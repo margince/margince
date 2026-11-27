@@ -132,10 +132,6 @@ func orderByLeadOriginLabel(context.Context, func(any) int) (string, error) {
 // ListLeads is the row-scoped lead list read: quick-find, the status and
 // owner filters, and keyset pagination under the validated sort.
 func (s *Store) ListLeads(ctx context.Context, in ListLeadsInput) ([]crmcontracts.Lead, storekit.Page, error) {
-	if in.CompanyID != nil && !auth.ReadGranted(ctx, companyEntity) {
-		return []crmcontracts.Lead{}, storekit.Page{}, nil
-	}
-
 	// Narrowing by a contact the caller cannot open would tell them which lead
 	// it is worked through, so such a contact matches nothing.
 	if in.FromContactID != nil {

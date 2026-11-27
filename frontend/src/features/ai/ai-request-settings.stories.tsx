@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { feature } from "../../testing/ai-admin.testkit";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import {
@@ -483,6 +484,8 @@ export const TaskConflict: Story = {
     await waitFor(() => expect(thinking).toBeEnabled());
     await userEvent.click(thinking);
     await userEvent.click(await body.findByRole("option", { name: "low" }));
-    await userEvent.click(body.getByRole("button", { name: "Save settings" }));
+    await userEvent.click(
+      body.getByRole("button", { name: englishCopy["aiTaskSheet.save"] }),
+    );
   },
 };

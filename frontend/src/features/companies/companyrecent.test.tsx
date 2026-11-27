@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { LatestCard } from "./companyoverviewlatest";
 
 type Activity = components["schemas"]["Activity"];
@@ -225,6 +226,6 @@ describe("the Overview's Latest card", () => {
 
   it("says there is nothing yet on an account with no exchange", () => {
     renderCard(view([]));
-    expect(screen.getByText("No activity logged yet.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["co.recent.empty"])).toBeTruthy();
   });
 });

@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { RetentionCard } from "./retention";
 
@@ -441,7 +442,7 @@ it("shows a seeded lawful basis in words, and keeps the stored one unless it is 
   const dialog = await openEditor("deal/won");
   const basis =
     within(dialog).getByLabelText<HTMLInputElement>(/lawful basis/i);
-  expect(basis.value).toBe("Storage limitation, GDPR Art. 5(1)(e)");
+  expect(basis.value).toBe(englishCopy["retention.basis.storage_limitation"]);
   await userEvent.click(
     within(dialog).getByRole("button", { name: /save policy/i }),
   );
@@ -566,9 +567,13 @@ describe("the retain-only posture", () => {
     backend();
     render(<RetentionCard />);
 
-    await userEvent.click(await screen.findByText("Call transcripts"));
+    await userEvent.click(
+      await screen.findByText(englishCopy["retention.scopeActivityTranscript"]),
+    );
     expect(
-      await screen.findByRole("dialog", { name: "Call transcripts" }),
+      await screen.findByRole("dialog", {
+        name: englishCopy["retention.scopeActivityTranscript"],
+      }),
     ).toBeVisible();
   });
 

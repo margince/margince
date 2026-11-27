@@ -157,7 +157,7 @@ const (
 // a model told nothing reports it as one. It matters more here than most,
 // because the question this tool answers is "is anything being dropped".
 const commitmentsTruncatedMessage = "More open commitments exist than are listed here. " +
-	"Report these as the most overdue promises found, not as everything outstanding."
+	"Report these as the most overdue commitments found, not as everything outstanding."
 
 // maxCommitments bounds one call. It is the schema's maximum and the
 // server-side ceiling both, so a caller that omits the argument gets a
@@ -190,8 +190,8 @@ func (t reviewCommitments) Spec() mcp.ToolSpec {
 		Unlisted:  true,
 		OpenAPIOp: "listOpenCommitments",
 		InputSchema: schema(`{"type":"object","properties":{
-			"assignee_id":{"type":"string","format":"uuid","description":"Narrow to one owner's promises; omit for everyone's"},
-			"project_id":{"type":"string","format":"uuid","description":"Keep only promises filed under this project or under none"},
+			"assignee_id":{"type":"string","format":"uuid","description":"Narrow to one owner's commitments; omit for everyone's"},
+			"project_id":{"type":"string","format":"uuid","description":"Keep only commitments filed under this project or under none"},
 			"limit":{"type":"integer","minimum":1,"maximum":50,"description":"Cap the set; omit for 50, the server-side ceiling"}},
 			"additionalProperties":false}`),
 		OutputSchema: schemaFor[ReviewCommitmentsResult](),

@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { feature, status } from "../../testing/ai-admin.testkit";
 import type { GrantSpec } from "../../testing/mefixture";
 import { AiRoutingCard } from "./ai-routing";
@@ -75,14 +76,20 @@ describe("AiTasksCard", () => {
     render(<AiTasksCard />);
 
     const row = await screen.findByTestId(`ai-task-row-${feature.task}`);
-    const group = screen.getByRole("table", { name: "Everyday cloud" });
+    const group = screen.getByRole("table", {
+      name: englishCopy["aiTier.cheap_cloud"],
+    });
     expect(group.contains(row)).toBe(true);
     expect(
-      within(group).getByRole("columnheader", { name: "Everyday cloud" }),
+      within(group).getByRole("columnheader", {
+        name: englishCopy["aiTier.cheap_cloud"],
+      }),
     ).toBeVisible();
     // The group names the tier, so no column says it a second time.
     expect(screen.queryByRole("columnheader", { name: "Tier" })).toBeNull();
-    expect(within(row).queryByText("Everyday cloud")).toBeNull();
+    expect(
+      within(row).queryByText(englishCopy["aiTier.cheap_cloud"]),
+    ).toBeNull();
     expect(within(row).queryByText("example-model")).toBeNull();
     expect(within(row).queryByText("Custom")).toBeNull();
   });
@@ -97,7 +104,7 @@ describe("AiTasksCard", () => {
     const sheet = await screen.findByRole("dialog");
     expect(
       within(sheet)
-        .getByRole("link", { name: "View these calls →" })
+        .getByRole("link", { name: englishCopy["aiTaskSheet.viewCalls"] })
         .getAttribute("href"),
     ).toBe(`/#/settings/model-calls?task=${feature.task}`);
   });
@@ -132,7 +139,7 @@ describe("AiTasksCard", () => {
     );
     render(<AiTasksCard />);
 
-    const empty = await screen.findByText("Nothing here yet.");
+    const empty = await screen.findByText(englishCopy["common.empty"]);
     expect(empty.closest(".panel-body")).not.toBeNull();
     expect(screen.queryByRole("table")).toBeNull();
   });
@@ -309,7 +316,9 @@ describe("the Model tiers card for a diagnostics-only reader", () => {
       within(cheap).getByRole("button", { name: "Everyday cloud: Responding" }),
     ).toBeTruthy();
     const embed = screen.getByTestId("ai-routing-tier-embeddings");
-    expect(within(embed).getByText("Embedding model")).toBeTruthy();
+    expect(
+      within(embed).getByText(englishCopy["aiTier.embeddings"]),
+    ).toBeTruthy();
     // The lane's key belongs to its editor, not to the row.
     expect(within(embed).queryByText("embeddings")).toBeNull();
     expect(

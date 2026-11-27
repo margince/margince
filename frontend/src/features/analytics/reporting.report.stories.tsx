@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -139,7 +140,7 @@ export const HistoryReadFailed: Story = {
   },
   play: async ({ canvasElement }) => {
     const name = await within(canvasElement).findByText(
-      "History and schedules",
+      englishCopy["reporting.history"],
     );
     const summary = name.closest("summary");
     if (summary === null) throw new Error("the history has no summary");
@@ -156,12 +157,12 @@ export const ArchiveConfirmation: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Report actions",
+        name: englishCopy["reporting.actions"],
       }),
     );
     await userEvent.click(
       await screen.findByRole("button", {
-        name: "Archive report",
+        name: englishCopy["reporting.archive"],
       }),
     );
   },

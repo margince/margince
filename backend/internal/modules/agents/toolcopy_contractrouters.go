@@ -18,7 +18,7 @@ var changeAttentionCopy = toolCopy{
 var changeAccessCopy = toolCopy{
 	Purpose: "Decide who works on what: share a record with a colleague or team and take the share back, " +
 		"make a colleague responsible for a record, offer, request or claim ownership, and set up the " +
-		"workspace (change a member's role, deactivate or remove a member, create " +
+		"company (change a member's role, deactivate or remove a member, create " +
 		"teams and add or remove their members, and record a colleague who already left).",
 	Limits: "An agent never grants or removes the admin role, never changes its own user's role or " +
 		"teams, never acts on a member who is an admin, never hands a colleague's work to its own user and " +
@@ -42,7 +42,7 @@ var changeOffersCopy = toolCopy{
 var changeRelationshipsCopy = toolCopy{
 	Purpose: "Work the relationships around a company: link its candidate contacts; check " +
 		"its VAT number; ask for, decide, complete or cancel an introduction and record one that happened; " +
-		"record, settle or take over a promise made in a conversation; save what research found.",
+		"record, settle or take over a commitment made in a conversation; save what research found.",
 	Limits: "Each act runs as the app does it, on the records the user may open.",
 	Instead: "Use run_research to ask about a company, refresh a brief, dossier, growth fit or scan, or research a contact, " +
 		"read_details to read one that is already there, and " +
@@ -50,13 +50,13 @@ var changeRelationshipsCopy = toolCopy{
 }
 
 var changeSettingsCopy = toolCopy{
-	Purpose: "Change how the workspace is set up: pipelines, stages, exit criteria and partner stages; custom " +
+	Purpose: "Change how the company is set up: pipelines, stages, exit criteria and partner stages; custom " +
 		"fields; automations and web forms; FX, tax and AI price sheets; product translations; lead sources, " +
 		"origins, disqualify and loss reasons and acquisition sources; lead, legal review, duplicate and " +
-		"follow-up settings; the review template and booking page; the workspace's own company, logos and " +
+		"follow-up settings; the review template and booking page; the company's own record, logos and " +
 		"legal entities; a partner company's terms; the accounting and contact data sources; background " +
 		"corrections; and the user's saved views.",
-	Limits: "A workspace setting changes what every colleague sees from then on, while a saved view is the user's " +
+	Limits: "A company setting changes what every colleague sees from then on, while a saved view is the user's " +
 		"alone. A request about the user's own preferences never reaches this tool. Read the current value first. Ask the user first where the action is " +
 		"marked so: a custom field changes the database for everyone and retiring one cannot be undone, a tax rate " +
 		"can never be removed, a rate reprices what colleagues see, and an enabled automation acts on its own. " +
@@ -104,9 +104,9 @@ var changeCaptureCopy = toolCopy{
 		"or channel, define the knowledge corpora and upload a text document to one, import the user's LinkedIn " +
 		"connections export, and carry on, test, cancel or undo an import. import_vcards takes a vCard file or " +
 		"its text, and fills a contact that already matches rather than doubling it.",
-	Limits: "Keep a domain out of the user's own capture with add_exclusion, scope user. Scope workspace " +
+	Limits: "Keep a domain out of the user's own capture with `add_exclusion`, scope `user`. Scope `workspace` " +
 		"stops capture for every colleague, so ask the user first. set_blocked_domain " +
-		"is a different act: it refuses the parent domain for the whole workspace, so a request about the " +
+		"is a different act: it refuses the parent domain for the whole company, so a request about the " +
 		"user's own mail never reaches it. " +
 		"Answers change what is captured from then on. A sender's keep_out destroys mail, so the " +
 		"app does that one. Connecting a mailbox needs the provider's consent in a browser, and deleting " +
@@ -127,7 +127,7 @@ var runResearchCopy = toolCopy{
 	Limits: "Each call spends AI budget, and research asks an outside provider, so the passport needs " +
 		"the enrich scope. Read the panel first through read_details; run this only when it is out of date. " +
 		"Ask the user first before buying a contact's details, and before rebuilding the search index for the whole " +
-		"workspace. Buying needs a daily limit and a healthy connection, skips a contact already looked up, " +
+		"company. Buying needs a daily limit and a healthy connection, skips a contact already looked up, " +
 		"and buys a priced detail only when you name its category.",
 	Instead: "Use read_details to read a panel, and enrich to fill a company's fields from its website.",
 }

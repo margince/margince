@@ -10,6 +10,7 @@ import { afterEach, expect, it, vi } from "vitest";
 import { UnsavedGuard } from "../../components/unsaved";
 import { useSaveDraft } from "../../design-system/savepage";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { SettingsSavePage } from "./settingssavepage";
 
 afterEach(cleanup);
@@ -64,7 +65,7 @@ it("asks on the way out of a settings draft, and Save writes it before leaving",
   await user.click(screen.getByRole("button", { name: "Contacts" }));
 
   const dialog = screen.getByRole("dialog");
-  expect(dialog).toHaveTextContent("Save your changes?");
+  expect(dialog).toHaveTextContent(englishCopy["unsaved.saveTitle"]);
   await user.click(within(dialog).getByRole("button", { name: "Save" }));
 
   expect(write).toHaveBeenCalledWith("Jane");

@@ -5,6 +5,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider, useT } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { DealMailAside, lastMailColumn } from "./dealmailaside";
 
 // A fixed noon, so a day count never meets a midnight or a clock change.
@@ -104,7 +105,7 @@ describe("DealMailAside", () => {
     expect(screen.getByText("3 d ago")).toBeTruthy();
     expect(
       screen
-        .getByRole("link", { name: "View all activity" })
+        .getByRole("link", { name: englishCopy["deal.mail.viewAll"] })
         .getAttribute("href"),
     ).toBe("/#/deals/d1");
     // ONE read, narrowed to this deal's mail and capped: the flyout is an
@@ -139,7 +140,9 @@ describe("DealMailAside", () => {
   it("says a held message is not shared, and offers nothing to press on it", async () => {
     serve([mail("a1", "Board pack", "inbound", 1, true)]);
     render();
-    expect(await screen.findByText("Not shared with you")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["email.withheldSubject"]),
+    ).toBeTruthy();
     expect(screen.queryByText("Board pack")).toBeNull();
     expect(screen.queryByRole("button")).toBeNull();
   });
@@ -147,9 +150,9 @@ describe("DealMailAside", () => {
   it("says so when the reader may know about no mail on the deal", async () => {
     serve([]);
     render();
-    expect(await screen.findByText("No email on this deal yet")).toBeTruthy();
+    expect(await screen.findByText(englishCopy["deal.mail.none"])).toBeTruthy();
     expect(
-      screen.getByRole("link", { name: "View all activity" }),
+      screen.getByRole("link", { name: englishCopy["deal.mail.viewAll"] }),
     ).toBeTruthy();
   });
 
@@ -159,7 +162,7 @@ describe("DealMailAside", () => {
     serve([], 500);
     render();
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.queryByText("No email on this deal yet")).toBeNull();
+    expect(screen.queryByText(englishCopy["deal.mail.none"])).toBeNull();
   });
 });
 
@@ -219,7 +222,7 @@ describe("lastMailColumn", () => {
         <Cell deal={tableDeal({})} />
       </LocaleProvider>,
     );
-    expect(screen.getByText("no email yet")).toBeTruthy();
+    expect(screen.getByText(englishCopy["deals.lastMailNone"])).toBeTruthy();
     expect(screen.queryByRole("button")).toBeNull();
   });
 

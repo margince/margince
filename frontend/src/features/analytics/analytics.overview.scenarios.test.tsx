@@ -7,6 +7,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
 import { stable } from "../../format/collate";
+import { en as englishCopy } from "../../i18n/en";
 import { forgetSeat } from "../../lib/storage";
 import { openViewStep } from "../../testing/listview.testkit";
 import { reportingFixtureFrames } from "../../testing/reporting.fixtures";
@@ -224,7 +225,9 @@ const SIGNATURES: Readonly<
     sales: shows("€0"),
     prospecting: async () => {
       await shows("No meetings recorded as held this week")();
-      expect(screen.queryByText("Nothing needs you right now")).toBeNull();
+      expect(
+        screen.queryByText(englishCopy["analytics.sdrNothingNeedsYou"]),
+      ).toBeNull();
     },
     team: shows(/Of the 0 rounds/),
   },
@@ -250,7 +253,11 @@ const SIGNATURES: Readonly<
   sourceUnavailable: {
     sales: async () => {
       await shows("Could not be calculated")();
-      expect(await screen.findByText("Connection maintenance")).toBeVisible();
+      expect(
+        await screen.findByText(
+          englishCopy["analytics.intervention.maintenance"],
+        ),
+      ).toBeVisible();
     },
     prospecting: shows(
       "Some of your work could not be read, so this list may be missing items.",
@@ -290,7 +297,9 @@ const SIGNATURES: Readonly<
   readOnlyReviewer: {
     sales: async () => {
       const list = within(
-        await screen.findByRole("region", { name: "Needs your attention" }),
+        await screen.findByRole("region", {
+          name: englishCopy["analytics.attention"],
+        }),
       );
       expect(await list.findAllByRole("link", { name: "Open" })).toHaveLength(
         3,
@@ -319,7 +328,9 @@ const SIGNATURES: Readonly<
   qualificationWorkflow: {
     prospecting: shows("Meetings to prepare"),
     team: async () => {
-      for (const label of await screen.findAllByText("Metric definitions"))
+      for (const label of await screen.findAllByText(
+        englishCopy["reporting.definitions"],
+      ))
         await userEvent.click(label);
       await shows(/does not use SDR handoffs/)();
       await shows("5 of 8")();
@@ -351,7 +362,9 @@ const SIGNATURES: Readonly<
   worklistFailed: {
     prospecting: async () => {
       await shows("This section did not load.")();
-      expect(screen.queryByText("Nothing needs you right now")).toBeNull();
+      expect(
+        screen.queryByText(englishCopy["analytics.sdrNothingNeedsYou"]),
+      ).toBeNull();
       expect(screen.queryByRole("link", { name: /^Open Call/ })).toBeNull();
     },
   },
@@ -365,7 +378,9 @@ const SIGNATURES: Readonly<
       await shows("Leads waiting for a reply are hidden from you.")();
       const members = await screen.findByRole("table", { name: "Members" });
       expect(
-        within(members).queryByRole("columnheader", { name: "Meetings held" }),
+        within(members).queryByRole("columnheader", {
+          name: englishCopy["analytics.team.meetings"],
+        }),
       ).toBeNull();
     },
   },

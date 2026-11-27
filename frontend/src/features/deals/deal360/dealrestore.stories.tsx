@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, waitFor, within } from "storybook/test";
 import type { components } from "../../../api/schema";
+import { en as englishCopy } from "../../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -74,7 +75,7 @@ export const MayRestore: Story = {
   render: () => band({ deal: ["read", "update", "delete"] }),
   play: async ({ canvasElement }) => {
     const restore = await within(canvasElement).findByRole("button", {
-      name: "Restore deal",
+      name: englishCopy["deal.restore"],
     });
     await waitFor(() => expect(restore).toBeEnabled());
   },

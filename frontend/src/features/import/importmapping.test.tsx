@@ -7,6 +7,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   formatFixture,
   jsonResponse,
@@ -25,7 +26,7 @@ afterEach(() => {
 async function toTheMap(user: UserEvent) {
   render(<ImportWizardPage />);
   await user.upload(
-    await screen.findByLabelText("Upload your data"),
+    await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
     new File(["PK"], "x.zip"),
   );
   await user.click(
@@ -136,7 +137,9 @@ describe("the map step", () => {
         }),
     });
     await toTheMap(user);
-    const strip = screen.getByRole("group", { name: "Files to map" });
+    const strip = screen.getByRole("group", {
+      name: englishCopy["import.map.tabs"],
+    });
     const tabs = within(strip).getAllByRole("button");
     expect(tabs.map((tab) => tab.dataset.tab)).toEqual([
       "contacts.csv",
@@ -148,9 +151,9 @@ describe("the map step", () => {
         name: /^Companies\s*, 1 column not imported$/,
       }),
     ).toBeVisible();
-    expect(within(strip).getByTitle("1 column not imported")).toHaveTextContent(
-      "1",
-    );
+    expect(
+      within(strip).getByTitle(englishCopy["import.map.leftOut_one"]),
+    ).toHaveTextContent("1");
     expect(
       within(strip).getByRole("button", { name: "Contacts" }),
     ).toBeVisible();
@@ -161,7 +164,7 @@ describe("the map step", () => {
     stubRoutes({ "POST /imports/sources": () => jsonResponse(zipProfile) });
     render(<ImportWizardPage />);
     await user.upload(
-      await screen.findByLabelText("Upload your data"),
+      await screen.findByLabelText(englishCopy["import.hub.uploadLabel"]),
       new File(["PK"], "x.zip"),
     );
     await user.click(
@@ -174,7 +177,7 @@ describe("the map step", () => {
     await user.click(screen.getByRole("button", { name: /Leads/ }));
     expect(
       screen.getByRole("combobox", { name: "Field for company_ref" }),
-    ).toHaveTextContent("Do not import");
+    ).toHaveTextContent(englishCopy["import.dontImport"]);
     expect(
       screen.getByRole("combobox", { name: "Field for email" }),
     ).toHaveTextContent("email");

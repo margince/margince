@@ -6,6 +6,7 @@ import { act, cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub, jsonResponse } from "../../testing/story-utils";
 import { render } from "./analytics.testkit";
 import {
@@ -78,13 +79,21 @@ describe("ReportingTargets", () => {
     await user.click(await screen.findByRole("button", { name: "Set target" }));
     await pickOption(
       user,
-      await screen.findByRole("combobox", { name: "Record scope" }),
+      await screen.findByRole("combobox", {
+        name: englishCopy["analytics.scopeLabel"],
+      }),
       "Sam Okafor",
     );
     expect(
-      screen.getByRole("combobox", { name: "Record scope" }).textContent,
+      screen.getByRole("combobox", {
+        name: englishCopy["analytics.scopeLabel"],
+      }).textContent,
     ).toContain("Sam Okafor");
-    await user.click(screen.getByRole("combobox", { name: "Record scope" }));
+    await user.click(
+      screen.getByRole("combobox", {
+        name: englishCopy["analytics.scopeLabel"],
+      }),
+    );
     expect(
       screen.queryByRole("option", { name: "Read only colleague" }),
     ).toBeNull();
@@ -119,9 +128,11 @@ describe("ReportingTargets", () => {
     ).toBeTruthy();
     expect(within(row).getByText("€1,140,000")).toBeTruthy();
     expect(within(row).getByText("Sales goals 2026 · 12 months")).toBeTruthy();
-    await userEvent
-      .setup()
-      .click(within(row).getByRole("button", { name: "Open sales goals" }));
+    await userEvent.setup().click(
+      within(row).getByRole("button", {
+        name: englishCopy["reporting.openGoals"],
+      }),
+    );
     expect(window.location.hash).toContain(
       `seller=${goalRoster.data[1]?.owner_id}`,
     );
@@ -141,7 +152,7 @@ describe("ReportingTargets", () => {
     });
     render(<ReportingTargets />);
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.queryByText("Nothing here yet.")).toBeNull();
+    expect(screen.queryByText(englishCopy["common.empty"])).toBeNull();
   });
 
   it("keeps loading while only next year's goals are still unread", async () => {
@@ -152,7 +163,7 @@ describe("ReportingTargets", () => {
     // Every read that will answer has answered once the timers run dry.
     await act(() => vi.advanceTimersByTimeAsync(60_000));
     expect(screen.getByRole("status")).toBeTruthy();
-    expect(screen.queryByText("Nothing here yet.")).toBeNull();
+    expect(screen.queryByText(englishCopy["common.empty"])).toBeNull();
   });
 
   it("says so when only next year's goals could not be read", async () => {
@@ -162,7 +173,7 @@ describe("ReportingTargets", () => {
     );
     render(<ReportingTargets />);
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.queryByText("Nothing here yet.")).toBeNull();
+    expect(screen.queryByText(englishCopy["common.empty"])).toBeNull();
   });
 
   it("lists no published goals among the retired targets", async () => {
@@ -174,7 +185,11 @@ describe("ReportingTargets", () => {
     const user = userEvent.setup();
     render(<ReportingTargets />);
     await screen.findAllByText("Sam Okafor");
-    await user.click(screen.getByRole("button", { name: "Retired targets" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["reporting.retiredTargets"],
+      }),
+    );
     await waitFor(() => expect(screen.queryByText("Sam Okafor")).toBeNull());
   });
 });

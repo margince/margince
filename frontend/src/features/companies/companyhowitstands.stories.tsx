@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { company, company360 } from "../../testing/company.fixtures";
 import {
   installFetchStub,
@@ -140,6 +141,8 @@ export const OneRated: Story = {
   play: async ({ canvasElement }) => {
     const card = within(canvasElement);
     await expect(await card.findByText("Strong")).toBeInTheDocument();
-    await expect(card.getAllByText("Not assessed").length).toBeGreaterThan(2);
+    await expect(
+      card.getAllByText(englishCopy["standing.notAssessed"]).length,
+    ).toBeGreaterThan(2);
   },
 };

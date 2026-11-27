@@ -285,7 +285,7 @@ const (
 	// re-running would risk a second effect from one human yes.
 	taskInterruptedMessage = "The approval for this call was consumed by an attempt that recorded no result, " +
 		"so whether the effect was carried out is not known here. Do not repeat the call; read the record, " +
-		"or the workspace audit log, to see what committed."
+		"or the company audit log, to see what committed."
 )
 
 // taskPollIntervalMs is what a client is asked to wait between polls. A human

@@ -6,6 +6,7 @@ import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { ContactRail } from "./contactrail";
 import "./contact360.css";
+import { en as englishCopy } from "../../i18n/en";
 import { listsMe, shortlist } from "../../testing/lists.fixtures";
 import {
   callMessengersRoute,
@@ -333,7 +334,9 @@ export const Lists: Story = {
       await within(canvasElement).findByRole("region", { name: "Lists" }),
     );
     await expect(
-      await lists.findByRole("button", { name: "Add to Shortlist" }),
+      await lists.findByRole("button", {
+        name: englishCopy["lists.addToShortlist"],
+      }),
     ).toBeVisible();
   },
 };
