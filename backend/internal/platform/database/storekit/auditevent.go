@@ -139,8 +139,10 @@ func insertAuditRows(ctx context.Context, tx pgx.Tx, action, entityType string, 
 	if err != nil {
 		return nil, err
 	}
-	if err := keepSourceAudits(ctx, tx, written, matched); err != nil {
-		return nil, err
+	if sourceEntities[entityType] {
+		if err := keepSourceAudits(ctx, tx, written, matched); err != nil {
+			return nil, err
+		}
 	}
 	return written, nil
 }

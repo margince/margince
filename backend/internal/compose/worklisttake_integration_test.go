@@ -18,6 +18,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
 // unheldTaskOn writes an overdue task on the contact through the real writer
@@ -50,6 +51,12 @@ func (r reminderEnv) auditRowsOf(t *testing.T, task ids.ActivityID) int {
 
 func TestAColleagueTakesAnUnheldTaskOnARecordTheyMayChange(t *testing.T) {
 	r := setupReminders(t)
+	actor, ok := principal.Actor(r.rep2)
+	if !ok {
+		t.Fatal("the colleague has no principal")
+	}
+	actor.SeatType = principal.SeatFull
+	r.rep2 = principal.WithActor(r.rep2, actor)
 	e := r.e
 	contact := e.SeedContact(t, "Dana Buyer", &e.Rep1)
 	task := r.unheldTaskOn(t, "Send the renewal terms", contact)

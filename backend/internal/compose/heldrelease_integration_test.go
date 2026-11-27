@@ -362,10 +362,11 @@ func TestAPreflightRefusalLeavesTheDraftPending(t *testing.T) {
 	svc := releaseService(t, e)
 	f := seedHeldDraft(t, e, svc)
 
-	// The purpose stops being answerable while the draft waits. Archiving it is
-	// how an admin retires a basis, and it is the kind of thing that happens in
-	// the days a draft can sit in an inbox.
-	e.WsExec(t, `UPDATE consent_purpose SET archived_at = now() WHERE key = 'business_correspondence'`)
+	// A legacy installation may already hold a retired purpose referenced by a
+	// pending draft. New writes refuse this state; the release must still check it.
+	e.WsExec(t, `ALTER TABLE consent_purpose DISABLE TRIGGER used_purpose_does_not_change;
+UPDATE consent_purpose SET archived_at = now() WHERE key = 'business_correspondence';
+ALTER TABLE consent_purpose ENABLE TRIGGER used_purpose_does_not_change`)
 
 	if _, err := svc.Decide(decider(e), f.approval, true, nil); err == nil {
 		t.Fatal("releasing with no answerable consent purpose succeeded, want a refusal")

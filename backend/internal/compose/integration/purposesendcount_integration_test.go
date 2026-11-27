@@ -61,14 +61,17 @@ func TestPurposeSendCountsReadWhatTheEngineJudged(t *testing.T) {
 	c.replyAs(t, "", "customer_service")               // a claimed kind with no key
 	c.replyAs(t, " Transactional", "customer_service") // a key that disagrees with the claim, as typed
 	c.replyAs(t, "Spring campaign 2026", "")           // a key no purpose defines
-	if _, err := c.Owner.Exec(context.Background(),
-		`UPDATE consent_purpose SET archived_at = now() WHERE key = 'marketing_email'`); err != nil {
+	c.replyAs(t, "marketing_email", "")
+	// Preserve a historical send under a purpose retired before the new guard.
+	if _, err := c.Owner.Exec(context.Background(), `
+ALTER TABLE consent_purpose DISABLE TRIGGER used_purpose_does_not_change;
+UPDATE consent_purpose SET archived_at = now() WHERE key = 'marketing_email';
+ALTER TABLE consent_purpose ENABLE TRIGGER used_purpose_does_not_change`); err != nil {
 		t.Fatal(err)
 	}
-	c.replyAs(t, "marketing_email", "") // a purpose archived before the send
 
 	want := []purposeSendCount{
-		{PurposeKey: "unknown", Sends: 3, Disputed: 1},
+		{PurposeKey: "unknown", Sends: 3, Disputed: 2},
 		{PurposeKey: "business_correspondence", Class: "business_correspondence", Sends: 1},
 		{PurposeKey: "transactional", Class: "transactional", Sends: 1, Disputed: 1},
 	}

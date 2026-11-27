@@ -543,11 +543,12 @@ func TestAChangeThatDoesNotCommitGivesItsReservationBack(t *testing.T) {
 // statements one more record adds to a bulk reassignment's preview or execution.
 // They are the counts measured with one read check per row, no re-read for
 // If-Match and no read-back for the caller. A lead's writer takes its own lock.
+// Each record also reads the trigger-source journal before its audit is written.
 var bulkReassignStatementsPerRecord = map[crmcontracts.BulkRecordType]int64{
-	crmcontracts.BulkRecordTypeContact: 21,
-	crmcontracts.BulkRecordTypeCompany: 15,
-	crmcontracts.BulkRecordTypeDeal:    11,
-	crmcontracts.BulkRecordTypeLead:    16,
+	crmcontracts.BulkRecordTypeContact: 22,
+	crmcontracts.BulkRecordTypeCompany: 16,
+	crmcontracts.BulkRecordTypeDeal:    12,
+	crmcontracts.BulkRecordTypeLead:    17,
 }
 
 func seedBulkCompanies(t *testing.T, e *integration.Env, owner ids.UUID, n int) []crmcontracts.BulkItem {

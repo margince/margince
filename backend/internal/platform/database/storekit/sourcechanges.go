@@ -49,6 +49,9 @@ func readSourceChanges(ctx context.Context, tx pgx.Tx) (map[string]sourceChange,
 }
 
 func sourceAuditRows(ctx context.Context, tx pgx.Tx, action, entityType string, rows []auditRow) (map[int]sourceChange, error) {
+	if !sourceEntities[entityType] {
+		return nil, nil
+	}
 	owner := database.CommitOwner(tx)
 	if !database.Memoized(owner) {
 		return nil, nil
