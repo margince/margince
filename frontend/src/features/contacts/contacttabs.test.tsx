@@ -15,7 +15,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { telUri } from "../../format/contacturi";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
-import { en as englishCopy } from "../../i18n/en";
+import { en } from "../../i18n/en";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { ContactDealsTab } from "./contactdeals";
@@ -209,9 +209,7 @@ describe("the timeline tab", () => {
     expect(
       screen.getByRole("button", { name: "All" }).getAttribute("aria-pressed"),
     ).toBe("false");
-    expect(
-      screen.queryByLabelText(englishCopy["timeline.filters.kind"]),
-    ).toBeNull();
+    expect(screen.queryByLabelText(en["timeline.filters.kind"])).toBeNull();
   });
 
   // The record's chronology holds the exchanges and the record's own edits, and
@@ -268,9 +266,7 @@ describe("the timeline tab", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={view} />);
 
     await user.click(screen.getByRole("button", { name: "Threads" }));
-    await user.click(
-      screen.getByLabelText(englishCopy["timeline.filters.kind"]),
-    );
+    await user.click(screen.getByLabelText(en["timeline.filters.kind"]));
 
     const listbox = await screen.findByRole("listbox");
     const offered = within(listbox)
@@ -289,14 +285,14 @@ describe("the timeline tab", () => {
 
     await pickOption(
       user,
-      screen.getByLabelText(englishCopy["timeline.filters.kind"]),
+      screen.getByLabelText(en["timeline.filters.kind"]),
       "Meetings",
     );
     await user.click(screen.getByRole("button", { name: "Threads" }));
 
     await waitFor(() =>
       expect(
-        screen.getByLabelText(englishCopy["timeline.filters.kind"]).textContent,
+        screen.getByLabelText(en["timeline.filters.kind"]).textContent,
       ).toContain("All kinds"),
     );
   });
@@ -347,7 +343,7 @@ describe("the timeline tab", () => {
   it("says the section is withheld rather than drawing it empty", () => {
     withProviders(<ContactTimelineTab contactId="p-1" view={withheld} />);
     expect(screen.queryByText(/Nothing has been logged/)).toBeNull();
-    expect(screen.getByText(englishCopy["state.withheld"])).toBeTruthy();
+    expect(screen.getByText(en["state.withheld"])).toBeTruthy();
   });
 
   // The same obligation on the new cut, which reads that same withheld
@@ -361,7 +357,7 @@ describe("the timeline tab", () => {
     await user.click(screen.getByRole("button", { name: "Threads" }));
 
     expect(screen.queryByText(/No conversations with them yet/)).toBeNull();
-    expect(screen.getByText(englishCopy["state.withheld"])).toBeTruthy();
+    expect(screen.getByText(en["state.withheld"])).toBeTruthy();
   });
 });
 
@@ -468,7 +464,7 @@ describe("Call on the timeline tab", () => {
 
     await pickOption(
       user,
-      screen.getByLabelText(englishCopy["timeline.filters.kind"]),
+      screen.getByLabelText(en["timeline.filters.kind"]),
       "Calls",
     );
 
@@ -482,9 +478,7 @@ describe("the deals tab", () => {
     withProviders(<ContactDealsTab view={view} />);
     expect(screen.getByText("Fleet renewal 2026")).toBeTruthy();
     expect(screen.getByText("Proposal")).toBeTruthy();
-    expect(
-      screen.getByText(englishCopy["co.roleLabel.economic_buyer"]),
-    ).toBeTruthy();
+    expect(screen.getByText(en["co.roleLabel.economic_buyer"])).toBeTruthy();
   });
 
   // The card draws its money, its close date and its company off the deal
@@ -627,12 +621,12 @@ describe("the deals tab", () => {
     withProviders(<ContactDealsTab view={view} />);
 
     const add = await screen.findByRole("button", {
-      name: englishCopy["rel.seatOnDeal"],
+      name: en["rel.seatOnDeal"],
     });
     await userEvent.click(add);
 
     expect(
-      screen.getByRole("heading", { name: englishCopy["rel.seatOnDeal"] }),
+      screen.getByRole("heading", { name: en["rel.seatOnDeal"] }),
     ).toBeTruthy();
 
     // NARROWED TO THE DEAL EDGE, asserted on what the picker SEARCHES.
@@ -732,7 +726,7 @@ describe("the deals tab", () => {
     // has answered rather than before it has run.
     await screen.findByText("Fleet renewal 2026");
     expect(
-      screen.queryByRole("button", { name: englishCopy["rel.seatOnDeal"] }),
+      screen.queryByRole("button", { name: en["rel.seatOnDeal"] }),
     ).toBeNull();
   });
 
@@ -805,7 +799,7 @@ describe("the deals tab", () => {
 
     // Awaited through a control the grant probe draws, so the absence below
     // is read after the probe has answered rather than before it ran.
-    await screen.findByRole("button", { name: englishCopy["rel.seatOnDeal"] });
+    await screen.findByRole("button", { name: en["rel.seatOnDeal"] });
     expect(screen.queryByText("Fleet renewal room")).toBeNull();
     expect(asked).toBe(false);
   });
@@ -897,7 +891,7 @@ describe("the meetings tab", () => {
     );
     await screen.findByText("Depot walkthrough");
     const actions = screen.getAllByRole("button", {
-      name: englishCopy["contact.meeting.brief"],
+      name: en["contact.meeting.brief"],
     });
     expect(actions.length).toBe(2);
     await userEvent.setup().click(actions[0]);
@@ -905,10 +899,6 @@ describe("the meetings tab", () => {
   });
 
   it("offers no brief for a meeting the reader may find but not read", async () => {
-    // The timeline carries discoverable-but-withheld rows on purpose, so the
-    // reader knows a conversation happened. The brief endpoint applies the
-    // stricter content gate, so a verb here would promise what their own grant
-    // refuses — and answer 404 when they took it up.
     serveMeetings([
       activity({
         id: "a-secret",
@@ -924,35 +914,27 @@ describe("the meetings tab", () => {
         onBriefMeeting={() => {}}
       />,
     );
-    // The row is DRAWN — the reader learns a meeting happened — and carries no
-    // verb. Its subject is redacted, which is the whole point of the state.
-    expect(
-      await screen.findByText(englishCopy["timeline.withheld"]),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["timeline.withheld"])).toBeTruthy();
     expect(screen.queryByText("Board session")).toBeNull();
     expect(
       screen.queryByRole("button", {
-        name: englishCopy["contact.meeting.brief"],
+        name: en["contact.meeting.brief"],
       }),
     ).toBeNull();
   });
 
   it("offers no brief when the surface cannot open one", async () => {
-    // Without the callback the verb would be a button that does nothing, which
-    // teaches a reader the feature is broken rather than absent.
     serveMeetings([held]);
     withProviders(<ContactMeetingsTab view={view} />);
     await screen.findByText("Depot walkthrough");
     expect(
       screen.queryByRole("button", {
-        name: englishCopy["contact.meeting.brief"],
+        name: en["contact.meeting.brief"],
       }),
     ).toBeNull();
   });
 
   it("names the meeting the reader picked, not the soonest one", async () => {
-    // The defect this replaces: the drawer always read next_meeting, so a
-    // brief opened from a past meeting described a different room.
     serveMeetings([held]);
     const briefed: string[] = [];
     withProviders(
@@ -963,16 +945,13 @@ describe("the meetings tab", () => {
     );
     await screen.findByText("Depot walkthrough");
     const actions = screen.getAllByRole("button", {
-      name: englishCopy["contact.meeting.brief"],
+      name: en["contact.meeting.brief"],
     });
-    // The booked meeting leads the tab; the held one follows it.
     await userEvent.setup().click(actions[1]);
     expect(briefed).toEqual(["a-2"]);
   });
 
   it("draws the prep note and its agenda verb on the booked meeting", async () => {
-    // The rung fires off the next meeting alone: a moment about a different
-    // claim (re-engagement, an overdue promise) has no meeting to sit on.
     const draftAgenda: components["schemas"]["ContactMomentAction"] = {
       kind: "draft_reply",
       label: "Draft agenda",
@@ -1008,7 +987,6 @@ describe("the meetings tab", () => {
     expect(screen.getByText("Upcoming")).toBeTruthy();
     expect(screen.getByText(/Prepare before the meeting/)).toBeTruthy();
     const draft = screen.getByRole("button", { name: "Draft agenda" });
-    // Beside the brief, the card's one filled verb, it is outlined with its ✦.
     expect(draft.classList.contains("btn-aiQuiet")).toBe(true);
     expect(draft.querySelector(".lucide-sparkles")).not.toBeNull();
     await userEvent.setup().click(draft);

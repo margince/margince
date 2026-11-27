@@ -143,6 +143,7 @@ const STORED_COLUMN_LABELS = new Map<string, MessageKey>([
 // this lookup carries no entity context, so `suppression_kind` rather than
 // `kind`.
 const SYNTHETIC_AUDIT_FIELD_LABELS = new Map<string, MessageKey>([
+  ["kind", "history.field.kind"],
   ["capability", "co.factField.capability"],
   ["certification", "co.factField.certification"],
   ["company_size", "history.field.size_band"],

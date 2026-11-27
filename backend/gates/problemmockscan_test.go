@@ -755,7 +755,13 @@ func refusalStatus(code int) bool { return code >= 400 && code <= 599 }
 func (r *problemFileReader) statusOf(entries []tsEntry) statusRead {
 	for _, entry := range entries {
 		if entry.key == "status" && !entry.spread {
-			return r.boundStatus(entry.value)
+			read := r.boundStatus(entry.value)
+			if !read.refusal && r.tree.is(entry.value.from+1, "(") {
+				if _, known := r.resolve(entry.value, nil, 0); !known {
+					read.refusal = true
+				}
+			}
+			return read
 		}
 	}
 	return statusRead{}
@@ -972,24 +978,4 @@ func (r *problemFileReader) readCall(call int, source codeSource) bool {
 		}
 	}
 	return false
-}
-
-// callStatus judges the status a call passes a helper. One it cannot follow
-// may be a refusal, so its code is judged.
-func (r *problemFileReader) callStatus(args []tsSpan, param *codeSource) (status int, refusal bool, passed *codeRead) {
-	if param == nil || param.index >= len(args) {
-		return 0, true, nil
-	}
-	if _, _, fallback := fallbackSides(r.tree, args[param.index]); fallback {
-		return 0, true, nil
-	}
-	read, ok := r.resolve(args[param.index], param.path, 0)
-	switch {
-	case ok && read.helper != "":
-		return 0, true, &read
-	case ok && len(read.literals) > 0:
-		status, refusal = refusalOf(r.tree, read.literals)
-		return status, refusal, nil
-	}
-	return 0, true, nil
 }

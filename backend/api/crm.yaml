@@ -14287,7 +14287,7 @@ paths:
       tags: [Leads]
       operationId: demoteLead
       x-mcp-tool: { verb: demote_lead, record_type: lead, tier: auto_execute, scope: write }
-      summary: Reverse a promotion (formulas §26) — the audited undo defined in ADR-0008 §4.
+      summary: Reverse a promotion and record the undo in History.
       description: |
         The documented reverse of POST /leads/{id}/promote, deterministic and conservative:
         it **blocks rather than orphans**.
@@ -53337,6 +53337,9 @@ components:
         open_minor: { type: integer, format: int64 }
         due_at: { type: string, format: date }
         days_overdue: { type: integer, minimum: 1 }
+        long_overdue:
+          type: boolean
+          description: Whether this invoice belongs to the installation's Long overdue group.
 
     CompanyFinanceSummary:
       type: object
@@ -82817,7 +82820,7 @@ components:
     OfferTemplate:
       type: object
       description: >-
-        A branded, organization-governed DE/EN PDF layout for offers (data-model §12.6).
+        A branded, organization-governed DE/EN PDF layout for offers.
         Mirrors the `offer_template` table. Deliberately carries no source/captured_by —
         like CustomField, this is organization-authored config, not a captured record;
         provenance lives in the audit row, not this schema.

@@ -198,137 +198,12 @@ func (s auditDoorSite) imageKeys(t *testing.T, _ callIndex) []string {
 	return keys
 }
 
-// resolveImage follows an image the call NAMES rather than spells, which is the
-// ordinary shape once a door already takes five arguments. Two forms, and both
-// are followed because a gate that read only the inline one would ratify the
-// rest — and a ratified site carries whatever keys it likes past the map.
-//
-//   - a LOCAL assigned a map literal a few lines up;
-//   - a PARAMETER of a small auditing helper, filled by its own callers. The
-//     keys are then every caller's, unioned: each is a payload this site can
-//     write.
-//
-// Anything else — a method's return, a value assembled across a package
-// boundary — is reported rather than guessed at.
-func (s auditDoorSite) resolveImage(arg ast.Expr, callers callIndex) ([]*ast.CompositeLit, bool) {
-	if literal, isLiteral := arg.(*ast.CompositeLit); isLiteral {
-		return []*ast.CompositeLit{literal}, true
-	}
-	if literals, built := callers.returnedLiterals(arg); built {
-		return literals, true
-	}
-	named, isNamed := arg.(*ast.Ident)
-	fn := s.use.decl
-	if !isNamed || fn == nil {
-		return nil, false
-	}
-	if local, found := localLiteral(fn, named.Name); found {
-		return []*ast.CompositeLit{local}, true
-	}
-	at, isParam := paramIndex(fn, named.Name)
-	if !isParam {
-		return nil, false
-	}
-	return callers.literalsAt(fn.Name.Name, at)
-}
-
-// localLiteral is the map literal this function assigns to a name. The LAST
-// assignment wins, so a map declared empty and then replaced by a literal reads
-// as the literal.
-func localLiteral(fn *ast.FuncDecl, name string) (*ast.CompositeLit, bool) {
-	var found *ast.CompositeLit
-	ast.Inspect(fn.Body, func(n ast.Node) bool {
-		assign, isAssign := n.(*ast.AssignStmt)
-		if !isAssign {
-			return true
-		}
-		for i, target := range assign.Lhs {
-			ident, isIdent := target.(*ast.Ident)
-			if !isIdent || ident.Name != name || i >= len(assign.Rhs) {
-				continue
-			}
-			if literal, isLiteral := assign.Rhs[i].(*ast.CompositeLit); isLiteral {
-				found = literal
-			}
-		}
-		return true
-	})
-	return found, found != nil
-}
-
-// paramIndex is where a name sits in a function's parameter list, counting the
-// grouped spelling (`before, after map[string]any`) as the two it declares.
-func paramIndex(fn *ast.FuncDecl, name string) (int, bool) {
-	at := 0
-	for _, field := range fn.Type.Params.List {
-		for _, ident := range field.Names {
-			if ident.Name == name {
-				return at, true
-			}
-			at++
-		}
-	}
-	return 0, false
-}
-
 // callIndex is what a package's own functions are called with, and what they
 // return, by name.
 type callIndex struct {
 	calls   map[string][]*ast.CallExpr
 	returns map[string][]*ast.CompositeLit
 	info    *types.Info
-}
-
-// returnedLiterals reads an image a small builder returns — `handleImage(…)`,
-// `reachabilityImage(…)`. The builders are one-line functions whose whole body
-// is the literal, so following them costs nothing and buys the sites that would
-// otherwise be ratified with a reason that amounted to "it is behind a helper".
-func (c callIndex) returnedLiterals(arg ast.Expr) ([]*ast.CompositeLit, bool) {
-	call, isCall := arg.(*ast.CallExpr)
-	if !isCall {
-		return nil, false
-	}
-	var name string
-	switch fn := call.Fun.(type) {
-	case *ast.Ident:
-		name = fn.Name
-	case *ast.SelectorExpr:
-		name = fn.Sel.Name
-	default:
-		return nil, false
-	}
-	literals := c.returns[name]
-	return literals, len(literals) > 0
-}
-
-// literalsAt reads the map literals a function's callers pass at one position.
-// A caller that names rather than spells its argument is reported, because the
-// union would otherwise be short by exactly that caller's keys.
-func (c callIndex) literalsAt(fn string, at int) ([]*ast.CompositeLit, bool) {
-	calls := c.calls[fn]
-	if len(calls) == 0 {
-		return nil, false
-	}
-	var literals []*ast.CompositeLit
-	for _, call := range calls {
-		if at >= len(call.Args) {
-			return nil, false
-		}
-		if isNilExpr(c.info, call.Args[at]) {
-			continue
-		}
-		switch arg := call.Args[at].(type) {
-		case *ast.CompositeLit:
-			literals = append(literals, arg)
-		default:
-			built, isBuilt := c.returnedLiterals(arg)
-			if !isBuilt {
-				return nil, false
-			}
-			literals = append(literals, built...)
-		}
-	}
-	return literals, true
 }
 
 // callsWithin indexes a package's calls to its own plain functions, so an
@@ -385,15 +260,6 @@ func (s auditDoorSite) imageArgs() []ast.Expr {
 		}
 	}
 	return args
-}
-
-// allElements flattens the literals one image resolved to.
-func allElements(literals []*ast.CompositeLit) []ast.Expr {
-	var elements []ast.Expr
-	for _, literal := range literals {
-		elements = append(elements, literal.Elts...)
-	}
-	return elements
 }
 
 // isNilExpr answers the untyped nil, which every door admits for an image

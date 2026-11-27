@@ -23,7 +23,7 @@ var PaymentLongOverdueDays = config.DefineStored(config.Spec[int]{
 		}
 		return nil
 	},
-	Doc: "Days past the due date before Home groups invoices at the bottom. Company totals stay the same.",
+	Doc: "Days past the due date before Home groups invoices at the end. Company totals stay the same.",
 }, config.Store{Cacheable: true, RBACObject: installationSettingsObject, AuditVerb: installationAuditVerb, SurvivesDataReset: true, MachineryApplied: true})
 
 // PaymentAgeForFinance applies the grouping preference without granting settings access.

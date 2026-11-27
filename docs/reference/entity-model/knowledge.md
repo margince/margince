@@ -51,7 +51,7 @@ The 3 tables owned by `knowledge`, as the migrations build them. [Back to the en
 | `min_similarity` | `double precision` |  | The grounding floor in force: the cosine a passage must reach before it may be cited at all. |
 | `name` | `text` | yes |  |
 | `reindexing` | `boolean`, default `false` | yes | A re-embed is in flight; every ask answers not_ready until it finishes. |
-| `topic_statement` | `text` | yes | What this corpus covers, in the workspace's own words. |
+| `topic_statement` | `text` | yes | What this corpus covers, in the organization's own words. |
 | `archived_at` | `timestamp with time zone` |  | When the set was archived; absent or null while it is live. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |

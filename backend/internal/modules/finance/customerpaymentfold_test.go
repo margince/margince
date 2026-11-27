@@ -5,6 +5,7 @@ package finance
 
 import (
 	"math"
+	"slices"
 	"testing"
 	"time"
 
@@ -111,5 +112,42 @@ func TestPaymentCursorFollowsRecentInvoicesAndLargeSameDayAmounts(t *testing.T) 
 				t.Fatalf("follows=%v want%v", got, tc.want)
 			}
 		})
+	}
+}
+
+func TestSameDayCustomerPaymentsHaveOneOrderAcrossCurrenciesAndAgeGroups(t *testing.T) {
+	a, b, c := openapi_types.UUID(ids.NewV7()), openapi_types.UUID(ids.NewV7()), openapi_types.UUID(ids.NewV7())
+	invoices := []crmcontracts.CustomerPaymentInvoice{
+		{CompanyId: a, Currency: "EUR", OpenMinor: 5},
+		{CompanyId: b, Currency: "EUR", OpenMinor: 10},
+		{CompanyId: c, Currency: "USD", OpenMinor: 100},
+	}
+	for _, days := range []int{4, 400} {
+		for _, order := range [][]int{{0, 1, 2}, {0, 2, 1}, {1, 0, 2}, {1, 2, 0}, {2, 0, 1}, {2, 1, 0}} {
+			for range 10 {
+				fold := newPaymentFold()
+				fold.age = 365
+				for _, at := range order {
+					invoice := invoices[at]
+					invoice.DaysOverdue = days
+					if err := fold.add(invoice); err != nil {
+						t.Fatal(err)
+					}
+				}
+				out := crmcontracts.CustomerPayments{}
+				fold.fill(&out, ids.NewV7())
+				customers := out.Customers
+				if days > 365 {
+					customers = out.LongOverdue.Customers
+				}
+				var got []openapi_types.UUID
+				for _, customer := range customers {
+					got = append(got, customer.CompanyId)
+				}
+				if !slices.Equal(got, []openapi_types.UUID{b, a, c}) {
+					t.Fatalf("currency/amount order changed with insertion order %v: %v", order, got)
+				}
+			}
+		}
 	}
 }

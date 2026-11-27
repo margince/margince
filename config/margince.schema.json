@@ -1762,7 +1762,7 @@
           "default": 43200
         },
         "payment_long_overdue_days": {
-          "description": "Days overdue after which Home folds invoices into Long overdue. Company totals stay the same.",
+          "description": "Days past the due date before Home groups invoices at the end. Company totals stay the same.",
           "type": [
             "integer",
             "null"

@@ -9,7 +9,7 @@ import { pickOption } from "../../design-system/select-testing";
 import { formatDate } from "../../format/format";
 import { useLocale } from "../../i18n";
 import { en as englishCopy } from "../../i18n/en";
-import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "./aicaches";
+import { LANGUAGE_DEPENDENT_QUERY_PREFIXES } from "../../lib/aicaches";
 import { InstallationSettingsCard } from "./installation-settings";
 import {
   backendFor,

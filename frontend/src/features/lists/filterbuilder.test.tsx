@@ -8,7 +8,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
-import { en as englishCopy } from "../../i18n/en";
+import { en } from "../../i18n/en";
 import type { VocabularyField } from "../../lib/filterdata";
 import {
   encode,
@@ -199,7 +199,7 @@ describe("what the builder offers", () => {
     // offering either would build a clause the engine refuses.
     expect(
       screen.getByRole("option", {
-        name: englishCopy["filters.op.onOrAfterDate"],
+        name: en["filters.op.onOrAfterDate"],
       }),
     ).toBeTruthy();
     expect(screen.queryByRole("option", { name: "contains" })).toBeNull();
@@ -222,7 +222,7 @@ describe("what the builder offers", () => {
     expect(screen.getByRole("option", { name: "is at least" })).toBeTruthy();
     expect(
       screen.queryByRole("option", {
-        name: englishCopy["filters.op.onOrAfterDate"],
+        name: en["filters.op.onOrAfterDate"],
       }),
     ).toBeNull();
   });
@@ -238,9 +238,7 @@ describe("what the builder offers", () => {
     // The badge tells a reader this column is theirs and not the product's;
     // AC-filters-and-views-3 asks for it by name. Neutral, because the accent
     // is the page's one primary action.
-    const badge = screen
-      .getByText(englishCopy["filters.customBadge"])
-      .closest(".badge");
+    const badge = screen.getByText(en["filters.customBadge"]).closest(".badge");
     expect(badge?.className).not.toContain("badge-accent");
     expect(screen.queryByText("owner id")).toBeNull();
   });
@@ -278,7 +276,7 @@ describe("what the builder offers", () => {
       <Harness start={newGroup("and", [newLeaf("owner_id", "eq", "u1")])} />,
     );
 
-    expect(screen.queryByText(englishCopy["filters.customBadge"])).toBeNull();
+    expect(screen.queryByText(en["filters.customBadge"])).toBeNull();
   });
 });
 
@@ -316,7 +314,7 @@ describe("an id clause names a record, not a uuid", () => {
     // not a uuid box either: nobody types one from memory, and one typed wrong
     // matches nothing and reads as "no companies match".
     const box = await screen.findByRole("combobox", {
-      name: englishCopy["filters.searchRecords"],
+      name: en["filters.searchRecords"],
     });
     expect(screen.queryByRole("combobox", { name: "Value" })).toBeNull();
 
@@ -348,17 +346,13 @@ describe("an id clause names a record, not a uuid", () => {
     );
 
     // A list with no rows and no line above it reads as a confident "this
-    // workspace has no such company", which is a settled answer to a question
-    // that got one — the exact failure this whole surface exists to prevent.
     await user.type(
       await screen.findByRole("combobox", {
-        name: englishCopy["filters.searchRecords"],
+        name: en["filters.searchRecords"],
       }),
       "zzz",
     );
-    expect(
-      await screen.findByText(englishCopy["filters.noRecordMatches"]),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["filters.noRecordMatches"])).toBeTruthy();
   });
 
   it("names records one at a time for a list clause, and never as free text", async () => {
@@ -368,11 +362,6 @@ describe("an id clause names a record, not a uuid", () => {
       <Harness start={newGroup("and", [newLeaf("owner_id", "in", [])])} />,
     );
 
-    // `in` used to win over the reference and hand back a token box, so every
-    // id field's LIST was free text — a uuid typed wrong there compiles,
-    // matches nothing, and reads as a settled "no rows" exactly as the single
-    // case did. The operator changes how many records are named, not whether
-    // they are chosen.
     expect(screen.queryByRole("textbox", { name: "Values" })).toBeNull();
 
     await pickOption(
@@ -390,7 +379,6 @@ describe("an id clause names a record, not a uuid", () => {
       and: [{ field: "owner_id", op: "in", value: ["u-1", "u-2"] }],
     });
 
-    // And a record already named can be dropped, or a list is a one-way door.
     await user.click(screen.getByRole("button", { name: "Remove Ann Lee" }));
     expect(wire()).toEqual({
       and: [{ field: "owner_id", op: "in", value: ["u-2"] }],
@@ -405,12 +393,9 @@ describe("an id clause names a record, not a uuid", () => {
       <Harness start={newGroup("and", [newLeaf("company_id", "in", [])])} />,
     );
 
-    // The unbounded target takes the same rule through its own control: the
-    // search box stays open under what the clause already holds, because the
-    // next pick is the point.
     await user.type(
       await screen.findByRole("combobox", {
-        name: englishCopy["filters.searchRecords"],
+        name: en["filters.searchRecords"],
       }),
       "north",
     );
@@ -421,7 +406,7 @@ describe("an id clause names a record, not a uuid", () => {
     });
     expect(
       screen.getByRole("combobox", {
-        name: englishCopy["filters.searchRecords"],
+        name: en["filters.searchRecords"],
       }),
     ).toBeTruthy();
   });
@@ -434,9 +419,6 @@ describe("an id clause names a record, not a uuid", () => {
       />,
     );
 
-    // `exists` on an id field is a two-way question the operator itself asked, so
-    // offering a record to compare against would ask for an operand the engine
-    // ignores. The operator arms come first in the control for that reason.
     expect(screen.queryByRole("combobox", { name: "Value" })).toBeNull();
     expect(screen.getByRole("button", { name: "has a value" })).toBeTruthy();
   });
@@ -459,8 +441,6 @@ describe("when a roster cannot be read", () => {
       <Harness start={newGroup("and", [newLeaf("owner_id", "eq", "")])} />,
     );
 
-    // Not an empty dropdown: that would claim this workspace has no seats, and
-    // would leave the reader unable to write the clause at all.
     expect(await screen.findByRole("textbox", { name: "Value" })).toBeTruthy();
     expect(screen.queryByRole("combobox", { name: "Value" })).toBeNull();
   });
@@ -495,9 +475,6 @@ describe("a closed set is picked, not typed", () => {
       />,
     );
 
-    // No text box at all for a closed set. That is the whole fix: a free box
-    // over these values let `Gold` through, which compiled, matched nothing, and
-    // reported "0 match" as a settled answer.
     expect(screen.queryByRole("textbox", { name: "Value" })).toBeNull();
     const listed = (await screen.findByRole("combobox", { name: "Value" }))
       .textContent;
@@ -511,8 +488,6 @@ describe("a closed set is picked, not typed", () => {
       <Harness start={newGroup("and", [newLeaf("full_name", "eq", "")])} />,
     );
 
-    // The other half of the rule: `text` has no closed set, so a box is right
-    // there and turning every field into a dropdown would be the opposite error.
     await user.type(
       await screen.findByRole("textbox", { name: "Value" }),
       "ann",
@@ -531,10 +506,9 @@ describe("editing the tree", () => {
     render(<Harness start={newGroup("and", [])} />);
 
     await user.click(
-      screen.getByRole("button", { name: englishCopy["filters.addClause"] }),
+      screen.getByRole("button", { name: en["filters.addClause"] }),
     );
 
-    // No field until the reader picks one, and so no operator or value yet.
     expect(wire()).toEqual({ and: [{ field: "", op: "eq", value: "" }] });
     expect(screen.queryByRole("combobox", { name: "Operator" })).toBeNull();
   });
@@ -575,8 +549,6 @@ describe("editing the tree", () => {
       "Created",
     );
 
-    // A date has no `contains`, so the clause falls back to the new field's first
-    // admitted operator rather than keeping one that would be refused.
     const after = wire();
     expect(after.and[0].field).toBe("created_at");
     expect(after.and[0].op).toBe("eq");
@@ -611,8 +583,6 @@ describe("editing the tree", () => {
       "partner",
     );
 
-    // A two-way choice always shows one arm pressed, so the clause holds that
-    // arm: a blank behind a pressed "yes" would hold the preview back unseen.
     expect(wire()).toEqual({
       and: [{ field: "cf_partner", op: "eq", value: true }],
     });
@@ -630,9 +600,6 @@ describe("editing the tree", () => {
       />,
     );
 
-    // "-" is neither a number nor a mistake; coercing it would either move the
-    // count or refuse a clause somebody is still typing. It stays text until it
-    // parses, and then becomes a number the engine will accept.
     await user.type(screen.getByLabelText("Value"), "-");
     expect(wire().and[0].value).toBe("-");
 
@@ -681,11 +648,10 @@ describe("the join between conditions", () => {
     expect(words()).toEqual(["and", "and"]);
     await user.click(screen.getAllByRole("button", { name: MATCH_ALL })[1]);
 
-    // "and" binds tighter, so the first two stay together as one run.
     expect(wire()).toEqual({ or: [{ and: [owner, name] }, score] });
     expect(words()).toEqual(["and", "or"]);
     expect(
-      screen.getByRole("group", { name: englishCopy["filters.group.all"] }),
+      screen.getByRole("group", { name: en["filters.group.all"] }),
     ).toBeTruthy();
   });
 
@@ -729,7 +695,7 @@ describe("the join between conditions", () => {
     );
 
     const run = screen.getByRole("group", {
-      name: englishCopy["filters.group.all"],
+      name: en["filters.group.all"],
     });
     await user.click(within(run).getByRole("button", { name: MATCH_ALL }));
 
@@ -756,8 +722,6 @@ describe("groups", () => {
 
     await user.click(screen.getByRole("button", { name: "Add a group" }));
 
-    // The opposite join, holding a condition: an empty group would stop the
-    // count until it was filled.
     expect(wire()).toEqual({
       and: [
         { field: "owner_id", op: "eq", value: "u1" },
@@ -765,7 +729,7 @@ describe("groups", () => {
       ],
     });
     expect(
-      screen.getByRole("group", { name: englishCopy["filters.group.any"] }),
+      screen.getByRole("group", { name: en["filters.group.any"] }),
     ).toBeTruthy();
   });
 
@@ -774,7 +738,7 @@ describe("groups", () => {
     render(<Harness start={newGroup("and", [])} />);
 
     expect(
-      screen.getByRole("button", { name: englishCopy["filters.addClause"] }),
+      screen.getByRole("button", { name: en["filters.addClause"] }),
     ).toBeTruthy();
     expect(screen.queryByRole("button", { name: "Add a group" })).toBeNull();
   });
@@ -791,14 +755,12 @@ describe("groups", () => {
       />,
     );
 
-    // One condition has no connector word between rows, so the head is the
-    // only place this group's join can be seen and changed.
     const head = screen.getByRole("group", {
-      name: englishCopy["filters.group.match"],
+      name: en["filters.group.match"],
     });
     await user.click(
       within(head).getByRole("button", {
-        name: englishCopy["filters.group.all"],
+        name: en["filters.group.all"],
       }),
     );
 
@@ -806,7 +768,7 @@ describe("groups", () => {
       and: [{ field: "full_name", op: "contains", value: "ann" }],
     });
     expect(
-      screen.getByRole("group", { name: englishCopy["filters.group.all"] }),
+      screen.getByRole("group", { name: en["filters.group.all"] }),
     ).toBeTruthy();
   });
 
@@ -823,7 +785,7 @@ describe("groups", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: englishCopy["filters.addToGroup"] }),
+      screen.getByRole("button", { name: en["filters.addToGroup"] }),
     );
     expect(wire().and[1]).toEqual({
       or: [
@@ -831,10 +793,9 @@ describe("groups", () => {
         { field: "", op: "eq", value: "" },
       ],
     });
-    // The group's own offer of a group, named apart from the root's.
     expect(
       screen.getByRole("button", {
-        name: englishCopy["filters.addGroupToGroup"],
+        name: en["filters.addGroupToGroup"],
       }),
     ).toBeTruthy();
   });
@@ -855,7 +816,7 @@ describe("groups", () => {
       screen.getByRole("button", { name: "Remove Name condition" }),
     );
 
-    expect(screen.getByText(englishCopy["filters.emptyGroup"])).toBeTruthy();
+    expect(screen.getByText(en["filters.emptyGroup"])).toBeTruthy();
     expect(wire()).toEqual({
       and: [{ field: "owner_id", op: "eq", value: "u1" }, { or: [] }],
     });
@@ -874,17 +835,15 @@ describe("groups", () => {
     );
 
     await user.click(
-      screen.getByRole("button", { name: englishCopy["filters.removeGroup"] }),
+      screen.getByRole("button", { name: en["filters.removeGroup"] }),
     );
 
-    // The clause beside the group survives: removal names a node, and the root is
-    // not offered a remove control at all.
     expect(wire()).toEqual({
       and: [{ field: "owner_id", op: "eq", value: "u1" }],
     });
     expect(
       screen.queryByRole("button", {
-        name: englishCopy["filters.removeGroup"],
+        name: en["filters.removeGroup"],
       }),
     ).toBeNull();
   });
@@ -916,11 +875,9 @@ describe("groups", () => {
       />,
     );
 
-    // Every group holds two conditions. Depths 2 and 3 may still nest; depth 4
-    // may not, or the tree is one the server refuses as filter_too_deep.
     expect(
       screen.getAllByRole("button", {
-        name: englishCopy["filters.addGroupToGroup"],
+        name: en["filters.addGroupToGroup"],
       }),
     ).toHaveLength(2);
     expect(screen.getByRole("button", { name: "Add a group" })).toBeTruthy();
@@ -941,7 +898,6 @@ describe("a proposed condition", () => {
 
     expect(document.querySelectorAll("[data-proposed]")).toHaveLength(2);
     expect(screen.getAllByText("Proposed")).toHaveLength(2);
-    // The mark is the editor's alone: the wire is the same filter unmarked.
     expect(JSON.stringify(wire())).not.toContain("proposed");
   });
 
@@ -998,7 +954,6 @@ describe("the value control follows the operator, then the type", () => {
       />,
     );
 
-    // The token control, not a text box: `in` is a set.
     expect(screen.getByRole("textbox", { name: "Values" })).toBeTruthy();
   });
 
@@ -1033,8 +988,6 @@ describe("the value control follows the operator, then the type", () => {
 
     await user.click(screen.getByRole("button", { name: "is empty" }));
 
-    // `exists: false` is the reading "has no value here" — a real answer, not an
-    // unfilled one, which is why the tree stays complete.
     expect(wire()).toEqual({
       and: [{ field: "full_name", op: "exists", value: false }],
     });

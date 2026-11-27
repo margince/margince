@@ -5,6 +5,7 @@ package gates
 
 import (
 	"go/ast"
+	"go/token"
 	"go/types"
 )
 
@@ -57,6 +58,15 @@ func (r historyImageReader) imageFieldRead(in historyImageArg, field string, dep
 		known := true
 		found := false
 		ast.Inspect(in.decl.Body, func(node ast.Node) bool {
+			if address, ok := node.(*ast.UnaryExpr); ok && address.Op == token.AND && (in.before == 0 || address.Pos() < in.before) {
+				escaped := address.X
+				if selected, ok := escaped.(*ast.SelectorExpr); ok && selected.Sel.Name == field {
+					escaped = selected.X
+				}
+				if name, ok := escaped.(*ast.Ident); ok && in.pkg.info.ObjectOf(name) == object {
+					known = false
+				}
+			}
 			if spec, ok := node.(*ast.ValueSpec); ok {
 				for at, name := range spec.Names {
 					if in.pkg.info.Defs[name] != object {

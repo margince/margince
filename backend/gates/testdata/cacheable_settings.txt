@@ -22,6 +22,7 @@ installation.gmail_watch_scan_interval_seconds
 installation.graph_watch_renew_within_hours
 installation.graph_watch_scan_interval_seconds
 installation.name
+installation.payment_long_overdue_days
 installation.technical_backfill_interval_seconds
 installation.time_format
 installation.time_scan_interval_seconds

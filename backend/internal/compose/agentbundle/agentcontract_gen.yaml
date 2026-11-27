@@ -117,7 +117,7 @@ tags:
   - name: Views
     description: Per-user saved views (columns, sort, filter state) for a resource.
   - name: CustomFields
-    description: Company-defined runtime custom fields on core objects — the catalog plus the governed schema-change engine.
+    description: Organization-defined runtime custom fields on core objects — the catalog plus the governed schema-change engine.
   - name: Reports
     description: Run validated, typed reports against a clean core.
   - name: Search
@@ -137,7 +137,7 @@ tags:
       Where a generated claim came from. Every sentence these surfaces write carries the records it was written from, and this is what a reader gets when they open one.
   - name: Knowledge
     description: >-
-      Company-uploaded document corpora and the grounded ask over them — answers built only from what was filed, or a refusal that says which of the two it is.
+      Organization-uploaded document corpora and the grounded ask over them — answers built only from what was filed, or a refusal that says which of the two it is.
   - name: Assignments
     description: Who is responsible for a record — administered roles, and the colleagues or teams holding them. Responsibility, never access.
   - name: Bulk
@@ -337,10 +337,10 @@ paths:
       operationId: getJobHealth
       security: [{bearerAuth: []}]
       summary: What the background system is holding, and whose work failed.
-      description: 'Gated by the `job_health` read grant (admin and ops hold it by default). Reports the caller''s own company''s background jobs by kind — waiting, running, retrying, and dead — plus the untenanted dispatcher rows that fan work out to every company. Another company''s jobs are never included: river_job carries no company column and therefore no RLS, so this endpoint imposes the scope itself. Failure text is the job layer''s own vetted sentence, never a worker''s raw cause (that column is fleet-visible and has no redaction path).'
+      description: 'Gated by the `job_health` read grant (admin and ops hold it by default). Reports the caller''s own organization''s background jobs by kind — waiting, running, retrying, and dead — plus the untenanted dispatcher rows that fan work out to every organization. Another organization''s jobs are never included: river_job carries no organization column and therefore no RLS, so this endpoint imposes the scope itself. Failure text is the job layer''s own vetted sentence, never a worker''s raw cause (that column is fleet-visible and has no redaction path).'
       responses:
         '200':
-          description: The company's background-job health.
+          description: The organization's background-job health.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/JobHealth'}
@@ -381,7 +381,7 @@ paths:
       description: 'Gated by the `job_health` read grant (admin and ops hold it by default). Reports how much is waiting on a sender decision or a thread result, by mailbox, plus the classifier queue as a whole. COUNTS AND AGES ONLY — never a subject, a body, or the reason a thread was held: those describe the correspondence, and an operational page is not an exemption from the capture-privacy boundary.'
       responses:
         '200':
-          description: The company's capture-queue health.
+          description: The organization's capture-queue health.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/CaptureHealth'}
@@ -956,7 +956,7 @@ paths:
       summary: The whole contact record page in one round trip — identity, employments, buying roles, strength, who-knows-them, timeline, consent, provenance.
       description: |-
         The contact half of the one-composite-read doctrine, assembled inside ONE
-        company transaction so the sections describe one consistent moment rather than a
+        organization transaction so the sections describe one consistent moment rather than a
         stack of independently-timed round trips. `as_of` stamps that moment; the isolation
         level is Read Committed, so a write committed mid-read may land in a later section —
         the stamp is what makes that honest rather than hidden.
@@ -1915,7 +1915,7 @@ paths:
             Include this installation's own company. It is excluded by default because this list
             answers "which companies are we selling to", and the company running the CRM is not one
             of them. Modeled on `include_archived`: a class of rows
-            almost never wanted, never silently unreachable. Surfaces whose subject IS the company
+            almost never wanted, never silently unreachable. Surfaces whose subject IS the organization
             — recording that a contact works here, own-company project work — set it.
         - $ref: '#/components/parameters/CapturedByKind'
         - $ref: '#/components/parameters/AiWritten'
@@ -2046,7 +2046,7 @@ paths:
       operationId: createCompany
       summary: Create a company.
       description: |-
-        Domains are normalized/lowercased and unique per company (409 on collision).
+        Domains are normalized/lowercased and unique per organization (409 on collision).
         A `parent_company_id` that names no company the caller can read answers 422 naming
         `parent_company_id`, the same for a missing company and for one hidden by row scope.
 
@@ -2093,7 +2093,7 @@ paths:
         address's domain or a parent of it, the narrowest such domain first. It matches as
         the daily link reconcile and `listCompanyLinkCandidates` do: an address on
         `eu.acme.example` answers the company on `acme.example`. Consumer mail for this
-        company and a domain refused a company never answer, even when a company carries
+        organization and a domain refused a company never answer, even when a company carries
         the domain. A company the caller cannot read is never named.
       parameters:
         - name: email
@@ -2236,7 +2236,7 @@ paths:
         `roll-up(node) = self(node) + Σ roll-up(readable child)` over the parent_company_id tree,
         walked with one bounded indexed recursive query. A child the caller cannot read
         contributes nothing and is named in `restricted_excluded` — never silently summed.
-        All money converts to the company base currency. An open deal whose currency has no
+        All money converts to the organization base currency. An open deal whose currency has no
         stored FX rate fails the whole read with `422 fx_rate_unavailable` rather than
         substituting a rate of 1. A won deal is valued at the base amount frozen when it was
         won. `closed_won` adds the won deals that have one, and `closed_won_coverage` says how many
@@ -2366,7 +2366,7 @@ paths:
       operationId: getCompany360
       summary: The whole company record page in one round trip — profile, contacts, deals, timeline, tags, approvals, next steps.
       description: |-
-        One composite read assembled inside ONE company transaction, so the sections
+        One composite read assembled inside ONE organization transaction, so the sections
         describe one consistent moment rather than a stack of independently-timed round
         trips. `as_of` stamps that moment; the isolation level is Read Committed, so a
         write committed mid-read may land in a later section — the stamp is what makes
@@ -2599,8 +2599,8 @@ paths:
       description: |-
         A contact is a candidate when it is live and not merged, the caller can read and
         change it, one of its live email addresses is at one of this company's domains or a
-        subdomain of one, it is no company seat, and it holds no current employment at this
-        company. A domain that is consumer mail for this company never matches, even when
+        subdomain of one, it is no organization seat, and it holds no current employment at this
+        company. A domain that is consumer mail for this organization never matches, even when
         the company carries it. `linkCompanyContacts` accepts exactly these contacts.
       responses:
         '200':
@@ -3409,7 +3409,7 @@ paths:
         private capture rows and live record shares, is applied before totals,
         counts, previews and pages. The payment read also requires company ownership,
         a shared owner team, an explicit read share, or an all-rows grant;
-        company-readable company identity alone does not grant financial scope. Hidden accounts contribute nothing to the response.
+        organization-readable company identity alone does not grant financial scope. Hidden accounts contribute nothing to the response.
         Only the current accounting connection and its live customer links contribute.
         Disputed invoices and former customers are excluded from collection prompts.
         Amounts stay in their invoice currency; totals in different currencies stay separate.
@@ -4265,7 +4265,7 @@ paths:
       tags: [Deals]
       operationId: dismissDealSuggestion
       security: [{bearerAuth: []}]
-      summary: Record that the suggestion is not a deal, for the whole company.
+      summary: Record that the suggestion is not a deal, for the whole organization.
       description: |-
         Audited. Nobody is offered this evidence again, and the company is
         suggested again only on evidence newer than the dismissal. `409
@@ -5843,7 +5843,7 @@ paths:
       operationId: getProject360
       summary: The whole project page in one round trip — the project, its company, its phase history, its deals, stakeholders, contracts, documents, commitments, timeline and filing coverage.
       description: |-
-        One composite read assembled inside ONE company transaction, so the sections describe
+        One composite read assembled inside ONE organization transaction, so the sections describe
         one consistent moment rather than a stack of independently-timed round trips. `as_of`
         stamps that moment; the isolation level is Read Committed, so a write committed mid-read
         may land in a later section — the stamp is what makes that honest rather than hidden.
@@ -6094,7 +6094,7 @@ paths:
       security: [{bearerAuth: []}]
       summary: Create a pipeline.
       description: |-
-        At most one default pipeline per company (409 if a second default). The opening
+        At most one default pipeline per organization (409 if a second default). The opening
         `stages` keep the ladder's shape: a won or lost stage above an open one is refused
         `422` with the code `closing_stage_before_open`, and two stages naming one position
         with `duplicate`. A ladder without a won or without a lost stage gets the missing one
@@ -7195,7 +7195,7 @@ paths:
       security: [{bearerAuth: []}]
       summary: Pick the message back up — the undo behind every set-aside verb.
       description: |-
-        Clears what THIS reader set aside, and, with `scope=thread`, the company-wide `not_sales`
+        Clears what THIS reader set aside, and, with `scope=thread`, the organization-wide `not_sales`
         judgement. The two are separate because their reach is: a rep undoing their own snooze must
         not also re-admit a thread a colleague ruled out.
 
@@ -7209,7 +7209,7 @@ paths:
           schema: {type: string, enum: [mine, thread], default: mine}
           description: |-
             `mine` clears this reader's own snooze or not-mine. `thread` withdraws the
-            company-wide not-sales judgement, which anybody who can read the message may do:
+            organization-wide not-sales judgement, which anybody who can read the message may do:
             the judgement was never one contact's property.
       responses:
         '204': {description: 'Picked up, or was never put down.'}
@@ -8048,7 +8048,7 @@ paths:
       summary: The caller's own messages waiting to be sent.
       description: |-
         Scheduled mail is the SENDER's own. An unsent message's body and its
-        blind-copy list are not company-readable the way a sent activity is, so this lists
+        blind-copy list are not organization-readable the way a sent activity is, so this lists
         only what the caller scheduled.
       parameters:
         - name: status
@@ -8715,7 +8715,7 @@ paths:
     get:
       tags: [Automations]
       operationId: listAutomationCatalog
-      summary: The closed starter library of automation types the company can instantiate.
+      summary: The closed starter library of automation types the organization can instantiate.
       description: |-
         Each entry names its trigger, action, tier, and a JSON-schema for
         its parameters. Closed set: the build does not invent types the catalog omits.
@@ -8733,7 +8733,7 @@ paths:
     get:
       tags: [Automations]
       operationId: listAutomations
-      summary: List the company's configured automation instances.
+      summary: List the organization's configured automation instances.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -8749,7 +8749,7 @@ paths:
                   data: {type: array, items: {$ref: '#/components/schemas/Automation'}}
                   page: {$ref: '#/components/schemas/PageInfo'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: List the company's configured automation instances.
+      description: List the organization's configured automation instances.
     post:
       tags: [Automations]
       operationId: createAutomation
@@ -9125,7 +9125,7 @@ paths:
       operationId: getFollowUpSettings
       summary: How long a sent message may go unanswered before the worklist reminds its sender.
       description: |-
-        The company's follow-up window: a message a seat sent to a customer that is still
+        The organization's follow-up window: a message a seat sent to a customer that is still
         the last word after this many days comes back on the sender's worklist as a
         follow-up. It also carries whether the AI checks private mail for requests owed an
         answer. Read by every role; changed by admin/ops. Governed by the
@@ -9180,7 +9180,7 @@ paths:
     get:
       tags: [Contacts]
       operationId: getEmailSignatureTemplate
-      summary: The company's signature template.
+      summary: The organization's signature template.
       description: |-
         The layout every member's mail signs with when it is set, filled in with each member's
         own name, title and phone. A member assigned to a legal entity that has its own
@@ -9199,7 +9199,7 @@ paths:
       tags: [Contacts]
       operationId: saveEmailSignatureTemplate
       security: [{bearerAuth: []}]
-      summary: Set the company's signature template (admin/ops).
+      summary: Set the organization's signature template (admin/ops).
       requestBody:
         required: true
         content:
@@ -9216,7 +9216,7 @@ paths:
         '409': {$ref: '#/components/responses/SettingLocked'}
         '422': {$ref: '#/components/responses/ValidationError'}
       description: |-
-        Set the company's signature template (admin/ops).
+        Set the organization's signature template (admin/ops).
 
         Needs the passport permission Send messages.
 
@@ -9512,6 +9512,7 @@ paths:
     post:
       tags: [Leads]
       operationId: demoteLead
+      summary: Reverse a promotion and record the undo in History.
       description: |-
         The documented reverse of POST /leads/{id}/promote, deterministic and conservative:
         it **blocks rather than orphans**.
@@ -9547,7 +9548,6 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
-      summary: 'The documented reverse of POST /leads/{id}/promote, deterministic and conservative: it **blocks rather than orphans**.'
   /leads/{id}/reopen:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -10606,7 +10606,7 @@ paths:
       operationId: listLists
       summary: Find the lists this caller may see, by name.
       description: |-
-        A list is found by its sharing: every seat finds a company list, the members of its team
+        A list is found by its sharing: every seat finds a organization list, the members of its team
         (or of its owner's teams) find a team list, and only its owner and steward find a private
         one. `visible_count` is how many members THIS caller may see, never the list's whole size.
       parameters:
@@ -12264,7 +12264,7 @@ paths:
       description: |-
         The deals are the ones `GET /deals?status=open` lists for the same owner or team, under the
         same row scope and field masks, so a page holds no deal the caller could not open. Each adds
-        the sale type its priced lines show and the next open task a company reader may see.
+        the sale type its priced lines show and the next open task a organization reader may see.
         The list is the work as it stands now, whatever period Progress reads.
       parameters:
         - $ref: '#/components/parameters/Cursor'
@@ -12905,7 +12905,7 @@ paths:
       tags: [Connectors]
       operationId: listChannelConnections
       security: [{bearerAuth: []}]
-      summary: List the company's messaging-channel connections.
+      summary: List the organization's messaging-channel connections.
       responses:
         '200':
           description: Channel connections.
@@ -12919,7 +12919,7 @@ paths:
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
-      description: List the company's messaging-channel connections.
+      description: List the organization's messaging-channel connections.
   /channel-connections/{id}:
     parameters:
       - $ref: '#/components/parameters/Id'
@@ -13383,7 +13383,7 @@ paths:
       tags: [Tags]
       operationId: dismissTagSuggestion
       security: [{bearerAuth: []}]
-      summary: Record that the evidence does not earn the tag, for the whole company.
+      summary: Record that the evidence does not earn the tag, for the whole organization.
       description: |-
         Audited. The tag is suggested on this record again only on evidence newer than
         the dismissal. Needs write authority over the record, like accepting does.
@@ -13409,8 +13409,8 @@ paths:
       operationId: listTags
       summary: List tags.
       description: |-
-        The company's tag vocabulary. Read it before applying one: apply_tag takes a tag_name and
-        REFUSES a word the company does not hold, so a caller who cannot see the existing words
+        The organization's tag vocabulary. Read it before applying one: apply_tag takes a tag_name and
+        REFUSES a word the organization does not hold, so a caller who cannot see the existing words
         asks for a near-duplicate — "K5 Conference" beside "K5 Conference 2026" — and an admin
         coins it, and the vocabulary stops being one.
       parameters:
@@ -13419,7 +13419,7 @@ paths:
           in: query
           schema: {type: boolean, default: false}
           description: >-
-            Also count, per tag, the records this caller may see carrying it, as `carried_by`. The count reads every tagging in the company, so a caller that only needs the words leaves it off.
+            Also count, per tag, the records this caller may see carrying it, as `carried_by`. The count reads every tagging in the organization, so a caller that only needs the words leaves it off.
       responses:
         '200':
           description: Tags.
@@ -13457,7 +13457,7 @@ paths:
     get:
       tags: [Tags]
       operationId: getTag
-      summary: Read one tag, with how much of the company carries it.
+      summary: Read one tag, with how much of the organization carries it.
       description: |-
         The word and its weight. `usage` counts the records this caller may see — an admin
         deciding whether to retire a tag needs to know what retiring it costs, and a count
@@ -13639,7 +13639,7 @@ paths:
       operationId: removeTag
       summary: Take one tag off one entity, leaving the tag itself in place.
       description: |-
-        Undo for applyTag. archiveTag retires a tag from the whole company, which is not the
+        Undo for applyTag. archiveTag retires a tag from the whole organization, which is not the
         same act and not a way back from a mistaken tagging. Idempotent: removing a tagging that
         is not there succeeds, because the caller asked for a state that is already true.
 
@@ -13805,7 +13805,7 @@ paths:
       tags: [Search]
       operationId: describeQueryVocabulary
       security: [{bearerAuth: []}]
-      summary: Everything a company query plan may say, for this caller.
+      summary: Everything a organization query plan may say, for this caller.
       description: |-
         The answer the `describe_query_vocabulary` agent tool gives, run by the same tool on
         both doors: the record types this caller can ask about, the fields each one names,
@@ -13947,7 +13947,7 @@ paths:
       tags: [Search]
       operationId: queryWorkspace
       security: [{bearerAuth: []}]
-      summary: Answer a query plan over the company's records.
+      summary: Answer a query plan over the organization's records.
       description: |-
         The answer the `query_workspace` agent tool gives, run by the same tool on both
         doors. The plan is written in the grammar `GET /query-vocabulary` publishes for this
@@ -14124,7 +14124,7 @@ paths:
           in: query
           schema: {type: boolean, default: false}
           description: >-
-            Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach every other company in the company. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`.
+            Also find the contacts who currently work at a company the query matches, each carrying that company as `works_at`. A contact the query matches by its own text is returned once, as itself; one found only through its employer ranks after every contact matched by its own text. Staff are read from the best-matching companies only, as many as a grouped page can show (20), so a word matching hundreds of accounts reaches the contacts at its strongest matches rather than at all of them. It needs the caller to read contacts, companies and the employment between them, and finds no one through the installation's own company or through a query using the websearch operators (`or`, `-word`, quotes), where `-acme` would reach other companies in your records. Honoured by both page shapes, so a contact a grouped page shows is also on the ranked list narrowed to `types=contact`.
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
       responses:
@@ -14154,7 +14154,7 @@ paths:
         embedding row. Read and the confirm route below are both admin/ops-only.
       responses:
         '200':
-          description: The binding marker + the fleet-wide and per-company pending counts.
+          description: The binding marker + the fleet-wide and per-organization pending counts.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/EmbedReindexStatus'}
@@ -14197,13 +14197,13 @@ paths:
       security: [{bearerAuth: []}]
       summary: Preview a reindex — the scope before the spend.
       description: |-
-        Returns the fleet-wide and per-company pending-entity counts plus a projected AI token/
+        Returns the fleet-wide and per-organization pending-entity counts plus a projected AI token/
         cost estimate, MUST precede the confirm
         route below — the estimate is what the operator consents to. Labeled an estimate;
         actual spend is metered per embed call.
       responses:
         '200':
-          description: The reindex's estimated scope and per-company budget-impact disclosure.
+          description: The reindex's estimated scope and per-organization budget-impact disclosure.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/EmbedReindexPreview'}
@@ -14255,7 +14255,7 @@ paths:
       operationId: listAgentTools
       security: [{bearerAuth: []}]
       summary: The governed tool surface (registry metadata) for the operator UI.
-      description: Read-only inventory of the tools an agent passport can call — name, action verb, the passport scope each requires, its autonomy tier (auto_execute/confirmation_required/dynamic) and whether it reaches outside the company. This is governance metadata, not tenant data; it mirrors exactly what an MCP client sees from `tools/list`.
+      description: Read-only inventory of the tools an agent passport can call — name, action verb, the passport scope each requires, its autonomy tier (auto_execute/confirmation_required/dynamic) and whether it reaches outside the organization. This is governance metadata, not tenant data; it mirrors exactly what an MCP client sees from `tools/list`.
       responses:
         '200':
           description: The governed tool surface, stably ordered by name.
@@ -14356,7 +14356,7 @@ paths:
       summary: The installation's own company (the anchor company).
       description: |-
         The company this installation belongs to — the spec's anchor company, marked by
-        `company.is_anchor` (0083; at most one live anchor per company). 404 until a human first
+        `company.is_anchor` (0083; at most one live anchor per organization). 404 until a human first
         saves the company form: that 404 IS the "this installation has not described itself yet" signal,
         and it is what onboarding gates on. Distinct from GET /companies/{id}, which reads the
         customer records.
@@ -15082,14 +15082,14 @@ paths:
     get:
       tags: [Capture]
       operationId: listWorkspaceEmailDomains
-      summary: The company's own email domains.
+      summary: The organization's own email domains.
       description: |-
         The domains this installation treats as its own. A message whose
         participants are ALL on one of these — subdomains included — produces zero rows.
       security: [{bearerAuth: []}]
       responses:
         '200':
-          description: The company's own email domains.
+          description: The organization's own email domains.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/WorkspaceEmailDomainListResponse'}
@@ -15098,7 +15098,7 @@ paths:
     post:
       tags: [Capture]
       operationId: createWorkspaceEmailDomain
-      summary: Register one of the company's own email domains.
+      summary: Register one of the organization's own email domains.
       description: |-
         Adds a domain, or confirms one a connected mailbox already contributed. An administrator
         adding a domain IS the human vouching for it, so the row is stored verified and takes
@@ -15172,13 +15172,13 @@ paths:
     get:
       tags: [Capture]
       operationId: listCaptureExclusions
-      summary: The addresses and domains capture keeps out — the company's rules and the caller's own.
+      summary: The addresses and domains capture keeps out — the organization's rules and the caller's own.
       description: |-
         A pre-capture exclusion keeps a message out of the CRM entirely: a message naming an excluded
         address, or any address on an excluded domain (subdomains included), is dropped before
         anything is stored, leaving only a trace that names the KIND of rule. A `workspace` rule is
         the installation's and binds every connection; a `user` rule is the caller's own boundary for
-        the mailbox they connected and binds only their connections. The list is the company's
+        the mailbox they connected and binds only their connections. The list is the organization's
         rules plus the caller's — never a colleague's personal ones.
       security: [{bearerAuth: []}]
       responses:
@@ -15222,7 +15222,7 @@ paths:
       operationId: deleteCaptureExclusion
       summary: Lift an exclusion.
       description: |-
-        A company rule by admin or ops; a user rule by the user it names. Mail from the address or
+        A organization rule by admin or ops; a user rule by the user it names. Mail from the address or
         domain is captured again from the next message on; nothing already dropped comes back. An
         agent lifts only a rule an agent added, and a user's rule answers `409`.
 
@@ -15268,7 +15268,7 @@ paths:
               properties:
                 share:
                   type: boolean
-                  description: True to share the thread with the company, false to keep it private.
+                  description: True to share the thread with the organization, false to keep it private.
       responses:
         '200':
           description: What the decision reached.
@@ -15616,7 +15616,7 @@ paths:
     delete:
       tags: [Capture]
       operationId: deleteWorkspaceEmailDomain
-      summary: Stop treating a domain as the company's own.
+      summary: Stop treating a domain as the organization's own.
       description: |-
         Removes the domain. Mail among its addresses is captured again from the next message on;
         nothing already suppressed comes back. Removing a domain the installation's own company
@@ -16432,7 +16432,7 @@ paths:
       tags: [Brief]
       operationId: getResponseMetrics
       security: [{bearerAuth: []}]
-      summary: How fast the company answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
+      summary: How fast the organization answers, how much of the queue it puts down, and how often an at-risk deal gets a next step.
       description: |-
         The hidden-backlog guardrail says what the queue is NOT showing. This says what
         happens to the work it does show, which is the other half of the same question: a
@@ -16444,11 +16444,11 @@ paths:
           schema: {type: integer, minimum: 1, maximum: 90, default: 14}
           description: |-
             How many days back the window reaches. Capped at 90: past that the figure stops
-            describing how the company works now and starts averaging over a change in
+            describing how the organization works now and starts averaging over a change in
             how it works.
       responses:
         '200':
-          description: What the company did with its waiting work.
+          description: What the organization did with its waiting work.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ResponseMetrics'}
@@ -16500,7 +16500,7 @@ paths:
       description: |-
         The CALLER'S OWN rows, across every connector they have connected, newest first. No RBAC
         object gates it and none can widen it: a member's own capture traffic is their own data,
-        and the company view (`listWorkspaceCaptureActivity`) returns shared-channel rows only.
+        and the organization view (`listWorkspaceCaptureActivity`) returns shared-channel rows only.
       parameters:
         - $ref: '#/components/parameters/Cursor'
         - $ref: '#/components/parameters/Limit'
@@ -16517,7 +16517,7 @@ paths:
       tags: [Capture]
       operationId: listWorkspaceCaptureActivity
       security: [{bearerAuth: []}]
-      summary: The same window for the company's shared channel connections.
+      summary: The same window for the organization's shared channel connections.
       description: |-
         Rows from connections the WORKSPACE owns — a Telegram bot, a Zalo OA — where one binding
         carries every seat's inbound traffic and no single member owns it.
@@ -16556,16 +16556,16 @@ paths:
       tags: [Capture]
       operationId: listConsumerMailDomains
       security: [{bearerAuth: []}]
-      summary: The company's own consumer-mail domain list.
+      summary: The organization's own consumer-mail domain list.
       description: |-
-        The company's additions to and carve-outs from the shipped consumer-mail baseline.
+        The organization's additions to and carve-outs from the shipped consumer-mail baseline.
         Mail from a consumer domain still creates the contact; what it never creates is a
         company. Every human role may read the list; any seat holding `capture_settings:create`
         adds a new `extra` entry, while carve-outs, kind changes and removal demand
         `capture_settings:update` (admin/ops). Governed by the `capture_settings` RBAC object.
       responses:
         '200':
-          description: The company's list entries.
+          description: The organization's list entries.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/ConsumerMailDomainListResponse'}
@@ -16577,7 +16577,7 @@ paths:
       security: [{bearerAuth: []}]
       summary: Add a consumer-mail domain, or carve one out.
       description: |-
-        It changes a company-wide capture posture, so an agent asks its user first. `kind:
+        It changes a organization-wide capture posture, so an agent asks its user first. `kind:
         extra` marks a domain the baseline missed as consumer mail; any seat holding
         `capture_settings:create` (every seeded role but read_only) may contribute a NEW one.
         `kind: never` takes a domain back out of the baseline and wins over it — the only way
@@ -16615,7 +16615,7 @@ paths:
       security: [{bearerAuth: []}]
       summary: Withdraw a consumer-mail list entry (admin/ops).
       description: |-
-        Returns the company to the shipped baseline's answer for that domain. Idempotent:
+        Returns the organization to the shipped baseline's answer for that domain. Idempotent:
         withdrawing an entry that is not there is a no-op, because the caller's intent is
         already satisfied.
 
@@ -16641,7 +16641,7 @@ paths:
         deliberate one.
       responses:
         '200':
-          description: The company's blocked and admitted domains.
+          description: The organization's blocked and admitted domains.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/BlockedDomainListResponse'}
@@ -16840,7 +16840,7 @@ paths:
       summary: Search the shipped consumer-mail baseline.
       description: |-
         The vendored consumer-domain dataset the installation ships with, as a searchable read.
-        The company's own list is only ever a delta against this baseline, so deciding whether
+        The organization's own list is only ever a delta against this baseline, so deciding whether
         a domain needs an `extra` entry — or a `never` carve-out — starts here. Answers the
         first 50 alphabetical matches plus the counts; every human role may read it, like the
         rest of the capture posture.
@@ -17058,7 +17058,7 @@ paths:
       security: [{bearerAuth: []}]
       summary: AI usage + budget — the spend is never invisible.
       description: |-
-        Per-day × task × tier usage from the metering record plus the company
+        Per-day × task × tier usage from the metering record plus the organization
         budget block: monthly token budget, spent, current band, and since
         when. The admin economy-mode banner and the spend view read this. Inference is the customer's own key — this is
         their own bill made visible, never a Margince meter for resale.
@@ -17101,7 +17101,7 @@ paths:
       tags: [AI]
       operationId: getAiProfile
       security: [{bearerAuth: []}]
-      summary: Authenticated AI configuration posture for transparent human-facing companies.
+      summary: Authenticated AI configuration posture for transparent human-facing organizations.
       description: |-
         The configured tier-to-provider-to-model bindings used by the deployment. This is an
         authenticated administrative surface: the anonymous assistant presence deliberately
@@ -18231,7 +18231,7 @@ paths:
       summary: Answer a refusal by saying what happened away from the system.
       description: |-
         The engine refuses a send to somebody it has no evidence about, and it is right to:
-        nothing on the record connects this company to that contact. But the record is not the
+        nothing on the record connects this organization to that contact. But the record is not the
         world. A customer rang and asked for a quote; somebody took a card at a stand. The rep
         who was there is the only place that fact exists, and this is where they put it on the
         record without leaving the message they are trying to send.
@@ -18586,13 +18586,13 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
         '409':
           description: >-
-            The slug already exists in this company, the derived column name is taken platform-wide (the physical column namespace on a shared core table is global), or the target table is busy with concurrent activity — the last is retryable.
+            The slug already exists in this organization, the derived column name is taken platform-wide (the physical column namespace on a shared core table is global), or the target table is busy with concurrent activity — the last is retryable.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
               examples:
                 duplicateSlug:
-                  summary: The same (object, slug) already exists in this company
+                  summary: The same (object, slug) already exists in this organization
                   value:
                     type: 'https://errors.gradion.com/conflict'
                     title: Conflict
@@ -18600,7 +18600,7 @@ paths:
                     code: conflict
                     detail: 'a custom field named "renewal_date" already exists on deal in this workspace: conflict'
                 columnTaken:
-                  summary: Another company holds the derived column name
+                  summary: Another organization holds the derived column name
                   value:
                     type: 'https://errors.gradion.com/conflict'
                     title: Conflict
@@ -18889,9 +18889,9 @@ paths:
     get:
       tags: [Compliance]
       operationId: listConsentPurposes
-      summary: List the company's consent purposes (e.g. transactional, marketing_email, profiling).
+      summary: List the organization's consent purposes (e.g. transactional, marketing_email, profiling).
       description: |-
-        UNPAGED, deliberately. A company's consent purposes are configuration — a handful of
+        UNPAGED, deliberately. A organization's consent purposes are configuration — a handful of
         them, set up once — so the answer is the whole set and `page` reports `has_more: false`.
       responses:
         '200':
@@ -19802,7 +19802,7 @@ paths:
       security: [{bearerAuth: []}]
       summary: Take ownership of a customer record.
       description: |-
-        Sets the record's `owner_id` to the caller. Customer identity is company-readable, and an
+        Sets the record's `owner_id` to the caller. Customer identity is organization-readable, and an
         ownerless record is nobody's to change until somebody claims it — this is the claim. Permitted
         on a record the caller can read that has no owner, or that is already theirs to change (a
         reassignment to oneself — a teammate's record, or one shared at `write`). A record owned by
@@ -20176,9 +20176,9 @@ paths:
     get:
       tags: [Identity]
       operationId: listUsers
-      summary: List company members (roster) — cursor-paginated. Read-only.
+      summary: List organization members (roster) — cursor-paginated. Read-only.
       description: |-
-        The company member roster: id + display name + email + seat/status. Any authenticated member
+        The organization member roster: id + display name + email + seat/status. Any authenticated member
         may read it (needed to pick a record-share subject and to resolve subject/granter names). Excludes
         archived users. Bounded by authenticated membership: every seat may read who else works here,
         because a share or assignee picker only some seats could read would be a broken feature.
@@ -20206,7 +20206,7 @@ paths:
             throughout the API compatibility window.
       responses:
         '200':
-          description: A page of company members.
+          description: A page of organization members.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/UserListResponse'}
@@ -20749,9 +20749,9 @@ paths:
       tags: [Identity]
       operationId: listRoles
       security: [{bearerAuth: []}]
-      summary: List the company's roles with their object grants and row scope.
+      summary: List the organization's roles with their object grants and row scope.
       description: |-
-        The role editor's read. Every live role the company defines — the six seeded system
+        The role editor's read. Every live role the organization defines — the six seeded system
         roles and any custom ones — with the `objects` map exactly as `role.permissions`
         stores it. Archived roles are left out unless `include_archived` is true.
       parameters:
@@ -20762,7 +20762,7 @@ paths:
           description: True also lists archived roles, each carrying `archived_at`.
       responses:
         '200':
-          description: Every role this company defines.
+          description: Every role this organization defines.
           content:
             application/json:
               schema: {$ref: '#/components/schemas/RoleDirectory'}
@@ -20815,7 +20815,7 @@ paths:
     get:
       tags: [Identity]
       operationId: listTeams
-      summary: List company teams — cursor-paginated. Read-only.
+      summary: List organization teams — cursor-paginated. Read-only.
       description: |-
         Teams available as record-share subjects, with a member count. Any authenticated member may read.
         Excludes archived teams unless `include_archived` is true, which needs `team_admin.read`.
@@ -21433,7 +21433,7 @@ paths:
       summary: Create a rate-card product.
       description: |-
         Price is integer minor-units + ISO-4217 currency (P11, no float money). `sku` is
-        optional; when present it is unique per company (409 on a live duplicate).
+        optional; when present it is unique per organization (409 on a live duplicate).
 
         Needs the passport permission Change records.
 
@@ -22278,7 +22278,7 @@ paths:
       operationId: createOfferTemplate
       summary: Create an offer template.
       description: |-
-        `name` must be unique among this company's live templates (409
+        `name` must be unique among this organization's live templates (409
         `offer_template_name_duplicate`). At most one default template per locale (409
         `offer_template_default_conflict` — setting `is_default=true` while another
         default already holds that locale).
@@ -22310,7 +22310,7 @@ paths:
               schema: {$ref: '#/components/schemas/Problem'}
               examples:
                 nameDuplicate:
-                  summary: A live template with this name already exists in this company
+                  summary: A live template with this name already exists in this organization
                   value:
                     type: 'https://errors.gradion.com/offer_template_name_duplicate'
                     title: Duplicate name
@@ -22879,7 +22879,7 @@ paths:
       summary: Render the offer's branded PDF (sets pdf_asset_ref).
       description: |-
         Produces the branded DE/EN PDF from the offer's current template (`offer.template_id`,
-        falling back to the company's default template for the offer's locale, de-DE when
+        falling back to the organization's default template for the offer's locale, de-DE when
         none is set) plus its line items, and stores the result as `pdf_asset_ref`. The rendered totals equal the server-computed totals — the PDF
         never recomputes money (P11). Not itself an irreversible act: a render can be repeated,
         and `send` — the step this precedes — is where the offer's terms are frozen.
@@ -23482,7 +23482,7 @@ paths:
       security: [{bearerAuth: []}]
       summary: What a check would find, without recording any of it.
       description: |-
-        The scope before the queue. A first pass over a company with a backlog raises
+        The scope before the queue. A first pass over a organization with a backlog raises
         every exception it can see at once, and a queue that arrives that way is one
         nobody reads — so the first pass is a decision somebody makes, and this is what
         they read to make it.
@@ -23501,8 +23501,8 @@ paths:
       security: [{bearerAuth: []}]
       summary: Run the input check now.
       description: |-
-        Starts one pass over this company. It is the same act twice: the FIRST press
-        starts the nightly cycle for a company that has never been checked, and every
+        Starts one pass over this organization. It is the same act twice: the FIRST press
+        starts the nightly cycle for a organization that has never been checked, and every
         press after it is a recheck for somebody who has just fixed a record and wants
         the panel to confirm it before a call.
 
@@ -23518,7 +23518,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '409':
-          description: A pass is already running for this company.
+          description: A pass is already running for this organization.
           content:
             application/problem+json:
               schema: {$ref: '#/components/schemas/Problem'}
@@ -23918,7 +23918,7 @@ paths:
       security: [{bearerAuth: []}]
       summary: An SDR's handoffs waiting on somebody else, and their upcoming meetings.
       description: |-
-        `workflow` says whether this company hands prospects on. A reporting framework set up
+        `workflow` says whether this organization hands prospects on. A reporting framework set up
         for SDR teams (`template: sdr`) does, and `handoffs` is then present. Any other setup
         answers `qualification` and leaves `handoffs` out. A zero is never read as the setup:
         a team that hands on nothing this week still has a handoff workflow.
@@ -25466,7 +25466,7 @@ paths:
       summary: Write or clear your own sign-off.
       description: |-
         An empty `body` clears the plain-text fallback. Personal HTML and the
-        company template retain their precedence until cleared separately.
+        organization template retain their precedence until cleared separately.
 
         Needs the passport permission Send messages.
 
@@ -26219,7 +26219,7 @@ paths:
       tags: [Import]
       operationId: listImportRuns
       security: [{bearerAuth: []}]
-      summary: List this company's recent CSV import runs, newest first.
+      summary: List this organization's recent CSV import runs, newest first.
       description: |-
         The history the Data import page shows: each run with its file, its
         source name, its parts and its state. Only `csv` runs are listed; the
@@ -26275,12 +26275,12 @@ paths:
       tags: [Import]
       operationId: getImportFormat
       security: [{bearerAuth: []}]
-      summary: Describe the files an import takes, column by column, for this company.
+      summary: Describe the files an import takes, column by column, for this organization.
       description: |-
         The import format as data: the order the files land in, each file's
         name and columns, and the rules that key a row. Each column carries a
         guide (what goes in it, an example, and whether a new row needs it).
-        The company's active custom fields are columns too, by their `cf_`
+        The organization's active custom fields are columns too, by their `cf_`
         key, with their label, type and, for a caller who may read custom
         fields, their allowed values.
       parameters:
@@ -26303,7 +26303,7 @@ paths:
       tags: [Import]
       operationId: downloadImportTemplate
       security: [{bearerAuth: []}]
-      summary: Download the import template for this company.
+      summary: Download the import template for this organization.
       description: |-
         A ZIP holding one CSV per file of `getImportFormat`, each with its
         header row only, and a README.txt that lists the import order, the key
@@ -26572,7 +26572,7 @@ paths:
       summary: List current FX rates (latest per currency), or one pair's history.
       description: |-
         Admin/ops-only view. Without `from`, returns the latest effective rate per
-        foreign currency (to = the company base currency). With `from=USD`, returns
+        foreign currency (to = the organization base currency). With `from=USD`, returns
         that pair's full effective-dated history, newest first. A caller that needs
         only the sheet's currency codes reads `GET /fx-rates/currencies`.
       parameters:
@@ -26600,7 +26600,7 @@ paths:
         stored for it. That extends the history back without changing any day
         that already had a rate;
         any other past date is refused (422 `fx_rate_past`). `to`
-        is resolved to the company base currency server-side; `from == base` is
+        is resolved to the organization base currency server-side; `from == base` is
         refused.
 
         Needs the passport permission Change records.
@@ -26740,10 +26740,10 @@ paths:
       security: [{bearerAuth: []}]
       summary: List the base currency and the currency codes on the FX rate sheet, without their rates.
       description: |-
-        The company base currency, and the foreign currencies of the sheet
+        The organization base currency, and the foreign currencies of the sheet
         head (the same rows `GET /fx-rates` lists without `from`) as codes in
         code order. Readable by every role that
-        may read deals, so a currency picker can offer the company's own
+        may read deals, so a currency picker can offer the organization's own
         currencies first; the rates themselves stay on the admin/ops-only
         `GET /fx-rates`. An empty sheet answers an empty list.
       responses:
@@ -26761,7 +26761,7 @@ paths:
       summary: Enqueue an async FX-rate refresh (stages proposals).
       description: |-
         Admin/ops-only. Enqueues a background job that fetches fresh rates for the
-        currencies this company already tracks and stages a confirm-first proposal
+        currencies this organization already tracks and stages a confirm-first proposal
         per changed rate into the approvals inbox. Returns immediately; review the
         proposals in the inbox.
 
@@ -27021,7 +27021,7 @@ paths:
       tags: [Knowledge]
       operationId: listCorpora
       security: [{bearerAuth: []}]
-      summary: The document corpora this company has defined.
+      summary: The document corpora this organization has defined.
       parameters:
         - $ref: '#/components/parameters/IncludeArchived'
       responses:
@@ -27033,7 +27033,7 @@ paths:
         '401': {$ref: '#/components/responses/Unauthorized'}
         '403': {$ref: '#/components/responses/PermissionDenied'}
         '422': {$ref: '#/components/responses/ValidationError'}
-      description: The document corpora this company has defined.
+      description: The document corpora this organization has defined.
     post:
       tags: [Knowledge]
       operationId: createCorpus
@@ -27299,7 +27299,7 @@ components:
       description: |-
         Bearer token — the token IS the Agent Seat Passport, minted via `POST /passports` (the local/A1 issuance path; the hosted
         A2 surface replaces issuance with the spec's OAuth2 + PKCE + DCR Authorization Server).
-        The token binds the company (tenant) and the principal — an agent acting
+        The token binds the organization (tenant) and the principal — an agent acting
         under a passport (`agent:<id>` + passport id + on-behalf-of `human:<user-uuid>`). The
         principal's effective RBAC (own/team/all + field masks) is enforced server-side; an agent can
         never exceed its granting human's permissions. Mutations by this scheme ride the autonomy
@@ -27442,7 +27442,7 @@ components:
         cursor is deterministic. The default sort when omitted is `-created_at,id` — also the only
         accepted multi-field spelling; any other comma-separated multi-field spec returns
         `422 code: sort_unsupported`. **Allowed sort fields per resource** are the columns that
-        resource's list publishes, plus the company's active `cf_` columns (custom columns carry no
+        resource's list publishes, plus the organization's active `cf_` columns (custom columns carry no
         index in V1 — a `cf_` sort runs as a tenant-scoped scan). A column a reader can see is one
         they can order by: a header that cannot be clicked is a dead control. Some columns are not
         yet offered even so — one that orders by a JOINED value, such as a stage by its position in
@@ -27578,7 +27578,7 @@ components:
           schema: {$ref: '#/components/schemas/Problem'}
     FileNotFound:
       description: |-
-        No such file in this company, or out of RBAC scope. A browser tab that opened the file's
+        No such file in this organization, or out of RBAC scope. A browser tab that opened the file's
         link (an `Accept` that prefers `text/html`) reads a short page in the reader's language
         instead of the problem; every other caller gets the problem.
       content:
@@ -27603,7 +27603,7 @@ components:
         text/html:
           schema: {type: string}
     NotFound:
-      description: No such resource in this company (or out of RBAC scope).
+      description: No such resource in this organization (or out of RBAC scope).
       content:
         application/problem+json:
           schema: {$ref: '#/components/schemas/Problem'}
@@ -27791,11 +27791,11 @@ components:
         status: {type: string, enum: [enqueued]}
     FxRate:
       type: object
-      description: One effective-dated FX rate converting from_currency into the company base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
+      description: One effective-dated FX rate converting from_currency into the organization base (to_currency). rate is a decimal string (numeric(20,10)), never a float.
       required: [from_currency, to_currency, rate, effective_date]
       properties:
         from_currency: {type: string, pattern: '^[A-Z]{3}$'}
-        to_currency: {type: string, pattern: '^[A-Z]{3}$', description: The company base currency.}
+        to_currency: {type: string, pattern: '^[A-Z]{3}$', description: The organization base currency.}
         rate: {type: string, pattern: '^[0-9]{1,10}(\.[0-9]{1,10})?$', description: 'Decimal rate (from -> base), always positive. Plain decimal, up to 10 integer and 10 fractional digits (numeric(20,10)).'}
         effective_date: {type: string, format: date}
     FxRateListResponse:
@@ -27807,7 +27807,7 @@ components:
           pattern: '^[A-Z]{3}$'
           readOnly: true
           description: >-
-            The company's base currency — every rate in `data` converts TO this. Served from the company itself rather than inferred from the first rate row, so a company that has entered no rates can still state its own base.
+            The organization's base currency — every rate in `data` converts TO this. Served from the organization itself rather than inferred from the first rate row, so a organization that has entered no rates can still state its own base.
         data: {type: array, items: {$ref: '#/components/schemas/FxRate'}}
     FxRateCurrencyListResponse:
       type: object
@@ -27817,7 +27817,7 @@ components:
           type: string
           pattern: '^[A-Z]{3}$'
           description: >-
-            The company's base currency, which every code in `data` converts into. Served here as well as on the installation settings, so a role that may read deals but not those settings still learns which currency a picker leads with.
+            The organization's base currency, which every code in `data` converts into. Served here as well as on the installation settings, so a role that may read deals but not those settings still learns which currency a picker leads with.
         data:
           type: array
           uniqueItems: true
@@ -28170,7 +28170,7 @@ components:
         intake:
           type: object
           description: >-
-            Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the company or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
+            Present only while the intake refuses posts to this form with 429. `throttled`: too many posts lately, so some are refused; `since` is when that began. `blocked`: every post is refused until `until`. `paused_all`: every form of the organization or installation refuses posts until `until`, because all forms together receive too many. Answered on the list and on one form's read.
           required: [state]
           properties:
             state: {type: string, enum: [throttled, blocked, paused_all]}
@@ -28323,7 +28323,7 @@ components:
         One count per outcome over the window. These PARTITION the messages seen — one row per message, under the most specific outcome that applied — so they sum to the total. Absent keys are zero.
       properties:
         captured: {type: integer, description: 'Landed; the sender was known or became known.'}
-        internal: {type: integer, description: 'Never landed: every party was on the company''s own mail domains.'}
+        internal: {type: integer, description: 'Never landed: every party was on the organization''s own mail domains.'}
         suppressed: {type: integer, description: 'Landed; the sender is mail infrastructure, so no record was derived.'}
         deferred: {type: integer, description: 'Landed; the sender is a stranger and the question is STILL open. A message whose sender has since been judged is counted under what the result decided, not under the bucket it was filed in at capture time.'}
         fault: {type: integer, description: 'The derivation failed. The message itself is unaffected unless the reason says otherwise.'}
@@ -28865,7 +28865,7 @@ components:
           items: {type: string}
         note:
           type: string
-          description: The site triage's own sentence on a `vendor_verdict` question, in the company language.
+          description: The site triage's own sentence on a `vendor_verdict` question, in the organization language.
         domain_context: {$ref: '#/components/schemas/DomainQuestionContext'}
     DomainQuestionContext:
       type: object
@@ -28887,7 +28887,7 @@ components:
           minimum: 0
           description: |-
             How many contacts the reader may see that confirming a company would employ there: every
-            live contact with an address on the domain, less company seats and anyone who already
+            live contact with an address on the domain, less organization seats and anyone who already
             holds a primary employment. Those keep the employer they have.
         sender_address: {type: string, description: 'The From address of the newest mail behind the question, which the reader may read.'}
         origin_activity_id: {type: string, format: uuid, description: 'The newest mail behind the question, which the reader may read.'}
@@ -29007,7 +29007,7 @@ components:
     ConsumerMailDomain:
       type: object
       description: |-
-        One entry on the company's own consumer-mail list. `extra` marks a
+        One entry on the organization's own consumer-mail list. `extra` marks a
         consumer domain the shipped baseline missed; `never` takes one back out of the baseline
         that claimed it. Either way the domain is stored in its registrable form, which is what
         the matcher keys on.
@@ -29167,7 +29167,7 @@ components:
           type: boolean
           description: |-
             The chosen word has since been archived. The connector then files NOTHING —
-            an archived word is one the company retired, and applying it anyway would
+            an archived word is one the organization retired, and applying it anyway would
             keep a retired vocabulary alive from a setting nobody looks at.
     SetConnectorContextTagRequest:
       type: object
@@ -29239,7 +29239,7 @@ components:
         posture:
           type: string
           enum: [shared, classified, held]
-          description: 'See CaptureConnection.mail_posture. `shared` needs the company opt-in.'
+          description: 'See CaptureConnection.mail_posture. `shared` needs the organization opt-in.'
         apply_to_history:
           type: boolean
           default: false
@@ -29362,14 +29362,14 @@ components:
           maxItems: 5
           items: {$ref: '#/components/schemas/HeldThreadParticipant'}
           description: |-
-            Up to five addresses outside the company on the message that opened the thread, so you
+            Up to five addresses outside the organization on the message that opened the thread, so you
             can tell who a held thread is with. Colleagues are left out. Present exactly when
             `activity_id` is: a message you may not read, or one that was erased, names nobody.
         participant_count:
           type: integer
           minimum: 0
           description: |-
-            How many addresses outside the company that message names, of which `participants`
+            How many addresses outside the organization that message names, of which `participants`
             shows up to five. Absent when `participants` is.
         attempts:
           type: integer
@@ -29378,7 +29378,7 @@ components:
             whose attempts stop climbing is a model that stopped answering.
     HeldThreadParticipant:
       type: object
-      description: One address outside the company on a held thread's opening message.
+      description: One address outside the organization on a held thread's opening message.
       required: [address]
       properties:
         address: {type: string, description: The folded address the message named.}
@@ -29606,7 +29606,7 @@ components:
           type: string
           enum: [contact_record, colleague, machine, unresolved]
           description: >-
-            `colleague` is a seat in this company, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+            `colleague` is a seat in this organization, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
         display_name: {type: [string, 'null']}
         address: {type: [string, 'null']}
         contact_id: {type: [string, 'null'], format: uuid}
@@ -29874,7 +29874,7 @@ components:
         user_id:
           type: [string, 'null']
           format: uuid
-          description: Set when the address belongs to a seat in this company.
+          description: Set when the address belongs to a seat in this organization.
     EmailAttachmentSummary:
       type: object
       description: One file that came with the message. Metadata only; bytes are fetched separately.
@@ -30084,7 +30084,7 @@ components:
         shared:
           type: boolean
           description: |-
-            Whether the messages are now readable by the company. False after a share means
+            Whether the messages are now readable by the organization. False after a share means
             somebody else still holds them.
         held_by_others:
           type: integer
@@ -30191,7 +30191,7 @@ components:
       type: object
       description: |-
         One seat's decision that their mail with a party is nobody else's. Per user, never
-        company-wide: one seat's lawyer says nothing about another seat's, and a shared list
+        organization-wide: one seat's lawyer says nothing about another seat's, and a shared list
         would let anyone keep a colleague's customer out of the CRM by naming their domain.
       required: [id, kind, value, created_at]
       properties:
@@ -30218,7 +30218,7 @@ components:
           minimum: 0
           description: |-
             How many of the caller's own imports stopped being held for this reason. Not the same
-            as how many messages the company can now read: a message a colleague also holds
+            as how many messages the organization can now read: a message a colleague also holds
             stays limited, because the audience is the strictest answer across every seat that
             imported it. Zero means every message the caller's holds caught is held for some
             other reason too, or was captured before the product recorded more than one reason.
@@ -30452,7 +30452,7 @@ components:
       required: [configured_identity, populated_identity, status, updated_at, reindex_needed, entities_pending]
       properties:
         configured_identity: {type: string, description: 'The live embed binding''s provider/model@dims (Task 9).'}
-        populated_identity: {type: string, description: 'The identity the last reindex run was RELEASED under — a run releases when no company of it has an outcome left to reach, exhausted attempts included, so this is not a claim that every company was re-embedded under it. entities_pending is what tells you the difference.'}
+        populated_identity: {type: string, description: 'The identity the last reindex run was RELEASED under — a run releases when no organization of it has an outcome left to reach, exhausted attempts included, so this is not a claim that every organization was re-embedded under it. entities_pending is what tells you the difference.'}
         status: {type: string, enum: [idle, reembedding], description: 'The marker''s own job-lifecycle state.'}
         updated_at: {type: string, format: date-time, description: 'When the marker last changed — while status is reembedding, how long the job has been running, the figure a stuck-job recovery affordance needs to show a human.'}
         reindex_needed: {type: boolean, description: 'Derived fresh on every read (never a stored flag): true when configured_identity != populated_identity, or entities_pending > 0.'}
@@ -30835,7 +30835,7 @@ components:
           description: |-
             Whether THIS caller could dismiss the pair or undo a decision on it.
             That needs write authority over BOTH ends: dismissing suppresses both
-            records as duplicates for the whole company. Whether the caller may
+            records as duplicates for the whole organization. Whether the caller may
             merge the pair is `can_merge`.
         can_merge:
           type: boolean
@@ -30898,12 +30898,12 @@ components:
           items: {$ref: '#/components/schemas/ContactCaseOwner'}
         confidence: {type: number, minimum: 0, maximum: 1, description: 'The strongest open pair in the case.'}
         too_large: {type: boolean, description: 'The case has more members than one review may merge (25). The pairs still decide one by one.'}
-        policy_enabled: {type: boolean, description: 'Whether the company lets any owner of a member merge the case (`contacts.shared_merge_reviews`).'}
+        policy_enabled: {type: boolean, description: 'Whether the organization lets any owner of a member merge the case (`contacts.shared_merge_reviews`).'}
         can_merge: {type: boolean, description: 'Whether this caller may merge at least two members of this case.'}
         merge_mode:
           type: string
           enum: [ordinary, delegated, pair, none]
-          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the company policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.'
+          description: '`ordinary`: the caller may change every member. `delegated`: the caller owns a member and the organization policy lets them merge the rest. `pair`: the caller may change one end of an open pair, and may merge exactly those two members, keeping the other end and its owner, who must be a live human seat. `none`: none of these.'
         reason:
           type: [string, 'null']
           enum: [no_write_authority, too_large, resolved, null]
@@ -31569,7 +31569,7 @@ components:
     ChannelConnection:
       type: object
       description: >-
-        One company-level messaging-channel binding. The bot token and the Dispact events secret never appear in this shape: both live sealed in the vault.
+        One organization-level messaging-channel binding. The bot token and the Dispact events secret never appear in this shape: both live sealed in the vault.
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: {type: string, format: uuid}
@@ -31970,7 +31970,7 @@ components:
     ImportFormat:
       type: object
       description: |-
-        The files an import takes, for this company. The template ZIP, the
+        The files an import takes, for this organization. The template ZIP, the
         column guide and the screen's file order are all read from it.
       required: [version, order, files, key_rules, size_limit_mb]
       properties:
@@ -32020,7 +32020,7 @@ components:
         description: {type: string, description: 'What goes in the column.'}
         example: {type: string, description: 'An example value, or several separated by " · ".'}
         required_on_new_row: {type: boolean, description: 'Whether a row that creates a record needs this column filled.'}
-        custom: {type: boolean, description: 'Whether this is one of the company''s custom fields.'}
+        custom: {type: boolean, description: 'Whether this is one of the organization''s custom fields.'}
         type: {type: string, description: 'A custom field''s type. Absent for a core column.'}
         options:
           type: array
@@ -33101,7 +33101,7 @@ components:
           type: [string, 'null']
           enum: [vendor_marketing, null]
           description: >-
-            Set when the company's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
+            Set when the organization's relationship to this contact is not an ordinary one. `vendor_marketing` is a named sender who only pitches something to this business and whom nobody here has answered. The default contact lists leave a marked contact out; a text search and a read by id still find it. Null is not marked. Written through `PATCH /contacts/{id}` or by the sender check, never by the request body of a create.
         legal_hold:
           type: boolean
           readOnly: true
@@ -33124,7 +33124,7 @@ components:
           enum: [workspace, owner]
           readOnly: true
           description: >-
-            Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the company through a result or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
+            Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the organization through a result or through the owner's own `POST /contacts/{id}/publish`, and never travels back.
         attachable:
           type: boolean
           readOnly: true
@@ -33655,7 +33655,7 @@ components:
           enum: [workspace, owner]
           readOnly: true
           description: >-
-            Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the company through a sender result, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
+            Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the organization through a sender result, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
         writable:
           type: boolean
           readOnly: true
@@ -33728,7 +33728,7 @@ components:
           readOnly: true
           minimum: 0
           description: >-
-            How many open, live deals belong to this account, counted across the WHOLE company — the same population the account's `computed_fields` open-pipeline row sums. The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read`. Present on `listCompanies` and `getCompany`; write responses omit it.
+            How many open, live deals belong to this account, counted across the WHOLE organization — the same population the account's `computed_fields` open-pipeline row sums. The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read`. Present on `listCompanies` and `getCompany`; write responses omit it.
         source: {type: string, description: 'The channel this company arrived by: `api`, `automation`, `capture`, `import`, `manual` or `webform`. An older company can show another value until the background correction reaches it.'}
         source_system: {type: [string, 'null'], readOnly: true, description: 'The system or connector the company came from, such as `gmail` for one read out of a mailbox. Empty when a member or an API client wrote it and named none.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
@@ -33765,7 +33765,7 @@ components:
           format: date-time
           readOnly: true
           description: >-
-            When something last happened with this account: the newest `occurred_at` at or before now of a company-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable.
+            When something last happened with this account: the newest `occurred_at` at or before now of a organization-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable.
         last_activity_precision:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
           readOnly: true
@@ -34222,7 +34222,7 @@ components:
     CompanyGrowthFit:
       type: object
       description: |-
-        Cached per reader, because it folds seat-dependent company context
+        Cached per reader, because it folds seat-dependent organization context
         and makes recommendations.
       required: [company_id, band, data_completeness, generated_at, generated_by]
       properties:
@@ -34335,7 +34335,7 @@ components:
       description: |-
         Which writer produced a piece of generated prose. `model` — the configured model
         lane. `deterministic` — the structured fallback, used when no lane is configured,
-        the company's AI budget is exhausted, the model call fails, or the checks the
+        the organization's AI budget is exhausted, the model call fails, or the checks the
         surface runs refuse the model's answer. Never silently interchangeable: a reader
         deciding how much to trust a sentence needs to know which wrote it.
     CompanyQuestion:
@@ -34594,6 +34594,9 @@ components:
         open_minor: {type: integer, format: int64}
         due_at: {type: string, format: date}
         days_overdue: {type: integer, minimum: 1}
+        long_overdue:
+          type: boolean
+          description: Whether this invoice belongs to the installation's Long overdue group.
     CompanyFinanceSummary:
       type: object
       description: |-
@@ -34891,7 +34894,7 @@ components:
             open_pipeline_minor_base:
               type: [integer, 'null']
               description: >-
-                The open pipeline in the company's base currency, integer minor units. Null when NO open deal carries a figure that can be converted — distinct from zero, which would claim a priced pipeline worth nothing.
+                The open pipeline in the organization's base currency, integer minor units. Null when NO open deal carries a figure that can be converted — distinct from zero, which would claim a priced pipeline worth nothing.
             priced_count:
               type: integer
               minimum: 0
@@ -34910,7 +34913,7 @@ components:
             base_currency:
               type: [string, 'null']
               description: >-
-                The ISO-4217 currency `open_pipeline_minor_base` is expressed in — the company's base. Null whenever the figure is.
+                The ISO-4217 currency `open_pipeline_minor_base` is expressed in — the organization's base. Null whenever the figure is.
             next_close_on:
               type: [string, 'null']
               format: date
@@ -35167,7 +35170,7 @@ components:
         assignee_name:
           type: [string, 'null']
           description: |-
-            The assignee's name while they are a live company member. Null when the task has no
+            The assignee's name while they are a live organization member. Null when the task has no
             assignee or the name cannot be given, so a reader says nothing about who holds it
             instead of printing an id.
         linked_deal_id: {type: [string, 'null'], format: uuid}
@@ -35532,12 +35535,12 @@ components:
           enum: [company, contact, deal, user]
           description: |-
             `company`, `contact` and `deal` are the account's own records.
-            `user` is a member of THIS company — someone on our side who is connected to the
+            `user` is a member of THIS organization — someone on our side who is connected to the
             account. `on_signal_route` is a plain boolean and is never sent as null on any node —
             a client reads its absence as "not on the signal's route".
         label:
           type: string
-          description: The record's display name — the company's, the contact's full name, the deal's name, the company member's display name.
+          description: The record's display name — the company's, the contact's full name, the deal's name, the organization member's display name.
         root:
           type: boolean
           description: |-
@@ -35786,7 +35789,7 @@ components:
           type: string
           enum: [readable_by_caller]
           description: >-
-            Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole company may see, so every colleague reads the same number. Absent together with the last-touch fields.
+            Which messages the last-touch fields count: `readable_by_caller` means the messages whose content this caller may open (the activity content gate, contact reach, project narrowing and the human-message rules). The last-message dates, `relationship_direction`, `relationship_changes` and the follow-up `moment` all read this basis, so they agree with the History the caller can read. Shared metrics use a different basis on purpose: `strength` and the colleague network count only messages the whole organization may see, so every colleague reads the same number. Absent together with the last-touch fields.
         last_inbound_activity_id:
           type: [string, 'null']
           format: uuid
@@ -38494,15 +38497,15 @@ components:
             expanding placeholders. Empty sanitized content uses the usual fallback.
         title:
           type: string
-          description: The member's title, filled into the company template's `{title}`.
+          description: The member's title, filled into the organization template's `{title}`.
         phone:
           type: string
-          description: The member's phone number, filled into the company template's `{phone}`.
+          description: The member's phone number, filled into the organization template's `{phone}`.
         template_active:
           type: boolean
           description: |-
             The member's mail has a signature template: their legal entity's own, or else the
-            company's. Every send this member makes then signs with that template, filled in
+            organization's. Every send this member makes then signs with that template, filled in
             with their name, title and phone, instead of `body`, unless effective personal `html` is set.
             An agent's send carries no sign-off.
         updated_at: {type: [string, 'null'], format: date-time}
@@ -38515,7 +38518,7 @@ components:
           type: string
           maxLength: 4000
           description: |-
-            The company's signature layout as HTML, with the placeholders `{name}`, `{title}`,
+            The organization's signature layout as HTML, with the placeholders `{name}`, `{title}`,
             `{phone}`, `{logo}` and `{imprint}`. `{logo}` embeds the logo of the legal entity the
             sender works for, sized for mail, in the message itself; the default entity's logo is
             the company's own, and an entity with no logo shows none. `{imprint}` is that entity's
@@ -38546,7 +38549,7 @@ components:
         template:
           type: string
           maxLength: 4000
-          description: The company template as edited. Empty previews a company with none.
+          description: The organization template as edited. Empty previews a organization with none.
         html:
           type: string
           maxLength: 10000
@@ -38582,7 +38585,7 @@ components:
           description: |-
             `signature`: the caller's own, from Settings. `closing`: the caller has written
             none, so the send closes with a plain greeting and their name when available.
-            `template`: the company's template, filled in with the caller's values. `none`:
+            `template`: the organization's template, filled in with the caller's values. `none`:
             this send appends nothing.
     SaveEmailSignatureRequest:
       type: object
@@ -38605,11 +38608,11 @@ components:
         title:
           type: string
           maxLength: 120
-          description: The member's title, for the company template. Omitted leaves it as it is.
+          description: The member's title, for the organization template. Omitted leaves it as it is.
         phone:
           type: string
           maxLength: 120
-          description: The member's phone number, for the company template. Omitted leaves it as it is.
+          description: The member's phone number, for the organization template. Omitted leaves it as it is.
     SaveMyDisplayNameRequest:
       type: object
       required: [display_name]
@@ -38882,8 +38885,8 @@ components:
             points at it; the account points at each child).
             `partner_of` / `referred_by` / `co_sell_with` — the partner edges, from
             the company that records the edge to its counterparty.
-            `owns` — `from` is the company member who owns the account.
-            `in_contact_with` — `from` is the company member who has been IN recorded
+            `owns` — `from` is the organization member who owns the account.
+            `in_contact_with` — `from` is the organization member who has been IN recorded
             interactions (email, call, meeting) with the contact at `to`. It is drawn from
             the recorded participants of those interactions, so it holds for
             connector-captured mail as well as manually logged activity. Every participant
@@ -39772,7 +39775,7 @@ components:
         explanation: {type: string, description: 'The one-line reason for the chance, in English.'}
     DealLastEmail:
       type: object
-      description: The newest company-visible email on a deal, as `Deal.last_email` carries it.
+      description: The newest organization-visible email on a deal, as `Deal.last_email` carries it.
       required: [occurred_at, occurred_precision, direction]
       properties:
         occurred_at: {type: string, format: date-time}
@@ -39929,13 +39932,13 @@ components:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
           readOnly: true
           description: How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
-        stalled: {type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked company-audience meeting ahead keeps the deal off stalled until it starts or is called off.'}
+        stalled: {type: boolean, readOnly: true, description: 'Derived — no activity past the threshold (absolute duration). A booked organization-audience meeting ahead keeps the deal off stalled until it starts or is called off.'}
         last_email:
           allOf: [{$ref: '#/components/schemas/DealLastEmail'}]
           nullable: true
           readOnly: true
           description: >-
-            The newest email on this deal that the whole company may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: company-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
+            The newest email on this deal that the whole organization may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: organization-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
         source: {type: string, description: 'The channel this record arrived by, one of the values `CreateDealRequest.source` lists. A record written before the list was fixed may still carry an older value until the background correction reaches it.'}
         captured_by: {type: string, readOnly: true, description: 'Server-stamped from the authenticated principal (human:<uuid> | agent:<id> | connector:<name>); never client-supplied.'}
         created_by:
@@ -40463,7 +40466,7 @@ components:
           type: [string, 'null']
           format: date-time
           readOnly: true
-          description: 'The newest company-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
+          description: 'The newest organization-audience activity filed under the project, maintained from the timeline on link write. A task never counts, whoever filed it. It is a read accelerator that a rebuild must reproduce. A message limited to its participants does not move it, even for a reader who may read that message: one number every reader sees can only count what every reader may see.'
         last_activity_precision:
           allOf: [{$ref: '#/components/schemas/OccurredPrecision'}]
           readOnly: true
@@ -40873,7 +40876,7 @@ components:
       required: [from_owner_id, to_owner_id]
       properties:
         from_owner_id: {type: string, format: uuid}
-        to_owner_id: {type: string, format: uuid, description: 'An active user of the company (422 otherwise).'}
+        to_owner_id: {type: string, format: uuid, description: 'An active user of the organization (422 otherwise).'}
     HandoverCounts:
       type: object
       description: Live records per kind.
@@ -41370,7 +41373,7 @@ components:
       properties:
         id: {type: string, format: uuid}
         name: {type: string}
-        is_default: {type: boolean, default: false, description: At most one default per company.}
+        is_default: {type: boolean, default: false, description: At most one default per organization.}
         position: {type: integer, default: 0}
         stages:
           type: array
@@ -41615,7 +41618,7 @@ components:
           description: |-
             `pending`: the member has not confirmed yet. `confirmed`: the member takes part.
             `left`: the member left the link; remove them to take bookings again. `unavailable`:
-            the member left the company or Margince cannot read their calendar.
+            the member left the organization or Margince cannot read their calendar.
     SchedulingTeamCandidate:
       type: object
       required: [user_id, name]
@@ -41858,7 +41861,7 @@ components:
         `duration_seconds` only for meeting/call; `direction` is null for note/task. Setting a
         disallowed field for the kind returns `422 code: field_not_valid_for_kind` (the API rejects
         what the DB CHECK would reject, rather than 500-ing at write time).
-        **Custom fields**: the values of the company's activity custom fields arrive as extra
+        **Custom fields**: the values of the organization's activity custom fields arrive as extra
         top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
         `withheld`.
       required: [id, kind, occurred_at, occurred_precision, source, captured_by, created_at, updated_at, offers_email]
@@ -42032,12 +42035,12 @@ components:
           allOf: [{$ref: '#/components/schemas/ActivityAudience'}]
           readOnly: true
           description: >-
-            Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the company's own domains.
+            Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the organization's own domains.
         audience_reason:
           type: [string, 'null']
           readOnly: true
           description: >-
-            Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the company turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the company; no result opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
+            Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the organization turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the organization; no result opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
         content_state:
           type: string
           enum: [available, withheld]
@@ -42475,7 +42478,7 @@ components:
           maxItems: 25
           items: {type: string, format: uuid}
           description: >-
-            Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this company returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
+            Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this organization returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
         sender_contact_id:
           type: string
           format: uuid
@@ -42542,7 +42545,7 @@ components:
             Which occurrence of `ical_uid` this is — the occurrence's own original start, as the calendar states it. Meeting only. Required whenever `ical_uid` is given, because a series without an occurrence names every meeting in it at once.
       additionalProperties: true
       description: >-
-        The company's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
+        The organization's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
     ActivityAudience:
       type: string
       enum: [workspace, participants, selected]
@@ -42917,7 +42920,7 @@ components:
             patch names, because a patch cannot change a kind.
       additionalProperties: true
       description: >-
-        A sparse patch. The company's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same.
+        A sparse patch. The organization's active activity custom fields travel as extra top-level `cf_` keys, and an explicit `null` clears one. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the stored kind returns `422 field_not_valid_for_kind`; a `null` clears it all the same.
     LatestInboundList:
       type: object
       required: [data]
@@ -43673,7 +43676,7 @@ components:
           items: {type: string, format: email}
           description: |-
             Visible to the SENDER, who is the only contact this record is readable by. A scheduled
-            message's blind-copy list is not company-readable the way a sent activity is.
+            message's blind-copy list is not organization-readable the way a sent activity is.
         body: {type: string}
         html_body:
           type: string
@@ -45270,7 +45273,7 @@ components:
           type: boolean
           description: |-
             Whether a request for a quotation found in private mail is shared with the whole
-            company (`activities.share_private_quote_requests`, on by default). When on, what
+            organization (`activities.share_private_quote_requests`, on by default). When on, what
             the customer asked for becomes visible on the deal it opens. It needs
             `private_mail_requests` on as well. Only mail private by a mailbox setting is
             shared; mail held for any other reason never is. A GET always carries it; a PATCH
@@ -46246,7 +46249,7 @@ components:
         custom:
           type: boolean
           description: |-
-            Whether this is a company-defined custom-field column. Where true,
+            Whether this is a organization-defined custom-field column. Where true,
             `name` is the catalog's `column_name` — join on it to show an admin's
             `label`, which the catalog owns and this vocabulary does not.
         options:
@@ -46349,7 +46352,7 @@ components:
         kind: {type: string, enum: [human, agent, import]}
     TagDetail:
       type: object
-      description: One tag with how much of the company carries it.
+      description: One tag with how much of the organization carries it.
       required: [id, name, usage]
       properties:
         id: {type: string, format: uuid}
@@ -47993,7 +47996,7 @@ components:
             What the deal's priced lines sell. `partly_classified` when lines of another kind or an unpriced remainder sit beside the classified ones, `unclassified` when no line is a product or a service, or the lines add up to more than the deal. Absent when the deal's amount is masked from the caller.
         next_task:
           allOf: [{$ref: '#/components/schemas/SalesProgressNextTask'}]
-          description: The earliest-due open task on the deal that every company reader may see. Absent when there is none.
+          description: The earliest-due open task on the deal that every organization reader may see. Absent when there is none.
     SalesProgressNextTask:
       type: object
       additionalProperties: false
@@ -49671,7 +49674,7 @@ components:
         started:
           type: boolean
           description: >-
-            Whether any pass has ever run in this company. False is a company the nightly sweep is skipping until somebody starts it — which is what makes this a first check rather than a recheck.
+            Whether any pass has ever run in this organization. False is a organization the nightly sweep is skipping until somebody starts it — which is what makes this a first check rather than a recheck.
         eligible_deals:
           type: integer
           description: How much there would be to check, counted once per deal evaluated.
@@ -49975,7 +49978,7 @@ components:
         scope_id:
           type: string
           format: uuid
-          description: Whose forecast, for a team or owner scope. Absent for the company.
+          description: Whose forecast, for a team or owner scope. Absent for the organization.
         snapshot_id:
           type: string
           format: uuid
@@ -50038,7 +50041,7 @@ components:
           type: string
           format: uuid
           description: >-
-            The team or contact measured. Absent for company and managed_teams, which name no single subject.
+            The team or contact measured. Absent for organization and managed_teams, which name no single subject.
         label: {type: string, description: "What to call this population on screen."}
         assertable:
           type: boolean
@@ -50047,7 +50050,7 @@ components:
         measurable:
           type: boolean
           description: >-
-            Whether this population is within the caller's own record access: the company for a seat that reads every record, a team for its members. Analytics offers the totals of a scope outside it. Progress reads only a scope inside it.
+            Whether this population is within the caller's own record access: the organization for a seat that reads every record, a team for its members. Analytics offers the totals of a scope outside it. Progress reads only a scope inside it.
       additionalProperties: false
     AnalyticsCapabilities:
       type: object
@@ -50763,14 +50766,14 @@ components:
         key:
           type: string
           description: >-
-            The stable key a role assignment and every refusal names (`admin`, `rep`, …). Unique per company, and the path segment `setRoleObjectGrant` addresses.
+            The stable key a role assignment and every refusal names (`admin`, `rep`, …). Unique per organization, and the path segment `setRoleObjectGrant` addresses.
         name:
           type: string
           description: The operator-facing label. Display only — nothing resolves a role by it.
         is_system:
           type: boolean
           description: >-
-            True for a role the company bootstrap seeded and the RBAC migrations top up. It is NOT an immutability flag — a system role's grants are editable through `setRoleObjectGrant`, which is what makes granting an extension object possible at all on an installation that never defined a custom role. A client may surface it as "shipped with the product", never as "read-only".
+            True for a role the organization bootstrap seeded and the RBAC migrations top up. It is NOT an immutability flag — a system role's grants are editable through `setRoleObjectGrant`, which is what makes granting an extension object possible at all on an installation that never defined a custom role. A client may surface it as "shipped with the product", never as "read-only".
         version:
           type: integer
           format: int64
@@ -50795,7 +50798,7 @@ components:
       additionalProperties: false
       required: [roles, verbs]
       description: >-
-        Every role this company defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer.
+        Every role this organization defines. Not paginated and deliberately not: the set is bounded by what an operator created (six seeded, plus a handful at most), the editor needs all of it to render, and a cursor over it would be ceremony over a complete answer.
       properties:
         roles:
           type: array
@@ -50868,7 +50871,7 @@ components:
         setup_missing:
           type: array
           description: >-
-            What an admin still has to set before the unit can work: each company secret the unit declares that holds no value, then each OAuth app it declares with no stored client. Empty means the unit is ready. Worked out on each read from the declaration and the stored values; nothing about it is stored. Each part needs the caller's right to read that setting: admin for a company secret, capture_settings.read for an OAuth app. A part the caller may not read is left out. The field is absent when that hides a part and nothing visible is missing, and from an older server.
+            What an admin still has to set before the unit can work: each organization secret the unit declares that holds no value, then each OAuth app it declares with no stored client. Empty means the unit is ready. Worked out on each read from the declaration and the stored values; nothing about it is stored. Each part needs the caller's right to read that setting: admin for a organization secret, capture_settings.read for an OAuth app. A part the caller may not read is left out. The field is absent when that hides a part and nothing visible is missing, and from an older server.
           items: {$ref: '#/components/schemas/ComposedExtensionSetupItem'}
         mail_hooks:
           $ref: '#/components/schemas/ComposedExtensionMailHooks'
@@ -51033,7 +51036,7 @@ components:
       additionalProperties: false
       description: |-
         Captured records already filed under a contact that are still held to their
-        participants because, when they arrived, they named nobody the company knew. The
+        participants because, when they arrived, they named nobody the organization knew. The
         nightly link reconcile lifts every one of them, so anything counted here is backlog.
         Counted with the pass's own selector and without its per-tick bound.
       required: [count]
@@ -51047,7 +51050,7 @@ components:
       additionalProperties: false
       description: |-
         When one repair pass last ran and last succeeded, from the receipt each pass writes
-        per company turn. Never names what the pass worked on.
+        per organization turn. Never names what the pass worked on.
       required: [sweep]
       properties:
         sweep:
@@ -51679,7 +51682,7 @@ components:
         fleet_wide:
           type: boolean
           description: >-
-            True for a dispatcher — a job that fans work out and does no tenant work of its own. Its rows carry no company.
+            True for a dispatcher — a job that fans work out and does no tenant work of its own. Its rows carry no organization.
         waiting: {type: integer, description: 'Available, scheduled or pending: queued and not yet started.'}
         running: {type: integer}
         retrying: {type: integer, description: Failed at least once and backing off toward another attempt.}
@@ -51859,7 +51862,7 @@ components:
     CustomField:
       type: object
       description: |-
-        A company-defined runtime field on an existing core object. `column_name` is the physical `cf_`-prefixed
+        A organization-defined runtime field on an existing core object. `column_name` is the physical `cf_`-prefixed
         identifier, stable across rename; `status=retired` hides the field from the API
         and filtering while the column and its values are preserved. Deliberately carries no
         `source`/`captured_by` — the catalog row itself has no such columns; provenance
@@ -52154,7 +52157,7 @@ components:
       additionalProperties: false
       required: [kind]
       properties:
-        kind: {type: string, enum: [owner, team, workspace], description: 'Whose figures the report covers: one owner, one team, or the whole company. id names the owner or team.'}
+        kind: {type: string, enum: [owner, team, workspace], description: 'Whose figures the report covers: one owner, one team, or the whole organization. id names the owner or team.'}
         id: {type: string, format: uuid}
     RunReportRequest:
       type: object
@@ -52596,7 +52599,7 @@ components:
             What the tool is for, as an MCP client is told it: the outcome it produces, its limits, when a neighbouring tool is the better call, and what to keep from its result — followed by this server's own governance clause, which is absent for a tool that runs immediately and needs only the read scope.
         required_scope: {type: string, description: Passport scope required to call it.}
         tier: {$ref: '#/components/schemas/AgentToolTier'}
-        egress: {type: boolean, description: True if the tool reaches outside the company.}
+        egress: {type: boolean, description: True if the tool reaches outside the organization.}
         actions:
           type: array
           description: >-
@@ -52791,8 +52794,8 @@ components:
           description: |-
             The mail signature layout of a sender assigned to this entity, with the placeholders
             of `EmailSignatureTemplate.template`, up to 4000 characters. Null means the
-            company's template. Always null on the default entity, which signs with the
-            company's template (`/email-signature-template`).
+            organization's template. Always null on the default entity, which signs with the
+            organization's template (`/email-signature-template`).
         offering: {$ref: '#/components/schemas/LegalEntityOffering'}
         logo_url:
           type: string
@@ -55967,7 +55970,7 @@ components:
       properties:
         id: {type: string, format: uuid}
         name: {type: string}
-        sku: {type: [string, 'null'], description: Optional; unique per company while live.}
+        sku: {type: [string, 'null'], description: Optional; unique per organization while live.}
         description: {type: [string, 'null'], maxLength: 20000}
         unit: {type: string, description: "A unit key (`piece`, `hour`, `day`, `month`, `flat_fee`) that a client shows in its reader's language, or any other unit as typed text. A row written before the keys may hold a known spelling such as `Tag`, which a client shows as its key. Display only."}
         unit_price_minor: {type: integer, format: int64, description: Integer minor units (P11); no float money.}
@@ -56477,11 +56480,11 @@ components:
     OfferTemplate:
       type: object
       description: >-
-        A branded, company-governed DE/EN PDF layout for offers. Deliberately carries no source/captured_by — like CustomField, this is company-authored config, not a captured record; provenance lives in the audit row, not this schema.
+        A branded, organization-governed DE/EN PDF layout for offers. Deliberately carries no source/captured_by — like CustomField, this is organization-authored config, not a captured record; provenance lives in the audit row, not this schema.
       required: [id, name, locale, is_default, layout, version, created_at, updated_at]
       properties:
         id: {type: string, format: uuid}
-        name: {type: string, description: Unique per company among live (non-archived) templates.}
+        name: {type: string, description: Unique per organization among live (non-archived) templates.}
         locale: {type: string, default: de-DE, description: 'DE/EN at launch (de-DE, en-US); drives the rendered PDF label set.'}
         is_default: {type: boolean, default: false, description: At most one default template per locale (partial unique index).}
         layout: {type: object, additionalProperties: true, description: 'Logo/header/footer/terms-block refs: bounded params rather than a CMS.'}
@@ -56549,7 +56552,7 @@ components:
       properties:
         id: {type: string, format: uuid}
         deal_id: {type: string, format: uuid}
-        offer_number: {type: string, readOnly: true, description: 'Human-facing Angebot number, minted server-side, unique per company (with revision).'}
+        offer_number: {type: string, readOnly: true, description: 'Human-facing Angebot number, minted server-side, unique per organization (with revision).'}
         revision: {type: integer, readOnly: true, description: Bumped when a sent offer is regenerated; the prior revision becomes superseded.}
         status: {type: string, enum: [draft, sent, accepted, rejected, expired, superseded]}
         currency: {type: string, pattern: '^[A-Z]{3}$'}
@@ -56919,7 +56922,7 @@ components:
         as_of: {type: string, format: date-time, description: The data cutoff this brief reflects; the next run derives "changed overnight" from it.}
         local_day: {type: string, format: date, description: 'The morning this run is for, as a calendar date in the installation reporting timezone. A rep has exactly one run per local day, and the on-open read serves today''s — never an older one dressed as today.'}
         candidate_count: {type: integer, minimum: 0}
-        revenue_norm_minor: {type: integer, format: int64, description: The company-P90 (or fallback) base value the revenue factor normalized against.}
+        revenue_norm_minor: {type: integer, format: int64, description: The organization-P90 (or fallback) base value the revenue factor normalized against.}
         revenue_norm_currency:
           type: string
           pattern: '^[A-Z]{3}$'
@@ -58899,7 +58902,7 @@ components:
           minimum: 0
           description: |-
             Work somebody judged to be no business of the queue's. SOMEBODY'S CHOICE, and
-            the judgement worth watching: it hides the thread from the WHOLE company and
+            the judgement worth watching: it hides the thread from the WHOLE organization and
             never lifts, so one rep's mistake removes a customer from everybody's day
             permanently.
         past_horizon:
@@ -58915,7 +58918,7 @@ components:
           minimum: 0
           description: |-
             Inbound mail that qualifies in every other way and is attached to no record the
-            company sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
+            organization sells to. ALSO NOBODY'S CHOICE, and genuinely ambiguous: usually it
             is right — a rep's dentist is not a customer — and it is also where a real
             customer lands when capture failed to link their thread. Its own figure for
             that reason rather than folded into a total.
@@ -58923,7 +58926,7 @@ components:
           type: integer
           minimum: 0
           description: |-
-            Mail from one of the company's own email domains. ALSO NOBODY'S CHOICE, and
+            Mail from one of the organization's own email domains. ALSO NOBODY'S CHOICE, and
             watched because the rule is only as good as the domain list behind it: a
             domain entered by mistake suppresses a real customer's correspondence for
             everybody, and this is the figure that would show it.
@@ -58959,7 +58962,7 @@ components:
     ResponseMetrics:
       type: object
       description: |-
-        What the company did with its work over one window. Three questions: how fast it
+        What the organization did with its work over one window. Three questions: how fast it
         answered what it answered, how much it put down instead, and how often a deal the
         queue called material and at risk got a next step booked the same day.
       required: [from, to, answered, median_minutes, disposed, disposed_not_sales]
@@ -58972,7 +58975,7 @@ components:
           description: |-
             How many inbound sales messages got a reply in the window. It is the
             denominator `median_minutes` is worth reading against: a fast median over three
-            answered messages says less about the company than a slower one over three
+            answered messages says less about the organization than a slower one over three
             hundred.
         median_minutes:
           type: integer
@@ -58989,7 +58992,7 @@ components:
           type: integer
           minimum: 0
           description: |-
-            How many of those were the company-wide judgement. Its own figure because it
+            How many of those were the organization-wide judgement. Its own figure because it
             is the one that costs everybody: the other two hide a row from one reader, this
             one hides the conversation from all of them and does not lift.
         at_risk_judged:
@@ -59059,7 +59062,7 @@ components:
           description: The domain question's reason code, rendered in the reader's language.
         domain_note:
           type: string
-          description: The site triage's own sentence on a `vendor_verdict` domain question, in the company language.
+          description: The site triage's own sentence on a `vendor_verdict` domain question, in the organization language.
         run_reason_code:
           type: string
           description: |-
@@ -59335,7 +59338,7 @@ components:
         not_shown_count_withheld:
           type: boolean
           description: >-
-            True when the reader cannot inspect company-wide unsupported record counts. Those counts are withheld; absence of described actions does not establish a complete receipt.
+            True when the reader cannot inspect organization-wide unsupported record counts. Those counts are withheld; absence of described actions does not establish a complete receipt.
         sources_unavailable:
           type: array
           items: {$ref: '#/components/schemas/WorklistSourceUnavailable'}
@@ -59365,7 +59368,7 @@ components:
             `unknown_entity_type` — a CRM entity kind this build cannot scope, and therefore
             cannot safely show. Counted rather than served: showing a row this read cannot
             place is showing a row it cannot prove the reader may see. The count is
-            company-wide machine changes to CRM entities, not the reader's own. Infrastructure
+            organization-wide machine changes to CRM entities, not the reader's own. Infrastructure
             and configuration audits do not contribute. It is reported only to a
             seat holding `ai_diagnostics` read. Its absence for any other seat is not a zero.
             `out_of_scope` — a row about a record outside the reader's own scope. Counted
@@ -60067,7 +60070,7 @@ components:
           type: string
           maxLength: 500
           description: >-
-            What this corpus covers, in the company's own words. Quoted back whenever the corpus refuses, so it is read by a contact at their least patient moment — write it as a sentence, not a label.
+            What this corpus covers, in the organization's own words. Quoted back whenever the corpus refuses, so it is read by a contact at their least patient moment — write it as a sentence, not a label.
         min_similarity:
           type: number
           format: double
@@ -60081,7 +60084,7 @@ components:
             True when min_similarity is this corpus's own number rather than the binding's measured floor. An override may sit below the measured floor.
         default_ask:
           type: boolean
-          description: The corpus the command palette's ask lands on. At most one per company.
+          description: The corpus the command palette's ask lands on. At most one per organization.
         reindexing:
           type: boolean
           description: A re-embed is in flight; every ask answers not_ready until it finishes.
@@ -60094,7 +60097,7 @@ components:
     KnowledgeCorpusList:
       type: object
       description: >-
-        Every corpus, unpaged. A company defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a commitment with no producer behind it.
+        Every corpus, unpaged. A organization defines these by hand, in ones and twos, and the screen shows all of them — a cursor here would be a commitment with no producer behind it.
       required: [items]
       properties:
         items:

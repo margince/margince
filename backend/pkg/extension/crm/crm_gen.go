@@ -1884,7 +1884,7 @@ func (e TaskType) Valid() bool {
 // what the DB CHECK would reject, rather than 500-ing at write time).
 // `channel_provider` is the same kind of constraint in both directions: non-null exactly
 // when `kind=message` (ADR-0107).
-// **Custom fields**: the values of the company's activity custom fields arrive as extra
+// **Custom fields**: the values of the organization's activity custom fields arrive as extra
 // top-level `cf_` keys. They are content, so they are absent whenever `content_state` is
 // `withheld`.
 type Activity struct {
@@ -1901,10 +1901,10 @@ type Activity struct {
 	// AttendeeResponses Meeting only: the answers the colleagues and the linked contacts you see gave the invitation, for those a calendar stated one for. A guest in `guests` carries their own `response`. Filled and withheld like `guests`.
 	AttendeeResponses *[]MeetingAttendeeResponse `json:"attendee_responses,omitempty"`
 
-	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the company's own domains.
+	// Audience Who may read this activity's CONTENT once the row is discoverable at all. `workspace` — everyone who can discover it (the default); `participants` — the humans on it (the capturing mailbox owner, anyone stamped as a participant by seat); `selected` — the participants plus the users and teams named through PATCH /activities/{id}/audience. Set only through that endpoint, by a human with write authority over the activity. The colleague who sent a mail that only another member's mailbox captured may read that one copy, when their login address is at one of the organization's own domains.
 	Audience *ActivityAudience `json:"audience,omitempty"`
 
-	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the company turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the company; no result opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
+	// AudienceReason Why `audience` is what it is, for a captured message whose audience the system derived rather than a human set: `posture` (a mailbox asked for it), `workspace_floor` (the organization turned mail sharing off), `no_record` (the message is filed under no record), `no_counterparty` (the message named nobody a record could be filed under), `pending_verdict` (nothing has judged the message yet), `verdict` (a classifier held the thread), `counterparty` (the importing seat holds mail with one of its parties), `explicitly_confidential` (the subject marks it confidential), `members_only` (every party is a member of the organization; no result opens it, the mailbox owner sharing the thread does), `manual` (a human said so). A classifier's own kind, such as `legal`, may stand in for `verdict`. Null on a row nothing derived. WITHHELD with the content — the reason describes what the message is about, so a colleague who may not read a held message does not learn why it is held either; it is absent whenever `content_state` is `withheld`.
 	AudienceReason *string `json:"audience_reason,omitempty"`
 
 	// Author Who wrote this where it came FROM, present only on a record imported from another system whose importer named the author. Null on everything else, which is most rows: a message captured from a mailbox or typed here has no author but the one `captured_by` already names.
@@ -2162,12 +2162,12 @@ type ActivityAuthor struct {
 	// IsReader The author is the signed-in caller.
 	IsReader bool `json:"is_reader"`
 
-	// Kind `colleague` is a seat in this company, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+	// Kind `colleague` is a seat in this organization, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
 	Kind   ActivityAuthorKind `json:"kind"`
 	UserId *string            `json:"user_id,omitempty"`
 }
 
-// ActivityAuthorKind `colleague` is a seat in this company, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
+// ActivityAuthorKind `colleague` is a seat in this organization, recorded as such by capture or by the seat that logged it. `machine` is a sending system rather than a human (`automatic_kind` sending_system). `contact_record` is a contact this caller may see. `unresolved` is an address, or an imported author's name, that resolved to neither.
 type ActivityAuthorKind string
 
 // ActivityDealFiling defines model for ActivityDealFiling.
@@ -2443,7 +2443,7 @@ type Company struct {
 	// cannot be archived or merged. A caller that offers company actions should tell it apart.
 	IsAnchor *bool `json:"is_anchor,omitempty"`
 
-	// LastActivityAt When something last happened with this account: the newest `occurred_at` at or before now of a company-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
+	// LastActivityAt When something last happened with this account: the newest `occurred_at` at or before now of a organization-audience activity linked to it, so a booked meeting counts once it starts. A task never counts, whoever filed it, and neither does a canceled or no-show meeting. It is maintained on the activity write as `deal.last_activity_at` is (a read accelerator that a rebuild must reproduce). NULL until the first such activity. Sortable (DM-VOCAB-2).
 	// A message limited to its participants does NOT move this date, even for a reader who may read that message. The value is one number every reader sees, so it can only count what every reader may see.
 	LastActivityAt *time.Time `json:"last_activity_at,omitempty"`
 
@@ -2468,7 +2468,7 @@ type Company struct {
 	LogoUrl      *string `json:"logo_url,omitempty"`
 	MergedIntoId *string `json:"merged_into_id,omitempty"`
 
-	// OpenDealCount How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE company — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it.
+	// OpenDealCount How many open, live deals belong to this account (PO-EXT-10; AC-companies-2/3's Open deals column), counted across the WHOLE organization — the same population the account's `computed_fields` open-pipeline row sums (founder decision 2026-08-18: a pipeline figure on an account is a fact about the account, not about who may open each deal). The key is ABSENT entirely, not 0, for a role without `deal:read` or without `computed_field:read` (STATE-4, the `computed_fields` gate). Present on `listCompanies` and `getCompany`; write responses omit it.
 	OpenDealCount *int    `json:"open_deal_count,omitempty" minimum:"0"`
 	OwnerId       *string `json:"owner_id,omitempty"`
 
@@ -2514,7 +2514,7 @@ type Company struct {
 	// (ErrVersionSkew) so the client re-reads before retrying.
 	Version *RowVersion `json:"version,omitempty" minimum:"1"`
 
-	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the company through a sender result, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
+	// Visibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the organization through a sender result, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 	Visibility *CompanyVisibility `json:"visibility,omitempty"`
 
 	// WebsiteUrl The company's readable website, DERIVED from its primary domain row. There is deliberately no website column — a second store for a fact company_domain already owns is the duplication ADR-0085 closes. Not accepted on write.
@@ -2537,7 +2537,7 @@ type CompanySizeBand string
 // CompanyStatus Where the account stands with us. Single-valued: an account is at one point in a sales motion at a time. `unknown` is the default and means it — the retired `classification` defaulted to `prospect` and, having no writer, rendered that default on every unassessed account as though someone had judged it. `onboarding` means the contract is signed and set-up runs. `live` means the agreed first scope is in use, and only a signed-in user may set it: an agent, automation, approval or import gets 422 `lifecycle_live_needs_a_human`.
 type CompanyStatus string
 
-// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the company through a sender result, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
+// CompanyVisibility Who this record is for. `workspace` is every seat that holds the read grant. `owner` is capture privacy: a connector made this record from a message nothing had judged yet, and it belongs to the mailbox owner alone until something does — not to their team, their manager, or an admin. You are only ever sent a row you may already read, so this discloses nothing new; it says WHY you can see it, which is what lets a page tell "private to you" from "shared with everybody" instead of leaving the owner to guess. An `owner` row reaches the organization through a sender result, or through `visibility` on `PATCH /companies/{id}`, which moves it BOTH ways for anybody the write gate admits. Read-only HERE, on the read schema, the same as the contact column beside it: the update request carries the writable copy.
 type CompanyVisibility string
 
 // CompanyDomain defines model for CompanyDomain.
@@ -2594,7 +2594,7 @@ type ControllerSend struct {
 	FromAddress *string `json:"from_address"`
 }
 
-// CreateActivityRequest The company's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
+// CreateActivityRequest The organization's active activity custom fields travel as extra top-level `cf_` keys. A key that is not `cf_`-prefixed, names no active activity field, or carries a value of the wrong shape for its field returns `422`. A value for a field that does not apply to the activity's kind returns `422 field_not_valid_for_kind`.
 type CreateActivityRequest struct {
 	// AiAssisted True when an AI model rewrote the subject or body the caller sends, as Polish wording (`POST /rewrites`) does. The activity then reads `ai_assisted`. Needs `ai_assisted_on`. Only a human sets it: an agent or a connector is refused with 422 on `ai_assisted`. Absent means false.
 	AiAssisted *bool `json:"ai_assisted,omitempty"`
@@ -2603,7 +2603,7 @@ type CreateActivityRequest struct {
 	AiAssistedOn *ActivityLink `json:"ai_assisted_on,omitempty"`
 	AssigneeId   *string       `json:"assignee_id,omitempty"`
 
-	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this company returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
+	// AttendeeUserIds Meeting or call only: the colleagues who attended besides the caller. Each one is recorded as a participant, so the meeting counts toward their relationship with every linked contact, the same as a meeting captured from a calendar. Any other kind returns `422 code: field_not_valid_for_kind`. An id that is not an active member of this organization returns `422 code: not_a_colleague`, and more than 25 ids return `422 code: too_many_attendees`.
 	AttendeeUserIds *[]string `json:"attendee_user_ids,omitempty"`
 	Body            *string   `json:"body,omitempty"`
 
@@ -2791,7 +2791,7 @@ type Deal struct {
 	// LastActivityPrecision How to read `last_activity_at`, from the activity it names. A day entry counts its quiet days from its own date. Absent when that is null.
 	LastActivityPrecision *OccurredPrecision `json:"last_activity_precision,omitempty"`
 
-	// LastEmail The newest email on this deal that the whole company may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: company-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
+	// LastEmail The newest email on this deal that the whole organization may see — what a board card states as "last mail, N days ago" beside the deal, so a rep reads the silence without opening every card. Null on a deal nobody has mailed about. Counts what `last_activity_at` counts, narrowed to mail: organization-audience rows only, and never the product's own system writing — a message limited to its participants must not move a date every colleague reads, and a mail the installation sent itself is not the buyer engaging. The rows a reader may discover through `GET /activities` can therefore be newer than this instant.
 	LastEmail *DealLastEmail `json:"last_email,omitempty"`
 
 	// LegalHold True while a litigation or investigation hold is preserving this record. A held record is never acted on by a retention sweep and an Art. 17 erasure against it is refused, so a screen that offers either action has to know. Placed and lifted through /retention/legal-holds, never by an ordinary edit.
@@ -2839,7 +2839,7 @@ type Deal struct {
 	// StageWinProbability The probability of the deal's current stage, so a client can show it beside a probability set on the deal.
 	StageWinProbability *int `json:"stage_win_probability,omitempty" maximum:"100" minimum:"0"`
 
-	// Stalled Derived — no activity past the threshold (absolute duration). A booked company-audience meeting ahead keeps the deal off stalled until it starts or is called off.
+	// Stalled Derived — no activity past the threshold (absolute duration). A booked organization-audience meeting ahead keeps the deal off stalled until it starts or is called off.
 	Stalled   *bool      `json:"stalled,omitempty"`
 	Status    DealStatus `json:"status"`
 	Tags      *[]RowTag  `json:"tags,omitempty"`
@@ -2904,7 +2904,7 @@ type DealWinProbabilitySource string
 // DealWonWithoutContractReason Why this deal was won with no contract behind it. NULL on a won deal that HAS one — the two are distinguishable, which is what makes "how many won deals have no paper, and why" answerable. Cleared on reopen and on any transition away from won.
 type DealWonWithoutContractReason string
 
-// DealLastEmail The newest company-visible email on a deal, as `Deal.last_email` carries it.
+// DealLastEmail The newest organization-visible email on a deal, as `Deal.last_email` carries it.
 type DealLastEmail struct {
 	// Direction Which way the mail went. Null on a logged email that named no direction, which is a fact about how it was captured rather than about the exchange.
 	Direction  *DealLastEmailDirection `json:"direction"`

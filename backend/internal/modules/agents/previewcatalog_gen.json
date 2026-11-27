@@ -607,7 +607,7 @@
     "key":
      "key",
     "kind":
-     "Kind",
+     "kind",
     "label":
      "label",
     "language":
@@ -11612,8 +11612,6 @@
      "Evidence considered",
     "merge_profile_field/text/judged_through_activity_id":
      "Evidence considered through",
-    "merge_profile_field/text/kind":
-     "Kind",
     "merge_profile_field/text/language":
      "Language",
     "merge_profile_field/text/last_name":
@@ -12288,8 +12286,6 @@
      "Evidence considered",
     "merge_profile_field/lifecycle/judged_through_activity_id":
      "Evidence considered through",
-    "merge_profile_field/lifecycle/kind":
-     "Kind",
     "merge_profile_field/lifecycle/language":
      "Language",
     "merge_profile_field/lifecycle/last_name":
@@ -25791,7 +25787,7 @@
     "invitation_response":
      "Antwort auf die Einladung",
     "invitation_sender":
-     "Absender der Einladung",
+     "Einladung gesendet von",
     "invitation_status":
      "Einladungsstatus",
     "invoice_id":
@@ -25809,7 +25805,7 @@
     "key":
      "key",
     "kind":
-     "Typ",
+     "kind",
     "label":
      "label",
     "language":
@@ -26287,7 +26283,7 @@
     "participant_seats":
      "Teilnehmende Mitglieder",
     "participant_users":
-     "Teilnehmende Benutzer",
+     "Teilnehmende Personen",
     "partner":
      "Partner",
     "partner_accepted_at":
@@ -26433,7 +26429,7 @@
     "proposed_lifecycle":
      "proposed lifecycle",
     "proven_sender":
-     "Bestätigter Absender",
+     "Nachweislich gesendet von",
     "provider_claims_received":
      "Erhaltene Anbieterangaben",
     "purge_reason":
@@ -26637,7 +26633,7 @@
     "sender_signature_private":
      "sender signature private",
     "sent_by_colleague":
-     "Von einem Kollegen gesendet",
+     "Vom Team gesendet",
     "served_industry":
      "Bediente Branchen",
     "served_segments":
@@ -36807,7 +36803,7 @@
     "merge_profile_field/text/invitation_response":
      "Antwort auf die Einladung",
     "merge_profile_field/text/invitation_sender":
-     "Absender der Einladung",
+     "Einladung gesendet von",
     "merge_profile_field/text/invitation_status":
      "Einladungsstatus",
     "merge_profile_field/text/is_current_primary":
@@ -36818,8 +36814,6 @@
      "Geprüfte Belege",
     "merge_profile_field/text/judged_through_activity_id":
      "Belege geprüft bis",
-    "merge_profile_field/text/kind":
-     "Typ",
     "merge_profile_field/text/language":
      "Sprache",
     "merge_profile_field/text/last_name":
@@ -36939,7 +36933,7 @@
     "merge_profile_field/text/participant_seats":
      "Teilnehmende Mitglieder",
     "merge_profile_field/text/participant_users":
-     "Teilnehmende Benutzer",
+     "Teilnehmende Personen",
     "merge_profile_field/text/partner":
      "Partner",
     "merge_profile_field/text/partner_accepted_at":
@@ -36977,7 +36971,7 @@
     "merge_profile_field/text/proposal_status":
      "Status des Terminvorschlags",
     "merge_profile_field/text/proven_sender":
-     "Bestätigter Absender",
+     "Nachweislich gesendet von",
     "merge_profile_field/text/provider_claims_received":
      "Erhaltene Anbieterangaben",
     "merge_profile_field/text/purge_reason":
@@ -37081,7 +37075,7 @@
     "merge_profile_field/text/score_override_reason":
      "Grund für die Score-Anpassung",
     "merge_profile_field/text/sent_by_colleague":
-     "Von einem Kollegen gesendet",
+     "Vom Team gesendet",
     "merge_profile_field/text/served_industry":
      "Bediente Branchen",
     "merge_profile_field/text/served_segments":
@@ -37487,7 +37481,7 @@
     "merge_profile_field/lifecycle/invitation_response":
      "Antwort auf die Einladung",
     "merge_profile_field/lifecycle/invitation_sender":
-     "Absender der Einladung",
+     "Einladung gesendet von",
     "merge_profile_field/lifecycle/invitation_status":
      "Einladungsstatus",
     "merge_profile_field/lifecycle/is_current_primary":
@@ -37498,8 +37492,6 @@
      "Geprüfte Belege",
     "merge_profile_field/lifecycle/judged_through_activity_id":
      "Belege geprüft bis",
-    "merge_profile_field/lifecycle/kind":
-     "Typ",
     "merge_profile_field/lifecycle/language":
      "Sprache",
     "merge_profile_field/lifecycle/last_name":
@@ -37619,7 +37611,7 @@
     "merge_profile_field/lifecycle/participant_seats":
      "Teilnehmende Mitglieder",
     "merge_profile_field/lifecycle/participant_users":
-     "Teilnehmende Benutzer",
+     "Teilnehmende Personen",
     "merge_profile_field/lifecycle/partner":
      "Partner",
     "merge_profile_field/lifecycle/partner_accepted_at":
@@ -37657,7 +37649,7 @@
     "merge_profile_field/lifecycle/proposal_status":
      "Status des Terminvorschlags",
     "merge_profile_field/lifecycle/proven_sender":
-     "Bestätigter Absender",
+     "Nachweislich gesendet von",
     "merge_profile_field/lifecycle/provider_claims_received":
      "Erhaltene Anbieterangaben",
     "merge_profile_field/lifecycle/purge_reason":
@@ -37761,7 +37753,7 @@
     "merge_profile_field/lifecycle/score_override_reason":
      "Grund für die Score-Anpassung",
     "merge_profile_field/lifecycle/sent_by_colleague":
-     "Von einem Kollegen gesendet",
+     "Vom Team gesendet",
     "merge_profile_field/lifecycle/served_industry":
      "Bediente Branchen",
     "merge_profile_field/lifecycle/served_segments":
@@ -51019,7 +51011,7 @@
     "key":
      "key",
     "kind":
-     "Loại",
+     "kind",
     "label":
      "label",
     "language":
@@ -51031,7 +51023,7 @@
     "lead_holds_email":
      "lead holds email",
     "lead_id":
-     "Lead",
+     "Khách hàng tiềm năng",
     "lead_status":
      "Trạng thái",
     "legal_entity_id":
@@ -51065,7 +51057,7 @@
     "link_suggestion":
      "Liên kết gợi ý",
     "linkedin":
-     "LinkedIn",
+     "Hồ sơ LinkedIn",
     "linkedin_url":
      "Liên kết LinkedIn",
     "locale":
@@ -62026,14 +62018,12 @@
      "Bằng chứng đã xét",
     "merge_profile_field/text/judged_through_activity_id":
      "Bằng chứng đã xét đến",
-    "merge_profile_field/text/kind":
-     "Loại",
     "merge_profile_field/text/language":
      "Ngôn ngữ",
     "merge_profile_field/text/last_name":
      "Họ",
     "merge_profile_field/text/lead_id":
-     "Lead",
+     "Khách hàng tiềm năng",
     "merge_profile_field/text/legal_entity_id":
      "Công ty gửi",
     "merge_profile_field/text/legal_form":
@@ -62053,7 +62043,7 @@
     "merge_profile_field/text/link_suggestion":
      "Liên kết gợi ý",
     "merge_profile_field/text/linkedin":
-     "LinkedIn",
+     "Hồ sơ LinkedIn",
     "merge_profile_field/text/linkedin_url":
      "Liên kết LinkedIn",
     "merge_profile_field/text/location":
@@ -62307,7 +62297,7 @@
     "merge_profile_field/text/social":
      "Hồ sơ mạng xã hội",
     "merge_profile_field/text/social.linkedin":
-     "LinkedIn",
+     "Hồ sơ LinkedIn",
     "merge_profile_field/text/source":
      "Nguồn",
     "merge_profile_field/text/source_activity_id":
@@ -62704,14 +62694,12 @@
      "Bằng chứng đã xét",
     "merge_profile_field/lifecycle/judged_through_activity_id":
      "Bằng chứng đã xét đến",
-    "merge_profile_field/lifecycle/kind":
-     "Loại",
     "merge_profile_field/lifecycle/language":
      "Ngôn ngữ",
     "merge_profile_field/lifecycle/last_name":
      "Họ",
     "merge_profile_field/lifecycle/lead_id":
-     "Lead",
+     "Khách hàng tiềm năng",
     "merge_profile_field/lifecycle/legal_entity_id":
      "Công ty gửi",
     "merge_profile_field/lifecycle/legal_form":
@@ -62731,7 +62719,7 @@
     "merge_profile_field/lifecycle/link_suggestion":
      "Liên kết gợi ý",
     "merge_profile_field/lifecycle/linkedin":
-     "LinkedIn",
+     "Hồ sơ LinkedIn",
     "merge_profile_field/lifecycle/linkedin_url":
      "Liên kết LinkedIn",
     "merge_profile_field/lifecycle/location":
@@ -62985,7 +62973,7 @@
     "merge_profile_field/lifecycle/social":
      "Hồ sơ mạng xã hội",
     "merge_profile_field/lifecycle/social.linkedin":
-     "LinkedIn",
+     "Hồ sơ LinkedIn",
     "merge_profile_field/lifecycle/source":
      "Nguồn",
     "merge_profile_field/lifecycle/source_activity_id":

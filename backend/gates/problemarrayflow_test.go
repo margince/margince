@@ -27,7 +27,7 @@ func (r *problemFileReader) readPassedFieldArrays() {
 			continue
 		}
 		for _, entry := range tr.entries(open) {
-			if entry.key == "errors" && !entry.spread {
+			if entry.key == "errors" && !entry.spread && !tr.is(entry.value.from, "[") {
 				r.readFieldArray(entry.value, context.code, entry.keyAt, 0)
 			}
 		}

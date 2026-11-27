@@ -235,6 +235,9 @@ func (r historyImageReader) sliceStrings(in historyImageArg, depth int) ([]strin
 			}
 		}
 	case *ast.SelectorExpr:
+		if r.storedFieldBusy == nil {
+			r.storedFieldBusy = map[*types.Var]bool{}
+		}
 		if values, known := r.storedFieldValues(in, value, depth+1, true, r.sliceStrings); known {
 			return values, true
 		}

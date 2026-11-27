@@ -5,15 +5,16 @@ import { useMutation, useQueryClient } from "@tanstack/react-query";
 import { api } from "../api/client";
 import type { components } from "../api/schema";
 import { useT } from "../i18n";
-import { LANGUAGE_DEPENDENT_QUERY_PREFIXES, SETTINGS_IN_SERVER_TEXT } from "./aicaches";
+import {
+  LANGUAGE_DEPENDENT_QUERY_PREFIXES,
+  SETTINGS_IN_SERVER_TEXT,
+} from "./aicaches";
 import { unwrap } from "./problem";
 import { INSTALLATION_SETTINGS_KEY } from "./uploadlimit";
 
 type Patch = components["schemas"]["UpdateInstallationSettingsRequest"];
 
-// Exported for the onboarding's preferences act, which writes the same sparse
-// patch from the same fields: a second mutation would be a second answer to
-// what a saved language invalidates.
+// Settings and onboarding share this mutation and its cache invalidation.
 export function useUpdateInstallationSettings(onSaved?: () => void) {
   const t = useT();
   const queryClient = useQueryClient();
@@ -52,11 +53,7 @@ export function useUpdateInstallationSettings(onSaved?: () => void) {
       }
       onSaved?.();
     },
-    // A refused patch can still have committed nothing OR something: the
-    // server applies the fields in one transaction, but a validation refusal
-    // on one field is reported after others were accepted in an earlier
-    // request. Refetching on failure means the form shows what the server
-    // actually holds rather than the draft the user typed.
+    // Refetch after refusal so every form shows the saved settings.
     onError: () => {
       void queryClient.invalidateQueries({
         queryKey: ["installation-settings"],
@@ -64,4 +61,3 @@ export function useUpdateInstallationSettings(onSaved?: () => void) {
     },
   });
 }
-

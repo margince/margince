@@ -1,5 +1,7 @@
 import { useUpdateInstallationSettings } from "../../lib/installation-settings.update";
+
 export { useUpdateInstallationSettings } from "../../lib/installation-settings.update";
+
 import { useEffect, useId, useRef, useState } from "react";
 import type { components } from "../../api/schema";
 import { useUnsavedGuard } from "../../components/unsaved";
@@ -34,9 +36,7 @@ import { type FieldLabels, percentLimit } from "../../lib/problem";
 // Shared with every upload form, which reads the ceiling off this same record.
 // One query, one key: two hooks on one key would let whichever mounted first
 // decide how a failure behaves for the other.
-import {
-  useInstallationSettings,
-} from "../../lib/uploadlimit";
+import { useInstallationSettings } from "../../lib/uploadlimit";
 import { wholeNumberFault } from "../../lib/wholenumber";
 import { CallingSettingsRows } from "./installation-settings.calling";
 import {
@@ -57,6 +57,7 @@ export { fiscalYearStartSummary } from "./installation-settings.profile";
 export type InstallationSettings =
   components["schemas"]["InstallationSettings"];
 
+type Patch = components["schemas"]["UpdateInstallationSettingsRequest"];
 
 // The facts this form writes, in the order the rows show them. ONE list: the
 // dirty check, the sparse patch and the re-seed signature all walk it, so a
@@ -125,7 +126,6 @@ function thresholdFault(
     ? undefined
     : wholeNumberFault(String(percent), locale, label, LIKELY_THRESHOLD);
 }
-
 
 /**
  * Which half of the installation's facts a tab shows: where and when the

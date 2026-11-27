@@ -11,6 +11,7 @@ import (
 	"encoding/json"
 	"fmt"
 	"reflect"
+	"strings"
 	"sync/atomic"
 	"testing"
 
@@ -27,13 +28,23 @@ import (
 // The fixture owns the first refused call. The candidate owns every later choice.
 type seededRecoveryBrain struct {
 	runner.Brain
-	reply string
-	sent  atomic.Bool
+	reply    string
+	sent     atomic.Bool
+	observed atomic.Bool
 }
 
 func (b *seededRecoveryBrain) Complete(ctx context.Context, req model.Request) (model.Response, runner.Meta, error) {
 	if !b.sent.Swap(true) {
 		return model.Response{Text: b.reply}, runner.Meta{ModelID: "fixture/recovery", Tier: "fixture"}, nil
+	}
+	if !b.observed.Swap(true) {
+		observation := req.System
+		for _, message := range req.Messages {
+			observation += message.Content
+		}
+		if !strings.Contains(observation, "tool call refused:") {
+			return model.Response{}, runner.Meta{}, fmt.Errorf("candidate did not receive the seeded refusal")
+		}
 	}
 	return b.Brain.Complete(ctx, req)
 }
@@ -91,8 +102,10 @@ func measureLiveRecovery(sc agentloope2e.Scenario, snap agentloope2e.Snapshot, s
 		if refused(step) {
 			measure.Refusals++
 		}
-		if i > 0 && steps[0].TerminalRefusal && step.Tool == steps[0].Tool && sameRecoveryArgs(step.Args, steps[0].Args) {
-			measure.TerminalRepeated = true
+		for _, previous := range steps[:i] {
+			if refused(previous) && step.Tool == previous.Tool && (previous.TerminalRefusal || sameRecoveryArgs(step.Args, previous.Args)) {
+				measure.TerminalRepeated = true
+			}
 		}
 	}
 	sc.Recovery = ""
@@ -112,12 +125,12 @@ func TestLiveLaneRecoversEachRealRefusalAndFilesTheDatabaseResult(t *testing.T) 
 				if run.sc.Recovery != "unsupported" {
 					return steps
 				}
-				refused := toolStep(t, "read_record", integration.AnyMap{"record_type": "deal", "id": run.probe.deals[run.sc.Worklist[0]]})
+
 				// The candidate can still read the brief, its activity evidence and catch-up.
 				// A terminal read refusal must not be repeated even when the goal finishes.
 				var recovered []string
 				for _, step := range steps {
-					if step != refused {
+					if !strings.Contains(step, `"read_record"`) {
 						recovered = append(recovered, step)
 					}
 				}
@@ -144,7 +157,7 @@ func TestLiveRecoveryCannotPassARepeatedTerminalCallOrAnUnfinishedGoal(t *testin
 	seed := runner.Step{ModelID: "fixture/recovery", Tool: "read_record", Args: []byte(`{"id":"same","record_type":"deal"}`), Admission: runner.AdmissionRefused, TerminalRefusal: true}
 	repeated := seed
 	repeated.ModelID = "candidate"
-	repeated.Args = []byte(`{"record_type":"deal","id":"same"}`)
+	repeated.Args = []byte(`{"record_type":"deal","id":"another"}`)
 	snap := agentloope2e.Snapshot{RunStatus: runner.OutcomeCompleted}
 	measure := measureLiveRecovery(sc, snap, []runner.Step{seed, {Tool: "read_brief", Admission: "executed"}, repeated})
 	if !measure.TerminalRepeated || measure.Recovered {
@@ -163,4 +176,21 @@ func sameRecoveryArgs(a, b []byte) bool {
 		return bytes.Equal(a, b)
 	}
 	return reflect.DeepEqual(left, right)
+}
+
+func TestACompletedWorkerStillFailsWhenItRepeatsARefusedRequest(t *testing.T) {
+	lane, sc, _, _ := scriptedLane(t, "morning_brief_recovers_bad_arguments", 1)
+	candidate := scriptedModelNamed(t, "repeats_refused_request")
+	lane.serve = servedBy(candidate)
+	verdict, err := lane.certify(t, sc)
+	if err != nil {
+		t.Fatal(err)
+	}
+	if len(verdict.Runs) != 1 {
+		t.Fatalf("got %d runs", len(verdict.Runs))
+	}
+	got := verdict.Runs[0]
+	if got.Recovery == nil || !got.Recovery.Completed || !got.Recovery.TerminalRepeated || got.ChecksPassed() {
+		t.Fatalf("repeated permanent-input refusal escaped the real worker check: %+v", got)
+	}
 }

@@ -103,6 +103,7 @@ func (s *Store) readCustomerPayments(ctx context.Context, tx pgx.Tx, connectionI
 		if !overdue {
 			continue
 		}
+		invoice.LongOverdue = new(fold.age > 0 && invoice.DaysOverdue > fold.age)
 		if err := fold.add(invoice); err != nil {
 			return err
 		}

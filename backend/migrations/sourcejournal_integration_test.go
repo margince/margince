@@ -61,7 +61,7 @@ func TestSourceJournalKeepsNamespacesSavepointsAndConnectionReuseSeparate(t *tes
 	read := func(namespace string) []map[string]any {
 		t.Helper()
 		execute(`SET LOCAL search_path=` + pgx.Identifier{namespace}.Sanitize() + `,public`)
-		rows, err := tx.Query(ctx, `SELECT public.source_changes_for_audit(current_schema(),NULL,NULL)`)
+		rows, err := tx.Query(ctx, `SELECT public.source_changes_for_audit(current_schema(),'company',ARRAY[$1]::uuid[])`, row)
 		if err != nil {
 			t.Fatal(err)
 		}
@@ -124,5 +124,10 @@ func TestSourceJournalKeepsNamespacesSavepointsAndConnectionReuseSeparate(t *tes
 	}
 	if len(read("journal_first")) != 0 {
 		t.Fatal("a rolled-back edit survived in the source journal")
+	}
+	execute(`UPDATE journal_first.company SET source='wrong binding'`)
+	execute(`SET LOCAL search_path=public`)
+	if _, err := tx.Exec(ctx, `SELECT public.source_changes_for_audit(current_schema(),NULL,NULL)`); err == nil {
+		t.Fatal("a mismatched namespace silently discarded a source change")
 	}
 }

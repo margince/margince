@@ -422,6 +422,7 @@ it("keeps old invoices inside the collapsed group and states its count and curre
           invoice_id: "old-invoice",
           number: "OLD-001",
           days_overdue: 366,
+          long_overdue: true,
         },
       ],
     }),

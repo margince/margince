@@ -14,6 +14,7 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
+  "history.field.kind": "Loại",
   "history.field.email_security": "Bảo mật email",
   "history.field.employee_range": "Khoảng số nhân viên",
   "history.field.founded_year": "Năm thành lập",

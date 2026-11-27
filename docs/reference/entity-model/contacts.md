@@ -29,7 +29,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `geocoded_at` | `timestamp with time zone` |  |  |
 | `industry` | `text` |  | One of the fixed industry codes, or null. |
 | `is_anchor` | `boolean`, default `false` | yes | True only for this installation's own company. |
-| `last_activity_at` | `timestamp with time zone` |  | When something last happened with this account: the newest `occurred_at` at or before now of a workspace-audience activity linked to it, so a booked meeting counts once it starts. |
+| `last_activity_at` | `timestamp with time zone` |  | When something last happened with this account: the newest `occurred_at` at or before now of a organization-audience activity linked to it, so a booked meeting counts once it starts. |
 | `legal_name` | `text` |  |  |
 | `linkedin_url` | `text` |  | Canonical LinkedIn company URL. |
 | `logo_icon_object_key` | `text` |  |  |
@@ -609,7 +609,7 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `quarantine_cleared_by` | `text` |  |  |
 | `quarantine_reason` | `text` |  | One of `punycode_domain`, `display_name_other_domain`. |
 | `quarantined_at` | `timestamp with time zone` |  |  |
-| `relationship_mark` | `text` |  | Set when the workspace's relationship to this contact is not an ordinary one. |
+| `relationship_mark` | `text` |  | Set when the organization's relationship to this contact is not an ordinary one. |
 | `relationship_mark_set_by` | `text` |  |  |
 | `salutation` | `text` |  | One of `mr`, `ms`, `none`. |
 | `source_author_id` | `uuid` |  | Points at `app_user.id`. |
@@ -1120,8 +1120,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `source_activity_id` | `uuid` | yes | Points at `activity.id`. |
 | `source_quote` | `text` | yes | The verbatim excerpt this was read from, never a summary of it, so the reader can check the claim against what was written. |
 | `status` | `text`, default `'open'::text` | yes | `open`: the loop is live. |
-| `taken_at` | `timestamp with time zone` |  | When the promise was taken over. |
-| `taken_by_user_id` | `uuid` |  | The colleague who took over this promise when nobody was asked to keep it. |
+| `taken_at` | `timestamp with time zone` |  | When the commitment was taken over. |
+| `taken_by_user_id` | `uuid` |  | The colleague who took over this commitment when nobody was asked to keep it. |
 | `task_activity_id` | `uuid` |  | The task an extracted `commitment_ours` created, so completing either side completes both. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `captured_by` | `text` | yes | Who or what wrote the row. Stamped by the server from the authenticated principal, never taken from the request body. |
@@ -1260,8 +1260,8 @@ The 50 tables owned by `contacts`, as the migrations build them. [Back to the en
 | `body` | `text` | yes | Plain-text fallback after personal HTML and the company template. |
 | `html` | `text`, default `''::text` | yes | Saved personal HTML, trimmed at both ends. |
 | `owner_id` | `uuid` | yes | Points at `app_user.id`. |
-| `phone` | `text`, default `''::text` | yes | The member's phone number, filled into the workspace template's `{phone}`. |
-| `title` | `text`, default `''::text` | yes | The member's title, filled into the workspace template's `{title}`. |
+| `phone` | `text`, default `''::text` | yes | The member's phone number, filled into the organization template's `{phone}`. |
+| `title` | `text`, default `''::text` | yes | The member's title, filled into the organization template's `{title}`. |
 | `archived_at` | `timestamp with time zone` |  | Soft-delete marker. `NULL` means live, and nearly every read filters on it. |
 | `created_at` | `timestamp with time zone`, default `now()` | yes | When the row was created. Set once. |
 | `updated_at` | `timestamp with time zone`, default `now()` | yes | When the row last changed. Refreshed on every write. |

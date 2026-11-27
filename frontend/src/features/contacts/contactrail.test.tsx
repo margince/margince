@@ -837,8 +837,6 @@ describe("a contact with no primary employer", () => {
   });
 
   // The empty state is a different sentence about a different fact — nobody has
-  // recorded where this contact works — and asking for a choice there would be
-  // asking them to choose between nothing.
   it("leaves the empty state to say it when there are no employments", async () => {
     mount(emptyButGranted);
     expect(
@@ -919,12 +917,6 @@ describe("bought work history that waits for a company match", () => {
   });
 });
 
-// THE TRANSPORT ROW ANSWERS FOR ITSELF OR NOT AT ALL.
-//
-// Only the correspondence class speaks for a transport: it is the purpose a
-// reply rides, and the only one an inbound message can flip on its own. A
-// marketing grant drawn against Email is a permission the composer then refuses
-// on the record — the pair of true answers a rep has no way to reconcile.
 describe("the consent rail's transport row", () => {
   const reachable: Contact360 = {
     ...granted,
@@ -966,8 +958,6 @@ describe("the consent rail's transport row", () => {
   it("stays unanswered when no correspondence purpose is defined", async () => {
     mount(reachable, marketingOnly);
 
-    // Scoped to the row. The phone row reads "Nothing recorded yet" too once a
-    // fixture gains a number, and a column-wide match would pass on it.
     const mail = (
       await screen.findByText(en["contact.consent.businessMail"])
     ).closest(".factlist-row");
@@ -980,7 +970,6 @@ describe("the consent rail's transport row", () => {
     expect(
       within(mail).queryByText(en["contact.consent.fact.businessContact"]),
     ).toBeNull();
-    // The marketing grant is the Research tab's consent panel's to name.
     expect(screen.queryByText("Newsletter")).toBeNull();
   });
 

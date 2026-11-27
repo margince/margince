@@ -26,7 +26,7 @@ import { SETTINGS_PAGE_VIEWS, SettingsScreen } from "./settings";
 import { AuditLogCard } from "./settings-audit";
 import { healthReport } from "./systemhealth.fixtures";
 import "./systemhealthdiagnostics";
-import { en as englishCopy } from "../../i18n/en";
+import { en } from "../../i18n/en";
 
 // What a principal is SERVED once an entry opens: the identity and locale
 // surfaces on Account, the rows that read as WITHHELD rather than absent, and
@@ -50,7 +50,7 @@ type MeResponse = components["schemas"]["MeResponse"];
 // was saved.
 function profileSave(): HTMLElement | null {
   const bar = screen.queryByRole("region", {
-    name: englishCopy["saveBar.unsaved"],
+    name: en["saveBar.unsaved"],
   });
   return bar && within(bar).queryByRole("button", { name: "Save" });
 }
@@ -188,7 +188,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     expect(within(profile).getByText("ada@acme.test")).toBeTruthy();
     expect(
       within(profile).getByRole("textbox", {
-        name: englishCopy["settings.displayName"],
+        name: en["settings.displayName"],
       }),
     ).toBeTruthy();
     expect(
@@ -197,7 +197,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     const signIn = card("Sign-in");
     expect(
       within(signIn).getByRole("button", {
-        name: englishCopy["password.open"],
+        name: en["password.open"],
       }),
     ).toBeTruthy();
     expect(
@@ -211,7 +211,7 @@ describe("SettingsScreen RBAC surfaces", () => {
       await within(language).findByRole("combobox", { name: "Time zone" }),
     ).toBeTruthy();
     expect(
-      within(card(englishCopy["account.browserCard"])).getByRole("group", {
+      within(card(en["account.browserCard"])).getByRole("group", {
         name: "Appearance",
       }),
     ).toBeTruthy();
@@ -262,7 +262,7 @@ describe("SettingsScreen RBAC surfaces", () => {
 
     await user.click(
       screen.getByRole("button", {
-        name: englishCopy["settings.signatureEdit"],
+        name: en["settings.signatureEdit"],
       }),
     );
     await user.type(
@@ -310,7 +310,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     const field = screen.getByRole("textbox", {
-      name: englishCopy["settings.displayName"],
+      name: en["settings.displayName"],
     });
     await user.clear(field);
     await user.type(field, "  Ada Lovelace  ");
@@ -355,7 +355,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     render(<SettingsScreen route={settingsHref("account")} />);
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
     const field = screen.getByRole("textbox", {
-      name: englishCopy["settings.displayName"],
+      name: en["settings.displayName"],
     });
     await user.clear(field);
     await user.type(field, "Ada Lovelace");
@@ -380,7 +380,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     const field = screen.getByRole("textbox", {
-      name: englishCopy["settings.displayName"],
+      name: en["settings.displayName"],
     });
     if (!(field instanceof HTMLInputElement)) throw new Error("not an input");
     const stored = field.value;
@@ -403,7 +403,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     const field = screen.getByRole("textbox", {
-      name: englishCopy["settings.displayName"],
+      name: en["settings.displayName"],
     });
     await user.clear(field);
     await user.type(field, "   ");
@@ -446,7 +446,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     await waitFor(() => expect(screen.getByText("ada@acme.test")).toBeTruthy());
 
     const field = screen.getByRole("textbox", {
-      name: englishCopy["settings.greetingName"],
+      name: en["settings.greetingName"],
     });
     expect(profileSave()).toBeNull();
     await user.type(field, "  Ada  ");
@@ -465,7 +465,7 @@ describe("SettingsScreen RBAC surfaces", () => {
 
     await user.type(
       screen.getByRole("textbox", {
-        name: englishCopy["settings.greetingName"],
+        name: en["settings.greetingName"],
       }),
       "Ada{Enter}",
     );
@@ -546,9 +546,7 @@ describe("SettingsScreen RBAC surfaces", () => {
     );
 
     // The allowance this grant reads is on screen...
-    expect(
-      await screen.findByText(englishCopy["aiAdmin.allowance"]),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["aiAdmin.allowance"])).toBeTruthy();
     unmount();
     // ...and the card on the Spend tab, whose endpoint requires
     // `ai_diagnostics:read`, KEEPS its place and says it is withheld. Absent, it
@@ -704,7 +702,7 @@ describe("SettingsScreen restructured pages", () => {
     await waitFor(() =>
       expect(
         screen
-          .getByRole("link", { name: englishCopy["settings.tab.agents"] })
+          .getByRole("link", { name: en["settings.tab.agents"] })
           .getAttribute("aria-current"),
       ).toBe("page"),
     );
@@ -712,9 +710,7 @@ describe("SettingsScreen restructured pages", () => {
     // and lists one opens for a seat holding no company grant and no writing
     // licence at all — gating it behind the company group would have meant only
     // admins could mint one.
-    const developers = await screen.findByText(
-      englishCopy["aiAccess.dev.title"],
-    );
+    const developers = await screen.findByText(en["aiAccess.dev.title"]);
     const user = userEvent.setup();
     await user.click(developers);
     expect(
@@ -724,7 +720,7 @@ describe("SettingsScreen restructured pages", () => {
     // And the autonomy table, one tab over under Agent rules.
     await user.click(screen.getByRole("button", { name: "Agent rules" }));
     expect(
-      screen.getByRole("heading", { name: englishCopy["settings.autonomy"] }),
+      screen.getByRole("heading", { name: en["settings.autonomy"] }),
     ).toBeTruthy();
   });
 
@@ -732,24 +728,22 @@ describe("SettingsScreen restructured pages", () => {
     vi.stubGlobal("fetch", mergedEntryBackend({ roles: ["rep"] }));
     renderSettings("agents");
     const headings = await screen.findAllByRole("heading", { level: 2 });
-    expect(headings[0].textContent).toBe(englishCopy["aiAccess.connect.title"]);
+    expect(headings[0].textContent).toBe(en["aiAccess.connect.title"]);
     const developers = screen
-      .getByText(englishCopy["aiAccess.dev.title"])
+      .getByText(en["aiAccess.dev.title"])
       .closest("details");
     if (!(developers instanceof HTMLDetailsElement)) {
       throw new Error("For developers is not a disclosure");
     }
     expect(developers.open).toBe(false);
     expect(developers.textContent).toContain("Passports");
-    await userEvent
-      .setup()
-      .click(screen.getByText(englishCopy["aiAccess.dev.title"]));
+    await userEvent.setup().click(screen.getByText(en["aiAccess.dev.title"]));
     expect(developers.open).toBe(true);
     // Passports open first, not the agent rules.
     expect(
       screen
         .getByRole("button", {
-          name: englishCopy["aiAccess.dev.tab.passports"],
+          name: en["aiAccess.dev.tab.passports"],
         })
         .getAttribute("aria-pressed"),
     ).toBe("true");
@@ -784,13 +778,13 @@ describe("SettingsScreen restructured pages", () => {
     await waitFor(() =>
       expect(
         screen
-          .getByRole("link", { name: englishCopy["settings.tab.privacy"] })
+          .getByRole("link", { name: en["settings.tab.privacy"] })
           .getAttribute("aria-current"),
       ).toBe("page"),
     );
     expect(
       await screen.findByRole("heading", {
-        name: englishCopy["settings.purposes"],
+        name: en["settings.purposes"],
       }),
     ).toBeTruthy();
     expect(screen.queryByLabelText("Actor")).toBeNull();
@@ -841,7 +835,7 @@ describe("SettingsScreen restructured pages", () => {
     // of five sharing an address.
     expect(
       await screen.findByRole("heading", {
-        name: englishCopy["auto.instances"],
+        name: en["auto.instances"],
       }),
     ).toBeTruthy();
   });
@@ -903,19 +897,19 @@ describe("SettingsScreen restructured pages", () => {
     await waitFor(() =>
       expect(
         screen
-          .getByRole("link", { name: englishCopy["roles.object.job_health"] })
+          .getByRole("link", { name: en["roles.object.job_health"] })
           .getAttribute("aria-current"),
       ).toBe("page"),
     );
     // The verb this grant buys, which used to hide beside the field editor.
     expect(
       await screen.findByRole("heading", {
-        name: englishCopy["embedreindex.title"],
+        name: en["embedreindex.title"],
       }),
     ).toBeTruthy();
     // Unauthorized sources are hidden; their absence makes no claim about queue state.
     expect(
-      screen.queryByRole("heading", { name: englishCopy["settings.jobs"] }),
+      screen.queryByRole("heading", { name: en["settings.jobs"] }),
     ).toBeNull();
     expect(
       vi
@@ -947,7 +941,7 @@ describe("SettingsScreen restructured pages", () => {
     renderSettings("system-health", "diagnostics");
     expect(
       await screen.findByRole("heading", {
-        name: englishCopy["embedreindex.title"],
+        name: en["embedreindex.title"],
       }),
     ).toBeTruthy();
     expect(screen.queryByText(/reset data/i)).toBeNull();

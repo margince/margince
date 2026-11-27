@@ -53,7 +53,7 @@ func historyStructKeys(typ types.Type) ([]string, bool) {
 		if !field.Exported() {
 			continue
 		}
-		tag := strings.Split(reflect.StructTag(shape.Tag(i)).Get("json"), ",")[0]
+		tag, _, _ := strings.Cut(reflect.StructTag(shape.Tag(i)).Get("json"), ",")
 		if tag == "-" {
 			continue
 		}
@@ -133,21 +133,6 @@ func (r historyImageReader) literalKeys(in historyImageArg, literal *ast.Composi
 		keys = append(keys, found...)
 	}
 	return keys, true
-}
-
-func (r historyImageReader) stringValue(in historyImageArg, expr ast.Expr, depth int) (string, bool) {
-	if depth > 32 {
-		return "", false
-	}
-	if key, ok := auditConstString(in.pkg.info, expr); ok {
-		return key, true
-	}
-	if name, ok := expr.(*ast.Ident); ok {
-		if value, found := in.bound[in.pkg.info.ObjectOf(name)]; found {
-			return r.stringValue(value, value.expr, depth+1)
-		}
-	}
-	return "", false
 }
 
 func (r historyImageReader) namedKeys(in historyImageArg, name *ast.Ident, depth int) ([]string, bool) {

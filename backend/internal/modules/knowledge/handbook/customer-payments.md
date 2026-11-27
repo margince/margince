@@ -8,7 +8,7 @@ Each currency has its own overdue total. The card names up to three customers, s
 
 Invoices more than 365 days overdue move to **Long overdue** at the foot of the card. The closed group shows the count and each currency total. Open it to check the amount, or open **View overdue invoices** for the rows. The group starts closed there too.
 
-In **Settings**, open the accounting source and set **Long overdue after (days)** to change that age. It changes only the Home grouping. Company totals and the debt stay the same. Check write-offs in your accounting system. A credit note or void invoice leaves the overdue list after the next sync.
+In **Settings**, open the accounting source and set **Long overdue after (days)** to change that age. It changes only the Home grouping. Company totals and the open amounts stay the same. Check write-offs in your accounting system. A credit note or void invoice leaves the overdue list after the next sync.
 
 With no accounting source connected, or no linked company you may read, the card stays off Home. After a complete sync with no overdue invoices, it says **No overdue invoices**. While a first sync or a new customer link still waits for data, amounts stay hidden. If a later sync fails, the last good amounts stay with their date and a warning.
 

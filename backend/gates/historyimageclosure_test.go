@@ -6,6 +6,7 @@ package gates
 import (
 	"go/ast"
 	"go/types"
+	"maps"
 )
 
 func (r historyImageReader) closureValues(in historyImageArg, call *ast.CallExpr, depth int, read func(historyImageArg, int) ([]string, bool)) ([]string, bool) {
@@ -35,9 +36,7 @@ func (r historyImageReader) closureValues(in historyImageArg, call *ast.CallExpr
 		return nil, false
 	}
 	bound := map[types.Object]historyImageArg{}
-	for object, value := range in.bound {
-		bound[object] = value
-	}
+	maps.Copy(bound, in.bound)
 	at := 0
 	for _, field := range literal.Type.Params.List {
 		for _, name := range field.Names {

@@ -137,3 +137,23 @@ func (r *problemFileReader) keepStatusVariants(before int) {
 	}
 	r.statusVariants = nil
 }
+
+// callStatus judges the status a call passes a helper. One it cannot follow
+// may be a refusal, so its code is judged.
+func (r *problemFileReader) callStatus(args []tsSpan, param *codeSource) (status int, refusal bool, passed *codeRead) {
+	if param == nil || param.index >= len(args) {
+		return 0, true, nil
+	}
+	if _, _, fallback := fallbackSides(r.tree, args[param.index]); fallback {
+		return 0, true, nil
+	}
+	read, ok := r.resolve(args[param.index], param.path, 0)
+	switch {
+	case ok && read.helper != "":
+		return 0, true, &read
+	case ok && len(read.literals) > 0:
+		status, refusal = refusalOf(r.tree, read.literals)
+		return status, refusal, nil
+	}
+	return 0, true, nil
+}

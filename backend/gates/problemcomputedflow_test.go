@@ -245,7 +245,7 @@ func (r *problemFileReader) localCalculatedValue(at int, name string) (tsSpan, b
 	tr := r.tree
 	best := -1
 	var value tsSpan
-	for i := 0; i < at; i++ {
+	for i := range at {
 		if tr.word(i) != name || !tr.is(i+1, "=") {
 			continue
 		}

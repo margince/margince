@@ -111,21 +111,14 @@ export function CustomerPaymentsCard({
             <PaymentInvoices
               rows={pages
                 .flatMap((page) => page.data)
-                .filter(
-                  (invoice) =>
-                    invoice.days_overdue <= (summary?.long_overdue_days ?? 365),
-                )}
+                .filter((invoice) => invoice.long_overdue !== true)}
             />
             {(summary?.long_overdue?.invoice_count ?? 0) > 0 && (
               <Disclosure summary={<LongOverdueSummary summary={summary} />}>
                 <PaymentInvoices
                   rows={pages
                     .flatMap((page) => page.data)
-                    .filter(
-                      (invoice) =>
-                        invoice.days_overdue >
-                        (summary?.long_overdue_days ?? 365),
-                    )}
+                    .filter((invoice) => invoice.long_overdue === true)}
                 />
               </Disclosure>
             )}
@@ -321,7 +314,16 @@ function LongOverdueSummary({ summary }: Readonly<{ summary?: Payments }>) {
   const { locale } = useLocale();
   return (
     <>
-      {plural("payments.longOverdue", summary?.long_overdue?.invoice_count ?? 0)}
+      {plural(
+        "payments.longOverdue",
+        summary?.long_overdue?.invoice_count ?? 0,
+        {
+          count: formatNumber(
+            summary?.long_overdue?.invoice_count ?? 0,
+            locale,
+          ),
+        },
+      )}
       {summary?.long_overdue?.totals.map((total) => (
         <span className="t-num" key={total.currency}>
           {" "}

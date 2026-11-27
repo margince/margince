@@ -18,7 +18,7 @@ import (
 func TestCreateRecordStatesTheContactVisibility(t *testing.T) {
 	// How the text words each visibility a typed contact create could set.
 	contactVisibilityWording := map[string]string{
-		"workspace": "A CONTACT created here is visible to everyone in the workspace",
+		"workspace": "A CONTACT created here is visible to everyone in the organization",
 		"owner":     "A CONTACT created here is visible to the human you are acting for and to nobody else",
 	}
 	description := servedToolDescription(t, "create_record")

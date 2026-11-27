@@ -33,6 +33,9 @@ var (
 // A private field read back from a ledger has the vocabulary its insert stored.
 // Require the same typed field at both ends; an arbitrary scanned string stays unreadable.
 func (r historyImageReader) storedFieldStrings(in historyImageArg, selected *ast.SelectorExpr, depth int) ([]string, bool) {
+	if r.storedFieldBusy == nil {
+		r.storedFieldBusy = map[*types.Var]bool{}
+	}
 	return r.storedFieldValues(in, selected, depth, false, func(child historyImageArg, d int) ([]string, bool) { return r.strings(child, child.expr, d) })
 }
 
@@ -95,49 +98,85 @@ func (r historyImageReader) storedFieldValues(in historyImageArg, selected *ast.
 	}
 	inserted := false
 	known := true
-	updateColumn := regexp.MustCompile(`(?is)\bUPDATE\s+` + regexp.QuoteMeta(table) + `\s+SET\s+` + regexp.QuoteMeta(column) + `\s*=`)
+	writeTable := regexp.MustCompile(`(?is)\b(?:INSERT\s+INTO|UPDATE)\s+` + regexp.QuoteMeta(table) + `\b`)
+	updateTable := regexp.MustCompile(`(?is)\bUPDATE\s+` + regexp.QuoteMeta(table) + `(?:\s+(?:AS\s+)?[a-z_][a-z_0-9]*)?\s+SET\s+(.+?)(?:\bWHERE\b|\bRETURNING\b|$)`)
+	updatedColumn := regexp.MustCompile(`(?is)(?:^|,)\s*` + regexp.QuoteMeta(column) + `\s*=`)
+	accounted := map[string]bool{}
+	var fragments []string
 	for at := range r.index.pkgs {
 		pkg := &r.index.pkgs[at]
 		for _, file := range pkg.files {
 			ast.Inspect(file, func(node ast.Node) bool {
-				call, ok := node.(*ast.CallExpr)
-				if !ok || len(call.Args) < 2 {
-					return true
+				if literal, ok := node.(*ast.BasicLit); ok {
+					if text, ok := auditConstString(pkg.info, literal); ok && writeTable.MatchString(text) {
+						fragments = append(fragments, text)
+					}
 				}
-				sql, ok := auditConstString(pkg.info, call.Args[1])
+				call, ok := node.(*ast.CallExpr)
 				if !ok {
 					return true
 				}
-				if updateColumn.MatchString(sql) {
-					known = false
-				}
-				match := historyInsertColumns.FindStringSubmatch(sql)
-				if match == nil || match[1] != table {
-					return true
-				}
-				columns, arguments := strings.Split(match[2], ","), strings.Split(match[3], ",")
-				for i, name := range columns {
-					if strings.TrimSpace(name) != column {
+				for argAt, arg := range call.Args {
+					sql, ok := auditConstString(pkg.info, arg)
+					if !ok {
 						continue
 					}
-					if i >= len(arguments) {
+					if selected, ok := call.Fun.(*ast.SelectorExpr); ok && selected.Sel.Name == "InsertFragments" && sql == table {
+						known = false
+					}
+					if !writeTable.MatchString(sql) {
+						continue
+					}
+					accounted[sql] = true
+					if updateTable.MatchString(sql) {
+						match := updateTable.FindStringSubmatch(sql)
+						if updatedColumn.MatchString(match[1]) {
+							known = false
+						}
+						continue
+					}
+					match := historyInsertColumns.FindStringSubmatch(sql)
+					if match == nil || match[1] != table {
 						known = false
 						continue
 					}
-					position, err := strconv.Atoi(strings.TrimPrefix(strings.TrimSpace(arguments[i]), "$"))
-					if err != nil || position+1 >= len(call.Args) {
-						known = false
-						continue
+					columns, arguments := strings.Split(match[2], ","), strings.Split(match[3], ",")
+					found := false
+					for i, name := range columns {
+						if strings.TrimSpace(name) != column {
+							continue
+						}
+						found = true
+						if i >= len(arguments) {
+							known = false
+							continue
+						}
+						position, err := strconv.Atoi(strings.TrimPrefix(strings.TrimSpace(arguments[i]), "$"))
+						if err != nil || position < 1 || argAt+position >= len(call.Args) {
+							known = false
+							continue
+						}
+						member, ok := call.Args[argAt+position].(*ast.SelectorExpr)
+						if !ok || auditSelectedField(pkg.info, member) != field {
+							known = false
+							continue
+						}
+						inserted = true
 					}
-					member, ok := call.Args[position+1].(*ast.SelectorExpr)
-					if !ok || auditSelectedField(pkg.info, member) != field {
+					if !found {
 						known = false
-						continue
 					}
-					inserted = true
 				}
 				return true
 			})
+		}
+	}
+	for _, fragment := range fragments {
+		if match := updateTable.FindStringSubmatch(fragment); match != nil && !updatedColumn.MatchString(match[1]) {
+			continue
+		}
+		if !accounted[fragment] {
+			known = false
 		}
 	}
 	return values, known && inserted

@@ -3,6 +3,7 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "history.field.kind": "Kind",
   "history.field.email_security": "Email security",
   "history.field.employee_range": "Employee count range",
   "history.field.founded_year": "Year founded",

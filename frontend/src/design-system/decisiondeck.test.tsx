@@ -6,7 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
-import { en as englishCopy } from "../i18n/en";
+import { en } from "../i18n/en";
 import { PLAIN_SUMMARY_WORDS } from "./approvalsummary.testkit";
 import type { DecisionApproval, DecisionCardLabels } from "./decisioncard";
 import {
@@ -462,17 +462,13 @@ describe("DecisionDeck — a card states only what its members agree on", () => 
 describe("DecisionDeck — the states it can honestly be in", () => {
   it("says the queue is empty only when it is", () => {
     render(deck({ items: [] }));
-    expect(
-      screen.getByText(englishCopy["brief.deck.empty"]),
-    ).toBeInTheDocument();
+    expect(screen.getByText(en["brief.deck.empty"])).toBeInTheDocument();
   });
 
   // A read that failed must not read as a queue with nothing in it.
   it("hands a failed read to the state vocabulary rather than drawing it empty", () => {
     render(deck({ items: [], state: "failed" }));
-    expect(
-      screen.queryByText(englishCopy["brief.deck.empty"]),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(en["brief.deck.empty"])).not.toBeInTheDocument();
   });
 
   it("counts what is still behind the live card", async () => {
@@ -512,9 +508,7 @@ describe("DecisionDeck — the states it can honestly be in", () => {
     expect(screen.getByText(`Finished at ${NOW}.`)).toBeInTheDocument();
     // NOT the empty sentence: "there was never anything" and "you finished it"
     // are different facts about the same blank screen.
-    expect(
-      screen.queryByText(englishCopy["brief.deck.empty"]),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(en["brief.deck.empty"])).not.toBeInTheDocument();
   });
 
   // A refused commit keeps the tray. The verdicts are the only copy of a
@@ -753,9 +747,7 @@ describe("DecisionDeck — the tray the frame is handed", () => {
     await user.click(screen.getByRole("button", { name: "Accept" }));
 
     expect(screen.getByTestId("body")).toBeEmptyDOMElement();
-    expect(
-      screen.queryByText(englishCopy["brief.deck.empty"]),
-    ).not.toBeInTheDocument();
+    expect(screen.queryByText(en["brief.deck.empty"])).not.toBeInTheDocument();
     expect(screen.getByTestId("foot").textContent).toContain("1 staged");
   });
 
@@ -869,7 +861,7 @@ describe("DecisionDeck — a verdict that sends nothing", () => {
     expect(screen.getByText(/1 skipped/)).toBeInTheDocument();
     await user.click(
       screen.getByRole("button", {
-        name: englishCopy["brief.deck.commitNothingToSend"],
+        name: en["brief.deck.commitNothingToSend"],
       }),
     );
     // The caller was told what the reader answered...
@@ -899,8 +891,6 @@ describe("DecisionDeck — a verdict that sends nothing", () => {
     expect(screen.queryByText(/2 staged/)).toBeNull();
   });
 
-  // And where a tray holds ONLY skips there is nothing to send at all, so the
-  // control does not say "Send": pressing it clears them out of the deck.
   it("does not offer to send a tray holding only skips", async () => {
     const user = userEvent.setup();
     render(deck({}));
@@ -909,16 +899,13 @@ describe("DecisionDeck — a verdict that sends nothing", () => {
 
     expect(
       screen.getByRole("button", {
-        name: englishCopy["brief.deck.commitNothingToSend"],
+        name: en["brief.deck.commitNothingToSend"],
       }),
     ).toBeInTheDocument();
     expect(screen.queryByRole("button", { name: "Commit" })).toBeNull();
     expect(screen.queryByText(/staged/)).toBeNull();
   });
 
-  // AN EDIT IS NOT A SKIP. Both send nothing, and lumping them said an edit had
-  // been skipped — which is the opposite of what it means: a skip is an answer
-  // deferred to another session, an edit is one being given on another form.
   it("names an edit apart from a skip", async () => {
     const user = userEvent.setup();
     render(deck({ items: [single(1), single(2), single(3)] }));
@@ -930,7 +917,6 @@ describe("DecisionDeck — a verdict that sends nothing", () => {
     expect(screen.getByText(/1 staged/)).toBeInTheDocument();
     expect(screen.getByText(/1 skipped/)).toBeInTheDocument();
     expect(screen.getByText(/1 being edited/)).toBeInTheDocument();
-    // And the edit is never counted among the skips.
     expect(screen.queryByText(/2 skipped/)).toBeNull();
   });
 });

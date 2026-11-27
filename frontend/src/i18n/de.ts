@@ -5,6 +5,7 @@ import type { MessageKey } from "./en";
 // build without typechecking still fails loudly. Every value is translated from
 // en.ts and written to docs/reference/ui-copy-style-de.md.
 export const de: Readonly<Record<MessageKey, string>> = {
+  "history.field.kind": "Art",
   "history.field.email_security": "E-Mail-Sicherheit",
   "history.field.employee_range": "Spanne der Mitarbeiterzahl",
   "history.field.founded_year": "Gründungsjahr",
@@ -130,7 +131,7 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "history.field.task_activity_id": "Aufgabe",
   "history.field.updated_at": "Geändert am",
   "history.field.verdict": "Ergebnis",
-  "payments.longOverdue_one": "Lange überfällig: {count} Rechnungen",
+  "payments.longOverdue_one": "Lange überfällig: {count} Rechnung",
   "payments.longOverdue_other": "Lange überfällig: {count} Rechnungen",
   "payments.checkWriteOff":
     "Prüfe, ob diese in {provider} abgeschrieben werden sollten.",

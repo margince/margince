@@ -9,7 +9,7 @@ import {
 } from "../format/format";
 import { browserZone } from "../format/timezone";
 import { useLocale } from "../i18n";
-import { en as englishCopy } from "../i18n/en";
+import { en } from "../i18n/en";
 import { playOpenViewStep } from "../testing/listview.play";
 import { phoneRow } from "../testing/phonerow";
 import { Badge, Button, OverflowMenu } from "./atoms";
@@ -562,7 +562,7 @@ export const ShortListWithoutChrome: Story = {
     await canvas.findByRole("button", { name: "Sort by Company" });
     await expect(
       canvas.queryByRole("combobox", {
-        name: englishCopy["table.rowsPerPage"],
+        name: en["table.rowsPerPage"],
       }),
     ).toBeNull();
     await expect(canvas.queryByRole("searchbox")).toBeNull();
@@ -578,7 +578,7 @@ export const ShortListKeepsVerb: Story = {
     await canvas.findByRole("button", { name: "Sort by Company" });
     // Under the narrow width the verbs fold into one menu.
     const more = canvas.queryByRole("button", {
-      name: englishCopy["list.headActions"],
+      name: en["list.headActions"],
     });
     if (more) await userEvent.click(more);
     await expect(
@@ -599,7 +599,7 @@ export const ShortListEmpty: Story = {
     await expect(await canvas.findByText("No companies yet.")).toBeVisible();
     await expect(canvas.queryByRole("columnheader")).toBeNull();
     const archived = canvas.getByRole("button", {
-      name: englishCopy["list.showArchived"],
+      name: en["list.showArchived"],
     });
     await expect(archived).toBeVisible();
     await expect(archived).toHaveAttribute("aria-pressed", "false");
@@ -621,7 +621,7 @@ export const LongerListKeepsPager: Story = {
     const canvas = within(canvasElement);
     await canvas.findByRole("navigation", { name: "Pages" });
     await expect(
-      canvas.getByRole("combobox", { name: englishCopy["table.rowsPerPage"] }),
+      canvas.getByRole("combobox", { name: en["table.rowsPerPage"] }),
     ).toBeVisible();
     await expect(
       canvas.getByRole("combobox", { name: "Search" }),
@@ -703,9 +703,7 @@ export const CardsOnPhone: Story = {
   tags: ["uat-phone"],
 };
 
-// A partner the reader may not see: the cell renders nothing, as `EntityRef` can.
 const Unseen = () => null;
-// A stage badge ends the name's line; industry, owner and partner are its caption.
 const phoneRowColumns: ListColumn<Company>[] = [
   ...columns.slice(0, 1),
   ...columns
@@ -741,7 +739,6 @@ const phoneRowColumns: ListColumn<Company>[] = [
 const lineOf = ({ identity, end, caption }: ReturnType<typeof phoneRow>) =>
   [identity.textContent, ...end, ...caption].join(" | ");
 
-// Line one: the name and its stage badge; line two: industry · owner.
 export const PhoneRow: Story = {
   render: () => <Surface rows={companies(4)} columns={phoneRowColumns} />,
   play: async ({ canvasElement }) => {
@@ -754,7 +751,6 @@ export const PhoneRow: Story = {
   tags: ["uat-phone"],
 };
 
-// "Unowned" and the unseen partner say nothing, so each goes with its dot.
 export const PhoneRowSkipsPlaceholder: Story = {
   render: () => (
     <Surface
@@ -781,7 +777,6 @@ export const PhoneRowSkipsPlaceholder: Story = {
 const LONG_NAME =
   "Vereinigte Norddeutsche Präzisionsmaschinenbau- und Antriebstechnik GmbH & Co. KG";
 
-// A long name and a long caption wrap; nothing runs past the screen's edge.
 export const PhoneRowLongText: Story = {
   render: () => (
     <Surface
@@ -820,7 +815,6 @@ const markedName: ListColumn<Company> = {
   ),
 };
 
-// The box and the logo lead the name; the caption starts under the name.
 export const PhoneRowMenuAndSelection: Story = {
   render: () => (
     <SelectableSurface
@@ -856,7 +850,6 @@ export const PhoneRowMenuAndSelection: Story = {
   tags: ["uat-phone"],
 };
 
-// The name drops its region on a phone, where a phone-only year joins the caption.
 export const PhoneRowFoldedName: Story = {
   render: () => (
     <Surface
@@ -888,7 +881,6 @@ export const PhoneRowFoldedName: Story = {
   tags: ["uat-phone"],
 };
 
-// A list that places no column keeps the card of labelled lines.
 export const PhoneRowWithoutPlaces: Story = {
   render: () => <Surface rows={companies(4)} />,
   play: async ({ canvasElement }) => {
@@ -922,8 +914,6 @@ const longHeaderColumns: ListColumn<Company>[] = [
   },
 ];
 
-// A header longer than its column wraps, and the column keeps its width.
-// Once the column is sorted, its arrow stays clear of the resize grip.
 export const LongHeadersWrap: Story = {
   render: () => (
     <div style={{ maxWidth: "62rem" }}>
@@ -952,8 +942,6 @@ export const LongHeadersWrap: Story = {
 
 const WIDE_FIGURES = ["₫120,000,000,000", "₫4,500,000", "₫900,000"];
 
-// Figures wider than a numeric column's share, in a box too narrow for the
-// row. The column takes its widest figure, so no amount reads as another.
 export const WideFigures: Story = {
   name: "Wide figures",
   render: () => (

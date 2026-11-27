@@ -1,10 +1,10 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import ts from "typescript";
 import { join } from "node:path";
-import { srcDir } from "../tree";
+import ts from "typescript";
 import type { CensusRule } from "../tree";
+import { srcDir } from "../tree";
 
 export const MIN_CATALOG_ASSERTION_LENGTH = 12;
 

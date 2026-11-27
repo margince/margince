@@ -135,6 +135,7 @@ export const LongOverdue: Story = {
           number: "OLD-001",
           due_at: "2025-01-01",
           days_overdue: 620,
+          long_overdue: true,
           open_minor: 3800000,
         },
       ],
@@ -142,7 +143,10 @@ export const LongOverdue: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    const label = englishCopy["payments.longOverdue"].replace("{count}", "1");
+    const label = englishCopy["payments.longOverdue_one"].replace(
+      "{count}",
+      "1",
+    );
     expect(
       (await canvas.findByText(label)).closest("details"),
     ).not.toHaveAttribute("open");

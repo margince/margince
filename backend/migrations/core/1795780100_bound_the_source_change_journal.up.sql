@@ -26,7 +26,7 @@ BEGIN
         'before', OLD.source, 'after', NEW.source, 'deal_id', to_jsonb(NEW)->'deal_id'))
     ON CONFLICT (namespace, entity_type, entity_id) DO UPDATE
     SET payload = journal.payload || jsonb_build_object(
-        'after', NEW.source, 'after_system', to_jsonb(NEW)->'source_system',
+        'deal_id', to_jsonb(NEW)->'deal_id', 'after', NEW.source, 'after_system', to_jsonb(NEW)->'source_system',
         'system_changed', (journal.payload->>'system_changed')::boolean OR
             ((to_jsonb(OLD)->'source_system') IS DISTINCT FROM (to_jsonb(NEW)->'source_system')));
     RETURN NEW;
@@ -40,6 +40,10 @@ RETURNS SETOF jsonb LANGUAGE plpgsql SET search_path = pg_catalog, public AS $$
 BEGIN
     IF to_regclass('pg_temp.margince_source_changes') IS NULL THEN RETURN; END IF;
     IF kind IS NULL THEN
+        IF EXISTS (SELECT 1 FROM pg_temp.margince_source_changes AS journal
+                   WHERE journal.namespace <> source_changes_for_audit.namespace) THEN
+            RAISE EXCEPTION 'source change journal does not match the bound workspace';
+        END IF;
         RETURN QUERY SELECT payload || jsonb_build_object('change_id', journal.change_id) FROM pg_temp.margince_source_changes AS journal
             WHERE journal.namespace = source_changes_for_audit.namespace;
         RETURN;
@@ -54,7 +58,7 @@ BEGIN
         UNION ALL
         SELECT payload || jsonb_build_object('change_id', journal.change_id) FROM pg_temp.margince_source_changes AS journal
         WHERE journal.namespace = source_changes_for_audit.namespace
-          AND journal.entity_type = kind AND journal.entity_id = ANY(identities);
+          AND journal.claimed AND journal.entity_type = kind AND journal.entity_id = ANY(identities);
 END;
 $$;
 
