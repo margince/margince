@@ -87,7 +87,8 @@ export const ThreePages: Story = {
   args: { ...onPage(2, 70), hasMore: false },
 };
 
-// A phone: five slots, chevrons named Previous and Next, and no range.
+// A phone: five slots and chevrons named Previous and Next. Under the strip sit
+// the range and a page size that shows its number alone.
 // `uat-phone` drives the capture gate to 390px.
 export const OnAPhone: Story = {
   name: "phone, five slots and chevrons",
@@ -99,6 +100,66 @@ export const OnAPhone: Story = {
     await expect(
       canvas.getByRole("button", { name: "Previous" }).querySelector("svg"),
     ).not.toBeNull();
-    await expect(canvasElement.querySelector(".lt-range")).toBeNull();
+    await expect(
+      canvas.getByRole("combobox", { name: "Rows per page" }),
+    ).toHaveTextContent(/^25$/);
+    await expectStacked(canvasElement);
+  },
+};
+
+const box = (canvasElement: HTMLElement, selector: string) => {
+  const found = canvasElement.querySelector(selector);
+  if (!found) {
+    throw new Error(`no ${selector} in the story`);
+  }
+  return found.getBoundingClientRect();
+};
+
+// The strip on its own row; the range at the start and the page size at the
+// end of the row under it.
+async function expectStacked(canvasElement: HTMLElement) {
+  const strip = box(canvasElement, ".lt-pager");
+  const range = box(canvasElement, ".lt-range");
+  const size = box(canvasElement, ".lt-perpage");
+  const row = box(canvasElement, ".lt-footrow");
+  await expect(range.top).toBeGreaterThanOrEqual(strip.bottom);
+  await expect(Math.abs(range.left - row.left)).toBeLessThan(1);
+  await expect(Math.abs(size.right - row.right)).toBeLessThan(1);
+}
+
+// A wide foot: one row, and the strip centred on the foot itself, whatever the
+// widths of the range and the page size beside it.
+export const WideFoot: Story = {
+  args: { ...onPage(49, COUNTED), hasMore: true, endKnown: true },
+  render: (args) => (
+    <div style={{ maxWidth: 1100 }}>
+      <Pager {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    const strip = box(canvasElement, ".lt-pager");
+    const foot = box(canvasElement, ".lt-foot");
+    const centre = (rect: DOMRect) => (rect.left + rect.right) / 2;
+    await expect(Math.abs(centre(strip) - centre(foot))).toBeLessThan(1);
+    await expect(box(canvasElement, ".lt-range").top).toBeLessThan(
+      strip.bottom,
+    );
+  },
+};
+
+// A foot too narrow for that row on a wide screen: the stacked layout a
+// phone uses, with seven slots and the words.
+export const NarrowFoot: Story = {
+  args: { ...onPage(49, COUNTED), hasMore: true, endKnown: true },
+  render: (args) => (
+    <div style={{ maxWidth: 560 }}>
+      <Pager {...args} />
+    </div>
+  ),
+  play: async ({ canvasElement }) => {
+    await expect(
+      within(canvasElement).getByRole("button", { name: "Next" }),
+    ).toHaveTextContent("Next");
+    await expectStacked(canvasElement);
   },
 };

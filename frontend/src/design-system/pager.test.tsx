@@ -61,6 +61,9 @@ describe("the pager on a computer", () => {
       "49",
       "Next",
     ]);
+    expect(
+      screen.getByRole("combobox", { name: "Rows per page" }),
+    ).toHaveTextContent("25 per page");
   });
 });
 
@@ -85,11 +88,14 @@ describe("the pager on a phone", () => {
     }
   });
 
-  it("draws no range", () => {
+  it("keeps the range, and names its compact page size in full", () => {
     stubWindowWidth(390);
     const { container } = renderPager(1);
 
-    expect(container.querySelector(".lt-range")).toBeNull();
-    expect(screen.queryByText(/of 1,204/)).toBeNull();
+    expect(container.querySelector(".lt-range")).toHaveTextContent(
+      "1-25 of 1,204",
+    );
+    const size = screen.getByRole("combobox", { name: "Rows per page" });
+    expect(size).toHaveTextContent(/^25$/);
   });
 });

@@ -51,8 +51,7 @@ export function Pager({
   return (
     <div className={`lt-foot${lastPage === 1 && endKnown ? " single" : ""}`}>
       <div className="lt-footrow">
-        {/* A phone has no room for it beside the strip. */}
-        {!phone && range.total > 0 && (
+        {range.total > 0 && (
           <span className="lt-range">{rangeText(t, locale, range)}</span>
         )}
         {/* A landmark, because this is navigation and a reader who jumps by region
@@ -108,6 +107,8 @@ export function Pager({
             options={PAGE_SIZES.map((size) => ({
               value: identifierNumber(size),
               label: t("table.perPage", { count: formatNumber(size, locale) }),
+              // The box's name says what the number counts.
+              faceLabel: phone ? formatNumber(size, locale) : undefined,
             }))}
           />
         </span>
