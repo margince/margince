@@ -189,6 +189,8 @@ installation:
   call_telegram: true
   call_whatsapp: true
   call_zalo: true
+  capture_confidentiality_verdict_interval_seconds: 600
+  capture_counterparty_verdict_interval_seconds: 600
   close_date_sweep_interval_seconds: 86400
   country: ""
   date_format: locale

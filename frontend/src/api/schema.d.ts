@@ -28765,6 +28765,10 @@ export interface components {
             geocode_backfill_interval_seconds?: number;
             /** @description Set the value `OperationSettings.technical_backfill_interval_seconds` describes. */
             technical_backfill_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.capture_counterparty_verdict_interval_seconds` describes. */
+            capture_counterparty_verdict_interval_seconds?: number;
+            /** @description Set the value `OperationSettings.capture_confidentiality_verdict_interval_seconds` describes. */
+            capture_confidentiality_verdict_interval_seconds?: number;
             /** @description Set the value `OperationSettings.gmail_watch_scan_interval_seconds` describes. */
             gmail_watch_scan_interval_seconds?: number;
             /** @description Set the value `OperationSettings.graph_watch_scan_interval_seconds` describes. */
@@ -29960,6 +29964,10 @@ export interface components {
             geocode_backfill_interval_seconds: number;
             /** @description How often company domains without technical facts are looked up, in seconds, from 300; 0 switches the sweep off. Default 21600. */
             technical_backfill_interval_seconds: number;
+            /** @description How often new senders are judged by the model, in seconds. Default 600. */
+            capture_counterparty_verdict_interval_seconds: number;
+            /** @description How often captured threads are judged for whether colleagues may read them, in seconds. Default 600. */
+            capture_confidentiality_verdict_interval_seconds: number;
             /** @description How often Gmail push subscriptions are checked for renewal, in seconds. Default 21600. */
             gmail_watch_scan_interval_seconds: number;
             /** @description How often Microsoft 365 mail subscriptions are checked for renewal, in seconds. Default 21600. */
