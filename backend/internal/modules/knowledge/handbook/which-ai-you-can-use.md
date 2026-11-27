@@ -20,8 +20,8 @@ Also called: which model should I use, best model, recommended model, which LLM,
 
 | Model setup | Where your data goes | Ready | Usable with care | Not reliable yet | Not measured |
 |---|---|---:|---:|---:|---:|
-| Google Gemini | global cloud | 29 | 9 | 0 | 0 |
-| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 29 | 9 | 0 | 0 |
+| Google Gemini | global cloud | 28 | 10 | 0 | 0 |
+| Google Gemini in the EU, through Vertex AI | EU-hosted cloud | 28 | 10 | 0 | 0 |
 | Anthropic Claude | global cloud | 33 | 5 | 0 | 0 |
 | OpenAI GPT-6, through OpenRouter | global cloud | 19 | 3 | 3 | 13 |
 | Open models from OpenAI and Mistral, through OpenRouter | global cloud | 12 | 12 | 8 | 6 |
@@ -30,7 +30,7 @@ Also called: which model should I use, best model, recommended model, which LLM,
 | Gemma 4 on your own server, through Ollama | your own servers | 0 | 0 | 0 | 38 |
 | Qwen3 on your own server, through vLLM | your own servers | 0 | 0 | 0 | 38 |
 
-98 of these 201 grades were measured on an older version of Margince and wait for a re-check.
+93 of these 201 grades were measured on an older version of Margince and wait for a re-check.
 
 ### What does a grade of a Margince AI feature mean?
 A grade of a Margince AI feature says how often it was right. **Ready** means right in at least 90 of every 100 tries: turn it on. **Usable with care** means right in most tries: have someone look over what it makes. **Not reliable yet** means wrong too often: leave it off. **Not measured** means nobody has tested that feature on that model yet.
@@ -42,16 +42,16 @@ Also called: which AI tool works with Margince, Claude, Codex, Gemini, ChatGPT, 
 
 | Assistant | How we connected it | Jobs done reliably | Can I trust it? |
 |---|---|---:|---|
-| `claude-sonnet-5-5` | Claude Code CLI | 81 of 81 (2 not yet run) | 🟢 Yes |
+| `claude-sonnet-5-5` | Claude Code CLI | 80 of 81 (2 not yet run) | 🟡 Mostly |
 | `claude-sonnet-5-5` | Claude Agent SDK | 2 of 2 (81 not yet run) | ⚪ Not enough tested yet |
-| `gemini-4-hydrogen-medium` | Antigravity CLI | 81 of 81 (2 not yet run) | 🟢 Yes |
-| `gpt-5.6-sol` | Codex CLI | 74 of 82 (1 not yet run) | 🟡 Mostly |
+| `gemini-4-hydrogen-medium` | Antigravity CLI | 80 of 81 (2 not yet run) | 🟡 Mostly |
+| `gpt-5.6-sol` | Codex CLI | 75 of 82 (1 not yet run) | 🟡 Mostly |
 
 ### Can I use an AI assistant that is not in the table?
 Yes. An AI assistant that is not in the table can still connect to Margince. It can do what you could do yourself, and nothing more. We have not measured how well it does the jobs, so check what it does before you rely on it.
 Also called: untested assistant, another AI tool, my own agent.
 
 ### What did you test, and what not?
-For Margince AI we ran 345 test cases. Each one is an example with a known right answer, in one of the 62 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
+For Margince AI we ran 346 test cases. Each one is an example with a known right answer, in one of the 62 places in the product where a feature calls a model. For your AI assistant, we wrote 83 everyday jobs on a test company. The table counts the jobs each assistant has run, and a job not run yet is not counted as failed. A model setup or an assistant missing from the tables above is not tested yet.
 Also called: how is the AI tested, test coverage, certification.
 

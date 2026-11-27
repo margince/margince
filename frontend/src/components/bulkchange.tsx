@@ -28,6 +28,7 @@ import { executeBulkChange, previewBulkChange } from "./bulkchangeapi";
 import { BulkUndoContext } from "./bulkundo";
 import {
   dialogWords,
+  outcomeWords,
   RECORD_KINDS,
   type RecordKind,
   SampleState,
@@ -185,7 +186,11 @@ function PreviewBody({
                 key: "reason",
                 header: t("bulk.colReason"),
                 render: (skip) => (
-                  <SkipReason skip={skip} verb={preview.verb} />
+                  <SkipReason
+                    skip={skip}
+                    verb={preview.verb}
+                    undo={request.undoOf !== undefined}
+                  />
                 ),
               },
             ]}
@@ -275,12 +280,13 @@ export function useBulkOutcome() {
     await Promise.all(runs.map((run) => refresh(run.request)));
     const result = combined(runs);
     const kind = RECORD_KINDS[first.request.recordType];
+    const words = outcomeWords(kind, first.request.verb);
     const undoable =
       openUndo !== null &&
       first.request.undoOf === undefined &&
       result.changed > 0;
     toast.show(
-      outcome(first.request.undoOf ? kind.undone : kind.done, result),
+      outcome(first.request.undoOf ? words.undone : words.done, result),
       {
         tone: result.changed > 0 ? "success" : "warning",
         action: undoable

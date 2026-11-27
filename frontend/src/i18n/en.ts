@@ -2008,6 +2008,8 @@ export const en = {
   "brief.queue.back": "Back to Worklist",
   "brief.queue.title": "Worklist",
   "brief.queue.show": "Show Worklist",
+  "brief.queue.count_one": "{count} item in the Worklist",
+  "brief.queue.count_other": "{count} items in the Worklist",
   "brief.queue.hide": "Hide Worklist",
   "brief.team.planUnavailable": "No current plan visible to you for {name}.",
   "brief.team.noCommitments": "{name} has no commitments in this plan.",
@@ -3661,7 +3663,7 @@ export const en = {
   "list.unowned": "Unassigned",
   "list.created": "Created",
   "list.lastActivity": "Last activity",
-  "list.filterOwnerMe": "Owned by you",
+  "list.filterOwnerMe": "You",
   "list.filterOwnerAll": "Any owner",
   "list.ownerDeactivated": "{name} (deactivated)",
   "list.ownerSuspended": "{name} (suspended)",
@@ -3673,6 +3675,10 @@ export const en = {
   "views.save": "Save view",
   "views.saveConfirm": "Save",
   "views.saveTitle": "Save this view",
+  "views.update": "Update “{name}”",
+  "views.updated": "View updated: “{name}”",
+  "views.nameTaken":
+    "A view with this name already exists. Choose another name.",
   "views.name": "Name",
   // Names the saved-view rail where the rail itself cannot: a failure notice
   // lands beside the list's own tools, and "this section did not load" under a
@@ -3919,6 +3925,7 @@ export const en = {
   "stat.open": "Open",
   "stat.forecast": "Forecast",
   "stat.records": "View records",
+  "stat.chart": "Show on chart",
   "co.strip.fin.neverInvoiced": "Not invoiced",
   "co.strip.fin.noConnection": "Accounting not connected",
   "co.strip.fin.unmapped": "Customer not matched",
@@ -5780,7 +5787,8 @@ export const en = {
   "tags.moreUncounted": "more",
   "tags.moreUncountedTip":
     "Including {names}. Open the record for the full set.",
-  "tags.columnHeaderPartial": "Tags (partial list)",
+  "tags.filterLabel": "Tag",
+  "tags.filterLabelPartial": "Tag (partial list)",
   "tags.loading": "Loading tags…",
   "tags.panelTitle": "Tags",
   "tags.add": "Add tag",
@@ -5829,7 +5837,8 @@ export const en = {
     "No tag with that name. An administrator or operations user can add one.",
   "tagResult.gone":
     "This tag no longer exists. It may have been merged into another.",
-  "tagResult.totalVisible": "{count} visible assignments",
+  "tagResult.tagged_one": "{count} tagged record",
+  "tagResult.tagged_other": "{count} tagged records",
   "tagResult.contacts": "Contacts",
   "tagResult.companies": "Companies",
   "tagResult.deals": "Deals",
@@ -6486,7 +6495,7 @@ export const en = {
   "deal.timeline.empty": "No activity on this deal yet.",
   "legalEntities.title": "Legal entities",
   "legalEntities.sub":
-    "The companies you trade as. A colleague you have not assigned works for the default, which takes its name, address and logo from the company above.",
+    "The companies you trade as. A colleague you have not assigned works for the default, which takes its name, address and logo from the company profile.",
   "legalEntities.loading": "Loading legal entities…",
   "legalEntities.addOpen": "New legal entity",
   "legalEntities.addTitle": "New legal entity",
@@ -6499,6 +6508,7 @@ export const en = {
     "Not set: the installation’s jurisdiction applies",
   "legalEntities.defaultBadge": "Default",
   "legalEntities.defaultUnnamed": "Your company",
+  "legalEntities.fromCompanyProfile": "From the company profile",
   "legalEntities.displayName": "Name",
   "legalEntities.legalName": "Legal name",
   "legalEntities.country": "Country",
@@ -6873,6 +6883,10 @@ export const en = {
   "bulk.selectPage": "Select every row on this page",
   "bulk.selectAll": "Select all",
   "bulk.clearSelection": "Clear selection",
+  "bulk.selecting_one": "Selecting {count}…",
+  "bulk.selecting_other": "Selecting {count}…",
+  "bulk.selectingOf_one": "Selecting {count} of {total}…",
+  "bulk.selectingOf_other": "Selecting {count} of {total}…",
   "bulk.selectionLimit_one":
     "One change takes at most {count} record, so the selection stops there.",
   "bulk.selectionLimit_other":
@@ -6940,12 +6954,19 @@ export const en = {
   "bulk.undoneCompanies_other": "{count} companies put back.",
   "bulk.undoneDeals_one": "{count} deal put back.",
   "bulk.undoneDeals_other": "{count} deals put back.",
+  "bulk.doneTasks_one": "{count} task created.",
+  "bulk.doneTasks_other": "{count} tasks created.",
+  "bulk.undoneTasks_one": "{count} task archived.",
+  "bulk.undoneTasks_other": "{count} tasks archived.",
   "bulk.undoLeftBehind_one":
     "{count} link, tag or list membership could not come back.",
   "bulk.undoLeftBehind_other":
     "{count} links, tags or list memberships could not come back.",
-  "bulk.reason.no_change_list": "Already on or off the Shortlist",
-  "bulk.reason.no_change_tag": "Already has or lacks this tag",
+  "bulk.reason.no_change_listed": "Already on this Shortlist",
+  "bulk.reason.no_change_unlisted": "Not on this Shortlist",
+  "bulk.reason.no_change_tagged": "Already has this tag",
+  "bulk.reason.no_change_untagged": "Does not have this tag",
+  "bulk.reason.no_change_undo": "Not part of the change you are undoing",
   "bulk.tag": "Tag",
   "bulk.tagPick": "Pick a tag",
   "bulk.addTag": "Add tag",
@@ -6979,7 +7000,7 @@ export const en = {
   "bulk.confirmComplete": "Mark done",
   "bulk.stateDone": "Done",
   "bulk.stateOpen": "Open",
-  "bulk.reason.no_change_done": "Already in that state",
+  "bulk.reason.no_change_done": "Already done",
   "bulk.titleMoveStage": "Move the selected {unit} to {stage}?",
   "bulk.confirmMoveStage": "Move",
   "bulk.stateStageUnnamed": "A stage",
@@ -7066,6 +7087,7 @@ export const en = {
   "offer.rejectConfirm": "Mark this offer as rejected?",
   "offer.rejectReason": "Reason (optional)",
   "offer.regenerate": "Regenerate revision",
+  "offer.regeneratedPlain": "Copied without AI changes.",
   "offer.writeUnsure":
     "Margince could not tell whether that went through. Check the deal’s offers before you try again.",
   "offer.aiDisclosureTitle": "AI-assisted offer",
@@ -7191,7 +7213,7 @@ export const en = {
   // The Brief's opening sentence, composed from the rows the page is showing —
   // never model-written, so it cannot say what the rows contradict.
   "brief.updating": "Updating…",
-  "brief.briefedAt": "Briefed by Margince at {time}",
+  "brief.briefedAt": "Prepared by Margince at {time}",
   "brief.task.done": "Mark done: {title}",
   "brief.task.reply": "Reply to {name}: {subject}",
   "brief.first.title": "Needs you",
@@ -7218,6 +7240,7 @@ export const en = {
   "brief.week.quiet": "No completed work or deal movement recorded.",
 
   // What is on screen out of what the day holds, on the panel's own line.
+  "brief.first.shownOf": "{shown} of {total} shown",
   "brief.feed.changedBadge_one": "1 changed",
   "brief.feed.changedBadge_other": "{count} changed",
   "brief.feed.loading": "Loading Morning brief…",
@@ -7533,6 +7556,17 @@ export const en = {
   "brief.readings.leadsBasis": "Planned tasks for prospects",
   "brief.readings.leadsDue": "Next due {value}",
   "brief.rail": "Context",
+  "brief.firstDay.title": "Your first day on Home",
+  "brief.firstDay.what":
+    "Home shows what needs you today, what Margince did for you and your meetings. Each morning it opens with your Morning brief.",
+  "brief.firstDay.briefTonight":
+    "Your first Morning brief is prepared overnight and opens Home tomorrow.",
+  "brief.firstDay.briefOff":
+    "Margince prepares a Morning brief overnight only once you allow it.",
+  "brief.firstDay.turnOn": "Turn on overnight preparation",
+  "brief.firstDay.briefLater":
+    "Your Morning brief opens Home once one has been prepared for you.",
+  "brief.firstDay.setup": "Set up next",
   "brief.rail.numbers": "Numbers",
   "extensionReports.withheld": "Withheld: too few records to show",
   "extensionReports.unavailable": "This report could not be loaded.",
@@ -8862,6 +8896,7 @@ export const en = {
   "tasks.movedTo": "Moved to {when}",
   "tasks.moveUndoFailed": "Task was not moved back. Retry.",
   "tasks.remind.menu": "Remind me",
+  "tasks.remind.chipName": "Remind me (reminder set for {when})",
   "tasks.remind.inAnHour": "In 1 hour",
   "tasks.remind.tomorrowMorning": "Tomorrow morning",
   "tasks.remind.beforeDue": "1 hour before it is due",
@@ -8878,6 +8913,8 @@ export const en = {
   "tasks.remind.needsTime": "Enter a day and a time.",
   "tasks.remind.past": "Pick a time that is still ahead.",
   "tasks.log.action": "Log what happened",
+  "tasks.more": "More",
+  "tasks.context": "Context",
   "tasks.log.record": "Which record is this activity for?",
   "tasks.log.chooseRecord": "Choose another record",
   "tasks.log.noRecord": "Log without a record",
@@ -10094,7 +10131,7 @@ export const en = {
   "agent.activity.summarize.queued": "Summary queued",
   "agent.activity.summarize.running": "Writing summary…",
   "agent.activity.summarize.done": "Summary ready",
-  "agent.activity.summarize.degraded": "Summary stopped partway",
+  "agent.activity.summarize.degraded": "Summary made without full AI help",
   "agent.activity.summarize.failed": "Summary failed",
   "agent.activity.summarize.stalled": "Summary is taking unusually long",
   // The same six with the record NAMED — the company, the contact or the
@@ -10104,27 +10141,36 @@ export const en = {
   "agent.activity.summarizeNamed.queued": "Summary of {name} queued",
   "agent.activity.summarizeNamed.running": "Summarizing {name}…",
   "agent.activity.summarizeNamed.done": "Summary of {name} ready",
-  "agent.activity.summarizeNamed.degraded": "Summary of {name} stopped partway",
+  "agent.activity.summarizeNamed.degraded":
+    "Summary of {name} made without full AI help",
   "agent.activity.summarizeNamed.failed": "Summary of {name} failed",
   "agent.activity.summarizeNamed.stalled":
     "Summary of {name} is taking unusually long",
-  "agent.activity.draftReply.queued": "Reply draft queued",
-  "agent.activity.draftReply.running": "Drafting reply…",
-  "agent.activity.draftReply.done": "Draft reply ready",
-  "agent.activity.draftReply.degraded": "Reply draft stopped partway",
-  "agent.activity.draftReply.failed": "Reply draft failed",
-  "agent.activity.draftReply.stalled": "Reply draft is taking unusually long",
+  "agent.activity.draftEmail.queued": "Email draft queued",
+  "agent.activity.draftEmail.running": "Drafting email…",
+  "agent.activity.draftEmail.done": "Email draft ready",
+  "agent.activity.draftEmail.degraded": "Email draft made without full AI help",
+  "agent.activity.draftEmail.failed": "Email draft failed",
+  "agent.activity.draftEmail.stalled": "Email draft is taking unusually long",
+  "agent.activity.draftEmailNamed.queued": "Email draft about {name} queued",
+  "agent.activity.draftEmailNamed.running": "Drafting an email about {name}…",
+  "agent.activity.draftEmailNamed.done": "Email draft about {name} ready",
+  "agent.activity.draftEmailNamed.degraded":
+    "Email draft about {name} made without full AI help",
+  "agent.activity.draftEmailNamed.failed": "Email draft about {name} failed",
+  "agent.activity.draftEmailNamed.stalled":
+    "Email draft about {name} is taking unusually long",
   "agent.activity.offerDraft.queued": "Offer draft queued",
   "agent.activity.offerDraft.running": "Drafting offer…",
   "agent.activity.offerDraft.done": "Draft offer ready",
-  "agent.activity.offerDraft.degraded": "Offer draft stopped partway",
+  "agent.activity.offerDraft.degraded": "Offer draft made without full AI help",
   "agent.activity.offerDraft.failed": "Offer draft failed",
   "agent.activity.offerDraft.stalled": "Offer draft is taking unusually long",
   "agent.activity.draftReplyNamed.queued": "Reply draft for “{name}” queued",
   "agent.activity.draftReplyNamed.running": "Drafting a reply to “{name}”…",
   "agent.activity.draftReplyNamed.done": "Draft reply to “{name}” ready",
   "agent.activity.draftReplyNamed.degraded":
-    "Reply draft for “{name}” stopped partway",
+    "Reply draft for “{name}” made without full AI help",
   "agent.activity.draftReplyNamed.failed": "Reply draft for “{name}” failed",
   "agent.activity.draftReplyNamed.stalled":
     "Reply draft for “{name}” is taking unusually long",
@@ -10132,7 +10178,7 @@ export const en = {
   "agent.activity.offerDraftNamed.running": "Drafting an offer for {name}…",
   "agent.activity.offerDraftNamed.done": "Draft offer for {name} ready",
   "agent.activity.offerDraftNamed.degraded":
-    "Offer draft for {name} stopped partway",
+    "Offer draft for {name} made without full AI help",
   "agent.activity.offerDraftNamed.failed": "Offer draft for {name} failed",
   "agent.activity.offerDraftNamed.stalled":
     "Offer draft for {name} is taking unusually long",
@@ -10737,9 +10783,10 @@ export const en = {
   "import.recent.files_other": "{count} files",
   "import.recent.filesBy": "{files} · by {name}",
   "import.recent.undo": "Undo",
+  "import.recent.rowsImported": "{written} of {read} imported",
   "import.status.pending": "Draft",
   "import.status.validating": "Checking",
-  "import.status.awaiting_approval": "Not imported",
+  "import.status.awaiting_approval": "Test run ready",
   "import.status.running": "Importing",
   "import.status.complete": "Complete",
   "import.status.failed": "Stopped",
@@ -11032,7 +11079,7 @@ export const en = {
     "This import is already running. It finishes on its own and this page updates.",
   "import.reason.undo_failed": "The record could not be undone.",
   "import.reason.amount_negative":
-    "“{value}” is below zero, and a deal’s amount cannot be.",
+    "“{value}” is below zero, and an imported amount cannot be.",
   "import.reason.author_too_long": "Author is longer than {max} characters.",
   "import.reason.cannot_create":
     "You cannot create {plural}, so the {plural} file is skipped.",
@@ -11078,10 +11125,14 @@ export const en = {
     "The company column is empty, so the row names no employer.",
   "import.reason.employer_column_empty_dropped":
     "The company column is empty, so the row names no employer. The row was imported without the link.",
+  "import.reason.employer_column_empty_will_drop":
+    "The company column is empty, so the row names no employer. The row will be imported without the link.",
   "import.reason.employer_not_found":
-    "No company named “{name}” is in the CRM, so there was nothing to link this contact to.",
+    "No company named “{name}” is in the CRM, so there is nothing to link this contact to.",
   "import.reason.employer_not_found_dropped":
-    "No company named “{name}” is in the CRM, so there was nothing to link this contact to. The row was imported without the link.",
+    "No company named “{name}” is in the CRM, so there is nothing to link this contact to. The row was imported without the link.",
+  "import.reason.employer_not_found_will_drop":
+    "No company named “{name}” is in the CRM, so there is nothing to link this contact to. The row will be imported without the link.",
   "import.reason.employer_refused":
     "The employer could not be resolved. Choose an unambiguous company that you may link.",
   "import.reason.employer_will_create":
@@ -11105,10 +11156,14 @@ export const en = {
     "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer.",
   "import.reason.link_ambiguous_dropped":
     "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer. The row was imported without the link.",
+  "import.reason.link_ambiguous_will_drop":
+    "More than one company is named “{name}”, so which one employs this contact is a question only a human can answer. The row will be imported without the link.",
   "import.reason.link_not_found":
     "No company with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.link_not_found_dropped":
     "No company with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.link_not_found_will_drop":
+    "No company with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.linkedin_held":
     "This LinkedIn URL is already held by another record in the CRM, so the row cannot claim it.",
   "import.reason.natural_key_taken": "A record with this key already exists.",
@@ -11118,7 +11173,13 @@ export const en = {
     "“{value}” is not a domain that can be written.",
   "import.reason.not_a_number": "“{value}” is not a number.",
   "import.reason.not_an_amount":
-    "“{value}” is not an amount in {currency}. Write it like 12000.50.",
+    "“{value}” is not an amount in {currency}. Write it like {example}.",
+  "import.reason.amount_too_many_decimals":
+    "“{value}” has more decimal places than {currency} takes. Write it like {example}.",
+  "import.reason.amount_needs_currency":
+    "The amount “{value}” has no currency. Fill the currency column of this row with a code, like EUR.",
+  "import.reason.not_a_phone":
+    "“{value}” is not a phone number. Write it with its country code, like +49 30 1234567.",
   "import.reason.not_an_email":
     "“{value}” is not an email address that can be written.",
   "import.reason.not_yes_no": "“{value}” is not yes or no.",
@@ -11170,6 +11231,10 @@ export const en = {
     "“{value}” is not a stage of pipeline “{pipeline}”. Its stages are: {names}.",
   "import.reason.currency_not_a_code":
     "“{value}” is not a currency code. Write its three letters, like EUR.",
+  "import.reason.currency_not_money":
+    "“{value}” is the code for no currency or for tests, so it prices no deal. Write the deal’s currency, like EUR.",
+  "import.reason.close_date_far":
+    "“{value}” is more than {years} years away. Check that this close date is right.",
   "import.reason.close_date_future":
     "“{value}” is in the future, and a closed deal’s close date cannot be.",
   "import.reason.close_date_past":
@@ -11198,6 +11263,8 @@ export const en = {
     "No contact with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.contact_not_found_dropped":
     "No contact with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.contact_not_found_will_drop":
+    "No contact with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.activity_type_unnamed":
     "Name the activity’s type: note, call, meeting or email.",
   "import.reason.activity_type_unknown":
@@ -11245,12 +11312,16 @@ export const en = {
     "No lead with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.lead_not_found_dropped":
     "No lead with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.lead_not_found_will_drop":
+    "No lead with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.deal_not_found":
     "No deal with “{ref}” in this upload, in an earlier import, or in Margince.",
   "import.reason.link_row_skipped":
     "The row “{ref}” was skipped in this import, so there is nothing to link to.",
   "import.reason.link_row_skipped_dropped":
     "The row “{ref}” was skipped in this import, so there is nothing to link to. The row was imported without the link.",
+  "import.reason.link_row_skipped_will_drop":
+    "The row “{ref}” was skipped in this import, so there is nothing to link to. The row will be imported without the link.",
   "import.reason.undo_edited":
     "Someone changed this record after the import, so it was left in place.",
   "import.reason.undo_still_referenced":
@@ -11261,10 +11332,14 @@ export const en = {
     "A file cannot set the status “{value}”. Use Qualify or Disqualify on the lead. The statuses a file may set are: {allowed}.",
   "import.reason.deal_not_found_dropped":
     "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row was imported without the link.",
+  "import.reason.deal_not_found_will_drop":
+    "No deal with “{ref}” in this upload, in an earlier import, or in Margince. The row will be imported without the link.",
   "import.reason.activity_link_ambiguous":
     "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer.",
   "import.reason.activity_link_ambiguous_dropped":
     "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer. The row was imported without the link.",
+  "import.reason.activity_link_ambiguous_will_drop":
+    "More than one company is named “{name}”, so which one this activity is about is a question only a human can answer. The row will be imported without the link.",
   "import.reason.value_unreadable": "“{value}” cannot be read.",
   "import.problem.broken_link": "Broken link",
   "import.problem.dropped_link": "Link left out",
@@ -15022,6 +15097,14 @@ export const en = {
     "“{label}” added to reports. Everyone who reads reports sees its label and choices.",
   "cf.removedFromReports": "“{label}” removed from reports",
   "cf.audit.title": "Recent field changes",
+  "cf.audit.renamed": "Renamed",
+  "cf.audit.translations": "Translations changed",
+  "cf.audit.choices": "Choices changed",
+  "cf.audit.shownInCreate": "Shown in create forms",
+  "cf.audit.hiddenFromCreate": "Hidden from create forms",
+  "cf.audit.addedToReports": "Added to reports",
+  "cf.audit.removedFromReports": "Removed from reports",
+  "cf.audit.kinds": "Activity types changed",
   "audit.kind.customField": "Custom field",
   "audit.kind.activity_retention_evidence": "Retention evidence",
   "audit.kind.activity_review_template": "Activity review template",
@@ -17599,6 +17682,9 @@ export const en = {
   "connectors.svc.queued": "Starting soon",
   "connectors.svc.imported": "Imported",
   "connectors.svc.stopped": "Stopped",
+  "connectors.svc.mailMissing": "Mail missing",
+  "connectors.svc.unreadPeriod":
+    "Some mail from {from} to {to} may be missing. Import older email with a window that reaches back to {from}.",
   "connectors.svc.calendar": "Calendar",
   "connectors.svc.calendarDesc":
     "Meetings show on contacts and deals, and your booking link offers only your free times.",
@@ -20890,6 +20976,11 @@ export const en = {
   "lists.editFilter": "Edit filter",
   "lists.filterCannotOpen": "This list’s filter cannot be opened here.",
   "lists.savedTo": "Saved to “{name}”",
+  "lists.settingsSaved": "List saved",
+  "lists.restored": "List restored",
+  "lists.archivedDone": "List archived",
+  "lists.addedTo": "Added to “{name}”",
+  "lists.addedToShortlist": "Added to the Shortlist",
   "lists.editingTitle": "Editing the filter of {name}",
   "lists.editingBody":
     "Save to the list to change which records it holds. To keep a copy instead, save the filter as a new view.",
@@ -22861,6 +22952,7 @@ export const en = {
   // four lanes. The `magic.action.*` and `magic.consequence.*` families are
   // the client half of a mirror the server sends keys against. So the set is
   // the contract (src/lib/magickeys.ts), not one screen's copy.
+  "magic.heading.firstBrief": "Before your first brief",
   "magic.heading.brief": "Since your last brief",
   "magic.loading": "Reading what the machinery did",
   "magic.lane.done": "Done for you",
@@ -24044,7 +24136,13 @@ export const en = {
   "analytics.trajectory.target": "Goal {amount}",
   "analytics.trajectory.projection": "{amount} projected",
   "analytics.trajectory.range": "Modelled finish",
-  "analytics.overview.more": "More",
+  "analytics.trajectory.pace": "Even pace",
+  "analytics.hero.chart.won": "Sales won through the period",
+  "analytics.hero.chart.forecast": "Where the quarter can finish",
+  "analytics.hero.chart.range": "Modelled quarter finish",
+  "analytics.hero.key.won": "Sales won",
+  "analytics.hero.key.goal": "Goal",
+  "analytics.hero.openForecast": "Open forecast",
   "analytics.outlook.valuedCount": "{included} of {eligible} valued",
   "analytics.outlook.periodPipeline": "Pipeline due this quarter",
   "analytics.outlook.selectedSales": "Sales outlook",
@@ -24082,8 +24180,6 @@ export const en = {
     "Completing the work does not qualify or win the deal.",
   "analytics.decisions.saveOutcome": "Save outcome",
   "analytics.overview.filtersToggle": "Filters",
-  "analytics.overview.chipPipeline": "Pipeline: {name}",
-  "analytics.overview.chipClose": "Closing: {window}",
   "analytics.overview.chipProduct": "Product: {name}",
   "analytics.overview.chipCountry": "Country: {name}",
   "analytics.overview.chipIndustry": "Industry: {name}",

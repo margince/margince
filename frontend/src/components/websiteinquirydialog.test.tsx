@@ -44,6 +44,7 @@ it("reviews the shared policy before saving it and keeps authority separate from
       jsonResponse(INQUIRY_DEADLINE_PREVIEW),
     "GET /custom-fields": () =>
       jsonResponse({
+        page: { has_more: false },
         data: [
           INQUIRY_REQUEST_FIELD,
           {
@@ -127,7 +128,8 @@ it("keeps the proposed policy visible when a stale review is refused", async () 
     "GET /me": meRoute(INQUIRY_GRANTS),
     [`POST /web-forms/${INQUIRY_FORM.id}/handling/preview`]: () =>
       jsonResponse(INQUIRY_DEADLINE_PREVIEW),
-    "GET /custom-fields": () => jsonResponse({ data: [] }),
+    "GET /custom-fields": () =>
+      jsonResponse({ page: { has_more: false }, data: [] }),
     "GET /users": () => jsonResponse({ data: INQUIRY_MEMBERS }),
     "GET /users/names": () => jsonResponse({ data: INQUIRY_MEMBERS }),
     [`GET /automations/${INQUIRY_AUTOMATION.id}`]: () =>
@@ -168,7 +170,8 @@ it("keeps the proposed policy visible when a stale review is refused", async () 
 it("keeps activation unavailable when the current deadline preview fails", async () => {
   installFetchStub({
     "GET /me": meRoute(INQUIRY_GRANTS),
-    "GET /custom-fields": () => jsonResponse({ data: [] }),
+    "GET /custom-fields": () =>
+      jsonResponse({ page: { has_more: false }, data: [] }),
     "GET /users": () => jsonResponse({ data: INQUIRY_MEMBERS }),
     "GET /users/names": () => jsonResponse({ data: INQUIRY_MEMBERS }),
     [`GET /automations/${INQUIRY_AUTOMATION.id}`]: () =>
@@ -202,7 +205,8 @@ it("keeps activation unavailable when the current deadline preview fails", async
 it("names what is missing on the review press instead of a dead button", async () => {
   installFetchStub({
     "GET /me": meRoute(INQUIRY_GRANTS),
-    "GET /custom-fields": () => jsonResponse({ data: [] }),
+    "GET /custom-fields": () =>
+      jsonResponse({ page: { has_more: false }, data: [] }),
     "GET /users": () => jsonResponse({ data: INQUIRY_MEMBERS }),
     "GET /users/names": () => jsonResponse({ data: INQUIRY_MEMBERS }),
     [`GET /automations/${INQUIRY_AUTOMATION.id}`]: () =>

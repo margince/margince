@@ -1,0 +1,4 @@
+{"type": "system", "subtype": "init", "tools": ["mcp__margince__run_research"]}
+{"type": "assistant", "message": {"content": [{"type": "tool_use", "name": "mcp__margince__run_research", "input": {"action": "draft_intro_note", "id": "n1", "request_body": {"via_user_id": "u1"}}, "id": "fixture1"}]}}
+{"type": "user", "message": {"content": [{"type": "tool_result", "tool_use_id": "fixture1", "content": "{}", "is_error": false}]}}
+{"type": "result", "subtype": "success", "is_error": false, "result": "Here is a draft:\n\n> Hi Heike, Sofia suggested I introduce myself. We would like to talk about Nordwind Armaturen's valve range.\n\nNothing has gone out yet."}

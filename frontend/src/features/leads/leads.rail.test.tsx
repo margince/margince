@@ -91,7 +91,11 @@ function stubFetch(onPatch: (body: unknown) => Response) {
       if (pathname.endsWith("/v1/leads/settings")) {
         return jsonResponse({ first_response_enabled: false });
       }
-      if (pathname.includes("/history") || pathname.includes("/activities")) {
+      if (
+        pathname.includes("/history") ||
+        pathname.includes("/activities") ||
+        pathname.endsWith("/v1/custom-fields")
+      ) {
         return jsonResponse({ data: [], page: { next_cursor: null } });
       }
       return jsonResponse(lead);

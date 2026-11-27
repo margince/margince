@@ -290,16 +290,16 @@ func TestAnAgentUploadOverTheToolsLimitIsRefusedAsTheToolRefusesIt(t *testing.T)
 
 // filedRow is what an upload lands as, apart from its id and when.
 type filedRow struct {
-	EntityType, EntityID, ContractID, CompanyID, Checksum, CapturedBy string
-	ByteSize                                                          int64
+	EntityType, EntityID, ContractID, Checksum, CapturedBy string
+	ByteSize                                               int64
 }
 
 func filedRowOf(t *testing.T, e *apptest.AppEnv, attachment string) filedRow {
 	t.Helper()
 	var row filedRow
 	if err := e.Owner.QueryRow(t.Context(), `SELECT entity_type, entity_id::text, coalesce(contract_id::text, ''),
-		coalesce(company_id::text, ''), checksum, captured_by, byte_size FROM attachment WHERE id = $1`, attachment).Scan(
-		&row.EntityType, &row.EntityID, &row.ContractID, &row.CompanyID, &row.Checksum, &row.CapturedBy, &row.ByteSize,
+		checksum, captured_by, byte_size FROM attachment WHERE id = $1`, attachment).Scan(
+		&row.EntityType, &row.EntityID, &row.ContractID, &row.Checksum, &row.CapturedBy, &row.ByteSize,
 	); err != nil {
 		t.Fatalf("reading attachment %s: %v", attachment, err)
 	}
@@ -307,7 +307,7 @@ func filedRowOf(t *testing.T, e *apptest.AppEnv, attachment string) filedRow {
 }
 
 // One file filed on a meeting note and against the account's contract lands as
-// one row on either door. The parent, contract, account, bytes and author agree.
+// one row on either door. The parent, contract, bytes and author agree.
 func TestAFileOnAMeetingAndAContractLandsAlikeOnBothDoors(t *testing.T) {
 	d := newTwoDoors(t, "files-contract", "read", "write")
 	company := createdID(t, d.e, "/v1/companies", AnyMap{"display_name": "Signed Works", "source": "manual"})

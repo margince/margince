@@ -170,7 +170,9 @@ const catalogParts = `
 			  JOIN pg_namespace n ON n.oid = c.relnamespace
 			  LEFT JOIN pg_attrdef ad ON ad.adrelid = a.attrelid AND ad.adnum = a.attnum
 			 WHERE n.nspname IN ('public', 'ext')
-			   AND c.relkind IN ('r', 'p', 'v', 'm')
+			   -- A view's columns are its definition's, which the view arm
+			   -- below records whole. Listed here they would read as stored.
+			   AND c.relkind IN ('r', 'p', 'm')
 			   AND c.oid NOT IN (SELECT oid FROM tracked)
 			   AND a.attnum > 0
 			   AND NOT a.attisdropped

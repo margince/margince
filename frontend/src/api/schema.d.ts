@@ -296,7 +296,7 @@ export interface paths {
         put?: never;
         /**
          * Redeem a reset token and set a new password.
-         * @description Validates the single-use token (`auth_token` purpose=`password_reset`), sets the new password, marks the token used, and invalidates existing sessions. An expired, consumed, or unknown token produces one neutral error. Audited.
+         * @description Validates the single-use token, sets the new password, marks the token used, and invalidates existing sessions. An expired, consumed, or unknown token produces one neutral error. Audited.
          */
         post: operations["resetPassword"];
         delete?: never;
@@ -15666,13 +15666,9 @@ export interface paths {
         /**
          * The calling user's morning digest — what capture did overnight.
          * @deprecated
-         * @description Reads the CAP-DDL-6 payload built by the nightly suite (CAP-WIRE-6): capture totals,
-         *     review counts (open dedupe candidates, pending 🟡 approvals, the classify summary), and
-         *     the connector health strip. `404 no_digest_yet` before the first nightly run — the
-         *     client renders the honest empty state. A `date` the nightly run has not reached
-         *     answers `404 no_digest_for_date`, which is a different state: digests exist, that day
-         *     has none. An empty `date=` is refused as `422 invalid_date` rather than read as the
-         *     year one. v1 delivery is in-app; email is delivery-only later, same object.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getMorningDigest"];
         put?: never;
@@ -15776,7 +15772,10 @@ export interface paths {
          *     conversion rate against it, because changing it would re-mean every roll-up built on
          *     those rates (ADR-0085 §7). Before that point it is freely changeable, which is the
          *     case this serves: an installation that chose wrong in its configuration and noticed
-         *     in week one. Audit-only write (no event stream, EVT-NOEVT-3).
+         *     in week one. The refusal's field error keeps its English `message` and carries
+         *     `params` that mirror `BaseCurrencyLock`: `reason`, `count` as a decimal string, and
+         *     `base_currency` only when the lock names one, so a client words it as it words the
+         *     read's `base_currency_lock`. Audit-only write (no event stream, EVT-NOEVT-3).
          */
         patch: operations["updateInstallationSettings"];
         trace?: never;
@@ -27268,30 +27267,9 @@ export interface paths {
         /**
          * Take back a stage move the product made by itself.
          * @deprecated
-         * @description Undo for an AUTOMATICALLY applied stage move, inside the window the
-         *     transition's rule allows (`undo_window_hours`, default 72).
-         *
-         *     It is a separate verb rather than the general undo path because a stage
-         *     move is not restorable by writing the field back: it wrote
-         *     `deal_stage_history` and the progression ledger beside the column, so
-         *     restoring `stage_id` alone would leave the history saying the deal is
-         *     somewhere it is not. The general replay engine refuses `advance_stage`
-         *     for exactly this reason.
-         *
-         *     What it does: moves the deal back to the stage it came from, appends a
-         *     new `deal_stage_history` row for the move back (history is append-only;
-         *     nothing is erased), and marks the progression ledger row `reversed` with
-         *     who did it and when.
-         *
-         *     **A reversal does not refute the evidence.** Taking a move back says the
-         *     deal should not have moved, which is a different claim from "the
-         *     criteria were wrongly read" — a rep may agree with every observation and
-         *     still want the deal where it was. Evidence is withdrawn only through its
-         *     own correction path.
-         *
-         *     Refused after the window closes: the move stands, the audit trail keeps
-         *     it, and moving the deal back by hand is the remaining route — which is
-         *     counted as a reversal too, on the same ledger.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["revertStageProgression"];
         delete?: never;
@@ -27310,29 +27288,9 @@ export interface paths {
         /**
          * What each stage transition has earned.
          * @deprecated
-         * @description Every from→to transition in one pipeline, with what happened to the moves
-         *     the product proposed on it. This is the evidence behind letting a
-         *     transition move deals by itself: it reports, and decides nothing.
-         *
-         *     Every rate is a fraction of `reviewed` — proposals a human actually
-         *     answered. A card nobody opened is not evidence that anyone agreed with
-         *     it, so `proposed`, `expired` and `superseded` are counted and reported
-         *     but kept OUT of the denominator. They are reported because their absence
-         *     would hide the case that matters most: a transition whose cards are
-         *     mostly ignored, whose acceptance rate is then computed over the few
-         *     somebody happened to open.
-         *
-         *     `expired` is not `rejected`. Both are refusals, and the product's answer
-         *     to each is opposite — a rejected transition needs a better proposal, an
-         *     expired one needs somebody to look.
-         *
-         *     `unsafe_rate` is a union, not a sum: a move that was reversed AND whose
-         *     evidence a human corrected is one mistake, and counting it twice would
-         *     put a transition over a ceiling it had not crossed.
-         *
-         *     `observation_days` is the span from the first answered proposal to the
-         *     last, rounded DOWN — a fine acceptance rate earned entirely on one
-         *     afternoon has not been observed, however many proposals it saw.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getStageAutomationReport"];
         put?: never;
@@ -27356,39 +27314,17 @@ export interface paths {
         /**
          * What each transition in this pipeline is allowed to do.
          * @deprecated
-         * @description One rule per from→to transition an admin has decided about. A transition
-         *     absent from this list has no rule, which is the default state of every
-         *     transition in the product and means it proposes.
-         *
-         *     A rule saying `auto` does NOT mean moves are applying. Asking is not
-         *     being allowed: the thresholds are re-checked in the transaction that
-         *     would apply each move, so a transition can be turned on before it has
-         *     earned the bar and start applying by itself the day its record clears —
-         *     without anybody coming back. Read `/stage-automation/report` to see
-         *     whether it has.
-         *
-         *     `suspended_at` is the product's own act, not an admin's. A rule the
-         *     product turned off went off for a measured reason and comes back only
-         *     through a deliberate resume; the admin's `mode` survives underneath it,
-         *     so resuming returns the transition to what was actually asked for.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["listTransitionPolicies"];
         /**
          * Decide what one transition may do.
          * @deprecated
-         * @description Records what an admin wants for ONE transition, named in the body rather
-         *     than the path because a pipeline has many and each is decided
-         *     separately.
-         *
-         *     Every threshold is optional and omitting one KEEPS what the rule has,
-         *     or takes the product default on a first write. A caller who only means
-         *     to turn a transition on does not have to restate four thresholds, and
-         *     cannot silently reset them by leaving one out.
-         *
-         *     It does not clear a suspension. A rule the product turned off went off
-         *     for a measured reason, and letting an ordinary save clear it would make
-         *     the safety mechanism a checkbox — `POST .../resume` is the separate,
-         *     deliberate act.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         put: operations["setTransitionPolicy"];
         post?: never;
@@ -27413,15 +27349,9 @@ export interface paths {
         /**
          * Lift a suspension the product put on a transition.
          * @deprecated
-         * @description A separate verb from saving a rule, so lifting a safety stop is
-         *     something an admin does on purpose rather than a side effect of editing
-         *     a threshold.
-         *
-         *     It does NOT re-enable. The rule comes back to whatever mode it was in,
-         *     and if that is `auto` the thresholds still have to hold in the
-         *     transaction that would apply — a resumed rule on a record that is still
-         *     bad simply proposes. Resuming a rule that is not suspended does
-         *     nothing and is not an error.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["resumeTransitionPolicy"];
         delete?: never;
@@ -27440,29 +27370,17 @@ export interface paths {
         /**
          * Whether the qualified forecast applies the viability reviews.
          * @deprecated
-         * @description `state` is `not_enrolled` before the input check has ever run, `observing` once it
-         *     runs and raises reviews and tasks but the forecast figures are unchanged, and
-         *     `enforcing` once an admin switched enforcement on. Only while `enforcing` does a
-         *     forecast reading carry `qualified`, and only then does the close-date sweep stop
-         *     lowering forecast categories.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getForecastAssuranceEnforcement"];
         /**
          * Switch the qualified forecast's enforcement on or off.
          * @deprecated
-         * @description Admin only. A setting fixed by the environment is refused with
-         *     `409 setting_locked_by_boot_source`.
-         *
-         *     Switching on changes the qualified forecast figures for every reader. It sends
-         *     `preview_digest`, the `digest` of the preview the admin saw, and is refused with
-         *     `409 preview_stale` when the deals' treatment changed since, so nobody switches
-         *     on a picture that is no longer true. It is then refused with
-         *     `409 input_check_not_started` until a check has judged a deal: before that the
-         *     qualified forecast would count nothing.
-         *
-         *     Switching off takes effect at once. The reviews, their tasks and their history
-         *     stay; only the qualified readings disappear, and the baseline readings never
-         *     changed.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         put: operations["setForecastAssuranceEnforcement"];
         post?: never;
@@ -27484,12 +27402,9 @@ export interface paths {
         /**
          * Answer a customer review with the day the customer asked you to wait until.
          * @deprecated
-         * @description For a `deal_viability` review only. One transaction records the customer's wait on
-         *     the deal (`wait_until`) and answers the review `remind_later` for the same day. The
-         *     review stays open and the deal stays out of the qualified forecast while it waits:
-         *     a wait is not support. The review comes back on that day.
-         *
-         *     404 when the finding is not an open customer review.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["waitInputCheck"];
         delete?: never;
@@ -27510,12 +27425,9 @@ export interface paths {
         /**
          * Answer a customer review by closing its deal as lost.
          * @deprecated
-         * @description For a `deal_viability` review only. One transaction moves the deal to its pipeline's
-         *     lost stage with the reason given, and answers the review `not_relevant` with that
-         *     reason. A review is never answered `not_relevant` while its deal is still open.
-         *
-         *     404 when the finding is not an open customer review. 422 when the pipeline has no
-         *     lost stage.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         post: operations["closeLostInputCheck"];
         delete?: never;
@@ -27537,17 +27449,9 @@ export interface paths {
         /**
          * Whether the customer still supports this deal, and the review behind the answer.
          * @deprecated
-         * @description The deal's treatment in the qualified forecast and what it rests on: the input check's
-         *     last receipt and its reasons, the close date's standing, the stage chance, and the open
-         *     `deal_viability` review with its task. The review is shown while it is open, even when
-         *     its task is done: completing the task does not answer the review.
-         *
-         *     Needs `forecast:read` and the deal under the caller's row scope, checked in the same
-         *     transaction as the read; a deal outside it answers 404. The review's task is shown only
-         *     while it is still linked to this deal and the caller may discover it. Carries no amount,
-         *     so nothing here needs masking.
-         *     `qualification` is computed whether or not the installation enforces it;
-         *     `qualification_mode` says whether the qualified forecast applies it.
+         * @description Retired. The behaviour behind this operation is gone. Calls that pass
+         *     the route's authentication and parameter checks answer `410 endpoint_retired`.
+         *     The operation stays declared until the notice window allows its removal.
          */
         get: operations["getDealViability"];
         put?: never;
@@ -28770,7 +28674,8 @@ export interface components {
             timezone?: string;
             /**
              * @description ISO-4217 code. Refused with `setting_frozen` once anything has frozen a conversion
-             *     rate against the current base.
+             *     rate against the current base. The refusal's `params` mirror `BaseCurrencyLock`:
+             *     `reason`, `count` as a decimal string, and `base_currency` when the lock names one.
              */
             base_currency?: string;
             /**
@@ -30594,6 +30499,11 @@ export interface components {
             next_sync_due_at?: string | null;
             /** @description Summary of the connection's backfill run; state `none` when never run. */
             backfill?: components["schemas"]["BackfillStatus"];
+            /**
+             * @description A period no sync of this mailbox read: a sync found its provider cursor gone and listed only the newest mail, or a first sync could not reach back to where it was to start. A successful sync since, and a finished import, do not clear it. Only an import whose window reaches back over it, and that failed no message, does. Absent when there is none.
+             *     A recent `last_success_at` and a `backfill` in state `done` say a poll and a scan completed. This period says which mail neither of them read, so the owner knows to import a window that covers it.
+             */
+            unread_period?: components["schemas"]["CaptureUnreadPeriod"];
             /**
              * @description This mailbox's own answer to reading contact details out of its mail, or null to
              *     follow the tenant default (`CaptureSettings.signature_enrich`). Null is a third state
@@ -33979,7 +33889,7 @@ export interface components {
          * @description Why a row was skipped or warned about, so a screen can say it in the reader's language with `params`. One closed list, the same one the server reports from; `reason` is the English sentence for a reader that does not know a code. `run_in_flight` is the one refusal code: it answers a commit or undo on a run another attempt holds, and no row carries it.
          * @enum {string}
          */
-        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_not_found" | "employer_not_found_dropped" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
+        ImportReasonCode: "activity_empty" | "activity_held" | "address_erased" | "address_not_split" | "activity_link_ambiguous" | "activity_link_ambiguous_dropped" | "activity_link_ambiguous_will_drop" | "activity_type_unknown" | "activity_type_unnamed" | "activity_unlinked" | "amount_negative" | "amount_needs_currency" | "amount_too_many_decimals" | "author_too_long" | "cannot_create" | "cannot_create_tags" | "cannot_edit" | "cannot_edit_and_tag" | "cannot_link_stakeholders" | "cannot_read_pipelines" | "cannot_read_tags" | "cannot_write_type" | "close_date_far" | "close_date_future" | "close_date_past" | "company_domain_matched" | "company_duplicate_found" | "company_duplicate_skipped" | "company_link_on_meeting" | "company_name_empty" | "contact_duplicate_found" | "contact_duplicate_skipped" | "contact_email_held" | "contact_holds_lead" | "contact_not_found" | "contact_not_found_dropped" | "contact_not_found_will_drop" | "contact_channel_missing" | "contact_unnamed" | "currency_not_a_code" | "currency_not_money" | "currency_unset" | "deal_already_closed" | "deal_company_has_contracts" | "deal_legal_gate" | "deal_not_found" | "deal_not_found_dropped" | "deal_not_found_will_drop" | "deal_pipeline_fixed" | "description_too_long" | "direction_unknown" | "domain_held" | "duplicate_email" | "duration_not_valid_for_kind" | "email_names_no_contact" | "duration_out_of_range" | "employer_column_empty" | "employer_column_empty_dropped" | "employer_column_empty_will_drop" | "employer_not_found" | "employer_not_found_dropped" | "employer_not_found_will_drop" | "employer_refused" | "employer_will_create" | "empty_payload" | "field_inactive" | "fx_rate_missing" | "id_not_a_company_id" | "id_not_a_record_id" | "id_not_visible" | "id_record_not_visible" | "id_on_non_company" | "lead_not_found" | "lead_not_found_dropped" | "lead_not_found_will_drop" | "lead_status_not_importable" | "lead_status_unknown" | "link_ambiguous" | "link_ambiguous_dropped" | "link_ambiguous_will_drop" | "link_contact_not_imported" | "link_edge_unsupported" | "link_malformed" | "link_not_attachable" | "link_not_found" | "link_not_found_dropped" | "link_not_found_will_drop" | "link_row_not_imported" | "link_row_skipped" | "link_row_skipped_dropped" | "link_row_skipped_will_drop" | "link_type_unknown" | "linkedin_held" | "lost_reason_missing" | "meeting_not_taken_place" | "meeting_status_not_valid_for_kind" | "meeting_status_unknown" | "message_not_importable" | "natural_key_taken" | "not_a_date" | "note_repeated" | "not_a_domain" | "not_a_number" | "not_a_phone" | "not_an_amount" | "not_an_email" | "not_yes_no" | "occurred_at_future" | "occurred_at_unnamed" | "option_not_allowed" | "option_not_in_list" | "options_need_semicolons" | "owner_refused" | "owner_unknown" | "phone_needs_country" | "pipeline_no_open_stage" | "pipeline_unknown" | "pipeline_unnamed" | "record_archived" | "ref_taken_by_another_company" | "ref_taken_by_another_record" | "row_key_empty" | "row_key_repeated" | "run_in_flight" | "size_band_invalid" | "stage_unknown" | "stage_unnamed" | "stored_values_kept" | "tag_created" | "tag_name_invalid" | "tag_new" | "task_not_importable" | "timestamp_needs_zone" | "too_many_links" | "undo_edited" | "undo_failed" | "undo_grant_lost" | "undo_not_visible" | "undo_rule_protects" | "undo_still_referenced" | "value_refused" | "value_too_long" | "value_unreadable";
         /**
          * @description Exactly one of two shapes: `object` and `mapping` (and optionally
          *     `source_key`) for one CSV, or `parts` for a ZIP, each part with its own
@@ -34230,7 +34140,7 @@ export interface components {
             /** @description A picklist or multiselect field's allowed values, for a caller who may read custom fields. Absent otherwise. */
             options?: string[];
         };
-        /** @description One row the import could not take, named by its line so a human can go fix it. A problem of a whole file, such as a tag the file names that does not exist yet, has no line. */
+        /** @description One problem of a row, named by its line so a human can go fix it. A row with several cells at fault has one issue for each, and counts once in `skipped`. A problem of a whole file, such as a tag the file names that does not exist yet, has no line. */
         ImportRowIssue: {
             /** @description The line in the uploaded file, counting the header as line 1. Absent when the problem belongs to the whole file. */
             line?: number;
@@ -34415,6 +34325,8 @@ export interface components {
             file_name?: string;
             /** @description The name the run's source is filed under. */
             source_name?: string;
+            /** @description Rows the upload counted in the file, a ZIP's files added together. Present while the run keeps what the upload read of the file, in a list too, so a draft no test has read still says how many rows it holds. */
+            readonly row_count?: number;
             /** @description The files the run imports, in import order. A single CSV is one part. */
             parts?: components["schemas"]["ImportRunPart"][];
             /**
@@ -34516,6 +34428,8 @@ export interface components {
             object: components["schemas"]["ImportObject"];
             /** @description Rows the file holds, once a dry run has read it; 0 before. */
             row_count: number;
+            /** @description Rows of the file the run created or updated. Present once the run has written: `complete`, `failed`, `undoing` or `undone`. */
+            readonly rows_written?: number;
             /** @description `{source column -> target field}` as the run saved it, the shape `updateImportRun` accepts, so a reader restores its edits from the run. Absent while the run holds none. */
             mapping?: {
                 [key: string]: string;
@@ -45562,12 +45476,12 @@ export interface components {
             supersedes_id?: string | null;
             /**
              * Format: uuid
-             * @description The account an upload is filed under: the company it was uploaded on, or the account of the deal it was uploaded on at that time. A file that came with a captured mail carries none; the account's Documents list reaches it through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's, and a company merge moves it.
+             * @description The account a file is filed under, worked out when it is read: the company it is filed on, or the company of the deal it is filed on now. A file on any other record names none; the account's Documents list reaches a mail's file through the mail's links as they are now. A read path rather than a second parent: visibility stays the primary parent's.
              */
             readonly company_id?: string | null;
             /**
              * Format: uuid
-             * @description The agreement this file belongs to: the same kind of roll-up as company_id above, and likewise not a second parent. Set at upload by the contact filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
+             * @description The agreement this file is about. A read path rather than a second parent: visibility stays the primary parent's. Set at upload by the member filing the paper; never inferred from a filename or a date, which is the guess the document state exists to refuse.
              */
             readonly contract_id?: string | null;
             /** @description True for a file a private message carried that was recorded by name, size and type only: no bytes were kept, so there is nothing to download (404) or read. Also true for any row with a `url`, which is a pointer and has no bytes. */
@@ -54799,7 +54713,7 @@ export interface components {
                 if_version?: boolean;
                 /** @description Whether the app asks its user to confirm it first. */
                 ask_user_first?: boolean;
-                /** @description Whether it takes filename, content_type and content_base64. */
+                /** @description Whether it takes filename, content_type and content_base64 or content_text. */
                 uploads_a_file?: boolean;
                 /** @description The JSON schema of its body argument. */
                 body?: {
@@ -56550,12 +56464,6 @@ export interface components {
              * @description The won deal that activated the partner.
              */
             readonly activation_deal_id?: string | null;
-            /** @description Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value. */
-            partner_fit_score?: number | null;
-            /** @description Retained machine-computed partner-fit value while a Commercial Judgement override is in force. */
-            readonly partner_fit_score_computed?: number | null;
-            /** @description Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared. */
-            readonly partner_fit_override_reason?: string | null;
             /**
              * @deprecated
              * @description Never set; always null. Kept so existing clients keep compiling.
@@ -60571,6 +60479,11 @@ export interface components {
             connection?: components["schemas"]["PassportConnection"];
             /** Format: date-time */
             created_at: string;
+            /**
+             * Format: uuid
+             * @description The member who granted the passport its authority. A server built before this field omits it.
+             */
+            granted_by?: string;
             /** Format: date-time */
             expires_at?: string | null;
             /** Format: date-time */
@@ -65615,6 +65528,15 @@ export interface components {
         };
         /** @description No such resource in this workspace (or out of RBAC scope). */
         NotFound: {
+            headers: {
+                [name: string]: unknown;
+            };
+            content: {
+                "application/problem+json": components["schemas"]["Problem"];
+            };
+        };
+        /** @description The operation is retired and its behaviour is gone (`code: endpoint_retired`). A call that passes the route's authentication and parameter checks answers 410 with that code, until the notice window allows its removal. */
+        Retired: {
             headers: {
                 [name: string]: unknown;
             };
@@ -91256,6 +91178,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -107957,6 +107880,7 @@ export interface operations {
                     "application/problem+json": components["schemas"]["Problem"];
                 };
             };
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -107980,6 +107904,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108006,6 +107931,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108045,6 +107971,7 @@ export interface operations {
                 };
             };
             409: components["responses"]["Conflict"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108075,6 +108002,7 @@ export interface operations {
             };
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108098,6 +108026,7 @@ export interface operations {
             };
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
+            410: components["responses"]["Retired"];
         };
     };
     setForecastAssuranceEnforcement: {
@@ -108129,6 +108058,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["PermissionDenied"];
             409: components["responses"]["SettingLocked"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108160,6 +108090,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108192,6 +108123,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };
@@ -108219,6 +108151,7 @@ export interface operations {
             401: components["responses"]["Unauthorized"];
             403: components["responses"]["Forbidden"];
             404: components["responses"]["NotFound"];
+            410: components["responses"]["Retired"];
             422: components["responses"]["ValidationError"];
         };
     };

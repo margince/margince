@@ -14,13 +14,13 @@ import { formatNumber } from "../../format/format";
 import { useLocale, usePlural, useT } from "../../i18n";
 import { useLeadDisqualifyReasons } from "../../lib/leaddisqualifyreasons";
 import { leadWriteKeys } from "../../lib/leadkeys";
+import { leadIdentityName } from "../../lib/leadname";
 import {
   ProblemError,
   problemMessageOf,
   throwProblem,
   unwrap,
 } from "../../lib/problem";
-import { leadIdentityName } from "./leadname";
 
 type Lead = components["schemas"]["Lead"];
 

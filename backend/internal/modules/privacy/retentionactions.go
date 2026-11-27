@@ -212,6 +212,9 @@ func anonymizeContactRecord(ctx context.Context, tx pgx.Tx, id ids.UUID, eraser 
 			`SELECT handle FROM contact_social WHERE contact_id = $1 AND platform = 'linkedin'`, id)
 	}
 	if err == nil {
+		err = purgeSubjectCompanyEvidence(ctx, tx, id)
+	}
+	if err == nil {
 		err = deleteIdentifyingSatellites(ctx, tx, id)
 	}
 	if err == nil {
@@ -350,8 +353,9 @@ func deleteIdentifyingSatellites(ctx context.Context, tx pgx.Tx, id ids.UUID) er
 		_, err = tx.Exec(ctx, `DELETE FROM contact_phone WHERE contact_id = $1`, id)
 	}
 	if err == nil {
-		// The sidecar holds their title and employer verbatim.
-		_, err = tx.Exec(ctx, `DELETE FROM contact_profile_field WHERE contact_id = $1`, id)
+		// Evidence still waiting to move to field_provenance holds their title
+		// and employer verbatim. The moved rows go with the provenance below.
+		_, err = tx.Exec(ctx, `DELETE FROM contact_profile_field_legacy WHERE contact_id = $1`, id)
 	}
 	if err == nil {
 		err = purgeEmployerOffers(ctx, tx, []ids.UUID{id})

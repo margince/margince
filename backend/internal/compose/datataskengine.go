@@ -154,11 +154,11 @@ func dataTaskCatalog(pool *pgxpool.Pool, now func() time.Time) []datatask.Task {
 		erasedseattraces.DataTask(),
 		newslettersDataTask(pool),
 		dealclockrefold.DataTask(), dealclockrefold.PersonalMeetingsTask(),
-		companyclockrefold.DataTask(), companyclockrefold.PersonalMailTask(), strengthdates.DataTask(),
+		companyclockrefold.DataTask(), companyclockrefold.PersonalMailTask(), strengthdates.DataTask(), strengthdates.DirectionlessSendersTask(),
 		customerlinks.DataTask(),
 		qualifytasks.DuplicatesDataTask(now), qualifytasks.TextDataTask(),
 		companyprofiles.OfferDuplicatesTask(),
 		qualifytasks.SystemTextDataTask(), employmentrepair.DataTask(contacts.NewStore(InstallationDB(pool))), halfvectors.DataTask(), recordsources.DataTask(), recordsources.SignalDataTask(), recordsources.PartyDataTask(), rolemailboxseats.DataTask(), participantaddresses.DataTask(),
-		activities.TeamLinksDataTask(activities.NewStore(InstallationDB(pool)).WithTeamRequestNotice(teamRequestNotice{}), now),
+		activities.TeamLinksDataTask(activities.NewStore(InstallationDB(pool)).WithTeamRequestNotice(teamRequestNotice{}), now), contacts.LegacyEvidenceDataTask(),
 	}
 }

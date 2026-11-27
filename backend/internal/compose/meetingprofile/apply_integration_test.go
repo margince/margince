@@ -308,7 +308,8 @@ func TestAMeetingValueGoesOnceItsTranscriptIsNarrowedOrRedacted(t *testing.T) {
 // one transaction takes.
 func TestOneSweepRemovesMoreMeetingValuesThanOneBatch(t *testing.T) {
 	m := newMeeting(t, "workspace")
-	entries := make([]saidBy, meetingprofile.SweepBatch+1)
+	sweep := meetingprofile.Sweep{Pool: m.e.Pool, Batch: 3}
+	entries := make([]saidBy, sweep.Batch+1)
 	for i := range entries {
 		company := m.e.SeedCompany(t, fmt.Sprintf("Brandt IT %d", i), &m.e.Rep1)
 		entries[i] = saidBy{m.employee(t, company, fmt.Sprintf("Dana Brandt %d", i)), "sales_motion", distributors}
@@ -322,7 +323,7 @@ func TestOneSweepRemovesMoreMeetingValuesThanOneBatch(t *testing.T) {
 		`UPDATE activity SET audience = 'participants' WHERE id = $1`, m.transcript.UUID); err != nil {
 		t.Fatal(err)
 	}
-	if err := (meetingprofile.Sweep{Pool: m.e.Pool}).Workspace(context.Background(), m.e.WS); err != nil {
+	if err := sweep.Workspace(context.Background(), m.e.WS); err != nil {
 		t.Fatalf("sweeping: %v", err)
 	}
 	if got := m.e.WsCount(t, filled, m.transcript); got != 0 {

@@ -31,7 +31,7 @@ func liveTokenCount(t *testing.T, e *revocationEnv, userID ids.UserID) int {
 	var n int
 	if err := e.owner.QueryRow(context.Background(),
 		`SELECT count(*) FROM auth_token
-		 WHERE user_id = $1 AND purpose = 'password_reset' AND used_at IS NULL`,
+		 WHERE user_id = $1 AND used_at IS NULL`,
 		userID).Scan(&n); err != nil {
 		t.Fatalf("counting live tokens: %v", err)
 	}

@@ -122,12 +122,12 @@ func calendarCaveat(backing CalendarBacking) (string, bool) {
 // caller able to ask it for any user id could read the whole roster's connector
 // state and watch a grant fail.
 const foreignCalendarMessage = "This window is what the meetings recorded in this CRM leave open for that " +
-	"host — NOT what their own diary leaves open, and this seat cannot tell whether one is connected to " +
+	"host, NOT what their own diary leaves open, and this seat cannot tell whether one is connected to " +
 	"it. A free slot here means nothing was recorded, never that they are free, and this answer is no " +
 	"evidence that a meeting is missing from their calendar. Offer a time rather than reporting them free."
 
 const noCalendarConnectedMessage = "No calendar is connected for this host, so these slots are what the " +
-	"meetings recorded in this CRM leave open — NOT what their diary leaves open. A free slot here means " +
+	"meetings recorded in this CRM leave open, NOT what their diary leaves open. A free slot here means " +
 	"nothing was recorded, never that the host is free, and this answer is no evidence that a meeting the " +
 	"user told you about is missing from their calendar. Say the calendar is not connected rather than " +
 	"reporting the day as clear."

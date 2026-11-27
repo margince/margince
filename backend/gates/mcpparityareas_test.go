@@ -16,8 +16,6 @@ import (
 	"slices"
 	"testing"
 
-	"gopkg.in/yaml.v3"
-
 	"github.com/margince/margince/backend/internal/platform/workarea"
 	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
@@ -145,7 +143,7 @@ func TestTheContractOffersTheChoosableWorkAreas(t *testing.T) {
 			} `yaml:"schemas"`
 		} `yaml:"components"`
 	}
-	if err := yaml.Unmarshal(raw, &doc); err != nil {
+	if err := unmarshalYAML(raw, &doc); err != nil {
 		t.Fatalf("parsing %s: %v", contractDocument, err)
 	}
 	var choosable []string

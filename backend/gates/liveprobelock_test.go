@@ -61,10 +61,28 @@ const (
 	seatLock = "holdLiveSeat"
 )
 
+// companyEvidenceRace is why a company's evidence writer holds the company and
+// not a contact. Erasure clears a contact's field_provenance rows, and the
+// company facts that repeat a subject's address or number.
+const companyEvidenceRace = "it writes a company's evidence, never a contact's, under the company it probes. An erasure " +
+	"deletes the company facts that repeat the subject's address or number, and a site read racing it can write " +
+	"such a fact back, as a feed can an offer. That row is the site's own current statement about the company, " +
+	"and the subject's next erasure or a user's correction removes it"
+
 // unlockedLiveWrites records exceptions to holding an erasure-cleared subject.
 var unlockedLiveWrites = gatekit.Waive(map[string]string{
-
-	"internal/modules/contacts:Store.RecordOfferedValues": "the erasure of an employee deletes a company's offered values by the employment edge, and a feed call racing it can write an offer back. That offer is the feed's own current value for the company and names no subject the erasure was clearing; the company row is the one locked live, and the next feed run would write the same offer",
+	"internal/modules/contacts:ApplyMeetingProfileTx":               companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyColdStartProfile":         companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyColdStartProfileTx":       companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyDeepRead":                 companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyDeepReadTx":               companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyEnrichment":               companyEvidenceRace,
+	"internal/modules/contacts:Store.ApplyEnrichmentTx":             companyEvidenceRace,
+	"internal/modules/contacts:Store.ResolveDomainTriage":           companyEvidenceRace,
+	"internal/modules/contacts:Store.ResolveUnreadableDomainTriage": companyEvidenceRace,
+	"internal/modules/contacts:Store.resolveDomainTriageTx":         companyEvidenceRace,
+	"internal/modules/contacts:applyColdStartTx":                    companyEvidenceRace,
+	"internal/modules/contacts:Store.RecordOfferedValues":           "the erasure of an employee deletes a company's offered values by the employment edge, and a feed call racing it can write an offer back. That offer is the feed's own current value for the company and names no subject the erasure was clearing; the company row is the one locked live, and the next feed run would write the same offer",
 })
 
 func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
@@ -86,6 +104,7 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 	// one asks whether a row is live, the other whether a room still is.
 	for _, dir := range moduleDirsWith(t, "WritableLive", liveProbeStanding) {
 		graph := packageCallGraph(t, dir)
+		inserts := map[string]string{}
 		for name := range graph {
 			// Through reaches, which reads identifiers rather than call
 			// edges: both of these are cross-package, and packageCallGraph
@@ -96,7 +115,7 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 				continue
 			}
 			probed++
-			table := firstErasureClearedInsert(graph, name, erasureClears)
+			table := firstErasureClearedInsert(graph, name, erasureClears, inserts)
 			if table == "" {
 				continue
 			}
@@ -142,7 +161,7 @@ func TestALiveProbedWriteOfAHeldRowLocksItsSubject(t *testing.T) {
 // the two row-probe spellings, and the standing probe beside it.
 func moduleDirsWith(t *testing.T, identifiers ...string) []string {
 	t.Helper()
-	paths, err := filepath.Glob("internal/modules/*/*.go")
+	paths, err := gatekit.Glob("internal/modules/*/*.go")
 	if err != nil {
 		t.Fatalf("listing the module sources: %v", err)
 	}
@@ -226,9 +245,21 @@ func reaches(graph map[string]*graphFunc, name, identifier string) bool {
 	return walk(name)
 }
 
+func ownErasureClearedInsert(entry *graphFunc, erasureClears map[string]bool) string {
+	for _, statement := range entry.statements {
+		for _, write := range sqlWrites(statement) {
+			if write.verb == "insert" && erasureClears[write.table] {
+				return write.table
+			}
+		}
+	}
+	return ""
+}
+
 // firstErasureClearedInsert names a table the function, or anything it calls,
-// INSERTs into and Art. 17 erasure clears — or "" when it writes none.
-func firstErasureClearedInsert(graph map[string]*graphFunc, name string, erasureClears map[string]bool) string {
+// INSERTs into and Art. 17 erasure clears, or "" when it writes none. inserts
+// holds each visited function's own answer, so a statement is parsed once per graph.
+func firstErasureClearedInsert(graph map[string]*graphFunc, name string, erasureClears map[string]bool, inserts map[string]string) string {
 	seen := map[string]bool{}
 	var walk func(string) string
 	walk = func(fn string) string {
@@ -240,15 +271,13 @@ func firstErasureClearedInsert(graph map[string]*graphFunc, name string, erasure
 		if !known {
 			return ""
 		}
-		for _, statement := range entry.statements {
-			for _, write := range sqlWrites(statement) {
-				if write.verb != "insert" {
-					continue
-				}
-				if erasureClears[write.table] {
-					return write.table
-				}
-			}
+		table, read := inserts[fn]
+		if !read {
+			table = ownErasureClearedInsert(entry, erasureClears)
+			inserts[fn] = table
+		}
+		if table != "" {
+			return table
 		}
 		for called := range entry.calls {
 			if table := walk(called); table != "" {

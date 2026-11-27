@@ -483,7 +483,7 @@
  */
 .auth-identity-col .core {
   justify-self: center;
-  --coreSize: clamp(110px, 16vh, 168px);
+  --coreSize: clamp(124px, 18vh, 188px);
   --coreGlass: calc(var(--coreSize) * 0.94);
   /* The one thing here that gets its own arrival rather than sharing the
      copy's stagger: it is the subject, so it is what a reader meets first. */

@@ -6,8 +6,8 @@ covers what a user sees: the **Technology** card on a company. This page is for 
 setting that turns the lookup on, what queues it, and how to check it ran.
 
 The lookup reads free public sources: DNS records, certificate transparency logs, and the pages the
-site read already fetched. It writes `company_fact` rows with `category='signal'` and
-`source='technical_lookup'`, in five fields: `mail_provider`, `email_security`, `hosting_provider`,
+site read already fetched. It writes the company's evidence rows, read through the `company_fact` view
+with `category='signal'` and `source='technical_lookup'`, in five fields: `mail_provider`, `email_security`, `hosting_provider`,
 `operated_service` and `technology`. No part of it calls a model.
 
 ## The three lanes

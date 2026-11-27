@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states plainly that there is no morning brief for today yet, so the criterion is met.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer says the user has no morning brief for today yet. Answer no if it reports what a brief for today contains, or never says whether there is one.",
+  "answer": "**Vietnam Partner JSC:** nothing new in 18 days. Mai Nguyen wrote on 6 Nov that they will review the appendix, and you promised her the Aufstellung by the end of that week.\n\n**Morning brief:** there isn't one for today yet; the overnight pass has not produced it."
+}

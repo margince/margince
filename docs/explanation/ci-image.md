@@ -125,4 +125,5 @@ pulled, again in it. `lint-cache.yml` lints in the image when it can, so its gol
   toolchain, or only Go for one small module. A pull would cost more than they save.
 - `vuln` reads the `plain` cache of the runner. So do the integration build and unit coverage jobs,
   which stay on the runner with the rest of their lane.
-- `test-budget` only reads two logs, so a pull would cost more than the job.
+- `ci` reads the verdict and the `deterministic-gates` logs for the test budget, so a pull would cost
+  more than the job.

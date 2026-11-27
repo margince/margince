@@ -140,14 +140,7 @@ func (s *VoiceStore) ListDeltas(ctx context.Context, profileID ids.UUID, cursor 
 	return page, nil
 }
 
-// VoiceLearningTransformation summarizes one repeatedly observed edit pattern.
-type VoiceLearningTransformation struct {
-	Key              string
-	ObservationCount int
-	Description      string
-}
-
-// VoiceLearningSummary reports draft outcomes and transformations eligible for learning.
+// VoiceLearningSummary reports draft outcomes and the sources eligible for learning.
 type VoiceLearningSummary struct {
 	Drafted               int
 	Accepted              int
@@ -155,7 +148,6 @@ type VoiceLearningSummary struct {
 	Rejected              int
 	QualifyingSourceCount int
 	QualifyingWords       int
-	Transformations       []VoiceLearningTransformation
 }
 
 // LearningSummary derives the owner-visible learning state from durable signals.
@@ -179,40 +171,14 @@ func (s *VoiceStore) LearningSummary(ctx context.Context, profileID ids.UUID) (V
 		); err != nil {
 			return err
 		}
-		if err := tx.QueryRow(ctx, `
+		return tx.QueryRow(ctx, `
 			SELECT count(*)::int, coalesce(sum(word_count), 0)::int
 			FROM voice_corpus_source
 			WHERE voice_profile_id = $1 AND origin = 'draft_signal' AND NOT excluded
 			  AND archived_at IS NULL AND content_erased_at IS NULL`, profileID).Scan(
 			&summary.QualifyingSourceCount, &summary.QualifyingWords,
-		); err != nil {
-			return err
-		}
-		rows, err := tx.Query(ctx, `
-			SELECT item->>'key', count(*)::int, min(item->>'description')
-			FROM voice_learning_signal
-			CROSS JOIN LATERAL jsonb_array_elements(transformations) AS item
-			WHERE voice_profile_id = $1 AND outcome = 'edited_sent'
-			  AND qualifies_as_source AND archived_at IS NULL
-			GROUP BY item->>'key'
-			HAVING count(*) >= 5
-			ORDER BY item->>'key'`, profileID)
-		if err != nil {
-			return err
-		}
-		defer rows.Close()
-		for rows.Next() {
-			var transformation VoiceLearningTransformation
-			if err := rows.Scan(&transformation.Key, &transformation.ObservationCount, &transformation.Description); err != nil {
-				return err
-			}
-			summary.Transformations = append(summary.Transformations, transformation)
-		}
-		return rows.Err()
+		)
 	})
-	if summary.Transformations == nil {
-		summary.Transformations = []VoiceLearningTransformation{}
-	}
 	return summary, err
 }
 

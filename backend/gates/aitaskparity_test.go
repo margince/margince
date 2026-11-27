@@ -28,8 +28,6 @@ import (
 	"slices"
 	"testing"
 
-	"github.com/margince/margince/backend/internal/modules/activities"
-	"github.com/margince/margince/backend/internal/modules/agents/runner"
 	"github.com/margince/margince/backend/internal/modules/ai"
 )
 
@@ -45,9 +43,9 @@ func TestEveryEmittedAITaskIsDeclaredInTheContract(t *testing.T) {
 
 	// The carriers name their task in their own exported constant; the router
 	// announces under the task's own name, so the registry IS its emitted set.
-	emitted := map[string]string{
-		"activities.ExtractionAITask": activities.ExtractionAITask,
-		"runner.ActivityAITask":       runner.ActivityAITask,
+	emitted := map[string]string{}
+	for source, carrier := range carrierSources {
+		emitted["the "+source+" carrier"] = carrier.task
 	}
 	for task, source := range ai.RailOwners() {
 		if source == ai.SourceRouter {

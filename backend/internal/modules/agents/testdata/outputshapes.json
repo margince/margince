@@ -15279,6 +15279,10 @@
                 "row_count": {
                   "type": "integer",
                   "minimum": 0
+                },
+                "rows_written": {
+                  "type": "integer",
+                  "minimum": 0
                 }
               },
               "required": [
@@ -19052,19 +19056,6 @@
           },
           "next_step_due_at": {
             "type": "string"
-          },
-          "partner_fit_override_reason": {
-            "type": "string"
-          },
-          "partner_fit_score": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 100
-          },
-          "partner_fit_score_computed": {
-            "type": "integer",
-            "minimum": 0,
-            "maximum": 100
           },
           "partner_kinds": {
             "type": "array",

@@ -17,7 +17,6 @@ package gates
 // migration and the declaration, not a value assembled at runtime.
 
 import (
-	"path/filepath"
 	"regexp"
 	"sort"
 	"strings"
@@ -88,7 +87,7 @@ func providerContainersInTheModule(t *testing.T) []string {
 
 func newestFileMatching(t *testing.T, pattern string) []byte {
 	t.Helper()
-	matches, err := filepath.Glob(pattern)
+	matches, err := gatekit.Glob(pattern)
 	if err != nil || len(matches) == 0 {
 		t.Fatalf("nothing matched %s: %v", pattern, err)
 	}

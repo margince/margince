@@ -21,7 +21,8 @@ import (
 func TestOneSweepReachesEveryDriftedTranscript(t *testing.T) {
 	e := integration.Setup(t)
 	booked := string(crmcontracts.ActivityMeetingStatusBooked)
-	transcripts := transcriptaudience.SweepBatch + 1
+	sweep := transcriptaudience.Sweep{Pool: e.Pool, Batch: 3}
+	transcripts := sweep.Batch + 1
 	for i := range transcripts {
 		meeting, _, err := e.Activities.LogActivity(e.Admin(), activities.LogActivityInput{
 			Kind: "meeting", Source: "manual", MeetingStatus: &booked,
@@ -47,7 +48,7 @@ func TestOneSweepReachesEveryDriftedTranscript(t *testing.T) {
 		SELECT m.id, $1, 'attendee' FROM activity m WHERE EXISTS (SELECT 1 FROM activity t WHERE t.source_activity_id = m.id)`,
 		e.Rep1)
 
-	if err := (transcriptaudience.Sweep{Pool: e.Pool}).Workspace(t.Context(), e.WS); err != nil {
+	if err := sweep.Workspace(t.Context(), e.WS); err != nil {
 		t.Fatalf("sweeping: %v", err)
 	}
 

@@ -1971,7 +1971,7 @@ type Activity struct {
 	DueIntent *IntentTime `json:"due_intent,omitempty"`
 
 	// DurationSeconds Meeting/call only.
-	DurationSeconds *int `json:"duration_seconds,omitempty"`
+	DurationSeconds *int `json:"duration_seconds,omitempty" minimum:"0"`
 
 	// EmailSummary Present exactly when `kind=email`. What the canonical email row renders, so a list does not have to fetch a message per visible line to draw one. Every other kind carries none, and a reader branches on its presence rather than on the kind word.
 	EmailSummary *EmailSummary `json:"email_summary,omitempty"`
@@ -2587,7 +2587,7 @@ type CreateActivityRequest struct {
 
 	// DueIntent A chosen local time in an IANA zone, resolved with current rules. A time in a gap moves forward; a repeated time takes its first occurrence.
 	DueIntent       *IntentTime           `json:"due_intent,omitempty"`
-	DurationSeconds *int                  `json:"duration_seconds,omitempty"`
+	DurationSeconds *int                  `json:"duration_seconds,omitempty" minimum:"0"`
 	FollowUpTask    *ActivityFollowUpTask `json:"follow_up_task,omitempty"`
 
 	// HostUserId Meeting only: the member of this company who HELD it, which is not the same question as who typed it up. Omit it for a meeting you held yourself and the server fills in the caller; name a colleague when you are minuting theirs, so it counts into their week rather than yours. A label and never an authority — what a caller may read is decided before this field is filled in.
@@ -3275,15 +3275,6 @@ type Partner struct {
 	// NextStepDueAt Deprecated as stored text: the day the next step's task is due. Sent without `next_step` it is refused.
 	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	NextStepDueAt *string `json:"next_step_due_at,omitempty"`
-
-	// PartnerFitOverrideReason Non-null ⇒ partner_fit_score is a human Commercial Judgement override and recompute is suppressed until cleared.
-	PartnerFitOverrideReason *string `json:"partner_fit_override_reason,omitempty"`
-
-	// PartnerFitScore Current partner-fit score; if partner_fit_override_reason is non-null this is the Commercial Judgement value.
-	PartnerFitScore *int `json:"partner_fit_score,omitempty" maximum:"100" minimum:"0"`
-
-	// PartnerFitScoreComputed Retained machine-computed partner-fit value while a Commercial Judgement override is in force.
-	PartnerFitScoreComputed *int `json:"partner_fit_score_computed,omitempty" maximum:"100" minimum:"0"`
 
 	// PartnerKinds What the partner does with us, one or more kinds, sorted and without repeats. Empty only on a partner recorded before kinds existed with no role.
 	PartnerKinds *[]PartnerKind `json:"partner_kinds,omitempty"`
