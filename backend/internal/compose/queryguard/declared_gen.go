@@ -400,7 +400,7 @@ var Declared = map[string][]string{
 	"GET /v1/lead-origins":                                                     {},
 	"GET /v1/lead-signal-catalog":                                              {},
 	"GET /v1/lead-sources":                                                     {},
-	"GET /v1/leads":                                                            {"ai_written", "captured_by_kind", "country", "cursor", "from_contact_id", "include_archived", "industry", "limit", "list_id", "min_score", "origin", "owner_id", "owner_team_id", "partner_accepted", "partner_company_id", "q", "salutation", "size_band", "sla_state", "sort", "source", "status", "tag_id", "tag_mode", "unassigned"},
+	"GET /v1/leads":                                                            {"ai_written", "captured_by_kind", "company_id", "country", "cursor", "from_contact_id", "include_archived", "industry", "limit", "list_id", "min_score", "origin", "owner_id", "owner_team_id", "partner_accepted", "partner_company_id", "q", "salutation", "size_band", "sla_state", "sort", "source", "status", "tag_id", "tag_mode", "unassigned"},
 	"GET /v1/leads/settings":                                                   {},
 	"GET /v1/leads/{id}":                                                       {},
 	"GET /v1/leads/{id}/consent/stops":                                         {},

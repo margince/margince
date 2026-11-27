@@ -38680,7 +38680,9 @@ export interface components {
             next_meeting?: components["schemas"]["Company360NextMeeting"];
             health?: components["schemas"]["Company360Health"];
             /** @description The sections withheld for lack of a grant — so a client can say "you can't see this" instead of "there is none". */
-            sections_omitted: ("contacts" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments" | "billing_contacts" | "commitments")[];
+            sections_omitted: ("contacts" | "leads" | "deals" | "projects" | "strength" | "activities" | "tags" | "list_memberships" | "pending_approvals" | "next_steps" | "since_last_visit" | "suggestions" | "last_touch" | "state_strip" | "health" | "next_meeting" | "moments" | "billing_contacts" | "commitments")[];
+            /** @description A bounded page of leads explicitly linked to this company, under the caller's lead row scope. Continue with GET /leads and company_id using the returned cursor. */
+            leads?: components["schemas"]["LeadListResponse"];
             contacts?: {
                 data: components["schemas"]["Company360Contact"][];
                 page: components["schemas"]["PageInfo"];
@@ -57537,6 +57539,19 @@ export interface components {
          *     (ErrVersionSkew) so the client re-reads before retrying.
          */
         RowVersion: number;
+        /** @description The two recorded program gate metrics. Unknown keys are refused by name. */
+        PartnerGateMetrics: {
+            /**
+             * Format: int32
+             * @description Number of certified staff.
+             */
+            certified_staff?: number;
+            /**
+             * Format: int32
+             * @description Whole percentage of customers retained. Omitted when unknown.
+             */
+            retention_rate?: number;
+        } | null;
         /**
          * @description First-class partner state as a 1:1 extension of a company (a company IS a partner iff it
          *     has a `partner` row AND carries `partner` in its `relationship_types` — ADR-0079 split that
@@ -57568,10 +57583,7 @@ export interface components {
              * @enum {string|null}
              */
             margin_tier?: null | "tier1_15" | "tier2_20" | "tier3_25";
-            /** @description Program gate metrics (certified seats, CSAT, ...). */
-            gate_metrics?: {
-                [key: string]: unknown;
-            } | null;
+            gate_metrics?: components["schemas"]["PartnerGateMetrics"];
             /** @description The key of the stage from `/partner-stages` the partner stands on. */
             relationship_stage?: string;
             /** @description The label `/partner-stages` gives `relationship_stage`. */
@@ -57648,9 +57660,7 @@ export interface components {
             cert_status?: "applied" | "certified" | "suspended";
             /** @enum {string|null} */
             margin_tier?: null | "tier1_15" | "tier2_20" | "tier3_25";
-            gate_metrics?: {
-                [key: string]: unknown;
-            } | null;
+            gate_metrics?: components["schemas"]["PartnerGateMetrics"];
             /**
              * @description An active key from `/partner-stages`, or the stage the partner already stands on (422
              *     `unknown_partner_stage` or `inactive_partner_stage`). A stage meaning `active` is 422
@@ -82018,6 +82028,8 @@ export interface operations {
                  *     Ignored when no `tag_id` is given — a mode with nothing to combine is not a filter.
                  */
                 tag_mode?: "any" | "all" | "none";
+                /** @description Leads explicitly linked to this company. A company the caller cannot read matches no leads. */
+                company_id?: string;
                 /**
                  * @deprecated
                  * @description Only older leads that retain this historical contact link. New leads cannot be

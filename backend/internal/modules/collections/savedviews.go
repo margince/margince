@@ -158,6 +158,9 @@ func (s *Store) CreateSavedView(ctx context.Context, in CreateSavedViewInput) (s
 		return savedViewRow{}, err
 	}
 	in.Name = name
+	if _, err := httperr.RequireNonBlank("resource", in.Resource); err != nil {
+		return savedViewRow{}, err
+	}
 	if kindUnavailable(ctx, in.Resource) {
 		return savedViewRow{}, &BadInputError{Field: "resource", Reason: fmt.Sprintf(
 			"%q is not a record kind you can read; read GET /v1/record-kinds for the kinds there are", in.Resource)}

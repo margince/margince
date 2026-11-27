@@ -1,5 +1,5 @@
 <!-- prose:plain -->
-<!-- describes: backend/internal/modules/customfields backend/internal/shared/ports/fieldcatalog backend/internal/platform/database/storekit/customcolumns.go backend/internal/platform/database/storekit/listquery.go backend/internal/platform/database/storekit/removedchoices.go frontend/src/features/records/customfields.tsx frontend/src/features/records/customfields.choices.tsx -->
+<!-- describes: backend/internal/modules/customfields backend/internal/shared/ports/fieldcatalog backend/internal/platform/database/storekit/customcolumns.go backend/internal/platform/database/storekit/listquery.go backend/internal/platform/database/storekit/removedchoices.go frontend/src/features/records/customfields.tsx frontend/src/features/records/customfields.choices.tsx frontend/src/components/listcustomfields.tsx -->
 # Custom fields: the governed add-field engine
 
 How a workspace admin adds a field to `contact` at runtime without anyone shipping code. And why so many
@@ -254,6 +254,18 @@ pipelines when it writes the list. A pipeline archived later matches nothing, an
 The forms show a field
 only when it applies to the deal's pipeline or the deal holds a value for it. That rule is
 `appliesToPipeline` in `frontend/src/components/customfields.form.ts`.
+
+## List columns and filters
+
+Company, contact, lead, deal and project lists offer active custom fields in **View → Columns**.
+They start hidden. **View → Filters** offers the same fields by their catalog labels. The filter
+uses the field's form control and stored type, including the currency's scale.
+Filters for fields with several choices compare the selected set in any choice order. They have no sort control.
+
+Masked values stay hidden when their column is shown. A retired field leaves the offered columns and
+filters; an existing saved filter still follows the server's catalog rules.
+
+Company and contact custom fields appear in the details column beside the standard record fields.
 
 ## No `cf_*` column is indexed
 

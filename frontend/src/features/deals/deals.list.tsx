@@ -277,6 +277,7 @@ export function DealsScreen({
   return (
     <div className="wrap">
       <ListTable
+        customFieldsKind="deal"
         title={pageName}
         state={listState}
         unit="deals.unit"

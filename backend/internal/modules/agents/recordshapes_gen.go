@@ -327,7 +327,7 @@ var contractFieldEnums = map[string]contractFieldEnum{
 	"Company360.last_inbound_precision":                                 {Values: []string{"instant", "day"}, ResponseOnly: []string{}, Description: "How to read `last_inbound_at`, from the row it names. Absent when that is null or absent."},
 	"Company360.last_outbound_precision":                                {Values: []string{"instant", "day"}, ResponseOnly: []string{}, Description: "How to read `last_outbound_at`, from the row it names. Absent when that is null or absent."},
 	"Company360.relationship_direction":                                 {Values: []string{"two_way", "inbound_only", "outbound_only", "none"}, ResponseOnly: []string{}, Description: "Which sides have written, rolled up from the account's current contacts. Absent together with last_inbound_at, named in `sections_omitted` as `last_touch`."},
-	"Company360.sections_omitted":                                       {Values: []string{"contacts", "deals", "projects", "strength", "activities", "tags", "list_memberships", "pending_approvals", "next_steps", "since_last_visit", "suggestions", "last_touch", "state_strip", "health", "next_meeting", "moments", "billing_contacts", "commitments"}, ResponseOnly: []string{}, Description: "The sections withheld for lack of a grant — so a client can say \"you can't see this\" instead of \"there is none\"."},
+	"Company360.sections_omitted":                                       {Values: []string{"contacts", "leads", "deals", "projects", "strength", "activities", "tags", "list_memberships", "pending_approvals", "next_steps", "since_last_visit", "suggestions", "last_touch", "state_strip", "health", "next_meeting", "moments", "billing_contacts", "commitments"}, ResponseOnly: []string{}, Description: "The sections withheld for lack of a grant — so a client can say \"you can't see this\" instead of \"there is none\"."},
 	"Company360Commitment.kind":                                         {Values: []string{"ours", "theirs"}, ResponseOnly: []string{}, Description: ""},
 	"Company360Contact.greeting_register":                               {Values: []string{"formal", "familiar"}, ResponseOnly: []string{}, Description: "The register a rep set for opening a message to this contact; null when none is set."},
 	"Company360Contact.salutation":                                      {Values: []string{"mr", "ms", "none"}, ResponseOnly: []string{}, Description: "Explicitly supplied by the contact, an import or an API caller. Never inferred from a name or signature. Null means unset; none means no gendered form."},
@@ -1572,6 +1572,7 @@ var listRecordFilters = map[string][]listFilter{
 	"lead": {
 		{Name: "ai_written", Type: "boolean"},
 		{Name: "captured_by_kind", Type: "string", Enum: []string{"human", "agent", "connector", "system"}},
+		{Name: "company_id", Type: "string"},
 		{Name: "country", Type: "string"},
 		{Name: "from_contact_id", Type: "string"},
 		{Name: "include_archived", Type: "boolean"},

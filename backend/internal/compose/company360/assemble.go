@@ -33,6 +33,7 @@ import (
 // a rename cannot leave the two halves disagreeing.
 const (
 	sectionContacts       = crmcontracts.Company360SectionsOmitted("contacts")
+	sectionLeads          = crmcontracts.Company360SectionsOmitted("leads")
 	sectionDeals          = crmcontracts.Company360SectionsOmitted("deals")
 	sectionProjects       = crmcontracts.Company360SectionsOmitted("projects")
 	sectionStrength       = crmcontracts.Company360SectionsOmitted("strength")
@@ -180,6 +181,7 @@ func (s *Service) sections(ctx context.Context, tx pgx.Tx, companyID ids.Company
 		read func() error
 	}{
 		{sectionContacts, a.readContacts},
+		{sectionLeads, a.readLeads},
 		{sectionStrength, a.readStrength},
 		{sectionDeals, a.readDeals},
 		{sectionProjects, a.readProjects},

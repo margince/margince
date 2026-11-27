@@ -178,6 +178,7 @@ var leadListFilters = storekit.FilterSet[ListLeadsInput]{
 		in.TagMode = tagModeOrDefault(v)
 	}),
 	filterFromContact:     storekit.FilterID(func(in *ListLeadsInput, id *ids.ContactID) { in.FromContactID = id }),
+	filterCompanyID:       storekit.FilterID(func(in *ListLeadsInput, id *ids.CompanyID) { in.CompanyID = id }),
 	filterIndustry:        storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Industry = v }),
 	filterCountry:         storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.Country = v }),
 	filterSizeBand:        storekit.FilterWord(func(in *ListLeadsInput, v *string) { in.CompanyFacts.SizeBand = v }),
@@ -191,11 +192,11 @@ var leadListFilters = storekit.FilterSet[ListLeadsInput]{
 func (p *Provider) ListFilters(t datasource.EntityType) []string {
 	switch t {
 	case datasource.EntityContact:
-		return contactListFilters.Names()
+		return append(contactListFilters.Names(), datasource.CustomFieldPrefix)
 	case datasource.EntityCompany:
-		return companyListFilters.Names()
+		return append(companyListFilters.Names(), datasource.CustomFieldPrefix)
 	case datasource.EntityLead:
-		return leadListFilters.Names()
+		return append(leadListFilters.Names(), datasource.CustomFieldPrefix)
 	case datasource.EntityPartner:
 		return partnerListFilters.Names()
 	default:
