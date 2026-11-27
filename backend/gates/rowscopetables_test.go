@@ -318,20 +318,11 @@ func endpointTableNames(expr ast.Expr) []string {
 	return names
 }
 
-// The modules tier, measured rather than guessed at.
-//
-// Extending the census over internal/modules is the change #1984 was filed to
-// unblock, and its own header says that tier "holds several times as many
-// statements of this shape". This is that number, standing where a reader can
-// see it without breaking a gate to find it — and it may only FALL.
-//
-// It is not the widening. Ninety-five sites is not a waiver list anybody should
-// write in one sitting, and a widening that shipped with one would be the green
-// check over the same defect this ticket exists to refuse. What it does is stop
-// the number growing quietly while the widening waits, and give whoever takes
-// it a floor to work against.
+// The modules tier, read whole. Each function holding an unscoped reference is
+// ratified by name, so a new one fails and a fixed one leaves a stale waiver.
 func TestTheModulesTierIsMeasuredForTheWideningItIsOwed(t *testing.T) {
 	t.Parallel()
+	defer modulesTierUnscopedReads.AssertAllMatched(t)
 	tables := rowScopedTables(t)
 	vocab := referenceVocabulary{
 		tables:  tables,
@@ -347,15 +338,27 @@ func TestTheModulesTierIsMeasuredForTheWideningItIsOwed(t *testing.T) {
 	unscoped := 0
 	var unscopedSites []string
 	for _, site := range sites {
-		if !reachesRowScope(pkgs[site.dir].visibleTo(site.recv), site.fn, site.table, map[string]bool{}) {
-			unscoped++
-			unscopedSites = append(unscopedSites, fmt.Sprintf("%s:%d:%s -> %s", site.dir, site.line, site.fn, site.table))
+		if reachesRowScope(pkgs[site.dir].visibleTo(site.recv), site.fn, site.table, map[string]bool{}) {
+			continue
 		}
+		unscoped++
+		unscopedSites = append(unscopedSites, fmt.Sprintf("%s:%d:%s -> %s", site.dir, site.line, site.fn, site.table))
+		// A censused module's reads are ratified once, in the compose census's
+		// own list, so the two gates cannot give one read two reasons.
+		key := site.dir + ":" + site.fn
+		if unscopedReferenceReads.Waived(t, key) || modulesTierUnscopedReads.Waived(t, key) {
+			continue
+		}
+		t.Errorf("%s:%d: %s hands back a %s reference and reaches no row-scope clause for that table. Apply "+
+			"auth.ScopeClauseFor or EnsureVisible for %q, or ratify %s in modulesTierUnscopedReads (or "+
+			"unscopedReferenceReads, for a censusedModules package) with what bounds the reference instead",
+			site.dir, site.line, site.fn, site.table, site.table, key)
 	}
 	if unscoped > modulesTierUnscopedCeiling {
 		t.Errorf("%d of %d record references in %s reach no row scope for the table they name, above the "+
-			"recorded %d. A new one is a read handing back a reference it never bounded: bound it, or lower "+
-			"nothing and explain here why this tier grew one",
+			"recorded %d. A new unscoped statement hands back a reference it never bounded, and in a function "+
+			"already waived the waiver does not answer for it: bound it, or say in that waiver why it shares "+
+			"the reason and raise the ceiling",
 			unscoped, len(sites), modulesTier, modulesTierUnscopedCeiling)
 		t.Logf("Unscoped references:\n%s", strings.Join(unscopedSites, "\n"))
 	}
@@ -366,337 +369,170 @@ const (
 	// The floor that catches an extractor which has stopped reading, far below
 	// the real count.
 	wantMinimumModuleSites = 60
-	// What the tier holds today. A ratchet: it may only fall, and it has risen
-	// three times. Every rise is a system-principal pass with no seat to narrow
-	// to, or a read a write-authority probe bounds a line later, and each is
-	// written out below rather than left as a number.
-	//
-	// THE FIRST RISE, and why it is not a widening anybody should copy.
-	// contacts.RetractMisattributedSignatureFields takes back the profile fields
-	// an earlier build wrote off a message the contact never sent. It is a
-	// repair pass, chosen by data. The same relstrength.SenderSQL that decides what
-	// may be written decides what may still stand. The enrichment job's own system
-	// principal runs it, and that principal has no seat for a scope to narrow to.
-	// Narrowing it to one caller's rows would leave every other contact wearing
-	// another sender's title while the pass reported success, which is the
-	// storage-limitation shape the privacy sweeps are exempted for.
-	//
-	// The scope clause was tried and is the WRONG tool: this path writes, and
-	// auth.ScopeClauseFor answers about visibility, so a manual read-share
-	// would have admitted a caller who may not edit the record —
-	// TestEveryMutationOfAShareableRecordProbesForWriteAuthority says so and is
-	// right. The authority it takes instead is auth.Require(contact, update),
-	// and its confinement is stated beside it in writesWithoutARowProbe.
-	//
-	// THE SECOND RISE, and the same shape as the first. deals.nextMembers reads
-	// the close-date pass's own frozen membership — close_date_run_member rows
-	// naming a deal_id — to walk the set that pass froze at its start. It runs
-	// under the workspace's system principal, which has no seat for a scope to
-	// narrow to, and narrowing it to one rep's deals would leave every other
-	// rep's pipeline unassessed while the run reported it had covered
-	// everything. That silent under-coverage is the exact defect the run table
-	// exists to make visible, so bounding this read by seat would reintroduce it
-	// through the gate meant to prevent it.
-	//
-	// What confines the read instead is the membership itself: the set was
-	// decided once by startRun, every row it returns belongs to that set, and
-	// the write it feeds re-locks the deal and re-verifies the deal is still
-	// open before touching it. The pass's authority is ratified as a whole in
-	// writeauthorityreach_test.go under SweepWorkspace and settleMember.
-	//
-	// THE THIRD RISE, +2, and the same pass again. deals.reversedCorrections
-	// and lockReversibleCorrection read deal_correction rows naming a deal_id:
-	// the first is the nightly sweep asking "has somebody taken this correction
-	// back?", which runs under the same system principal with no seat to narrow
-	// to, and narrowing it would let a correction one rep undid be re-applied to
-	// another rep's deal.
-	//
-	// The second is the Undo path, and it IS bounded — by auth.EnsureWritable on
-	// the deal, taken inside the same transaction immediately after. It reads
-	// unscoped here because the correction row is looked up first, under FOR
-	// UPDATE, so a repeated Undo serializes before either caller can act; the
-	// visibility answer follows it and refuses everything a row scope would.
-	//
-	// THE FOURTH RISE, +1, and it is bounded the same way the Undo path above
-	// is. consent.survivingSubject reads contact.merged_into_id to answer "which
-	// record survives this one", so a stop recorded moments after a merge lands
-	// on the survivor instead of on a record no send evaluates. It is reached
-	// from exactly one caller, suppressAdmittedTx, which has already run
-	// auth.EnsureWritable on the id being resolved, in the same transaction,
-	// one statement earlier — so the caller has been shown to reach that row
-	// before this read follows its pointer, and a caller who cannot see the
-	// contact never gets here. The read hands back no row: it returns one uuid,
-	// which is either the id the caller already named or the survivor that id
-	// now resolves to.
-	//
-	// THE FIFTH RISE, +3, and all three are the public withdrawal resolve.
-	// consent.resolveWithdrawalTokenTx projects contact_id and lead_id off
-	// withdrawal_credential, and legacyPreferenceTokenAsWithdrawal projects
-	// contact_id off preference_token, so a one-click unsubscribe can act.
-	//
-	// There is NO row scope to reach on this edge and there cannot be: the
-	// surface is anonymous by construction — RFC 8058 requires the POST to work
-	// with no session, from a mail client, and a scope needs a seat to narrow
-	// to. Possession of the emailed credential IS the authority, which is the
-	// posture ResolvePreferenceToken and ResolveConfirmToken already hold and
-	// which ungatedEntryPoints records for all three. What bounds it instead is
-	// the credential's narrowness: the ref carries an address and a scope, so a
-	// holder cannot read a consent state, cannot grant, and cannot reach
-	// business correspondence.
-	//
-	// THE SIXTH RISE, +1, and it is the same public edge again.
-	// consent.bindWithdrawalSubject reads contact_email and lead to attach the
-	// record holding the address a withdrawal link is being minted for. It runs
-	// on the SEND path, under the system principal that composes outbound mail,
-	// which holds no seat to narrow to — the same posture every send-path read
-	// of a recipient has. What bounds it is the address: the caller does not
-	// choose an id, it hands over the address the message is already going to,
-	// and a match on two records resolves to no subject at all rather than
-	// picking one.
-	//
-	// THE SEVENTH RISE, +1, and it is the send path's own shape once more.
-	// consent.RecordHardBounceTx reads contact_email to learn which record, if
-	// any, owns the address a delivery report just declared dead. It runs under
-	// the CONNECTOR principal that carried the report — no seat, nothing to
-	// narrow to — which is the posture every capture-side read has.
-	//
-	// What bounds it is the address, and more narrowly than the entry above:
-	// the caller chooses no id at all. The address arrives from a delivery
-	// report that had to name a message this installation actually sent to that
-	// address before anything got this far, and the read's whole output is one
-	// nullable contact id used to decide which entity an audit row hangs from.
-	// A match on two records takes the first and the stop is unaffected either
-	// way, because the suppression itself deliberately names no contact.
-	//
-	// 106: privacy.contactsMatchingSuppression walks every live contact_email
-	// in the installation, hashes it against the erasure-suppression list and
-	// hands back the ids of subjects an erasure already ended — a restore or a
-	// re-import having put them back.
-	//
-	// Unscoped ON PURPOSE. The suppression list has no tenant predicate and
-	// nothing for one to key on (storekit/suppression.go, ADR-0091 and
-	// ADR-0061), so narrowing the pass to one seat's rows would leave a
-	// resurrected subject standing everywhere that seat cannot reach. The
-	// reference never leaves: the ids go straight into EraseContact.
-	//
-	// 107: activities.HeldMeetingCounterparties is the held-meeting walk Deal
-	// Scout reads, the participant twin of CompanyReachSet above it in the same
-	// census and unscoped for the same reason: it is a derived-table body a
-	// system-principal producer composes, with no seat to narrow to. The
-	// company it names goes to deals.RecordSuggestionTx, and a rep sees the
-	// suggestion only through deals' visibility clause, which applies the
-	// company's row scope and every evidence item's content gate.
-	//
-	// 108, 109: contacts.archiveContactRows and contacts.retireCompanyCascade read
-	// back the ids of the Shortlists an archive took the record off, from the
-	// same statement that deleted the memberships and recorded their removal
-	// in list_member_event. The list ids go into the archive's own audit
-	// evidence, which an un-archive reads to put the memberships back; no
-	// reader is handed one, so there is no list scope to apply.
-	//
-	// 110, 111: collections.Store.compareSnapshot's two statements write a Live
-	// List's entered and left events under the system checker, which has to see
-	// every record for the history to be whole. They hand the caller counts,
-	// never a reference, and every read of the events they write applies the
-	// reader's current row scope (observedVisibleClause).
-	//
-	// 112: collections.lastChecks reads the latest check of lists its caller
-	// already found through their sharing (ListLists, GetList); it answers only
-	// for the ids it was handed, so it names no list the reader could not find.
-	//
-	// 113: contacts.nameDomainClaimant is the dedupe ladder's rival for a company
-	// named after a domain, the sibling of exactCompanyByDomain above it and
-	// unscoped for the same reason: the ladder scores every company in the
-	// installation, and the id it finds becomes a review row, never a response.
-	//
-	// 114: contacts.OpenDuplicateCompanyPairsTx is system-only and hands Deal
-	// Scout the open company pairs, so it can withdraw a suggestion raised twice
-	// for one business. The ids select suggestions to supersede; a rep sees a
-	// suggestion only through deals' visibility clause.
-	//
-	// 115: capture.AutoEnrichStore.ParkedEnrichments is the operator recovery's
-	// list of companies whose enrichment an outage exhausted. System-only, no
-	// seat to narrow to, and the ids go straight into the reopen of each
-	// company's own backoff cursor; nothing returns one to a reader, and the
-	// sweep that then re-reads them applies its own eligibility.
-	//
-	// 116: consent.revokeOverrideAdmittedTx asks whether the vouch being revoked
-	// belongs to the contact named or to the survivor a merge folded it into. A
-	// vouch chain spans records by construction (a merge copies the vouch
-	// onto the survivor and leaves the original on the predecessor, linked by
-	// carried_from), so the lookup reaches
-	// contact_id across several rows and no single row scope can bound it.
-	// auth.EnsureRetractable has already been taken on both the named contact
-	// and its survivor in the same transaction, so the caller was shown to reach
-	// every record the question can resolve to. The read hands back no
-	// reference: the only row returned is the FOR UPDATE row's decided_by_level.
-	//
-	// 117: contacts.workedFromContact reads the contact a lead row was worked
-	// from, for the writers that keep one live lead per contact (reopen, demote,
-	// lead merge). They must see the link whether or not the caller may open
-	// the contact, so it is read off the row; it reaches no caller, and every
-	// read of a lead withholds it through withholdUnreadableSourceContacts.
-	//
-	// 118: privacy.contactsMatchingSuppression's second walk, over every live
-	// contact_channel_identity. It is unscoped for the reason given at 106: a
-	// chat-only subject has no address, and the list names their account.
-	//
-	// 119: activities.CompanyReachedActivities is a SQL fragment, not a read:
-	// the timeline predicate's arms as a set that starts from the accounts. Its
-	// one caller, company360.LastTouchFor, bounds the company with ScopeClauseFor
-	// and the activity with ActivityDiscoverClause around it.
-	//
-	// 121: deals.readReviewTerms and deals.readOfferTerms read the deal's
-	// company and each offer's buyer company into the legal review terms. The
-	// ids feed a SHA-256 the stage gate compares and never leave the server.
-	//
-	// 123: privacy.subjectQuestionSources follows a rights-case subject to the
-	// deals and projects they are a stakeholder of. Subject access and erasure
-	// then reach every kept question answer those records were counted in.
-	// The operator's own seat must not narrow a subject's rights case.
-	//
-	// 124: privacy.leadTwinOf follows the same subject through merged contacts
-	// to the leads they were, for the same rights case.
-	//
-	// 125-127: activities.PassedActivitiesTx reads the contact, deal and company
-	// an activity whose time has come is filed under. System-only, and the ids
-	// go straight into the clock refold; nothing returns one to a reader.
-	// 128-131: contacts' nightly duplicate re-check (deduperecheck.go) reads the
-	// two ends of every open pair, and a contact's current employer, under the
-	// system principal. It walks the whole queue by design, and the ids decide
-	// only whether a pair stays open; none leaves the server.
-	//
-	// 132-133: capture.mailContacts and capture.threadDeals read the contacts
-	// on a mail and the company of a deal its thread is filed under, for the
-	// deal rule. A seat that sees only part of them would file on a guess. So
-	// they are read whole; the ids stay in the rule, and its link passes
-	// EnsureLinkTarget.
-	//
-	// 134: contacts.subdomainClaimants is the sibling of nameDomainClaimant for
-	// a company on a subdomain of a held domain, unscoped for the same reason.
-	// The ladder scores every company, and the id becomes a review row.
-	//
-	// 135: contacts.addressVariantContact finds the contact holding the same
-	// address under another plus tag. The ladder searches the whole workspace
-	// by design. The id becomes a review row, or a possible-duplicate answer
-	// that asks the caller's visibility before it names the contact.
-	//
-	// 136: activities.DeliveryReportsTx names the leads a delivery report is
-	// linked to, so the repair can re-derive each. It runs as the system actor
-	// over the whole workspace, and the id is only handed to
-	// contacts.ReDeriveLeadFromRemainingTouchesTx, which probes writability.
-	//
-	// 137: projects.LinkPhaseHistoryTx pages over phase-history rows under the
-	// system principal and matches each to its audit row. It returns the
-	// history row ids only to advance the cursor; none leaves the server.
-	//
-	// 138: contacts.SignatureFieldSourcesTx pages the signature fields for the
-	// repair data task, as the system actor over the whole workspace. The ids
-	// go only to RetractSignatureFieldsByIDTx, ratified in writesWithoutARowProbe.
-	//
-	// 139: contacts.primaryEmployersOf lists every current employee of the
-	// company a merge retires, past the reader's scope, because the merge moves
-	// every edge. The ids go only to the merge's twin re-check; none is returned.
-	//
-	// 140: contacts.leadLinkedCompany reads the company a lead row is linked to.
-	// The link, the unlink, the promotion's edge and the match offer must see it
-	// whether or not the caller may open the company. Every read of a lead
-	// withholds it through withholdUnreadableCompanies.
-	//
-	// 141: deals.reconcileEvidenceAuthorshipTx pages activity evidence for the
-	// own-domain repair, as the system actor over the whole workspace. Its deal
-	// ids go only to correctEvidenceAuthor, which locks and audits the row it
-	// corrects. None is returned to a caller.
-	//
-	// 142: deals.reconcileMeetingProof pages machine event_held claims for the
-	// same pass, as the system actor. Its deal ids go only to
-	// withdrawMeetingClaim, which locks and audits the row. None is returned.
-	//
-	// 143-144: contacts.MergeExistingLeadContactPairsTx and its bounded count
-	// find the contact ids held by a live lead's historical or identity links.
-	// The data task runs as the system principal over the workspace. A unique id
-	// goes only into promoteLeadTx, which locks both records and rechecks the
-	// promotion. Several ids leave the lead untouched and go to the duplicate
-	// review. No id reaches a caller.
-	//
-	// 145-146: contacts.retractUnsupportedPhones reads contact ids to lock and
-	// audit unsupported signature numbers. Its caller requires the system actor;
-	// the workspace repair returns a count, never contacts to a reader.
-	//
-	// 147-148: activities.lockMeetingFacts and readPreparations read a meeting's
-	// participant contact ids only to hash them into the guest-list fingerprint
-	// of the preparation revision. The meeting itself is content-gated first.
-	// No id is returned.
-	//
-	// 149: forecasting.attachOpenDeals reads the deal ids of frozen contribution
-	// rows for the forecast evaluation, which only a system principal may run.
-	// Each id joins a deal to its outcome and is dropped from the dataset.
-	//
-	// 150: contacts.fileLinkedInTwins finds every live contact holding the
-	// LinkedIn profile a write just set. The lane searches the whole workspace
-	// by design, as the address-variant lane does. The ids become review rows
-	// inside the write, and none is returned to its caller.
-	//
-	// 151: deals.StuckAfter returns the won-deal stage pace keyed by stage id.
-	// A stage is configuration every member reads, and the pace is a duration.
-	//
-	// 152: activities.carryMissingParticipantsTx copies a folded meeting copy's
-	// guests onto the meeting that stays, under a system job or a calendar sync.
-	// The contacts move between two rows of one meeting, and nothing is returned.
-	//
-	// 153: deals.correctionReceiptSelect is the SELECT list every change report
-	// shares, with no `WHERE` of its own. Each caller (RecentCorrectionsOwnedBy,
-	// DealChanges, TeamChanges) adds auth.ScopeClauseFor or auth.EnsureVisible.
-	//
-	// 154: privacy.readLeadNotice names the kinds of data a notice link's own
-	// website lead holds, for the privacy page. It reads presence flags only,
-	// for the lead the link resolved, and returns no reference.
-	//
-	// 155: ai.eraseSamplesTx finds every voice profile holding a sample copied
-	// from erased mail or naming an erased contact. An erasure must reach every
-	// owner's profile, so no row scope applies. Each id is only locked, and the
-	// call returns nothing but an error.
-	// 156–162: derived-work maintenance adds seven contact references:
-	// signature retry/release selectors (two), the misattribution repair's
-	// ordered locks (one), and interaction retry/release/lock/queue selectors
-	// (four). Their system-only callers consume these keys inside maintenance;
-	// none enters a response. Human graph reads retain their object and row gates.
-	//
-	// 163: privacy.sarRetainedCopySections reads the audit, event and duplicate
-	// copies that still name the subject and their leads, three references in
-	// all. The tier had fallen to 160, so the ceiling rises by one. These are
-	// subject-access reads, unscoped for the reason subjectQuestionSources is.
-	// Art. 15 owes everything held, and AssembleSAR admits only an unbounded
-	// human holding contact.delete.
-	// Also counted: contacts.holdCohortActivities locks the activities a cohort
-	// repair may write before it locks the contact. The ids bound that repair's
-	// writes inside its transaction, and none is returned to a caller.
-	//
-	// 164–165: chatlinks.linkedRecords and chatlinks.AdoptProject read the
-	// project of a deal whose chat channel is being written. linkedRecords runs
-	// after auth.HoldWritableLive on that deal. AdoptProject runs only under the
-	// chat engine's system principal. Each project id is stored on the link,
-	// never returned to a caller.
-	//
-	// 166: forecasting.FocusLists reads the deal ids of a team's stored focus
-	// list. Each list passes the store's SnapshotLens, which compose binds and
-	// which applies the deal row scope, as it does for SnapshotSide.
-	//
-	// 167: contacts.CompaniesWhoseEmploymentEndedTx reads the company ids of
-	// employments that ended, as the system principal (auth.RequireSystem). The
-	// clock refold job takes them and returns nothing to a caller.
-	//
-	// 168: contacts.autoMove reads the contact id of a claim it moves as the
-	// system principal (auth.RequireSystem in the sweep's entry points). The id
-	// goes to the claim's audit row and is returned to no caller.
-	//
-	// 169: forecasting.addTeamStandings reads a team freeze's deal ids and hands
-	// them to the snapshot lens before any caller sees one. The lens applies the
-	// reader's deal row scope and the team's assertion check, as FocusLists does.
-	//
-	// 170–174: the three statements of contacts.legacyEvidenceMoves, and the
-	// subject queries of moveLegacyMeetingEvidence and dropProfileFieldSupportTx,
-	// name the companies and contacts whose legacy evidence rows move into
-	// field_provenance. The ids stay inside the move's SQL and reach no caller.
+	// The waivers name functions, and one function can hold several unscoped
+	// statements. This counts statements, so a new one inside a waived function
+	// still fails. It may only fall.
 	modulesTierUnscopedCeiling = 174
 )
+
+// modulesTierUnscopedReads names, per function, what bounds a module read that
+// hands back a record reference without a row scope for its table.
+//
+// Most are passes under a system principal, which holds no seat for a scope to
+// narrow to. Narrowing such a pass to one seat would leave every other seat's
+// records unrepaired while the pass reported success.
+var modulesTierUnscopedReads = gatekit.Waive(map[string]string{
+	"internal/modules/activities:DeliveryReportsTx":          "the delivery-report repair pages imported mail under auth.RequireSystem over the whole workspace; each lead id goes only to contacts.ReDeriveLeadFromRemainingTouchesTx, which probes writability",
+	"internal/modules/activities:HeldMeetingCounterparties":  "a derived-table body Deal Scout composes under its system principal; the company goes to deals.RecordSuggestionTx, and a rep sees a suggestion only through deals' visibility clause with the company row scope",
+	"internal/modules/activities:StampProvenSenderTx":        "the proven-sender stamp runs under auth.RequireSystem and writes the sender onto the stored activity under its row lock; no contact id is returned to a caller",
+	"internal/modules/activities:askLeadsToQualifyTx":        "files the qualify task on each lead a held meeting is filed on, inside the write that recorded it held; the lead ids feed that task writer and are returned to no caller",
+	"internal/modules/activities:attachAttendeeResponses":    "reads each meeting answer, then keeps a contact's answer only when the contact is in shownContacts, the links the reader already sees on the meeting",
+	"internal/modules/activities:backfillParticipants":       "the participant backfill is one INSERT ... SELECT over the workspace's stored mail; contact ids move between tables inside the statement and only a row count is returned",
+	"internal/modules/activities:carryMissingParticipantsTx": "copies a folded meeting copy's guests onto the meeting that stays, under a system job or a calendar sync; the contacts move between two rows of one meeting and none is returned",
+	"internal/modules/activities:copyEchoLinks":              "an echo's links are copied onto the human send that survives it, inside the fold's own transaction; the company, deal, lead and project ids move between link rows and none is returned",
+	"internal/modules/activities:lastTouchCandidateQuery":    "the quiet-account candidate scan, behind auth.RequireReadForReaders; the account arm groups by company to fold its last touch, and the reminder writer applies each record's scope before a card shows",
+	"internal/modules/activities:linkedLeads":                "the follow-up auto-resolve consumer asks which leads a captured activity touches, as the event worker; the lead ids select tasks to close and never reach a reader",
+	"internal/modules/activities:lockMeetingFacts":           "reads a meeting's participant contact ids only to hash them into the preparation's guest-list fingerprint; changeReadiness has already taken EnsureActivityContentVisibleLive on the meeting, and no id is returned",
+	"internal/modules/activities:meetingAttendeesSQL":        "a CTE fragment that resolves each follow-up candidate's recipients; meetingFollowUpsPage wraps it in the follow-up gates and the addressable-contact clause before any contact is named",
+	"internal/modules/activities:reachableOnConversation":    "the reply goes to this conversation's counterparty: the links were visibility-checked when the anchor was read under EnsureActivityContentVisible, and each is re-checked when the reply's own links are inserted",
+	"internal/modules/activities:readPreparations":           "reads attendee contact ids only to hash them into the preparation fingerprint, for meetings the caller already read under the content clause; no id is returned",
+	"internal/modules/activities:refoldTargetsTx":            "the clock refold reads the contact, deal, company and project an activity whose time has come is filed under, behind auth.RequireSystem; the ids go straight into the refold and none reaches a reader",
+
+	"internal/modules/ai:DueDeferredBuilds":   "the voice-build retry worker lists due builds across profiles, with no seat behind it; each profile id goes to the build pipeline, which is the profile owner's own work",
+	"internal/modules/ai:ListDeltas":          "a voice profile's history, behind auth.Require for voice_profile and visibleProfile, which admits only the profile's own owner; a voice profile has no row scope beyond its owner",
+	"internal/modules/ai:eraseSamplesTx":      "an erasure must reach every owner's voice profile holding a sample from erased mail or naming an erased contact; each profile id is only locked, and the call returns nothing but an error",
+	"internal/modules/ai:lockJudgeableSignal": "finds the learning signal by draft reference and the caller's own seat (p.owner_id = $2), so the profile it names is always the caller's own",
+
+	"internal/modules/assignments:parentOfAssignment": "an unlocked lookup of which record an assignment hangs on; lockAssignment then takes ensureParentWritable on that parent before anything is read for the caller",
+
+	"internal/modules/capture:ParkedEnrichments":         "the operator recovery's list of companies an enrichment outage exhausted, with no seat to narrow to; the ids reopen each company's own backoff cursor and none is returned to a reader",
+	"internal/modules/capture:channelReplyContact":       "the capture sink resolves a messaging counterparty to the contact on file, by the provider's own identity key; the id files the inbound reply and is never served",
+	"internal/modules/capture:insertFurtherParticipants": "the capture write matches each party's address to a contact inside the INSERT that stores the participant rows; only a row count leaves it",
+	"internal/modules/capture:mailContacts":              "the deal rule reads every contact on a mail; a seat that sees only some would file on a guess, so the ids stay in the rule and its link passes EnsureLinkTarget",
+	"internal/modules/capture:mailReplyContact":          "the capture sink resolves a mail counterparty to the contact on file by address; the id files the inbound reply and is never served",
+	"internal/modules/capture:privateLeadLinksTx":        "answers which lead links sit on messages private to one seat, for the privacy and personal-sender passes that remove them; the ids are unlinked, never served",
+	"internal/modules/capture:readDealProvenance":        "the deal-link repair reads which deal a captured mail is filed under and how; the id decides only whether the link stays and is not served",
+
+	"internal/modules/chatlinks:AdoptProject": "runs only under the chat engine's system principal (auth.RequireSystem); the project id is stored on the deal's channel link and never returned to a caller",
+
+	"internal/modules/collections:compareSnapshot": "writes a Live List's entered and left events under the system checker, which must see every record for the history to be whole; every read of those events applies the reader's row scope",
+
+	"internal/modules/consent:RecordHardBounceTx":                "runs under the connector principal that carried the delivery report, with no seat; the caller chooses no id, and the one contact id it reads only decides which record the audit row hangs from",
+	"internal/modules/consent:bindWithdrawalSubject":             "the send path mints a withdrawal link under the system principal that composes mail; the caller hands over the address the mail goes to, and two matching records bind no subject at all",
+	"internal/modules/consent:deliveryLinks":                     "the transmit gate reads the deal ids the delivery's activity is filed under, for the live-deal arm; the ids decide whether a send proceeds and never leave the gate",
+	"internal/modules/consent:legacyPreferenceTokenAsWithdrawal": "the anonymous one-click unsubscribe (RFC 8058) has no session to scope; possession of the mailed token is the authority, and the ref carries only an address and the withdrawal scope",
+	"internal/modules/consent:liveAddressHolderTx":               "mints a preference link for the address a mail already goes to; the caller names an address, not an id, and the contact id only keys the link",
+	"internal/modules/consent:resolvePreferenceTokenTx":          "the public preference centre has no session to scope; possession of the mailed token is the authority, as ungatedEntryPoints records for ResolvePreferenceToken",
+	"internal/modules/consent:resolveWithdrawalTokenTx":          "the anonymous withdrawal resolve projects contact_id and lead_id so a one-click unsubscribe can act; the mailed credential is the authority and carries only an address and a scope",
+	"internal/modules/consent:revokeOverrideAdmittedTx":          "a vouch chain spans merged records, so no single row scope bounds it; EnsureRetractable is taken on the named contact and its survivor first, and only decided_by_level is returned",
+	"internal/modules/consent:subjectOfConfirmTokenTx":           "the public confirmation submit names whose link this is before it locks anything; the token is the authority, and the spend that redeems it runs under the subject lock",
+	"internal/modules/consent:survivingSubject":                  "follows contact.merged_into_id one hop for a contact every caller has already probed in the same transaction (EnsureWritable, EnsureRetractable, EnsureReadable or the subject lock); it returns the id named or its survivor",
+
+	"internal/modules/contacts:CommitmentsTheirsForProjects":        "the projects are the ones the caller named, read from a record page it already opened; the contact each claim names passes ScopeClauseFor in the same statement",
+	"internal/modules/contacts:CompaniesCarryingLiveProjects":       "work the reader cannot see must still block a merge, so the answer is unscoped by project; it says only whether a company holds one, never which",
+	"internal/modules/contacts:CompaniesWhoseEmploymentEndedTx":     "reads the companies whose employments ended, as the system principal (auth.RequireSystem); the clock refold job takes them and returns nothing to a caller",
+	"internal/modules/contacts:ContactsOwedACohortRepair":           "the link-reconcile sweep lists contacts whose captured mail is not all on their record, as the system; each id goes to the repair, never to a reader",
+	"internal/modules/contacts:CountExistingLeadContactPairs":       "the LinkedIn identity data task's bounded estimate of live lead-contact pairs; it returns a count, never an id",
+	"internal/modules/contacts:DomainsOwedTheirContacts":            "the link-reconcile sweep runs as the system, the only actor that may attach every seat's contacts to a company; each company id goes to that attach and none is served",
+	"internal/modules/contacts:EnrichmentFence":                     "reads whether the subject is archived or merged as two flags (merged_into_id IS NOT NULL), inside the enrichment hold; it returns a yes or no with a reason, never an id",
+	"internal/modules/contacts:NormalizeContactLinkedInTx":          "a data task page under auth.RequireSystem that rewrites stored LinkedIn profiles; the contact ids advance the cursor and none leaves the server",
+	"internal/modules/contacts:OpenDuplicateCompanyPairsTx":         "system-only (auth.RequireSystem): hands Deal Scout the open company pairs to withdraw a suggestion raised twice; a rep sees a suggestion only through deals' visibility clause",
+	"internal/modules/contacts:ReleaseSignatureWorkTx":              "a signature-work release selector under auth.RequireSystem; the contact keys move between import runs inside maintenance and none enters a response",
+	"internal/modules/contacts:ReopenSignatureTitleHistoryTx":       "a data task page under auth.RequireSystem that reopens signature watermarks; the contact ids page the work and no field changes",
+	"internal/modules/contacts:ResolveOrCreateChannelIdentity":      "the channel ingest's insert-then-adopt: the incumbent contact bound to a provider identity is the answer by construction, and adopting it widens no visibility",
+	"internal/modules/contacts:RetractMisattributedSignatureFields": "a repair under the enrichment job's system principal; narrowing it to one caller would leave other contacts with another sender's title. Its authority is auth.Require(contact, update), confined in writesWithoutARowProbe",
+	"internal/modules/contacts:SetChannelIdentityBlocked":           "applies a provider's block or unblock to the identity it names, under the ingest actor; the contact id goes to the audit row, never to a reader",
+	"internal/modules/contacts:SignatureFieldSourcesTx":             "pages signature fields for the repair data task as the system actor; the ids go only to RetractSignatureFieldsByIDTx, ratified in writesWithoutARowProbe",
+	"internal/modules/contacts:SubjectsWithProviderFills":           "names the contacts one provider's purchases wrote to, so the revert can take them one transaction at a time; the ids go to that revert and none is served",
+	"internal/modules/contacts:addressVariantContacts":              "the dedupe ladder searches the whole workspace by design; the id becomes a review row, or a possible-duplicate answer that asks the caller's visibility before naming the contact",
+	"internal/modules/contacts:adoptEmailRoutedIncumbent":           "binds a messaging account to the contact the address already found; adopting leaves the contact's visibility as it was and returns the id only to the ensure",
+	"internal/modules/contacts:companyByDomain":                     "the provider fill resolves an employer by its unique domain; the company id becomes an employment edge inside the fill and is not returned to a reader",
+	"internal/modules/contacts:companyIsLive":                       "locks a company and reads merged_into_id IS NULL as a flag, to learn whether it is still live before an attach; it answers a yes or no, never an id",
+	"internal/modules/contacts:declinedTriageBind":                  "re-reads the company a triage row already names after a guarded bind declined; the id only tells a replay from a lost race and is never served",
+	"internal/modules/contacts:dropProfileFieldSupportTx":           "names the companies and contacts whose signature rows lose a source; the ids stay inside the move's SQL and reach no caller",
+	"internal/modules/contacts:dropShortlistMemberships":            "reads back the Shortlists an archive took the record off, from the statement that removed the memberships; the ids go into the archive's own audit evidence, never to a reader",
+	"internal/modules/contacts:employmentFingerprint":               "digests one contact's employment edges into a hash, after ApplyEmploymentImport took HoldWritableLive on the contact; no company id is returned",
+	"internal/modules/contacts:exactCompanyByDomain":                "the dedupe ladder scores every company in the installation; the id it finds routes capture or becomes a review row, never a response",
+	"internal/modules/contacts:exactContactByChannelIdentity":       "the dedupe ladder's first lane matches a provider identity against every live contact; the id routes capture or becomes a review row, never a response",
+	"internal/modules/contacts:exactContactByEmail":                 "the dedupe ladder matches an address against every live contact; the id routes capture or becomes a review row, never a response",
+	"internal/modules/contacts:exactContactByPhone":                 "the dedupe ladder matches a number against every live contact; the id routes capture or becomes a review row, never a response",
+	"internal/modules/contacts:fileLinkedInTwins":                   "the LinkedIn lane searches the whole workspace by design, as the address-variant lane does; the ids become review rows inside the write and none is returned",
+	"internal/modules/contacts:holdCohortActivities":                "locks the activities a cohort repair may write before it locks the contact; the ids bound that repair's writes inside its transaction and none is returned",
+	"internal/modules/contacts:inferredEmploymentPage":              "the employment repair pages inferred edges under auth.RequireSystem; the company ids decide which edges retire and none is served",
+	"internal/modules/contacts:leadLinkedCompany":                   "the lead writers must see a lead's company whether or not the caller may open it; every read of a lead withholds it through withholdUnreadableCompanies",
+	"internal/modules/contacts:leadResponseTouches":                 "the lead SLA consumers ask which leads an activity touches, as the event worker; the ids drive the SLA ladder and never reach a reader",
+	"internal/modules/contacts:legacyEvidenceMoves":                 "names the companies and contacts whose legacy evidence rows move into field_provenance; the ids stay inside the move's SQL and reach no caller",
+	"internal/modules/contacts:linkActivityToContact":               "settles a captured contact against a merge just before the link insert; the id is the one the ensure already chose, and it is written, not served",
+	"internal/modules/contacts:linkedLeads":                         "the lead-score recompute consumer asks which leads an activity touches, as the event worker; the ids are rescored and never reach a reader",
+	"internal/modules/contacts:lockContactForEmployment":            "locks the contact behind one employment edge so two primary-flag writes serialize; only the lock is taken and no id is returned",
+	"internal/modules/contacts:lockKeptPromise":                     "the kept-promise reconcile locks one claim under auth.RequireSystem; the contact id settles that claim and is returned to no caller",
+	"internal/modules/contacts:moveLegacyMeetingEvidence":           "the subject query of the legacy evidence move, under auth.RequireSystem; the company ids stay inside the move's SQL and reach no caller",
+	"internal/modules/contacts:nameDomainClaimant":                  "the dedupe ladder's rival for a company named after a domain; the ladder scores every company, and the id becomes a review row, never a response",
+	"internal/modules/contacts:pendingSignatureCohort":              "the signature retry selector behind PendingSignatureWork's auth.RequireSystem; its system-only caller consumes the keys inside maintenance and none enters a response",
+	"internal/modules/contacts:primaryEmployersOf":                  "lists every current employee of the company a merge retires, past the reader's scope, because the merge moves every edge; the ids go only to the twin re-check",
+	"internal/modules/contacts:promoteCohortTx":                     "settles the cohort's contact against a merge before the repair writes; the id is the one the pass was handed, and it is written, not served",
+	"internal/modules/contacts:promotedContactOf":                   "an unlocked hint naming the contact a lead was promoted into; the demote locks it, then re-reads under both locks and EnsureWritable before acting",
+	"internal/modules/contacts:queryOpenPairs":                      "the nightly duplicate re-check reads both ends of every open pair under the system principal; the ids decide only whether a pair stays open",
+	"internal/modules/contacts:readCurrentEmployer":                 "a contact's current primary employer for the duplicate filing and re-check; the company id is compared inside the pass and none leaves the server",
+	"internal/modules/contacts:readDedupeCandidate":                 "the by-id read of one review pair; GetDedupeCandidate then requires both sides to pass EnsureVisible, or EnsureVisibleLive while open, before the row is served",
+	"internal/modules/contacts:readDispositionTx":                   "locks a domain's triage verdict; the company it names is the one the verdict resolved to, used inside the ensure or the triage write, never served",
+	"internal/modules/contacts:readEmployerChange":                  "the employer-change signal reads the current and target companies; employerChangeFor then asks ownerSeesCompanies before anything is proposed",
+	"internal/modules/contacts:readStoredLeadPartner":               "a decision about a lead's partner link must see what is stored, which a lead read blanks for a partner the caller cannot open; the id decides the link and is not served",
+	"internal/modules/contacts:refreshChannelUsername":              "keeps a provider identity's handle current on each inbound message; the contact id goes to the audit row of a handle change and is never served",
+	"internal/modules/contacts:refuseWhenBothCarryProjects":         "work the caller cannot see must still block a company merge; the refusal names only projects the caller may see and counts the rest",
+	"internal/modules/contacts:retractUnsupportedPhones":            "reads contact ids to lock and audit unsupported signature numbers; its caller requires the system actor and the repair returns a count",
+	"internal/modules/contacts:subdomainClaimants":                  "the dedupe ladder's subdomain rival, unscoped like nameDomainClaimant; the ladder scores every company and the id becomes a review row",
+	"internal/modules/contacts:switchboardNumbers":                  "counts the companies stating each number, to tell a switchboard from a shared line; it returns a flag per number, never a company id",
+	"internal/modules/contacts:takeBackSignatureFieldsTx":           "the misattribution repair's ordered locks on the contacts its rows name; the ids are locked, never served, under RetractSignatureFieldsByIDTx's terms",
+	"internal/modules/contacts:workedFromContact":                   "lead writers that keep one live lead per contact must see the link whether or not the caller may open the contact; every lead read withholds it through withholdUnreadableSourceContacts",
+
+	"internal/modules/deals:DealOfContract":                "the stage-evidence trigger reads the deal a contract is bound to, as the event worker; the deal id settles that deal's criteria and is never served",
+	"internal/modules/deals:ReadActivityAuthorship":        "the stage-evidence readers ask which deal an activity reaches, under ActivityContentClause on the activity; the deal id scores evidence and is not returned to a reader",
+	"internal/modules/deals:SilentClosesTx":                "the backfill job lists silent closes under auth.RequireSystem; the deal ids go to the offer-back writer and none is served",
+	"internal/modules/deals:copyOfferIntoRevision":         "clones a sent offer into its next revision after RegenerateOffer read it through visibleOfferLocked; the deal id is copied row to row and not returned on its own",
+	"internal/modules/deals:correctionReceiptSelect":       "the SELECT list every change report shares, with no WHERE of its own; each caller (RecentCorrectionsOwnedBy, DealChanges, TeamChanges) adds ScopeClauseFor or EnsureVisibleExisting",
+	"internal/modules/deals:lockCorrection":                "locks the correction row FOR UPDATE so a repeated Undo serializes; the caller takes EnsureWritable on the deal it names, in the same transaction, before acting",
+	"internal/modules/deals:lockReview":                    "locks a legal review and reads its deal; WithdrawLegalReview and DecideLegalReview take EnsureWritableLive on that deal before acting",
+	"internal/modules/deals:nextMembers":                   "the close-date pass walks the membership it froze at its start, under the system principal; narrowing to one rep would leave the rest unassessed while the run reported coverage",
+	"internal/modules/deals:queryActivityParticipants":     "reads an activity's parties for the authorship rule; it answers roles and whether a contact is present, never a contact id",
+	"internal/modules/deals:readOfferTerms":                "reads each offer's buyer company into the legal review terms; the ids feed a SHA-256 the stage gate compares and never leave the server",
+	"internal/modules/deals:readQuietSide":                 "reads one deal's last word each way under the deal owner's context; compose names the counterparty through ContactNamesTx in that context, so an unseen contact goes unnamed",
+	"internal/modules/deals:readReviewTerms":               "reads the deal's company into the legal review terms; the ids feed a SHA-256 the stage gate compares and never leave the server",
+	"internal/modules/deals:reconcileEvidenceAuthorshipTx": "pages activity evidence for the own-domain repair as the system actor; its deal ids go only to correctEvidenceAuthor, which locks and audits the row",
+	"internal/modules/deals:reconcileMeetingProof":         "re-judges machine event_held claims as the system actor; its deal ids go only to withdrawMeetingClaim, which locks and audits the row",
+	"internal/modules/deals:resolveBuyerCompany":           "an explicit buyer company passes EnsureLinkTarget in admitOfferCreation; without one the offer inherits the company of the deal the caller is writing",
+	"internal/modules/deals:wonStints":                     "the won-stint population behind the stage pace; callers aggregate it into per-stage durations, and no deal id is returned",
+
+	"internal/modules/finance:findInvoice": "the finance sync's before image of one mirrored invoice, held FOR UPDATE for its own rewrite; the company id goes into the audit image, never to a reader",
+	"internal/modules/finance:findPayment": "the finance sync's before image of one mirrored payment, held FOR UPDATE for its own rewrite; the company id goes into the audit image, never to a reader",
+	"internal/modules/finance:readLinks":   "the finance sync reads which company a human linked each source customer to; a schedule holds no seat, and the ids stamp mirrored rows",
+
+	"internal/modules/integrations:applyStoredPurchases": "the provider backfill sweep hands stored purchases to the domain, as the integration worker; the contact ids go to that apply and none is served",
+	"internal/modules/integrations:leaseForPoll":         "the provider run worker leases a run to poll; the contact id travels with the run to its settlement, and ReadRunForContactTx probes EnsureVisible before a reader sees a run",
+	"internal/modules/integrations:leaseForSubmit":       "the provider run worker leases a queued run to submit; the contact id travels with the run, and ReadRunForContactTx probes EnsureVisible before a reader sees a run",
+	"internal/modules/integrations:readRun":              "loads one provider run for the queue and skip writers; the reader path, ReadRunForContactTx, takes EnsureVisible on the contact first",
+
+	"internal/modules/introductions:AwaitingMyAnswer": "an ask is between two colleagues and is bound to the acting introducer; the contact it names is the one the requester asked this caller about",
+
+	"internal/modules/privacy:ListRestrictedActivities":     "the restriction register, gated on the retention-policy read that the seeded roles hold admin-only; it lists held records so an operator can release them",
+	"internal/modules/privacy:contactsMatchingSuppression":  "hashes every live address and channel identity against the erasure-suppression list, which has no tenant key; the ids go straight into EraseContact",
+	"internal/modules/privacy:leadTwinOf":                   "follows a rights-case subject through merges to the leads they were; an operator's seat must not narrow a subject's rights case",
+	"internal/modules/privacy:legacyBuyerAuditQuery":        "finds the erasure of the seat that wrote a deleted record, for the rights case; the record itself is gone and the operator's seat must not narrow the case",
+	"internal/modules/privacy:readLeadNotice":               "names the kinds of data a notice link's own website lead holds, for the privacy page; it reads presence flags for the lead the link resolved and returns no reference",
+	"internal/modules/privacy:redactSubjectLegalReviewText": "erasure redacts the subject's name from legal reviews on every deal they hold a stake in; it writes tombstones and returns no deal to a reader",
+	"internal/modules/privacy:sarLegalReviewSection":        "a subject-access export of legal reviews on the subject's deals; Art. 15 owes everything held, and AssembleSAR admits only an unbounded human holding contact.delete",
+	"internal/modules/privacy:sarProvenanceSections":        "a subject-access export of where held data came from; Art. 15 owes everything held, and AssembleSAR admits only an unbounded human holding contact.delete",
+	"internal/modules/privacy:sarRecordSections":            "a subject-access export of the records the subject appears in; Art. 15 owes everything held, and AssembleSAR admits only an unbounded human holding contact.delete",
+	"internal/modules/privacy:subjectQuestionSources":       "follows a rights-case subject to the deals and projects they hold a stake in, so access and erasure reach every kept answer; an operator's seat must not narrow the case",
+	"internal/modules/privacy:tombstoneRestrictions":        "a restriction writes one tombstone per held record; the deal ids go into the audit row and event the authority is shown, never to a reader",
+
+	"internal/modules/search:RebuildEdges":            "the nightly rebuild replaces the graph projection wholesale from the base tables; contact ids move between tables inside the statement and none is returned",
+	"internal/modules/search:ReleaseGraphHistoryTx":   "an interaction release selector under auth.RequireSystem; the contact keys move between import runs inside maintenance and none enters a response",
+	"internal/modules/search:affectedContactPairs":    "resolves which contact edges an activity change can affect, for the projection refold; the pairs are refolded inside the consumer and never served",
+	"internal/modules/search:affectedPairs":           "resolves which seat-contact edges an activity change can affect, for the projection refold; the pairs are refolded inside the consumer and never served",
+	"internal/modules/search:foldPairsSQL":            "the upsert that refolds named pairs of the graph projection; contact ids move between tables inside the statement and none is returned",
+	"internal/modules/search:lockInteractionPairs":    "the interaction lock selector of the projection refold; the contact keys are locked inside maintenance and none enters a response",
+	"internal/modules/search:pendingInteractionPairs": "the interaction retry selector behind DrainPendingGraphTx's auth.RequireSystem; the contact keys are refolded inside maintenance and none enters a response",
+	"internal/modules/search:queueInteractionPairs":   "the interaction queue selector of the projection refold; the contact keys are queued inside maintenance and none enters a response",
+	"internal/modules/search:rebuildContactEdges":     "the contact half of the nightly projection rebuild; contact ids move between tables inside the statement and none is returned",
+})
