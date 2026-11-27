@@ -167,6 +167,11 @@ type callRuntime struct {
 	// deliversNotices lets Notices().Send run with nobody behind it. Only a
 	// bus delivery sets it; see deliveryRuntimeFor.
 	deliversNotices bool
+	// actsAsSeat marks a delivery that runs as the unit's service member. Its
+	// callCtx carries that member's own principal, so Caller names it and a
+	// core verb is checked against it. Ingress, notices and models still read
+	// unattended, which keeps their rules for a run with no human caller.
+	actsAsSeat bool
 
 	// mu orders live: it is read and written under the same lock, so release
 	// and a handler-spawned goroutine cannot race the FLAG. It does not order
@@ -330,7 +335,7 @@ func (r *callRuntime) Secrets() extension.Secrets {
 // holds.
 func (r *callRuntime) Caller() extension.Caller {
 	actor, ok := principal.Actor(r.callCtx)
-	if !ok || r.unattended {
+	if !ok || (r.unattended && !r.actsAsSeat) {
 		// No principal is the unauthenticated or unbound path, and the zero
 		// Caller is CallerSystem — the least authority, so a wiring gap reads
 		// as "nobody" rather than as a human whose id happens to be empty.
