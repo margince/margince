@@ -53504,11 +53504,25 @@ export interface components {
                 [key: string]: "row_currency" | "base_currency";
             };
             /**
+             * @description The fields a question may narrow by and cannot group by or aggregate, such as a count of
+             *     days since the last activity. Fields that can also be grouped or measured are not repeated here.
+             */
+            filters?: components["schemas"]["AnalyticsFilterField"][];
+            /**
              * @description The installation's own fields among `group_by`, with the label and choices an
              *     administrator gave them. A field an administrator opted into reporting shows here, and
              *     only such a field: its label and choices are published to every reader of the population.
              */
             custom_fields?: components["schemas"]["AnalyticsCustomField"][];
+        };
+        AnalyticsFilterField: {
+            /** @description The field as a filter names it. */
+            name: string;
+            /**
+             * @description What a filter value is: send a number unquoted, true or false for a boolean, and text for the rest.
+             * @enum {string}
+             */
+            shape: "text" | "number" | "boolean" | "id";
         };
         AnalyticsCustomField: {
             /** @description The field as `group_by` and a filter name it. */

@@ -48,7 +48,7 @@
       "persona": "team manager",
       "question": "Which open deals are stuck and have no agreed next step?",
       "tool": "run_report",
-      "expects": "The shared stalled rule over the report path. `stalled` is a report FILTER and the analytics schema publishes dimensions and measures only, so an agent asking this through run_analytics_query is told the field does not exist."
+      "expects": "The shared stalled rule over the report path. `stalled` is a filter on the deal reports, so the typed query reaches it too. The proof drives run_report."
     },
     {
       "id": "M08",

@@ -3,7 +3,7 @@
 # The prompts this build sends
 
 Regenerate with
-`cd backend && go test ./internal/compose/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts`.
+`cd backend && go test ./internal/compose/aitasks/ -run TestTheAIPromptsPageIsCurrent -update-ai-prompts`.
 
 Every instruction below was read off a real request, by driving that site's
 own certification case over its own committed fixture, so it is the text

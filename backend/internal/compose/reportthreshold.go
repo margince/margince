@@ -36,12 +36,13 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 )
 
-// reportThreshold is one numeric filter: the predicate it renders over the
-// bind position holding the caller's number, and the number used when the
-// caller sends none.
+// reportThreshold is one numeric filter: the predicate over the bind position
+// holding the caller's number, and the number used when none is sent. An
+// optional one has no default. It applies only when sent.
 type reportThreshold struct {
 	clause       func(pos int) string
 	defaultValue int
+	optional     bool
 }
 
 // withThresholdDefaults fills in every threshold the caller left out, so the
@@ -56,7 +57,7 @@ func withThresholdDefaults(spec reportSpec, filters map[string]any) map[string]a
 	out := make(map[string]any, len(filters)+len(spec.thresholds))
 	maps.Copy(out, filters)
 	for key, threshold := range spec.thresholds {
-		if _, ok := out[key]; !ok {
+		if _, ok := out[key]; !ok && !threshold.optional {
 			out[key] = threshold.defaultValue
 		}
 	}

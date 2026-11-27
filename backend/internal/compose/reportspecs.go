@@ -38,6 +38,10 @@ func creditedSeatIsFilter() string {
 // filters. listPredicates matches each the way the list does.
 func withQuietFilters(spec reportSpec) reportSpec {
 	spec.filters, spec.scopeVia, spec.grants = quietfilters.Extend(spec.filters, spec.scopeVia, spec.grants)
+	spec.thresholds = map[string]reportThreshold{
+		quietfilters.DaysAtLeast:        {clause: quietfilters.DaysAtLeastClause, optional: true},
+		quietfilters.CompanyDaysAtLeast: {clause: quietfilters.CompanyDaysAtLeastClause, optional: true},
+	}
 	return spec
 }
 
@@ -153,9 +157,8 @@ var prebuiltReports = map[string]reportSpec{
 		table:  tableDeal,
 		joins: []string{
 			joinStageForWinProbability,
-			// The most recent entry into the CURRENT stage. A deal that moved
-			// out and back counts from its return, because that is when the
-			// clock a reader cares about started again.
+			// The latest entry into the CURRENT stage: a deal that moved out
+			// and back counts from its return.
 			currentStageEntryJoin,
 		},
 		baseWhere: whereArchivedNull + " AND t.status = 'open'",

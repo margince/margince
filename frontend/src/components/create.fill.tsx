@@ -1,7 +1,7 @@
 // SPDX-License-Identifier: BUSL-1.1
 // SPDX-FileCopyrightText: 2026 Gradion
 
-import { useRef, useState } from "react";
+import { useEffect, useRef, useState } from "react";
 import { Button } from "../design-system/atoms";
 import { ErrorLine } from "../design-system/errorline";
 import { useT } from "../i18n";
@@ -28,7 +28,9 @@ export function FillButton({
   const [busy, setBusy] = useState(false);
   const [failed, setFailed] = useState(false);
   const latest = useRef({ values, setValue });
-  latest.current = { values, setValue };
+  useEffect(() => {
+    latest.current = { values, setValue };
+  });
   const text = fill.source(values);
   const press = async () => {
     setBusy(true);

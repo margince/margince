@@ -73289,6 +73289,12 @@ components:
             `row_currency` in each record's own currency, which a sum across currencies
             refuses, or `base_currency` converted to the installation's base currency. A
             measure not named here is a plain number, whatever its name.
+        filters:
+          type: array
+          items: { $ref: '#/components/schemas/AnalyticsFilterField' }
+          description: |
+            The fields a question may narrow by and cannot group by or aggregate, such as a count of
+            days since the last activity. Fields that can also be grouped or measured are not repeated here.
         custom_fields:
           type: array
           items: { $ref: '#/components/schemas/AnalyticsCustomField' }
@@ -73296,6 +73302,17 @@ components:
             The installation's own fields among `group_by`, with the label and choices an
             administrator gave them. A field an administrator opted into reporting shows here, and
             only such a field: its label and choices are published to every reader of the population.
+      additionalProperties: false
+    AnalyticsFilterField:
+      type: object
+      required: [name, shape]
+      properties:
+        name: { type: string, description: "The field as a filter names it." }
+        shape:
+          type: string
+          enum: [text, number, boolean, id]
+          x-extensible-enum: true
+          description: "What a filter value is: send a number unquoted, true or false for a boolean, and text for the rest."
       additionalProperties: false
     AnalyticsCustomField:
       type: object

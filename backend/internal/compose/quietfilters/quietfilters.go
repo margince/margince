@@ -11,30 +11,62 @@
 package quietfilters
 
 import (
+	"fmt"
 	"maps"
 
 	"github.com/margince/margince/backend/internal/compose/analyticsquery"
+	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
+	"github.com/margince/margince/backend/internal/shared/kernel/occurredday"
 )
 
-// The three expressions render against a deal report aliased t.
+// The three expressions render against a deal report aliased t, judged at now().
 var (
-	// DaysSinceActivitySQL is whole days since the deal's last activity. A deal
-	// with no activity yet has been quiet for ever. It matches every "at least
-	// N days" question and no "fewer than N days" one.
-	DaysSinceActivitySQL = daysSince("t.last_activity_at")
+	// DaysSinceActivitySQL is calendar days since the deal's last activity, the
+	// count the deal badge and the stalled rule make. A deal with no activity
+	// yet has been quiet for ever. It matches every "at least N days" question
+	// and no "fewer than N days" one.
+	DaysSinceActivitySQL = DealDaysSinceActivityAt("now()")
 	// MeetingAheadSQL is the deal list's own answer, so a report and a screen
 	// agree on which deals have a meeting still to come.
 	MeetingAheadSQL = deals.MeetingAheadSQL("t")
 	// CompanyDaysSinceActivitySQL is the same count for the deal's company. A
 	// deal with no company reads NULL and matches no comparison.
-	CompanyDaysSinceActivitySQL = "(SELECT " + daysSince("c.last_activity_at") + " FROM company c WHERE c.id = t.company_id)"
+	CompanyDaysSinceActivitySQL = CompanyDaysSinceActivityAt("now()")
 )
+
+// DealDaysSinceActivityAt is DaysSinceActivitySQL judged at the instant asOf, an SQL expression.
+func DealDaysSinceActivityAt(asOf string) string {
+	return daysSince("t.last_activity_at", deals.LastActivityDaySQL("t"), asOf)
+}
+
+// CompanyDaysSinceActivityAt is CompanyDaysSinceActivitySQL judged at asOf.
+func CompanyDaysSinceActivityAt(asOf string) string {
+	return "(SELECT " + daysSince("c.last_activity_at", contacts.LastActivityDaySQL("c"), asOf) +
+		" FROM company c WHERE c.id = t.company_id)"
+}
 
 const companyID = "t.company_id"
 
-func daysSince(column string) string {
-	return "coalesce(floor(extract(epoch FROM (now() - " + column + ")) / 86400)::float8, 'Infinity'::float8)"
+// The two thresholds run_report takes in its `filters` object. The report engine
+// renders a filter as an equality, so "at least N days" is a threshold there.
+// The typed query compares the filters with any operator. A threshold applies
+// only when the caller sends it.
+const (
+	DaysAtLeast        = "days_since_activity_at_least"
+	CompanyDaysAtLeast = "company_days_since_activity_at_least"
+)
+
+// DaysAtLeastClause is the deal's quiet days compared with the number bound at pos.
+func DaysAtLeastClause(pos int) string { return fmt.Sprintf("(%s >= $%d)", DaysSinceActivitySQL, pos) }
+
+// CompanyDaysAtLeastClause is the company's quiet days compared with the number bound at pos.
+func CompanyDaysAtLeastClause(pos int) string {
+	return fmt.Sprintf("(%s >= $%d)", CompanyDaysSinceActivitySQL, pos)
+}
+
+func daysSince(clock, isDay, asOf string) string {
+	return "coalesce(" + occurredday.DaysSinceSQL(clock, isDay, asOf) + "::float8, 'Infinity'::float8)"
 }
 
 // Extend adds the three filters to a deal report's vocabulary. The maps are
@@ -49,10 +81,13 @@ func Extend(filters, scopeVia, grants map[string]string) (outFilters, outScopeVi
 		analyticsquery.FilterMeetingAhead:             MeetingAheadSQL,
 		analyticsquery.FilterCompanyDaysSinceActivity: CompanyDaysSinceActivitySQL,
 	})
-	outScopeVia = with(scopeVia, map[string]string{analyticsquery.FilterCompanyDaysSinceActivity: companyID})
+	outScopeVia = with(scopeVia, map[string]string{
+		analyticsquery.FilterCompanyDaysSinceActivity: companyID, CompanyDaysAtLeast: companyID,
+	})
 	outGrants = with(grants, map[string]string{
 		analyticsquery.FilterMeetingAhead:             "activity",
 		analyticsquery.FilterCompanyDaysSinceActivity: "company",
+		CompanyDaysAtLeast:                            "company",
 	})
 	return outFilters, outScopeVia, outGrants
 }

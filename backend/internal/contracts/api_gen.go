@@ -2230,6 +2230,30 @@ func (e AnalyticsFilterOp) Valid() bool {
 	}
 }
 
+// Defines values for AnalyticsFilterFieldShape.
+const (
+	AnalyticsFilterFieldShapeBoolean AnalyticsFilterFieldShape = "boolean"
+	AnalyticsFilterFieldShapeId      AnalyticsFilterFieldShape = "id"
+	AnalyticsFilterFieldShapeNumber  AnalyticsFilterFieldShape = "number"
+	AnalyticsFilterFieldShapeText    AnalyticsFilterFieldShape = "text"
+)
+
+// Valid indicates whether the value is a known member of the AnalyticsFilterFieldShape enum.
+func (e AnalyticsFilterFieldShape) Valid() bool {
+	switch e {
+	case AnalyticsFilterFieldShapeBoolean:
+		return true
+	case AnalyticsFilterFieldShapeId:
+		return true
+	case AnalyticsFilterFieldShapeNumber:
+		return true
+	case AnalyticsFilterFieldShapeText:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for AnalyticsMeasureFn.
 const (
 	AnalyticsMeasureFnAnalyticsAvg           AnalyticsMeasureFn = "avg"
@@ -37195,6 +37219,10 @@ type AnalyticsEntity struct {
 	// only such a field: its label and choices are published to every reader of the population.
 	CustomFields *[]AnalyticsCustomField `json:"custom_fields,omitempty"`
 
+	// Filters The fields a question may narrow by and cannot group by or aggregate, such as a count of
+	// days since the last activity. Fields that can also be grouped or measured are not repeated here.
+	Filters *[]AnalyticsFilterField `json:"filters,omitempty"`
+
 	// GroupBy The fields this population can be grouped by.
 	GroupBy []string `json:"group_by"`
 
@@ -37255,6 +37283,18 @@ type AnalyticsFilter struct {
 
 // AnalyticsFilterOp defines model for AnalyticsFilter.Op.
 type AnalyticsFilterOp string
+
+// AnalyticsFilterField defines model for AnalyticsFilterField.
+type AnalyticsFilterField struct {
+	// Name The field as a filter names it.
+	Name string `json:"name"`
+
+	// Shape What a filter value is: send a number unquoted, true or false for a boolean, and text for the rest.
+	Shape AnalyticsFilterFieldShape `json:"shape"`
+}
+
+// AnalyticsFilterFieldShape What a filter value is: send a number unquoted, true or false for a boolean, and text for the rest.
+type AnalyticsFilterFieldShape string
 
 // AnalyticsIdLabels Display names for the ids in the grouped columns that name a company or a project, keyed by column and then id, read under this caller's own grants. An id this caller may not name is absent, and so is a column with nothing named; the id still stands on the row. A withheld row carries no id, so nothing here names it.
 type AnalyticsIdLabels map[string]map[string]string
