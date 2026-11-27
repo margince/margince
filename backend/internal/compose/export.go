@@ -150,6 +150,10 @@ func (w *ExportWriter) WriteBundle(ctx context.Context, dst io.Writer) (BundleSu
 	if !ok {
 		return BundleSummary{}, errors.New("compose: no actor bound to export context")
 	}
+	wsID, ok := principal.WorkspaceID(ctx)
+	if !ok {
+		return BundleSummary{}, database.ErrNoWorkspace
+	}
 	summary := BundleSummary{RowCounts: make(map[string]int, len(exportMembers))}
 
 	var collected []memberData
@@ -181,7 +185,6 @@ func (w *ExportWriter) WriteBundle(ctx context.Context, dst io.Writer) (BundleSu
 		return BundleSummary{}, err
 	}
 
-	wsID, _ := principal.WorkspaceID(ctx)
 	if err := writeZip(dst, actor, wsID, collected, summary); err != nil {
 		return BundleSummary{}, err
 	}

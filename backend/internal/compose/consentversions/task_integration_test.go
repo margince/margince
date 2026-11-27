@@ -105,7 +105,7 @@ func TestConsentVersionTaskUsesOnlyTheMatchingLatestProof(t *testing.T) {
 		}
 	}
 	var replay datatask.BatchOut
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		replay, err = task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 		return err
@@ -164,7 +164,7 @@ func TestConsentVersionTaskBoundsItsEstimateAndPagesPastUnknownProof(t *testing.
 	}
 	seedConsentVersion(t, e, consentVersionSeed{Lead: true})
 	step := consentversions.DataTask().Steps[0]
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		count, more, err := step.Estimate(ctx, tx, 2)
 		if err != nil {
 			return err

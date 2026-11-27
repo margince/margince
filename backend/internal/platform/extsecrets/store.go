@@ -375,8 +375,7 @@ func (s *store) prepare(ctx context.Context, key string) (ids.WorkspaceID, error
 	}
 	ws, ok := principal.WorkspaceID(ctx)
 	if !ok {
-		// The same refusal WithTx would give, raised before a
-		// connection is taken from the pool.
+		// Refused before a connection is taken from the pool.
 		return ids.WorkspaceID{}, database.ErrNoWorkspace
 	}
 	return ids.From[ids.WorkspaceKind](ws), nil

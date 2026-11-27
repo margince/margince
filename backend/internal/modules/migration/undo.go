@@ -178,6 +178,7 @@ func (s *RunStore) LockRunWrites(ctx context.Context, id RunID) (func(), error) 
 }
 
 func (s *RunStore) acquireRunWrites(ctx context.Context, id RunID) (func(), error) {
+	// pool-exempt: this connection holds a session-level advisory lock for the run and writes no domain row.
 	conn, err := s.db.Pool().Acquire(ctx)
 	if err != nil {
 		return nil, fmt.Errorf("import run %s: acquiring the write lock connection: %w", id, err)

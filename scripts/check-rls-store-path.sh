@@ -23,18 +23,38 @@ cd "$(dirname "$0")/.."
 
 dir="backend/internal/modules"
 
-# One awk pass over every non-test module .go file; prev resets per file.
+# A scan that reads far fewer files than the tree holds would pass with no
+# subject, so the floor is fixed here and raised when the tree grows.
+min_files=1000
+
+# One awk pass over every non-test module .go file; prev resets per file. It
+# matches both spellings the tree uses: the field `.pool.Exec(` and the accessor
+# `.Pool().Exec(`. It also counts every match, waived or not.
 files="$(find "$dir" -name '*.go' ! -name '*_test.go' | sort)"
-violations="$(echo "$files" | xargs awk '
+file_count="$(echo "$files" | wc -l | tr -d ' ')"
+if (( file_count < min_files )); then
+  echo "FAIL: rls-store-path scanned $file_count module files, fewer than the floor of $min_files; the scan lost the module tree"
+  exit 1
+fi
+
+scan="$(echo "$files" | xargs awk '
   FNR == 1 { prev = "" }
-  $0 ~ /\.pool\.(ExecContext|QueryContext|QueryRowContext|Exec|Query|QueryRow)\(/ {
+  $0 ~ /(\.pool|\.Pool\(\))\.(ExecContext|QueryContext|QueryRowContext|Exec|Query|QueryRow|Begin|BeginTx|Acquire|SendBatch|CopyFrom)\(/ {
+    matched++
     if (prev !~ /\/\/[[:space:]]*pool-exempt:/) {
       line = $0; sub(/^[[:space:]]+/, "", line)
       printf "%s:%d: %s\n", FILENAME, FNR, line
     }
   }
   { prev = $0 }
+  END { printf "MATCHED %d\n", matched }
 ')"
+matched="$(echo "$scan" | sed -n 's/^MATCHED //p')"
+violations="$(echo "$scan" | grep -v '^MATCHED ' || true)"
+if (( matched < 1 )); then
+  echo "FAIL: rls-store-path matched no pool statement at all; the pattern no longer sees the spellings the tree uses"
+  exit 1
+fi
 
 if [[ -n "$violations" ]]; then
   echo "FAIL: module statements addressing the pool directly, outside the transaction seam:"

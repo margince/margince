@@ -61,7 +61,7 @@ var connectionAcquirers = map[string]string{
 	"BeginTx":       "opens a transaction on a pool, which takes a connection to hold it",
 	"Tx":            "opens a transaction on the bound handle (database.DB.Tx)",
 	"tx":            "opens a transaction through the store's own helper over database.DB.Tx",
-	"WithTx":        "opens a workspace-bound transaction",
+	"WithTx":        "opens a transaction",
 	"WithInfraTx":   "opens an unbound infrastructure transaction",
 	"activeColumns": "reads the custom-field catalog, which opens a transaction of its own",
 	"ActiveColumns": "reads the custom-field catalog through the fieldcatalog seam, which opens a transaction of its own",
