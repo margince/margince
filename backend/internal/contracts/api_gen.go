@@ -46697,8 +46697,7 @@ type ContactEmail struct {
 // ContactEmailEmailType defines model for ContactEmail.EmailType.
 type ContactEmailEmailType string
 
-// ContactEmailInput One address on a contact, as a writer supplies it. One schema for create and update,
-// so the two cannot describe an address differently.
+// ContactEmailInput One address supplied when creating a contact.
 type ContactEmailInput struct {
 	// Email An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
 	Email     openapi_types.Email         `json:"email"`
@@ -46711,6 +46710,10 @@ type ContactEmailInput struct {
 
 // ContactEmailInputEmailType defines model for ContactEmailInput.EmailType.
 type ContactEmailInputEmailType string
+
+// ContactEmailReplacementInput Mirrors ContactEmailInput except for the state-dependent address ceiling.
+// A held legacy address may remain unchanged; a new address must fit the write limit.
+type ContactEmailReplacementInput = ContactEmailInput
 
 // ContactEmployer The account a contact works at today, by their current primary employment edge — the one `uq_rel_current_primary_employer` keeps unique per contact, so a contact has at most one.
 type ContactEmployer struct {
@@ -72416,9 +72419,11 @@ type UpdateContactRequest struct {
 	//
 	// A list past 25 addresses is 422 `too_many`, unless the contact already
 	// holds at least as many: a longer stored list may be sent back, and not grown.
-	Emails    *[]ContactEmailInput `json:"emails,omitempty"`
-	FirstName *string              `json:"first_name,omitempty" singleline:"true"`
-	FullName  *string              `json:"full_name,omitempty" singleline:"true"`
+	// Held legacy addresses may remain unchanged. New addresses must fit the
+	// normalized 254-byte ceiling and name a dotted domain.
+	Emails    *[]ContactEmailReplacementInput `json:"emails,omitempty"`
+	FirstName *string                         `json:"first_name,omitempty" singleline:"true"`
+	FullName  *string                         `json:"full_name,omitempty" singleline:"true"`
 
 	// GreetingRegister Sets how a message to the contact opens (`formal` or `familiar`), or clears it (null) so drafts read the register from the correspondence again.
 	GreetingRegister *UpdateContactRequestGreetingRegister `json:"greeting_register,omitempty"`

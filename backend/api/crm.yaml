@@ -51722,13 +51722,28 @@ components:
     ContactEmailInput:
       type: object
       description: |
-        One address on a contact, as a writer supplies it. One schema for create and update,
-        so the two cannot describe an address differently.
+        One address supplied when creating a contact.
       required: [email]
       properties:
         email:
           type: string
           maxLength: 254
+          format: email
+          description: 'An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.'
+        email_type: { type: string, enum: [work, personal, other], default: work }
+        is_primary: { type: boolean, default: false, description: 'The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.' }
+        position: { type: integer, default: 0 }
+
+    ContactEmailReplacementInput:
+      type: object
+      x-go-type: ContactEmailInput
+      description: |
+        Mirrors ContactEmailInput except for the state-dependent address ceiling.
+        A held legacy address may remain unchanged; a new address must fit the write limit.
+      required: [email]
+      properties:
+        email:
+          type: string
           format: email
           description: 'An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.'
         email_type: { type: string, enum: [work, personal, other], default: work }
@@ -51804,7 +51819,7 @@ components:
         address: { $ref: '#/components/schemas/Address' }
         emails:
           type: array
-          items: { $ref: '#/components/schemas/ContactEmailInput' }
+          items: { $ref: '#/components/schemas/ContactEmailReplacementInput' }
           description: |
             REPLACES the contact's addresses with exactly this list, which is what a
             correction needs: a bounced address is fixed by sending the set that should
@@ -51816,6 +51831,8 @@ components:
 
             A list past 25 addresses is 422 `too_many`, unless the contact already
             holds at least as many: a longer stored list may be sent back, and not grown.
+            Held legacy addresses may remain unchanged. New addresses must fit the
+            normalized 254-byte ceiling and name a dotted domain.
         phones:
           type: array
           items: { $ref: '#/components/schemas/ContactPhoneInput' }

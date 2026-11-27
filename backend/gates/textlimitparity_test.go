@@ -18,6 +18,7 @@ import (
 	"go/ast"
 	"go/token"
 	"go/types"
+	"reflect"
 	"slices"
 	"strconv"
 	"strings"
@@ -186,6 +187,7 @@ func TestEmailReferenceSchemasAdmitStoredAddressesPastTheWriteCap(t *testing.T) 
 	doc := textLimitsContract(t)
 	for _, path := range [][]string{
 		schemaProperty("UpdateMemberRequest", "email"),
+		schemaProperty("ContactEmailReplacementInput", "email"),
 		schemaProperty("FormerMemberRequest", "email"),
 		schemaProperty("DealRoomLinkRequest", "email"),
 		corpusBody("post", "/auth/forgot-password", "email"),
@@ -193,6 +195,23 @@ func TestEmailReferenceSchemasAdmitStoredAddressesPastTheWriteCap(t *testing.T) 
 		if _, bounded := textLimitSchema(t, doc, path)["maxLength"]; bounded {
 			t.Errorf("%v has maxLength: existing addresses must reach their lookup or unchanged-value check", path)
 		}
+	}
+}
+
+func TestContactEmailReplacementMirrorsTheCreateShape(t *testing.T) {
+	t.Parallel()
+	doc := textLimitsContract(t)
+	create := textLimitSchema(t, doc, schemaPath("components", "schemas", "ContactEmailInput"))
+	replace := textLimitSchema(t, doc, schemaPath("components", "schemas", "ContactEmailReplacementInput"))
+	if replace["x-go-type"] != "ContactEmailInput" {
+		t.Fatal("contact replacements must use the create shape's generated Go mapping")
+	}
+	delete(replace, "x-go-type")
+	delete(create, "description")
+	delete(replace, "description")
+	delete(textLimitSchema(t, doc, schemaProperty("ContactEmailInput", "email")), "maxLength")
+	if !reflect.DeepEqual(create, replace) {
+		t.Error("contact email creation and replacement differ beyond the address ceiling")
 	}
 }
 

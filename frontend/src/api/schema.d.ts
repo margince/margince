@@ -36468,11 +36468,31 @@ export interface components {
              */
             action: "imported" | "replaced" | "kept" | "not_in_card";
         };
-        /**
-         * @description One address on a contact, as a writer supplies it. One schema for create and update,
-         *     so the two cannot describe an address differently.
-         */
+        /** @description One address supplied when creating a contact. */
         ContactEmailInput: {
+            /**
+             * Format: email
+             * @description An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
+             */
+            email: string;
+            /**
+             * @default work
+             * @enum {string}
+             */
+            email_type: "work" | "personal" | "other";
+            /**
+             * @description The one primary address of the contact, whatever its type. More than one row marked primary is refused with 409 `multiple_primary`. A new contact whose rows name none gets its first row as primary.
+             * @default false
+             */
+            is_primary: boolean;
+            /** @default 0 */
+            position: number;
+        };
+        /**
+         * @description Mirrors ContactEmailInput except for the state-dependent address ceiling.
+         *     A held legacy address may remain unchanged; a new address must fit the write limit.
+         */
+        ContactEmailReplacementInput: {
             /**
              * Format: email
              * @description An address whose local part names a sending system (noreply@, notifications@, receipts@ and the like) is refused with 422 `email_names_no_one`: nobody answers there, so it names no contact.
@@ -36571,8 +36591,10 @@ export interface components {
              *
              *     A list past 25 addresses is 422 `too_many`, unless the contact already
              *     holds at least as many: a longer stored list may be sent back, and not grown.
+             *     Held legacy addresses may remain unchanged. New addresses must fit the
+             *     normalized 254-byte ceiling and name a dotted domain.
              */
-            emails?: components["schemas"]["ContactEmailInput"][];
+            emails?: components["schemas"]["ContactEmailReplacementInput"][];
             /**
              * @description REPLACES the contact's numbers with exactly this list, the same way `emails`
              *     replaces addresses. A number that has been reassigned is corrected by sending
