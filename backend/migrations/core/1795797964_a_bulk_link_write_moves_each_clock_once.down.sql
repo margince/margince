@@ -172,3 +172,23 @@ CREATE TRIGGER activity_link_last_activity
 	AFTER INSERT OR DELETE OR UPDATE ON activity_link
 	FOR EACH ROW
 	EXECUTE FUNCTION trg_activity_link_last_activity();
+
+DO $$
+DECLARE
+  clock_function regprocedure;
+  definition text;
+BEGIN
+  FOREACH clock_function IN ARRAY ARRAY[
+    'public.move_last_activity(regclass,uuid)'::regprocedure,
+    'public.move_project_last_activity(uuid)'::regprocedure,
+    'public.refresh_contact_strength_dates(uuid[])'::regprocedure,
+    'public.touch_contact_strength_dates(uuid[],uuid[],timestamptz[])'::regprocedure
+  ] LOOP
+    definition := pg_get_functiondef(clock_function);
+    IF strpos(definition, ' FOR NO KEY UPDATE') = 0 OR strpos(definition, ' FOR UPDATE') <> 0 THEN
+      RAISE EXCEPTION 'unexpected row lock in %, check the function before rolling back', clock_function;
+    END IF;
+    EXECUTE replace(definition, ' FOR NO KEY UPDATE', ' FOR UPDATE');
+  END LOOP;
+END;
+$$;

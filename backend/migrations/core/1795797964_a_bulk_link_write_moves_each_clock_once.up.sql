@@ -3,6 +3,28 @@
 
 SET LOCAL lock_timeout = '2s';
 
+-- Date writes change no parent key, so foreign-key key-share locks must pass.
+-- Keep each installed calculation body while changing its row-lock mode.
+DO $$
+DECLARE
+  clock_function regprocedure;
+  definition text;
+BEGIN
+  FOREACH clock_function IN ARRAY ARRAY[
+    'public.move_last_activity(regclass,uuid)'::regprocedure,
+    'public.move_project_last_activity(uuid)'::regprocedure,
+    'public.refresh_contact_strength_dates(uuid[])'::regprocedure,
+    'public.touch_contact_strength_dates(uuid[],uuid[],timestamptz[])'::regprocedure
+  ] LOOP
+    definition := pg_get_functiondef(clock_function);
+    IF strpos(definition, ' FOR UPDATE') = 0 OR strpos(definition, ' FOR NO KEY UPDATE') <> 0 THEN
+      RAISE EXCEPTION 'unexpected row lock in %, check the function before migrating', clock_function;
+    END IF;
+    EXECUTE replace(definition, ' FOR UPDATE', ' FOR NO KEY UPDATE');
+  END LOOP;
+END;
+$$;
+
 -- The later strength trigger locks contacts even when their activity cannot
 -- advance a clock, so those contacts must be locked before the project clock.
 CREATE FUNCTION advance_last_activities(tbl regclass, rids uuid[], ats timestamptz[]) RETURNS void
@@ -19,22 +41,22 @@ BEGIN
   PERFORM set_config('margince.last_activity_move', 'on', true);
   CASE tbl
     WHEN 'contact'::regclass THEN
-      PERFORM 1 FROM contact WHERE id = ANY (moved_ids) ORDER BY id FOR UPDATE;
+      PERFORM 1 FROM contact WHERE id = ANY (moved_ids) ORDER BY id FOR NO KEY UPDATE;
       UPDATE contact SET last_activity_at = m.at FROM unnest(moved_ids, moved_ats) m(rid, at)
        WHERE contact.id = m.rid AND m.at IS NOT NULL
          AND (contact.last_activity_at IS NULL OR contact.last_activity_at < m.at);
     WHEN 'deal'::regclass THEN
-      PERFORM 1 FROM deal WHERE id = ANY (moved_ids) ORDER BY id FOR UPDATE;
+      PERFORM 1 FROM deal WHERE id = ANY (moved_ids) ORDER BY id FOR NO KEY UPDATE;
       UPDATE deal SET last_activity_at = m.at FROM unnest(moved_ids, moved_ats) m(rid, at)
        WHERE deal.id = m.rid AND m.at IS NOT NULL
          AND (deal.last_activity_at IS NULL OR deal.last_activity_at < m.at);
     WHEN 'company'::regclass THEN
-      PERFORM 1 FROM company WHERE id = ANY (moved_ids) ORDER BY id FOR UPDATE;
+      PERFORM 1 FROM company WHERE id = ANY (moved_ids) ORDER BY id FOR NO KEY UPDATE;
       UPDATE company SET last_activity_at = m.at FROM unnest(moved_ids, moved_ats) m(rid, at)
        WHERE company.id = m.rid AND m.at IS NOT NULL
          AND (company.last_activity_at IS NULL OR company.last_activity_at < m.at);
     WHEN 'project'::regclass THEN
-      PERFORM 1 FROM project WHERE id = ANY (moved_ids) ORDER BY id FOR UPDATE;
+      PERFORM 1 FROM project WHERE id = ANY (moved_ids) ORDER BY id FOR NO KEY UPDATE;
       UPDATE project SET last_activity_at = m.at FROM unnest(moved_ids, moved_ats) m(rid, at)
        WHERE project.id = m.rid AND m.at IS NOT NULL
          AND (project.last_activity_at IS NULL OR project.last_activity_at < m.at);
@@ -68,7 +90,7 @@ BEGIN
     IF reached.move_clock THEN
       PERFORM move_last_activity(reached.kind::regclass, reached.id);
     ELSE
-      PERFORM 1 FROM contact WHERE id = reached.id FOR UPDATE;
+      PERFORM 1 FROM contact WHERE id = reached.id FOR NO KEY UPDATE;
     END IF;
   END LOOP;
 END;
