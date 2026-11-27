@@ -4986,6 +4986,8 @@ export const en = {
   "approval.linkedin.useAsTitle": "Use as job title",
   "approval.linkedin.useAsEmployer": "Use {company} as employer",
   "approval.linkedin.employerNow": "Works at {company} now",
+  "approval.vcard.mergeInto":
+    "Merge into {contact} instead of creating a new contact",
   "approval.responsibility.requestedFrom": "Decision requested from",
   "approval.commitment.promiser": "Promised by",
   "approval.commitment.effect": "On approval",
@@ -7818,6 +7820,11 @@ export const en = {
   "vcardImport.field.kept": "Record value kept",
   "vcardImport.field.notInCard": "Not in the card",
   "vcardImport.next": "Next vCard",
+  "vcardImport.staged_one":
+    "{count} card waits for your answer in the Worklist. It expires after 30 days.",
+  "vcardImport.staged_other":
+    "{count} cards wait for your answer in the Worklist. They expire after 30 days.",
+  "vcardImport.staged.open": "Open the Worklist",
   "vcardImport.forCompany": "Contacts created from these cards work for",
   "vcardImport.companyPhotoTitle": "Photos are not filed under a company",
   "vcardImport.companyPhoto":

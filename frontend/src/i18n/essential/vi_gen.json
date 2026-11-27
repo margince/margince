@@ -2152,6 +2152,7 @@
   "approval.linkedin.useAsTitle": "Dùng làm chức danh",
   "approval.linkedin.useAsEmployer": "Dùng {company} làm nơi làm việc",
   "approval.linkedin.employerNow": "Hiện làm việc tại {company}",
+  "approval.vcard.mergeInto": "Gộp vào {contact} thay vì tạo liên hệ mới",
   "approval.responsibility.requestedFrom": "Người được yêu cầu quyết định",
   "approval.commitment.promiser": "Người cam kết",
   "approval.commitment.effect": "Khi phê duyệt",

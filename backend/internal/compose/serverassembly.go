@@ -71,7 +71,7 @@ func newContactsHandlers(pool *pgxpool.Pool) contactsHandlers {
 		WithFloorCarry(EntityFloorCarry(pool)).
 		WithFieldCatalog(customfields.NewService(pool, nil)).
 		WithMatchStager(linkedInMatchStager(pool)).
-		WithVCardReviewStager(vcardCreateStager(pool)).
+		WithVCardReviewStager(VCardCreateStager(pool)).
 		WithSettings(StoredConfig(pool)).
 		WithLocks(loadedLocks).
 		WithSeatReadsLeads(seatReadsLeads(pool)).
