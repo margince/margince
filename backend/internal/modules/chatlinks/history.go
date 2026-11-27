@@ -24,7 +24,7 @@ func (s *Store) PullLinks(ctx context.Context, connectionID ids.UUID) ([]Link, e
 	err := s.db.Tx(ctx, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT `+linkColumns+` FROM chat_link
 			WHERE connection_id = $1 AND archived_at IS NULL AND status = $2
-			ORDER BY created_at, id`, connectionID, StatusActive)
+			AND NOT read_disabled ORDER BY created_at, id`, connectionID, StatusActive)
 		if err != nil {
 			return err
 		}
@@ -77,6 +77,15 @@ func (s *Store) FilingLink(ctx context.Context, kind string, id ids.UUID) (Link,
 	return out, err
 }
 
+// FilingContextTx refreshes filing authority inside the recap transaction.
+func (s *Store) FilingContextTx(ctx context.Context, tx pgx.Tx) (context.Context, error) {
+	actor, ok := principal.Actor(ctx)
+	if ok && actor.Type == principal.PrincipalHuman && s.memberAuthority != nil {
+		return s.readMemberTx(ctx, tx)
+	}
+	return ctx, nil
+}
+
 // HoldLiveLinkTx refuses with ErrLinkNotFound unless the link is still live
 // and still carries the same deal and project. It holds the row until tx ends,
 // so an unlink waits for a note being filed under it instead of racing it.
@@ -85,11 +94,21 @@ func (s *Store) HoldLiveLinkTx(ctx context.Context, tx pgx.Tx, link Link) error 
 	if err := auth.Require(ctx, "activity", principal.ActionCreate); err != nil {
 		return err
 	}
+	actor, _ := principal.Actor(ctx)
+	if actor.Type == principal.PrincipalSystem {
+		var disabled bool
+		if err := tx.QueryRow(ctx, `SELECT read_disabled FROM chat_link WHERE id=$1 FOR SHARE`, link.ID).Scan(&disabled); err != nil {
+			return err
+		}
+		if disabled {
+			return ErrLinkNotFound
+		}
+	}
 	var id ids.UUID
 	err := tx.QueryRow(ctx, `SELECT id FROM chat_link
 		WHERE id = $1 AND archived_at IS NULL AND status = $2
-		  AND deal_id IS NOT DISTINCT FROM $3 AND project_id IS NOT DISTINCT FROM $4
-		FOR SHARE`, link.ID, StatusActive, link.DealID, link.ProjectID).Scan(&id)
+		  AND deal_id IS NOT DISTINCT FROM $3 AND project_id IS NOT DISTINCT FROM $4 AND company_id IS NOT DISTINCT FROM $5
+		FOR SHARE`, link.ID, StatusActive, link.DealID, link.ProjectID, link.CompanyID).Scan(&id)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return ErrLinkNotFound
 	}

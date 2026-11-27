@@ -36,6 +36,7 @@ func (t journalMeterTx) Query(ctx context.Context, sql string, args ...any) (pgx
 	}
 	return rows, nil
 }
+
 func (t journalMeterTx) QueryRow(ctx context.Context, sql string, args ...any) pgx.Row {
 	row := t.Tx.QueryRow(ctx, sql, args...)
 	if strings.Contains(sql, "source_changes") {
@@ -69,6 +70,7 @@ func (r journalMeterRow) Scan(dest ...any) error {
 	countJournalBytes(r.transferred, dest)
 	return nil
 }
+
 func countJournalBytes(total *int, dest []any) {
 	for _, value := range dest {
 		switch raw := value.(type) {

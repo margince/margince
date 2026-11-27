@@ -12,6 +12,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/agents"
 	"github.com/margince/margince/backend/internal/modules/capture"
+	"github.com/margince/margince/backend/internal/modules/chatlinks"
 	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
@@ -42,7 +43,7 @@ type memberManager struct{ service *identity.Service }
 
 func newMemberManager(db *database.DB) memberManager {
 	engine := newBulkEngine(db, nil)
-	return memberManager{identity.NewServiceFor(db).WithMemberWork(memberWork{newHandoverSeam(engine)})}
+	return memberManager{identity.NewServiceFor(db).WithMemberGrantWithdrawal(chatlinks.WithdrawMemberGrantsTx).WithMemberWork(memberWork{newHandoverSeam(engine)})}
 }
 
 func (m memberManager) Preview(ctx context.Context, source ids.UUID, target *ids.UUID, merge bool) (crmcontracts.MemberRetirementPreview, error) {

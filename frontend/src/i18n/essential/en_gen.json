@@ -1,4 +1,6 @@
 {
+  "history.field.chat_source_changed": "Conversation source changed",
+  "history.field.chat_source_deleted": "Conversation source removed",
   "history.field.kind": "Kind",
   "history.field.email_security": "Email security",
   "history.field.employee_range": "Employee count range",

@@ -13,22 +13,8 @@ import (
 	"github.com/margince/margince/backend/internal/platform/jobs"
 )
 
-// THE SCHEDULE HAS TO REACH THE RUNNER, which is a different claim from the
-// cadence being declared.
-//
-// A pass whose worker is wired and whose schedule is not runs never, and every
-// symptom of that is silence: no job row, no error, no log line. That is not
-// hypothetical — this pass was written with its schedule returned from a helper
-// that wireJobs did not call, and the dev stack simply never produced a report
-// while every sibling pass ran normally.
-//
-// It reads the SOURCE because river.PeriodicJob has only unexported fields:
-// nothing in the built slice can be asked which kind it carries, so a test over
-// the returned value can only count schedules and would pass with this one
-// missing. An earlier draft did exactly that, and the mutation below survived
-// it.
-//
-// Mutation: drop the periodicFor line from wireJobs and this fails.
+// A wired worker without its periodic placement never runs. Inspect source
+// because River does not expose a schedule’s job kind.
 func TestTheDisagreementReadingIsScheduled(t *testing.T) {
 	t.Parallel()
 
@@ -36,34 +22,30 @@ func TestTheDisagreementReadingIsScheduled(t *testing.T) {
 		t.Fatalf("periodicFor placed %d schedules for the disagreement reading, want 1", len(got))
 	}
 
-	source, err := os.ReadFile("jobs.go")
+	wiring, err := os.ReadFile("jobs.go")
+	if err != nil {
+		t.Fatal(err)
+	}
+	if !strings.Contains(string(wiring), "placedSchedules(cfg)") {
+		t.Fatal("the runner does not use its base schedules")
+	}
+	source, err := os.ReadFile("jobschedule.go")
 	if err != nil {
 		t.Fatalf("reading the wiring: %v", err)
 	}
 	placement := "periodicFor(cfg, AuthzDisagreementArgs{})"
 	if !strings.Contains(string(source), placement) {
-		t.Errorf("jobs.go does not place %s: the worker is wired and the pass runs never, "+
+		t.Errorf("jobschedule.go does not place %s: the worker is wired and the pass runs never, "+
 			"and every symptom of that is silence", placement)
 	}
-	// Under-recognition: if the placement spelling changed wholesale, the check
-	// above would report a missing schedule that is present. Every sibling
-	// placement uses this form, so finding none means the file was restructured
-	// and this test has to be rewritten rather than believed.
+	// Require the current placement spelling so a renamed schedule cannot pass vacuously.
 	if strings.Count(string(source), "periodicFor(cfg, ") < 2 {
-		t.Fatal("jobs.go holds fewer than two periodicFor placements: the wiring has been " +
+		t.Fatal("jobschedule.go holds fewer than two periodicFor placements: the wiring has been " +
 			"restructured and this test is reading for a form that no longer exists")
 	}
 }
 
-// THE WINDOW MATCHES THE CADENCE, and slightly exceeds it.
-//
-// Consecutive passes must describe consecutive periods: a window shorter than
-// the cadence leaves minutes no reading ever covers, and a longer one reports
-// one disagreement on several days running, which reads as a growing problem
-// when it is one problem counted repeatedly. The excess is what absorbs a pass
-// that starts late.
-//
-// Mutation: set disagreementWindow below the cadence and this fails.
+// The reading window must cover the cadence and its scheduling delay.
 func TestTheWindowCoversTheCadenceItRunsOn(t *testing.T) {
 	t.Parallel()
 

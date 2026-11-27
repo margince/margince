@@ -22,7 +22,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/activities"
 	"github.com/margince/margince/backend/internal/modules/ai"
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
-	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/deals"
 	"github.com/margince/margince/backend/internal/platform/database"
@@ -61,7 +61,7 @@ const restrictedMarker = "Some messages were left out because a participant rest
 // that cannot answer at all reads as errNoModel. p.restricted answers which
 // author addresses to withhold; a message from one is dropped before the model
 // sees the talk.
-func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record chatRecord, messages []dispact.Message, chosen bool) (chatsummary.Reply, error) {
+func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record chatRecord, messages []chatwire.Message, chosen bool) (chatsummary.Reply, error) {
 	if p.lane == nil {
 		return chatsummary.Reply{}, errNoModel
 	}
@@ -69,7 +69,7 @@ func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record c
 	if err != nil {
 		return chatsummary.Reply{}, err
 	}
-	in := chatsummary.Input{Record: record.kind + " " + record.name, Channel: link.ChannelName, Chosen: chosen}
+	in := chatsummary.Input{Record: record.kind + " " + record.name, Channel: link.ChannelName, Chosen: chosen, Brief: link.MessageDetail == chatlinks.MessageDetailBrief}
 	if record.stage != "" {
 		in.Facts = append(in.Facts, "Stage: "+record.stage)
 	}
@@ -84,24 +84,22 @@ func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record c
 	in.Earlier = extra.earlier
 	in.Messages = transcript(messages, extra.place)
 	about := &model.Subjects{}
+	if link.CompanyID != nil {
+		about.Companies = append(about.Companies, *link.CompanyID)
+	}
 	if link.DealID != nil {
 		about.Deals = append(about.Deals, *link.DealID)
 	}
 	if link.ProjectID != nil {
 		about.Projects = append(about.Projects, *link.ProjectID)
 	}
-	check := func(raw string) error {
-		reply, err := chatsummary.Parse(raw)
-		if err == nil {
-			err = chatsummary.Check(reply)
-		}
-		if err == nil && chosen && !reply.Relevant {
-			err = errors.New("a colleague chose this talk, so summarise it")
-		}
-		return err
-	}
+	check := func(raw string) error { return checkSummaryReply(raw, in) }
 	ctx = ai.WithSubject(ctx, recordRef(record), record.name)
-	res, err := ai.Ask(ctx, p.lane, chatsummary.Request(in, about), check)
+	request, err := chatsummary.Request(in, about)
+	if err != nil {
+		return chatsummary.Reply{}, chatlinks.ErrThreadTooLong
+	}
+	res, err := ai.Ask(ctx, p.lane, request, check)
 	if errors.Is(err, ai.ErrUnconfiguredModel) {
 		return chatsummary.Reply{}, errNoModel
 	}
@@ -112,12 +110,19 @@ func (p summariser) summarise(ctx context.Context, link chatlinks.Link, record c
 	if err := check(res.Text); err != nil {
 		return chatsummary.Reply{}, fmt.Errorf("%w: %w", ai.ErrOutputRejected, err)
 	}
+	current, _, err := clearedMessages(ctx, messages, p.restricted)
+	if err != nil {
+		return chatsummary.Reply{}, err
+	}
+	if len(current) != len(messages) {
+		return chatsummary.Reply{}, errUnmatchableAuthor
+	}
 	return chatsummary.Parse(res.Text)
 }
 
 // transcript is the talk as the model reads it. The email the chat gives an
 // author only places them and is never sent.
-func transcript(messages []dispact.Message, place placing) []chatsummary.Message {
+func transcript(messages []chatwire.Message, place placing) []chatsummary.Message {
 	out := make([]chatsummary.Message, 0, len(messages))
 	for _, m := range messages {
 		said := chatsummary.Message{ID: m.TS, Author: authorOf(m), Side: place.sideOf(m.UserEmail), At: m.PostedAt, Text: m.Text}
@@ -134,7 +139,7 @@ func transcript(messages []dispact.Message, place placing) []chatsummary.Message
 
 // authorOf is the name the chat shows. An author with no name is "someone",
 // never their email.
-func authorOf(m dispact.Message) string {
+func authorOf(m chatwire.Message) string {
 	if m.UserName != "" {
 		return m.UserName
 	}
@@ -170,7 +175,7 @@ func (p placing) sideOf(email string) chatsummary.Side {
 // authorEmail is the address a chat message carries for matching a restriction,
 // lowercased, empty when the chat named none. authorOf keeps its own rule for
 // what a reader sees; this is only for the match.
-func authorEmail(m dispact.Message) string {
+func authorEmail(m chatwire.Message) string {
 	return strings.ToLower(strings.TrimSpace(m.UserEmail))
 }
 
@@ -179,7 +184,7 @@ func authorEmail(m dispact.Message) string {
 // stays in rather than passing the whole episode over, so a channel with
 // non-contact authors is still summarised. A restricted contact is matched by
 // its own address.
-func authorEmails(messages []dispact.Message) []string {
+func authorEmails(messages []chatwire.Message) []string {
 	emails := make([]string, 0, len(messages))
 	for _, m := range messages {
 		if email := authorEmail(m); email != "" {
@@ -192,8 +197,8 @@ func authorEmails(messages []dispact.Message) []string {
 // keepUnrestricted drops every message whose author is restricted. dropped
 // marks that at least one was left out, so the caller can tell the model the
 // talk it reads is partial.
-func keepUnrestricted(messages []dispact.Message, restricted map[string]bool) (kept []dispact.Message, dropped bool) {
-	kept = make([]dispact.Message, 0, len(messages))
+func keepUnrestricted(messages []chatwire.Message, restricted map[string]bool) (kept []chatwire.Message, dropped bool) {
+	kept = make([]chatwire.Message, 0, len(messages))
 	for _, m := range messages {
 		if restricted[authorEmail(m)] {
 			dropped = true
@@ -208,9 +213,9 @@ func keepUnrestricted(messages []dispact.Message, restricted map[string]bool) (k
 // and reports whether any was dropped so the caller can mark the talk partial.
 // It passes the episode over with errUnmatchableAuthor only when every message
 // was dropped, so nothing is left to summarise.
-func clearedMessages(ctx context.Context, messages []dispact.Message,
+func clearedMessages(ctx context.Context, messages []chatwire.Message,
 	restricted func(context.Context, []string) (map[string]bool, error),
-) (kept []dispact.Message, dropped bool, err error) {
+) (kept []chatwire.Message, dropped bool, err error) {
 	blocked, err := restricted(ctx, authorEmails(messages))
 	if err != nil {
 		return nil, false, err
@@ -247,10 +252,11 @@ type talk struct {
 	started time.Time
 	ended   time.Time
 	url     string
+	rootID  string
 }
 
 // talkOf is what a note says about messages, oldest first.
-func talkOf(key, url string, messages []dispact.Message) talk {
+func talkOf(key, url string, messages []chatwire.Message) talk {
 	return talk{
 		key: key, url: url, count: len(messages),
 		started: messages[0].PostedAt, ended: messages[len(messages)-1].PostedAt,
@@ -263,10 +269,8 @@ func recordRef(record chatRecord) ids.Ref { return ids.Ref{Type: record.kind, ID
 // not write, which must never stand in for its summary.
 var errSummaryKeyTaken = fmt.Errorf("chat summary: another writer holds this talk's key: %w", apperrors.ErrConflict)
 
-// summarySource is the source every chat summary note is written with. The
-// channel trigger moves it to automation, so a row under a summary key on any
-// other channel was not written here.
-const summarySource = "chat_links"
+// summarySource recognizes recaps before their channel is normalized.
+const summarySource = provenance.ChatSummaryOrigin
 
 // writtenHere reports whether a note under a summary key is one this engine
 // filed, also before the correction task reached it.
@@ -276,11 +280,16 @@ func writtenHere(note crmcontracts.Activity) bool {
 
 // filing is what a note needs besides the summary: the transaction it is
 // written in, the stores, and the link it is filed under.
+type ReconfirmationWriter func(context.Context, pgx.Tx, ids.UUID, ids.Ref, chatsummary.Reconfirmation) error
+
 type filing struct {
-	pool  *pgxpool.Pool
-	store *chatlinks.Store
-	acts  *activities.Store
-	link  chatlinks.Link
+	reconfirm ReconfirmationWriter
+	pool      *pgxpool.Pool
+	store     *chatlinks.Store
+	acts      *activities.Store
+	link      chatlinks.Link
+	root      *chatlinks.RootState
+	digest    string
 }
 
 // fileNote files the summary as one note on the link's records. It is keyed
@@ -292,13 +301,21 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 	link := f.link
 	system := provenance.ChatSummarySource
 	raw := map[string]any{
-		"message_count": said.count,
-		"ended_at":      said.ended.UTC().Format(time.RFC3339),
-		"url":           said.url,
+		"provider":       link.Provider,
+		"channel_name":   link.ChannelName,
+		"message_count":  said.count,
+		"ended_at":       said.ended.UTC().Format(time.RFC3339),
+		"url":            said.url,
+		"connection_id":  link.ConnectionID.String(),
+		"link_id":        link.ID.String(),
+		"channel_id":     link.ChannelSlug,
+		"root_id":        said.rootID,
+		"reconfirmation": reply.Reconfirmation,
 	}
 	record := linkRecord(link)
 	key := said.key + ":" + record.Type + ":" + record.ID.String()
 	body := noteBody(reply)
+	raw["generated_fingerprint"] = activities.ChatSummaryFingerprint(reply.Title, body)
 	// Both the title and the summary are the model's words, in the talk's language.
 	written := textlang.Detect(reply.Summary)
 	in := activities.LogActivityInput{
@@ -318,6 +335,10 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 	}
 	var note crmcontracts.Activity
 	err := database.WithTx(ctx, f.pool, func(tx pgx.Tx) error {
+		ctx, err := f.store.FilingContextTx(ctx, tx)
+		if err != nil {
+			return err
+		}
 		if err := f.store.HoldLiveLinkTx(ctx, tx, link); err != nil {
 			return err
 		}
@@ -327,13 +348,24 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 		case err != nil:
 			return err
 		case !filed.IsZero():
-			note, err = f.acts.GetActivityTx(ctx, tx, ids.ActivityID{UUID: filed}, storekit.IncludeArchived, activities.CustomColumns{})
+			if f.root != nil {
+				note, err = f.acts.ReviseChatSummaryTx(ctx, tx, ids.ActivityID{UUID: filed}, activities.ChatSummaryRevision{Subject: reply.Title, Body: body, Metadata: raw})
+			} else {
+				note, err = f.acts.GetActivityTx(ctx, tx, ids.ActivityID{UUID: filed}, storekit.IncludeArchived, activities.CustomColumns{})
+			}
 		default:
 			in.Links = links
 			note, created, err = f.acts.LogActivityTx(ctx, tx, in)
 		}
+		if err == nil && f.root != nil {
+			activity := ids.UUID(note.Id)
+			err = f.store.CompleteRootTx(ctx, tx, link, *f.root, f.digest, &activity)
+		}
 		if err == nil && !created && !writtenHere(note) {
 			return errSummaryKeyTaken
+		}
+		if err == nil && f.reconfirm != nil && reply.Reconfirmation != nil && note.ArchivedAt == nil {
+			err = f.reconfirm(ctx, tx, ids.UUID(note.Id), record, *reply.Reconfirmation)
 		}
 		return err
 	})
@@ -350,7 +382,7 @@ func fileNote(ctx context.Context, f filing, said talk, reply chatsummary.Reply)
 func priorNote(ctx context.Context, tx pgx.Tx, link chatlinks.Link, talkKey string) (ids.UUID, []activities.ActivityLinkInput, error) {
 	engine := principal.WithActor(ctx, chatLinksPrincipal)
 	escaped := storekit.EscapeLike(talkKey)
-	keys := []string{escaped, escaped + ":" + chatlinks.RecordDeal + ":%", escaped + ":" + chatlinks.RecordProject + ":%"}
+	keys := []string{escaped, escaped + ":" + chatlinks.RecordDeal + ":%", escaped + ":" + chatlinks.RecordProject + ":%", escaped + ":" + chatlinks.RecordCompany + ":%"}
 	record := linkRecord(link)
 	filed, err := activities.SourceFiledOnTx(engine, tx, provenance.ChatSummarySource, keys, record.Type, record.ID)
 	if err != nil || !filed.IsZero() {
@@ -392,4 +424,21 @@ func noteBody(reply chatsummary.Reply) string {
 		}
 	}
 	return body.String()
+}
+
+func checkSummaryReply(raw string, in chatsummary.Input) error {
+	reply, err := chatsummary.Parse(raw)
+	if err != nil {
+		return err
+	}
+	if err := chatsummary.CheckForInput(reply, in); err != nil {
+		return err
+	}
+	if in.FromCRM && !reply.Relevant {
+		return apperrors.ErrInvalidArgument
+	}
+	if in.Chosen && !reply.Relevant {
+		return errors.New("a colleague chose this talk, so summarise it")
+	}
+	return nil
 }

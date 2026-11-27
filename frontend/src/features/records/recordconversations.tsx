@@ -37,10 +37,11 @@ export const CONVERSATION_FILTER_KINDS: readonly ActivityKind[] =
 
 /** Drops a picked kind this cut cannot draw, which would leave it empty. */
 export function conversationFilters(filters: TimelineFilters): TimelineFilters {
-  if (!filters.kind || isConversationKind(filters.kind)) {
-    return filters;
-  }
-  return { ...filters, kind: undefined };
+  const current = filters.chat_provider
+    ? { ...filters, chat_provider: undefined }
+    : filters;
+  if (!current.kind || isConversationKind(current.kind)) return current;
+  return { ...current, kind: undefined };
 }
 
 /**

@@ -10,6 +10,7 @@ import "github.com/margince/margince/backend/internal/shared/gatekit"
 const activityCorrectionMetadata = "system data-task progress counts only a capped primary-key page, never content. Immutable IDs stay in that scan so progress advances across every inspected record; the domain corrections exclude restricted rows before reading their content or writing them"
 
 var restrictedReadersAdmitted = gatekit.Waive(map[string]string{
+	"internal/modules/activities/systemtext.go:readSystemTextForMutation":               "reads the prior system rendering only for an audit before-image after the caller holds activity write authority, including archived recap erasure; no prior content is returned to the caller",
 	"internal/platform/database/storekit/sourcechanges.go:keepSourceAudits":             "the commit hook reads audit IDs and normalized source metadata to suppress redacted or rolled-back events; it reads and returns no activity body",
 	"internal/modules/capture/chatclarifyreply.go:Sink.consumeEcho":                     "matches only the current connector and thread identity to consume our own echo; no held content is returned or disclosed. Filtering held rows would ingest our outgoing echo as a new customer message",
 	"internal/modules/capture/chatclarify.go:FormClarifyBatchesTx":                      "reads held forwards, whose predicate (pendingforward.Predicate) names only unarchived, unrestricted rows, to group them into batches. It returns no content to anyone.",

@@ -401,7 +401,9 @@ const CUTS: readonly SelectOption[] = [
 function CardHeadFilter() {
   const [cut, setCut] = useState("all");
   return (
-    <div style={{ display: "flex", alignItems: "center", gap: 8 }}>
+    <div
+      style={{ display: "flex", alignItems: "center", gap: "var(--space-2)" }}
+    >
       <IconAction label="Search history" icon={<Search aria-hidden />} />
       <div style={{ inlineSize: "9rem" }}>
         <Select

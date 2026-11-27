@@ -5,10 +5,7 @@
 
 package compose
 
-// The voice build over a real Postgres: a queued build is claimed, derived,
-// evaluated and lands as a real active version with a real evaluation; a
-// corpus edit between queue and claim fails the build honestly; a budget
-// stop parks the row deferred and the sweep re-offers it when due.
+// The real queue, database and stores prove the complete build lifecycle.
 
 import (
 	"context"
@@ -56,13 +53,7 @@ var voiceDraftPerms = principal.Permissions{
 	RowScope: principal.RowScopeAll,
 }
 
-// sampleSpanOpen returns how one sample's span begins in THIS call's prompt, up
-// to its id value.
-//
-// A marker-shaped pattern is not the boundary. Writing samples are the user's
-// prose and reach the prompt byte for byte. A sample containing
-// `<untrusted-<nonce> id="…"` would be read as a span the builder never
-// opened. The marker the system prompt declares is the only one that counts.
+// Samples are quoted in the prompt; compare their opening prefix so later copy stays free.
 func sampleSpanOpen(system string) (string, bool) {
 	marker, ok := promptfence.MarkerIn(system)
 	if !ok {
@@ -159,10 +150,7 @@ type voiceBuildEnv struct {
 	profile ai.VoiceProfile
 }
 
-// seedVoiceBuild creates an owner profile with a buildable corpus of
-// sourceCount register-alternating pieces and one queued build. Two sources
-// stay just over the build floor (no held-out reserve possible); six give
-// the evaluator room to reserve real held-out prompts.
+// A build needs both a text corpus and the owner’s current profile.
 func seedVoiceBuild(t *testing.T, quote string, sourceCount int) (*voiceBuildEnv, ai.VoiceBuild) {
 	t.Helper()
 	e := integration.Setup(t)
@@ -221,7 +209,7 @@ func (v *voiceBuildEnv) workCtx(t *testing.T) context.Context {
 func (v *voiceBuildEnv) principals(t *testing.T) (books, work context.Context) {
 	t.Helper()
 	worker := newVoiceBuildWorker(v.e.Pool, nil, slog.New(slog.DiscardHandler))
-	books, work, err := worker.voiceBuildWorkerCtx(context.Background(), VoiceBuildArgs{
+	books, work, err := voiceBuildWorkerCtx(context.Background(), worker.users, VoiceBuildArgs{
 		Workspace: v.e.WS, ProfileID: v.profile.ID.String(),
 		BuildID: ids.NewV7().String(), RequestedBy: v.e.Rep1.String(),
 	})
@@ -391,10 +379,7 @@ func TestVoiceBuildDefersOnBudgetAndTheSweepFindsItWhenDue(t *testing.T) {
 	}
 }
 
-// The terminal failure write mints its own detached deadline AT write time:
-// a work context the model calls already spent must still record the
-// outcome, or the build sits "running" until reclaim and retries forever
-// while the UI polls a row that never concludes.
+// The terminal write needs a fresh deadline after its work context ends.
 func TestVoiceBuildRecordsFailureEvenWhenTheWorkContextIsSpent(t *testing.T) {
 	env, build := seedVoiceBuild(t, "Spent-context quote.", 6)
 	ctx := env.workerCtx(t)
@@ -740,15 +725,7 @@ func (f brainFunc) Complete(ctx context.Context, req model.Request) (model.Respo
 	return f(ctx, req)
 }
 
-// What a build tells its owner when the PROVIDER refuses, rather than when the
-// model answers badly. The two are different failures with different remedies,
-// and the scripted brain above cannot tell them apart: it returns well-formed
-// answers by construction, so every test that uses it passes through a space no
-// real provider occupies.
-//
-// Each case here is a refusal a real provider actually sent, reported from the
-// running product: a Gemini spending cap, an OpenRouter shared-pool throttle,
-// and a 429 whose cause nothing recognizes.
+// Provider refusals need a recovery action distinct from malformed model output.
 func TestVoiceBuildTellsTheOwnerWhichProviderFailureItWas(t *testing.T) {
 	refusals := []struct {
 		name    string
@@ -810,10 +787,7 @@ func TestVoiceBuildTellsTheOwnerWhichProviderFailureItWas(t *testing.T) {
 	}
 }
 
-// The build a reader waits on has to REACH a terminal state, whatever the model
-// does. A worker that returned early, hung, or left the row running would look
-// exactly like a slow build on the screen — and the screen polls, so nobody
-// finds out until they give up.
+// A claimed build must finish even when the model returns no usable draft.
 func TestVoiceBuildAlwaysReachesATerminalState(t *testing.T) {
 	answers := map[string]string{
 		"prose instead of JSON":    "Sure! Here is the voice profile you asked for.",
@@ -848,16 +822,7 @@ func TestVoiceBuildAlwaysReachesATerminalState(t *testing.T) {
 	}
 }
 
-// An installation with no vendor bound runs the whole voice build on the
-// offline stand-in, whose one answer no validator can accept. The row it
-// leaves is the only thing its operator sees, and it used to say the model
-// "returned something we could not read as a profile … try again" — advice
-// that cannot work, because every retry buys the same stand-in. A first user
-// spent an hour on it.
-//
-// Driven through the REAL offline routing rather than a scripted brain: what
-// carries the cause is the provider name the --ai-fake config installs, so a
-// double that merely returns an error would prove nothing about production.
+// An unconfigured provider must name its missing setup before requesting a draft.
 func TestVoiceBuildOnAnUnconfiguredInstallationNamesTheSetting(t *testing.T) {
 	env, build := seedVoiceBuild(t, "A quote the stand-in will never cite.", 6)
 	ctx := env.workerCtx(t)

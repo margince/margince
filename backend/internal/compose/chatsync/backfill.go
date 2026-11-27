@@ -13,7 +13,7 @@ import (
 	"errors"
 
 	"github.com/margince/margince/backend/internal/modules/chatlinks"
-	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
 )
 
 const (
@@ -75,7 +75,7 @@ func (p *Puller) backfill(ctx context.Context, session chatlinks.Session, link c
 // beforeLink splits what was read at the link's creation. It answers the
 // messages from before it and the last seq the backfill may move the cursor
 // to. It also says whether the talk before the link was read to its end.
-func beforeLink(read historyRead, link chatlinks.Link) ([]dispact.Message, int64, bool) {
+func beforeLink(read historyRead, link chatlinks.Link) ([]chatwire.Message, int64, bool) {
 	for i, m := range read.kept {
 		if postedSinceLink(m, link) {
 			return read.kept[:i], m.Seq - 1, true

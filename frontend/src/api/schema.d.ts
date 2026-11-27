@@ -11923,6 +11923,412 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/activities/{id}/chat-source": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Verify the current reader's native source access for a visible chat recap. */
+        get: operations["getChatSummarySource"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/teams/graph": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Authenticate metadata-only Graph channel notifications and lifecycle recovery with sealed client state. */
+        post: operations["receiveTeamsGraphNotification"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/teams/bot": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Verify a Microsoft bot activity and retain only installation and conversation references. */
+        post: operations["receiveTeamsBotActivity"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-events/slack": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Verify a signed Slack event and queue a canonical channel read.
+         * @description Message bodies are discarded after signature and routing checks. Only root identifiers and revisions reach the queue ledger.
+         */
+        post: operations["receiveSlackChannelEvent"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-providers/teams/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Microsoft team installations verified by signed bot events, separate from participant consent. */
+        get: operations["getTeamsChannelSetup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-providers/teams/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Approve a verified team installation for record channel links. */
+        post: operations["connectTeamsChannels"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-providers/teams/package": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Build the team-scoped app package with the operator's legal URLs. */
+        post: operations["downloadTeamsChannelPackage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-providers/slack/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Slack workspace installation requirements, separate from participant consent. */
+        get: operations["getSlackChannelSetup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-providers/slack/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start admin consent for the Slack bot used by record channel links. */
+        post: operations["connectSlackChannels"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-providers/slack/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        /** Complete workspace bot consent using signed state and the initiating browser nonce. */
+        get: operations["slackChannelsOAuthCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/setup": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        /** The configured account-consent flow and its required participant scopes. */
+        get: operations["getMessengerSetup"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/dispact/credential": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /**
+         * Connect your own Dispact personal token to the configured workspace.
+         * @description Verifies the token's live participant identity against the configured Dispact workspace.
+         *     The token is sealed for the signed-in member. It never becomes the installation bot's token.
+         */
+        post: operations["connectDispactParticipant"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/connect": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        /** Start consent for the current participant's messaging account. */
+        post: operations["connectMessenger"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/callback": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        /** Complete participant consent using signed state and the initiating browser's nonce. */
+        get: operations["messengerOAuthCallback"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/identity": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        /** Check the current member’s Messenger connection. */
+        get: operations["getMessengerIdentity"];
+        put?: never;
+        post?: never;
+        /** Disconnect the current member’s Messenger grant. */
+        delete: operations["disconnectMessengerIdentity"];
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/{record_type}/{id}/team": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Resolve the owner and assigned record team to this participant's provider directory. */
+        get: operations["getMessengerTeam"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/{record_type}/{id}/channels": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Find channels the participant can select. */
+        get: operations["listMessengerChannels"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/{record_type}/{id}/members": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Find eligible internal colleagues. */
+        get: operations["listMessengerMembers"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/{record_type}/{id}/conversation": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Read the selected conversation and verify its current participants. */
+        get: operations["getMessengerConversation"];
+        put?: never;
+        /** Open a verified channel or exact participant roster. */
+        post: operations["openMessengerConversation"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/{record_type}/{id}/messages": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Read the participant’s conversation without filing it in History. */
+        get: operations["getMessengerMessages"];
+        put?: never;
+        /** Send once under the participant’s reviewed audience. */
+        post: operations["sendMessengerMessage"];
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/messenger/{provider}/{record_type}/{id}/attempts/{request_id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        /** Read this participant’s delivery receipt. */
+        get: operations["getMessengerAttempt"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
     "/channel-links/{record_type}/{id}": {
         parameters: {
             query?: never;
@@ -11944,7 +12350,7 @@ export interface paths {
         get: operations["getChannelLink"];
         put?: never;
         /**
-         * Link a deal or project to a new or existing private chat channel.
+         * Link a company, deal or project to an authorized work channel.
          * @description `create` makes a private channel named after the record and invites every live member who may
          *     open the record, the record's owner and the member linking it first, at most 50. A member with
          *     no chat account is counted in `not_in_chat`, and members over the 50 in `skipped_over_cap`.
@@ -11997,6 +12403,52 @@ export interface paths {
         get: operations["listLinkableChannels"];
         put?: never;
         post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-links/{record_type}/{id}/delivery-preview": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Preview the effective channel audience and eligible outgoing content without posting. */
+        get: operations["previewChannelDelivery"];
+        put?: never;
+        post?: never;
+        delete?: never;
+        options?: never;
+        head?: never;
+        patch?: never;
+        trace?: never;
+    };
+    "/channel-links/{record_type}/{id}/delivery-review": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        /** Review uncertain automated sends without exposing their source bodies. */
+        get: operations["getChannelDeliveryReview"];
+        put?: never;
+        /**
+         * Explicitly stop retrying reviewed unknown sends, or request a fresh overview card.
+         * @description This action never confirms delivery and never claims to remove a provider copy. Skipping an uncertain overview pauses automatic card posting; restarting it requires a separate explicit acknowledgement.
+         */
+        post: operations["reviewChannelDeliveries"];
         delete?: never;
         options?: never;
         head?: never;
@@ -16364,7 +16816,7 @@ export interface paths {
         };
         /**
          * Every vendor whose OAuth app this installation can hold, and whether it holds one.
-         * @description The core's own vendors (`google`, `microsoft`) first, then one entry per OAuth app a
+         * @description The core vendors (`google`, `microsoft`, `slack`) first, then one entry per OAuth app a
          *     composed extension unit declares, ordered by provider. A unit's entry carries the unit's
          *     `title` for it and the `unit` that declared it. Each entry answers exactly what
          *     `GET /installation/oauth-apps/{provider}` answers for that vendor.
@@ -30165,7 +30617,7 @@ export interface components {
              *     None is derivable from another: the sign-in callback rides a base that already carries `/v1`, while the connector callbacks prefer the API's own origin over the SPA's, and on a split deployment those are different hosts. Only the purposes this deployment actually serves are listed.
              * @enum {string}
              */
-            purpose: "sign_in" | "mailbox_connect" | "calendar_connect" | "documents_connect" | "extension_connect";
+            purpose: "sign_in" | "mailbox_connect" | "calendar_connect" | "documents_connect" | "extension_connect" | "messenger_connect";
             /**
              * Format: uri
              * @description The absolute URL to register, exactly as it must be pasted.
@@ -30173,6 +30625,8 @@ export interface components {
             url: string;
         };
         ConnectorAppInput: {
+            /** @description Slack only. The app signing secret used to verify channel notifications. Stored sealed with the client secret. */
+            signing_secret?: string;
             /** @description The vendor's OAuth client id. Google's end in `.apps.googleusercontent.com`; Microsoft's is the Application (client) ID from the Entra app registration's Overview, a GUID. A value of neither shape is refused: it is almost always a neighbouring field copied from the same console screen — the project number, an API key, or the app's display name. */
             client_id: string;
             /** @description The app's client secret. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes. */
@@ -34178,7 +34632,7 @@ export interface components {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            provider: "telegram" | "telegram_business" | "dispact" | "whatsapp" | "zalo_oa";
+            provider: "telegram" | "telegram_business" | "dispact" | "whatsapp" | "zalo_oa" | "slack" | "teams";
             /** @description The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id. */
             channelId: string;
             /** @description The bot's @username. Display only — a username is mutable and re-assignable, so it identifies nothing. */
@@ -34412,12 +34866,16 @@ export interface components {
         /** @description One signed notice from Dispact, or its URL check. A notice names the channel and the newest message sequence, and never carries message text. */
         DispactChannelEvent: {
             /** @enum {string} */
-            type: "url_verification" | "message.created" | "thread.replied" | "message.updated" | "channel.archived";
+            type: "url_verification" | "message.created" | "thread.replied" | "message.updated" | "message.deleted" | "channel.archived";
             /** @description The value a URL check expects back. */
             challenge?: string;
             /** @description The Dispact team; it must be the connected bot's team. */
             workspace_id?: string;
             channel_slug?: string;
+            /** @description Immutable channel identity when supported by the source. */
+            channel_id?: string;
+            /** @description Immutable conversation root identity when supported by the source. */
+            root_message_id?: string;
             /** @description The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal. */
             seq?: number;
             message_id?: string;
@@ -34437,17 +34895,179 @@ export interface components {
              */
             status?: "pull_queued" | "link_paused" | "ignored" | "already_taken";
         };
+        TeamsChannelSetup: {
+            configured: boolean;
+            app_id: string;
+            tenant_id: string;
+            events_url: string;
+            scopes: string[];
+            installations: components["schemas"]["TeamsChannelInstallation"][];
+        };
+        TeamsChannelInstallation: {
+            /** Format: uuid */
+            id: string;
+            name: string;
+            team_id: string;
+        };
+        SlackHistoryProfile: {
+            /** @enum {string} */
+            distribution: "internal" | "marketplace" | "non_marketplace";
+            history_per_minute: number;
+            replies_per_minute: number;
+            history_page_size: number;
+            replies_page_size: number;
+            /** @enum {string} */
+            source: "admin_declared";
+            /** Format: date-time */
+            recorded_at: string;
+            canonical_supported: boolean;
+        };
+        ChannelProviderSetup: {
+            history_profile?: components["schemas"]["SlackHistoryProfile"];
+            configured: boolean;
+            callback_url: string;
+            events_url: string;
+            scopes: string[];
+        };
+        MessengerTeamMember: {
+            /** Format: uuid */
+            crm_id: string;
+            /** @enum {string} */
+            kind: "user" | "team";
+            name: string;
+            member_id: string;
+            /** @enum {string} */
+            state: "matched" | "self" | "unresolved" | "inactive";
+        };
+        MessengerSetup: {
+            provider: components["schemas"]["MessengerProvider"];
+            configured: boolean;
+            callback_url: string;
+            /** @description The configured provider page for creating a personal credential. */
+            account_url?: string;
+            participant_scopes: string[];
+            max_group_recipients: number;
+        };
+        /** @enum {string} */
+        MessengerProvider: "dispact" | "slack" | "teams";
+        MessengerMember: {
+            bot?: boolean;
+            id: string;
+            name: string;
+            email?: string;
+            active: boolean;
+            external: boolean;
+        };
+        MessengerConversation: {
+            /** @enum {string} */
+            access?: "workspace" | "team" | "private" | "participants" | "unknown";
+            /** @description Whether this conversation supports native thread replies. */
+            supports_threads?: boolean;
+            id: string;
+            name: string;
+            /** @enum {string} */
+            kind: "channel" | "group" | "direct";
+            members: components["schemas"]["MessengerMember"][];
+            audience_known: boolean;
+            external: boolean;
+        };
+        MessengerConnectRequest: {
+            record_type: components["schemas"]["ChannelLinkRecordType"];
+            /** Format: uuid */
+            record_id: string;
+        };
+        MessengerContext: {
+            unresolved_attempt?: components["schemas"]["MessengerAttempt"];
+            /** Format: int64 */
+            grant_version: number;
+            provider: components["schemas"]["MessengerProvider"];
+            workspace: string;
+            sender: components["schemas"]["MessengerMember"];
+            conversation: components["schemas"]["MessengerConversation"];
+            audience_key: string;
+        };
+        MessengerOpenRequest: {
+            conversation_id?: string;
+            members?: string[];
+        };
+        MessengerMessage: {
+            id: string;
+            root_id: string;
+            author: string;
+            text: string;
+            /** Format: date-time */
+            at: string;
+            edited: boolean;
+            deleted: boolean;
+        };
+        MessengerPage: {
+            /**
+             * @description Whether next_cursor continues into older history or later replies. Omitted means older.
+             * @enum {string}
+             */
+            cursor_direction?: "older" | "newer";
+            messages: components["schemas"]["MessengerMessage"][];
+            next_cursor: string;
+        };
+        MessengerChannels: {
+            conversations: components["schemas"]["MessengerConversation"][];
+            next_cursor: string;
+        };
+        MessengerMembers: {
+            members: components["schemas"]["MessengerMember"][];
+            next_cursor: string;
+        };
+        MessengerSendRequest: {
+            /** Format: uuid */
+            acknowledged_request_id?: string;
+            /** Format: uuid */
+            request_id: string;
+            /** Format: int64 */
+            grant_version: number;
+            conversation_id: string;
+            root_id?: string;
+            text: string;
+            audience_key: string;
+        };
+        MessengerAttempt: {
+            /** Format: uuid */
+            id: string;
+            /** Format: uuid */
+            request_id: string;
+            conversation_id: string;
+            provider_message_id: string;
+            /** @enum {string} */
+            state: "pending" | "accepted" | "failed" | "unknown";
+            failure_code?: string;
+            /** Format: date-time */
+            retry_at?: string;
+            /** Format: date-time */
+            updated_at: string;
+        };
+        MessengerIdentity: {
+            /** @enum {string} */
+            state: "connected" | "needs_consent" | "unavailable";
+            provider: components["schemas"]["MessengerProvider"];
+            /** Format: int64 */
+            grant_version?: number;
+            workspace?: string;
+            sender?: components["schemas"]["MessengerMember"];
+        };
         /**
          * @description The kind of record a chat channel is linked to.
          * @enum {string}
          */
-        ChannelLinkRecordType: "deal" | "project";
+        ChannelLinkRecordType: "company" | "deal" | "project";
+        /** @enum {string} */
+        ChannelMessageDetail: "brief" | "full";
         /**
          * @description How much Margince posts into a linked channel.
          * @enum {string}
          */
         ChannelVerbosity: "everything" | "important" | "milestones" | "silent";
         ChannelLinkState: {
+            last_sync?: components["schemas"]["ChannelEndedSync"];
+            sync?: components["schemas"]["ChannelSyncHealth"];
             /**
              * @description `off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.
              * @enum {string}
@@ -34456,22 +35076,118 @@ export interface components {
             link?: components["schemas"]["ChannelLink"];
             invites?: components["schemas"]["ChannelInvites"];
         };
-        ChannelLink: {
+        ChannelEndedSync: {
+            provider: components["schemas"]["MessengerProvider"];
+            /** Format: date-time */
+            ended_at: string;
+            /** Format: date-time */
+            read_through?: string | null;
+            /** Format: date-time */
+            last_posted_at?: string | null;
+            retained_messages: number;
+            /** @description Messages successfully rewritten without withdrawn content; this does not prove deletion of other copies. */
+            confirmed_redactions: number;
+            unverified_withdrawals: number;
+            unconfirmed_deliveries: number;
+        };
+        ChannelUncertainDelivery: {
             /** Format: uuid */
             id: string;
             /** @enum {string} */
-            provider: "dispact";
+            state: "sending" | "unknown";
+            /** Format: date-time */
+            created_at: string;
+            update_count: number;
+            overview_card: boolean;
+        };
+        ChannelPreviewMember: {
+            id: string;
+            name: string;
+        };
+        ChannelDeliveryPreview: {
+            /** Format: uuid */
+            link_id: string;
+            /** Format: int64 */
+            version: number;
+            provider: components["schemas"]["MessengerProvider"];
+            workspace: string;
+            channel_name: string;
+            root_id?: string;
+            audience: components["schemas"]["ChannelPreviewMember"][];
+            overview_text: string;
+            update_text: string;
+            pending_updates: number;
+            excluded_updates: number;
+            verbosity: components["schemas"]["ChannelVerbosity"];
+            message_detail: components["schemas"]["ChannelMessageDetail"];
+        };
+        ChannelProviderCopies: {
+            retained_messages: number;
+            confirmed_redactions: number;
+            unverified_withdrawals: number;
+            unconfirmed_deliveries: number;
+        };
+        ChannelDeliveryReview: {
+            provider_copies?: components["schemas"]["ChannelProviderCopies"];
+            /** Format: uuid */
+            link_id: string;
+            overview_card_paused: boolean;
+            deliveries: components["schemas"]["ChannelUncertainDelivery"][];
+        };
+        ReviewChannelDeliveryRequest: {
+            /** Format: uuid */
+            link_id: string;
+            /** @enum {string} */
+            action: "skip_unknown" | "restart_card";
+            acknowledged: boolean;
+            delivery_ids: string[];
+        };
+        ChannelSyncHealth: {
+            /** @enum {string|null} */
+            delivery_error?: "audience_changed" | "delivery_unknown" | "source_incomplete" | "source_unavailable" | "source_too_long" | "model_unavailable" | "rate_limited" | "access_lost" | "source_changed" | null;
+            /** @description Teams push notifications need recovery; periodic source reads continue independently. */
+            notifications_delayed?: boolean;
+            /**
+             * Format: date-time
+             * @description Metadata discovery checked through this time. Pending recaps are reported separately.
+             */
+            coverage_at?: string | null;
+            /** @enum {string|null} */
+            last_error?: "history_profile" | "source_incomplete" | "source_unavailable" | "source_too_long" | "model_unavailable" | "rate_limited" | "access_lost" | "source_changed" | null;
+            pending_conversations: number;
+            failed_conversations: number;
+            pending_crm_updates: number;
+            unconfirmed_deliveries: number;
+        };
+        ChannelLink: {
+            history_profile?: components["schemas"]["SlackHistoryProfile"];
+            /** @description Whether this association uses an explicitly confirmed immutable provider channel identity. */
+            native_identity?: boolean;
+            overview_card_paused?: boolean;
+            /** @description Whether the native provider permits bot delivery in this channel. False for private Teams channels. */
+            can_send_crm_updates?: boolean;
+            root_id?: string;
+            /** Format: uuid */
+            id: string;
+            provider: components["schemas"]["MessengerProvider"];
             channel_slug: string;
             channel_name: string;
             /** @description The channel's address in the chat. */
             channel_url: string;
+            message_detail?: components["schemas"]["ChannelMessageDetail"];
             verbosity: components["schemas"]["ChannelVerbosity"];
             /** @enum {string} */
-            status: "active" | "channel_gone";
+            status: "active" | "channel_gone" | "identity_needs_review";
+            /** Format: uuid */
+            company_id?: string | null;
             /** Format: uuid */
             deal_id?: string | null;
             /** Format: uuid */
             project_id?: string | null;
+            /** @description Whether future eligible channel activity is filed in History. */
+            save_channel_updates?: boolean;
+            /** @description Whether eligible CRM events are posted to the channel. */
+            send_crm_updates?: boolean;
             /** Format: date-time */
             created_at: string;
         };
@@ -34539,6 +35255,13 @@ export interface components {
             name: string;
         };
         LinkChannelRequest: {
+            /** @description Existing native thread root explicitly assigned to this record. A shared channel uses separate root assignments for each record. */
+            root_id?: string;
+            /**
+             * @description Native provider whose shared bot owns this link.
+             * @default dispact
+             */
+            provider: components["schemas"]["MessengerProvider"];
             /** @enum {string} */
             mode: "create" | "existing";
             /** @description For `existing`, the channel's slug or its link. */
@@ -34548,22 +35271,43 @@ export interface components {
             summarize_history?: boolean;
         };
         SetChannelVerbosityRequest: {
-            verbosity: components["schemas"]["ChannelVerbosity"];
+            /** Format: uuid */
+            expected_link_id?: string;
+            /** Format: int64 */
+            expected_version?: number;
+            message_detail?: components["schemas"]["ChannelMessageDetail"];
+            verbosity?: components["schemas"]["ChannelVerbosity"];
+            save_channel_updates?: boolean;
+            send_crm_updates?: boolean;
         };
         FileChannelMessageRequest: {
             /**
-             * @description The message in the record's channel: its sequence number, `#slug:seq`, the chat's
-             *     `<m:#slug:seq|…>` mention, or its link. A message in another channel is not found.
+             * @description A native message ID or link in the record's linked channel. Dispact also accepts
+             *     a sequence number, `#slug:seq`, or `<m:#slug:seq|…>` mention. A message in another
+             *     channel or outside a linked thread is not found.
              */
             message: string;
-            /** @description True files the message and the replies in its thread that follow it. */
+            /** @description True files the complete available thread containing the selected message. */
             thread?: boolean;
         };
+        ChatSourceAccess: {
+            available: boolean;
+            /** Format: uuid */
+            user_id: string;
+            url?: string;
+            /** Format: date-time */
+            valid_until?: string;
+        };
         /**
-         * @description The chat talk a summary note was written from. The talk itself is not kept: open `url`
-         *     to read it in the chat.
+         * @description The source metadata of a channel recap. Source URLs are withheld from ordinary activity reads;
+         *     obtain a short-lived authorized link through the chat-source endpoint.
          */
         ChatEpisode: {
+            provider?: components["schemas"]["MessengerProvider"];
+            /** @description The source changed after a human edited this recap; review the preserved text. */
+            source_changed?: boolean;
+            /** @description Channel name recorded when the recap was written. */
+            channel_name?: string;
             /** @description How many messages the summary covers. */
             message_count: number;
             /**
@@ -34571,7 +35315,10 @@ export interface components {
              * @description When the last of them was posted.
              */
             ended_at: string;
-            /** @description The first message in the chat. */
+            /**
+             * @deprecated
+             * @description Empty on activity reads. Obtain an authorized link through the chat-source endpoint.
+             */
             url: string;
         };
         /**
@@ -77367,6 +78114,8 @@ export interface operations {
                 kind?: ("email" | "call" | "meeting" | "note" | "task" | "message")[];
                 /** @description Calls that ended this way. Matches calls only. */
                 call_outcome?: "reached" | "not_reached" | "voicemail" | "call_back_later" | "put_through";
+                /** @description Generated channel recaps from this provider. Content visibility is required for a match. */
+                chat_provider?: components["schemas"]["MessengerProvider"];
                 /**
                  * @description Filter to messages carried by one transport. Since `kind=message` no longer names
                  *     the transport, this is the only way to ask the question `kind=telegram` used to
@@ -87294,6 +88043,905 @@ export interface operations {
             };
         };
     };
+    getChatSummarySource: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Availability of the native source without source identifiers when unavailable. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChatSourceAccess"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    receiveTeamsGraphNotification: {
+        parameters: {
+            query?: {
+                validationToken?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+                "text/plain": string;
+            };
+        };
+        responses: {
+            /** @description Endpoint validation or a verified notification batch receipt. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispactChannelEventReceipt"];
+                    "text/plain": string;
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Notification batch exceeds the size limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+            /** @description Retry after the returned wait. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Notification recovery could not be queued yet. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    receiveTeamsBotActivity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Activity accepted or ignored. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispactChannelEventReceipt"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Activity exceeds the size limit. */
+            413: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description Retry after the returned wait. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    receiveSlackChannelEvent: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    [key: string]: unknown;
+                };
+            };
+        };
+        responses: {
+            /** @description Challenge response or accepted event. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["DispactChannelEventReceipt"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            /** @description Retry after the returned rate limit wait. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getTeamsChannelSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Setup instructions and verified installed teams without credentials. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["TeamsChannelSetup"];
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description Configure the Microsoft app before managing its team installation. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connectTeamsChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uuid */
+                    installation_id: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The approved team is connected. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description Configure the Microsoft app before managing its team installation. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    downloadTeamsChannelPackage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** Format: uri */
+                    privacy_url: string;
+                    /** Format: uri */
+                    terms_url: string;
+                };
+            };
+        };
+        responses: {
+            /** @description The app manifest and its required icons. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/zip": string;
+                };
+            };
+            400: components["responses"]["ValidationError"];
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description Configure the Microsoft app before managing its team installation. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getSlackChannelSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Public installation metadata without credentials. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelProviderSetup"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+        };
+    };
+    connectSlackChannels: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    /** @enum {string} */
+                    distribution: "internal" | "marketplace" | "non_marketplace";
+                };
+            };
+        };
+        responses: {
+            /** @description The native bot consent URL. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        authorize_url: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            /** @description Configure the Slack app and signing secret before installing the bot. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    slackChannelsOAuthCallback: {
+        parameters: {
+            query: {
+                state: string;
+                code?: string;
+                error?: string;
+            };
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Return to Messaging providers with an explicit installation result. */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The callback cannot be authenticated. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMessengerSetup: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description App setup facts without credentials. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerSetup"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    connectDispactParticipant: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    personal_token: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Your participant credential is verified and sealed. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            /** @description Connect the Dispact installation before connecting your participant account. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    connectMessenger: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: {
+            content: {
+                "application/json": components["schemas"]["MessengerConnectRequest"];
+            };
+        };
+        responses: {
+            /** @description The provider consent URL. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        authorize_url: string;
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            422: components["responses"]["ValidationError"];
+            /** @description Configure the messaging app before starting consent. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    messengerOAuthCallback: {
+        parameters: {
+            query: {
+                state: string;
+                code?: string;
+                error?: string;
+            };
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Return to Messaging providers with an explicit consent result. */
+            302: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The callback cannot be authenticated. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMessengerIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerIdentity"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    disconnectMessengerIdentity: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The participant-authorized result. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMessengerTeam: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Matched, inactive and unresolved members remain explicit. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": {
+                        members: components["schemas"]["MessengerTeamMember"][];
+                    };
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listMessengerChannels: {
+        parameters: {
+            query?: {
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerChannels"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    listMessengerMembers: {
+        parameters: {
+            query?: {
+                q?: string;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerMembers"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMessengerConversation: {
+        parameters: {
+            query: {
+                conversation_id: string;
+            };
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The current sender and audience. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerContext"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    openMessengerConversation: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessengerOpenRequest"];
+            };
+        };
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerContext"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMessengerMessages: {
+        parameters: {
+            query: {
+                conversation_id: string;
+                root_id?: string;
+                cursor?: string;
+            };
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerPage"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    sendMessengerMessage: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["MessengerSendRequest"];
+            };
+        };
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerAttempt"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    getMessengerAttempt: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                provider: components["schemas"]["MessengerProvider"];
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+                request_id: string;
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description The participant-authorized result. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["MessengerAttempt"];
+                };
+            };
+            /** @description The destination or message needs correction. */
+            400: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+        };
+    };
     getChannelLink: {
         parameters: {
             query?: never;
@@ -87464,7 +89112,9 @@ export interface operations {
     };
     listLinkableChannels: {
         parameters: {
-            query?: never;
+            query?: {
+                provider?: components["schemas"]["MessengerProvider"];
+            };
             header?: never;
             path: {
                 record_type: components["schemas"]["ChannelLinkRecordType"];
@@ -87499,6 +89149,142 @@ export interface operations {
             422: components["responses"]["ValidationError"];
             /** @description The chat could not be reached (`code: channel_provider_unreachable`). */
             502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    previewChannelDelivery: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Current audience, overview and eligible queued update preview. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelDeliveryPreview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description The provider requires a pause before another preview. */
+            429: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The provider could not supply a complete preview. */
+            502: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+            /** @description The provider cannot currently supply a complete preview. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    getChannelDeliveryReview: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Unconfirmed delivery metadata for the current linked record. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelDeliveryReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description Channel delivery review is unavailable in this role. */
+            503: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/problem+json": components["schemas"]["Problem"];
+                };
+            };
+        };
+    };
+    reviewChannelDeliveries: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                record_type: components["schemas"]["ChannelLinkRecordType"];
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": components["schemas"]["ReviewChannelDeliveryRequest"];
+            };
+        };
+        responses: {
+            /** @description Current review metadata after the human decision. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ChannelDeliveryReview"];
+                };
+            };
+            401: components["responses"]["Unauthorized"];
+            403: components["responses"]["Forbidden"];
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+            422: components["responses"]["ValidationError"];
+            /** @description Channel delivery review is unavailable in this role. */
+            503: {
                 headers: {
                     [name: string]: unknown;
                 };

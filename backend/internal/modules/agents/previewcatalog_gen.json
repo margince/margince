@@ -1472,6 +1472,10 @@
      "Source",
     "source_activity_id":
      "Source activity",
+    "source_changed":
+     "Conversation source changed",
+    "source_deleted":
+     "Conversation source removed",
     "source_id":
      "Source reference",
     "source_revision":
@@ -11898,6 +11902,10 @@
      "Source",
     "merge_profile_field/text/source_activity_id":
      "Source activity",
+    "merge_profile_field/text/source_changed":
+     "Conversation source changed",
+    "merge_profile_field/text/source_deleted":
+     "Conversation source removed",
     "merge_profile_field/text/source_id":
      "Source reference",
     "merge_profile_field/text/source_revision":
@@ -12574,6 +12582,10 @@
      "Source",
     "merge_profile_field/lifecycle/source_activity_id":
      "Source activity",
+    "merge_profile_field/lifecycle/source_changed":
+     "Conversation source changed",
+    "merge_profile_field/lifecycle/source_deleted":
+     "Conversation source removed",
     "merge_profile_field/lifecycle/source_id":
      "Source reference",
     "merge_profile_field/lifecycle/source_revision":
@@ -18397,6 +18409,46 @@
     "source_activity_id/lifecycle/unknown":
      "Unknown",
     "source_activity_id/boolean/true":
+     "Yes",
+    "source_changed/lifecycle/customer":
+     "Customer",
+    "source_changed/lifecycle/disqualified":
+     "Disqualified",
+    "source_changed/lifecycle/former_customer":
+     "Former customer",
+    "source_changed/lifecycle/live":
+     "Live",
+    "source_changed/lifecycle/onboarding":
+     "Onboarding",
+    "source_changed/lifecycle/opportunity":
+     "Opportunity",
+    "source_changed/lifecycle/prospect":
+     "Prospect",
+    "source_changed/lifecycle/target":
+     "Target",
+    "source_changed/lifecycle/unknown":
+     "Unknown",
+    "source_changed/boolean/true":
+     "Yes",
+    "source_deleted/lifecycle/customer":
+     "Customer",
+    "source_deleted/lifecycle/disqualified":
+     "Disqualified",
+    "source_deleted/lifecycle/former_customer":
+     "Former customer",
+    "source_deleted/lifecycle/live":
+     "Live",
+    "source_deleted/lifecycle/onboarding":
+     "Onboarding",
+    "source_deleted/lifecycle/opportunity":
+     "Opportunity",
+    "source_deleted/lifecycle/prospect":
+     "Prospect",
+    "source_deleted/lifecycle/target":
+     "Target",
+    "source_deleted/lifecycle/unknown":
+     "Unknown",
+    "source_deleted/boolean/true":
      "Yes",
     "source_id/lifecycle/customer":
      "Customer",
@@ -24688,6 +24740,18 @@
      "Not set",
     "source_activity_id/execution":
      "Set when applied",
+    "source_changed/boolean":
+     "No",
+    "source_changed/empty":
+     "Not set",
+    "source_changed/execution":
+     "Set when applied",
+    "source_deleted/boolean":
+     "No",
+    "source_deleted/empty":
+     "Not set",
+    "source_deleted/execution":
+     "Set when applied",
     "source_id/boolean":
      "No",
     "source_id/empty":
@@ -26674,6 +26738,10 @@
      "Quelle",
     "source_activity_id":
      "Quellaktivität",
+    "source_changed":
+     "Gesprächsquelle geändert",
+    "source_deleted":
+     "Gesprächsquelle entfernt",
     "source_id":
      "Quellverweis",
     "source_revision":
@@ -37104,6 +37172,10 @@
      "Quelle",
     "merge_profile_field/text/source_activity_id":
      "Quellaktivität",
+    "merge_profile_field/text/source_changed":
+     "Gesprächsquelle geändert",
+    "merge_profile_field/text/source_deleted":
+     "Gesprächsquelle entfernt",
     "merge_profile_field/text/source_id":
      "Quellverweis",
     "merge_profile_field/text/source_revision":
@@ -37784,6 +37856,10 @@
      "Quelle",
     "merge_profile_field/lifecycle/source_activity_id":
      "Quellaktivität",
+    "merge_profile_field/lifecycle/source_changed":
+     "Gesprächsquelle geändert",
+    "merge_profile_field/lifecycle/source_deleted":
+     "Gesprächsquelle entfernt",
     "merge_profile_field/lifecycle/source_id":
      "Quellverweis",
     "merge_profile_field/lifecycle/source_revision":
@@ -43607,6 +43683,46 @@
     "source_activity_id/lifecycle/unknown":
      "Unbekannt",
     "source_activity_id/boolean/true":
+     "Ja",
+    "source_changed/lifecycle/customer":
+     "Kunde",
+    "source_changed/lifecycle/disqualified":
+     "Disqualifiziert",
+    "source_changed/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "source_changed/lifecycle/live":
+     "Live",
+    "source_changed/lifecycle/onboarding":
+     "Onboarding",
+    "source_changed/lifecycle/opportunity":
+     "Chance",
+    "source_changed/lifecycle/prospect":
+     "Interessent",
+    "source_changed/lifecycle/target":
+     "Zielunternehmen",
+    "source_changed/lifecycle/unknown":
+     "Unbekannt",
+    "source_changed/boolean/true":
+     "Ja",
+    "source_deleted/lifecycle/customer":
+     "Kunde",
+    "source_deleted/lifecycle/disqualified":
+     "Disqualifiziert",
+    "source_deleted/lifecycle/former_customer":
+     "Ehemaliger Kunde",
+    "source_deleted/lifecycle/live":
+     "Live",
+    "source_deleted/lifecycle/onboarding":
+     "Onboarding",
+    "source_deleted/lifecycle/opportunity":
+     "Chance",
+    "source_deleted/lifecycle/prospect":
+     "Interessent",
+    "source_deleted/lifecycle/target":
+     "Zielunternehmen",
+    "source_deleted/lifecycle/unknown":
+     "Unbekannt",
+    "source_deleted/boolean/true":
      "Ja",
     "source_id/lifecycle/customer":
      "Kunde",
@@ -49898,6 +50014,18 @@
      "Nicht gesetzt",
     "source_activity_id/execution":
      "Wird beim Anwenden festgelegt",
+    "source_changed/boolean":
+     "Nein",
+    "source_changed/empty":
+     "Nicht gesetzt",
+    "source_changed/execution":
+     "Wird beim Anwenden festgelegt",
+    "source_deleted/boolean":
+     "Nein",
+    "source_deleted/empty":
+     "Nicht gesetzt",
+    "source_deleted/execution":
+     "Wird beim Anwenden festgelegt",
     "source_id/boolean":
      "Nein",
     "source_id/empty":
@@ -51884,6 +52012,10 @@
      "Nguồn",
     "source_activity_id":
      "Hoạt động nguồn",
+    "source_changed":
+     "Nguồn cuộc trò chuyện đã thay đổi",
+    "source_deleted":
+     "Nguồn cuộc trò chuyện đã bị xóa",
     "source_id":
      "Tham chiếu nguồn",
     "source_revision":
@@ -62312,6 +62444,10 @@
      "Nguồn",
     "merge_profile_field/text/source_activity_id":
      "Hoạt động nguồn",
+    "merge_profile_field/text/source_changed":
+     "Nguồn cuộc trò chuyện đã thay đổi",
+    "merge_profile_field/text/source_deleted":
+     "Nguồn cuộc trò chuyện đã bị xóa",
     "merge_profile_field/text/source_id":
      "Tham chiếu nguồn",
     "merge_profile_field/text/source_revision":
@@ -62990,6 +63126,10 @@
      "Nguồn",
     "merge_profile_field/lifecycle/source_activity_id":
      "Hoạt động nguồn",
+    "merge_profile_field/lifecycle/source_changed":
+     "Nguồn cuộc trò chuyện đã thay đổi",
+    "merge_profile_field/lifecycle/source_deleted":
+     "Nguồn cuộc trò chuyện đã bị xóa",
     "merge_profile_field/lifecycle/source_id":
      "Tham chiếu nguồn",
     "merge_profile_field/lifecycle/source_revision":
@@ -68813,6 +68953,46 @@
     "source_activity_id/lifecycle/unknown":
      "Chưa rõ",
     "source_activity_id/boolean/true":
+     "Có",
+    "source_changed/lifecycle/customer":
+     "Khách hàng",
+    "source_changed/lifecycle/disqualified":
+     "Đã loại",
+    "source_changed/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "source_changed/lifecycle/live":
+     "Đang vận hành",
+    "source_changed/lifecycle/onboarding":
+     "Đang triển khai",
+    "source_changed/lifecycle/opportunity":
+     "Cơ hội",
+    "source_changed/lifecycle/prospect":
+     "Tiềm năng",
+    "source_changed/lifecycle/target":
+     "Mục tiêu",
+    "source_changed/lifecycle/unknown":
+     "Chưa rõ",
+    "source_changed/boolean/true":
+     "Có",
+    "source_deleted/lifecycle/customer":
+     "Khách hàng",
+    "source_deleted/lifecycle/disqualified":
+     "Đã loại",
+    "source_deleted/lifecycle/former_customer":
+     "Khách hàng cũ",
+    "source_deleted/lifecycle/live":
+     "Đang vận hành",
+    "source_deleted/lifecycle/onboarding":
+     "Đang triển khai",
+    "source_deleted/lifecycle/opportunity":
+     "Cơ hội",
+    "source_deleted/lifecycle/prospect":
+     "Tiềm năng",
+    "source_deleted/lifecycle/target":
+     "Mục tiêu",
+    "source_deleted/lifecycle/unknown":
+     "Chưa rõ",
+    "source_deleted/boolean/true":
      "Có",
     "source_id/lifecycle/customer":
      "Khách hàng",
@@ -75103,6 +75283,18 @@
     "source_activity_id/empty":
      "Chưa đặt",
     "source_activity_id/execution":
+     "Được xác định khi áp dụng",
+    "source_changed/boolean":
+     "Không",
+    "source_changed/empty":
+     "Chưa đặt",
+    "source_changed/execution":
+     "Được xác định khi áp dụng",
+    "source_deleted/boolean":
+     "Không",
+    "source_deleted/empty":
+     "Chưa đặt",
+    "source_deleted/execution":
      "Được xác định khi áp dụng",
     "source_id/boolean":
      "Không",

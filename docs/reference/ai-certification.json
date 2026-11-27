@@ -1,9 +1,9 @@
 {
   "totals": {
     "sites": 64,
-    "sites_best_current": 48,
+    "sites_best_current": 47,
     "sites_best_partial": 0,
-    "sites_best_stale": 14,
+    "sites_best_stale": 15,
     "sites_absent": 2,
     "scenarios": 356,
     "records": 463,
@@ -239,7 +239,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -250,7 +250,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 24,
@@ -1432,7 +1432,7 @@
             "env": "eu_hosted"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -1443,7 +1443,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current",
+            "state": "stale",
             "measured_on": {
               "provider": "gemini",
               "model": "gemini-3.8-flash",
@@ -2865,7 +2865,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "fallback": {
             "tier": "premium",
             "model": {
@@ -2875,7 +2875,7 @@
             },
             "same_model": false,
             "band": "certified",
-            "state": "current"
+            "state": "stale"
           },
           "abandoned": 0,
           "runs": 18,
@@ -10740,7 +10740,7 @@
       "usable_with_care": 1,
       "not_reliable_yet": 0,
       "too_few_runs": 16,
-      "recheck_pending": 16,
+      "recheck_pending": 17,
       "judges": [
         "gemini-3.1-flash-lite",
         "gemini-3.8-flash"
@@ -10753,9 +10753,9 @@
             "env": "cloud_frontier"
           },
           "sites": 48,
-          "sites_current": 32,
+          "sites_current": 31,
           "sites_partial": 0,
-          "sites_stale": 16,
+          "sites_stale": 17,
           "runs": 1236,
           "passed": 1216,
           "reliability": 0.9838187702265372,
@@ -10778,9 +10778,9 @@
             "env": "cloud_frontier"
           },
           "sites": 45,
-          "sites_current": 32,
+          "sites_current": 31,
           "sites_partial": 0,
-          "sites_stale": 13,
+          "sites_stale": 14,
           "runs": 900,
           "passed": 883,
           "reliability": 0.9811111111111112,
@@ -10938,7 +10938,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 18,
           "passed": 18,
           "records": 2,
@@ -11626,7 +11626,7 @@
       "usable_with_care": 4,
       "not_reliable_yet": 0,
       "too_few_runs": 12,
-      "recheck_pending": 15,
+      "recheck_pending": 16,
       "judges": [
         "claude-sonnet-5-5"
       ],
@@ -11638,9 +11638,9 @@
             "env": "cloud_frontier"
           },
           "sites": 48,
-          "sites_current": 34,
+          "sites_current": 33,
           "sites_partial": 0,
-          "sites_stale": 14,
+          "sites_stale": 15,
           "runs": 1353,
           "passed": 1321,
           "reliability": 0.9763488543976349,
@@ -11664,9 +11664,9 @@
             "thinking_level": "low"
           },
           "sites": 45,
-          "sites_current": 32,
+          "sites_current": 31,
           "sites_partial": 0,
-          "sites_stale": 13,
+          "sites_stale": 14,
           "runs": 888,
           "passed": 885,
           "reliability": 0.9966216216216216,
@@ -11827,7 +11827,7 @@
             "env": "cloud_frontier"
           },
           "band": "certified",
-          "state": "current",
+          "state": "stale",
           "runs": 24,
           "passed": 24,
           "records": 2,
@@ -14152,9 +14152,9 @@
         "env": "cloud_frontier"
       },
       "sites": 55,
-      "sites_current": 38,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 17,
+      "sites_stale": 18,
       "runs": 1341,
       "passed": 1313,
       "reliability": 0.9791200596569725,
@@ -14177,9 +14177,9 @@
         "env": "cloud_frontier"
       },
       "sites": 52,
-      "sites_current": 38,
+      "sites_current": 37,
       "sites_partial": 0,
-      "sites_stale": 14,
+      "sites_stale": 15,
       "runs": 993,
       "passed": 975,
       "reliability": 0.9818731117824774,
@@ -14202,9 +14202,9 @@
         "env": "cloud_frontier"
       },
       "sites": 58,
-      "sites_current": 41,
+      "sites_current": 40,
       "sites_partial": 0,
-      "sites_stale": 17,
+      "sites_stale": 18,
       "runs": 1629,
       "passed": 1577,
       "reliability": 0.9680785758133824,
@@ -14355,9 +14355,9 @@
         "thinking_level": "low"
       },
       "sites": 52,
-      "sites_current": 39,
+      "sites_current": 38,
       "sites_partial": 0,
-      "sites_stale": 13,
+      "sites_stale": 14,
       "runs": 1002,
       "passed": 999,
       "reliability": 0.9970059880239521,
@@ -19987,23 +19987,8 @@
       "key": "chat_summary/episode",
       "scope": "full_invocation",
       "missing_context_scopes": [],
-      "best_state": "current",
-      "recommended": {
-        "binding": {
-          "provider": "gemini",
-          "model": "gemini-3.1-flash-lite",
-          "env": "cloud_frontier"
-        },
-        "band": "certified",
-        "runs": 24,
-        "passed": 24,
-        "reliability": 1,
-        "reliability_interval": {
-          "lower": 0.935946,
-          "upper": 1
-        },
-        "state": "current"
-      },
+      "best_state": "stale",
+      "recommended": null,
       "scenarios": [
         {
           "name": "decision_on_discount",
@@ -20031,10 +20016,10 @@
             "model": "claude-haiku-5-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 18,
           "passed": 18,
@@ -20051,7 +20036,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): decision_on_discount, instruction_in_chat_is_data, small_talk_is_not_filed",
+          "stale_cause": {
+            "prompt_changed": [
+              "decision_on_discount",
+              "instruction_in_chat_is_data",
+              "small_talk_is_not_filed"
+            ],
+            "grader_changed": [
+              "decision_on_discount",
+              "instruction_in_chat_is_data",
+              "small_talk_is_not_filed"
+            ]
+          }
         },
         {
           "binding": {
@@ -20059,10 +20056,10 @@
             "model": "claude-sonnet-5-5",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "judge": "gemini-3.1-flash-lite",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 18,
           "passed": 18,
@@ -20079,7 +20076,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): decision_on_discount, instruction_in_chat_is_data, small_talk_is_not_filed",
+          "stale_cause": {
+            "prompt_changed": [
+              "decision_on_discount",
+              "instruction_in_chat_is_data",
+              "small_talk_is_not_filed"
+            ],
+            "grader_changed": [
+              "decision_on_discount",
+              "instruction_in_chat_is_data",
+              "small_talk_is_not_filed"
+            ]
+          }
         },
         {
           "binding": {
@@ -20087,10 +20096,10 @@
             "model": "gemini-3.1-flash-lite",
             "env": "cloud_frontier"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 24,
           "passed": 24,
@@ -20107,7 +20116,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): decision_on_discount, instruction_in_chat_is_data, small_talk_is_not_filed",
+          "stale_cause": {
+            "prompt_changed": [
+              "decision_on_discount",
+              "instruction_in_chat_is_data",
+              "small_talk_is_not_filed"
+            ],
+            "grader_changed": [
+              "decision_on_discount",
+              "instruction_in_chat_is_data",
+              "small_talk_is_not_filed"
+            ]
+          }
         },
         {
           "binding": {
@@ -20161,10 +20182,10 @@
             "env": "cloud_frontier",
             "thinking_level": "low"
           },
-          "state": "current",
+          "state": "stale",
           "band": "certified",
           "judge": "claude-sonnet-5-5",
-          "scenarios_measured": 3,
+          "scenarios_measured": 0,
           "scenarios_total": 3,
           "runs": 18,
           "passed": 18,
@@ -20181,7 +20202,19 @@
             "invalid": 0,
             "abstained": 0
           },
-          "stale_reason": ""
+          "stale_reason": "3 scenarios it scored have changed since (the prompt this build sends and how a run is graded): decision_on_discount, instruction_in_chat_is_data, small_talk_is_not_filed",
+          "stale_cause": {
+            "prompt_changed": [
+              "decision_on_discount",
+              "instruction_in_chat_is_data",
+              "small_talk_is_not_filed"
+            ],
+            "grader_changed": [
+              "decision_on_discount",
+              "instruction_in_chat_is_data",
+              "small_talk_is_not_filed"
+            ]
+          }
         }
       ]
     },

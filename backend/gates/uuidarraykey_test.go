@@ -34,6 +34,7 @@ const seatsAreRetired = "app_user ids; a colleague is retired and never deleted,
 
 // keylessUUIDArrays are the uuid arrays that keep no foreign key, each with why.
 var keylessUUIDArrays = gatekit.Waive(map[string]string{
+	"chat_bot_delivery.carried_item_ids":                "an immutable delivery manifest retained when source items are erased; unknown sends still need reconciliation and withdrawal, so deletion must not rewrite which items the provider may have received",
 	"activity_commitment_admission.evidence_ids":        "the messages a recorded commitment decision read, published with it; a re-read replaces the decision whole, and a cascade would rewrite what it rested on",
 	"activity_meeting_history.credited_seats_at_change": "a history row's snapshot of the seats a held meeting credited at that change; " + seatsAreRetired,
 	"activity_participant.roster_seats":                 "the seats whose calendar rosters list the participant, folded whole by the address trigger and storekit.StoreRosterSeatsSQL; " + seatsAreRetired,

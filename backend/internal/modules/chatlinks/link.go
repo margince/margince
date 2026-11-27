@@ -12,13 +12,13 @@ import (
 
 	"github.com/jackc/pgx/v5"
 
+	"github.com/margince/margince/backend/internal/modules/chatlinks/chatwire"
 	"github.com/margince/margince/backend/internal/modules/chatlinks/dispact"
+	"github.com/margince/margince/backend/internal/modules/chatlinks/messaging"
 	"github.com/margince/margince/backend/internal/platform/auth"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
-	"github.com/margince/margince/backend/internal/shared/kernel/principal"
-	"github.com/margince/margince/backend/internal/shared/kernel/textcut"
 )
 
 // The link states a reader sees.
@@ -31,10 +31,13 @@ const (
 
 // State is what a record's channel panel shows.
 type State struct {
-	State   string
-	Link    *Link
-	Address string
-	Invites *Invites
+	LastSync  *EndedSync
+	Health    *SyncHealth
+	Workspace string
+	State     string
+	Link      *Link
+	Address   string
+	Invites   *Invites
 }
 
 // Invites says who a newly created channel was opened to.
@@ -44,6 +47,9 @@ type Invites struct {
 
 // LinkRequest is a link as the caller asked for it.
 type LinkRequest struct {
+	participant      *MemberGrant
+	RootID           string
+	Provider         string
 	Mode             string
 	Channel          string
 	Verbosity        string
@@ -62,7 +68,7 @@ func (s *Store) GetState(ctx context.Context, kind string, id ids.UUID) (State, 
 	if _, err := recordColumn(kind); err != nil {
 		return State{}, err
 	}
-	if err := auth.Require(ctx, kind, principal.ActionRead); err != nil {
+	if err := requireRecordRead(ctx, kind); err != nil {
 		return State{}, err
 	}
 	var out State
@@ -72,40 +78,52 @@ func (s *Store) GetState(ctx context.Context, kind string, id ids.UUID) (State, 
 		}
 		var err error
 		out, err = stateOf(ctx, tx, kind, id)
+		if err != nil {
+			return err
+		}
+		out.LastSync, err = lastEndedSync(ctx, tx, kind, id)
 		return err
 	})
 	return out, err
 }
 
 func stateOf(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) (State, error) {
-	var address *string
-	var connected bool
-	var connection ids.UUID
-	err := tx.QueryRow(ctx, `SELECT id, address, status = 'connected' FROM channel_connection
-		WHERE provider = $1 AND archived_at IS NULL AND account_id IS NULL AND parent_connection_id IS NULL`, ProviderDispact).Scan(&connection, &address, &connected)
-	if errors.Is(err, pgx.ErrNoRows) {
+	link, err := liveLinkOf(ctx, tx, kind, id)
+	if errors.Is(err, ErrLinkNotFound) {
+		var connected bool
+		err := tx.QueryRow(ctx, `SELECT EXISTS (SELECT 1 FROM channel_connection
+   WHERE provider=ANY(@providers) AND status='connected' AND archived_at IS NULL
+   AND account_id IS NULL AND parent_connection_id IS NULL)`, pgx.StrictNamedArgs{"providers": []string{ProviderDispact, ProviderSlack, ProviderTeams}}).Scan(&connected)
+		if err != nil {
+			return State{}, err
+		}
+		if connected {
+			return State{State: StateNone}, nil
+		}
 		return State{State: StateOff}, nil
 	}
 	if err != nil {
 		return State{}, err
 	}
-	out := State{State: StateNone}
-	if address != nil {
-		out.Address = *address
+	var address *string
+	var connected bool
+	var workspace string
+	err = tx.QueryRow(ctx, `SELECT channel_id,address,status='connected' AND archived_at IS NULL FROM channel_connection
+  WHERE id=@id AND provider=@provider AND account_id IS NULL AND parent_connection_id IS NULL`, pgx.StrictNamedArgs{"id": link.ConnectionID, providerKey: link.Provider}).Scan(&workspace, &address, &connected)
+	if errors.Is(err, pgx.ErrNoRows) {
+		connected = false
+	} else if err != nil {
+		return State{}, err
 	}
-	link, err := liveLinkOf(ctx, tx, kind, id)
-	if errors.Is(err, ErrLinkNotFound) {
-		if !connected {
-			out.State = StateOff
-		}
-		return out, nil
-	}
+	health, err := linkSyncHealth(ctx, tx, link.ID)
 	if err != nil {
 		return State{}, err
 	}
-	out.Link = &link
-	out.State = StateLinked
-	if !connected || link.Status != StatusActive || link.ConnectionID != connection {
+	out := State{State: StateLinked, Link: &link, Workspace: workspace, Health: &health}
+	if address != nil {
+		out.Address = *address
+	}
+	if !connected || link.Status != StatusActive {
 		out.State = StatePaused
 	}
 	return out, nil
@@ -122,13 +140,35 @@ func (s *Store) Link(ctx context.Context, kind string, id ids.UUID, req LinkRequ
 	if err != nil {
 		return State{}, err
 	}
-	session, err := s.chats.Open(ctx)
+	session, err := OpenProvider(ctx, s.chats, req.Provider)
 	if err != nil {
 		return State{}, err
+	}
+	var participant messaging.Client
+	_, canonical := session.Chat.(chatwire.RootReader)
+	if req.Provider != ProviderDispact || canonical {
+		grant, client, err := s.OpenMember(ctx, req.Provider)
+		if err != nil {
+			return State{}, err
+		}
+		if grant.Workspace != session.TeamID {
+			return State{}, messaging.ErrUnauthorized
+		}
+		req.participant = &grant
+		participant = client
 	}
 	channel, err := resolveChannel(ctx, session.Chat, kind, id, facts.name, req)
 	if err != nil {
 		return State{}, err
+	}
+	if req.RootID != "" {
+		reader, ok := session.Chat.(chatwire.RootReader)
+		if !ok || req.Mode != ModeExisting {
+			return State{}, apperrors.ErrInvalidArgument
+		}
+		if _, err := reader.Thread(ctx, channel.Slug, req.RootID, ""); err != nil {
+			return State{}, ChatFailure(err)
+		}
 	}
 	var invites *Invites
 	if req.Mode == ModeCreate {
@@ -137,20 +177,36 @@ func (s *Store) Link(ctx context.Context, kind string, id ids.UUID, req LinkRequ
 			return State{}, err
 		}
 	}
+	if participant != nil {
+		if _, err := participant.Conversation(ctx, channel.Slug); err != nil {
+			return State{}, err
+		}
+	}
+
 	link, err := s.insertLink(ctx, kind, id, session, channel, req)
 	if err != nil {
 		return State{}, err
 	}
-	return State{State: StateLinked, Link: &link, Address: session.Address, Invites: invites}, nil
+	return State{State: StateLinked, Link: &link, Address: session.Address, Workspace: session.TeamID, Invites: invites}, nil
 }
 
 func validateLink(req *LinkRequest) error {
+	if req.Provider == "" {
+		req.Provider = ProviderDispact
+	}
+	if !IsChatProvider(req.Provider) {
+		return fmt.Errorf("choose a supported chat provider: %w", apperrors.ErrInvalidArgument)
+	}
 	switch req.Mode {
 	case ModeCreate:
 		req.Channel = ""
 		req.SummarizeHistory = nil
 	case ModeExisting:
-		req.Channel = channelSlugOf(req.Channel)
+		if req.Provider == ProviderDispact {
+			req.Channel = channelSlugOf(req.Channel)
+		} else {
+			req.Channel = strings.TrimSpace(req.Channel)
+		}
 		if req.Channel == "" {
 			return fmt.Errorf("name the channel by its slug or its link: %w", apperrors.ErrInvalidArgument)
 		}
@@ -197,11 +253,16 @@ type recordFacts struct {
 
 // LinkableChannels lists the private channels the bot is in that no live link
 // holds, sorted by slug, for a member who may link this record.
-func (s *Store) LinkableChannels(ctx context.Context, kind string, id ids.UUID) ([]dispact.Channel, error) {
+func (s *Store) LinkableChannels(ctx context.Context, kind string, id ids.UUID) ([]chatwire.Channel, error) {
+	return s.LinkableProviderChannels(ctx, kind, id, ProviderDispact)
+}
+
+// LinkableProviderChannels limits discovery to destinations the record may associate.
+func (s *Store) LinkableProviderChannels(ctx context.Context, kind string, id ids.UUID, provider string) ([]chatwire.Channel, error) {
 	if _, err := s.precheckLink(ctx, kind, id); err != nil {
 		return nil, err
 	}
-	session, err := s.chats.Open(ctx)
+	session, err := OpenProvider(ctx, s.chats, provider)
 	if err != nil {
 		return nil, err
 	}
@@ -225,20 +286,20 @@ func (s *Store) LinkableChannels(ctx context.Context, kind string, id ids.UUID) 
 	if err != nil {
 		return nil, err
 	}
-	out := make([]dispact.Channel, 0, len(channels))
+	out := make([]chatwire.Channel, 0, len(channels))
 	for _, ch := range channels {
 		if ch.IsPrivate && ch.BotIsMember && !ch.IsArchived && !linked[ch.Slug] {
 			out = append(out, ch)
 		}
 	}
-	slices.SortFunc(out, func(a, b dispact.Channel) int { return strings.Compare(a.Slug, b.Slug) })
+	slices.SortFunc(out, func(a, b chatwire.Channel) int { return strings.Compare(a.Slug, b.Slug) })
 	return out, nil
 }
 
 // precheckLink refuses early what the write would refuse anyway. So the chat
 // is never asked for a channel the record cannot take.
 func (s *Store) precheckLink(ctx context.Context, kind string, id ids.UUID) (recordFacts, error) {
-	if err := auth.Require(ctx, kind, principal.ActionUpdate); err != nil {
+	if err := requireRecordUpdate(ctx, kind); err != nil {
 		return recordFacts{}, err
 	}
 	actor, err := linkActor(ctx)
@@ -265,7 +326,12 @@ func readFacts(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID, facts *
 	if kind == RecordDeal {
 		project = "r.project_id"
 	}
-	query := fmt.Sprintf(`SELECT r.name, r.owner_id, %s FROM %s r WHERE r.id = $1`,
+	name := "r.name"
+	if kind == RecordCompany {
+		name = "r.display_name"
+	}
+	query := fmt.Sprintf(`SELECT %s, r.owner_id, %s FROM %s r WHERE r.id = $1`,
+		name,
 		project, pgx.Identifier{kind}.Sanitize())
 	return tx.QueryRow(ctx, query, id).Scan(&facts.name, &facts.owner, &facts.projectID)
 }
@@ -302,79 +368,31 @@ func linkActor(ctx context.Context) (ids.UUID, error) {
 
 // resolveChannel creates the record's channel, or checks the named one: it
 // must exist, be private, and have the bot in it.
-func resolveChannel(ctx context.Context, chat Chat, kind string, id ids.UUID, name string, req LinkRequest) (dispact.Channel, error) {
+func resolveChannel(ctx context.Context, chat Chat, kind string, id ids.UUID, name string, req LinkRequest) (chatwire.Channel, error) {
 	if req.Mode == ModeCreate {
 		return createChannel(ctx, chat, kind, id, name)
 	}
 	ch, err := LiveChannel(ctx, chat, req.Channel)
 	if err != nil {
-		return dispact.Channel{}, ChatFailure(err)
+		return chatwire.Channel{}, ChatFailure(err)
 	}
 	switch {
 	case !ch.IsPrivate:
-		return dispact.Channel{}, ErrChannelNotPrivate
+		return chatwire.Channel{}, ErrChannelNotPrivate
 	case !ch.BotIsMember:
-		return dispact.Channel{}, ErrBotNotMember
+		return chatwire.Channel{}, ErrBotNotMember
 	}
 	return ch, nil
 }
 
 // LiveChannel reads a channel and answers an archived one as gone. The chat
 // still serves an archived channel's history and takes the bot's posts.
-func LiveChannel(ctx context.Context, chat Chat, slug string) (dispact.Channel, error) {
+func LiveChannel(ctx context.Context, chat Chat, slug string) (chatwire.Channel, error) {
 	ch, err := chat.Channel(ctx, slug)
 	if err == nil && ch.IsArchived {
 		err = fmt.Errorf("chatlinks: channel %s is archived: %w", slug, dispact.ErrChannelGone)
 	}
 	return ch, err
-}
-
-// createChannel makes the record's channel under the record's name. Deals
-// often share a name, so a name the chat refuses is asked once more in a form
-// derived from the record. A blank name starts in that form.
-func createChannel(ctx context.Context, chat Chat, kind string, id ids.UUID, name string) (dispact.Channel, error) {
-	name = channelNameOf(name)
-	if name == "" {
-		name = kind + "-" + idSuffix(id)
-	}
-	ch, err := chat.CreateChannel(ctx, externalKey(kind, id), name)
-	if errors.Is(err, dispact.ErrNameRefused) {
-		ch, err = chat.CreateChannel(ctx, externalKey(kind, id), fallbackName(kind, id, name, err))
-	}
-	return ch, ChatFailure(err)
-}
-
-// fallbackName tells a taken name apart by the end of the record's id. A name
-// the chat's rules refuse is replaced by the record's kind and that id.
-func fallbackName(kind string, id ids.UUID, name string, refusal error) string {
-	suffix := idSuffix(id)
-	var coded *dispact.CodeError
-	if errors.As(refusal, &coded) && coded.Code == dispact.CodeNameTaken {
-		if kept := strings.TrimSpace(textcut.Runes(name, channelNameLimit-len(suffix)-1)); kept != "" {
-			return kept + " " + suffix
-		}
-	}
-	return kind + "-" + suffix
-}
-
-// idSuffix is the end of a record's id, its random part.
-func idSuffix(id ids.UUID) string {
-	full := id.String()
-	return full[len(full)-6:]
-}
-
-// externalKey names the channel Margince made for a record, so a retried
-// create finds it instead of making a second one.
-func externalKey(kind string, id ids.UUID) string {
-	return "margince:" + kind + ":" + id.String()
-}
-
-// channelNameLimit is the longest channel name the chat takes, in characters.
-const channelNameLimit = 80
-
-// channelNameOf keeps a record's name within the chat's limit.
-func channelNameOf(name string) string {
-	return textcut.Runes(strings.TrimSpace(name), channelNameLimit)
 }
 
 // ChatFailure turns the chat client's errors into this package's refusals.

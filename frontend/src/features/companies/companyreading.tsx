@@ -2,6 +2,7 @@
 // SPDX-FileCopyrightText: 2026 Gradion
 
 import type { components } from "../../api/schema";
+import { ChannelPanel } from "../../components/channelpanel";
 import type { useTaskUpdate } from "../../components/taskactions";
 import type { CompanyTab } from "../../lib/companytab";
 import { CompanyHowItStands } from "./companyhowitstands";
@@ -66,6 +67,11 @@ export function CompanyReading({
         loading={loading}
         failed={failed}
         onOpenTab={onOpenTab}
+      />
+      <ChannelPanel
+        recordType="company"
+        recordId={company.id}
+        canEdit={company.writable ?? false}
       />
       {ready && (
         <CompanyOverviewCards

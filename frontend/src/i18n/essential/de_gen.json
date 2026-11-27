@@ -1,4 +1,6 @@
 {
+  "history.field.chat_source_changed": "Gesprächsquelle geändert",
+  "history.field.chat_source_deleted": "Gesprächsquelle entfernt",
   "history.field.kind": "Art",
   "history.field.email_security": "E-Mail-Sicherheit",
   "history.field.employee_range": "Spanne der Mitarbeiterzahl",

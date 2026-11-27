@@ -300,6 +300,44 @@ describe("RecordTabs keeps focus on the row as tabs fold", () => {
 // Widths here depend on where a tab stands: the first one drops its start
 // padding. The fold must settle on one row, not flip between two.
 describe("RecordTabs folds to one stable row", () => {
+  it("reserves the strip padding before folding its tabs", () => {
+    vi.stubGlobal(
+      "ResizeObserver",
+      class {
+        observe() {}
+        disconnect() {}
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "offsetWidth", "get").mockImplementation(
+      function (this: HTMLElement) {
+        return this.classList.contains("recordtabs-more") ? 32 : 100;
+      },
+    );
+    vi.spyOn(HTMLElement.prototype, "clientWidth", "get").mockReturnValue(200);
+    const computed = window.getComputedStyle.bind(window);
+    vi.spyOn(window, "getComputedStyle").mockImplementation((element) => {
+      const style = computed(element);
+      return element.classList.contains("recordtabs-strip")
+        ? {
+            ...style,
+            paddingInlineStart: "8px",
+            paddingInlineEnd: "8px",
+            columnGap: "0px",
+          }
+        : style;
+    });
+    const { container } = strip();
+    expect(screen.queryByRole("button", { name: LABELS.contacts })).toBeNull();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["record.tabs.moreLabel"],
+      }),
+    ).toBeVisible();
+    expect(container.querySelector(".recordtabs-strip")).toHaveStyle({
+      minInlineSize: "148px",
+    });
+  });
+
   it("keeps the same tabs when the first tab's padding moves", () => {
     let resized: () => void = () => undefined;
     vi.stubGlobal(

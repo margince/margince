@@ -6778,6 +6778,10 @@ paths:
           schema:
             type: string
             enum: [reached, not_reached, voicemail, call_back_later, put_through]
+        - name: chat_provider
+          in: query
+          description: Generated channel recaps from this provider. Content visibility is required for a match.
+          schema: {$ref: '#/components/schemas/MessengerProvider'}
         - name: channel_provider
           in: query
           description: |-
@@ -12889,7 +12893,7 @@ paths:
       tags: [Connectors]
       operationId: linkChannel
       security: [{bearerAuth: []}]
-      summary: Link a deal or project to a new or existing private chat channel.
+      summary: Link a company, deal or project to an authorized work channel.
       description: |-
         `create` makes a private channel named after the record and invites every live member who may
         open the record, the record's owner and the member linking it first, at most 50. A member with
@@ -13005,9 +13009,11 @@ paths:
         summary as a note on the record, as the caller. The message text is not stored. Filing the
         same message again returns the note already filed.
 
-        Needs the passport permission Change records.
+        Needs the passport permission Use AI and buy data.
 
         Runs at once.
+
+        Holds the request open while an AI model answers.
       requestBody:
         required: true
         content:
@@ -31563,7 +31569,7 @@ components:
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: {type: string, format: uuid}
-        provider: {type: string, enum: [telegram, telegram_business, dispact, whatsapp, zalo_oa]}
+        provider: {type: string, enum: [telegram, telegram_business, dispact, whatsapp, zalo_oa, slack, teams]}
         channelId:
           type: string
           description: The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.
@@ -31590,10 +31596,32 @@ components:
       required: [data]
       properties:
         data: {type: array, items: {$ref: '#/components/schemas/ChannelConnection'}}
+    SlackHistoryProfile:
+      type: object
+      additionalProperties: false
+      required: [distribution, history_per_minute, replies_per_minute, history_page_size, replies_page_size, source, recorded_at, canonical_supported]
+      properties:
+        distribution: {type: string, enum: [internal, marketplace, non_marketplace]}
+        history_per_minute: {type: integer, minimum: 1, maximum: 50}
+        replies_per_minute: {type: integer, minimum: 1, maximum: 50}
+        history_page_size: {type: integer, minimum: 1, maximum: 200}
+        replies_page_size: {type: integer, minimum: 1, maximum: 100}
+        source: {type: string, enum: [admin_declared]}
+        recorded_at: {type: string, format: date-time}
+        canonical_supported: {type: boolean}
+    MessengerProvider:
+      type: "string"
+      enum:
+        - "dispact"
+        - "slack"
+        - "teams"
     ChannelLinkRecordType:
       type: string
-      enum: [deal, project]
+      enum: [company, deal, project]
       description: The kind of record a chat channel is linked to.
+    ChannelMessageDetail:
+      type: string
+      enum: [brief, full]
     ChannelVerbosity:
       type: string
       enum: [everything, important, milestones, silent]
@@ -31603,6 +31631,8 @@ components:
       additionalProperties: false
       required: [state]
       properties:
+        last_sync: {$ref: '#/components/schemas/ChannelEndedSync'}
+        sync: {$ref: '#/components/schemas/ChannelSyncHealth'}
         state:
           type: string
           enum: [off, none, linked, paused]
@@ -31611,20 +31641,57 @@ components:
           $ref: '#/components/schemas/ChannelLink'
         invites:
           $ref: '#/components/schemas/ChannelInvites'
+    ChannelEndedSync:
+      type: object
+      additionalProperties: false
+      required: [provider, ended_at, retained_messages, confirmed_redactions, unverified_withdrawals, unconfirmed_deliveries]
+      properties:
+        provider: {$ref: '#/components/schemas/MessengerProvider'}
+        ended_at: {type: string, format: date-time}
+        read_through: {type: [string, 'null'], format: date-time}
+        last_posted_at: {type: [string, 'null'], format: date-time}
+        retained_messages: {type: integer, minimum: 0}
+        confirmed_redactions: {type: integer, minimum: 0, description: Messages successfully rewritten without withdrawn content; this does not prove deletion of other copies.}
+        unverified_withdrawals: {type: integer, minimum: 0}
+        unconfirmed_deliveries: {type: integer, minimum: 0}
+    ChannelSyncHealth:
+      type: object
+      additionalProperties: false
+      required: [pending_conversations, failed_conversations, pending_crm_updates, unconfirmed_deliveries]
+      properties:
+        delivery_error: {type: [string, 'null'], enum: [audience_changed, delivery_unknown, source_incomplete, source_unavailable, source_too_long, model_unavailable, rate_limited, access_lost, source_changed, null]}
+        notifications_delayed: {type: boolean, description: Teams push notifications need recovery; periodic source reads continue independently.}
+        coverage_at: {type: [string, 'null'], format: date-time, description: Metadata discovery checked through this time. Pending recaps are reported separately.}
+        last_error: {type: [string, 'null'], enum: [history_profile, source_incomplete, source_unavailable, source_too_long, model_unavailable, rate_limited, access_lost, source_changed, null]}
+        pending_conversations: {type: integer, minimum: 0}
+        failed_conversations: {type: integer, minimum: 0}
+        pending_crm_updates: {type: integer, minimum: 0}
+        unconfirmed_deliveries: {type: integer, minimum: 0}
     ChannelLink:
       type: object
       additionalProperties: false
       required: [id, provider, channel_slug, channel_name, channel_url, verbosity, status, created_at]
       properties:
+        history_profile: {$ref: '#/components/schemas/SlackHistoryProfile'}
+        native_identity: {type: boolean, description: Whether this association uses an explicitly confirmed immutable provider channel identity.}
+        overview_card_paused: {type: boolean}
+        can_send_crm_updates:
+          type: boolean
+          description: Whether the native provider permits bot delivery in this channel. False for private Teams channels.
+        root_id: {type: string, maxLength: 1024}
         id: {type: string, format: uuid}
-        provider: {type: string, enum: [dispact]}
+        provider: {$ref: '#/components/schemas/MessengerProvider'}
         channel_slug: {type: string}
         channel_name: {type: string}
         channel_url: {type: string, description: The channel's address in the chat.}
+        message_detail: {$ref: '#/components/schemas/ChannelMessageDetail'}
         verbosity: {$ref: '#/components/schemas/ChannelVerbosity'}
-        status: {type: string, enum: [active, channel_gone]}
+        status: {type: string, enum: [active, channel_gone, identity_needs_review]}
+        company_id: {type: [string, 'null'], format: uuid}
         deal_id: {type: [string, 'null'], format: uuid}
         project_id: {type: [string, 'null'], format: uuid}
+        save_channel_updates: {type: boolean, description: Whether future eligible channel activity is filed in History.}
+        send_crm_updates: {type: boolean, description: Whether eligible CRM events are posted to the channel.}
         created_at: {type: string, format: date-time}
     ChannelInvites:
       type: object
@@ -31641,6 +31708,15 @@ components:
       additionalProperties: false
       required: [mode]
       properties:
+        root_id:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          description: Existing native thread root explicitly assigned to this record. A shared channel uses separate root assignments for each record.
+        provider:
+          allOf: [{$ref: '#/components/schemas/MessengerProvider'}]
+          default: dispact
+          description: Native provider whose shared bot owns this link.
         mode:
           type: string
           enum: [create, existing]
@@ -31655,9 +31731,14 @@ components:
     SetChannelVerbosityRequest:
       type: object
       additionalProperties: false
-      required: [verbosity]
+      minProperties: 1
       properties:
+        expected_link_id: {type: string, format: uuid}
+        expected_version: {type: integer, format: int64}
+        message_detail: {$ref: '#/components/schemas/ChannelMessageDetail'}
         verbosity: {$ref: '#/components/schemas/ChannelVerbosity'}
+        save_channel_updates: {type: boolean}
+        send_crm_updates: {type: boolean}
     FileChannelMessageRequest:
       type: object
       additionalProperties: false
@@ -31668,22 +31749,27 @@ components:
           minLength: 1
           maxLength: 500
           description: |-
-            The message in the record's channel: its sequence number, `#slug:seq`, the chat's
-            `<m:#slug:seq|…>` mention, or its link. A message in another channel is not found.
+            A native message ID or link in the record's linked channel. Dispact also accepts
+            a sequence number, `#slug:seq`, or `<m:#slug:seq|…>` mention. A message in another
+            channel or outside a linked thread is not found.
         thread:
           type: boolean
-          description: True files the message and the replies in its thread that follow it.
+          description: True files the complete available thread containing the selected message.
     ChatEpisode:
       type: object
       readOnly: true
       description: |-
-        The chat talk a summary note was written from. The talk itself is not kept: open `url`
-        to read it in the chat.
+        The source metadata of a channel recap. Source URLs are withheld from ordinary activity reads;
+        obtain a short-lived authorized link through the chat-source endpoint.
       required: [message_count, ended_at, url]
       properties:
+        provider:
+          $ref: '#/components/schemas/MessengerProvider'
+        source_changed: {type: boolean, description: The source changed after a human edited this recap; review the preserved text.}
+        channel_name: {type: string, description: Channel name recorded when the recap was written.}
         message_count: {type: integer, minimum: 1, description: How many messages the summary covers.}
         ended_at: {type: string, format: date-time, description: When the last of them was posted.}
-        url: {type: string, description: The first message in the chat.}
+        url: {type: string, deprecated: true, description: Empty on activity reads. Obtain an authorized link through the chat-source endpoint.}
     ImportObject:
       type: string
       enum: [company, lead, contact, deal, activity, project, product]

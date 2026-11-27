@@ -75,8 +75,15 @@ var enumBindings = map[string]struct{ pkgDir, typeName string }{
 	"tag.color": {"internal/contracts", "TagColor"},
 	// A chat link's level and state are served as they are stored, so the
 	// contract's enums and the CHECKs are one vocabulary.
-	"chat_link.verbosity": {"internal/contracts", "ChannelVerbosity"},
-	"chat_link.status":    {"internal/contracts", "ChannelLinkStatus"},
+	"chat_link.message_detail":      {"internal/contracts", "ChannelMessageDetail"},
+	"chat_link.provider":            {"internal/contracts", "MessengerProvider"},
+	"chat_member_grant.provider":    {"internal/contracts", "MessengerProvider"},
+	"chat_member_grant.status":      {"internal/modules/chatlinks", "MemberGrantStatus"},
+	"chat_member_room.record_type":  {"internal/contracts", "ChannelLinkRecordType"},
+	"chat_send_attempt.record_type": {"internal/contracts", "ChannelLinkRecordType"},
+	"chat_send_attempt.state":       {"internal/contracts", "MessengerAttemptState"},
+	"chat_link.verbosity":           {"internal/contracts", "ChannelVerbosity"},
+	"chat_link.status":              {"internal/contracts", "ChannelLinkStatus"},
 	// Where a saved draft was opened. The wire enum is what the composer sends,
 	// so a value the contract admits and the CHECK refuses would be a save that
 	// fails with a constraint error instead of a validation answer.

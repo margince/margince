@@ -1347,6 +1347,27 @@ func (e MeetingResponse) Valid() bool {
 	}
 }
 
+// Defines values for MessengerProvider.
+const (
+	Dispact MessengerProvider = "dispact"
+	Slack   MessengerProvider = "slack"
+	Teams   MessengerProvider = "teams"
+)
+
+// Valid indicates whether the value is a known member of the MessengerProvider enum.
+func (e MessengerProvider) Valid() bool {
+	switch e {
+	case Dispact:
+		return true
+	case Slack:
+		return true
+	case Teams:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for OccurredPrecision.
 const (
 	OccurredPrecisionDay     OccurredPrecision = "day"
@@ -2327,16 +2348,24 @@ type AddressCountryMismatch struct {
 // body.
 type BodyCompleteness string
 
-// ChatEpisode The chat talk a summary note was written from. The talk itself is not kept: open `url`
-// to read it in the chat.
+// ChatEpisode The source metadata of a channel recap. Source URLs are withheld from ordinary activity reads;
+// obtain a short-lived authorized link through the chat-source endpoint.
 type ChatEpisode struct {
+	// ChannelName Channel name recorded when the recap was written.
+	ChannelName *string `json:"channel_name,omitempty"`
+
 	// EndedAt When the last of them was posted.
 	EndedAt time.Time `json:"ended_at"`
 
 	// MessageCount How many messages the summary covers.
-	MessageCount int `json:"message_count" minimum:"1"`
+	MessageCount int                `json:"message_count" minimum:"1"`
+	Provider     *MessengerProvider `json:"provider,omitempty"`
 
-	// Url The first message in the chat.
+	// SourceChanged The source changed after a human edited this recap; review the preserved text.
+	SourceChanged *bool `json:"source_changed,omitempty"`
+
+	// Url Empty on activity reads. Obtain an authorized link through the chat-source endpoint.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Url string `json:"url"`
 }
 
@@ -3290,6 +3319,9 @@ type MeetingInvitationSummary struct {
 
 // MeetingResponse A guest's answer to a calendar invitation. `needs_action` is an invitation not answered yet.
 type MeetingResponse string
+
+// MessengerProvider defines model for MessengerProvider.
+type MessengerProvider string
 
 // OccurredPrecision How much of an activity's time is known. `instant` is a real moment. `day` is a date with no time of day: the stored instant is noon UTC of that date, so its date is the UTC date, whatever the installation's zone. A meeting of this precision never holds its host's calendar slot.
 type OccurredPrecision string

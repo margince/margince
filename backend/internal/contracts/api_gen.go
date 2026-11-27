@@ -5341,6 +5341,8 @@ func (e ChangeContractStatusRequestStatus) Valid() bool {
 // Defines values for ChannelConnectionProvider.
 const (
 	ChannelConnectionProviderDispact          ChannelConnectionProvider = "dispact"
+	ChannelConnectionProviderSlack            ChannelConnectionProvider = "slack"
+	ChannelConnectionProviderTeams            ChannelConnectionProvider = "teams"
 	ChannelConnectionProviderTelegram         ChannelConnectionProvider = "telegram"
 	ChannelConnectionProviderTelegramBusiness ChannelConnectionProvider = "telegram_business"
 	ChannelConnectionProviderWhatsapp         ChannelConnectionProvider = "whatsapp"
@@ -5351,6 +5353,10 @@ const (
 func (e ChannelConnectionProvider) Valid() bool {
 	switch e {
 	case ChannelConnectionProviderDispact:
+		return true
+	case ChannelConnectionProviderSlack:
+		return true
+	case ChannelConnectionProviderTeams:
 		return true
 	case ChannelConnectionProviderTelegram:
 		return true
@@ -5392,25 +5398,11 @@ func (e ChannelConnectionStatus) Valid() bool {
 	}
 }
 
-// Defines values for ChannelLinkProvider.
-const (
-	ChannelLinkProviderDispact ChannelLinkProvider = "dispact"
-)
-
-// Valid indicates whether the value is a known member of the ChannelLinkProvider enum.
-func (e ChannelLinkProvider) Valid() bool {
-	switch e {
-	case ChannelLinkProviderDispact:
-		return true
-	default:
-		return false
-	}
-}
-
 // Defines values for ChannelLinkStatus.
 const (
-	ChannelLinkStatusActive      ChannelLinkStatus = "active"
-	ChannelLinkStatusChannelGone ChannelLinkStatus = "channel_gone"
+	ChannelLinkStatusActive              ChannelLinkStatus = "active"
+	ChannelLinkStatusChannelGone         ChannelLinkStatus = "channel_gone"
+	ChannelLinkStatusIdentityNeedsReview ChannelLinkStatus = "identity_needs_review"
 )
 
 // Valid indicates whether the value is a known member of the ChannelLinkStatus enum.
@@ -5420,6 +5412,8 @@ func (e ChannelLinkStatus) Valid() bool {
 		return true
 	case ChannelLinkStatusChannelGone:
 		return true
+	case ChannelLinkStatusIdentityNeedsReview:
+		return true
 	default:
 		return false
 	}
@@ -5427,6 +5421,7 @@ func (e ChannelLinkStatus) Valid() bool {
 
 // Defines values for ChannelLinkRecordType.
 const (
+	ChannelLinkRecordTypeCompany ChannelLinkRecordType = "company"
 	ChannelLinkRecordTypeDeal    ChannelLinkRecordType = "deal"
 	ChannelLinkRecordTypeProject ChannelLinkRecordType = "project"
 )
@@ -5434,6 +5429,8 @@ const (
 // Valid indicates whether the value is a known member of the ChannelLinkRecordType enum.
 func (e ChannelLinkRecordType) Valid() bool {
 	switch e {
+	case ChannelLinkRecordTypeCompany:
+		return true
 	case ChannelLinkRecordTypeDeal:
 		return true
 	case ChannelLinkRecordTypeProject:
@@ -5467,6 +5464,24 @@ func (e ChannelLinkStateState) Valid() bool {
 	}
 }
 
+// Defines values for ChannelMessageDetail.
+const (
+	ChannelMessageDetailBrief ChannelMessageDetail = "brief"
+	ChannelMessageDetailFull  ChannelMessageDetail = "full"
+)
+
+// Valid indicates whether the value is a known member of the ChannelMessageDetail enum.
+func (e ChannelMessageDetail) Valid() bool {
+	switch e {
+	case ChannelMessageDetailBrief:
+		return true
+	case ChannelMessageDetailFull:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ChannelProviderEntryCredentialModel.
 const (
 	ChannelProviderEntryCredentialModelPerMember    ChannelProviderEntryCredentialModel = "per_member"
@@ -5479,6 +5494,99 @@ func (e ChannelProviderEntryCredentialModel) Valid() bool {
 	case ChannelProviderEntryCredentialModelPerMember:
 		return true
 	case ChannelProviderEntryCredentialModelWorkspaceBot:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelSyncHealthDeliveryError.
+const (
+	ChannelSyncHealthDeliveryErrorAccessLost        ChannelSyncHealthDeliveryError = "access_lost"
+	ChannelSyncHealthDeliveryErrorAudienceChanged   ChannelSyncHealthDeliveryError = "audience_changed"
+	ChannelSyncHealthDeliveryErrorDeliveryUnknown   ChannelSyncHealthDeliveryError = "delivery_unknown"
+	ChannelSyncHealthDeliveryErrorModelUnavailable  ChannelSyncHealthDeliveryError = "model_unavailable"
+	ChannelSyncHealthDeliveryErrorRateLimited       ChannelSyncHealthDeliveryError = "rate_limited"
+	ChannelSyncHealthDeliveryErrorSourceChanged     ChannelSyncHealthDeliveryError = "source_changed"
+	ChannelSyncHealthDeliveryErrorSourceIncomplete  ChannelSyncHealthDeliveryError = "source_incomplete"
+	ChannelSyncHealthDeliveryErrorSourceTooLong     ChannelSyncHealthDeliveryError = "source_too_long"
+	ChannelSyncHealthDeliveryErrorSourceUnavailable ChannelSyncHealthDeliveryError = "source_unavailable"
+)
+
+// Valid indicates whether the value is a known member of the ChannelSyncHealthDeliveryError enum.
+func (e ChannelSyncHealthDeliveryError) Valid() bool {
+	switch e {
+	case ChannelSyncHealthDeliveryErrorAccessLost:
+		return true
+	case ChannelSyncHealthDeliveryErrorAudienceChanged:
+		return true
+	case ChannelSyncHealthDeliveryErrorDeliveryUnknown:
+		return true
+	case ChannelSyncHealthDeliveryErrorModelUnavailable:
+		return true
+	case ChannelSyncHealthDeliveryErrorRateLimited:
+		return true
+	case ChannelSyncHealthDeliveryErrorSourceChanged:
+		return true
+	case ChannelSyncHealthDeliveryErrorSourceIncomplete:
+		return true
+	case ChannelSyncHealthDeliveryErrorSourceTooLong:
+		return true
+	case ChannelSyncHealthDeliveryErrorSourceUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelSyncHealthLastError.
+const (
+	ChannelSyncHealthLastErrorAccessLost        ChannelSyncHealthLastError = "access_lost"
+	ChannelSyncHealthLastErrorHistoryProfile    ChannelSyncHealthLastError = "history_profile"
+	ChannelSyncHealthLastErrorModelUnavailable  ChannelSyncHealthLastError = "model_unavailable"
+	ChannelSyncHealthLastErrorRateLimited       ChannelSyncHealthLastError = "rate_limited"
+	ChannelSyncHealthLastErrorSourceChanged     ChannelSyncHealthLastError = "source_changed"
+	ChannelSyncHealthLastErrorSourceIncomplete  ChannelSyncHealthLastError = "source_incomplete"
+	ChannelSyncHealthLastErrorSourceTooLong     ChannelSyncHealthLastError = "source_too_long"
+	ChannelSyncHealthLastErrorSourceUnavailable ChannelSyncHealthLastError = "source_unavailable"
+)
+
+// Valid indicates whether the value is a known member of the ChannelSyncHealthLastError enum.
+func (e ChannelSyncHealthLastError) Valid() bool {
+	switch e {
+	case ChannelSyncHealthLastErrorAccessLost:
+		return true
+	case ChannelSyncHealthLastErrorHistoryProfile:
+		return true
+	case ChannelSyncHealthLastErrorModelUnavailable:
+		return true
+	case ChannelSyncHealthLastErrorRateLimited:
+		return true
+	case ChannelSyncHealthLastErrorSourceChanged:
+		return true
+	case ChannelSyncHealthLastErrorSourceIncomplete:
+		return true
+	case ChannelSyncHealthLastErrorSourceTooLong:
+		return true
+	case ChannelSyncHealthLastErrorSourceUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ChannelUncertainDeliveryState.
+const (
+	ChannelUncertainDeliveryStateSending ChannelUncertainDeliveryState = "sending"
+	ChannelUncertainDeliveryStateUnknown ChannelUncertainDeliveryState = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the ChannelUncertainDeliveryState enum.
+func (e ChannelUncertainDeliveryState) Valid() bool {
+	switch e {
+	case ChannelUncertainDeliveryStateSending:
+		return true
+	case ChannelUncertainDeliveryStateUnknown:
 		return true
 	default:
 		return false
@@ -8074,6 +8182,7 @@ const (
 	ConnectorAppRedirectUriPurposeDocumentsConnect ConnectorAppRedirectUriPurpose = "documents_connect"
 	ConnectorAppRedirectUriPurposeExtensionConnect ConnectorAppRedirectUriPurpose = "extension_connect"
 	ConnectorAppRedirectUriPurposeMailboxConnect   ConnectorAppRedirectUriPurpose = "mailbox_connect"
+	ConnectorAppRedirectUriPurposeMessengerConnect ConnectorAppRedirectUriPurpose = "messenger_connect"
 	ConnectorAppRedirectUriPurposeSignIn           ConnectorAppRedirectUriPurpose = "sign_in"
 )
 
@@ -8087,6 +8196,8 @@ func (e ConnectorAppRedirectUriPurpose) Valid() bool {
 	case ConnectorAppRedirectUriPurposeExtensionConnect:
 		return true
 	case ConnectorAppRedirectUriPurposeMailboxConnect:
+		return true
+	case ConnectorAppRedirectUriPurposeMessengerConnect:
 		return true
 	case ConnectorAppRedirectUriPurposeSignIn:
 		return true
@@ -12731,6 +12842,7 @@ func (e DispactAppManifestSlug) Valid() bool {
 const (
 	DispactChannelEventTypeChannelArchived DispactChannelEventType = "channel.archived"
 	DispactChannelEventTypeMessageCreated  DispactChannelEventType = "message.created"
+	DispactChannelEventTypeMessageDeleted  DispactChannelEventType = "message.deleted"
 	DispactChannelEventTypeMessageUpdated  DispactChannelEventType = "message.updated"
 	DispactChannelEventTypeThreadReplied   DispactChannelEventType = "thread.replied"
 	DispactChannelEventTypeUrlVerification DispactChannelEventType = "url_verification"
@@ -12742,6 +12854,8 @@ func (e DispactChannelEventType) Valid() bool {
 	case DispactChannelEventTypeChannelArchived:
 		return true
 	case DispactChannelEventTypeMessageCreated:
+		return true
+	case DispactChannelEventTypeMessageDeleted:
 		return true
 	case DispactChannelEventTypeMessageUpdated:
 		return true
@@ -19030,6 +19144,180 @@ func (e MemberUnavailableActionReason) Valid() bool {
 	}
 }
 
+// Defines values for MessengerAttemptState.
+const (
+	MessengerAttemptStateAccepted MessengerAttemptState = "accepted"
+	MessengerAttemptStateFailed   MessengerAttemptState = "failed"
+	MessengerAttemptStatePending  MessengerAttemptState = "pending"
+	MessengerAttemptStateUnknown  MessengerAttemptState = "unknown"
+)
+
+// Valid indicates whether the value is a known member of the MessengerAttemptState enum.
+func (e MessengerAttemptState) Valid() bool {
+	switch e {
+	case MessengerAttemptStateAccepted:
+		return true
+	case MessengerAttemptStateFailed:
+		return true
+	case MessengerAttemptStatePending:
+		return true
+	case MessengerAttemptStateUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MessengerConversationAccess.
+const (
+	MessengerConversationAccessParticipants MessengerConversationAccess = "participants"
+	MessengerConversationAccessPrivate      MessengerConversationAccess = "private"
+	MessengerConversationAccessTeam         MessengerConversationAccess = "team"
+	MessengerConversationAccessUnknown      MessengerConversationAccess = "unknown"
+	MessengerConversationAccessWorkspace    MessengerConversationAccess = "workspace"
+)
+
+// Valid indicates whether the value is a known member of the MessengerConversationAccess enum.
+func (e MessengerConversationAccess) Valid() bool {
+	switch e {
+	case MessengerConversationAccessParticipants:
+		return true
+	case MessengerConversationAccessPrivate:
+		return true
+	case MessengerConversationAccessTeam:
+		return true
+	case MessengerConversationAccessUnknown:
+		return true
+	case MessengerConversationAccessWorkspace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MessengerConversationKind.
+const (
+	MessengerConversationKindChannel MessengerConversationKind = "channel"
+	MessengerConversationKindDirect  MessengerConversationKind = "direct"
+	MessengerConversationKindGroup   MessengerConversationKind = "group"
+)
+
+// Valid indicates whether the value is a known member of the MessengerConversationKind enum.
+func (e MessengerConversationKind) Valid() bool {
+	switch e {
+	case MessengerConversationKindChannel:
+		return true
+	case MessengerConversationKindDirect:
+		return true
+	case MessengerConversationKindGroup:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MessengerIdentityState.
+const (
+	MessengerIdentityStateConnected    MessengerIdentityState = "connected"
+	MessengerIdentityStateNeedsConsent MessengerIdentityState = "needs_consent"
+	MessengerIdentityStateUnavailable  MessengerIdentityState = "unavailable"
+)
+
+// Valid indicates whether the value is a known member of the MessengerIdentityState enum.
+func (e MessengerIdentityState) Valid() bool {
+	switch e {
+	case MessengerIdentityStateConnected:
+		return true
+	case MessengerIdentityStateNeedsConsent:
+		return true
+	case MessengerIdentityStateUnavailable:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MessengerPageCursorDirection.
+const (
+	MessengerPageCursorDirectionNewer MessengerPageCursorDirection = "newer"
+	MessengerPageCursorDirectionOlder MessengerPageCursorDirection = "older"
+)
+
+// Valid indicates whether the value is a known member of the MessengerPageCursorDirection enum.
+func (e MessengerPageCursorDirection) Valid() bool {
+	switch e {
+	case MessengerPageCursorDirectionNewer:
+		return true
+	case MessengerPageCursorDirectionOlder:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MessengerProvider.
+const (
+	MessengerProviderDispact MessengerProvider = "dispact"
+	MessengerProviderSlack   MessengerProvider = "slack"
+	MessengerProviderTeams   MessengerProvider = "teams"
+)
+
+// Valid indicates whether the value is a known member of the MessengerProvider enum.
+func (e MessengerProvider) Valid() bool {
+	switch e {
+	case MessengerProviderDispact:
+		return true
+	case MessengerProviderSlack:
+		return true
+	case MessengerProviderTeams:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MessengerTeamMemberKind.
+const (
+	MessengerTeamMemberKindTeam MessengerTeamMemberKind = "team"
+	MessengerTeamMemberKindUser MessengerTeamMemberKind = "user"
+)
+
+// Valid indicates whether the value is a known member of the MessengerTeamMemberKind enum.
+func (e MessengerTeamMemberKind) Valid() bool {
+	switch e {
+	case MessengerTeamMemberKindTeam:
+		return true
+	case MessengerTeamMemberKindUser:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for MessengerTeamMemberState.
+const (
+	MessengerTeamMemberStateInactive   MessengerTeamMemberState = "inactive"
+	MessengerTeamMemberStateMatched    MessengerTeamMemberState = "matched"
+	MessengerTeamMemberStateSelf       MessengerTeamMemberState = "self"
+	MessengerTeamMemberStateUnresolved MessengerTeamMemberState = "unresolved"
+)
+
+// Valid indicates whether the value is a known member of the MessengerTeamMemberState enum.
+func (e MessengerTeamMemberState) Valid() bool {
+	switch e {
+	case MessengerTeamMemberStateInactive:
+		return true
+	case MessengerTeamMemberStateMatched:
+		return true
+	case MessengerTeamMemberStateSelf:
+		return true
+	case MessengerTeamMemberStateUnresolved:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for MorningBriefFactorsOmitted.
 const (
 	MorningBriefFactorsOmittedWarmth MorningBriefFactorsOmitted = "warmth"
@@ -23140,6 +23428,24 @@ func (e RetentionScope) Valid() bool {
 	}
 }
 
+// Defines values for ReviewChannelDeliveryRequestAction.
+const (
+	ReviewChannelDeliveryRequestActionRestartCard ReviewChannelDeliveryRequestAction = "restart_card"
+	ReviewChannelDeliveryRequestActionSkipUnknown ReviewChannelDeliveryRequestAction = "skip_unknown"
+)
+
+// Valid indicates whether the value is a known member of the ReviewChannelDeliveryRequestAction enum.
+func (e ReviewChannelDeliveryRequestAction) Valid() bool {
+	switch e {
+	case ReviewChannelDeliveryRequestActionRestartCard:
+		return true
+	case ReviewChannelDeliveryRequestActionSkipUnknown:
+		return true
+	default:
+		return false
+	}
+}
+
 // Defines values for ReviewQuestionType.
 const (
 	ReviewQuestionTypeMultiselect ReviewQuestionType = "multiselect"
@@ -25588,6 +25894,42 @@ func (e SiteReadStartedStatus) Valid() bool {
 	case SiteReadStartedStatusQueued:
 		return true
 	case SiteReadStartedStatusRunning:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SlackHistoryProfileDistribution.
+const (
+	SlackHistoryProfileDistributionInternal       SlackHistoryProfileDistribution = "internal"
+	SlackHistoryProfileDistributionMarketplace    SlackHistoryProfileDistribution = "marketplace"
+	SlackHistoryProfileDistributionNonMarketplace SlackHistoryProfileDistribution = "non_marketplace"
+)
+
+// Valid indicates whether the value is a known member of the SlackHistoryProfileDistribution enum.
+func (e SlackHistoryProfileDistribution) Valid() bool {
+	switch e {
+	case SlackHistoryProfileDistributionInternal:
+		return true
+	case SlackHistoryProfileDistributionMarketplace:
+		return true
+	case SlackHistoryProfileDistributionNonMarketplace:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for SlackHistoryProfileSource.
+const (
+	SlackHistoryProfileSourceAdminDeclared SlackHistoryProfileSource = "admin_declared"
+)
+
+// Valid indicates whether the value is a known member of the SlackHistoryProfileSource enum.
+func (e SlackHistoryProfileSource) Valid() bool {
+	switch e {
+	case SlackHistoryProfileSourceAdminDeclared:
 		return true
 	default:
 		return false
@@ -31639,6 +31981,27 @@ func (e CatchUpOnRecordParamsRecordType) Valid() bool {
 	case CatchUpOnRecordParamsRecordTypeLead:
 		return true
 	case CatchUpOnRecordParamsRecordTypeProject:
+		return true
+	default:
+		return false
+	}
+}
+
+// Defines values for ConnectSlackChannelsJSONBodyDistribution.
+const (
+	ConnectSlackChannelsJSONBodyDistributionInternal       ConnectSlackChannelsJSONBodyDistribution = "internal"
+	ConnectSlackChannelsJSONBodyDistributionMarketplace    ConnectSlackChannelsJSONBodyDistribution = "marketplace"
+	ConnectSlackChannelsJSONBodyDistributionNonMarketplace ConnectSlackChannelsJSONBodyDistribution = "non_marketplace"
+)
+
+// Valid indicates whether the value is a known member of the ConnectSlackChannelsJSONBodyDistribution enum.
+func (e ConnectSlackChannelsJSONBodyDistribution) Valid() bool {
+	switch e {
+	case ConnectSlackChannelsJSONBodyDistributionInternal:
+		return true
+	case ConnectSlackChannelsJSONBodyDistributionMarketplace:
+		return true
+	case ConnectSlackChannelsJSONBodyDistributionNonMarketplace:
 		return true
 	default:
 		return false
@@ -41946,6 +42309,46 @@ type ChannelConnectionListResponse struct {
 	Data []ChannelConnection `json:"data"`
 }
 
+// ChannelDeliveryPreview defines model for ChannelDeliveryPreview.
+type ChannelDeliveryPreview struct {
+	Audience        []ChannelPreviewMember `json:"audience"`
+	ChannelName     string                 `json:"channel_name"`
+	ExcludedUpdates int                    `json:"excluded_updates" minimum:"0"`
+	LinkId          openapi_types.UUID     `json:"link_id"`
+	MessageDetail   ChannelMessageDetail   `json:"message_detail"`
+	OverviewText    string                 `json:"overview_text"`
+	PendingUpdates  int                    `json:"pending_updates" minimum:"0"`
+	Provider        MessengerProvider      `json:"provider"`
+	RootId          *string                `json:"root_id,omitempty"`
+	UpdateText      string                 `json:"update_text"`
+
+	// Verbosity How much Margince posts into a linked channel.
+	Verbosity ChannelVerbosity `json:"verbosity"`
+	Version   int64            `json:"version"`
+	Workspace string           `json:"workspace"`
+}
+
+// ChannelDeliveryReview defines model for ChannelDeliveryReview.
+type ChannelDeliveryReview struct {
+	Deliveries         []ChannelUncertainDelivery `json:"deliveries"`
+	LinkId             openapi_types.UUID         `json:"link_id"`
+	OverviewCardPaused bool                       `json:"overview_card_paused"`
+	ProviderCopies     *ChannelProviderCopies     `json:"provider_copies,omitempty"`
+}
+
+// ChannelEndedSync defines model for ChannelEndedSync.
+type ChannelEndedSync struct {
+	// ConfirmedRedactions Messages successfully rewritten without withdrawn content; this does not prove deletion of other copies.
+	ConfirmedRedactions   int               `json:"confirmed_redactions" minimum:"0"`
+	EndedAt               time.Time         `json:"ended_at"`
+	LastPostedAt          *time.Time        `json:"last_posted_at,omitempty"`
+	Provider              MessengerProvider `json:"provider"`
+	ReadThrough           *time.Time        `json:"read_through,omitempty"`
+	RetainedMessages      int               `json:"retained_messages" minimum:"0"`
+	UnconfirmedDeliveries int               `json:"unconfirmed_deliveries" minimum:"0"`
+	UnverifiedWithdrawals int               `json:"unverified_withdrawals" minimum:"0"`
+}
+
 // ChannelInvites Who a newly created channel was opened to.
 type ChannelInvites struct {
 	// Invited Members added to the channel, or already in it.
@@ -41963,24 +42366,37 @@ type ChannelInvites struct {
 
 // ChannelLink defines model for ChannelLink.
 type ChannelLink struct {
-	ChannelName string `json:"channel_name"`
-	ChannelSlug string `json:"channel_slug"`
+	// CanSendCrmUpdates Whether the native provider permits bot delivery in this channel. False for private Teams channels.
+	CanSendCrmUpdates *bool  `json:"can_send_crm_updates,omitempty"`
+	ChannelName       string `json:"channel_name"`
+	ChannelSlug       string `json:"channel_slug"`
 
 	// ChannelUrl The channel's address in the chat.
-	ChannelUrl string              `json:"channel_url"`
-	CreatedAt  time.Time           `json:"created_at"`
-	DealId     *openapi_types.UUID `json:"deal_id,omitempty"`
-	Id         openapi_types.UUID  `json:"id"`
-	ProjectId  *openapi_types.UUID `json:"project_id,omitempty"`
-	Provider   ChannelLinkProvider `json:"provider"`
-	Status     ChannelLinkStatus   `json:"status"`
+	ChannelUrl     string                `json:"channel_url"`
+	CompanyId      *openapi_types.UUID   `json:"company_id,omitempty"`
+	CreatedAt      time.Time             `json:"created_at"`
+	DealId         *openapi_types.UUID   `json:"deal_id,omitempty"`
+	HistoryProfile *SlackHistoryProfile  `json:"history_profile,omitempty"`
+	Id             openapi_types.UUID    `json:"id"`
+	MessageDetail  *ChannelMessageDetail `json:"message_detail,omitempty"`
+
+	// NativeIdentity Whether this association uses an explicitly confirmed immutable provider channel identity.
+	NativeIdentity     *bool               `json:"native_identity,omitempty"`
+	OverviewCardPaused *bool               `json:"overview_card_paused,omitempty"`
+	ProjectId          *openapi_types.UUID `json:"project_id,omitempty"`
+	Provider           MessengerProvider   `json:"provider"`
+	RootId             *string             `json:"root_id,omitempty"`
+
+	// SaveChannelUpdates Whether future eligible channel activity is filed in History.
+	SaveChannelUpdates *bool `json:"save_channel_updates,omitempty"`
+
+	// SendCrmUpdates Whether eligible CRM events are posted to the channel.
+	SendCrmUpdates *bool             `json:"send_crm_updates,omitempty"`
+	Status         ChannelLinkStatus `json:"status"`
 
 	// Verbosity How much Margince posts into a linked channel.
 	Verbosity ChannelVerbosity `json:"verbosity"`
 }
-
-// ChannelLinkProvider defines model for ChannelLink.Provider.
-type ChannelLinkProvider string
 
 // ChannelLinkStatus defines model for ChannelLink.Status.
 type ChannelLinkStatus string
@@ -41991,15 +42407,34 @@ type ChannelLinkRecordType string
 // ChannelLinkState defines model for ChannelLinkState.
 type ChannelLinkState struct {
 	// Invites Who a newly created channel was opened to.
-	Invites *ChannelInvites `json:"invites,omitempty"`
-	Link    *ChannelLink    `json:"link,omitempty"`
+	Invites  *ChannelInvites   `json:"invites,omitempty"`
+	LastSync *ChannelEndedSync `json:"last_sync,omitempty"`
+	Link     *ChannelLink      `json:"link,omitempty"`
 
 	// State `off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.
 	State ChannelLinkStateState `json:"state"`
+	Sync  *ChannelSyncHealth    `json:"sync,omitempty"`
 }
 
 // ChannelLinkStateState `off`: no chat bot is connected. `none`: no channel yet. `linked`: posting and reading. `paused`: the channel is gone or the bot lost access.
 type ChannelLinkStateState string
+
+// ChannelMessageDetail defines model for ChannelMessageDetail.
+type ChannelMessageDetail string
+
+// ChannelPreviewMember defines model for ChannelPreviewMember.
+type ChannelPreviewMember struct {
+	Id   string `json:"id"`
+	Name string `json:"name"`
+}
+
+// ChannelProviderCopies defines model for ChannelProviderCopies.
+type ChannelProviderCopies struct {
+	ConfirmedRedactions   int `json:"confirmed_redactions" minimum:"0"`
+	RetainedMessages      int `json:"retained_messages" minimum:"0"`
+	UnconfirmedDeliveries int `json:"unconfirmed_deliveries" minimum:"0"`
+	UnverifiedWithdrawals int `json:"unverified_withdrawals" minimum:"0"`
+}
 
 // ChannelProviderDirectory Every messaging transport this installation has registered (ADR-0107).
 type ChannelProviderDirectory struct {
@@ -42096,19 +42531,69 @@ type ChannelProviderEntry struct {
 // installation-independent.
 type ChannelProviderEntryCredentialModel string
 
+// ChannelProviderSetup defines model for ChannelProviderSetup.
+type ChannelProviderSetup struct {
+	CallbackUrl    string               `json:"callback_url"`
+	Configured     bool                 `json:"configured"`
+	EventsUrl      string               `json:"events_url"`
+	HistoryProfile *SlackHistoryProfile `json:"history_profile,omitempty"`
+	Scopes         []string             `json:"scopes"`
+}
+
+// ChannelSyncHealth defines model for ChannelSyncHealth.
+type ChannelSyncHealth struct {
+	// CoverageAt Metadata discovery checked through this time. Pending recaps are reported separately.
+	CoverageAt          *time.Time                      `json:"coverage_at,omitempty"`
+	DeliveryError       *ChannelSyncHealthDeliveryError `json:"delivery_error,omitempty"`
+	FailedConversations int                             `json:"failed_conversations" minimum:"0"`
+	LastError           *ChannelSyncHealthLastError     `json:"last_error,omitempty"`
+
+	// NotificationsDelayed Teams push notifications need recovery; periodic source reads continue independently.
+	NotificationsDelayed  *bool `json:"notifications_delayed,omitempty"`
+	PendingConversations  int   `json:"pending_conversations" minimum:"0"`
+	PendingCrmUpdates     int   `json:"pending_crm_updates" minimum:"0"`
+	UnconfirmedDeliveries int   `json:"unconfirmed_deliveries" minimum:"0"`
+}
+
+// ChannelSyncHealthDeliveryError defines model for ChannelSyncHealth.DeliveryError.
+type ChannelSyncHealthDeliveryError string
+
+// ChannelSyncHealthLastError defines model for ChannelSyncHealth.LastError.
+type ChannelSyncHealthLastError string
+
+// ChannelUncertainDelivery defines model for ChannelUncertainDelivery.
+type ChannelUncertainDelivery struct {
+	CreatedAt    time.Time                     `json:"created_at"`
+	Id           openapi_types.UUID            `json:"id"`
+	OverviewCard bool                          `json:"overview_card"`
+	State        ChannelUncertainDeliveryState `json:"state"`
+	UpdateCount  int                           `json:"update_count" minimum:"0"`
+}
+
+// ChannelUncertainDeliveryState defines model for ChannelUncertainDelivery.State.
+type ChannelUncertainDeliveryState string
+
 // ChannelVerbosity How much Margince posts into a linked channel.
 type ChannelVerbosity string
 
-// ChatEpisode The chat talk a summary note was written from. The talk itself is not kept: open `url`
-// to read it in the chat.
+// ChatEpisode The source metadata of a channel recap. Source URLs are withheld from ordinary activity reads;
+// obtain a short-lived authorized link through the chat-source endpoint.
 type ChatEpisode struct {
+	// ChannelName Channel name recorded when the recap was written.
+	ChannelName *string `json:"channel_name,omitempty"`
+
 	// EndedAt When the last of them was posted.
 	EndedAt time.Time `json:"ended_at"`
 
 	// MessageCount How many messages the summary covers.
-	MessageCount int `json:"message_count" minimum:"1"`
+	MessageCount int                `json:"message_count" minimum:"1"`
+	Provider     *MessengerProvider `json:"provider,omitempty"`
 
-	// Url The first message in the chat.
+	// SourceChanged The source changed after a human edited this recap; review the preserved text.
+	SourceChanged *bool `json:"source_changed,omitempty"`
+
+	// Url Empty on activity reads. Obtain an authorized link through the chat-source endpoint.
+	// Deprecated: this property has been marked as deprecated upstream, but no `x-deprecated-reason` was set
 	Url string `json:"url"`
 }
 
@@ -42132,6 +42617,14 @@ type ChatIdentityList struct {
 
 // ChatNetwork defines model for ChatNetwork.
 type ChatNetwork string
+
+// ChatSourceAccess defines model for ChatSourceAccess.
+type ChatSourceAccess struct {
+	Available  bool               `json:"available"`
+	Url        *string            `json:"url,omitempty"`
+	UserId     openapi_types.UUID `json:"user_id"`
+	ValidUntil *time.Time         `json:"valid_until,omitempty"`
+}
 
 // ChatVerificationStarted defines model for ChatVerificationStarted.
 type ChatVerificationStarted struct {
@@ -45847,6 +46340,9 @@ type ConnectorAppInput struct {
 
 	// ClientSecret The app's client secret. WRITE-ONLY — no response in this contract returns it, and the setting that records it holds an opaque vault reference rather than these bytes.
 	ClientSecret *string `json:"client_secret,omitempty"`
+
+	// SigningSecret Slack only. The app signing secret used to verify channel notifications. Stored sealed with the client secret.
+	SigningSecret *string `json:"signing_secret,omitempty"`
 
 	// Tenant The Entra directory (tenant) id to pin a `microsoft` app to, so only that directory's members may authorize. Omit it to authorize any company, which is what a multi-tenant registration is for. Refused for `google`, and refused for the authority aliases `common`, `companies` and `consumers` — each of those widens the app to a population nobody vetted, and an empty field says the same thing without an alias a reader has to know to interpret.
 	Tenant *string `json:"tenant,omitempty"`
@@ -51979,10 +52475,16 @@ type DispactAppManifestSecurity struct {
 // DispactChannelEvent One signed notice from Dispact, or its URL check. A notice names the channel and the newest message sequence, and never carries message text.
 type DispactChannelEvent struct {
 	// Challenge The value a URL check expects back.
-	Challenge   *string `json:"challenge,omitempty"`
+	Challenge *string `json:"challenge,omitempty"`
+
+	// ChannelId Immutable channel identity when supported by the source.
+	ChannelId   *string `json:"channel_id,omitempty"`
 	ChannelSlug *string `json:"channel_slug,omitempty"`
 	EventId     *string `json:"event_id,omitempty"`
 	MessageId   *string `json:"message_id,omitempty"`
+
+	// RootMessageId Immutable conversation root identity when supported by the source.
+	RootMessageId *string `json:"root_message_id,omitempty"`
 
 	// Seq The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal.
 	Seq *int `json:"seq,omitempty"`
@@ -53325,11 +53827,12 @@ type FieldHistoryListResponse struct {
 
 // FileChannelMessageRequest defines model for FileChannelMessageRequest.
 type FileChannelMessageRequest struct {
-	// Message The message in the record's channel: its sequence number, `#slug:seq`, the chat's
-	// `<m:#slug:seq|…>` mention, or its link. A message in another channel is not found.
+	// Message A native message ID or link in the record's linked channel. Dispact also accepts
+	// a sequence number, `#slug:seq`, or `<m:#slug:seq|…>` mention. A message in another
+	// channel or outside a linked thread is not found.
 	Message string `json:"message"`
 
-	// Thread True files the message and the replies in its thread that follow it.
+	// Thread True files the complete available thread containing the selected message.
 	Thread *bool `json:"thread,omitempty"`
 }
 
@@ -58824,6 +59327,12 @@ type LinkChannelRequest struct {
 	Channel *string                `json:"channel,omitempty"`
 	Mode    LinkChannelRequestMode `json:"mode"`
 
+	// Provider Native provider whose shared bot owns this link.
+	Provider *MessengerProvider `json:"provider,omitempty"`
+
+	// RootId Existing native thread root explicitly assigned to this record. A shared channel uses separate root assignments for each record.
+	RootId *string `json:"root_id,omitempty"`
+
 	// SummarizeHistory For `existing`, required. True files up to five summaries of the talk so far.
 	SummarizeHistory *bool `json:"summarize_history,omitempty"`
 
@@ -60822,6 +61331,162 @@ type MergeTagsResult struct {
 	// Moved Records that carried only the source and now carry the target.
 	Moved int `json:"moved"`
 }
+
+// MessengerAttempt defines model for MessengerAttempt.
+type MessengerAttempt struct {
+	ConversationId    string                `json:"conversation_id"`
+	FailureCode       *string               `json:"failure_code,omitempty"`
+	Id                openapi_types.UUID    `json:"id"`
+	ProviderMessageId string                `json:"provider_message_id"`
+	RequestId         openapi_types.UUID    `json:"request_id"`
+	RetryAt           *time.Time            `json:"retry_at,omitempty"`
+	State             MessengerAttemptState `json:"state"`
+	UpdatedAt         time.Time             `json:"updated_at"`
+}
+
+// MessengerAttemptState defines model for MessengerAttempt.State.
+type MessengerAttemptState string
+
+// MessengerChannels defines model for MessengerChannels.
+type MessengerChannels struct {
+	Conversations []MessengerConversation `json:"conversations"`
+	NextCursor    string                  `json:"next_cursor"`
+}
+
+// MessengerConnectRequest defines model for MessengerConnectRequest.
+type MessengerConnectRequest struct {
+	RecordId openapi_types.UUID `json:"record_id"`
+
+	// RecordType The kind of record a chat channel is linked to.
+	RecordType ChannelLinkRecordType `json:"record_type"`
+}
+
+// MessengerContext defines model for MessengerContext.
+type MessengerContext struct {
+	AudienceKey       string                `json:"audience_key"`
+	Conversation      MessengerConversation `json:"conversation"`
+	GrantVersion      int64                 `json:"grant_version" maximum:"9007199254740991" minimum:"1"`
+	Provider          MessengerProvider     `json:"provider"`
+	Sender            MessengerMember       `json:"sender"`
+	UnresolvedAttempt *MessengerAttempt     `json:"unresolved_attempt,omitempty"`
+	Workspace         string                `json:"workspace"`
+}
+
+// MessengerConversation defines model for MessengerConversation.
+type MessengerConversation struct {
+	Access        *MessengerConversationAccess `json:"access,omitempty"`
+	AudienceKnown bool                         `json:"audience_known"`
+	External      bool                         `json:"external"`
+	Id            string                       `json:"id"`
+	Kind          MessengerConversationKind    `json:"kind"`
+	Members       []MessengerMember            `json:"members"`
+	Name          string                       `json:"name"`
+
+	// SupportsThreads Whether this conversation supports native thread replies.
+	SupportsThreads *bool `json:"supports_threads,omitempty"`
+}
+
+// MessengerConversationAccess defines model for MessengerConversation.Access.
+type MessengerConversationAccess string
+
+// MessengerConversationKind defines model for MessengerConversation.Kind.
+type MessengerConversationKind string
+
+// MessengerIdentity defines model for MessengerIdentity.
+type MessengerIdentity struct {
+	GrantVersion *int64                 `json:"grant_version,omitempty" maximum:"9007199254740991" minimum:"1"`
+	Provider     MessengerProvider      `json:"provider"`
+	Sender       *MessengerMember       `json:"sender,omitempty"`
+	State        MessengerIdentityState `json:"state"`
+	Workspace    *string                `json:"workspace,omitempty"`
+}
+
+// MessengerIdentityState defines model for MessengerIdentity.State.
+type MessengerIdentityState string
+
+// MessengerMember defines model for MessengerMember.
+type MessengerMember struct {
+	Active   bool    `json:"active"`
+	Bot      *bool   `json:"bot,omitempty"`
+	Email    *string `json:"email,omitempty"`
+	External bool    `json:"external"`
+	Id       string  `json:"id"`
+	Name     string  `json:"name"`
+}
+
+// MessengerMembers defines model for MessengerMembers.
+type MessengerMembers struct {
+	Members    []MessengerMember `json:"members"`
+	NextCursor string            `json:"next_cursor"`
+}
+
+// MessengerMessage defines model for MessengerMessage.
+type MessengerMessage struct {
+	At      time.Time `json:"at"`
+	Author  string    `json:"author"`
+	Deleted bool      `json:"deleted"`
+	Edited  bool      `json:"edited"`
+	Id      string    `json:"id"`
+	RootId  string    `json:"root_id"`
+	Text    string    `json:"text"`
+}
+
+// MessengerOpenRequest defines model for MessengerOpenRequest.
+type MessengerOpenRequest struct {
+	ConversationId *string   `json:"conversation_id,omitempty"`
+	Members        *[]string `json:"members,omitempty"`
+}
+
+// MessengerPage defines model for MessengerPage.
+type MessengerPage struct {
+	// CursorDirection Whether next_cursor continues into older history or later replies. Omitted means older.
+	CursorDirection *MessengerPageCursorDirection `json:"cursor_direction,omitempty"`
+	Messages        []MessengerMessage            `json:"messages"`
+	NextCursor      string                        `json:"next_cursor"`
+}
+
+// MessengerPageCursorDirection Whether next_cursor continues into older history or later replies. Omitted means older.
+type MessengerPageCursorDirection string
+
+// MessengerProvider defines model for MessengerProvider.
+type MessengerProvider string
+
+// MessengerSendRequest defines model for MessengerSendRequest.
+type MessengerSendRequest struct {
+	AcknowledgedRequestId *openapi_types.UUID `json:"acknowledged_request_id,omitempty"`
+	AudienceKey           string              `json:"audience_key"`
+	ConversationId        string              `json:"conversation_id"`
+	GrantVersion          int64               `json:"grant_version" maximum:"9007199254740991" minimum:"1"`
+	RequestId             openapi_types.UUID  `json:"request_id"`
+	RootId                *string             `json:"root_id,omitempty"`
+	Text                  string              `json:"text"`
+}
+
+// MessengerSetup defines model for MessengerSetup.
+type MessengerSetup struct {
+	// AccountUrl The configured provider page for creating a personal credential.
+	AccountUrl         *string           `json:"account_url,omitempty"`
+	CallbackUrl        string            `json:"callback_url"`
+	Configured         bool              `json:"configured"`
+	MaxGroupRecipients int               `json:"max_group_recipients" maximum:"1000" minimum:"0"`
+	ParticipantScopes  []string          `json:"participant_scopes"`
+	Provider           MessengerProvider `json:"provider"`
+}
+
+// MessengerTeamMember defines model for MessengerTeamMember.
+type MessengerTeamMember struct {
+	CrmId    openapi_types.UUID       `json:"crm_id"`
+	Kind     MessengerTeamMemberKind  `json:"kind"`
+	MemberId string                   `json:"member_id"`
+	Name     string                   `json:"name"`
+	State    MessengerTeamMemberState `json:"state"`
+}
+
+// MessengerTeamMemberKind defines model for MessengerTeamMember.Kind.
+type MessengerTeamMemberKind string
+
+// MessengerTeamMemberState defines model for MessengerTeamMember.State.
+type MessengerTeamMemberState string
 
 // MfaChallenge Handed back by a 202 login when a second factor is required. The token is opaque, short-lived, and stands in for "this member passed the password step"; present it to POST /auth/mfa with a code.
 type MfaChallenge struct {
@@ -67384,6 +68049,17 @@ type RetentionSettings struct {
 	RetainOnly bool `json:"retain_only"`
 }
 
+// ReviewChannelDeliveryRequest defines model for ReviewChannelDeliveryRequest.
+type ReviewChannelDeliveryRequest struct {
+	Acknowledged bool                               `json:"acknowledged"`
+	Action       ReviewChannelDeliveryRequestAction `json:"action"`
+	DeliveryIds  []openapi_types.UUID               `json:"delivery_ids" unique:"items"`
+	LinkId       openapi_types.UUID                 `json:"link_id"`
+}
+
+// ReviewChannelDeliveryRequestAction defines model for ReviewChannelDeliveryRequest.Action.
+type ReviewChannelDeliveryRequestAction string
+
 // ReviewQuestion defines model for ReviewQuestion.
 type ReviewQuestion struct {
 	// Key Stable within a template. An answer is filed under it and a frozen response keeps both, so rewording a label never orphans an answer.
@@ -70067,8 +70743,14 @@ type SetBlockedDomainRequestAdmission string
 
 // SetChannelVerbosityRequest defines model for SetChannelVerbosityRequest.
 type SetChannelVerbosityRequest struct {
+	ExpectedLinkId     *openapi_types.UUID   `json:"expected_link_id,omitempty"`
+	ExpectedVersion    *int64                `json:"expected_version,omitempty"`
+	MessageDetail      *ChannelMessageDetail `json:"message_detail,omitempty"`
+	SaveChannelUpdates *bool                 `json:"save_channel_updates,omitempty"`
+	SendCrmUpdates     *bool                 `json:"send_crm_updates,omitempty"`
+
 	// Verbosity How much Margince posts into a linked channel.
-	Verbosity ChannelVerbosity `json:"verbosity"`
+	Verbosity *ChannelVerbosity `json:"verbosity,omitempty"`
 }
 
 // SetConnectorContextTagRequest The word this connector files what it captures under.
@@ -70818,6 +71500,24 @@ type SiteReadStarted struct {
 
 // SiteReadStartedStatus The joined dossier state when a read is already in flight.
 type SiteReadStartedStatus string
+
+// SlackHistoryProfile defines model for SlackHistoryProfile.
+type SlackHistoryProfile struct {
+	CanonicalSupported bool                            `json:"canonical_supported"`
+	Distribution       SlackHistoryProfileDistribution `json:"distribution"`
+	HistoryPageSize    int                             `json:"history_page_size" maximum:"200" minimum:"1"`
+	HistoryPerMinute   int                             `json:"history_per_minute" maximum:"50" minimum:"1"`
+	RecordedAt         time.Time                       `json:"recorded_at"`
+	RepliesPageSize    int                             `json:"replies_page_size" maximum:"100" minimum:"1"`
+	RepliesPerMinute   int                             `json:"replies_per_minute" maximum:"50" minimum:"1"`
+	Source             SlackHistoryProfileSource       `json:"source"`
+}
+
+// SlackHistoryProfileDistribution defines model for SlackHistoryProfile.Distribution.
+type SlackHistoryProfileDistribution string
+
+// SlackHistoryProfileSource defines model for SlackHistoryProfile.Source.
+type SlackHistoryProfileSource string
 
 // SlippingDeal One at-risk deal. Ranked by how long it has been quiet, then by amount, then by id, so the order is the same on every read of the same data.
 type SlippingDeal struct {
@@ -72054,6 +72754,23 @@ type TeamWeeklyStaleDeal struct {
 	DealName       string             `json:"deal_name"`
 	LastActivityAt time.Time          `json:"last_activity_at"`
 	OwnerId        openapi_types.UUID `json:"owner_id"`
+}
+
+// TeamsChannelInstallation defines model for TeamsChannelInstallation.
+type TeamsChannelInstallation struct {
+	Id     openapi_types.UUID `json:"id"`
+	Name   string             `json:"name"`
+	TeamId string             `json:"team_id"`
+}
+
+// TeamsChannelSetup defines model for TeamsChannelSetup.
+type TeamsChannelSetup struct {
+	AppId         string                     `json:"app_id"`
+	Configured    bool                       `json:"configured"`
+	EventsUrl     string                     `json:"events_url"`
+	Installations []TeamsChannelInstallation `json:"installations"`
+	Scopes        []string                   `json:"scopes"`
+	TenantId      string                     `json:"tenant_id"`
 }
 
 // TechnicalEnrichLane What one public source last did.
@@ -78269,6 +78986,9 @@ type ListActivitiesParams struct {
 	// CallOutcome Calls that ended this way. Matches calls only.
 	CallOutcome *ListActivitiesParamsCallOutcome `form:"call_outcome,omitempty" json:"call_outcome,omitempty"`
 
+	// ChatProvider Generated channel recaps from this provider. Content visibility is required for a match.
+	ChatProvider *MessengerProvider `form:"chat_provider,omitempty" json:"chat_provider,omitempty"`
+
 	// ChannelProvider Filter to messages carried by one transport. Since `kind=message` no longer names
 	// the transport, this is the only way to ask the question `kind=telegram` used to
 	// answer (ADR-0107).
@@ -80063,12 +80783,60 @@ type CatchUpOnRecordParams struct {
 // CatchUpOnRecordParamsRecordType defines parameters for CatchUpOnRecord.
 type CatchUpOnRecordParamsRecordType string
 
+// ReceiveSlackChannelEventJSONBody defines parameters for ReceiveSlackChannelEvent.
+type ReceiveSlackChannelEventJSONBody map[string]interface{}
+
+// ReceiveTeamsBotActivityJSONBody defines parameters for ReceiveTeamsBotActivity.
+type ReceiveTeamsBotActivityJSONBody map[string]interface{}
+
+// ReceiveTeamsGraphNotificationJSONBody defines parameters for ReceiveTeamsGraphNotification.
+type ReceiveTeamsGraphNotificationJSONBody map[string]interface{}
+
+// ReceiveTeamsGraphNotificationTextBody defines parameters for ReceiveTeamsGraphNotification.
+type ReceiveTeamsGraphNotificationTextBody = string
+
+// ReceiveTeamsGraphNotificationParams defines parameters for ReceiveTeamsGraphNotification.
+type ReceiveTeamsGraphNotificationParams struct {
+	ValidationToken *string `form:"validationToken,omitempty" json:"validationToken,omitempty"`
+}
+
 // VerifyWhatsAppWebhookParams defines parameters for VerifyWhatsAppWebhook.
 type VerifyWhatsAppWebhookParams struct {
 	// HubMode Always `subscribe`.
 	HubMode        *string `form:"hub.mode,omitempty" json:"hub.mode,omitempty"`
 	HubVerifyToken *string `form:"hub.verify_token,omitempty" json:"hub.verify_token,omitempty"`
 	HubChallenge   *string `form:"hub.challenge,omitempty" json:"hub.challenge,omitempty"`
+}
+
+// ListLinkableChannelsParams defines parameters for ListLinkableChannels.
+type ListLinkableChannelsParams struct {
+	Provider *MessengerProvider `form:"provider,omitempty" json:"provider,omitempty"`
+}
+
+// SlackChannelsOAuthCallbackParams defines parameters for SlackChannelsOAuthCallback.
+type SlackChannelsOAuthCallbackParams struct {
+	State string  `form:"state" json:"state"`
+	Code  *string `form:"code,omitempty" json:"code,omitempty"`
+	Error *string `form:"error,omitempty" json:"error,omitempty"`
+}
+
+// ConnectSlackChannelsJSONBody defines parameters for ConnectSlackChannels.
+type ConnectSlackChannelsJSONBody struct {
+	Distribution ConnectSlackChannelsJSONBodyDistribution `json:"distribution"`
+}
+
+// ConnectSlackChannelsJSONBodyDistribution defines parameters for ConnectSlackChannels.
+type ConnectSlackChannelsJSONBodyDistribution string
+
+// ConnectTeamsChannelsJSONBody defines parameters for ConnectTeamsChannels.
+type ConnectTeamsChannelsJSONBody struct {
+	InstallationId openapi_types.UUID `json:"installation_id"`
+}
+
+// DownloadTeamsChannelPackageJSONBody defines parameters for DownloadTeamsChannelPackage.
+type DownloadTeamsChannelPackageJSONBody struct {
+	PrivacyUrl string `json:"privacy_url"`
+	TermsUrl   string `json:"terms_url"`
 }
 
 // ListCommissionEntriesParams defines parameters for ListCommissionEntries.
@@ -84471,6 +85239,41 @@ type PrepForMeetingParams struct {
 // PrepForMeetingParamsRecordType defines parameters for PrepForMeeting.
 type PrepForMeetingParamsRecordType string
 
+// ConnectDispactParticipantJSONBody defines parameters for ConnectDispactParticipant.
+type ConnectDispactParticipantJSONBody struct {
+	PersonalToken *string `json:"personal_token,omitempty"`
+}
+
+// MessengerOAuthCallbackParams defines parameters for MessengerOAuthCallback.
+type MessengerOAuthCallbackParams struct {
+	State string  `form:"state" json:"state"`
+	Code  *string `form:"code,omitempty" json:"code,omitempty"`
+	Error *string `form:"error,omitempty" json:"error,omitempty"`
+}
+
+// ListMessengerChannelsParams defines parameters for ListMessengerChannels.
+type ListMessengerChannelsParams struct {
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// GetMessengerConversationParams defines parameters for GetMessengerConversation.
+type GetMessengerConversationParams struct {
+	ConversationId string `form:"conversation_id" json:"conversation_id"`
+}
+
+// ListMessengerMembersParams defines parameters for ListMessengerMembers.
+type ListMessengerMembersParams struct {
+	Q      *string `form:"q,omitempty" json:"q,omitempty"`
+	Cursor *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
+// GetMessengerMessagesParams defines parameters for GetMessengerMessages.
+type GetMessengerMessagesParams struct {
+	ConversationId string  `form:"conversation_id" json:"conversation_id"`
+	RootId         *string `form:"root_id,omitempty" json:"root_id,omitempty"`
+	Cursor         *string `form:"cursor,omitempty" json:"cursor,omitempty"`
+}
+
 // ListNoticesParams defines parameters for ListNotices.
 type ListNoticesParams struct {
 	// Limit How many lines to answer with. Fifty is both the ceiling and the default, because
@@ -88306,6 +89109,18 @@ type ReplaceChannelTokenJSONRequestBody = ReplaceChannelTokenRequest
 // ReceiveDispactChannelEventJSONRequestBody defines body for ReceiveDispactChannelEvent for application/json ContentType.
 type ReceiveDispactChannelEventJSONRequestBody = DispactChannelEvent
 
+// ReceiveSlackChannelEventJSONRequestBody defines body for ReceiveSlackChannelEvent for application/json ContentType.
+type ReceiveSlackChannelEventJSONRequestBody ReceiveSlackChannelEventJSONBody
+
+// ReceiveTeamsBotActivityJSONRequestBody defines body for ReceiveTeamsBotActivity for application/json ContentType.
+type ReceiveTeamsBotActivityJSONRequestBody ReceiveTeamsBotActivityJSONBody
+
+// ReceiveTeamsGraphNotificationJSONRequestBody defines body for ReceiveTeamsGraphNotification for application/json ContentType.
+type ReceiveTeamsGraphNotificationJSONRequestBody ReceiveTeamsGraphNotificationJSONBody
+
+// ReceiveTeamsGraphNotificationTextRequestBody defines body for ReceiveTeamsGraphNotification for text/plain ContentType.
+type ReceiveTeamsGraphNotificationTextRequestBody = ReceiveTeamsGraphNotificationTextBody
+
 // ReceiveWhatsAppWebhookJSONRequestBody defines body for ReceiveWhatsAppWebhook for application/json ContentType.
 type ReceiveWhatsAppWebhookJSONRequestBody = WhatsAppWebhookDelivery
 
@@ -88318,8 +89133,20 @@ type SetChannelVerbosityJSONRequestBody = SetChannelVerbosityRequest
 // LinkChannelJSONRequestBody defines body for LinkChannel for application/json ContentType.
 type LinkChannelJSONRequestBody = LinkChannelRequest
 
+// ReviewChannelDeliveriesJSONRequestBody defines body for ReviewChannelDeliveries for application/json ContentType.
+type ReviewChannelDeliveriesJSONRequestBody = ReviewChannelDeliveryRequest
+
 // FileChannelMessageJSONRequestBody defines body for FileChannelMessage for application/json ContentType.
 type FileChannelMessageJSONRequestBody = FileChannelMessageRequest
+
+// ConnectSlackChannelsJSONRequestBody defines body for ConnectSlackChannels for application/json ContentType.
+type ConnectSlackChannelsJSONRequestBody ConnectSlackChannelsJSONBody
+
+// ConnectTeamsChannelsJSONRequestBody defines body for ConnectTeamsChannels for application/json ContentType.
+type ConnectTeamsChannelsJSONRequestBody ConnectTeamsChannelsJSONBody
+
+// DownloadTeamsChannelPackageJSONRequestBody defines body for DownloadTeamsChannelPackage for application/json ContentType.
+type DownloadTeamsChannelPackageJSONRequestBody DownloadTeamsChannelPackageJSONBody
 
 // SettleConversationClaimJSONRequestBody defines body for SettleConversationClaim for application/json ContentType.
 type SettleConversationClaimJSONRequestBody = SettleClaimRequest
@@ -88932,6 +89759,18 @@ type SaveMyTimezoneJSONRequestBody = SaveMyTimezoneRequest
 
 // SaveMyWorkingHoursJSONRequestBody defines body for SaveMyWorkingHours for application/json ContentType.
 type SaveMyWorkingHoursJSONRequestBody = SaveWorkingHoursRequest
+
+// ConnectDispactParticipantJSONRequestBody defines body for ConnectDispactParticipant for application/json ContentType.
+type ConnectDispactParticipantJSONRequestBody ConnectDispactParticipantJSONBody
+
+// ConnectMessengerJSONRequestBody defines body for ConnectMessenger for application/json ContentType.
+type ConnectMessengerJSONRequestBody = MessengerConnectRequest
+
+// OpenMessengerConversationJSONRequestBody defines body for OpenMessengerConversation for application/json ContentType.
+type OpenMessengerConversationJSONRequestBody = MessengerOpenRequest
+
+// SendMessengerMessageJSONRequestBody defines body for SendMessengerMessage for application/json ContentType.
+type SendMessengerMessageJSONRequestBody = MessengerSendRequest
 
 // RaiseNoticeJSONRequestBody defines body for RaiseNotice for application/json ContentType.
 type RaiseNoticeJSONRequestBody = RaiseNoticeRequest
@@ -103347,6 +104186,9 @@ type ServerInterface interface {
 	// Accept, tentatively accept or decline a calendar invitation that came by email.
 	// (PUT /activities/{id}/calendar-response)
 	AnswerCalendarInvitation(w http.ResponseWriter, r *http.Request, id Id)
+	// Verify the current reader's native source access for a visible chat recap.
+	// (GET /activities/{id}/chat-source)
+	GetChatSummarySource(w http.ResponseWriter, r *http.Request, id Id)
 	// Say a captured message is not about a deal, or about none of the deals its question offered.
 	// (POST /activities/{id}/deal-decline)
 	DeclineActivityDeal(w http.ResponseWriter, r *http.Request, id Id)
@@ -104181,6 +105023,15 @@ type ServerInterface interface {
 	// Take a signed notice of new talk in a linked Dispact channel (anonymous).
 	// (POST /channel-events/dispact)
 	ReceiveDispactChannelEvent(w http.ResponseWriter, r *http.Request)
+	// Verify a signed Slack event and queue a canonical channel read.
+	// (POST /channel-events/slack)
+	ReceiveSlackChannelEvent(w http.ResponseWriter, r *http.Request)
+	// Verify a Microsoft bot activity and retain only installation and conversation references.
+	// (POST /channel-events/teams/bot)
+	ReceiveTeamsBotActivity(w http.ResponseWriter, r *http.Request)
+	// Authenticate metadata-only Graph channel notifications and lifecycle recovery with sealed client state.
+	// (POST /channel-events/teams/graph)
+	ReceiveTeamsGraphNotification(w http.ResponseWriter, r *http.Request, params ReceiveTeamsGraphNotificationParams)
 	// Answer Meta's webhook subscription check (anonymous).
 	// (GET /channel-events/whatsapp)
 	VerifyWhatsAppWebhook(w http.ResponseWriter, r *http.Request, params VerifyWhatsAppWebhookParams)
@@ -104199,18 +105050,45 @@ type ServerInterface interface {
 	// Choose how much Margince posts into a record's channel.
 	// (PATCH /channel-links/{record_type}/{id})
 	SetChannelVerbosity(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
-	// Link a deal or project to a new or existing private chat channel.
+	// Link a company, deal or project to an authorized work channel.
 	// (POST /channel-links/{record_type}/{id})
 	LinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
 	// The private channels this record can be linked to.
 	// (GET /channel-links/{record_type}/{id}/channels)
-	ListLinkableChannels(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
+	ListLinkableChannels(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id, params ListLinkableChannelsParams)
+	// Preview the effective channel audience and eligible outgoing content without posting.
+	// (GET /channel-links/{record_type}/{id}/delivery-preview)
+	PreviewChannelDelivery(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
+	// Review uncertain automated sends without exposing their source bodies.
+	// (GET /channel-links/{record_type}/{id}/delivery-review)
+	GetChannelDeliveryReview(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
+	// Explicitly stop retrying reviewed unknown sends, or request a fresh overview card.
+	// (POST /channel-links/{record_type}/{id}/delivery-review)
+	ReviewChannelDeliveries(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
 	// File a summary of one message in a record's channel, or of its thread, as a note.
 	// (POST /channel-links/{record_type}/{id}/notes)
 	FileChannelMessage(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id)
 	// Which messaging transports THIS installation has registered.
 	// (GET /channel-providers)
 	ListChannelProviders(w http.ResponseWriter, r *http.Request)
+	// Complete workspace bot consent using signed state and the initiating browser nonce.
+	// (GET /channel-providers/slack/callback)
+	SlackChannelsOAuthCallback(w http.ResponseWriter, r *http.Request, params SlackChannelsOAuthCallbackParams)
+	// Start admin consent for the Slack bot used by record channel links.
+	// (POST /channel-providers/slack/connect)
+	ConnectSlackChannels(w http.ResponseWriter, r *http.Request)
+	// Slack workspace installation requirements, separate from participant consent.
+	// (GET /channel-providers/slack/setup)
+	GetSlackChannelSetup(w http.ResponseWriter, r *http.Request)
+	// Approve a verified team installation for record channel links.
+	// (POST /channel-providers/teams/connect)
+	ConnectTeamsChannels(w http.ResponseWriter, r *http.Request)
+	// Build the team-scoped app package with the operator's legal URLs.
+	// (POST /channel-providers/teams/package)
+	DownloadTeamsChannelPackage(w http.ResponseWriter, r *http.Request)
+	// Microsoft team installations verified by signed bot events, separate from participant consent.
+	// (GET /channel-providers/teams/setup)
+	GetTeamsChannelSetup(w http.ResponseWriter, r *http.Request)
 	// Undo Margince's close of a commitment.
 	// (POST /claims/{id}/reopen)
 	ReopenConversationClaim(w http.ResponseWriter, r *http.Request, id Id)
@@ -105729,6 +106607,48 @@ type ServerInterface interface {
 	// Get ready for a meeting about one record.
 	// (GET /meeting-prep)
 	PrepForMeeting(w http.ResponseWriter, r *http.Request, params PrepForMeetingParams)
+	// Connect your own Dispact personal token to the configured workspace.
+	// (POST /messenger/dispact/credential)
+	ConnectDispactParticipant(w http.ResponseWriter, r *http.Request)
+	// Complete participant consent using signed state and the initiating browser's nonce.
+	// (GET /messenger/{provider}/callback)
+	MessengerOAuthCallback(w http.ResponseWriter, r *http.Request, provider MessengerProvider, params MessengerOAuthCallbackParams)
+	// Start consent for the current participant's messaging account.
+	// (POST /messenger/{provider}/connect)
+	ConnectMessenger(w http.ResponseWriter, r *http.Request, provider MessengerProvider)
+	// Disconnect the current member’s Messenger grant.
+	// (DELETE /messenger/{provider}/identity)
+	DisconnectMessengerIdentity(w http.ResponseWriter, r *http.Request, provider MessengerProvider)
+	// Check the current member’s Messenger connection.
+	// (GET /messenger/{provider}/identity)
+	GetMessengerIdentity(w http.ResponseWriter, r *http.Request, provider MessengerProvider)
+	// The configured account-consent flow and its required participant scopes.
+	// (GET /messenger/{provider}/setup)
+	GetMessengerSetup(w http.ResponseWriter, r *http.Request, provider MessengerProvider)
+	// Read this participant’s delivery receipt.
+	// (GET /messenger/{provider}/{record_type}/{id}/attempts/{request_id})
+	GetMessengerAttempt(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id, requestId openapi_types.UUID)
+	// Find channels the participant can select.
+	// (GET /messenger/{provider}/{record_type}/{id}/channels)
+	ListMessengerChannels(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id, params ListMessengerChannelsParams)
+	// Read the selected conversation and verify its current participants.
+	// (GET /messenger/{provider}/{record_type}/{id}/conversation)
+	GetMessengerConversation(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id, params GetMessengerConversationParams)
+	// Open a verified channel or exact participant roster.
+	// (POST /messenger/{provider}/{record_type}/{id}/conversation)
+	OpenMessengerConversation(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id)
+	// Find eligible internal colleagues.
+	// (GET /messenger/{provider}/{record_type}/{id}/members)
+	ListMessengerMembers(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id, params ListMessengerMembersParams)
+	// Read the participant’s conversation without filing it in History.
+	// (GET /messenger/{provider}/{record_type}/{id}/messages)
+	GetMessengerMessages(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id, params GetMessengerMessagesParams)
+	// Send once under the participant’s reviewed audience.
+	// (POST /messenger/{provider}/{record_type}/{id}/messages)
+	SendMessengerMessage(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id)
+	// Resolve the owner and assigned record team to this participant's provider directory.
+	// (GET /messenger/{provider}/{record_type}/{id}/team)
+	GetMessengerTeam(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id)
 	// The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
 	// (GET /notices)
 	ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams)
@@ -106917,6 +107837,12 @@ func (_ Unimplemented) SetActivityAudience(w http.ResponseWriter, r *http.Reques
 // Accept, tentatively accept or decline a calendar invitation that came by email.
 // (PUT /activities/{id}/calendar-response)
 func (_ Unimplemented) AnswerCalendarInvitation(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Verify the current reader's native source access for a visible chat recap.
+// (GET /activities/{id}/chat-source)
+func (_ Unimplemented) GetChatSummarySource(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -108588,6 +109514,24 @@ func (_ Unimplemented) ReceiveDispactChannelEvent(w http.ResponseWriter, r *http
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Verify a signed Slack event and queue a canonical channel read.
+// (POST /channel-events/slack)
+func (_ Unimplemented) ReceiveSlackChannelEvent(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Verify a Microsoft bot activity and retain only installation and conversation references.
+// (POST /channel-events/teams/bot)
+func (_ Unimplemented) ReceiveTeamsBotActivity(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Authenticate metadata-only Graph channel notifications and lifecycle recovery with sealed client state.
+// (POST /channel-events/teams/graph)
+func (_ Unimplemented) ReceiveTeamsGraphNotification(w http.ResponseWriter, r *http.Request, params ReceiveTeamsGraphNotificationParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // Answer Meta's webhook subscription check (anonymous).
 // (GET /channel-events/whatsapp)
 func (_ Unimplemented) VerifyWhatsAppWebhook(w http.ResponseWriter, r *http.Request, params VerifyWhatsAppWebhookParams) {
@@ -108624,7 +109568,7 @@ func (_ Unimplemented) SetChannelVerbosity(w http.ResponseWriter, r *http.Reques
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
-// Link a deal or project to a new or existing private chat channel.
+// Link a company, deal or project to an authorized work channel.
 // (POST /channel-links/{record_type}/{id})
 func (_ Unimplemented) LinkChannel(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
@@ -108632,7 +109576,25 @@ func (_ Unimplemented) LinkChannel(w http.ResponseWriter, r *http.Request, recor
 
 // The private channels this record can be linked to.
 // (GET /channel-links/{record_type}/{id}/channels)
-func (_ Unimplemented) ListLinkableChannels(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+func (_ Unimplemented) ListLinkableChannels(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id, params ListLinkableChannelsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Preview the effective channel audience and eligible outgoing content without posting.
+// (GET /channel-links/{record_type}/{id}/delivery-preview)
+func (_ Unimplemented) PreviewChannelDelivery(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Review uncertain automated sends without exposing their source bodies.
+// (GET /channel-links/{record_type}/{id}/delivery-review)
+func (_ Unimplemented) GetChannelDeliveryReview(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Explicitly stop retrying reviewed unknown sends, or request a fresh overview card.
+// (POST /channel-links/{record_type}/{id}/delivery-review)
+func (_ Unimplemented) ReviewChannelDeliveries(w http.ResponseWriter, r *http.Request, recordType ChannelLinkRecordType, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -108645,6 +109607,42 @@ func (_ Unimplemented) FileChannelMessage(w http.ResponseWriter, r *http.Request
 // Which messaging transports THIS installation has registered.
 // (GET /channel-providers)
 func (_ Unimplemented) ListChannelProviders(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Complete workspace bot consent using signed state and the initiating browser nonce.
+// (GET /channel-providers/slack/callback)
+func (_ Unimplemented) SlackChannelsOAuthCallback(w http.ResponseWriter, r *http.Request, params SlackChannelsOAuthCallbackParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Start admin consent for the Slack bot used by record channel links.
+// (POST /channel-providers/slack/connect)
+func (_ Unimplemented) ConnectSlackChannels(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Slack workspace installation requirements, separate from participant consent.
+// (GET /channel-providers/slack/setup)
+func (_ Unimplemented) GetSlackChannelSetup(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Approve a verified team installation for record channel links.
+// (POST /channel-providers/teams/connect)
+func (_ Unimplemented) ConnectTeamsChannels(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Build the team-scoped app package with the operator's legal URLs.
+// (POST /channel-providers/teams/package)
+func (_ Unimplemented) DownloadTeamsChannelPackage(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Microsoft team installations verified by signed bot events, separate from participant consent.
+// (GET /channel-providers/teams/setup)
+func (_ Unimplemented) GetTeamsChannelSetup(w http.ResponseWriter, r *http.Request) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -111684,6 +112682,90 @@ func (_ Unimplemented) PrepForMeeting(w http.ResponseWriter, r *http.Request, pa
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
+// Connect your own Dispact personal token to the configured workspace.
+// (POST /messenger/dispact/credential)
+func (_ Unimplemented) ConnectDispactParticipant(w http.ResponseWriter, r *http.Request) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Complete participant consent using signed state and the initiating browser's nonce.
+// (GET /messenger/{provider}/callback)
+func (_ Unimplemented) MessengerOAuthCallback(w http.ResponseWriter, r *http.Request, provider MessengerProvider, params MessengerOAuthCallbackParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Start consent for the current participant's messaging account.
+// (POST /messenger/{provider}/connect)
+func (_ Unimplemented) ConnectMessenger(w http.ResponseWriter, r *http.Request, provider MessengerProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Disconnect the current member’s Messenger grant.
+// (DELETE /messenger/{provider}/identity)
+func (_ Unimplemented) DisconnectMessengerIdentity(w http.ResponseWriter, r *http.Request, provider MessengerProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Check the current member’s Messenger connection.
+// (GET /messenger/{provider}/identity)
+func (_ Unimplemented) GetMessengerIdentity(w http.ResponseWriter, r *http.Request, provider MessengerProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// The configured account-consent flow and its required participant scopes.
+// (GET /messenger/{provider}/setup)
+func (_ Unimplemented) GetMessengerSetup(w http.ResponseWriter, r *http.Request, provider MessengerProvider) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read this participant’s delivery receipt.
+// (GET /messenger/{provider}/{record_type}/{id}/attempts/{request_id})
+func (_ Unimplemented) GetMessengerAttempt(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id, requestId openapi_types.UUID) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Find channels the participant can select.
+// (GET /messenger/{provider}/{record_type}/{id}/channels)
+func (_ Unimplemented) ListMessengerChannels(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id, params ListMessengerChannelsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the selected conversation and verify its current participants.
+// (GET /messenger/{provider}/{record_type}/{id}/conversation)
+func (_ Unimplemented) GetMessengerConversation(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id, params GetMessengerConversationParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Open a verified channel or exact participant roster.
+// (POST /messenger/{provider}/{record_type}/{id}/conversation)
+func (_ Unimplemented) OpenMessengerConversation(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Find eligible internal colleagues.
+// (GET /messenger/{provider}/{record_type}/{id}/members)
+func (_ Unimplemented) ListMessengerMembers(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id, params ListMessengerMembersParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Read the participant’s conversation without filing it in History.
+// (GET /messenger/{provider}/{record_type}/{id}/messages)
+func (_ Unimplemented) GetMessengerMessages(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id, params GetMessengerMessagesParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Send once under the participant’s reviewed audience.
+// (POST /messenger/{provider}/{record_type}/{id}/messages)
+func (_ Unimplemented) SendMessengerMessage(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Resolve the owner and assigned record team to this participant's provider directory.
+// (GET /messenger/{provider}/{record_type}/{id}/team)
+func (_ Unimplemented) GetMessengerTeam(w http.ResponseWriter, r *http.Request, provider MessengerProvider, recordType ChannelLinkRecordType, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
 // The acting user's own in-app notifications, newest first. Not a privacy notice owed to a contact; those are notice_case_reviews (GET /privacy/notice-case-reviews).
 // (GET /notices)
 func (_ Unimplemented) ListNotices(w http.ResponseWriter, r *http.Request, params ListNoticesParams) {
@@ -114102,6 +115184,19 @@ func (siw *ServerInterfaceWrapper) ListActivities(w http.ResponseWriter, r *http
 		return
 	}
 
+	// ------------- Optional query parameter "chat_provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "chat_provider", r.URL.Query(), &params.ChatProvider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "chat_provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "chat_provider", Err: err})
+		}
+		return
+	}
+
 	// ------------- Optional query parameter "channel_provider" -------------
 
 	err = runtime.BindQueryParameterWithOptions("form", true, false, "channel_provider", r.URL.Query(), &params.ChannelProvider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
@@ -114880,6 +115975,38 @@ func (siw *ServerInterfaceWrapper) AnswerCalendarInvitation(w http.ResponseWrite
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.AnswerCalendarInvitation(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetChatSummarySource operation middleware
+func (siw *ServerInterfaceWrapper) GetChatSummarySource(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetChatSummarySource(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -126832,6 +127959,67 @@ func (siw *ServerInterfaceWrapper) ReceiveDispactChannelEvent(w http.ResponseWri
 	handler.ServeHTTP(w, r)
 }
 
+// ReceiveSlackChannelEvent operation middleware
+func (siw *ServerInterfaceWrapper) ReceiveSlackChannelEvent(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReceiveSlackChannelEvent(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReceiveTeamsBotActivity operation middleware
+func (siw *ServerInterfaceWrapper) ReceiveTeamsBotActivity(w http.ResponseWriter, r *http.Request) {
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReceiveTeamsBotActivity(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReceiveTeamsGraphNotification operation middleware
+func (siw *ServerInterfaceWrapper) ReceiveTeamsGraphNotification(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ReceiveTeamsGraphNotificationParams
+
+	// ------------- Optional query parameter "validationToken" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "validationToken", r.URL.Query(), &params.ValidationToken, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "validationToken"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "validationToken", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReceiveTeamsGraphNotification(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // VerifyWhatsAppWebhook operation middleware
 func (siw *ServerInterfaceWrapper) VerifyWhatsAppWebhook(w http.ResponseWriter, r *http.Request) {
 
@@ -127121,8 +128309,147 @@ func (siw *ServerInterfaceWrapper) ListLinkableChannels(w http.ResponseWriter, r
 
 	r = r.WithContext(ctx)
 
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListLinkableChannelsParams
+
+	// ------------- Optional query parameter "provider" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "provider", r.URL.Query(), &params.Provider, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "provider"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		}
+		return
+	}
+
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
-		siw.Handler.ListLinkableChannels(w, r, recordType, id)
+		siw.Handler.ListLinkableChannels(w, r, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// PreviewChannelDelivery operation middleware
+func (siw *ServerInterfaceWrapper) PreviewChannelDelivery(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.PreviewChannelDelivery(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetChannelDeliveryReview operation middleware
+func (siw *ServerInterfaceWrapper) GetChannelDeliveryReview(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetChannelDeliveryReview(w, r, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ReviewChannelDeliveries operation middleware
+func (siw *ServerInterfaceWrapper) ReviewChannelDeliveries(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ReviewChannelDeliveries(w, r, recordType, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -127188,6 +128515,165 @@ func (siw *ServerInterfaceWrapper) ListChannelProviders(w http.ResponseWriter, r
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListChannelProviders(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SlackChannelsOAuthCallback operation middleware
+func (siw *ServerInterfaceWrapper) SlackChannelsOAuthCallback(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params SlackChannelsOAuthCallbackParams
+
+	// ------------- Required query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "code" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "code", r.URL.Query(), &params.Code, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "code"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "code", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "error" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "error", r.URL.Query(), &params.Error, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "error"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "error", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SlackChannelsOAuthCallback(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConnectSlackChannels operation middleware
+func (siw *ServerInterfaceWrapper) ConnectSlackChannels(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConnectSlackChannels(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetSlackChannelSetup operation middleware
+func (siw *ServerInterfaceWrapper) GetSlackChannelSetup(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetSlackChannelSetup(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConnectTeamsChannels operation middleware
+func (siw *ServerInterfaceWrapper) ConnectTeamsChannels(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConnectTeamsChannels(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DownloadTeamsChannelPackage operation middleware
+func (siw *ServerInterfaceWrapper) DownloadTeamsChannelPackage(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DownloadTeamsChannelPackage(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetTeamsChannelSetup operation middleware
+func (siw *ServerInterfaceWrapper) GetTeamsChannelSetup(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetTeamsChannelSetup(w, r)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -149547,6 +151033,734 @@ func (siw *ServerInterfaceWrapper) PrepForMeeting(w http.ResponseWriter, r *http
 	handler.ServeHTTP(w, r)
 }
 
+// ConnectDispactParticipant operation middleware
+func (siw *ServerInterfaceWrapper) ConnectDispactParticipant(w http.ResponseWriter, r *http.Request) {
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConnectDispactParticipant(w, r)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// MessengerOAuthCallback operation middleware
+func (siw *ServerInterfaceWrapper) MessengerOAuthCallback(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params MessengerOAuthCallbackParams
+
+	// ------------- Required query parameter "state" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "state", r.URL.Query(), &params.State, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "state"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "state", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "code" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "code", r.URL.Query(), &params.Code, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "code"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "code", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "error" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "error", r.URL.Query(), &params.Error, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "error"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "error", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.MessengerOAuthCallback(w, r, provider, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ConnectMessenger operation middleware
+func (siw *ServerInterfaceWrapper) ConnectMessenger(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ConnectMessenger(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// DisconnectMessengerIdentity operation middleware
+func (siw *ServerInterfaceWrapper) DisconnectMessengerIdentity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.DisconnectMessengerIdentity(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMessengerIdentity operation middleware
+func (siw *ServerInterfaceWrapper) GetMessengerIdentity(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMessengerIdentity(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMessengerSetup operation middleware
+func (siw *ServerInterfaceWrapper) GetMessengerSetup(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMessengerSetup(w, r, provider)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMessengerAttempt operation middleware
+func (siw *ServerInterfaceWrapper) GetMessengerAttempt(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "request_id" -------------
+	var requestId openapi_types.UUID
+
+	err = runtime.BindStyledParameterWithOptions("simple", "request_id", chi.URLParam(r, "request_id"), &requestId, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "request_id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMessengerAttempt(w, r, provider, recordType, id, requestId)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMessengerChannels operation middleware
+func (siw *ServerInterfaceWrapper) ListMessengerChannels(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMessengerChannelsParams
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMessengerChannels(w, r, provider, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMessengerConversation operation middleware
+func (siw *ServerInterfaceWrapper) GetMessengerConversation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMessengerConversationParams
+
+	// ------------- Required query parameter "conversation_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "conversation_id", r.URL.Query(), &params.ConversationId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "conversation_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "conversation_id", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMessengerConversation(w, r, provider, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// OpenMessengerConversation operation middleware
+func (siw *ServerInterfaceWrapper) OpenMessengerConversation(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.OpenMessengerConversation(w, r, provider, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ListMessengerMembers operation middleware
+func (siw *ServerInterfaceWrapper) ListMessengerMembers(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params ListMessengerMembersParams
+
+	// ------------- Optional query parameter "q" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "q", r.URL.Query(), &params.Q, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "q"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "q", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ListMessengerMembers(w, r, provider, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMessengerMessages operation middleware
+func (siw *ServerInterfaceWrapper) GetMessengerMessages(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	// Parameter object where we will unmarshal all parameters from the context
+	var params GetMessengerMessagesParams
+
+	// ------------- Required query parameter "conversation_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, true, "conversation_id", r.URL.Query(), &params.ConversationId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "conversation_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "conversation_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "root_id" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "root_id", r.URL.Query(), &params.RootId, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "root_id"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "root_id", Err: err})
+		}
+		return
+	}
+
+	// ------------- Optional query parameter "cursor" -------------
+
+	err = runtime.BindQueryParameterWithOptions("form", true, false, "cursor", r.URL.Query(), &params.Cursor, runtime.BindQueryParameterOptions{Type: "string", Format: ""})
+	if err != nil {
+		var requiredError *runtime.RequiredParameterError
+		if errors.As(err, &requiredError) {
+			siw.ErrorHandlerFunc(w, r, &RequiredParamError{ParamName: "cursor"})
+		} else {
+			siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "cursor", Err: err})
+		}
+		return
+	}
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMessengerMessages(w, r, provider, recordType, id, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// SendMessengerMessage operation middleware
+func (siw *ServerInterfaceWrapper) SendMessengerMessage(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.SendMessengerMessage(w, r, provider, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// GetMessengerTeam operation middleware
+func (siw *ServerInterfaceWrapper) GetMessengerTeam(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "provider" -------------
+	var provider MessengerProvider
+
+	err = runtime.BindStyledParameterWithOptions("simple", "provider", chi.URLParam(r, "provider"), &provider, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "provider", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "record_type" -------------
+	var recordType ChannelLinkRecordType
+
+	err = runtime.BindStyledParameterWithOptions("simple", "record_type", chi.URLParam(r, "record_type"), &recordType, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: ""})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "record_type", Err: err})
+		return
+	}
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.GetMessengerTeam(w, r, provider, recordType, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
 // ListNotices operation middleware
 func (siw *ServerInterfaceWrapper) ListNotices(w http.ResponseWriter, r *http.Request) {
 
@@ -165767,6 +167981,9 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Put(options.BaseURL+"/activities/{id}/calendar-response", wrapper.AnswerCalendarInvitation)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/activities/{id}/chat-source", wrapper.GetChatSummarySource)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/activities/{id}/deal-decline", wrapper.DeclineActivityDeal)
 	})
 	r.Group(func(r chi.Router) {
@@ -166601,6 +168818,15 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Post(options.BaseURL+"/channel-events/dispact", wrapper.ReceiveDispactChannelEvent)
 	})
 	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-events/slack", wrapper.ReceiveSlackChannelEvent)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-events/teams/bot", wrapper.ReceiveTeamsBotActivity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-events/teams/graph", wrapper.ReceiveTeamsGraphNotification)
+	})
+	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/channel-events/whatsapp", wrapper.VerifyWhatsAppWebhook)
 	})
 	r.Group(func(r chi.Router) {
@@ -166625,10 +168851,37 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 		r.Get(options.BaseURL+"/channel-links/{record_type}/{id}/channels", wrapper.ListLinkableChannels)
 	})
 	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-links/{record_type}/{id}/delivery-preview", wrapper.PreviewChannelDelivery)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-links/{record_type}/{id}/delivery-review", wrapper.GetChannelDeliveryReview)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-links/{record_type}/{id}/delivery-review", wrapper.ReviewChannelDeliveries)
+	})
+	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/channel-links/{record_type}/{id}/notes", wrapper.FileChannelMessage)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/channel-providers", wrapper.ListChannelProviders)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-providers/slack/callback", wrapper.SlackChannelsOAuthCallback)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-providers/slack/connect", wrapper.ConnectSlackChannels)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-providers/slack/setup", wrapper.GetSlackChannelSetup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-providers/teams/connect", wrapper.ConnectTeamsChannels)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/channel-providers/teams/package", wrapper.DownloadTeamsChannelPackage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/channel-providers/teams/setup", wrapper.GetTeamsChannelSetup)
 	})
 	r.Group(func(r chi.Router) {
 		r.Post(options.BaseURL+"/claims/{id}/reopen", wrapper.ReopenConversationClaim)
@@ -168147,6 +170400,48 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/meeting-prep", wrapper.PrepForMeeting)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/messenger/dispact/credential", wrapper.ConnectDispactParticipant)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/messenger/{provider}/callback", wrapper.MessengerOAuthCallback)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/messenger/{provider}/connect", wrapper.ConnectMessenger)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/messenger/{provider}/identity", wrapper.DisconnectMessengerIdentity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/messenger/{provider}/identity", wrapper.GetMessengerIdentity)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/messenger/{provider}/setup", wrapper.GetMessengerSetup)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/messenger/{provider}/{record_type}/{id}/attempts/{request_id}", wrapper.GetMessengerAttempt)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/messenger/{provider}/{record_type}/{id}/channels", wrapper.ListMessengerChannels)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/messenger/{provider}/{record_type}/{id}/conversation", wrapper.GetMessengerConversation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/messenger/{provider}/{record_type}/{id}/conversation", wrapper.OpenMessengerConversation)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/messenger/{provider}/{record_type}/{id}/members", wrapper.ListMessengerMembers)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/messenger/{provider}/{record_type}/{id}/messages", wrapper.GetMessengerMessages)
+	})
+	r.Group(func(r chi.Router) {
+		r.Post(options.BaseURL+"/messenger/{provider}/{record_type}/{id}/messages", wrapper.SendMessengerMessage)
+	})
+	r.Group(func(r chi.Router) {
+		r.Get(options.BaseURL+"/messenger/{provider}/{record_type}/{id}/team", wrapper.GetMessengerTeam)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/notices", wrapper.ListNotices)

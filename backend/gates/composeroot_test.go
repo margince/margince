@@ -48,7 +48,8 @@ const (
 	// Raised by 1 for the seat-bound deal reads a unit asks as its own user.
 	// Raised by the files develop's import, analytics and release fixes added,
 	// met with main's in the back-sync.
-	composeRootProductionFiles = 1394
+	// Provider callbacks bind private Server state; shared engines live in subpackages.
+	composeRootProductionFiles = 1_402
 	// Raised by 2 files for the extension mail-file read cases and the purge
 	// receipt cases, which drive this package's unexported seams. Raised by 1
 	// production and 1 test file for the series-split fold and its cases.
@@ -75,7 +76,7 @@ const (
 	// brief fixture.
 	// Raised by 1 test file for the re-ingest vector reuse cases, which drive the
 	// unexported knowledge ingest worker.
-	composeRootTestFiles = 1936
+	composeRootTestFiles = 1_941
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -176,7 +177,7 @@ const (
 	// Raised by develop's import, analytics and release fixes met with main's.
 	// Raised by 1 production line for the notices handlers' mail delivery, set on
 	// the unexported server options.
-	composeRootProductionLines = 232_860
+	composeRootProductionLines = 233_827
 	// Raised by 18 test lines for the link suggestion tool cases.
 	// Raised by 2 test lines for the actor census waivers of the two jobs that
 	// bind their colleague inside a method.
@@ -198,7 +199,7 @@ const (
 	// finish case, which checks a repeated id keeps its first place.
 	// Raised by 21 test lines for the case that reads a timeline entry's request
 	// state into the deal status input, which is unexported.
-	composeRootTestLines = 363_826
+	composeRootTestLines = 364_269
 )
 
 // A read under these floors stopped early or read the wrong place, and would

@@ -13,6 +13,7 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/activities": {
 		{Name: "call_outcome", Values: []string{"reached", "not_reached", "voicemail", "call_back_later", "put_through"}, Array: false, Explode: true},
+		{Name: "chat_provider", Values: []string{"dispact", "slack", "teams"}, Array: false, Explode: true},
 		{Name: "entity_type", Values: []string{"contact", "company", "deal", "lead", "project"}, Array: false, Explode: true},
 		{Name: "kind", Values: []string{"email", "call", "meeting", "note", "task", "message"}, Array: true, Explode: true},
 	},
@@ -121,6 +122,9 @@ var queryEnumTable = map[string][]queryEnum{
 	},
 	"GET /v1/catch-up": {
 		{Name: "record_type", Values: []string{"contact", "company", "deal", "lead", "project", "activity"}, Array: false, Explode: true},
+	},
+	"GET /v1/channel-links/{record_type}/{id}/channels": {
+		{Name: "provider", Values: []string{"dispact", "slack", "teams"}, Array: false, Explode: true},
 	},
 	"GET /v1/commissions": {
 		{Name: "status", Values: []string{"accrued", "approved", "paid", "void"}, Array: false, Explode: true},

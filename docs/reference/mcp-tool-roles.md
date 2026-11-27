@@ -671,7 +671,6 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 
 | Call | admin | management | manager | ops | read_only | rep |
 |---|---|---|---|---|---|---|
-| `change_activities.file_channel_message` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `change_capture.cancel_backfill` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `change_capture.disconnect_channel` | ✓ | ✗ | ✗ | ✓ | ✗ | ✗ |
 | `change_capture.disconnect_mailbox` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
@@ -690,6 +689,7 @@ Each cell counts the calls in the group that ran for the role, and those a gate 
 | `read_workspace.connector_containers` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.connectors` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
 | `read_workspace.provider_connections` | ✓ | ✓ | ✓ | ✓ | ✓ | ✓ |
+| `run_research.file_channel_message` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `run_research.start_backfill` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 | `send_outbound.link_channel` | ✓ | ✓ | ✓ | ✓ | ✗ | ✓ |
 
@@ -1567,7 +1567,6 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Capture review | `read_workspace.held_threads` | `list_held_threads` |  |
 | Capture review | `read_workspace.my_capture_activity` | `list_my_capture_activity` |  |
 | Capture review | `read_workspace.workspace_capture_activity` | `list_workspace_capture_activity` | `capture_trace.read` |
-| Connectors and provider connections | `change_activities.file_channel_message` | `file_channel_message` | `activity.create` `activity.read` `company.read` `contact.read` |
 | Connectors and provider connections | `change_capture.cancel_backfill` | `cancel_connector_backfill` |  |
 | Connectors and provider connections | `change_capture.disconnect_channel` | `disconnect_channel` | `channel_connection.delete` |
 | Connectors and provider connections | `change_capture.disconnect_mailbox` | `disconnect_connector` |  |
@@ -1586,6 +1585,7 @@ A check is `object.action`, or `object.a|b` for any one of them. `*.action` is t
 | Connectors and provider connections | `read_workspace.connector_containers` | `list_connector_containers` |  |
 | Connectors and provider connections | `read_workspace.connectors` | `list_connectors` |  |
 | Connectors and provider connections | `read_workspace.provider_connections` | `list_provider_connections` | `integrations.read` |
+| Connectors and provider connections | `run_research.file_channel_message` | `file_channel_message` | `activity.create` `activity.read` `company.read` `contact.read` `deal.read` |
 | Connectors and provider connections | `run_research.start_backfill` | `start_connector_backfill` | `activity.create` `contact.create` `lead.create` |
 | Connectors and provider connections | `send_outbound.link_channel` | `link_channel` | `deal.update` |
 | Accounting source | `change_settings.disconnect_finance_source` | `disconnect_finance_source` | `integrations.delete` |

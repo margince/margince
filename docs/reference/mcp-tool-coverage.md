@@ -657,8 +657,8 @@ Every run of every case requiring this tool passed, for the model named.
 | Tool | Reliability | Runs | Required by |
 |---|---:|---:|---|
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
-| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
+| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
@@ -683,8 +683,8 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
-| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
+| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |
@@ -702,8 +702,8 @@ Every run of every case requiring this tool passed, for the model named.
 |---|---:|---:|---|
 | `read_reports` | 1.00 | 2 | `case49_who_can_introduce_us` |
 | `change_settings` | 1.00 | 4 | `case116_the_rate_and_the_logo`, `case91_add_a_review_stage` |
-| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `read_workspace` | 1.00 | 2 | `case111_how_is_the_workspace_doing` |
+| `change_activities` | 1.00 | 2 | `case9_filed_in_the_wrong_place` |
 | `change_reports` | 1.00 | 2 | `case113_after_the_sales_review` |
 | `change_attention` | 1.00 | 2 | `case104_mark_it_seen` |
 | `send_outbound` | 1.00 | 2 | `case44_chase_what_is_slipping` |

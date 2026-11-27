@@ -38,6 +38,7 @@ func (h Handlers) ListActivities(w http.ResponseWriter, r *http.Request, params 
 		id := ids.UUID(*params.WebsiteFormId)
 		in.WebsiteFormID = &id
 	}
+	in.ChatProvider = (*string)(params.ChatProvider)
 	in.ChannelProvider = params.ChannelProvider
 	if params.CallOutcome != nil {
 		outcome := string(*params.CallOutcome)

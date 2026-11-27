@@ -11,18 +11,23 @@ import (
 	"github.com/jackc/pgx/v5"
 
 	"github.com/margince/margince/backend/internal/platform/database"
+	"github.com/margince/margince/backend/internal/platform/keyvault"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
 // The record kinds a channel can carry. Each is also the table it lives in.
 const (
+	RecordCompany = "company"
 	RecordDeal    = "deal"
 	RecordProject = "project"
 )
 
 // The verbosity levels, from loudest to quietest.
 const (
+	MessageDetailBrief  = "brief"
+	MessageDetailFull   = "full"
+	MessageDetailLegacy = "legacy"
 	VerbosityEverything = "everything"
 	VerbosityImportant  = "important"
 	VerbosityMilestones = "milestones"
@@ -31,27 +36,41 @@ const (
 
 // The link statuses: a gone channel pauses the link until it is replaced.
 const (
-	StatusActive      = "active"
-	StatusChannelGone = "channel_gone"
+	StatusActive              = "active"
+	StatusChannelGone         = "channel_gone"
+	StatusIdentityNeedsReview = "identity_needs_review"
 )
 
 // Link is one record's channel.
 type Link struct {
-	ID                ids.UUID
-	ConnectionID      ids.UUID
-	Provider          string
-	ChannelSlug       string
-	ChannelName       string
-	DealID            *ids.UUID
-	ProjectID         *ids.UUID
-	Verbosity         string
-	CardMessageID     string
-	CardFingerprint   string
-	HistoryCursor     *int64
-	BackfillRequested bool
-	Status            string
-	Version           int64
-	CreatedAt         time.Time
+	WorkspaceName       string
+	CardPaused          bool
+	CardGeneration      string
+	NativeIdentity      bool
+	ID                  ids.UUID
+	ConnectionID        ids.UUID
+	Provider            string
+	ChannelSlug         string
+	ChannelName         string
+	RootID              string
+	IncludeHistory      bool
+	PostSupported       bool
+	CompanyID           *ids.UUID
+	DealID              *ids.UUID
+	ProjectID           *ids.UUID
+	Verbosity           string
+	MessageDetail       string
+	storedMessageDetail *string
+	CardMessageID       string
+	CardFingerprint     string
+	HistoryCursor       *int64
+	BackfillRequested   bool
+	ReadDisabled        bool
+	PostDisabled        bool
+	ReadSince           *time.Time
+	Status              string
+	Version             int64
+	CreatedAt           time.Time
 }
 
 // Scheduler queues a link's jobs in the transaction that asked for them.
@@ -76,10 +95,16 @@ type Viewers func(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID) ([]V
 
 // Store owns chat_link and chat_post_item.
 type Store struct {
-	db      *database.DB
-	chats   Chats
-	jobs    Scheduler
-	viewers Viewers
+	historyProfiles HistoryProfileReader
+	vault           func() keyvault.Vault
+	memberClient    MemberClient
+	memberRefresh   MemberRefresh
+	memberAuthority MemberAuthority
+	messengerRoster MessengerRoster
+	db              *database.DB
+	chats           Chats
+	jobs            Scheduler
+	viewers         Viewers
 }
 
 // NewStore wires the store over the chat it acts in, the job scheduler, and
@@ -88,26 +113,42 @@ func NewStore(db *database.DB, chats Chats, jobs Scheduler, viewers Viewers) *St
 	return &Store{db: db, chats: chats, jobs: jobs, viewers: viewers}
 }
 
+// WithVault keeps provider credentials behind the installation's key provider.
+func (s *Store) WithVault(vault func() keyvault.Vault) *Store {
+	s.vault = vault
+	return s
+}
+
 const linkColumns = `id, connection_id, provider, channel_slug, channel_name, deal_id, project_id, verbosity,
-	coalesce(card_message_id, ''), coalesce(card_fingerprint, ''), history_cursor, backfill_requested, status, version, created_at`
+	coalesce(card_message_id, ''), coalesce(card_fingerprint, ''), history_cursor, backfill_requested, status, version, created_at, company_id, read_disabled, post_disabled, read_since, message_detail,coalesce(root_id,''),include_history,post_supported,native_identity,card_paused,coalesce(card_generation::text,'')`
 
 func scanLink(row pgx.Row) (Link, error) {
 	var l Link
 	err := row.Scan(&l.ID, &l.ConnectionID, &l.Provider, &l.ChannelSlug, &l.ChannelName, &l.DealID, &l.ProjectID,
 		&l.Verbosity, &l.CardMessageID, &l.CardFingerprint, &l.HistoryCursor, &l.BackfillRequested,
-		&l.Status, &l.Version, &l.CreatedAt)
+		&l.Status, &l.Version, &l.CreatedAt, &l.CompanyID, &l.ReadDisabled, &l.PostDisabled, &l.ReadSince, &l.storedMessageDetail, &l.RootID, &l.IncludeHistory, &l.PostSupported, &l.NativeIdentity, &l.CardPaused, &l.CardGeneration)
+	switch {
+	case l.storedMessageDetail != nil:
+		l.MessageDetail = *l.storedMessageDetail
+	case l.Verbosity == VerbosityEverything:
+		l.MessageDetail = MessageDetailFull
+	default:
+		l.MessageDetail = MessageDetailBrief
+	}
 	return l, err
 }
 
 // recordColumn is the chat_link column that names a record of kind.
 func recordColumn(kind string) (string, error) {
 	switch kind {
+	case RecordCompany:
+		return companyIDKey, nil
 	case RecordDeal:
 		return "deal_id", nil
 	case RecordProject:
 		return "project_id", nil
 	}
-	return "", fmt.Errorf("a channel is linked to a deal or a project: %w", apperrors.ErrInvalidArgument)
+	return "", fmt.Errorf("a channel is linked to a company, deal or project: %w", apperrors.ErrInvalidArgument)
 }
 
 // liveLinkOf reads the record's live link, or ErrLinkNotFound.
@@ -138,12 +179,16 @@ func readLiveLink(ctx context.Context, tx pgx.Tx, kind string, id ids.UUID, lock
 // out: they are sync state, not a decision anyone made.
 func auditImage(l Link) map[string]any {
 	return map[string]any{
-		"provider":     l.Provider,
-		"channel_slug": l.ChannelSlug,
-		"channel_name": l.ChannelName,
-		"deal_id":      l.DealID,
-		"project_id":   l.ProjectID,
-		"verbosity":    l.Verbosity,
-		"status":       l.Status,
+		providerKey: l.Provider, "card_paused": l.CardPaused, "card_generation": l.CardGeneration,
+		rootIDKey: l.RootID, "native_identity": l.NativeIdentity, "include_history": l.IncludeHistory, "post_supported": l.PostSupported, "read_since": l.ReadSince,
+		"channel_slug":   l.ChannelSlug,
+		"channel_name":   l.ChannelName,
+		"company_id":     l.CompanyID,
+		"deal_id":        l.DealID,
+		"project_id":     l.ProjectID,
+		"verbosity":      l.Verbosity,
+		"message_detail": l.storedMessageDetail,
+		"status":         l.Status,
+		"read_disabled":  l.ReadDisabled, "post_disabled": l.PostDisabled,
 	}
 }

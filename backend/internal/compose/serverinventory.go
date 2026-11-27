@@ -128,8 +128,7 @@ type Server struct {
 	promiseTakeOverHandlers
 	importHandlers
 	channelHandlers
-	chatLinkHandlers
-	chatEventHandlers
+	messagingHandlers
 	whatsAppEventHandlers
 	traceHandlers
 	pipelineTraceHandlers

@@ -9539,6 +9539,10 @@ paths:
             type: string
             enum: [reached, not_reached, voicemail, call_back_later, put_through]
             x-enum-varnames: [ListCallOutcomeReached, ListCallOutcomeNotReached, ListCallOutcomeVoicemail, ListCallOutcomeCallBackLater, ListCallOutcomePutThrough]
+        - name: chat_provider
+          in: query
+          description: Generated channel recaps from this provider. Content visibility is required for a match.
+          schema: { $ref: '#/components/schemas/MessengerProvider' }
         - name: channel_provider
           in: query
           description: |
@@ -18403,6 +18407,846 @@ paths:
   # keeps a card in the channel and posts what happens on the record; what the
   # channel decides comes back as summarised notes. Linking needs the right to
   # edit the record, and reading needs the right to see it.
+  /activities/{id}/chat-source:
+    get:
+      tags: [Activities]
+      operationId: getChatSummarySource
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [{ cookieAuth: [] }]
+      summary: Verify the current reader's native source access for a visible chat recap.
+      parameters:
+        - $ref: '#/components/parameters/Id'
+      responses:
+        '200':
+          description: Availability of the native source without source identifiers when unavailable.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChatSourceAccess' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+  /channel-events/teams/graph:
+    post:
+      tags: [Connectors]
+      operationId: receiveTeamsGraphNotification
+      x-agent-access: human-only
+      security: []
+      summary: Authenticate metadata-only Graph channel notifications and lifecycle recovery with sealed client state.
+      parameters:
+        - { name: validationToken, in: query, schema: { type: string, maxLength: 4096 } }
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+          text/plain:
+            schema: { type: string, maxLength: 4096 }
+      responses:
+        '200':
+          description: Endpoint validation or a verified notification batch receipt.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DispactChannelEventReceipt' }
+            text/plain:
+              schema: { type: string, maxLength: 4096 }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '413':
+          description: Notification batch exceeds the size limit.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: Retry after the returned wait.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: Notification recovery could not be queued yet.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-events/teams/bot:
+    post:
+      tags: [Connectors]
+      operationId: receiveTeamsBotActivity
+      x-agent-access: human-only
+      security: []
+      summary: Verify a Microsoft bot activity and retain only installation and conversation references.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Activity accepted or ignored.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DispactChannelEventReceipt' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '413':
+          description: Activity exceeds the size limit.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '429':
+          description: Retry after the returned wait.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-events/slack:
+    post:
+      tags: [Connectors]
+      operationId: receiveSlackChannelEvent
+      x-agent-access: human-only
+      security: []
+      summary: Verify a signed Slack event and queue a canonical channel read.
+      description: Message bodies are discarded after signature and routing checks. Only root identifiers and revisions reach the queue ledger.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { type: object, additionalProperties: true }
+      responses:
+        '200':
+          description: Challenge response or accepted event.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/DispactChannelEventReceipt' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '429':
+          description: Retry after the returned rate limit wait.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-providers/teams/setup:
+    get:
+      tags: [Connectors]
+      operationId: getTeamsChannelSetup
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Microsoft team installations verified by signed bot events, separate from participant consent.
+      responses:
+        '200':
+          description: Setup instructions and verified installed teams without credentials.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/TeamsChannelSetup' }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Configure the Microsoft app before managing its team installation.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-providers/teams/connect:
+    post:
+      tags: [Connectors]
+      operationId: connectTeamsChannels
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Approve a verified team installation for record channel links.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [installation_id]
+              properties:
+                installation_id: { type: string, format: uuid }
+      responses:
+        '204': { description: The approved team is connected. }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Configure the Microsoft app before managing its team installation.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-providers/teams/package:
+    post:
+      tags: [Connectors]
+      operationId: downloadTeamsChannelPackage
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Build the team-scoped app package with the operator's legal URLs.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [privacy_url, terms_url]
+              properties:
+                privacy_url: { type: string, format: uri, maxLength: 8192 }
+                terms_url: { type: string, format: uri, maxLength: 8192 }
+      responses:
+        '200':
+          description: The app manifest and its required icons.
+          content:
+            application/zip:
+              schema: { type: string, format: binary }
+        '400': { $ref: '#/components/responses/ValidationError' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Configure the Microsoft app before managing its team installation.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-providers/slack/setup:
+    get:
+      tags: [Connectors]
+      operationId: getSlackChannelSetup
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Slack workspace installation requirements, separate from participant consent.
+      responses:
+        '200':
+          description: Public installation metadata without credentials.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelProviderSetup' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+  /channel-providers/slack/connect:
+    post:
+      tags: [Connectors]
+      operationId: connectSlackChannels
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Start admin consent for the Slack bot used by record channel links.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [distribution]
+              properties:
+                distribution: { type: string, enum: [internal, marketplace, non_marketplace] }
+      responses:
+        '200':
+          description: The native bot consent URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [authorize_url]
+                properties:
+                  authorize_url: { type: string, maxLength: 8192 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503':
+          description: Configure the Slack app and signing secret before installing the bot.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-providers/slack/callback:
+    get:
+      tags: [Connectors]
+      operationId: slackChannelsOAuthCallback
+      x-agent-access: human-only
+      security: []
+      summary: Complete workspace bot consent using signed state and the initiating browser nonce.
+      parameters:
+        - { name: state, in: query, required: true, schema: { type: string, maxLength: 8192 } }
+        - { name: code, in: query, schema: { type: string, maxLength: 8192 } }
+        - { name: error, in: query, schema: { type: string, maxLength: 256 } }
+      responses:
+        '302': { description: Return to Messaging providers with an explicit installation result. }
+        '400':
+          description: The callback cannot be authenticated.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /messenger/{provider}/setup:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { $ref: '#/components/schemas/MessengerProvider' } }
+    get:
+      tags: [Connectors]
+      operationId: getMessengerSetup
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: The configured account-consent flow and its required participant scopes.
+      responses:
+        '200':
+          description: App setup facts without credentials.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessengerSetup' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /messenger/dispact/credential:
+    post:
+      tags: [Connectors]
+      operationId: connectDispactParticipant
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Connect your own Dispact personal token to the configured workspace.
+      description: |
+        Verifies the token's live participant identity against the configured Dispact workspace.
+        The token is sealed for the signed-in member. It never becomes the installation bot's token.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              additionalProperties: false
+              required: [personal_token]
+              properties:
+                personal_token: { type: string, minLength: 5, maxLength: 8192, pattern: '^pat_', writeOnly: true }
+      responses:
+        '204': { description: Your participant credential is verified and sealed. }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Connect the Dispact installation before connecting your participant account.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /messenger/{provider}/connect:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { $ref: '#/components/schemas/MessengerProvider' } }
+    post:
+      tags: [Connectors]
+      operationId: connectMessenger
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Start consent for the current participant's messaging account.
+      requestBody:
+        required: false
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/MessengerConnectRequest' }
+      responses:
+        '200':
+          description: The provider consent URL.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [authorize_url]
+                properties:
+                  authorize_url: { type: string, maxLength: 8192 }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '503':
+          description: Configure the messaging app before starting consent.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /messenger/{provider}/callback:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { $ref: '#/components/schemas/MessengerProvider' } }
+    get:
+      tags: [Connectors]
+      operationId: messengerOAuthCallback
+      x-agent-access: human-only
+      security: []
+      summary: Complete participant consent using signed state and the initiating browser's nonce.
+      parameters:
+        - { name: state, in: query, required: true, schema: { type: string, maxLength: 8192 } }
+        - { name: code, in: query, schema: { type: string, maxLength: 8192 } }
+        - { name: error, in: query, schema: { type: string, maxLength: 256 } }
+      responses:
+        '302':
+          description: Return to Messaging providers with an explicit consent result.
+        '400':
+          description: The callback cannot be authenticated.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  "/messenger/{provider}/identity":
+    parameters:
+      -
+        name: "provider"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/MessengerProvider"
+    get:
+      tags:
+        - "Connectors"
+      operationId: "getMessengerIdentity"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Check the current member’s Messenger connection."
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerIdentity"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+    delete:
+      tags:
+        - "Connectors"
+      operationId: "disconnectMessengerIdentity"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Disconnect the current member’s Messenger grant."
+      responses:
+        '204':
+          description: "The participant-authorized result."
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  /messenger/{provider}/{record_type}/{id}/team:
+    parameters:
+      - { name: provider, in: path, required: true, schema: { $ref: '#/components/schemas/MessengerProvider' } }
+      - { name: record_type, in: path, required: true, schema: { $ref: '#/components/schemas/ChannelLinkRecordType' } }
+      - { $ref: '#/components/parameters/Id' }
+    get:
+      tags: [Connectors]
+      operationId: getMessengerTeam
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Resolve the owner and assigned record team to this participant's provider directory.
+      responses:
+        '200':
+          description: Matched, inactive and unresolved members remain explicit.
+          content:
+            application/json:
+              schema:
+                type: object
+                additionalProperties: false
+                required: [members]
+                properties:
+                  members: { type: array, maxItems: 1000, items: { $ref: '#/components/schemas/MessengerTeamMember' } }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  "/messenger/{provider}/{record_type}/{id}/channels":
+    parameters:
+      -
+        name: "provider"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/MessengerProvider"
+      -
+        name: "record_type"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/ChannelLinkRecordType"
+      -
+        "$ref": "#/components/parameters/Id"
+    get:
+      tags:
+        - "Connectors"
+      operationId: "listMessengerChannels"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Find channels the participant can select."
+      parameters:
+        -
+          name: "cursor"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            maxLength: 65536
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerChannels"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  "/messenger/{provider}/{record_type}/{id}/members":
+    parameters:
+      -
+        name: "provider"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/MessengerProvider"
+      -
+        name: "record_type"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/ChannelLinkRecordType"
+      -
+        "$ref": "#/components/parameters/Id"
+    get:
+      tags:
+        - "Connectors"
+      operationId: "listMessengerMembers"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Find eligible internal colleagues."
+      parameters:
+        -
+          name: "q"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            maxLength: 200
+        -
+          name: "cursor"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            maxLength: 65536
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerMembers"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  "/messenger/{provider}/{record_type}/{id}/conversation":
+    parameters:
+      -
+        name: "provider"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/MessengerProvider"
+      -
+        name: "record_type"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/ChannelLinkRecordType"
+      -
+        "$ref": "#/components/parameters/Id"
+    get:
+      tags: [Connectors]
+      operationId: getMessengerConversation
+      x-agent-access: human-only
+      x-human-only-reason: covered
+      security: [{ cookieAuth: [] }]
+      summary: Read the selected conversation and verify its current participants.
+      parameters:
+        - { name: conversation_id, in: query, required: true, schema: { type: string, maxLength: 1024 } }
+      responses:
+        '200':
+          description: The current sender and audience.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/MessengerContext' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+    post:
+      tags:
+        - "Connectors"
+      operationId: "openMessengerConversation"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Open a verified channel or exact participant roster."
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/MessengerOpenRequest"
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerContext"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  "/messenger/{provider}/{record_type}/{id}/messages":
+    parameters:
+      -
+        name: "provider"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/MessengerProvider"
+      -
+        name: "record_type"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/ChannelLinkRecordType"
+      -
+        "$ref": "#/components/parameters/Id"
+    get:
+      tags:
+        - "Connectors"
+      operationId: "getMessengerMessages"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Read the participant’s conversation without filing it in History."
+      parameters:
+        -
+          name: "conversation_id"
+          in: "query"
+          required: true
+          schema:
+            type: "string"
+            maxLength: 1024
+        -
+          name: "root_id"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            maxLength: 1024
+        -
+          name: "cursor"
+          in: "query"
+          required: false
+          schema:
+            type: "string"
+            maxLength: 65536
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerPage"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+    post:
+      tags:
+        - "Connectors"
+      operationId: "sendMessengerMessage"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Send once under the participant’s reviewed audience."
+      requestBody:
+        required: true
+        content:
+          "application/json":
+            schema:
+              "$ref": "#/components/schemas/MessengerSendRequest"
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerAttempt"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
+  "/messenger/{provider}/{record_type}/{id}/attempts/{request_id}":
+    parameters:
+      -
+        name: "provider"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/MessengerProvider"
+      -
+        name: "record_type"
+        in: "path"
+        required: true
+        schema:
+          "$ref": "#/components/schemas/ChannelLinkRecordType"
+      -
+        "$ref": "#/components/parameters/Id"
+      -
+        name: "request_id"
+        in: "path"
+        required: true
+        schema:
+          type: "string"
+          format: "uuid"
+    get:
+      tags:
+        - "Connectors"
+      operationId: "getMessengerAttempt"
+      x-agent-access: "human-only"
+      x-human-only-reason: "covered"
+      security:
+        -
+          cookieAuth: []
+      summary: "Read this participant’s delivery receipt."
+      responses:
+        '200':
+          description: "The participant-authorized result."
+          content:
+            "application/json":
+              schema:
+                "$ref": "#/components/schemas/MessengerAttempt"
+        '400':
+          description: The destination or message needs correction.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '401':
+          "$ref": "#/components/responses/Unauthorized"
+        '403':
+          "$ref": "#/components/responses/Forbidden"
+        '404':
+          "$ref": "#/components/responses/NotFound"
+        '409':
+          "$ref": "#/components/responses/Conflict"
+        '422': { $ref: '#/components/responses/ValidationError' }
+
   /channel-links/{record_type}/{id}:
     parameters:
       - name: record_type
@@ -18436,7 +19280,7 @@ paths:
       operationId: linkChannel
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
       x-mcp-tool: { verb: link_channel, router: send_outbound, action: link_channel, tier: auto_execute, scope: send, served_by: route, ask_user_first: true }
-      summary: Link a deal or project to a new or existing private chat channel.
+      summary: Link a company, deal or project to an authorized work channel.
       description: |
         `create` makes a private channel named after the record and invites every live member who may
         open the record, the record's owner and the member linking it first, at most 50. A member with
@@ -18540,6 +19384,10 @@ paths:
         schema: { $ref: '#/components/schemas/ChannelLinkRecordType' }
       - $ref: '#/components/parameters/Id'
     get:
+      parameters:
+        - name: provider
+          in: query
+          schema: { $ref: '#/components/schemas/MessengerProvider' }
       tags: [Connectors]
       operationId: listLinkableChannels
       # Human-only: the picker in the web form's Link an existing channel. An
@@ -18573,6 +19421,100 @@ paths:
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
+  /channel-links/{record_type}/{id}/delivery-preview:
+    parameters:
+      - { name: record_type, in: path, required: true, schema: { $ref: '#/components/schemas/ChannelLinkRecordType' } }
+      - { $ref: '#/components/parameters/Id' }
+    get:
+      tags: [Connectors]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [{ cookieAuth: [] }]
+      operationId: previewChannelDelivery
+      x-waits-on-model: always
+      summary: Preview the effective channel audience and eligible outgoing content without posting.
+      responses:
+        '200':
+          description: Current audience, overview and eligible queued update preview.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelDeliveryPreview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: The provider requires a pause before another preview.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '502':
+          description: The provider could not supply a complete preview.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+        '503':
+          description: The provider cannot currently supply a complete preview.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+  /channel-links/{record_type}/{id}/delivery-review:
+    parameters:
+      - { name: record_type, in: path, required: true, schema: { $ref: '#/components/schemas/ChannelLinkRecordType' } }
+      - { $ref: '#/components/parameters/Id' }
+    get:
+      tags: [Connectors]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [{ cookieAuth: [] }]
+      operationId: getChannelDeliveryReview
+      summary: Review uncertain automated sends without exposing their source bodies.
+      responses:
+        '200':
+          description: Unconfirmed delivery metadata for the current linked record.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelDeliveryReview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Channel delivery review is unavailable in this role.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
+    post:
+      tags: [Connectors]
+      x-agent-access: human-only
+      x-human-only-reason: security
+      security: [{ cookieAuth: [] }]
+      operationId: reviewChannelDeliveries
+      summary: Explicitly stop retrying reviewed unknown sends, or request a fresh overview card.
+      description: This action never confirms delivery and never claims to remove a provider copy. Skipping an uncertain overview pauses automatic card posting; restarting it requires a separate explicit acknowledgement.
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema: { $ref: '#/components/schemas/ReviewChannelDeliveryRequest' }
+      responses:
+        '200':
+          description: Current review metadata after the human decision.
+          content:
+            application/json:
+              schema: { $ref: '#/components/schemas/ChannelDeliveryReview' }
+        '401': { $ref: '#/components/responses/Unauthorized' }
+        '403': { $ref: '#/components/responses/Forbidden' }
+        '404': { $ref: '#/components/responses/NotFound' }
+        '409': { $ref: '#/components/responses/Conflict' }
+        '422': { $ref: '#/components/responses/ValidationError' }
+        '503':
+          description: Channel delivery review is unavailable in this role.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
   /channel-links/{record_type}/{id}/notes:
     parameters:
       - name: record_type
@@ -18583,8 +19525,9 @@ paths:
     post:
       tags: [Connectors]
       operationId: fileChannelMessage
+      x-waits-on-model: always
       security: [ { bearerAuth: [] }, { cookieAuth: [] } ]
-      x-mcp-tool: { verb: file_channel_message, router: change_activities, action: file_channel_message, tier: auto_execute, scope: write, served_by: route }
+      x-mcp-tool: { verb: file_channel_message, router: run_research, action: file_channel_message, tier: auto_execute, scope: enrich, served_by: route }
       summary: File a summary of one message in a record's channel, or of its thread, as a note.
       description: |
         Reads the message from the chat, has the AI write a short summary of it, and files that
@@ -24503,7 +25446,7 @@ paths:
       x-settings-audience: member
       summary: Every vendor whose OAuth app this installation can hold, and whether it holds one.
       description: |
-        The core's own vendors (`google`, `microsoft`) first, then one entry per OAuth app a
+        The core vendors (`google`, `microsoft`, `slack`) first, then one entry per OAuth app a
         composed extension unit declares, ordered by provider. A unit's entry carries the unit's
         `title` for it and the `unit` that declared it. Each entry answers exactly what
         `GET /installation/oauth-apps/{provider}` answers for that vendor.
@@ -44519,7 +45462,7 @@ components:
       properties:
         purpose:
           type: string
-          enum: [sign_in, mailbox_connect, calendar_connect, documents_connect, extension_connect]
+          enum: [sign_in, mailbox_connect, calendar_connect, documents_connect, extension_connect, messenger_connect]
           x-extensible-enum: true
           description: >-
             Which flow uses this URL. `sign_in` is the login callback. `mailbox_connect` and
@@ -44545,6 +45488,12 @@ components:
       additionalProperties: false
       required: [client_id, client_secret]
       properties:
+        signing_secret:
+          type: string
+          minLength: 1
+          maxLength: 512
+          writeOnly: true
+          description: Slack only. The app signing secret used to verify channel notifications. Stored sealed with the client secret.
         client_id:
           type: string
           minLength: 1
@@ -48930,7 +49879,7 @@ components:
       required: [id, provider, channelId, channelLabel, status, version]
       properties:
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [telegram, telegram_business, dispact, whatsapp, zalo_oa], x-extensible-enum: true }
+        provider: { type: string, enum: [telegram, telegram_business, dispact, whatsapp, zalo_oa, slack, teams], x-extensible-enum: true }
         channelId:
           type: string
           description: The provider's own id for the bot — the key the binding is unique on. For Dispact it is the chat's team id.
@@ -49183,10 +50132,12 @@ components:
       properties:
         type:
           type: string
-          enum: [url_verification, message.created, thread.replied, message.updated, channel.archived]
+          enum: [url_verification, message.created, thread.replied, message.updated, message.deleted, channel.archived]
         challenge: { type: string, maxLength: 500, description: The value a URL check expects back. }
         workspace_id: { type: string, description: The Dispact team; it must be the connected bot's team. }
         channel_slug: { type: string }
+        channel_id: { type: string, maxLength: 1024, description: Immutable channel identity when supported by the source. }
+        root_message_id: { type: string, maxLength: 1024, description: Immutable conversation root identity when supported by the source. }
         seq: { type: integer, description: 'The highest message sequence of the burst. Margince reads the history itself and uses the notice only as a signal.' }
         message_id: { type: string }
         event_id: { type: string }
@@ -49204,10 +50155,374 @@ components:
           description: '`pull_queued`: the channel''s history is read soon. `link_paused`: the archived channel''s link is paused. `ignored`: no live link has this channel. `already_taken`: this `webhook-id` was taken in the last 24 hours, so nothing changes.'
 
     # ---- chat channel links ----
+    TeamsChannelSetup:
+      type: object
+      additionalProperties: false
+      required: [configured, app_id, tenant_id, events_url, scopes, installations]
+      properties:
+        configured: { type: boolean }
+        app_id: { type: string, maxLength: 256 }
+        tenant_id: { type: string, maxLength: 256 }
+        events_url: { type: string, maxLength: 8192 }
+        scopes: { type: array, maxItems: 100, items: { type: string, maxLength: 256 } }
+        installations:
+          type: array
+          maxItems: 1000
+          items: { $ref: '#/components/schemas/TeamsChannelInstallation' }
+    TeamsChannelInstallation:
+      type: object
+      additionalProperties: false
+      required: [id, name, team_id]
+      properties:
+        id: { type: string, format: uuid }
+        name: { type: string, maxLength: 500 }
+        team_id: { type: string, maxLength: 256 }
+    SlackHistoryProfile:
+      type: object
+      additionalProperties: false
+      required: [distribution, history_per_minute, replies_per_minute, history_page_size, replies_page_size, source, recorded_at, canonical_supported]
+      properties:
+        distribution: { type: string, enum: [internal, marketplace, non_marketplace], x-extensible-enum: true }
+        history_per_minute: { type: integer, minimum: 1, maximum: 50 }
+        replies_per_minute: { type: integer, minimum: 1, maximum: 50 }
+        history_page_size: { type: integer, minimum: 1, maximum: 200 }
+        replies_page_size: { type: integer, minimum: 1, maximum: 100 }
+        source: { type: string, enum: [admin_declared], x-extensible-enum: true }
+        recorded_at: { type: string, format: date-time }
+        canonical_supported: { type: boolean }
+    ChannelProviderSetup:
+      type: object
+      additionalProperties: false
+      required: [configured, callback_url, events_url, scopes]
+      properties:
+        history_profile: { $ref: '#/components/schemas/SlackHistoryProfile' }
+        configured: { type: boolean }
+        callback_url: { type: string, maxLength: 8192 }
+        events_url: { type: string, maxLength: 8192 }
+        scopes: { type: array, maxItems: 100, items: { type: string, maxLength: 256 } }
+    MessengerTeamMember:
+      type: object
+      additionalProperties: false
+      required: [crm_id, kind, name, member_id, state]
+      properties:
+        crm_id: { type: string, format: uuid }
+        kind: { type: string, enum: [user, team], x-extensible-enum: true }
+        name: { type: string, maxLength: 1024 }
+        member_id: { type: string, maxLength: 1024 }
+        state: { type: string, enum: [matched, self, unresolved, inactive], x-extensible-enum: true }
+    MessengerSetup:
+      type: object
+      additionalProperties: false
+      required: [provider, configured, callback_url, participant_scopes, max_group_recipients]
+      properties:
+        provider: { $ref: '#/components/schemas/MessengerProvider' }
+        configured: { type: boolean }
+        callback_url: { type: string, maxLength: 8192 }
+        account_url: { type: string, maxLength: 8192, description: The configured provider page for creating a personal credential. }
+        participant_scopes: { type: array, maxItems: 100, items: { type: string, maxLength: 256 } }
+        max_group_recipients: { type: integer, minimum: 0, maximum: 1000 }
+    MessengerProvider:
+      type: "string"
+      enum:
+        - "dispact"
+        - "slack"
+        - "teams"
+      x-extensible-enum: true
+    MessengerMember:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "id"
+        - "name"
+        - "active"
+        - "external"
+      properties:
+        bot: { type: boolean }
+        id:
+          type: "string"
+          maxLength: 1024
+        name:
+          type: "string"
+          maxLength: 1024
+        email:
+          type: "string"
+          maxLength: 1024
+        active:
+          type: "boolean"
+        external:
+          type: "boolean"
+    MessengerConversation:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "id"
+        - "name"
+        - "kind"
+        - "members"
+        - "audience_known"
+        - "external"
+      properties:
+        access:
+          type: string
+          enum: [workspace, team, private, participants, unknown]
+          x-extensible-enum: true
+        supports_threads: { type: boolean, description: Whether this conversation supports native thread replies. }
+        id:
+          type: "string"
+          maxLength: 1024
+        name:
+          type: "string"
+          maxLength: 1024
+        kind:
+          type: "string"
+          enum:
+            - "channel"
+            - "group"
+            - "direct"
+          x-extensible-enum: true
+        members:
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/MessengerMember"
+          maxItems: 25000
+        audience_known:
+          type: "boolean"
+        external:
+          type: "boolean"
+    MessengerConnectRequest:
+      type: object
+      additionalProperties: false
+      required: [record_type, record_id]
+      properties:
+        record_type: { $ref: '#/components/schemas/ChannelLinkRecordType' }
+        record_id: { type: string, format: uuid }
+    MessengerContext:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "grant_version"
+        - "provider"
+        - "workspace"
+        - "sender"
+        - "conversation"
+        - "audience_key"
+      properties:
+        unresolved_attempt:
+          "$ref": "#/components/schemas/MessengerAttempt"
+        grant_version:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+          maximum: 9007199254740991
+        provider:
+          "$ref": "#/components/schemas/MessengerProvider"
+        workspace:
+          type: "string"
+          maxLength: 1024
+        sender:
+          "$ref": "#/components/schemas/MessengerMember"
+        conversation:
+          "$ref": "#/components/schemas/MessengerConversation"
+        audience_key:
+          type: "string"
+          maxLength: 64
+    MessengerOpenRequest:
+      type: "object"
+      additionalProperties: false
+      required: []
+      properties:
+        conversation_id:
+          type: "string"
+          maxLength: 1024
+        members:
+          type: "array"
+          items:
+            type: "string"
+            maxLength: 1024
+          maxItems: 999
+    MessengerMessage:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "id"
+        - "root_id"
+        - "author"
+        - "text"
+        - "at"
+        - "edited"
+        - "deleted"
+      properties:
+        id:
+          type: "string"
+          maxLength: 1024
+        root_id:
+          type: "string"
+          maxLength: 1024
+        author:
+          type: "string"
+          maxLength: 1024
+        text:
+          type: "string"
+          maxLength: 200000
+        at:
+          type: "string"
+          format: "date-time"
+        edited:
+          type: "boolean"
+        deleted:
+          type: "boolean"
+    MessengerPage:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "messages"
+        - "next_cursor"
+      properties:
+        cursor_direction: { type: string, enum: [older, newer], x-extensible-enum: true, description: Whether next_cursor continues into older history or later replies. Omitted means older. }
+        messages:
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/MessengerMessage"
+          maxItems: 1000
+        next_cursor:
+          type: "string"
+          maxLength: 65536
+    MessengerChannels:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "conversations"
+        - "next_cursor"
+      properties:
+        conversations:
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/MessengerConversation"
+          maxItems: 1000
+        next_cursor:
+          type: "string"
+          maxLength: 65536
+    MessengerMembers:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "members"
+        - "next_cursor"
+      properties:
+        members:
+          type: "array"
+          items:
+            "$ref": "#/components/schemas/MessengerMember"
+          maxItems: 1000
+        next_cursor:
+          type: "string"
+          maxLength: 65536
+    MessengerSendRequest:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "request_id"
+        - "grant_version"
+        - "conversation_id"
+        - "text"
+        - "audience_key"
+      properties:
+        acknowledged_request_id:
+          type: "string"
+          format: "uuid"
+        request_id:
+          type: "string"
+          format: "uuid"
+        grant_version:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+          maximum: 9007199254740991
+        conversation_id:
+          type: "string"
+          maxLength: 1024
+        root_id:
+          type: "string"
+          maxLength: 1024
+        text:
+          type: "string"
+          minLength: 1
+          maxLength: 90000
+        audience_key:
+          type: "string"
+          minLength: 64
+          maxLength: 64
+    MessengerAttempt:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "id"
+        - "request_id"
+        - "conversation_id"
+        - "provider_message_id"
+        - "state"
+        - "updated_at"
+      properties:
+        id:
+          type: "string"
+          format: "uuid"
+        request_id:
+          type: "string"
+          format: "uuid"
+        conversation_id:
+          type: "string"
+          maxLength: 1024
+        provider_message_id:
+          type: "string"
+          maxLength: 1024
+        state:
+          type: "string"
+          enum:
+            - "pending"
+            - "accepted"
+            - "failed"
+            - "unknown"
+          x-extensible-enum: true
+        failure_code: { type: string, maxLength: 128 }
+        retry_at: { type: string, format: date-time }
+        updated_at:
+          type: "string"
+          format: "date-time"
+    MessengerIdentity:
+      type: "object"
+      additionalProperties: false
+      required:
+        - "state"
+        - "provider"
+      properties:
+        state:
+          type: "string"
+          enum:
+            - "connected"
+            - "needs_consent"
+            - "unavailable"
+          x-extensible-enum: true
+        provider:
+          "$ref": "#/components/schemas/MessengerProvider"
+        grant_version:
+          type: "integer"
+          format: "int64"
+          minimum: 1
+          maximum: 9007199254740991
+        workspace:
+          type: "string"
+          maxLength: 1024
+        sender:
+          "$ref": "#/components/schemas/MessengerMember"
+
     ChannelLinkRecordType:
       type: string
-      enum: [deal, project]
+      enum: [company, deal, project]
       description: The kind of record a chat channel is linked to.
+    ChannelMessageDetail:
+      type: string
+      enum: [brief, full]
+      x-extensible-enum: true
     ChannelVerbosity:
       type: string
       enum: [everything, important, milestones, silent]
@@ -49218,6 +50533,8 @@ components:
       additionalProperties: false
       required: [state]
       properties:
+        last_sync: { $ref: '#/components/schemas/ChannelEndedSync' }
+        sync: { $ref: '#/components/schemas/ChannelSyncHealth' }
         state:
           type: string
           enum: [off, none, linked, paused]
@@ -49227,20 +50544,119 @@ components:
           $ref: '#/components/schemas/ChannelLink'
         invites:
           $ref: '#/components/schemas/ChannelInvites'
+    ChannelEndedSync:
+      type: object
+      additionalProperties: false
+      required: [provider, ended_at, retained_messages, confirmed_redactions, unverified_withdrawals, unconfirmed_deliveries]
+      properties:
+        provider: { $ref: '#/components/schemas/MessengerProvider' }
+        ended_at: { type: string, format: date-time }
+        read_through: { type: [string, 'null'], format: date-time }
+        last_posted_at: { type: [string, 'null'], format: date-time }
+        retained_messages: { type: integer, minimum: 0 }
+        confirmed_redactions: { type: integer, minimum: 0, description: Messages successfully rewritten without withdrawn content; this does not prove deletion of other copies. }
+        unverified_withdrawals: { type: integer, minimum: 0 }
+        unconfirmed_deliveries: { type: integer, minimum: 0 }
+    ChannelUncertainDelivery:
+      type: object
+      additionalProperties: false
+      required: [id, state, created_at, update_count, overview_card]
+      properties:
+        id: { type: string, format: uuid }
+        state: { type: string, enum: [sending, unknown], x-extensible-enum: true }
+        created_at: { type: string, format: date-time }
+        update_count: { type: integer, minimum: 0 }
+        overview_card: { type: boolean }
+    ChannelPreviewMember:
+      type: object
+      additionalProperties: false
+      required: [id, name]
+      properties:
+        id: { type: string }
+        name: { type: string }
+    ChannelDeliveryPreview:
+      type: object
+      additionalProperties: false
+      required: [link_id, version, provider, workspace, channel_name, audience, overview_text, update_text, pending_updates, excluded_updates, verbosity, message_detail]
+      properties:
+        link_id: { type: string, format: uuid }
+        version: { type: integer, format: int64 }
+        provider: { $ref: '#/components/schemas/MessengerProvider' }
+        workspace: { type: string }
+        channel_name: { type: string }
+        root_id: { type: string }
+        audience: { type: array, items: { $ref: '#/components/schemas/ChannelPreviewMember' } }
+        overview_text: { type: string }
+        update_text: { type: string }
+        pending_updates: { type: integer, minimum: 0 }
+        excluded_updates: { type: integer, minimum: 0 }
+        verbosity: { $ref: '#/components/schemas/ChannelVerbosity' }
+        message_detail: { $ref: '#/components/schemas/ChannelMessageDetail' }
+    ChannelProviderCopies:
+      type: object
+      additionalProperties: false
+      required: [retained_messages, confirmed_redactions, unverified_withdrawals, unconfirmed_deliveries]
+      properties:
+        retained_messages: { type: integer, minimum: 0 }
+        confirmed_redactions: { type: integer, minimum: 0 }
+        unverified_withdrawals: { type: integer, minimum: 0 }
+        unconfirmed_deliveries: { type: integer, minimum: 0 }
+    ChannelDeliveryReview:
+      type: object
+      additionalProperties: false
+      required: [link_id, overview_card_paused, deliveries]
+      properties:
+        provider_copies: { $ref: '#/components/schemas/ChannelProviderCopies' }
+        link_id: { type: string, format: uuid }
+        overview_card_paused: { type: boolean }
+        deliveries: { type: array, items: { $ref: '#/components/schemas/ChannelUncertainDelivery' } }
+    ReviewChannelDeliveryRequest:
+      type: object
+      additionalProperties: false
+      required: [link_id, action, acknowledged, delivery_ids]
+      properties:
+        link_id: { type: string, format: uuid }
+        action: { type: string, enum: [skip_unknown, restart_card] }
+        acknowledged: { type: boolean }
+        delivery_ids: { type: array, maxItems: 100, uniqueItems: true, items: { type: string, format: uuid } }
+    ChannelSyncHealth:
+      type: object
+      additionalProperties: false
+      required: [pending_conversations, failed_conversations, pending_crm_updates, unconfirmed_deliveries]
+      properties:
+        delivery_error: { type: [string, 'null'], enum: [audience_changed, delivery_unknown, source_incomplete, source_unavailable, source_too_long, model_unavailable, rate_limited, access_lost, source_changed, null], x-extensible-enum: true }
+        notifications_delayed: { type: boolean, description: Teams push notifications need recovery; periodic source reads continue independently. }
+        coverage_at: { type: [string, 'null'], format: date-time, description: Metadata discovery checked through this time. Pending recaps are reported separately. }
+        last_error: { type: [string, 'null'], enum: [history_profile, source_incomplete, source_unavailable, source_too_long, model_unavailable, rate_limited, access_lost, source_changed, null], x-extensible-enum: true }
+        pending_conversations: { type: integer, minimum: 0 }
+        failed_conversations: { type: integer, minimum: 0 }
+        pending_crm_updates: { type: integer, minimum: 0 }
+        unconfirmed_deliveries: { type: integer, minimum: 0 }
     ChannelLink:
       type: object
       additionalProperties: false
       required: [id, provider, channel_slug, channel_name, channel_url, verbosity, status, created_at]
       properties:
+        history_profile: { $ref: '#/components/schemas/SlackHistoryProfile' }
+        native_identity: { type: boolean, description: Whether this association uses an explicitly confirmed immutable provider channel identity. }
+        overview_card_paused: { type: boolean }
+        can_send_crm_updates:
+          type: boolean
+          description: Whether the native provider permits bot delivery in this channel. False for private Teams channels.
+        root_id: { type: string, maxLength: 1024 }
         id: { type: string, format: uuid }
-        provider: { type: string, enum: [dispact], x-extensible-enum: true }
+        provider: { $ref: '#/components/schemas/MessengerProvider' }
         channel_slug: { type: string }
         channel_name: { type: string }
         channel_url: { type: string, description: The channel's address in the chat. }
+        message_detail: { $ref: '#/components/schemas/ChannelMessageDetail' }
         verbosity: { $ref: '#/components/schemas/ChannelVerbosity' }
-        status: { type: string, enum: [active, channel_gone], x-extensible-enum: true }
+        status: { type: string, enum: [active, channel_gone, identity_needs_review], x-extensible-enum: true }
+        company_id: { type: [string, 'null'], format: uuid }
         deal_id: { type: [string, 'null'], format: uuid }
         project_id: { type: [string, 'null'], format: uuid }
+        save_channel_updates: { type: boolean, description: Whether future eligible channel activity is filed in History. }
+        send_crm_updates: { type: boolean, description: Whether eligible CRM events are posted to the channel. }
         created_at: { type: string, format: date-time }
     ChannelInvites:
       type: object
@@ -49332,6 +50748,15 @@ components:
       additionalProperties: false
       required: [mode]
       properties:
+        root_id:
+          type: string
+          minLength: 1
+          maxLength: 1024
+          description: Existing native thread root explicitly assigned to this record. A shared channel uses separate root assignments for each record.
+        provider:
+          allOf: [{ $ref: '#/components/schemas/MessengerProvider' }]
+          default: dispact
+          description: Native provider whose shared bot owns this link.
         mode:
           type: string
           enum: [create, existing]
@@ -49346,9 +50771,14 @@ components:
     SetChannelVerbosityRequest:
       type: object
       additionalProperties: false
-      required: [verbosity]
+      minProperties: 1
       properties:
+        expected_link_id: { type: string, format: uuid }
+        expected_version: { type: integer, format: int64 }
+        message_detail: { $ref: '#/components/schemas/ChannelMessageDetail' }
         verbosity: { $ref: '#/components/schemas/ChannelVerbosity' }
+        save_channel_updates: { type: boolean }
+        send_crm_updates: { type: boolean }
 
     FileChannelMessageRequest:
       type: object
@@ -49360,23 +50790,37 @@ components:
           minLength: 1
           maxLength: 500
           description: |
-            The message in the record's channel: its sequence number, `#slug:seq`, the chat's
-            `<m:#slug:seq|…>` mention, or its link. A message in another channel is not found.
+            A native message ID or link in the record's linked channel. Dispact also accepts
+            a sequence number, `#slug:seq`, or `<m:#slug:seq|…>` mention. A message in another
+            channel or outside a linked thread is not found.
         thread:
           type: boolean
-          description: True files the message and the replies in its thread that follow it.
+          description: True files the complete available thread containing the selected message.
 
+    ChatSourceAccess:
+      type: object
+      additionalProperties: false
+      required: [available, user_id]
+      properties:
+        available: { type: boolean }
+        user_id: { type: string, format: uuid }
+        url: { type: string, maxLength: 8192 }
+        valid_until: { type: string, format: date-time }
     ChatEpisode:
       type: object
       readOnly: true
       description: |
-        The chat talk a summary note was written from. The talk itself is not kept: open `url`
-        to read it in the chat.
+        The source metadata of a channel recap. Source URLs are withheld from ordinary activity reads;
+        obtain a short-lived authorized link through the chat-source endpoint.
       required: [message_count, ended_at, url]
       properties:
+        provider:
+          $ref: '#/components/schemas/MessengerProvider'
+        source_changed: { type: boolean, description: The source changed after a human edited this recap; review the preserved text. }
+        channel_name: { type: string, description: Channel name recorded when the recap was written. }
         message_count: { type: integer, minimum: 1, description: How many messages the summary covers. }
         ended_at: { type: string, format: date-time, description: When the last of them was posted. }
-        url: { type: string, description: The first message in the chat. }
+        url: { type: string, deprecated: true, description: Empty on activity reads. Obtain an authorized link through the chat-source endpoint. }
 
     ImportObject:
       type: string

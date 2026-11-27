@@ -23,7 +23,7 @@ func chatEpisodeOf(sourceSystem *string, raw map[string]any) *crmcontracts.ChatE
 		return nil
 	}
 	var episode crmcontracts.ChatEpisode
-	if err := json.Unmarshal(encoded, &episode); err != nil || episode.MessageCount < 1 || episode.Url == "" {
+	if err := json.Unmarshal(encoded, &episode); err != nil || episode.MessageCount < 1 || episode.EndedAt.IsZero() {
 		return nil
 	}
 	return &episode

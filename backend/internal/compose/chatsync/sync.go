@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/kernel/events"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/provenance"
 )
 
 // Sync records events for the channels of the records they touch.
@@ -43,7 +44,7 @@ func New(pool *pgxpool.Pool, db *database.DB, store *chatlinks.Store) *Sync {
 
 // HandleEvent routes one envelope. An event no channel shows answers nil.
 func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
-	if _, linked := chatRecordQueries[env.Entity.Type]; env.Entity.ID == ids.Nil || !linked && !events.NarrowsActivity(env) {
+	if _, linked := chatRecordQueries[env.Entity.Type]; env.Entity.ID == ids.Nil || !linked && env.Entity.Type != chatlinks.RecordCompany && !events.NarrowsActivity(env) {
 		return nil
 	}
 	ws, err := s.db.Workspace(ctx)
@@ -56,7 +57,7 @@ func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
 			return err
 		}
 	}
-	if chatReleasingEvents[env.Type] && (env.Entity.Type == chatlinks.RecordDeal || env.Entity.Type == chatlinks.RecordProject) {
+	if chatReleasingEvents[env.Type] && (env.Entity.Type == chatlinks.RecordDeal || env.Entity.Type == chatlinks.RecordProject || env.Entity.Type == chatlinks.RecordCompany) {
 		if err := s.store.ReleaseArchived(ctx, env.Entity.Type, env.Entity.ID); err != nil {
 			return err
 		}
@@ -73,7 +74,7 @@ func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
 	ev := chatlinks.Event{EventID: env.EventID, EventType: env.Type, Tier: tier, Detail: detail}
 	if env.Entity.Type == "activity" {
 		shared, err := s.sharedActivityText(ctx, env.Entity.ID)
-		if err != nil || !shared.ok || shared.sourceSystem == chatlinks.ProviderDispact {
+		if err != nil || !shared.ok || chatlinks.IsChatProvider(shared.sourceSystem) {
 			return err
 		}
 		ev.ActivityID = &env.Entity.ID
@@ -83,6 +84,22 @@ func (s *Sync) HandleEvent(ctx context.Context, env events.Envelope) error {
 	}
 	if ev.Deals, ev.Projects, err = s.recordsOf(ctx, env.Entity.Type, env.Entity.ID); err != nil {
 		return err
+	}
+	if env.Entity.Type == chatlinks.RecordCompany {
+		ev.Companies = []ids.UUID{env.Entity.ID}
+	}
+	if env.Entity.Type == "activity" {
+		err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
+			rows, err := tx.Query(ctx, `SELECT DISTINCT company_id FROM activity_link WHERE activity_id=$1 AND company_id IS NOT NULL`, env.Entity.ID)
+			if err != nil {
+				return err
+			}
+			ev.Companies, err = pgx.CollectRows(rows, pgx.RowTo[ids.UUID])
+			return err
+		})
+		if err != nil {
+			return err
+		}
 	}
 	return s.store.RecordEvent(ctx, ev)
 }
@@ -106,7 +123,7 @@ var chatLinksPrincipal = principal.Principal{
 // whole workspace, and not one the chat itself delivered.
 func (s *Sync) activityPosts(ctx context.Context, id ids.UUID) (bool, error) {
 	shared, err := s.sharedActivityText(ctx, id)
-	return shared.ok && shared.sourceSystem != chatlinks.ProviderDispact, err
+	return shared.ok && !chatlinks.IsChatProvider(shared.sourceSystem), err
 }
 
 // sharedActivityText reads the activity as a channel may show it.
@@ -141,6 +158,7 @@ func (s *Sync) withdrawIfNarrowed(ctx context.Context, id ids.UUID) error {
 // sharedText is an activity as a channel may show it. body is read only by
 // sharedNote.
 type sharedText struct {
+	complete     bool
 	ok           bool
 	kind         string
 	subject      string
@@ -159,10 +177,10 @@ func sharedActivity(ctx context.Context, tx pgx.Tx, id ids.UUID) (sharedText, er
 // Held by: TestTheChatEngineReadsActivityTextOnlyThroughSharedRow (backend/internal/compose/chatsync/sync_test.go)
 func sharedRow(ctx context.Context, tx pgx.Tx, where, order string, args ...any) (sharedText, error) {
 	var out sharedText
-	err := tx.QueryRow(ctx, `SELECT a.kind, coalesce(a.subject, ''), coalesce(a.body, ''), coalesce(a.source_system, '')
+	err := tx.QueryRow(ctx, `SELECT a.kind, coalesce(a.subject, ''), coalesce(a.body, ''), coalesce(a.source_system, ''), `+provenance.MailBodyCompleteSQL("a")+`
 		FROM activity a WHERE a.archived_at IS NULL AND a.restricted_at IS NULL AND `+where+
 		auth.AudienceWorkspaceOnly("a")+` ORDER BY `+order+` LIMIT 1`, args...).
-		Scan(&out.kind, &out.subject, &out.body, &out.sourceSystem)
+		Scan(&out.kind, &out.subject, &out.body, &out.sourceSystem, &out.complete)
 	if err == pgx.ErrNoRows {
 		return sharedText{}, nil
 	}
@@ -267,7 +285,7 @@ const (
 
 // chatReleasingEvents may leave a deal or project archived. A retention
 // policy archives a deal under retention.applied, not deal.archived.
-var chatReleasingEvents = map[string]bool{eventDealArchived: true, eventProjectArchived: true, "retention.applied": true}
+var chatReleasingEvents = map[string]bool{"company.archived": true, eventDealArchived: true, eventProjectArchived: true, "retention.applied": true}
 
 // chatMilestones are the steps every level but silent posts.
 var chatMilestones = map[string]string{

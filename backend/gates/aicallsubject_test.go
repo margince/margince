@@ -57,6 +57,7 @@ type subjectClaim struct {
 // namesItsSubject: the site cites a record, and the witness is where it is
 // named.
 var namesItsSubject = map[string]subjectClaim{
+	"internal/compose/chatsync/outboundsummary.go:outboundSummary": {"internal/compose/chatsync/outboundsummary.go", "the activity whose complete body is summarized for an eligible channel audience"},
 	"internal/compose/capturedealtopic.go:Check": {
 		"internal/compose/capturedealtopic.go",
 		"the captured mail whose subject and body are the request",

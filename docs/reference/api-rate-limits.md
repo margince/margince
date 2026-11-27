@@ -33,7 +33,10 @@ Regenerate with `cd backend && go test ./gates -run TestRateLimitReferenceMatche
 | `"channel-events/" + name` | 600 | 1m0s | [internal/modules/capture/webhookgate.go:45](../../backend/internal/modules/capture/webhookgate.go) |
 | `"extension-inbound/" + unit + "/" + slug` | configured: `rate.Limit` | configured: `rate.Window` | [internal/compose/extinbound.go:135](../../backend/internal/compose/extinbound.go) |
 | `"webhook-refusals/" + spec.Provider` | 20 | 1m0s | [internal/compose/webhook.go:124](../../backend/internal/compose/webhook.go) |
-| `channel-events/dispact` | 600 | 1m0s | [internal/modules/chatlinks/events.go:72](../../backend/internal/modules/chatlinks/events.go) |
+| `channel-events/dispact` | 600 | 1m0s | [internal/modules/chatlinks/events.go:80](../../backend/internal/modules/chatlinks/events.go) |
+| `channel-events/slack` | 600 | 1m0s | [internal/modules/chatlinks/events.go:92](../../backend/internal/modules/chatlinks/events.go) |
+| `channel-events/teams/bot` | 600 | 1m0s | [internal/modules/chatlinks/events.go:104](../../backend/internal/modules/chatlinks/events.go) |
+| `channel-events/teams/graph` | 600 | 1m0s | [internal/modules/chatlinks/events.go:116](../../backend/internal/modules/chatlinks/events.go) |
 | `comms/mailbox-send` | configured: `limit` | configured: `window` | [internal/modules/comms/policy.go:46](../../backend/internal/modules/comms/policy.go) |
 | `erasure-return/per-address` | 1 | 24h0m0s | [internal/compose/erasurereturn/erasurereturn.go:83](../../backend/internal/compose/erasurereturn/erasurereturn.go) |
 | `extension-core-read` | 600 | 1m0s | [internal/compose/extcoreread.go:44](../../backend/internal/compose/extcoreread.go) |

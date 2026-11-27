@@ -101,7 +101,7 @@ func approvalsServiceTelling(pool *pgxpool.Pool, notices *siteLeadNoticeLane) *a
 	proposalstage.Register(svc, InstallationDB(pool), deals.NewStore(InstallationDB(pool), DealsInstallation()))
 	svc.WithEffect(deals.FollowUpReconcileKind, followUpConfirmEffect(svc, activities.NewStore(InstallationDB(pool)), time.Now))
 	svc.WithPrecheck(deals.FollowUpReconcileKind, followUpPrecheck(InstallationDB(pool), time.Now))
-	commitmentTasks := activities.NewStore(InstallationDB(pool))
+	commitmentTasks := activities.NewStore(InstallationDB(pool)).WithSourceAuthority(identity.WorkPrincipalTx)
 	duequestion.Register(svc, InstallationDB(pool), commitmentTasks, time.Now)
 	employerchange.Register(svc, store)
 	svc.WithEffect(CommitmentTaskKind, commitmentTaskEffect(svc, commitmentTasks, newContactsStore(InstallationDB(pool))))

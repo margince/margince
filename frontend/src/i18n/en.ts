@@ -3,6 +3,8 @@
 // use {name} and are filled by t(key, params).
 // Every value is written to docs/reference/ui-copy-style.md.
 export const en = {
+  "history.field.chat_source_changed": "Conversation source changed",
+  "history.field.chat_source_deleted": "Conversation source removed",
   "history.field.kind": "Kind",
   "history.field.email_security": "Email security",
   "history.field.employee_range": "Employee count range",
@@ -136,6 +138,106 @@ export const en = {
   "payments.ageHelp":
     "Home groups invoices past this age at the bottom. It starts at 365 days. Company totals stay the same.",
   "payments.ageRefusal": "Enter a whole number from 1 to 3,650 days.",
+  "messenger.deliveryPending":
+    "This delivery is still in progress. Check its receipt before starting another attempt.",
+  "messenger.accessWorkspace":
+    "This is a public channel. Colleagues who have not joined can also read it.",
+  "messenger.accessTeam": "Team channel: the full team can read.",
+  "messenger.accessPrivate": "Private channel: only its members can read.",
+  "messenger.accessParticipants":
+    "Private conversation: only its participants can read.",
+  "messenger.accessUnknown": "Channel access type could not be verified.",
+  "messenger.joinedOnly":
+    "This list shows joined members. Other members can read the public channel.",
+  "messenger.appMember": "App or bot",
+  "messenger.teamComparison": "Compared with the assigned record team",
+  "messenger.teamOutside": "Recipients outside the assigned team",
+  "messenger.teamMissing": "Assigned team members outside this conversation",
+  "messenger.teamNotJoined":
+    "Assigned team members who have not joined this channel",
+  "messenger.teamUnverified":
+    "Assigned members without a verified messaging identity",
+  "messenger.teamMatches":
+    "All verified assigned members are in this conversation.",
+  "messenger.messageRequired": "Write a message before sending.",
+  "messenger.recipientsRequired": "Select at least one recipient.",
+  "channelDelivery.review": "Review delivery status",
+  "channelDelivery.cardPaused": "Overview card updates are paused",
+  "channelDelivery.cardPausedHelp":
+    "An overview card had no confirmed receipt. Other eligible CRM updates can continue. A previous card may still exist in the channel.",
+  "channelDelivery.restart": "Create a new overview card",
+  "channelDelivery.restartTitle": "Create one new overview card",
+  "channelDelivery.title": "Review uncertain delivery",
+  "channelDelivery.skip": "Skip these retries",
+  "channelDelivery.restartWarning":
+    "A previous overview card may still exist. This creates one new card and resumes its automatic updates. It does not edit or remove the unconfirmed copy.",
+  "channelDelivery.help":
+    "Check the channel in Messenger or the messaging app first. Skipping stops retries for the listed updates without marking them delivered. A copy or a late provider response may still arrive. This does not cancel a request or remove a provider copy. An uncertain overview card pauses its automatic updates.",
+  "channelDelivery.linkChanged":
+    "The linked channel changed. Close this review and open it again.",
+  "channelDelivery.reviewFirst":
+    "Review the uncertain deliveries before creating another overview card.",
+  "channelDelivery.none":
+    "No uncertain delivery is ready for review. A send may still be in progress; check again after it finishes.",
+  "channelDelivery.list": "Uncertain deliveries",
+  "channelDelivery.card": "Record overview card",
+  "channelDelivery.updates_one": "CRM updates: {count}",
+  "channelDelivery.updates_other": "CRM updates: {count}",
+  "timeline.chatSummary.sourceHelp":
+    "Connect your own messaging account from Messenger on this record, check that you can open the channel there, then check source access again.",
+  "channelInstall.slackReader":
+    "Shared channel installation also asks the installing account for read-only channel history. That account must belong to the linked private channels. It grants no direct-message access or personal sending permission.",
+  "channelProfile.distribution": "Slack app distribution",
+  "channelProfile.declaration":
+    "Choose how this app is distributed. Margince records your declaration and the documented history limits when you install or reconnect it.",
+  "channelProfile.internal": "Internal Slack app",
+  "channelProfile.marketplace": "Slack Marketplace app",
+  "channelProfile.nonMarketplace": "Commercial app outside Slack Marketplace",
+  "channelProfile.details": "Slack history access and limits",
+  "channelProfile.missing":
+    "History limits have not been confirmed for this installation.",
+  "channelProfile.reconnect":
+    "Ask an administrator to reconnect Slack in Shared channel connections, confirm the app distribution and approve read-only channel history. The installing account must belong to the linked private channels. Complete summaries remain paused until access and limits are confirmed.",
+  "channelProfile.unsupported":
+    "This distribution allows only one history and one thread request per minute, with 15 messages per page. Complete channel summaries are unavailable. Personal Messenger and CRM updates to Slack remain separate.",
+  "channelProfile.limits":
+    "History: {history} requests/minute, {historyPage} messages/page. Threads: {replies} requests/minute, {repliesPage} messages/page.",
+  "channelProfile.provenance":
+    "Declared by an administrator on {at}; based on Slack’s documented limits. Slack can still return a longer retry delay.",
+  "messenger.authorUnavailable": "Name unavailable",
+  "channelInstall.title": "Shared channel connections",
+  "channelInstall.separate":
+    "Connect the shared bot here to link channels with CRM records. Each person connects their own account separately to use Messenger.",
+  "channelInstall.slackReady":
+    "The app is ready for Slack connection approval.",
+  "channelInstall.slackMissing":
+    "Set up the Slack app and signing secret below first.",
+  "channelInstall.slackConnect": "Install or reconnect Slack bot",
+  "channelInstall.failed": "Channel connection could not be updated",
+  "channelInstall.callback": "OAuth redirect address",
+  "channelInstall.events": "Bot event address",
+  "channelInstall.adminRequired":
+    "An administrator with channel connection access must approve this connection.",
+  "channelInstall.teamsSteps":
+    "Register the Microsoft bot with the event address below. Upload the app package to Teams and add it to the intended team, approve its team permissions, then refresh and approve that team here.",
+  "channelInstall.teamsApp": "Microsoft app {app}, tenant {tenant}",
+  "channelInstall.refresh": "Refresh installed teams",
+  "channelInstall.noTeams":
+    "No verified team installation yet. Check the bot registration and add the app to your team, then refresh.",
+  "channelInstall.team": "Verified installed team",
+  "channelInstall.approval":
+    "Only this team will be connected. Existing links keep their destination; connecting another team requires disconnecting the current connection first.",
+  "channelInstall.approve": "Approve team connection",
+  "channelInstall.connected":
+    "Team connected. You can now link its channels from a company, deal or project.",
+  "channelInstall.teamsMissing":
+    "Set up the Microsoft app and tenant below first.",
+  "channelInstall.package": "Build the Teams app package",
+  "channelInstall.legal":
+    "Use the HTTPS privacy and terms pages your company provides for this app. These addresses are included in the downloaded package.",
+  "channelInstall.privacy": "Privacy policy URL",
+  "channelInstall.terms": "Terms of use URL",
+  "channelInstall.download": "Download Teams app package",
   "systemJob.proposal_stage": "Asking whether a sent proposal moves the deal",
   "systemJob.google_directory": "Reading a member’s Google groups",
   "systemJob.legal_review_desk": "Legal review desk",
@@ -5308,6 +5410,8 @@ export const en = {
   "timeline.kind.extension": "Extension",
   "timeline.kind.signal": "Signal",
   "timeline.withheld": "Content for participants only",
+  "timeline.chatSummary.sourceChanged": "Source changed · review recap",
+  "timeline.chatSummary.updated": "Updated {at}",
   "timeline.chatSummary.badge": "AI summary",
   "timeline.chatSummary.from": "From {provider}",
   "timeline.chatSummary.meta_one": "{count} message, until {ended}",
@@ -13660,6 +13764,13 @@ export const en = {
     "Leave empty to keep the events secret already saved.",
 
   // The team chat card on a deal or project.
+  "channelLink.identityReviewBody":
+    "Confirm this channel again to bind its permanent identity. Unlink it, then choose it from the channel list. Saved History stays on the record.",
+  "channelLink.privateTeamsReadOnly":
+    "Teams supports incoming recaps in private channels. Use a standard channel to send CRM updates as the bot.",
+  "channelLink.chooseConversation": "Conversation to link",
+  "channelLink.specificConversation":
+    "Link one conversation in a shared channel",
   "channelLink.title": "Team chat",
   "channelLink.none": "No channel yet",
   "channelLink.noneSub":
@@ -13672,6 +13783,13 @@ export const en = {
   "channelLink.channelHint":
     "Pick a private channel the bot is in. To link another one, add the bot to it in the chat first.",
   "channelLink.summarize": "Summarize the talk so far (up to 5 summaries)",
+  "channelLink.manage": "Manage",
+  "channelLink.readDirection": "Save channel updates to History",
+  "channelLink.postDirection": "Send CRM updates to channel",
+  "channelLink.readOn": "Recaps saved to History",
+  "channelLink.readOff": "History sync off",
+  "channelLink.postOn": "CRM posts on",
+  "channelLink.postOff": "CRM posts off",
   "channelLink.verbosity": "What Margince posts",
   "channelLink.verbosityHint":
     "The card in the channel stays current at every level.",
@@ -15444,6 +15562,15 @@ export const en = {
   "cf.audit.addedToReports": "Added to reports",
   "cf.audit.removedFromReports": "Removed from reports",
   "cf.audit.kinds": "Activity types changed",
+  "audit.kind.chat_bot_delivery": "Channel delivery",
+  "audit.kind.chat_channel_watch": "Channel notifications",
+  "audit.kind.chat_member_grant": "Messaging account",
+  "audit.kind.chat_member_room": "Private conversation binding",
+  "audit.kind.chat_post_item": "Channel update",
+  "audit.kind.chat_root": "Channel thread",
+  "audit.kind.chat_send_attempt": "Message delivery attempt",
+  "audit.kind.chat_team_installation": "Teams installation",
+  "audit.kind.chat_team_thread": "Teams conversation reference",
   "audit.kind.customField": "Custom field",
   "audit.kind.activity_retention_evidence": "Retention evidence",
   "audit.kind.activity_review_template": "Activity review template",
@@ -15806,7 +15933,7 @@ export const en = {
   "settings.part.integrations.contact": "Contact data",
   "settings.part.integrations.accounting": "Accounting",
   "settings.part.integrations.webhooks": "Webhooks",
-  "settings.part.integrations.telegram": "Chat bots",
+  "settings.part.integrations.telegram": "Messaging providers",
   "settings.part.integrations.sharedMailboxes": "Shared mailboxes",
   "sharedMailboxes.title": "Shared mailboxes",
   "sharedMailboxes.intro":
@@ -25257,6 +25384,259 @@ export const en = {
   "particulars.translationIntro":
     "Mail and pages in {language} show this text where you fill it in. Advertising that must be in {language} is sent only once the refusal and the advertiser contact are filled in here.",
   "particulars.objectionExample": "Example: {example}",
+  "messenger.signingSecret": "Signing secret",
+  "messenger.signingSecretHint":
+    "Copy the app signing secret from Slack’s Basic Information page for channel sync. Re-enter it when replacing the app credentials. Personal Messenger consent is separate.",
+  "messenger.writeOutcome": "Write outcome",
+  "messenger.shareOutcome": "Share outcome",
+  "messenger.outcomeDestination": "Choose destination",
+  "messenger.outcomePrivacy":
+    "Write the outcome you want to share. The private conversation and its links stay out of CRM History.",
+  "messenger.outcomeAudience":
+    "This saves a CRM note. Members who can read the destination record can read the note. If that record sends CRM updates to a linked channel, the note may also be summarized there. Check the destination and your text before saving.",
+  "messenger.dispactConsent":
+    "Connect with a personal token from your own Dispact account.",
+  "messenger.dispactTokenTitle": "Connect your Dispact account",
+  "messenger.dispactTokenHelp":
+    "In Dispact, open Preferences → API tokens. Create a token with Read and Write access to your conversations. Paste it below. Margince verifies your identity and stores the token securely. You can revoke it in Dispact at any time.",
+  "messenger.dispactToken": "Personal API token",
+  "messenger.dispactOpen": "Open Dispact",
+  "messenger.loadLater": "Load later replies",
+  "messenger.verb": "Messenger",
+  "messenger.provider": "Messaging provider",
+
+  "messenger.channels": "Channels",
+  "messenger.people": "People",
+
+  "messenger.change": "Change conversation",
+  "messenger.needsConsent": "Connect your account to send as yourself.",
+  "messenger.unavailable":
+    "This provider is not available. Ask a company administrator to set it up.",
+  "messenger.write": "Message {name}",
+  "messenger.sendingAs": "Sending as {name}",
+  "messenger.sendProblem": "Your message could not be confirmed",
+  "messenger.failed": "The message was not sent. Your draft is still here.",
+  "messenger.checkDelivery":
+    "Delivery is unconfirmed. Check the receipt before sending again.",
+  "messenger.checkReceipt": "Check receipt",
+  "messenger.accepted": "Accepted by provider",
+  "messenger.send": "Send",
+  "messenger.openedFrom": "Opened from {name}",
+  "messenger.private":
+    "Private messages stay out of CRM History unless you share an outcome.",
+  "messenger.audience": "Recipients: {names}",
+  "messenger.audienceUnknown":
+    "The full audience cannot be verified. Sending is unavailable.",
+  "messenger.loadEarlier": "Load earlier messages",
+  "messenger.newMessages": "Jump to latest messages",
+  "messenger.empty": "No messages in this conversation yet.",
+  "messenger.reply": "Reply in thread",
+  "messenger.back": "Back to conversation",
+  "messenger.deleted": "Message deleted",
+  "messenger.edited": "Edited",
+  "messenger.loading": "Loading conversation…",
+  "messenger.loadProblem": "Conversation unavailable",
+  "messenger.searchPeople": "Find people",
+  "messenger.openPeople": "Open conversation",
+  "messenger.more": "Load more",
+
+  "messenger.connect": "Connect my account",
+  "messenger.settings": "Messaging provider settings",
+  "messenger.connectProblem": "Account connection could not start",
+  "oauthApp.slack.title": "Slack app",
+  "oauthApp.slack.sub": "The app behind native Slack messaging.",
+  "oauthApp.slack.absent": "Set up a Slack app to connect accounts.",
+  "oauthApp.slack.redirectSub": "Register this exact callback in Slack.",
+  "oauthApp.slack.clientIdPlaceholder": "Slack client ID",
+  "oauthApp.slack.removeConfirmTitle": "Remove the Slack app?",
+  "oauthApp.slack.removeConfirmBody":
+    "Participant accounts need this app to connect and renew consent.",
+  "oauthApp.slack.save": "Save Slack app",
+  "oauthApp.slack.removeSecret": "The stored app secret is deleted.",
+  "oauthApp.slack.removeUsedBy":
+    "Accounts connected through this app stop opening in Messenger.",
+  "oauthApp.slack.removeOthers":
+    "Set up the app again before connecting accounts.",
+  "oauthApp.slack.for": "For your Slack team.",
+  "oauthApp.slack.setUp": "Set up Slack app",
+  "oauthApp.unlock.slack": "Slack messages",
+  "oauthApp.drawer.slack.title": "Set up the Slack app",
+  "oauthApp.drawer.slack.intro":
+    "Register the app in Slack, then store its client ID and secret here.",
+  "oauthApp.drawer.slack.value":
+    "People at {company} connect their own Slack accounts through this app.",
+  "oauthApp.drawer.slack.redirects":
+    "In “OAuth & Permissions”, add every callback address below to Redirect URLs.",
+  "oauthApp.drawer.slack.step1Title": "Create a Slack app",
+  "oauthApp.drawer.slack.step1Body":
+    "Choose the Slack team in the app console. Keep the client ID and client secret from Basic Information.",
+  "oauthApp.drawer.slack.step1Link": "Open Slack app console",
+  "oauthApp.drawer.slack.scopesTitle": "Allow participant messaging",
+  "oauthApp.drawer.slack.scopesBody":
+    "Under “OAuth & Permissions”, configure the participant scopes shown in Messaging providers. Each person grants access with Connect my account.",
+  "oauthApp.drawer.slack.pasteBody":
+    "Paste the client ID and client secret from Basic Information. The secret is sealed after saving.",
+  "oauthApp.redirect.messenger_connect": "Messenger account",
+  "messenger.disconnect": "Disconnect my account",
+  "messenger.disconnectTitle": "Disconnect this messaging account?",
+  "messenger.disconnectBody":
+    "Messenger stops reading and sending through your account. Existing provider conversations remain with their participants.",
+  "messenger.myAccounts": "My messaging accounts",
+  "messenger.apps": "Messaging apps",
+  "messenger.setupDetails": "Account setup details",
+  "messenger.appReady": "The app is configured for participant consent.",
+  "messenger.appMissing":
+    "An administrator needs to complete app setup before accounts can connect.",
+  "messenger.participantScopes": "Required participant permissions",
+  "messenger.teamsTenant":
+    "Pin the Microsoft app to your directory ID and grant the listed delegated permissions in Entra.",
+  "messenger.editDraft": "Edit draft",
+  "messenger.reviewDelivery": "Check delivery before editing",
+  "messenger.checkedConversation": "Conversation checked",
+  "messenger.newAttemptWarning":
+    "Check the conversation for your previous message. A new send may duplicate it. Your text stays here for editing.",
+  "messenger.refresh": "Refresh messages",
+  "messenger.team": "Record team",
+  "messenger.noTeam":
+    "No owner or team assignments on this record yet. Choose people or a channel.",
+  "messenger.teamUnresolved":
+    "The full team needs review. Choose people explicitly or resolve the assignments before messaging everyone.",
+  "messenger.groupLimit":
+    "This provider can open a group with up to {limit} recipients. Choose a channel or fewer people.",
+  "messenger.messageTeam": "Message the record team",
+  "messenger.matched": "Matched account",
+  "messenger.you": "You",
+  "messenger.inactive": "Inactive assignment",
+  "messenger.unresolved": "Account not matched",
+  "messenger.failureReconnect":
+    "Reconnect the account before sending again. Your draft is kept.",
+  "messenger.failureUnavailable":
+    "This conversation is unavailable. Choose another destination. Your draft is kept.",
+  "messenger.failureReview":
+    "Review the recipients and message. The provider rejected this send.",
+  "messenger.failureUnsupported":
+    "This provider cannot send to the selected destination.",
+  "messenger.failureAuthorization":
+    "Your access changed before sending. Reopen the conversation and review the recipients.",
+  "messenger.failureRate":
+    "The provider asked Margince to wait. Your draft is kept.",
+  "messenger.retryAfter": "You can send again after {at}.",
+  "messenger.audienceCount_one": "{count} member",
+  "messenger.audienceCount_other": "{count} members",
+  "messenger.viewAudience": "View recipients",
+  "messenger.audienceChanged":
+    "The recipients have changed. Review them before sending.",
+  "messenger.reviewAudience": "Review recipients",
+  "messenger.useAudience": "Use these recipients",
+  "messenger.externalAudience":
+    "This conversation includes external people. Sending from Margince is paused.",
+  "messenger.externalMember": "External account",
+  "messenger.inactiveMember": "Inactive account",
+  "messenger.accountMenu": "Messaging account",
+  "channelLink.messageDetail": "Message detail",
+  "channelLink.detailHelp":
+    "Both options preserve conditions, dates and open questions. Full adds context.",
+  "channelLink.detailBrief": "Brief",
+  "channelLink.detailFull": "Full",
+  "channelLink.coverageThrough":
+    "Conversation discovery checked through {at}. Pending recaps are listed below.",
+  "channelLink.notificationsDelayed": "Channel notifications need recovery",
+  "channelLink.notificationsPolling":
+    "Periodic source checks continue. New messages may take longer to appear while the connection recovers.",
+  "channelLink.coverageWaiting":
+    "Source coverage has not been confirmed. Earlier conversations are included only when history was requested.",
+  "channelLink.conversationQueue":
+    "Recaps pending: {pending}. Conversations needing another attempt: {failed}.",
+  "channelLink.syncNeedsAttention": "Some channel updates are waiting",
+  "channelLink.outboundQueue_one": "CRM updates waiting to be sent: {count}.",
+  "channelLink.outboundQueue_other": "CRM updates waiting to be sent: {count}.",
+  "channelLink.deliveryUnconfirmed": "Channel delivery is unconfirmed",
+  "channelLink.deliveryUnconfirmedHelp":
+    "A provider did not confirm delivery. Margince will not automatically resend this post. Open the channel to check what arrived.",
+  "channelLink.sourceIncomplete":
+    "An update is waiting because the complete source message is unavailable. Other eligible updates can continue. Check the original activity and its capture status.",
+  "channelLink.sourceTooLong":
+    "A conversation exceeds the complete-read limit. It has not been summarized in part. Other conversations continue syncing.",
+  "channelLink.summaryWaiting":
+    "A summary is waiting for the configured AI model. Its source has not been marked as summarized.",
+  "channelLink.providerWaiting":
+    "The provider asked Margince to wait. Sync will resume after its retry window.",
+  "channelLink.sourceAccessLost":
+    "Margince cannot currently read the linked source. Check the app installation and channel membership.",
+  "channelLink.sourceChanged":
+    "The source changed during processing. Margince will read it again before saving a recap.",
+  "channelLink.sourceUnavailable":
+    "A complete source read is temporarily unavailable. Existing recaps are kept and the conversation will be checked again.",
+  "timeline.chatSummary.sourceCheck": "Check source access",
+  "timeline.chatSummary.sourceChecking": "Checking source access…",
+  "timeline.chatSummary.sourceUnavailable":
+    "Source access could not be verified.",
+  "channelEnded.title": "Sync ended {at}",
+  "channelEnded.retention":
+    "Eligible History remains under its existing access and retention rules. No channel changes after the last coverage time are reflected here.",
+  "channelEnded.read": "Channel coverage through {at}.",
+  "channelEnded.noRead": "No successful channel coverage was recorded.",
+  "channelEnded.posted": "Last confirmed CRM update: {at}.",
+  "channelEnded.noPost": "No confirmed CRM update was recorded.",
+  "channelEnded.copies":
+    "Provider update messages retained: {retained}. Messages confirmed rewritten without withdrawn content: {redacted}. This does not confirm removal of other copies.",
+  "channelEnded.action":
+    "Provider-side review is needed: {withdrawals} unverified withdrawals and {unknown} unconfirmed deliveries. Check the channel before taking further action.",
+  "channelPreview.title": "Review channel delivery",
+  "channelPreview.enable": "Enable CRM updates",
+  "channelPreview.help":
+    "Review who can read this channel and what Margince will post before enabling automatic delivery.",
+  "channelPreview.loading": "Checking audience and outgoing content…",
+  "channelPreview.thread": "Updates will go into the selected thread.",
+  "channelPreview.channel": "Updates will go into this channel.",
+  "channelPreview.audience": "Current human audience",
+  "channelPreview.settings":
+    "Frequency: {frequency}. Message detail: {detail}.",
+  "channelPreview.scope":
+    "Only eligible record updates and content every channel member may read are shared. Private exchanges and restricted content are excluded.",
+  "channelPreview.overview": "Current overview card",
+  "channelPreview.updates": "Eligible queued updates",
+  "channelPreview.noUpdates":
+    "There are no eligible updates queued. Enabling delivery starts with future changes; it does not replay earlier history.",
+  "channelPreview.excluded":
+    "Some queued updates are excluded from this preview because they cannot be shared with the complete audience.",
+  "channelPreview.recheck":
+    "Margince checks audience and access again before every delivery. The preview does not send a message.",
+  "channelHandoff.title": "Review delivery handoff",
+  "channelHandoff.noOutgoing":
+    "Automatic CRM posts are off or unavailable for this channel. Starting delivery does not turn them on.",
+  "channelHandoff.help":
+    "Check the delivery room, who can read it, open commitments and dates before handing over.",
+  "channelHandoff.current": "Current deal channel: {channel}.",
+  "channelHandoff.noCurrent": "The deal has no linked channel.",
+  "channelHandoff.preserve":
+    "The project already has {channel}. That channel will be preserved.",
+  "channelHandoff.continue":
+    "The project has no channel. Continuing will carry {channel} into the project.",
+  "channelHandoff.noChannel":
+    "Neither record has a channel. Handoff can continue without channel sync.",
+  "channelHandoff.choose":
+    "To use a different delivery destination, link it to the project here before continuing. Its sharing settings stay independent.",
+  "channelHandoff.loading": "Reading the delivery brief…",
+  "channelHandoff.owner": "Delivery owner: {owner}.",
+  "channelHandoff.target": "Project target: {at}.",
+  "channelHandoff.noTarget": "No project target date is recorded.",
+  "channelHandoff.promises": "Open project commitments and dates",
+  "channelHandoff.noPromises":
+    "No readable open project commitments were returned.",
+  "channelHandoff.partial": "Some handoff information is withheld",
+  "channelHandoff.omitted":
+    "Your permissions exclude some sections. A missing section does not mean there is nothing outstanding.",
+  "channelHandoff.gaps": "Gaps to resolve at handoff",
+  "channelInstall.slackHistoryProfile":
+    "Channel sync needs Slack’s standard history limits, available to Marketplace-approved apps and internal apps. With the one-request-per-minute limit, complete thread verification stays paused; use an eligible app profile.",
+  "channelLink.outboundNeedsAttention": "CRM sharing needs attention",
+  "channelLink.audienceNeedsReview":
+    "The channel audience could not be cleared for this record. Automatic sharing is paused. Review channel members and their record access, then use Manage to review delivery again.",
+  "timeline.filters.chatProvider": "Channel recap source",
+  "timeline.filters.allProviders": "All sources",
+  "timeline.filters.providerOmitsLimited":
+    "Channel source filters exclude content you cannot read.",
 } as const;
 
 export type MessageKey = keyof typeof en;

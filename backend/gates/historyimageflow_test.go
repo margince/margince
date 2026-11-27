@@ -199,10 +199,11 @@ func (r historyImageReader) namedKeys(in historyImageArg, name *ast.Ident, depth
 				if !named || in.pkg.info.ObjectOf(receiver) != object || historyRangeRewritesOwnKeys(in, index.Index, object) {
 					continue
 				}
-				found, ok := r.strings(in, index.Index, depth+1)
-				known = known && ok
-				if ok {
-					keys = append(keys, found...)
+				written, classified := r.strings(in, index.Index, depth+1)
+				known = known && classified
+				if classified {
+					written = historyGuardedKeys(in, assignment, index.Index, written)
+					keys = append(keys, written...)
 				}
 				continue
 			}

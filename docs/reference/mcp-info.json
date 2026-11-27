@@ -10,16 +10,16 @@
   "totals": {
     "tools": 48,
     "resources": 14,
-    "tool_catalog_bytes": 250819,
+    "tool_catalog_bytes": 250831,
     "resource_catalog_bytes": 5618,
-    "approx_wire_tokens_total": 64109,
+    "approx_wire_tokens_total": 64112,
     "largest_tool_bytes": 15878,
     "largest_tool": "read_details",
     "tool_catalog_composition": {
-      "description_bytes": 52323,
-      "input_schema_bytes": 152169,
+      "description_bytes": 52301,
+      "input_schema_bytes": 152203,
       "output_schema_bytes": 34465,
-      "description_plus_input_schema_bytes": 204492
+      "description_plus_input_schema_bytes": 204504
     }
   },
   "tools": {
@@ -406,11 +406,11 @@
           "readOnlyHint": false,
           "title": "Log, plan and file activities"
         },
-        "description": "Log, plan and file activities, and work the mail, drafts and documents on them. log records what already happened; one the user only tells you about is logged from what they said, saying so, without its exact words. relink files one activity under another record too, and relink_many a named set; with replace_existing_of_type they move it off the old record of that type instead. relink and relink_many usually run at once; filing under a project, or a move the installation's policy holds, answers staged with an approval id, and nothing has moved until the retry answers. Tell the user before you file under a project, which only a member can undo from the activity. Before log, read the record's recent activity with read_context about catch_up: a call or meeting already on it is reported as there, never logged a second time. attach checks the record first; read list_documents before attaching the same file again. A logged meeting names who takes part: leave off anyone whose invitation did not go out. Use schedule_meeting to book a meeting still to come, change_state with move_deal when the same event moves a deal, so move and note are one change, and change_reports record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for accept_document_fields, accept_link_suggestion, archive_document, assign_inquiry, attach, attach_link, bring_back, cancel_send, check_new_send, check_send, deal_relevance, decline_deal, discard_draft, file_channel_message, hide_document, log, preview_inquiry_assignment, preview_sign_off, read_document_fields, read_transcript, ready, reject_link_suggestion, request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready; decided per call from its arguments for relink, relink_many; ask the user first for the actions archive_document, assign_inquiry, reject_link_suggestion.)",
+        "description": "Log, plan and file activities, and work the mail, drafts and documents on them. log records what already happened; one the user only tells you about is logged from what they said, saying so, without its exact words. relink files one activity under another record too, and relink_many a named set; with replace_existing_of_type they move it off the old record of that type instead. relink and relink_many usually run at once; filing under a project, or a move the installation's policy holds, answers staged with an approval id, and nothing has moved until the retry answers. Tell the user before you file under a project, which only a member can undo from the activity. Before log, read the record's recent activity with read_context about catch_up: a call or meeting already on it is reported as there, never logged a second time. attach checks the record first; read list_documents before attaching the same file again. A logged meeting names who takes part: leave off anyone whose invitation did not go out. Use schedule_meeting to book a meeting still to come, change_state with move_deal when the same event moves a deal, so move and note are one change, and change_reports record_decision for a sales review's decision, which a note cannot track. Keep the activity id; a relink needs it. A staged answer's approval id is what the retry carries. (Governance: runs immediately for accept_document_fields, accept_link_suggestion, archive_document, assign_inquiry, attach, attach_link, bring_back, cancel_send, check_new_send, check_send, deal_relevance, decline_deal, discard_draft, hide_document, log, preview_inquiry_assignment, preview_sign_off, read_document_fields, read_transcript, ready, reject_link_suggestion, request_document_access, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience, show_document, task, unready; decided per call from its arguments for relink, relink_many; ask the user first for the actions archive_document, assign_inquiry, reject_link_suggestion.)",
         "inputSchema": {
           "properties": {
             "action": {
-              "description": "accept_document_fields: Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only)\naccept_link_suggestion: Accept a suggestion, filing the message under its record\narchive_document: Archive an attachment (soft delete)\nassign_inquiry: Take an inquiry or hand its lead and this task to a colleague in one transaction\nattach: Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab, or on one activity such as the meeting it came from\nattach_link: Add a web link to a record's documents\nbring_back: Pick the message back up — the undo behind every set-aside verb\ncancel_send: Withdraw a scheduled message before it fires\ncheck_new_send: Would a new message with no thread behind it be allowed, and on what ground\ncheck_send: Would this reply be allowed, and on what ground — asked before a word is typed\ndeal_relevance: Say whether an activity linked to a deal is about that deal, or take that back\ndecline_deal: Say a captured message is not about a deal, or about none of the deals its question offered\ndiscard_draft: Discard one of the caller's unsent messages\nfile_channel_message: File a summary of one message in a record's channel, or of its thread, as a note\nhide_document: Stop listing a captured file on this deal without touching the file\nlog: Record something that happened (a call, a meeting, a note, a message) on every record it was about\npreview_inquiry_assignment: Show the inquiry task and record ownership before taking or assigning it\npreview_sign_off: The sign-off a send of this message would append beneath it\nread_document_fields: Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields\nread_transcript: Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals\nready: Say the user is ready for a meeting they attend, so their Worklist stops asking them to prepare it\nreject_link_suggestion: Reject a suggestion\nrelink: Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none\nrelink_many: Move up to 500 named activities onto one record, all or nothing\nrequest_document_access: Request access to a restricted attachment (audit row only — no notification system)\nreschedule_send: Move a scheduled message to a different moment\nsave_draft: Save the caller's unsent message for one anchor, replacing what was saved before\nset_aside: Put a waiting message down, so the Worklist stops offering it\nset_audience: Limit (or re-open) who may see this activity's content\nset_document_details: Set a document's category, title, state or supersedes pointer\nset_thread_audience: Share a thread with the team, or keep it private\nshow_document: List the file on this deal again\ntask: Put a to-do on someone's list: what is owed, by whom, on which records\nunready: Take back the user's confirmation that they are ready for a meeting",
+              "description": "accept_document_fields: Accept staged extraction fields onto the attachment's deal (deal-scoped attachments only)\naccept_link_suggestion: Accept a suggestion, filing the message under its record\narchive_document: Archive an attachment (soft delete)\nassign_inquiry: Take an inquiry or hand its lead and this task to a colleague in one transaction\nattach: Put a file the user gave you on a company, contact, deal, lead or project, where it appears on the record's Documents tab, or on one activity such as the meeting it came from\nattach_link: Add a web link to a record's documents\nbring_back: Pick the message back up — the undo behind every set-aside verb\ncancel_send: Withdraw a scheduled message before it fires\ncheck_new_send: Would a new message with no thread behind it be allowed, and on what ground\ncheck_send: Would this reply be allowed, and on what ground — asked before a word is typed\ndeal_relevance: Say whether an activity linked to a deal is about that deal, or take that back\ndecline_deal: Say a captured message is not about a deal, or about none of the deals its question offered\ndiscard_draft: Discard one of the caller's unsent messages\nhide_document: Stop listing a captured file on this deal without touching the file\nlog: Record something that happened (a call, a meeting, a note, a message) on every record it was about\npreview_inquiry_assignment: Show the inquiry task and record ownership before taking or assigning it\npreview_sign_off: The sign-off a send of this message would append beneath it\nread_document_fields: Find the deal facts this attached document states — a background reading that ends in staged, evidence-carrying fields\nread_transcript: Find the next steps this meeting transcript states — a background reading that ends in staged 🟡 proposals\nready: Say the user is ready for a meeting they attend, so their Worklist stops asking them to prepare it\nreject_link_suggestion: Reject a suggestion\nrelink: Fix what a recorded activity is about, when a captured mail or meeting landed on the wrong record or on none\nrelink_many: Move up to 500 named activities onto one record, all or nothing\nrequest_document_access: Request access to a restricted attachment (audit row only — no notification system)\nreschedule_send: Move a scheduled message to a different moment\nsave_draft: Save the caller's unsent message for one anchor, replacing what was saved before\nset_aside: Put a waiting message down, so the Worklist stops offering it\nset_audience: Limit (or re-open) who may see this activity's content\nset_document_details: Set a document's category, title, state or supersedes pointer\nset_thread_audience: Share a thread with the team, or keep it private\nshow_document: List the file on this deal again\ntask: Put a to-do on someone's list: what is owed, by whom, on which records\nunready: Take back the user's confirmation that they are ready for a meeting",
               "enum": [
                 "accept_document_fields",
                 "accept_link_suggestion",
@@ -425,7 +425,6 @@
                 "deal_relevance",
                 "decline_deal",
                 "discard_draft",
-                "file_channel_message",
                 "hide_document",
                 "log",
                 "preview_inquiry_assignment",
@@ -585,7 +584,7 @@
               "type": "object"
             },
             "id": {
-              "description": "accept_document_fields, accept_link_suggestion, archive_document, assign_inquiry, bring_back, cancel_send, check_send, deal_relevance, decline_deal, discard_draft, file_channel_message, hide_document, preview_inquiry_assignment, read_document_fields, read_transcript, reject_link_suggestion, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
+              "description": "accept_document_fields, accept_link_suggestion, archive_document, assign_inquiry, bring_back, cancel_send, check_send, deal_relevance, decline_deal, discard_draft, hide_document, preview_inquiry_assignment, read_document_fields, read_transcript, reject_link_suggestion, request_document_access, reschedule_send, set_aside, set_audience, set_document_details, show_document only",
               "type": "string"
             },
             "idempotency_key": {
@@ -664,7 +663,7 @@
               "type": "boolean"
             },
             "request_body": {
-              "description": "accept_document_fields, assign_inquiry, attach_link, check_new_send, check_send, deal_relevance, decline_deal, file_channel_message, preview_inquiry_assignment, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "description": "accept_document_fields, assign_inquiry, attach_link, check_new_send, check_send, deal_relevance, decline_deal, preview_inquiry_assignment, preview_sign_off, read_document_fields, reschedule_send, save_draft, set_aside, set_audience, set_document_details, set_thread_audience only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
             },
             "source_activity_id": {
@@ -2736,6 +2735,9 @@
                   "type": "string"
                 },
                 "channel_provider": {
+                  "type": "string"
+                },
+                "chat_provider": {
                   "type": "string"
                 },
                 "close_from": {
@@ -9306,7 +9308,7 @@
         "inputSchema": {
           "properties": {
             "action": {
-              "description": "read_workspace topic actions lists each action's body\nask_about_company: Ask one of the prepared questions about this company\nask_corpus: Ask this corpus a question, answered only from its documents\nask_site_read: Ask Margince about a website read and receive reviewable company-field suggestions\nassess_sales_review: The Sales review's assessment of one selection: a few sentences on what the measured figures show, each citing the cells it rests on, and one next decision on a deal the reader may see\nbuild_voice_profile: Queue a durable build over the current included corpus\ndraft_intro_note: Draft the forwardable note a colleague can paste into their own introduction\ndraft_intro_request: Draft the message asking a colleague to introduce you\nenrich_contact_from_provider: Queue an on-demand contact-data enrichment run\ngenerate_brief: Assemble the acting rep's brief for today if the overnight pass has not already\npreview_home_repair: Review a bounded page of automatic Home work\npropose_deal_roles: Read the buying roles out of what this deal's contacts have written\npropose_filter: Propose filter clauses for a list described in plain words\npropose_report_setup: A sales initiative or a custom report proposed from a description in plain words: the filters, metrics and charts the words name, resolved against what the reader may use, with the phrase each came from, the questions the words leave open and the phrases nothing here can express\nread_card_photo: Read a photo of business cards and propose the contacts it shows\nrefresh_company_brief: Deprecated: Regenerate this company's brief, ignoring the cached one\nrefresh_contact_brief: Regenerate this contact's brief, ignoring the cached one\nrefresh_dossier: Reassemble the dossier now, past a fingerprint that still matches\nrefresh_growth_fit: Re-assemble the caller's growth fit now, past a fingerprint that still matches\nrefresh_scan: Make sure this reader's scan of the company is current, reading it again only when the company changed\nregenerate_offer: Mint the next revision as a fresh draft — mechanically, or AI-drafted from captured signal\nresearch_contact: Ask the connected provider what is publicly known about this contact\nstart_backfill: Start the bounded connect-time backfill\nstart_search_reindex: Confirm and start a fleet-wide reindex",
+              "description": "read_workspace topic actions lists each action's body\nask_about_company: Ask one of the prepared questions about this company\nask_corpus: Ask this corpus a question, answered only from its documents\nask_site_read: Ask Margince about a website read and receive reviewable company-field suggestions\nassess_sales_review: The Sales review's assessment of one selection: a few sentences on what the measured figures show, each citing the cells it rests on, and one next decision on a deal the reader may see\nbuild_voice_profile: Queue a durable build over the current included corpus\ndraft_intro_note: Draft the forwardable note a colleague can paste into their own introduction\ndraft_intro_request: Draft the message asking a colleague to introduce you\nenrich_contact_from_provider: Queue an on-demand contact-data enrichment run\nfile_channel_message: File a summary of one message in a record's channel, or of its thread, as a note\ngenerate_brief: Assemble the acting rep's brief for today if the overnight pass has not already\npreview_home_repair: Review a bounded page of automatic Home work\npropose_deal_roles: Read the buying roles out of what this deal's contacts have written\npropose_filter: Propose filter clauses for a list described in plain words\npropose_report_setup: A sales initiative or a custom report proposed from a description in plain words: the filters, metrics and charts the words name, resolved against what the reader may use, with the phrase each came from, the questions the words leave open and the phrases nothing here can express\nread_card_photo: Read a photo of business cards and propose the contacts it shows\nrefresh_company_brief: Deprecated: Regenerate this company's brief, ignoring the cached one\nrefresh_contact_brief: Regenerate this contact's brief, ignoring the cached one\nrefresh_dossier: Reassemble the dossier now, past a fingerprint that still matches\nrefresh_growth_fit: Re-assemble the caller's growth fit now, past a fingerprint that still matches\nrefresh_scan: Make sure this reader's scan of the company is current, reading it again only when the company changed\nregenerate_offer: Mint the next revision as a fresh draft — mechanically, or AI-drafted from captured signal\nresearch_contact: Ask the connected provider what is publicly known about this contact\nstart_backfill: Start the bounded connect-time backfill\nstart_search_reindex: Confirm and start a fleet-wide reindex",
               "enum": [
                 "ask_about_company",
                 "ask_corpus",
@@ -9316,6 +9318,7 @@
                 "draft_intro_note",
                 "draft_intro_request",
                 "enrich_contact_from_provider",
+                "file_channel_message",
                 "generate_brief",
                 "preview_home_repair",
                 "propose_deal_roles",
@@ -9335,7 +9338,7 @@
               "type": "string"
             },
             "id": {
-              "description": "ask_about_company, ask_corpus, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, propose_deal_roles, refresh_company_brief, refresh_contact_brief, refresh_dossier, refresh_growth_fit, refresh_scan, regenerate_offer, research_contact only",
+              "description": "ask_about_company, ask_corpus, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, file_channel_message, propose_deal_roles, refresh_company_brief, refresh_contact_brief, refresh_dossier, refresh_growth_fit, refresh_scan, regenerate_offer, research_contact only",
               "type": "string"
             },
             "idempotency_key": {
@@ -9343,7 +9346,7 @@
               "type": "string"
             },
             "request_body": {
-              "description": "ask_about_company, ask_corpus, ask_site_read, assess_sales_review, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, preview_home_repair, propose_filter, propose_report_setup, refresh_scan, start_backfill, start_search_reindex only: The chosen action's request body; read_workspace topic actions lists its shape",
+              "description": "ask_about_company, ask_corpus, ask_site_read, assess_sales_review, build_voice_profile, draft_intro_note, draft_intro_request, enrich_contact_from_provider, file_channel_message, preview_home_repair, propose_filter, propose_report_setup, refresh_scan, start_backfill, start_search_reindex only: The chosen action's request body; read_workspace topic actions lists its shape",
               "type": "object"
             }
           },
@@ -11363,34 +11366,6 @@
             "id"
           ],
           "route": "DELETE /v1/mail-drafts/{id}"
-        },
-        {
-          "action": "file_channel_message",
-          "body": {
-            "additionalProperties": false,
-            "properties": {
-              "message": {
-                "description": "The message in the record's channel: its sequence number, `#slug:seq`, the chat's `\u003cm:#slug:seq|…\u003e` mention, or its link. A message in another channel is not found.",
-                "maxLength": 500,
-                "minLength": 1,
-                "type": "string"
-              },
-              "thread": {
-                "description": "True files the message and the replies in its thread that follow it.",
-                "type": "boolean"
-              }
-            },
-            "required": [
-              "message"
-            ],
-            "type": "object"
-          },
-          "does": "File a summary of one message in a record's channel, or of its thread, as a note.",
-          "ids": [
-            "record_type",
-            "id"
-          ],
-          "route": "POST /v1/channel-links/{record_type}/{id}/notes"
         },
         {
           "action": "hide_document",
@@ -13924,7 +13899,30 @@
           "action": "set_channel_verbosity",
           "body": {
             "additionalProperties": false,
+            "minProperties": 1,
             "properties": {
+              "expected_link_id": {
+                "format": "uuid",
+                "type": "string"
+              },
+              "expected_version": {
+                "format": "int64",
+                "type": "integer"
+              },
+              "message_detail": {
+                "enum": [
+                  "brief",
+                  "full"
+                ],
+                "type": "string",
+                "x-extensible-enum": true
+              },
+              "save_channel_updates": {
+                "type": "boolean"
+              },
+              "send_crm_updates": {
+                "type": "boolean"
+              },
               "verbosity": {
                 "description": "How much Margince posts into a linked channel.",
                 "enum": [
@@ -13937,9 +13935,6 @@
                 "x-extensible-enum": true
               }
             },
-            "required": [
-              "verbosity"
-            ],
             "type": "object"
           },
           "does": "Choose how much Margince posts into a record's channel.",
@@ -29029,6 +29024,34 @@
           "route": "POST /v1/contacts/{id}/enrichment-runs"
         },
         {
+          "action": "file_channel_message",
+          "body": {
+            "additionalProperties": false,
+            "properties": {
+              "message": {
+                "description": "A native message ID or link in the record's linked channel. Dispact also accepts a sequence number, `#slug:seq`, or `\u003cm:#slug:seq|…\u003e` mention. A message in another channel or outside a linked thread is not found.",
+                "maxLength": 500,
+                "minLength": 1,
+                "type": "string"
+              },
+              "thread": {
+                "description": "True files the complete available thread containing the selected message.",
+                "type": "boolean"
+              }
+            },
+            "required": [
+              "message"
+            ],
+            "type": "object"
+          },
+          "does": "File a summary of one message in a record's channel, or of its thread, as a note.",
+          "ids": [
+            "record_type",
+            "id"
+          ],
+          "route": "POST /v1/channel-links/{record_type}/{id}/notes"
+        },
+        {
           "action": "generate_brief",
           "does": "Assemble the acting rep's brief for today if the overnight pass has not already.",
           "route": "POST /v1/brief"
@@ -29905,6 +29928,23 @@
                 ],
                 "type": "string"
               },
+              "provider": {
+                "default": "dispact",
+                "description": "Native provider whose shared bot owns this link.",
+                "enum": [
+                  "dispact",
+                  "slack",
+                  "teams"
+                ],
+                "type": "string",
+                "x-extensible-enum": true
+              },
+              "root_id": {
+                "description": "Existing native thread root explicitly assigned to this record. A shared channel uses separate root assignments for each record.",
+                "maxLength": 1024,
+                "minLength": 1,
+                "type": "string"
+              },
               "summarize_history": {
                 "description": "For `existing`, required. True files up to five summaries of the talk so far.",
                 "type": "boolean"
@@ -29926,7 +29966,7 @@
             ],
             "type": "object"
           },
-          "does": "Link a deal or project to a new or existing private chat channel.",
+          "does": "Link a company, deal or project to an authorized work channel.",
           "ids": [
             "record_type",
             "id"

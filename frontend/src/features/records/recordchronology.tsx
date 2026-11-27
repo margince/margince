@@ -1,6 +1,7 @@
 import type { ReactNode } from "react";
 import { useState } from "react";
 import type { components } from "../../api/schema";
+import { EntityRef } from "../../components/entityref";
 import { TaskTerms } from "../../components/taskassignee";
 import { activityTimeline } from "../../design-system/activitytimeline";
 import { EmptyState, PendingBody } from "../../design-system/atoms";
@@ -12,7 +13,7 @@ import type { TimelineEntry } from "../../design-system/timelineentry";
 import { useT } from "../../i18n";
 import type { MessageKey } from "../../i18n/en";
 import { useProviderLabel } from "../../lib/channelproviders";
-import type { EntityKind } from "../../lib/entity";
+import { type EntityKind, isEntityKind } from "../../lib/entity";
 import { historyFieldLabel } from "../../lib/historyfieldlabels";
 import type { HistoryValueCtx } from "../../lib/historyvalues";
 import { useViewerId } from "../../lib/session";
@@ -202,7 +203,28 @@ export function useRecordChronology({
     },
   ).map((built) => {
     const activity = byId.get(built.id);
-    const entry = nameChat(built, activity);
+    const named = nameChat(built, activity);
+    const sources = activity?.links?.filter(
+      (link) =>
+        ["company", "deal", "project"].includes(link.entity_type) &&
+        !(link.entity_type === kind && link.entity_id === recordId),
+    );
+    const entry =
+      named.chatEpisode && !named.withheld
+        ? {
+            ...named,
+            via: sources?.map((link) => (
+              <span
+                className="tl-about"
+                key={`${link.entity_type}:${link.entity_id}`}
+              >
+                {isEntityKind(link.entity_type) && (
+                  <EntityRef kind={link.entity_type} id={link.entity_id} />
+                )}
+              </span>
+            )),
+          }
+        : named;
     // Only an email has a drawer to open, and only when the caller has one to
     // open it in.
     const opened =

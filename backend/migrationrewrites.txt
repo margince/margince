@@ -351,3 +351,10 @@
 1795787423_a_merged_tag_names_the_tag_it_went_into.up.sql | tag | only tags a merge archived are written, one per merge an admin ran by hand; each is found through the indexed audit trail of the archived tags, so the set is a handful of rows
 1795807306_installation_keeps_its_own_identity.up.sql | *, installation_state | copies at most three facts from the one live workspace row into installation_state, which holds a handful of rows; the procedural marker is the check that refuses a second live workspace
 1795807306_installation_keeps_its_own_identity.down.sql | installation_state | one DELETE of the three keys the up migration wrote
+1795810207_company_chat_links.down.sql | * | the procedural block only checks whether a company association exists and refuses the downgrade; it changes no row and prevents deleting association history during rollback
+1795810209_participant_messenger_grants_and_receipts.up.sql | * | creates empty personal messaging tables and their timestamp trigger; no existing record rows are rewritten
+1795810210_participant_consent_generation.up.sql | chat_member_grant | the table is created empty by this same release before any application writer starts; copying its initial version does not scan a shipped population
+1795810213_native_channel_roots.up.sql | * | adds the fixed Slack and Teams provider catalog entries and replaces a link timestamp trigger; it does not rewrite existing record content
+1795810216_validate_channel_link_constraints.down.sql | * | the down migration is SELECT 1 and changes no row
+1795810217_messaging_text_guards.up.sql | * | replaces text-limit trigger declarations for the named messaging tables without scanning or rewriting their rows
+1795810217_messaging_text_guards.down.sql | * | restores or removes text-limit trigger declarations without scanning or rewriting their rows

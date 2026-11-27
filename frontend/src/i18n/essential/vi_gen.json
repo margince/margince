@@ -1,4 +1,6 @@
 {
+  "history.field.chat_source_changed": "Nguồn cuộc trò chuyện đã thay đổi",
+  "history.field.chat_source_deleted": "Nguồn cuộc trò chuyện đã bị xóa",
   "history.field.kind": "Loại",
   "history.field.email_security": "Bảo mật email",
   "history.field.employee_range": "Khoảng số nhân viên",

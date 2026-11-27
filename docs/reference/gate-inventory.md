@@ -556,7 +556,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `bounceobserver_test.go` | H2 | The bounce sink stops the address it just marked dead. |
 | `commsreconciler_test.go` | H2 | No role this repository assembles builds a delivery store without the seam that re-keys a sent message's timeline row. |
 | `companyrenamerecheck_test.go` | H2 | A company's name is the axis on which two records of one company converge, so every rename has to ask whether it just created a duplicate. |
-| `composerowscope_test.go` | H2 | Anything in the compose tier that returns a record is a read. |
+| `composerowscope_test.go` | H2 | A returned record reference is a read. |
 | `consentproof_test.go` | H2 | Every write that sets a contact\_consent state appends a consent\_event proof row in the same function, so the current state is always backed by an append-only event saying when, how, and by whom. |
 | `contactemployer_test.go` | H2 | TestEveryContactInsertResolvesItsEmployer derives the obligation from the actual insert statements. |
 | `contactscrub_test.go` | H2 | Erasing a contact and anonymizing one are the same act with one difference: the erased subject goes on a suppression list, and the anonymized subject may lawfully return. |
@@ -798,6 +798,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `frontendobjectkeys_test.go` | H2 | The word map reader reads each shape a frontend map is declared in, and fails one it cannot read. |
 | `geministrictwire_test.go` | H2 | Each tool's arguments and the runner's step schema go through the Gemini rewrite. |
 | `historyfieldlabelsfalsify_test.go` | H3 | The label census, falsified. |
+| `historyimageguards_falsify_test.go` | H3 | _(no doc comment)_ |
 | `historyimagestoredfield_falsify_test.go` | H3 | _(no doc comment)_ |
 | `historylabelconsumers_test.go` | H3 | History also reads stored column labels, the address dialog and company profile. |
 | `individualperformancereachfixtures_test.go` | H2 | The individual-performance path walk read against planted packages, one shape per package, each of which an any-path reading of the switch accepts. |

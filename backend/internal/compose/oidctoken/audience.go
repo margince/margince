@@ -34,3 +34,25 @@ func (a *Audience) UnmarshalJSON(raw []byte) error {
 func (a Audience) Is(aud string) bool { return len(a) == 1 && a[0] == aud }
 
 func (a Audience) String() string { return strings.Join(a, " ") }
+
+// Claims are the ID token fields a sign-in or push check reads.
+type Claims struct {
+	Nbf               int64    `json:"nbf"`
+	ServiceURL        string   `json:"serviceurl"`
+	Iss               string   `json:"iss"`
+	Aud               Audience `json:"aud"`
+	Sub               string   `json:"sub"`
+	Email             string   `json:"email"`
+	EmailVerified     bool     `json:"email_verified"`
+	Exp               int64    `json:"exp"`
+	Iat               int64    `json:"iat"`
+	Tid               string   `json:"tid"`
+	PreferredUsername string   `json:"preferred_username"`
+	Groups            []string `json:"groups"`
+	Hd                string   `json:"hd"`
+	GivenName         string   `json:"given_name"`
+	Picture           string   `json:"picture"`
+	Jti               string   `json:"jti"`
+	WorkspaceID       string   `json:"workspace_id"`
+	DisplayName       string   `json:"display_name"`
+}

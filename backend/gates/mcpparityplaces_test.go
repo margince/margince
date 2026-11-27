@@ -206,6 +206,8 @@ var parityPathAreas = map[string]string{
 	"/capture/owner-identities":           "capture_rules",
 	"/capture/settings":                   "capture_rules",
 	"/channel-connections":                "connectors",
+	"/channel-providers/slack/callback":   "oauth_callbacks",
+	"/messenger/{provider}/callback":      "oauth_callbacks",
 	"/channel-providers":                  "connectors",
 	"/coldstart":                          "ai_help",
 	"/company":                            "company_profile",

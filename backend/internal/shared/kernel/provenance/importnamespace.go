@@ -95,7 +95,11 @@ const WebFormSource = "web_form"
 // is the channel, the talk's first message and the record, so a replay files
 // nothing. A client that could spell it would claim a summary before it is
 // written.
-const ChatSummarySource = "dispact"
+const (
+	ChatSummarySource = "dispact"
+	// ChatSummaryOrigin identifies recaps whose source provenance must remain traceable.
+	ChatSummaryOrigin = "chat_links"
+)
 
 // WebsiteInquirySource binds a task and its handling run to one accepted submission.
 const WebsiteInquirySource = "website_inquiry"

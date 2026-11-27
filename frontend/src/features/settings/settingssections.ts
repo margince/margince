@@ -278,6 +278,11 @@ export const SETTINGS_SECTIONS = {
     webhooks: ["settings.part.integrations.webhooks", "webhooks.title"],
     telegram: [
       "settings.part.integrations.telegram",
+      "messenger.myAccounts",
+      "messenger.apps",
+      "messenger.setupDetails",
+      "channelProfile.distribution",
+      "channelInstall.title",
       "connectors.telegramTitle",
       "connectors.bot.dispactTitle",
     ],
@@ -421,8 +426,7 @@ export const SETTINGS_SECTIONS = {
   readonly MessageKey[] | Readonly<Record<string, readonly MessageKey[]>>
 >;
 
-// Settings a tab draws as the column heads of a table whose rows each set
-// them. A column that only heads a list of records does not belong here.
+// Search includes table columns only when their rows set that value.
 export const SETTINGS_COLUMNS: Partial<
   Record<SettingsPageId, Readonly<Record<string, readonly MessageKey[]>>>
 > = {
@@ -438,11 +442,7 @@ const tabKeys = (
   ...(SETTINGS_COLUMNS[page]?.[tab] ?? []),
 ];
 
-/**
- * The section keys one page draws, flat. On a tabbed page, only the tabs
- * `opensTab` lets through, so search never offers a part the reader cannot
- * open.
- */
+// Search excludes sections in tabs the reader cannot open.
 export function settingsSectionKeys(
   page: SettingsPageId,
   opensTab: (tab: string) => boolean = () => true,

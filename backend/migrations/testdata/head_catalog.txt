@@ -2781,7 +2781,7 @@ public.channel_connection.channel_connection_owner_user_id_fkey FOREIGN KEY (own
 public.channel_connection.channel_connection_ownership_check CHECK ((ownership = ANY (ARRAY['workspace'::text, 'member'::text])))
 public.channel_connection.channel_connection_parent_connection_id_fkey FOREIGN KEY (parent_connection_id) REFERENCES channel_connection(id) ON DELETE RESTRICT
 public.channel_connection.channel_connection_pkey PRIMARY KEY (id)
-public.channel_connection.channel_connection_provider_check CHECK ((provider = ANY (ARRAY['telegram'::text, 'telegram_business'::text, 'dispact'::text, 'whatsapp'::text, 'zalo_oa'::text])))
+public.channel_connection.channel_connection_provider_check CHECK ((provider = ANY (ARRAY['telegram'::text, 'telegram_business'::text, 'dispact'::text, 'whatsapp'::text, 'zalo_oa'::text, 'slack'::text, 'teams'::text])))
 public.channel_connection.channel_connection_seat_id_fkey FOREIGN KEY (seat_id) REFERENCES capture_connection(id) ON DELETE RESTRICT
 public.channel_connection.channel_connection_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'error'::text, 'reauth_required'::text, 'pending_approval'::text])))
 public.channel_connection.channel_connection_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
@@ -2821,43 +2821,158 @@ public.channel_provider.text_bound_insert CREATE TRIGGER text_bound_insert AFTER
 public.channel_provider.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.channel_provider FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"label": 120, "transport": 20000, "credential_model": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"credential_model":20000,"label":120,"transport":20000}')
 public.channel_provider.transport text NOT NULL gen=- def=-
 public.channel_provider_pkey CREATE UNIQUE INDEX channel_provider_pkey ON public.channel_provider USING btree (provider)
+public.chat_bot_delivery acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.chat_bot_delivery.audience_hash text NOT NULL gen=- def=-
+public.chat_bot_delivery.carried_item_ids uuid[] NOT NULL gen=- def='{}'::uuid[]
+public.chat_bot_delivery.chat_bot_delivery_link_id_fkey FOREIGN KEY (link_id) REFERENCES chat_link(id) ON DELETE CASCADE
+public.chat_bot_delivery.chat_bot_delivery_link_id_request_key_key UNIQUE (link_id, request_key)
+public.chat_bot_delivery.chat_bot_delivery_pkey PRIMARY KEY (id)
+public.chat_bot_delivery.chat_bot_delivery_request_key_check CHECK (((length(request_key) >= 1) AND (length(request_key) <= 200)))
+public.chat_bot_delivery.chat_bot_delivery_state_check CHECK ((state = ANY (ARRAY['sending'::text, 'sent'::text, 'unknown'::text, 'refused'::text, 'reviewed_unknown'::text])))
+public.chat_bot_delivery.content_hash text NOT NULL gen=- def=-
+public.chat_bot_delivery.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_bot_delivery.id uuid NOT NULL gen=- def=uuidv7()
+public.chat_bot_delivery.link_id uuid NOT NULL gen=- def=-
+public.chat_bot_delivery.message_id text gen=- def=-
+public.chat_bot_delivery.request_key text NOT NULL gen=- def=-
+public.chat_bot_delivery.state text NOT NULL gen=- def=-
+public.chat_bot_delivery.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_bot_delivery FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 120, "message_id": 20000, "request_key": 20000, "content_hash": 120, "audience_hash": 120}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"audience_hash":120,"content_hash":120,"message_id":20000,"request_key":20000,"state":120}')
+public.chat_bot_delivery.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_bot_delivery FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 120, "message_id": 20000, "request_key": 20000, "content_hash": 120, "audience_hash": 120}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"audience_hash":120,"content_hash":120,"message_id":20000,"request_key":20000,"state":120}')
+public.chat_bot_delivery.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_bot_delivery_link_id_request_key_key CREATE UNIQUE INDEX chat_bot_delivery_link_id_request_key_key ON public.chat_bot_delivery USING btree (link_id, request_key)
+public.chat_bot_delivery_pkey CREATE UNIQUE INDEX chat_bot_delivery_pkey ON public.chat_bot_delivery USING btree (id)
+public.chat_bot_delivery_unconfirmed_idx CREATE INDEX chat_bot_delivery_unconfirmed_idx ON public.chat_bot_delivery USING btree (link_id) WHERE (state = ANY (ARRAY['sending'::text, 'unknown'::text]))
+public.chat_channel_watch acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.chat_channel_watch.app_id text NOT NULL gen=- def=-
+public.chat_channel_watch.channel_id text NOT NULL gen=- def=-
+public.chat_channel_watch.chat_channel_watch_check CHECK ((expires_at > created_at))
+public.chat_channel_watch.chat_channel_watch_connection_id_channel_id_key UNIQUE (connection_id, channel_id)
+public.chat_channel_watch.chat_channel_watch_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES channel_connection(id) ON DELETE CASCADE
+public.chat_channel_watch.chat_channel_watch_pkey PRIMARY KEY (id)
+public.chat_channel_watch.chat_channel_watch_version_check CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.chat_channel_watch.connection_id uuid NOT NULL gen=- def=-
+public.chat_channel_watch.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_channel_watch.credential_ref text gen=- def=-
+public.chat_channel_watch.expires_at timestamp with time zone gen=- def=-
+public.chat_channel_watch.id uuid NOT NULL gen=- def=uuidv7()
+public.chat_channel_watch.last_error text gen=- def=-
+public.chat_channel_watch.lease_until timestamp with time zone gen=- def=-
+public.chat_channel_watch.needs_rescan boolean NOT NULL gen=- def=false
+public.chat_channel_watch.notification_url text NOT NULL gen=- def=-
+public.chat_channel_watch.reauthorize boolean NOT NULL gen=- def=false
+public.chat_channel_watch.removal_verified boolean NOT NULL gen=- def=false
+public.chat_channel_watch.retired_at timestamp with time zone gen=- def=-
+public.chat_channel_watch.subscription_id text gen=- def=-
+public.chat_channel_watch.tenant_id text NOT NULL gen=- def=-
+public.chat_channel_watch.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_channel_watch FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"app_id": 20000, "tenant_id": 20000, "channel_id": 20000, "last_error": 120, "credential_ref": 20000, "subscription_id": 20000, "notification_url": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"app_id":20000,"channel_id":20000,"credential_ref":20000,"last_error":120,"notification_url":20000,"subscription_id":20000,"tenant_id":20000}')
+public.chat_channel_watch.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_channel_watch FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"app_id": 20000, "tenant_id": 20000, "channel_id": 20000, "last_error": 120, "credential_ref": 20000, "subscription_id": 20000, "notification_url": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"app_id":20000,"channel_id":20000,"credential_ref":20000,"last_error":120,"notification_url":20000,"subscription_id":20000,"tenant_id":20000}')
+public.chat_channel_watch.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_channel_watch.version bigint NOT NULL gen=- def=1
+public.chat_channel_watch_connection_id_channel_id_key CREATE UNIQUE INDEX chat_channel_watch_connection_id_channel_id_key ON public.chat_channel_watch USING btree (connection_id, channel_id)
+public.chat_channel_watch_pkey CREATE UNIQUE INDEX chat_channel_watch_pkey ON public.chat_channel_watch USING btree (id)
+public.chat_channel_watch_subscription_idx CREATE UNIQUE INDEX chat_channel_watch_subscription_idx ON public.chat_channel_watch USING btree (subscription_id) WHERE (subscription_id IS NOT NULL)
 public.chat_link acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.chat_link.archived_at timestamp with time zone gen=- def=-
 public.chat_link.backfill_requested boolean NOT NULL gen=- def=false
 public.chat_link.card_fingerprint text gen=- def=-
+public.chat_link.card_generation uuid gen=- def=-
 public.chat_link.card_message_id text gen=- def=-
+public.chat_link.card_paused boolean NOT NULL gen=- def=false
 public.chat_link.channel_name text NOT NULL gen=- def=-
 public.chat_link.channel_slug text NOT NULL gen=- def=-
+public.chat_link.chat_link_company_id_fkey FOREIGN KEY (company_id) REFERENCES company(id) ON DELETE CASCADE
 public.chat_link.chat_link_connection_id_fkey FOREIGN KEY (connection_id) REFERENCES channel_connection(id) ON DELETE RESTRICT
 public.chat_link.chat_link_deal_id_fkey FOREIGN KEY (deal_id) REFERENCES deal(id) ON DELETE CASCADE
 public.chat_link.chat_link_history_cursor_js_safe CHECK (((history_cursor IS NULL) OR ((history_cursor >= 0) AND (history_cursor <= '9007199254740991'::bigint))))
 public.chat_link.chat_link_linked_by_fkey FOREIGN KEY (linked_by) REFERENCES app_user(id) ON DELETE RESTRICT
+public.chat_link.chat_link_message_detail_check CHECK ((message_detail = ANY (ARRAY['brief'::text, 'full'::text])))
 public.chat_link.chat_link_pkey PRIMARY KEY (id)
 public.chat_link.chat_link_project_id_fkey FOREIGN KEY (project_id) REFERENCES project(id) ON DELETE CASCADE
-public.chat_link.chat_link_provider_check CHECK ((provider = 'dispact'::text))
-public.chat_link.chat_link_record_check CHECK (((deal_id IS NOT NULL) OR (project_id IS NOT NULL)))
-public.chat_link.chat_link_status_check CHECK ((status = ANY (ARRAY['active'::text, 'channel_gone'::text])))
+public.chat_link.chat_link_provider_check CHECK ((provider = ANY (ARRAY['dispact'::text, 'slack'::text, 'teams'::text])))
+public.chat_link.chat_link_record_check CHECK ((((company_id IS NOT NULL) AND (deal_id IS NULL) AND (project_id IS NULL)) OR ((company_id IS NULL) AND ((deal_id IS NOT NULL) OR (project_id IS NOT NULL)))))
+public.chat_link.chat_link_status_check CHECK ((status = ANY (ARRAY['active'::text, 'channel_gone'::text, 'identity_needs_review'::text])))
 public.chat_link.chat_link_verbosity_check CHECK ((verbosity = ANY (ARRAY['everything'::text, 'important'::text, 'milestones'::text, 'silent'::text])))
 public.chat_link.chat_link_version_js_safe CHECK (((version >= '-9007199254740991'::bigint) AND (version <= '9007199254740991'::bigint)))
+public.chat_link.company_id uuid gen=- def=-
 public.chat_link.connection_id uuid NOT NULL gen=- def=-
 public.chat_link.created_at timestamp with time zone NOT NULL gen=- def=now()
 public.chat_link.deal_id uuid gen=- def=-
 public.chat_link.history_cursor bigint gen=- def=-
 public.chat_link.id uuid NOT NULL gen=- def=uuidv7()
+public.chat_link.include_history boolean NOT NULL gen=- def=false
+public.chat_link.last_post_error text gen=- def=-
 public.chat_link.linked_by uuid NOT NULL gen=- def=-
+public.chat_link.message_detail text gen=- def=-
+public.chat_link.native_coverage_at timestamp with time zone gen=- def=-
+public.chat_link.native_cursor text gen=- def=-
+public.chat_link.native_identity boolean NOT NULL gen=- def=false
+public.chat_link.native_refresh_at timestamp with time zone gen=- def=-
+public.chat_link.native_scan_error text gen=- def=-
+public.chat_link.native_scan_started_at timestamp with time zone gen=- def=-
+public.chat_link.post_disabled boolean NOT NULL gen=- def=false
+public.chat_link.post_supported boolean NOT NULL gen=- def=true
 public.chat_link.project_id uuid gen=- def=-
 public.chat_link.provider text NOT NULL gen=- def=-
+public.chat_link.read_disabled boolean NOT NULL gen=- def=false
+public.chat_link.read_since timestamp with time zone gen=- def=-
+public.chat_link.root_id text gen=- def=-
 public.chat_link.status text NOT NULL gen=- def='active'::text
-public.chat_link.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "provider": 20000, "verbosity": 20000, "channel_name": 500, "channel_slug": 500, "card_message_id": 500, "card_fingerprint": 120}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"card_fingerprint":120,"card_message_id":500,"channel_name":500,"channel_slug":500,"provider":20000,"status":20000,"verbosity":20000}')
-public.chat_link.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "provider": 20000, "verbosity": 20000, "channel_name": 500, "channel_slug": 500, "card_message_id": 500, "card_fingerprint": 120}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"card_fingerprint":120,"card_message_id":500,"channel_name":500,"channel_slug":500,"provider":20000,"status":20000,"verbosity":20000}')
-public.chat_link.trg_chat_link_updated CREATE TRIGGER trg_chat_link_updated BEFORE UPDATE ON public.chat_link FOR EACH ROW WHEN (((to_jsonb(old.*) - ARRAY['history_cursor'::text, 'card_message_id'::text, 'card_fingerprint'::text]) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['history_cursor'::text, 'card_message_id'::text, 'card_fingerprint'::text]))) EXECUTE FUNCTION set_updated_at_bump_version()
+public.chat_link.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 20000, "root_id": 20000, "provider": 20000, "verbosity": 20000, "channel_name": 500, "channel_slug": 500, "native_cursor": 20000, "message_detail": 120, "card_message_id": 500, "last_post_error": 120, "card_fingerprint": 120, "native_scan_error": 120}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"card_fingerprint":120,"card_message_id":500,"channel_name":500,"channel_slug":500,"last_post_error":120,"message_detail":120,"native_cursor":20000,"native_scan_error":120,"provider":20000,"root_id":20000,"status":20000,"verbosity":20000}')
+public.chat_link.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_link FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 20000, "root_id": 20000, "provider": 20000, "verbosity": 20000, "channel_name": 500, "channel_slug": 500, "native_cursor": 20000, "message_detail": 120, "card_message_id": 500, "last_post_error": 120, "card_fingerprint": 120, "native_scan_error": 120}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"card_fingerprint":120,"card_message_id":500,"channel_name":500,"channel_slug":500,"last_post_error":120,"message_detail":120,"native_cursor":20000,"native_scan_error":120,"provider":20000,"root_id":20000,"status":20000,"verbosity":20000}')
+public.chat_link.trg_chat_link_updated CREATE TRIGGER trg_chat_link_updated BEFORE UPDATE ON public.chat_link FOR EACH ROW WHEN (((to_jsonb(old.*) - ARRAY['history_cursor'::text, 'history_synced_at'::text, 'card_message_id'::text, 'card_fingerprint'::text, 'native_cursor'::text, 'native_scan_started_at'::text, 'native_coverage_at'::text, 'native_scan_error'::text, 'last_post_error'::text, 'native_refresh_at'::text]) IS DISTINCT FROM (to_jsonb(new.*) - ARRAY['history_cursor'::text, 'history_synced_at'::text, 'card_message_id'::text, 'card_fingerprint'::text, 'native_cursor'::text, 'native_scan_started_at'::text, 'native_coverage_at'::text, 'native_scan_error'::text, 'last_post_error'::text, 'native_refresh_at'::text]))) EXECUTE FUNCTION set_updated_at_bump_version()
 public.chat_link.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.chat_link.verbosity text NOT NULL gen=- def='important'::text
 public.chat_link.version bigint NOT NULL gen=- def=1
+public.chat_link_company_idx CREATE INDEX chat_link_company_idx ON public.chat_link USING btree (company_id)
 public.chat_link_pkey CREATE UNIQUE INDEX chat_link_pkey ON public.chat_link USING btree (id)
+public.chat_member_grant acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.chat_member_grant.address text NOT NULL gen=- def=''::text
+public.chat_member_grant.chat_member_grant_consent_version_check CHECK (((consent_version >= 1) AND (consent_version <= '9007199254740991'::bigint)))
+public.chat_member_grant.chat_member_grant_pkey PRIMARY KEY (id)
+public.chat_member_grant.chat_member_grant_provider_check CHECK ((provider = ANY (ARRAY['dispact'::text, 'slack'::text, 'teams'::text])))
+public.chat_member_grant.chat_member_grant_provider_provider_workspace_provider_user_key UNIQUE (provider, provider_workspace, provider_user)
+public.chat_member_grant.chat_member_grant_status_check CHECK ((status = ANY (ARRAY['connected'::text, 'disconnected'::text, 'reauth_required'::text])))
+public.chat_member_grant.chat_member_grant_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.chat_member_grant.chat_member_grant_user_id_provider_key UNIQUE (user_id, provider)
+public.chat_member_grant.chat_member_grant_version_check CHECK (((version >= 1) AND (version <= '9007199254740991'::bigint)))
+public.chat_member_grant.consent_version bigint NOT NULL gen=- def=1
+public.chat_member_grant.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_member_grant.credential_ref text NOT NULL gen=- def=-
+public.chat_member_grant.id uuid NOT NULL gen=- def=uuidv7()
+public.chat_member_grant.provider text NOT NULL gen=- def=-
+public.chat_member_grant.provider_user text NOT NULL gen=- def=-
+public.chat_member_grant.provider_workspace text NOT NULL gen=- def=-
+public.chat_member_grant.status text NOT NULL gen=- def='connected'::text
+public.chat_member_grant.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_member_grant FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"status": 120, "address": 20000, "provider": 120, "provider_user": 20000, "credential_ref": 20000, "provider_workspace": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address":20000,"credential_ref":20000,"provider":120,"provider_user":20000,"provider_workspace":20000,"status":120}')
+public.chat_member_grant.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_member_grant FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"status": 120, "address": 20000, "provider": 120, "provider_user": 20000, "credential_ref": 20000, "provider_workspace": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"address":20000,"credential_ref":20000,"provider":120,"provider_user":20000,"provider_workspace":20000,"status":120}')
+public.chat_member_grant.trg_chat_member_grant_updated CREATE TRIGGER trg_chat_member_grant_updated BEFORE UPDATE ON public.chat_member_grant FOR EACH ROW EXECUTE FUNCTION set_updated_at_bump_version()
+public.chat_member_grant.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_member_grant.user_id uuid NOT NULL gen=- def=-
+public.chat_member_grant.version bigint NOT NULL gen=- def=1
+public.chat_member_grant_pkey CREATE UNIQUE INDEX chat_member_grant_pkey ON public.chat_member_grant USING btree (id)
+public.chat_member_grant_provider_provider_workspace_provider_user_key CREATE UNIQUE INDEX chat_member_grant_provider_provider_workspace_provider_user_key ON public.chat_member_grant USING btree (provider, provider_workspace, provider_user)
+public.chat_member_grant_user_id_provider_key CREATE UNIQUE INDEX chat_member_grant_user_id_provider_key ON public.chat_member_grant USING btree (user_id, provider)
+public.chat_member_room acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.chat_member_room.chat_member_room_grant_id_fkey FOREIGN KEY (grant_id) REFERENCES chat_member_grant(id) ON DELETE CASCADE
+public.chat_member_room.chat_member_room_grant_id_grant_version_record_type_record__key UNIQUE (grant_id, grant_version, record_type, record_id, roster_hash)
+public.chat_member_room.chat_member_room_pkey PRIMARY KEY (id)
+public.chat_member_room.chat_member_room_record_type_check CHECK ((record_type = ANY (ARRAY['company'::text, 'deal'::text, 'project'::text])))
+public.chat_member_room.conversation_id text NOT NULL gen=- def=-
+public.chat_member_room.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_member_room.grant_id uuid NOT NULL gen=- def=-
+public.chat_member_room.grant_version bigint NOT NULL gen=- def=-
+public.chat_member_room.id uuid NOT NULL gen=- def=uuidv7()
+public.chat_member_room.record_id uuid NOT NULL gen=- def=-
+public.chat_member_room.record_type text NOT NULL gen=- def=-
+public.chat_member_room.roster_hash text NOT NULL gen=- def=-
+public.chat_member_room.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_member_room FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"record_type": 120, "roster_hash": 120, "conversation_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"conversation_id":20000,"record_type":120,"roster_hash":120}')
+public.chat_member_room.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_member_room FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"record_type": 120, "roster_hash": 120, "conversation_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"conversation_id":20000,"record_type":120,"roster_hash":120}')
+public.chat_member_room_grant_id_grant_version_record_type_record__key CREATE UNIQUE INDEX chat_member_room_grant_id_grant_version_record_type_record__key ON public.chat_member_room USING btree (grant_id, grant_version, record_type, record_id, roster_hash)
+public.chat_member_room_pkey CREATE UNIQUE INDEX chat_member_room_pkey ON public.chat_member_room USING btree (id)
 public.chat_post_item acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.chat_post_item.activity_id uuid gen=- def=-
 public.chat_post_item.chat_post_item_link_id_fkey FOREIGN KEY (link_id) REFERENCES chat_link(id) ON DELETE CASCADE
+public.chat_post_item.chat_post_item_message_detail_check CHECK ((message_detail = ANY (ARRAY['legacy'::text, 'brief'::text, 'full'::text])))
 public.chat_post_item.chat_post_item_pkey PRIMARY KEY (id)
 public.chat_post_item.chat_post_item_posted_check CHECK (((posted_at IS NULL) OR (post_id IS NOT NULL)))
 public.chat_post_item.created_at timestamp with time zone NOT NULL gen=- def=now()
@@ -2865,14 +2980,104 @@ public.chat_post_item.detail jsonb NOT NULL gen=- def='{}'::jsonb
 public.chat_post_item.event_id uuid NOT NULL gen=- def=-
 public.chat_post_item.event_type text NOT NULL gen=- def=-
 public.chat_post_item.id uuid NOT NULL gen=- def=uuidv7()
+public.chat_post_item.last_error text gen=- def=-
 public.chat_post_item.link_id uuid NOT NULL gen=- def=-
+public.chat_post_item.message_detail text gen=- def=-
 public.chat_post_item.message_id text gen=- def=-
 public.chat_post_item.post_id uuid gen=- def=-
 public.chat_post_item.posted_at timestamp with time zone gen=- def=-
-public.chat_post_item.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_post_item FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"event_type": 20000, "message_id": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"event_type":20000,"message_id":500}')
-public.chat_post_item.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_post_item FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"event_type": 20000, "message_id": 500}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"event_type":20000,"message_id":500}')
+public.chat_post_item.redacted_at timestamp with time zone gen=- def=-
+public.chat_post_item.retry_at timestamp with time zone gen=- def=-
+public.chat_post_item.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_post_item FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"event_type": 20000, "last_error": 120, "message_id": 500, "message_detail": 120}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"event_type":20000,"last_error":120,"message_detail":120,"message_id":500}')
+public.chat_post_item.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_post_item FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"event_type": 20000, "last_error": 120, "message_id": 500, "message_detail": 120}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"event_type":20000,"last_error":120,"message_detail":120,"message_id":500}')
 public.chat_post_item.withdrawn_at timestamp with time zone gen=- def=-
 public.chat_post_item_pkey CREATE UNIQUE INDEX chat_post_item_pkey ON public.chat_post_item USING btree (id)
+public.chat_root acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.chat_root.activity_id uuid gen=- def=-
+public.chat_root.applied_revision text gen=- def=-
+public.chat_root.chat_root_activity_id_fkey FOREIGN KEY (activity_id) REFERENCES activity(id) ON DELETE SET NULL
+public.chat_root.chat_root_link_id_fkey FOREIGN KEY (link_id) REFERENCES chat_link(id) ON DELETE CASCADE
+public.chat_root.chat_root_link_id_root_id_key UNIQUE (link_id, root_id)
+public.chat_root.chat_root_pkey PRIMARY KEY (id)
+public.chat_root.chat_root_revision_check CHECK (((length(revision) >= 1) AND (length(revision) <= 128)))
+public.chat_root.chat_root_root_id_check CHECK (((length(root_id) >= 1) AND (length(root_id) <= 1024)))
+public.chat_root.content_digest text gen=- def=-
+public.chat_root.first_seen_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_root.id uuid NOT NULL gen=- def=uuidv7()
+public.chat_root.last_error text gen=- def=-
+public.chat_root.link_id uuid NOT NULL gen=- def=-
+public.chat_root.notice_revision text gen=- def=-
+public.chat_root.retry_at timestamp with time zone gen=- def=-
+public.chat_root.revision text NOT NULL gen=- def=-
+public.chat_root.root_id text NOT NULL gen=- def=-
+public.chat_root.source_deleted boolean NOT NULL gen=- def=false
+public.chat_root.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_root FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"root_id": 20000, "revision": 20000, "last_error": 120, "content_digest": 20000, "notice_revision": 20000, "applied_revision": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"applied_revision":20000,"content_digest":20000,"last_error":120,"notice_revision":20000,"revision":20000,"root_id":20000}')
+public.chat_root.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_root FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"root_id": 20000, "revision": 20000, "last_error": 120, "content_digest": 20000, "notice_revision": 20000, "applied_revision": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"applied_revision":20000,"content_digest":20000,"last_error":120,"notice_revision":20000,"revision":20000,"root_id":20000}')
+public.chat_root.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_root_activity_idx CREATE INDEX chat_root_activity_idx ON public.chat_root USING btree (activity_id) WHERE (activity_id IS NOT NULL)
+public.chat_root_link_id_root_id_key CREATE UNIQUE INDEX chat_root_link_id_root_id_key ON public.chat_root USING btree (link_id, root_id)
+public.chat_root_pkey CREATE UNIQUE INDEX chat_root_pkey ON public.chat_root USING btree (id)
+public.chat_send_attempt acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.chat_send_attempt.audience_hash text NOT NULL gen=- def=-
+public.chat_send_attempt.chat_send_attempt_grant_id_fkey FOREIGN KEY (grant_id) REFERENCES chat_member_grant(id) ON DELETE RESTRICT
+public.chat_send_attempt.chat_send_attempt_pkey PRIMARY KEY (id)
+public.chat_send_attempt.chat_send_attempt_record_type_check CHECK ((record_type = ANY (ARRAY['company'::text, 'deal'::text, 'project'::text])))
+public.chat_send_attempt.chat_send_attempt_state_check CHECK ((state = ANY (ARRAY['pending'::text, 'accepted'::text, 'failed'::text, 'unknown'::text])))
+public.chat_send_attempt.chat_send_attempt_user_id_fkey FOREIGN KEY (user_id) REFERENCES app_user(id) ON DELETE CASCADE
+public.chat_send_attempt.chat_send_attempt_user_id_request_id_key UNIQUE (user_id, request_id)
+public.chat_send_attempt.content_hash text NOT NULL gen=- def=-
+public.chat_send_attempt.conversation_id text NOT NULL gen=- def=-
+public.chat_send_attempt.created_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_send_attempt.failure_code text NOT NULL gen=- def=''::text
+public.chat_send_attempt.grant_id uuid NOT NULL gen=- def=-
+public.chat_send_attempt.grant_version bigint NOT NULL gen=- def=-
+public.chat_send_attempt.id uuid NOT NULL gen=- def=uuidv7()
+public.chat_send_attempt.provider_message_id text NOT NULL gen=- def=''::text
+public.chat_send_attempt.record_id uuid NOT NULL gen=- def=-
+public.chat_send_attempt.record_type text NOT NULL gen=- def=-
+public.chat_send_attempt.request_id uuid NOT NULL gen=- def=-
+public.chat_send_attempt.retry_at timestamp with time zone gen=- def=-
+public.chat_send_attempt.root_id text NOT NULL gen=- def=''::text
+public.chat_send_attempt.state text NOT NULL gen=- def=-
+public.chat_send_attempt.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_send_attempt FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"state": 120, "root_id": 20000, "record_type": 120, "content_hash": 120, "failure_code": 120, "audience_hash": 120, "conversation_id": 20000, "provider_message_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"audience_hash":120,"content_hash":120,"conversation_id":20000,"failure_code":120,"provider_message_id":20000,"record_type":120,"root_id":20000,"state":120}')
+public.chat_send_attempt.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_send_attempt FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"state": 120, "root_id": 20000, "record_type": 120, "content_hash": 120, "failure_code": 120, "audience_hash": 120, "conversation_id": 20000, "provider_message_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"audience_hash":120,"content_hash":120,"conversation_id":20000,"failure_code":120,"provider_message_id":20000,"record_type":120,"root_id":20000,"state":120}')
+public.chat_send_attempt.updated_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_send_attempt.user_id uuid NOT NULL gen=- def=-
+public.chat_send_attempt_pkey CREATE UNIQUE INDEX chat_send_attempt_pkey ON public.chat_send_attempt USING btree (id)
+public.chat_send_attempt_user_id_request_id_key CREATE UNIQUE INDEX chat_send_attempt_user_id_request_id_key ON public.chat_send_attempt USING btree (user_id, request_id)
+public.chat_team_installation acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.chat_team_installation.app_id text NOT NULL gen=- def=-
+public.chat_team_installation.bot_member_id text NOT NULL gen=- def=-
+public.chat_team_installation.chat_team_installation_app_id_tenant_id_team_id_key UNIQUE (app_id, tenant_id, team_id)
+public.chat_team_installation.chat_team_installation_pkey PRIMARY KEY (id)
+public.chat_team_installation.id uuid NOT NULL gen=- def=uuidv7()
+public.chat_team_installation.installed boolean NOT NULL gen=- def=-
+public.chat_team_installation.native_team_id text NOT NULL gen=- def=-
+public.chat_team_installation.observed_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_team_installation.service_url text NOT NULL gen=- def=-
+public.chat_team_installation.signed_at timestamp with time zone NOT NULL gen=- def=-
+public.chat_team_installation.team_id text NOT NULL gen=- def=-
+public.chat_team_installation.team_name text NOT NULL gen=- def=-
+public.chat_team_installation.tenant_id text NOT NULL gen=- def=-
+public.chat_team_installation.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_team_installation FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"app_id": 20000, "team_id": 20000, "team_name": 20000, "tenant_id": 20000, "service_url": 20000, "bot_member_id": 20000, "native_team_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"app_id":20000,"bot_member_id":20000,"native_team_id":20000,"service_url":20000,"team_id":20000,"team_name":20000,"tenant_id":20000}')
+public.chat_team_installation.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_team_installation FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"app_id": 20000, "team_id": 20000, "team_name": 20000, "tenant_id": 20000, "service_url": 20000, "bot_member_id": 20000, "native_team_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"app_id":20000,"bot_member_id":20000,"native_team_id":20000,"service_url":20000,"team_id":20000,"team_name":20000,"tenant_id":20000}')
+public.chat_team_installation_app_id_tenant_id_team_id_key CREATE UNIQUE INDEX chat_team_installation_app_id_tenant_id_team_id_key ON public.chat_team_installation USING btree (app_id, tenant_id, team_id)
+public.chat_team_installation_pkey CREATE UNIQUE INDEX chat_team_installation_pkey ON public.chat_team_installation USING btree (id)
+public.chat_team_thread acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
+public.chat_team_thread.channel_id text NOT NULL gen=- def=-
+public.chat_team_thread.chat_team_thread_installation_id_channel_id_root_id_key UNIQUE (installation_id, channel_id, root_id)
+public.chat_team_thread.chat_team_thread_installation_id_fkey FOREIGN KEY (installation_id) REFERENCES chat_team_installation(id) ON DELETE CASCADE
+public.chat_team_thread.chat_team_thread_pkey PRIMARY KEY (id)
+public.chat_team_thread.conversation_id text NOT NULL gen=- def=-
+public.chat_team_thread.id uuid NOT NULL gen=- def=uuidv7()
+public.chat_team_thread.installation_id uuid NOT NULL gen=- def=-
+public.chat_team_thread.observed_at timestamp with time zone NOT NULL gen=- def=now()
+public.chat_team_thread.root_id text NOT NULL gen=- def=-
+public.chat_team_thread.signed_at timestamp with time zone NOT NULL gen=- def=-
+public.chat_team_thread.text_bound_insert CREATE TRIGGER text_bound_insert AFTER INSERT ON public.chat_team_thread FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), NULL::jsonb, '{"root_id": 20000, "channel_id": 20000, "conversation_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"channel_id":20000,"conversation_id":20000,"root_id":20000}')
+public.chat_team_thread.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE ON public.chat_team_thread FOR EACH ROW WHEN (text_row_exceeds_bounds(to_jsonb(new.*), to_jsonb(old.*), '{"root_id": 20000, "channel_id": 20000, "conversation_id": 20000}'::jsonb)) EXECUTE FUNCTION refuse_oversized_text('{"channel_id":20000,"conversation_id":20000,"root_id":20000}')
+public.chat_team_thread_installation_id_channel_id_root_id_key CREATE UNIQUE INDEX chat_team_thread_installation_id_channel_id_root_id_key ON public.chat_team_thread USING btree (installation_id, channel_id, root_id)
+public.chat_team_thread_pkey CREATE UNIQUE INDEX chat_team_thread_pkey ON public.chat_team_thread USING btree (id)
 public.clear_reply_settled(threads text[], since timestamp with time zone) secdef=false cfg=- acl=- 
 BEGIN
   PERFORM clear_reply_settled_by_thread(threads, array_fill(since, ARRAY[cardinality(threads)]));
@@ -6932,6 +7137,8 @@ public.idx_chat_link_deal CREATE INDEX idx_chat_link_deal ON public.chat_link US
 public.idx_chat_link_project CREATE INDEX idx_chat_link_project ON public.chat_link USING btree (project_id)
 public.idx_chat_post_item_activity CREATE INDEX idx_chat_post_item_activity ON public.chat_post_item USING btree (activity_id) WHERE (activity_id IS NOT NULL)
 public.idx_chat_post_item_pending CREATE INDEX idx_chat_post_item_pending ON public.chat_post_item USING btree (link_id, created_at) WHERE (posted_at IS NULL)
+public.idx_chat_send_attempt_grant CREATE INDEX idx_chat_send_attempt_grant ON public.chat_send_attempt USING btree (grant_id)
+public.idx_chat_send_attempt_owner CREATE INDEX idx_chat_send_attempt_owner ON public.chat_send_attempt USING btree (user_id, created_at DESC)
 public.idx_close_date_run_member_deal CREATE INDEX idx_close_date_run_member_deal ON public.close_date_run_member USING btree (deal_id)
 public.idx_commission_deal CREATE INDEX idx_commission_deal ON public.commission_entry USING btree (deal_id)
 public.idx_commission_partner CREATE INDEX idx_commission_partner ON public.commission_entry USING btree (partner_company_id, status)
@@ -12052,7 +12259,8 @@ public.uq_capture_freemail_domain CREATE UNIQUE INDEX uq_capture_freemail_domain
 public.uq_channel_connection_account CREATE UNIQUE INDEX uq_channel_connection_account ON public.channel_connection USING btree (provider, account_id) WHERE ((archived_at IS NULL) AND (account_id IS NOT NULL))
 public.uq_channel_connection_provider CREATE UNIQUE INDEX uq_channel_connection_provider ON public.channel_connection USING btree (provider) WHERE ((archived_at IS NULL) AND (account_id IS NULL))
 public.uq_channel_connection_seat CREATE UNIQUE INDEX uq_channel_connection_seat ON public.channel_connection USING btree (seat_id) WHERE ((seat_id IS NOT NULL) AND (archived_at IS NULL))
-public.uq_chat_link_channel CREATE UNIQUE INDEX uq_chat_link_channel ON public.chat_link USING btree (provider, channel_slug) WHERE (archived_at IS NULL)
+public.uq_chat_link_channel CREATE UNIQUE INDEX uq_chat_link_channel ON public.chat_link USING btree (connection_id, channel_slug, root_id) NULLS NOT DISTINCT WHERE (archived_at IS NULL)
+public.uq_chat_link_company CREATE UNIQUE INDEX uq_chat_link_company ON public.chat_link USING btree (company_id) WHERE ((archived_at IS NULL) AND (company_id IS NOT NULL))
 public.uq_chat_link_deal CREATE UNIQUE INDEX uq_chat_link_deal ON public.chat_link USING btree (deal_id) WHERE ((archived_at IS NULL) AND (deal_id IS NOT NULL))
 public.uq_chat_link_project CREATE UNIQUE INDEX uq_chat_link_project ON public.chat_link USING btree (project_id) WHERE ((archived_at IS NULL) AND (project_id IS NOT NULL))
 public.uq_chat_post_item_activity CREATE UNIQUE INDEX uq_chat_post_item_activity ON public.chat_post_item USING btree (link_id, activity_id) WHERE (activity_id IS NOT NULL)

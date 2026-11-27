@@ -14,6 +14,8 @@ import type { MessageKey } from "./en";
 //     "pháp nhân" (onboarding's legal-block copy). The two senses share no
 //     string in this catalog and must stay that way.
 export const vi: Readonly<Record<MessageKey, string>> = {
+  "history.field.chat_source_changed": "Nguồn cuộc trò chuyện đã thay đổi",
+  "history.field.chat_source_deleted": "Nguồn cuộc trò chuyện đã bị xóa",
   "history.field.kind": "Loại",
   "history.field.email_security": "Bảo mật email",
   "history.field.employee_range": "Khoảng số nhân viên",
@@ -148,6 +150,109 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "payments.ageHelp":
     "Trang chủ gom hóa đơn quá số ngày này ở cuối. Mặc định là 365 ngày. Tổng của công ty giữ nguyên.",
   "payments.ageRefusal": "Nhập số nguyên từ 1 đến 3.650 ngày.",
+  "messenger.deliveryPending":
+    "Tin nhắn này vẫn đang được gửi. Kiểm tra biên nhận trước khi thử gửi lại.",
+  "messenger.accessWorkspace":
+    "Đây là kênh công khai. Đồng nghiệp chưa tham gia cũng có thể đọc.",
+  "messenger.accessTeam": "Kênh của nhóm: cả nhóm đều có thể đọc.",
+  "messenger.accessPrivate":
+    "Kênh riêng tư: chỉ thành viên của kênh mới có thể đọc.",
+  "messenger.accessParticipants":
+    "Cuộc trò chuyện riêng tư: chỉ các thành viên tham gia mới có thể đọc.",
+  "messenger.accessUnknown": "Chưa xác minh được quyền đọc kênh.",
+  "messenger.joinedOnly":
+    "Danh sách này hiển thị thành viên đã tham gia. Đồng nghiệp khác cũng có thể đọc kênh công khai.",
+  "messenger.appMember": "Ứng dụng hoặc bot",
+  "messenger.teamComparison": "So sánh với nhóm được phân công cho hồ sơ",
+  "messenger.teamOutside": "Thành viên nhận tin ngoài nhóm được phân công",
+  "messenger.teamMissing":
+    "Thành viên được phân công chưa có trong cuộc trò chuyện này",
+  "messenger.teamNotJoined": "Thành viên được phân công chưa tham gia kênh này",
+  "messenger.teamUnverified":
+    "Thành viên được phân công chưa xác minh danh tính nhắn tin",
+  "messenger.teamMatches":
+    "Tất cả thành viên được phân công đã xác minh đều có trong cuộc trò chuyện này.",
+  "messenger.messageRequired": "Viết tin nhắn trước khi gửi.",
+  "messenger.recipientsRequired": "Chọn ít nhất một người nhận.",
+  "channelDelivery.review": "Kiểm tra trạng thái gửi",
+  "channelDelivery.cardPaused": "Đã tạm dừng cập nhật thẻ tổng quan",
+  "channelDelivery.cardPausedHelp":
+    "Chưa có xác nhận gửi thẻ tổng quan. Các cập nhật CRM đủ điều kiện khác vẫn có thể tiếp tục. Thẻ trước đó có thể vẫn còn trong kênh.",
+  "channelDelivery.restart": "Tạo thẻ tổng quan mới",
+  "channelDelivery.restartTitle": "Tạo một thẻ tổng quan mới",
+  "channelDelivery.title": "Kiểm tra lần gửi chưa được xác nhận",
+  "channelDelivery.skip": "Bỏ qua các lần thử lại này",
+  "channelDelivery.restartWarning":
+    "Thẻ tổng quan trước đó có thể vẫn còn. Thao tác này tạo một thẻ mới và tiếp tục tự động cập nhật thẻ đó. Bản chưa được xác nhận sẽ không bị sửa hoặc xóa.",
+  "channelDelivery.help":
+    "Trước tiên hãy kiểm tra kênh trong Messenger hoặc ứng dụng nhắn tin. Bỏ qua sẽ dừng thử lại các cập nhật được liệt kê mà không đánh dấu là đã gửi. Bản sao hoặc phản hồi muộn từ nhà cung cấp vẫn có thể đến. Thao tác này không hủy yêu cầu hoặc xóa bản sao tại nhà cung cấp. Thẻ tổng quan chưa được xác nhận sẽ tạm dừng tự động cập nhật.",
+  "channelDelivery.linkChanged":
+    "Kênh được liên kết đã thay đổi. Đóng phần kiểm tra này rồi mở lại.",
+  "channelDelivery.reviewFirst":
+    "Kiểm tra các lần gửi chưa được xác nhận trước khi tạo thẻ tổng quan khác.",
+  "channelDelivery.none":
+    "Chưa có lần gửi nào cần kiểm tra. Một lần gửi có thể vẫn đang xử lý; hãy kiểm tra lại sau khi hoàn tất.",
+  "channelDelivery.list": "Các lần gửi chưa được xác nhận",
+  "channelDelivery.card": "Thẻ tổng quan bản ghi",
+  "channelDelivery.updates_one": "Cập nhật CRM: {count}",
+  "channelDelivery.updates_other": "Cập nhật CRM: {count}",
+  "timeline.chatSummary.sourceHelp":
+    "Kết nối tài khoản nhắn tin của bạn qua Messenger trên bản ghi này, kiểm tra xem bạn có mở được kênh ở đó không, rồi kiểm tra lại quyền truy cập nguồn.",
+  "channelInstall.slackReader":
+    "Bản cài đặt kênh dùng chung cũng yêu cầu tài khoản cài đặt cấp quyền chỉ đọc lịch sử kênh. Tài khoản đó phải là thành viên của các kênh riêng đã liên kết. Quyền này không bao gồm tin nhắn trực tiếp hoặc gửi tin cá nhân.",
+  "channelProfile.distribution": "Cách phân phối ứng dụng Slack",
+  "channelProfile.declaration":
+    "Chọn cách phân phối ứng dụng này. Margince lưu thông tin bạn khai báo và giới hạn lịch sử được công bố khi cài đặt hoặc kết nối lại.",
+  "channelProfile.internal": "Ứng dụng Slack nội bộ",
+  "channelProfile.marketplace": "Ứng dụng trên Slack Marketplace",
+  "channelProfile.nonMarketplace":
+    "Ứng dụng thương mại ngoài Slack Marketplace",
+  "channelProfile.details": "Quyền truy cập và giới hạn lịch sử Slack",
+  "channelProfile.missing":
+    "Chưa xác nhận giới hạn lịch sử cho bản cài đặt này.",
+  "channelProfile.reconnect":
+    "Liên hệ quản trị viên để kết nối lại Slack trong Kết nối kênh dùng chung, xác nhận cách phân phối ứng dụng và cấp quyền chỉ đọc lịch sử kênh. Tài khoản cài đặt phải là thành viên của các kênh riêng đã liên kết. Bản tóm tắt đầy đủ vẫn tạm dừng cho đến khi xác nhận quyền truy cập và giới hạn.",
+  "channelProfile.unsupported":
+    "Cách phân phối này chỉ cho phép một yêu cầu lịch sử và một yêu cầu chuỗi mỗi phút, với 15 tin nhắn mỗi trang. Không có bản tóm tắt kênh đầy đủ. Messenger cá nhân và cập nhật CRM gửi đến Slack vẫn hoạt động riêng.",
+  "channelProfile.limits":
+    "Lịch sử: {history} yêu cầu/phút, {historyPage} tin nhắn/trang. Chuỗi: {replies} yêu cầu/phút, {repliesPage} tin nhắn/trang.",
+  "channelProfile.provenance":
+    "Quản trị viên khai báo vào {at}; dựa trên giới hạn Slack công bố. Slack vẫn có thể yêu cầu chờ lâu hơn.",
+  "messenger.authorUnavailable": "Chưa có tên",
+  "channelInstall.title": "Kết nối kênh chung",
+  "channelInstall.separate":
+    "Kết nối bot dùng chung tại đây để liên kết kênh với bản ghi CRM. Mỗi người kết nối tài khoản riêng để dùng Messenger.",
+  "channelInstall.slackReady":
+    "Ứng dụng đã sẵn sàng để cấp quyền trong nhóm Slack.",
+  "channelInstall.slackMissing":
+    "Trước tiên hãy thiết lập ứng dụng Slack và khóa ký bên dưới.",
+  "channelInstall.slackConnect": "Cài đặt hoặc kết nối lại bot Slack",
+  "channelInstall.failed": "Không thể cập nhật kết nối kênh",
+  "channelInstall.callback": "Địa chỉ chuyển hướng OAuth",
+  "channelInstall.events": "Địa chỉ sự kiện bot",
+  "channelInstall.adminRequired":
+    "Quản trị viên có quyền kết nối kênh phải phê duyệt kết nối này.",
+  "channelInstall.teamsSteps":
+    "Đăng ký bot Microsoft bằng địa chỉ sự kiện bên dưới. Tải gói ứng dụng lên Teams, thêm vào nhóm cần dùng và phê duyệt quyền của nhóm, sau đó làm mới và phê duyệt nhóm tại đây.",
+  "channelInstall.teamsApp":
+    "Ứng dụng Microsoft {app}, đối tượng thuê {tenant}",
+  "channelInstall.refresh": "Làm mới nhóm đã cài đặt",
+  "channelInstall.noTeams":
+    "Chưa có cài đặt nhóm đã xác minh. Kiểm tra đăng ký bot, thêm ứng dụng vào nhóm rồi làm mới.",
+  "channelInstall.team": "Nhóm đã cài đặt và xác minh",
+  "channelInstall.approval":
+    "Chỉ nhóm này sẽ được kết nối. Liên kết hiện có giữ nguyên đích; muốn kết nối nhóm khác, trước tiên hãy ngắt kết nối hiện tại.",
+  "channelInstall.approve": "Phê duyệt kết nối nhóm",
+  "channelInstall.connected":
+    "Đã kết nối nhóm. Bạn có thể liên kết các kênh của nhóm từ công ty, giao dịch hoặc dự án.",
+  "channelInstall.teamsMissing":
+    "Trước tiên hãy thiết lập ứng dụng Microsoft và đối tượng thuê bên dưới.",
+  "channelInstall.package": "Tạo gói ứng dụng Teams",
+  "channelInstall.legal":
+    "Dùng trang HTTPS về quyền riêng tư và điều khoản do tổ chức cung cấp cho ứng dụng này. Các địa chỉ được đưa vào gói tải xuống.",
+  "channelInstall.privacy": "URL chính sách quyền riêng tư",
+  "channelInstall.terms": "URL điều khoản sử dụng",
+  "channelInstall.download": "Tải gói ứng dụng Teams",
   "systemJob.proposal_stage": "Hỏi có chuyển deal sau khi gửi đề xuất không",
   "systemJob.google_directory": "Đọc nhóm Google của thành viên",
   "systemJob.legal_review_desk": "Rà soát pháp lý",
@@ -5241,6 +5346,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "timeline.kind.extension": "Tiện ích mở rộng",
   "timeline.kind.signal": "Tín hiệu",
   "timeline.withheld": "Nội dung chỉ dành cho người tham gia",
+  "timeline.chatSummary.sourceChanged": "Nguồn đã thay đổi · kiểm tra tóm tắt",
+  "timeline.chatSummary.updated": "Cập nhật {at}",
   "timeline.chatSummary.badge": "Tóm tắt AI",
   "timeline.chatSummary.from": "Từ {provider}",
   "timeline.chatSummary.meta_one": "{count} tin nhắn, đến {ended}",
@@ -13386,7 +13493,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Không bắt buộc. Sao chép khóa sự kiện (whsec_…) từ trang ứng dụng Margince trong chat của bạn. Có khóa này, Margince đọc một kênh ngay khi kênh có tin nhắn mới và kiểm tra phần còn lại mỗi giờ; nếu không, Margince kiểm tra mọi kênh mỗi phút.",
   "connectors.bot.eventsSecretKeepHint": "Để trống để giữ khóa sự kiện đã lưu.",
 
+  "channelLink.identityReviewBody":
+    "Xác nhận lại kênh để liên kết danh tính cố định. Gỡ liên kết rồi chọn kênh từ danh sách. Lịch sử đã lưu vẫn nằm trong bản ghi.",
+  "channelLink.privateTeamsReadOnly":
+    "Kênh riêng tư trong Teams hỗ trợ nhận bản tóm tắt. Hãy dùng kênh tiêu chuẩn để bot gửi cập nhật CRM.",
+  "channelLink.chooseConversation": "Cuộc trò chuyện cần liên kết",
+  "channelLink.specificConversation":
+    "Liên kết một cuộc trò chuyện trong kênh dùng chung",
   "channelLink.title": "Kênh trao đổi",
+
   "channelLink.none": "Chưa có kênh",
   "channelLink.noneSub": "Kênh riêng để cả nhóm nắm tình hình hồ sơ này.",
   "channelLink.create": "Tạo kênh",
@@ -13398,6 +13513,13 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chọn một kênh riêng tư có bot. Để liên kết kênh khác, hãy thêm bot vào kênh đó trong chat trước.",
   "channelLink.summarize":
     "Tóm tắt cuộc trao đổi đến nay (tối đa 5 bản tóm tắt)",
+  "channelLink.manage": "Quản lý",
+  "channelLink.readDirection": "Lưu cập nhật kênh vào Lịch sử",
+  "channelLink.postDirection": "Gửi cập nhật CRM vào kênh",
+  "channelLink.readOn": "Lưu tóm tắt vào Lịch sử",
+  "channelLink.readOff": "Tắt đồng bộ Lịch sử",
+  "channelLink.postOn": "Bật bài đăng CRM",
+  "channelLink.postOff": "Tắt bài đăng CRM",
   "channelLink.verbosity": "Margince đăng những gì",
   "channelLink.verbosityHint": "Ở mọi mức, thẻ trong kênh luôn được cập nhật.",
   "channelLink.verbosityFailed": "Chưa lưu được cài đặt",
@@ -15112,6 +15234,15 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "cf.audit.addedToReports": "Đã thêm vào báo cáo",
   "cf.audit.removedFromReports": "Đã gỡ khỏi báo cáo",
   "cf.audit.kinds": "Đã đổi loại hoạt động",
+  "audit.kind.chat_bot_delivery": "Gửi cập nhật kênh",
+  "audit.kind.chat_channel_watch": "Thông báo kênh",
+  "audit.kind.chat_member_grant": "Tài khoản nhắn tin",
+  "audit.kind.chat_member_room": "Liên kết trò chuyện riêng",
+  "audit.kind.chat_post_item": "Cập nhật kênh",
+  "audit.kind.chat_root": "Cuộc trò chuyện kênh",
+  "audit.kind.chat_send_attempt": "Lần gửi tin nhắn",
+  "audit.kind.chat_team_installation": "Ứng dụng Teams",
+  "audit.kind.chat_team_thread": "Tham chiếu trò chuyện Teams",
   "audit.kind.customField": "Trường tùy chỉnh",
   "audit.kind.activity_retention_evidence": "Bằng chứng lưu giữ",
   "audit.kind.activity_review_template": "Mẫu đánh giá hoạt động",
@@ -15470,7 +15601,8 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "settings.part.integrations.contact": "Dữ liệu liên hệ",
   "settings.part.integrations.accounting": "Kế toán",
   "settings.part.integrations.webhooks": "Webhook",
-  "settings.part.integrations.telegram": "Chatbot",
+  "settings.part.integrations.telegram": "Nhà cung cấp nhắn tin",
+
   "settings.part.integrations.sharedMailboxes": "Hộp thư dùng chung",
   "sharedMailboxes.title": "Hộp thư dùng chung",
   "sharedMailboxes.intro":
@@ -24990,4 +25122,257 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "particulars.translationIntro":
     "Email và trang bằng {language} hiển thị nội dung này ở những trường bạn điền. Quảng cáo phải viết bằng {language} chỉ được gửi khi cách từ chối và liên hệ bên quảng cáo đã được điền ở đây.",
   "particulars.objectionExample": "Ví dụ: {example}",
+  "messenger.signingSecret": "Mã bí mật ký",
+  "messenger.signingSecretHint":
+    "Sao chép mã bí mật ký từ trang Basic Information của ứng dụng Slack để đồng bộ kênh. Nhập lại mã khi thay thông tin ứng dụng. Tài khoản Messenger cá nhân được kết nối riêng.",
+  "messenger.writeOutcome": "Viết kết quả",
+  "messenger.shareOutcome": "Chia sẻ kết quả",
+  "messenger.outcomeDestination": "Chọn nơi lưu",
+  "messenger.outcomePrivacy":
+    "Viết kết quả bạn muốn chia sẻ. Cuộc trò chuyện riêng tư và các liên kết của cuộc trò chuyện sẽ không được lưu vào lịch sử CRM.",
+  "messenger.outcomeAudience":
+    "Thao tác này lưu ghi chú CRM. Thành viên có quyền đọc bản ghi đích có thể đọc ghi chú. Nếu bản ghi gửi cập nhật CRM đến kênh đã liên kết, ghi chú cũng có thể được tóm tắt tại đó. Kiểm tra đích và nội dung trước khi lưu.",
+  "messenger.dispactConsent":
+    "Kết nối bằng mã truy cập cá nhân từ tài khoản Dispact của bạn.",
+  "messenger.dispactTokenTitle": "Kết nối tài khoản Dispact",
+  "messenger.dispactTokenHelp":
+    "Trong Dispact, mở Tùy chọn → Mã API. Tạo mã có quyền Đọc và Ghi cho các cuộc trò chuyện của bạn, rồi dán vào bên dưới. Margince xác minh danh tính và lưu mã an toàn. Bạn có thể thu hồi mã trong Dispact bất cứ lúc nào.",
+  "messenger.dispactToken": "Mã API cá nhân",
+  "messenger.dispactOpen": "Mở Dispact",
+  "messenger.loadLater": "Tải câu trả lời tiếp theo",
+  "messenger.verb": "Nhắn tin",
+  "messenger.provider": "Dịch vụ nhắn tin",
+
+  "messenger.channels": "Kênh",
+  "messenger.people": "Mọi người",
+
+  "messenger.change": "Đổi cuộc trò chuyện",
+  "messenger.needsConsent": "Kết nối tài khoản để gửi dưới tên bạn.",
+  "messenger.unavailable":
+    "Dịch vụ chưa khả dụng. Liên hệ quản trị viên công ty để thiết lập.",
+  "messenger.write": "Nhắn cho {name}",
+  "messenger.sendingAs": "Gửi dưới tên {name}",
+  "messenger.sendProblem": "Chưa xác nhận được tin nhắn",
+  "messenger.failed": "Tin nhắn chưa được gửi. Bản nháp vẫn còn đây.",
+  "messenger.checkDelivery":
+    "Chưa xác nhận việc gửi. Kiểm tra biên nhận trước khi gửi lại.",
+  "messenger.checkReceipt": "Kiểm tra biên nhận",
+  "messenger.accepted": "Dịch vụ đã nhận",
+  "messenger.send": "Gửi",
+  "messenger.openedFrom": "Mở từ {name}",
+  "messenger.private":
+    "Tin nhắn riêng không vào lịch sử CRM trừ khi bạn chia sẻ kết quả.",
+  "messenger.audience": "Người nhận: {names}",
+  "messenger.audienceUnknown":
+    "Không xác minh được toàn bộ người nhận. Chưa thể gửi.",
+  "messenger.loadEarlier": "Tải tin nhắn trước",
+  "messenger.newMessages": "Đến tin nhắn mới nhất",
+  "messenger.empty": "Cuộc trò chuyện chưa có tin nhắn.",
+  "messenger.reply": "Trả lời trong luồng",
+  "messenger.back": "Về cuộc trò chuyện",
+  "messenger.deleted": "Tin nhắn đã xóa",
+  "messenger.edited": "Đã sửa",
+  "messenger.loading": "Đang tải cuộc trò chuyện…",
+  "messenger.loadProblem": "Cuộc trò chuyện không khả dụng",
+  "messenger.searchPeople": "Tìm người",
+  "messenger.openPeople": "Mở cuộc trò chuyện",
+  "messenger.more": "Tải thêm",
+
+  "messenger.connect": "Kết nối tài khoản của tôi",
+  "messenger.settings": "Cài đặt dịch vụ nhắn tin",
+  "messenger.connectProblem": "Chưa thể bắt đầu kết nối tài khoản",
+  "oauthApp.slack.title": "Ứng dụng Slack",
+  "oauthApp.slack.sub": "Ứng dụng cho tính năng nhắn tin Slack qua API.",
+  "oauthApp.slack.absent": "Thiết lập ứng dụng Slack để kết nối tài khoản.",
+  "oauthApp.slack.redirectSub":
+    "Đăng ký chính xác địa chỉ gọi lại này trong Slack.",
+  "oauthApp.slack.clientIdPlaceholder": "ID ứng dụng khách Slack",
+  "oauthApp.slack.removeConfirmTitle": "Xóa ứng dụng Slack?",
+  "oauthApp.slack.removeConfirmBody":
+    "Tài khoản người tham gia cần ứng dụng này để kết nối và gia hạn quyền.",
+  "oauthApp.slack.save": "Lưu ứng dụng Slack",
+  "oauthApp.slack.removeSecret": "Bí mật ứng dụng đã lưu sẽ bị xóa.",
+  "oauthApp.slack.removeUsedBy":
+    "Các tài khoản kết nối qua ứng dụng này sẽ không mở được trong Nhắn tin.",
+  "oauthApp.slack.removeOthers":
+    "Thiết lập lại ứng dụng trước khi kết nối tài khoản.",
+  "oauthApp.slack.for": "Dành cho nhóm Slack của bạn.",
+  "oauthApp.slack.setUp": "Thiết lập ứng dụng Slack",
+  "oauthApp.unlock.slack": "Tin nhắn Slack",
+  "oauthApp.drawer.slack.title": "Thiết lập ứng dụng Slack",
+  "oauthApp.drawer.slack.intro":
+    "Đăng ký ứng dụng trong Slack, rồi lưu ID ứng dụng khách và bí mật tại đây.",
+  "oauthApp.drawer.slack.value":
+    "Mọi người tại {company} kết nối tài khoản Slack của họ qua ứng dụng này.",
+  "oauthApp.drawer.slack.redirects":
+    "Trong “OAuth & Permissions”, thêm mọi địa chỉ gọi lại bên dưới vào “Redirect URLs”.",
+  "oauthApp.drawer.slack.step1Title": "Tạo ứng dụng Slack",
+  "oauthApp.drawer.slack.step1Body":
+    "Chọn nhóm trong bảng quản lý ứng dụng Slack. Lấy ID ứng dụng khách và bí mật từ Basic Information.",
+  "oauthApp.drawer.slack.step1Link": "Mở bảng quản lý ứng dụng Slack",
+  "oauthApp.drawer.slack.scopesTitle": "Cho phép người tham gia nhắn tin",
+  "oauthApp.drawer.slack.scopesBody":
+    "Trong “OAuth & Permissions”, cấu hình các quyền người tham gia được hiển thị ở Dịch vụ nhắn tin. Mỗi người cấp quyền qua Kết nối tài khoản của tôi.",
+  "oauthApp.drawer.slack.pasteBody":
+    "Dán ID ứng dụng khách và bí mật từ Basic Information. Bí mật được mã hóa sau khi lưu.",
+  "oauthApp.redirect.messenger_connect": "Tài khoản nhắn tin",
+  "messenger.disconnect": "Ngắt kết nối tài khoản của tôi",
+  "messenger.disconnectTitle": "Ngắt kết nối tài khoản nhắn tin này?",
+  "messenger.disconnectBody":
+    "Nhắn tin sẽ dừng đọc và gửi qua tài khoản của bạn. Các cuộc trò chuyện hiện có vẫn thuộc về người tham gia.",
+  "messenger.myAccounts": "Tài khoản nhắn tin của tôi",
+  "messenger.apps": "Ứng dụng nhắn tin",
+  "messenger.setupDetails": "Chi tiết thiết lập tài khoản",
+  "messenger.appReady": "Ứng dụng đã sẵn sàng để người tham gia cấp quyền.",
+  "messenger.appMissing":
+    "Quản trị viên cần hoàn tất thiết lập ứng dụng trước khi kết nối tài khoản.",
+  "messenger.participantScopes": "Quyền cần thiết của người tham gia",
+  "messenger.teamsTenant":
+    "Ghim ứng dụng Microsoft vào ID thư mục và cấp các quyền ủy quyền được liệt kê trong Entra.",
+  "messenger.editDraft": "Sửa bản nháp",
+  "messenger.reviewDelivery": "Kiểm tra việc gửi trước khi sửa",
+  "messenger.checkedConversation": "Đã kiểm tra cuộc trò chuyện",
+  "messenger.newAttemptWarning":
+    "Kiểm tra xem tin nhắn trước đã xuất hiện trong cuộc trò chuyện chưa. Gửi lại có thể tạo bản trùng. Nội dung vẫn ở đây để bạn sửa.",
+  "messenger.refresh": "Làm mới tin nhắn",
+  "messenger.team": "Nhóm của hồ sơ",
+  "messenger.noTeam":
+    "Hồ sơ chưa có chủ sở hữu hoặc nhóm được phân công. Chọn người hoặc kênh.",
+  "messenger.teamUnresolved":
+    "Cần kiểm tra toàn bộ nhóm. Chọn rõ từng người hoặc giải quyết việc phân công trước khi nhắn cho tất cả.",
+  "messenger.groupLimit":
+    "Dịch vụ này có thể mở nhóm tối đa {limit} người nhận. Chọn kênh hoặc ít người hơn.",
+  "messenger.messageTeam": "Nhắn cho nhóm của hồ sơ",
+  "messenger.matched": "Đã khớp tài khoản",
+  "messenger.you": "Bạn",
+  "messenger.inactive": "Phân công không hoạt động",
+  "messenger.unresolved": "Chưa khớp tài khoản",
+  "messenger.failureReconnect":
+    "Kết nối lại tài khoản trước khi gửi tiếp. Bản nháp vẫn được giữ.",
+  "messenger.failureUnavailable":
+    "Cuộc trò chuyện không khả dụng. Chọn nơi nhận khác. Bản nháp vẫn được giữ.",
+  "messenger.failureReview":
+    "Kiểm tra người nhận và nội dung. Dịch vụ đã từ chối gửi.",
+  "messenger.failureUnsupported": "Dịch vụ không thể gửi đến nơi nhận đã chọn.",
+  "messenger.failureAuthorization":
+    "Quyền truy cập đã thay đổi trước khi gửi. Mở lại cuộc trò chuyện và kiểm tra người nhận.",
+  "messenger.failureRate":
+    "Dịch vụ yêu cầu Margince chờ. Bản nháp vẫn được giữ.",
+  "messenger.retryAfter": "Bạn có thể gửi lại sau {at}.",
+  "messenger.audienceCount_one": "{count} thành viên",
+  "messenger.audienceCount_other": "{count} thành viên",
+  "messenger.viewAudience": "Xem người nhận",
+  "messenger.audienceChanged":
+    "Người nhận đã thay đổi. Kiểm tra trước khi gửi.",
+  "messenger.reviewAudience": "Kiểm tra người nhận",
+  "messenger.useAudience": "Dùng danh sách người nhận này",
+  "messenger.externalAudience":
+    "Cuộc trò chuyện có người bên ngoài. Việc gửi từ Margince đang tạm dừng.",
+  "messenger.externalMember": "Tài khoản bên ngoài",
+  "messenger.inactiveMember": "Tài khoản không hoạt động",
+  "messenger.accountMenu": "Tài khoản nhắn tin",
+  "channelLink.messageDetail": "Mức chi tiết tin nhắn",
+  "channelLink.detailHelp":
+    "Cả hai lựa chọn giữ nguyên điều kiện, ngày tháng và câu hỏi còn mở. Đầy đủ bổ sung bối cảnh.",
+  "channelLink.detailBrief": "Ngắn gọn",
+  "channelLink.detailFull": "Đầy đủ",
+  "channelLink.coverageThrough":
+    "Đã kiểm tra các cuộc trò chuyện đến {at}. Các bản tóm tắt đang chờ được liệt kê bên dưới.",
+  "channelLink.notificationsDelayed": "Thông báo kênh cần được khôi phục",
+  "channelLink.notificationsPolling":
+    "Việc kiểm tra nguồn định kỳ vẫn tiếp tục. Tin nhắn mới có thể xuất hiện chậm hơn trong khi kết nối được khôi phục.",
+  "channelLink.coverageWaiting":
+    "Phạm vi nguồn chưa được xác nhận. Chỉ bao gồm các cuộc trò chuyện trước đây khi đã yêu cầu lịch sử.",
+  "channelLink.conversationQueue":
+    "Bản tóm tắt đang chờ: {pending}. Cuộc trò chuyện cần thử lại: {failed}.",
+  "channelLink.syncNeedsAttention": "Một số cập nhật kênh đang chờ",
+  "channelLink.outboundQueue_one": "Cập nhật CRM đang chờ gửi: {count}.",
+  "channelLink.outboundQueue_other": "Cập nhật CRM đang chờ gửi: {count}.",
+  "channelLink.deliveryUnconfirmed": "Chưa xác nhận gửi đến kênh",
+  "channelLink.deliveryUnconfirmedHelp":
+    "Nhà cung cấp chưa xác nhận việc gửi. Margince sẽ không tự động gửi lại bài này. Mở kênh để kiểm tra nội dung đã nhận.",
+  "channelLink.sourceIncomplete":
+    "Một cập nhật đang chờ vì chưa có toàn bộ tin nhắn nguồn. Các cập nhật đủ điều kiện khác vẫn có thể tiếp tục. Kiểm tra hoạt động gốc và trạng thái thu thập.",
+  "channelLink.sourceTooLong":
+    "Một cuộc trò chuyện vượt quá giới hạn đọc đầy đủ. Nội dung chưa được tóm tắt một phần. Các cuộc trò chuyện khác vẫn tiếp tục đồng bộ.",
+  "channelLink.summaryWaiting":
+    "Một bản tóm tắt đang chờ mô hình AI đã cấu hình. Nguồn vẫn chưa được đánh dấu là đã tóm tắt.",
+  "channelLink.providerWaiting":
+    "Nhà cung cấp yêu cầu chờ. Đồng bộ sẽ tiếp tục sau thời gian chờ.",
+  "channelLink.sourceAccessLost":
+    "Margince hiện không đọc được nguồn đã liên kết. Kiểm tra cài đặt ứng dụng và thành viên kênh.",
+  "channelLink.sourceChanged":
+    "Nguồn đã thay đổi trong khi xử lý. Margince sẽ đọc lại trước khi lưu bản tóm tắt.",
+  "channelLink.sourceUnavailable":
+    "Tạm thời không thể đọc đầy đủ nguồn. Các bản tóm tắt hiện có được giữ lại và cuộc trò chuyện sẽ được kiểm tra lại.",
+  "timeline.chatSummary.sourceCheck": "Kiểm tra quyền truy cập nguồn",
+  "timeline.chatSummary.sourceChecking": "Đang kiểm tra quyền truy cập nguồn…",
+  "timeline.chatSummary.sourceUnavailable":
+    "Không thể xác minh quyền truy cập nguồn.",
+  "channelEnded.title": "Đã kết thúc đồng bộ lúc {at}",
+  "channelEnded.retention":
+    "Lịch sử đủ điều kiện được giữ theo quy tắc truy cập và lưu giữ hiện có. Các thay đổi trong kênh sau thời điểm bao phủ cuối cùng không được phản ánh ở đây.",
+  "channelEnded.read": "Đã kiểm tra kênh đến {at}.",
+  "channelEnded.noRead": "Chưa ghi nhận lần bao phủ kênh thành công.",
+  "channelEnded.posted": "Cập nhật CRM được xác nhận gần nhất: {at}.",
+  "channelEnded.noPost": "Chưa ghi nhận cập nhật CRM được xác nhận.",
+  "channelEnded.copies":
+    "Tin cập nhật còn giữ tại nhà cung cấp: {retained}. Tin đã xác nhận sửa để bỏ nội dung bị thu hồi: {redacted}. Điều này không xác nhận việc xóa các bản sao khác.",
+  "channelEnded.action":
+    "Cần kiểm tra tại nhà cung cấp: {withdrawals} lần thu hồi chưa xác minh và {unknown} lượt gửi chưa xác nhận. Kiểm tra kênh trước khi thực hiện bước tiếp theo.",
+  "channelPreview.title": "Kiểm tra việc gửi vào kênh",
+  "channelPreview.enable": "Bật cập nhật CRM",
+  "channelPreview.help":
+    "Kiểm tra ai có thể đọc kênh và nội dung Margince sẽ đăng trước khi bật gửi tự động.",
+  "channelPreview.loading": "Đang kiểm tra người nhận và nội dung gửi…",
+  "channelPreview.thread": "Cập nhật sẽ được gửi vào luồng đã chọn.",
+  "channelPreview.channel": "Cập nhật sẽ được gửi vào kênh này.",
+  "channelPreview.audience": "Người nhận hiện tại",
+  "channelPreview.settings":
+    "Tần suất: {frequency}. Chi tiết tin nhắn: {detail}.",
+  "channelPreview.scope":
+    "Chỉ chia sẻ cập nhật hồ sơ đủ điều kiện và nội dung mà mọi thành viên kênh đều có quyền đọc. Trao đổi riêng tư và nội dung bị hạn chế được loại trừ.",
+  "channelPreview.overview": "Thẻ tổng quan hiện tại",
+  "channelPreview.updates": "Cập nhật đủ điều kiện đang chờ",
+  "channelPreview.noUpdates":
+    "Không có cập nhật đủ điều kiện đang chờ. Bật gửi sẽ bắt đầu từ các thay đổi mới, không gửi lại lịch sử trước đó.",
+  "channelPreview.excluded":
+    "Một số cập nhật đang chờ không có trong bản xem trước vì không thể chia sẻ với toàn bộ người nhận.",
+  "channelPreview.recheck":
+    "Margince kiểm tra lại người nhận và quyền truy cập trước mỗi lần gửi. Bản xem trước không gửi tin nhắn.",
+  "channelHandoff.title": "Kiểm tra bàn giao triển khai",
+  "channelHandoff.noOutgoing":
+    "Kênh này đã tắt hoặc không hỗ trợ tự động đăng cập nhật CRM. Bắt đầu triển khai sẽ không bật tính năng này.",
+  "channelHandoff.help":
+    "Kiểm tra kênh triển khai, người có quyền đọc, cam kết và thời hạn còn mở trước khi bàn giao.",
+  "channelHandoff.current": "Kênh hiện tại của cơ hội: {channel}.",
+  "channelHandoff.noCurrent": "Cơ hội chưa có kênh được liên kết.",
+  "channelHandoff.preserve":
+    "Dự án đã dùng kênh {channel}. Kênh này sẽ được giữ nguyên.",
+  "channelHandoff.continue":
+    "Dự án chưa có kênh. Tiếp tục sẽ liên kết kênh {channel} với dự án.",
+  "channelHandoff.noChannel":
+    "Cả hai hồ sơ đều chưa có kênh. Có thể tiếp tục bàn giao mà không đồng bộ kênh.",
+  "channelHandoff.choose":
+    "Để dùng kênh triển khai khác, hãy liên kết kênh đó với dự án tại đây trước khi tiếp tục. Cài đặt chia sẻ vẫn độc lập.",
+  "channelHandoff.loading": "Đang đọc thông tin bàn giao…",
+  "channelHandoff.owner": "Người phụ trách triển khai: {owner}.",
+  "channelHandoff.target": "Mốc mục tiêu của dự án: {at}.",
+  "channelHandoff.noTarget": "Chưa ghi nhận ngày mục tiêu của dự án.",
+  "channelHandoff.promises": "Cam kết và thời hạn dự án còn mở",
+  "channelHandoff.noPromises":
+    "Không có cam kết dự án còn mở nào được trả về trong phạm vi quyền đọc.",
+  "channelHandoff.partial": "Một phần thông tin bàn giao bị ẩn",
+  "channelHandoff.omitted":
+    "Quyền của bạn không bao gồm một số phần. Phần bị thiếu không có nghĩa là không còn công việc tồn đọng.",
+  "channelHandoff.gaps": "Nội dung cần làm rõ khi bàn giao",
+  "channelInstall.slackHistoryProfile":
+    "Đồng bộ kênh cần hạn mức lịch sử tiêu chuẩn của Slack, dành cho ứng dụng được Marketplace duyệt và ứng dụng nội bộ. Với giới hạn một yêu cầu mỗi phút, việc xác minh đầy đủ luồng sẽ tạm dừng; hãy dùng loại ứng dụng phù hợp.",
+  "channelLink.outboundNeedsAttention": "Cần kiểm tra chia sẻ CRM",
+  "channelLink.audienceNeedsReview":
+    "Chưa xác minh được toàn bộ người nhận trong kênh cho hồ sơ này. Chia sẻ tự động đã tạm dừng. Kiểm tra thành viên kênh và quyền truy cập hồ sơ, rồi vào Quản lý để kiểm tra việc gửi lại.",
+  "timeline.filters.chatProvider": "Nguồn bản tóm tắt kênh",
+  "timeline.filters.allProviders": "Tất cả nguồn",
+  "timeline.filters.providerOmitsLimited":
+    "Bộ lọc nguồn kênh loại trừ nội dung bạn không có quyền đọc.",
 };
