@@ -236,7 +236,7 @@ func TestAnAgentAddsACustomFieldOnlyWithTheUsersGrant(t *testing.T) {
 	got := colleague.mcp.Call(t, "change_settings", map[string]any{"action": "create_custom_field", "request_body": AnyMap{
 		"object": "company", "label": "Rep's own", "type": "text", "source": "manual",
 	}})
-	if !got.IsError || !strings.Contains(got.Text, "permission denied") {
+	if !got.IsError || !strings.Contains(got.Text, "permission_denied") {
 		t.Errorf("a rep's agent creating a field answered %+v, want permission denied", got)
 	}
 }

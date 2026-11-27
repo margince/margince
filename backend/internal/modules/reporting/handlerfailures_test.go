@@ -136,7 +136,13 @@ func TestReportingListHandlersRejectMalformedContinuationTokens(t *testing.T) {
 
 func TestReportingQueryRejectsMalformedScopeAndDatesBeforeEvaluation(t *testing.T) {
 	handlers := NewHandlers(nil, OpeningSelection{})
-	for _, query := range []string{"scope_id=invalid", "pipeline_id=invalid", "start_at=invalid", "start_at=2026-09-01T00:00:00Z&end_at=invalid"} {
+	scopeID := "00000000-0000-4000-8000-000000000001"
+	for query, field := range map[string]string{
+		"scope_id=invalid": "scope_id", "pipeline_id=invalid": "pipeline_id", "start_at=invalid": "start_at",
+		"scope_kind=unknown": "scope_kind", "scope_kind=owner": "scope_id", "scope_kind=team": "scope_id",
+		"scope_kind=workspace&scope_id=" + scopeID: "scope_id", "scope_id=" + scopeID: "scope_kind",
+		"start_at=2026-09-01T00:00:00Z&end_at=invalid": "end_at", "end_at=2026-01-01T00:00:00Z": "start_at",
+	} {
 		for _, evidence := range []bool{false, true} {
 			response := httptest.NewRecorder()
 			request := httptest.NewRequest(http.MethodGet, "/analytics/evaluate?"+query, nil)
@@ -145,8 +151,8 @@ func TestReportingQueryRejectsMalformedScopeAndDatesBeforeEvaluation(t *testing.
 			} else {
 				handlers.EvaluateReporting(response, request, crmcontracts.EvaluateReportingParams{})
 			}
-			if response.Code != http.StatusBadRequest {
-				t.Fatalf("malformed selection: %d %s", response.Code, response.Body.String())
+			if response.Code != http.StatusUnprocessableEntity || !strings.Contains(response.Body.String(), `"field":"`+field+`"`) {
+				t.Fatalf("%s: %d %s, want 422 naming %s", query, response.Code, response.Body.String(), field)
 			}
 		}
 	}

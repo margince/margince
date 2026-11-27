@@ -37,7 +37,7 @@ func TestTheFrontendPictureLimitsMatchTheServer(t *testing.T) {
 	if err != nil {
 		t.Fatalf("reading the frontend picture limits: %v", err)
 	}
-	source := tsComment.ReplaceAllString(string(raw), " ")
+	source := gatekit.TSWithoutComments(string(raw))
 
 	list := tsPictureTypes.FindStringSubmatch(source)
 	if list == nil {

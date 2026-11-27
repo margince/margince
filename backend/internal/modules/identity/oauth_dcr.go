@@ -94,12 +94,8 @@ func (req dcrRequest) validate() *dcrRefusal {
 		}
 	}
 	for _, raw := range req.RedirectURIs {
-		if !validRedirectURI(raw) {
-			return &dcrRefusal{
-				oauthErrInvalidRedirectURI,
-				fmt.Sprintf("%q: redirect uris must be https, or http on localhost", raw),
-				"redirect_uris",
-			}
+		if fault := redirectURIFault(raw); fault != "" {
+			return &dcrRefusal{oauthErrInvalidRedirectURI, fmt.Sprintf("%q: %s", raw, fault), "redirect_uris"}
 		}
 	}
 	// An empty list names nothing, so it reads as the member omitted; the echo

@@ -31,7 +31,7 @@ import (
 )
 
 // tsAgentLabelKey reads one `"agentJob.<name>":` key out of the English
-// catalogue, after tsComment has stripped its comments.
+// catalogue, after gatekit.TSWithoutComments has stripped its comments.
 var tsAgentLabelKey = regexp.MustCompile(`"agentJob\.([a-z0-9_]+)"\s*:`)
 
 // agentPrincipalText is a string that is a whole named agent principal.
@@ -42,33 +42,15 @@ const agentPrefixText = "agent:"
 
 func TestEveryAgentPrincipalHasAFrontendLabel(t *testing.T) {
 	t.Parallel()
-	source, err := gatekit.ReadFile(frontendCatalogue)
-	if err != nil {
-		t.Fatalf("reading the frontend catalogue: %v", err)
-	}
-	labelled := map[string]bool{}
-	for _, m := range tsAgentLabelKey.FindAllStringSubmatch(tsComment.ReplaceAllString(string(source), " "), -1) {
-		labelled[m[1]] = true
-	}
-
-	bound := boundAgentPrincipals(t)
-	if len(bound) == 0 || len(labelled) == 0 {
-		t.Fatalf("read %d agent principals and %d labels — a census that reads nothing agrees with everything", len(bound), len(labelled))
-	}
-	for _, name := range sortedKeys(bound) {
-		if !labelled[name] {
-			t.Errorf("%s stamps agent principal %q, and %s has no \"agentJob.%s\" message (add it to de.ts and vi.ts too), so its provenance tag reads only \"Automated by an agent\"", bound[name], name, frontendCatalogue, name)
-		}
-	}
-	for _, name := range sortedKeys(labelled) {
-		if strings.HasPrefix(name, extension.NamespacePrefix) {
-			t.Errorf("%s labels agentJob.%s, an extension unit's principal; the core catalogue cannot follow a unit's jobs and the tag names it from its kind — delete the message", frontendCatalogue, name)
-			continue
-		}
-		if _, ok := bound[name]; !ok {
-			t.Errorf("%s labels agentJob.%s, which no agent principal in the backend stamps — delete the message or stamp the principal", frontendCatalogue, name)
-		}
-	}
+	assertPrincipalLabels(t, principalLabels{
+		kind: "agent", key: tsAgentLabelKey, keyPrefix: "agentJob", bound: boundAgentPrincipals(t),
+		unlabelled: "stamps agent principal %q, and %s has no \"agentJob.%s\" message (add it to de.ts and " +
+			"vi.ts too), so its provenance tag reads only \"Automated by an agent\"",
+		refuse: func(name string) (string, bool) {
+			return "an extension unit's principal; the core catalogue cannot follow a unit's jobs and the tag " +
+				"names it from its kind — delete the message", strings.HasPrefix(name, extension.NamespacePrefix)
+		},
+	})
 }
 
 // boundAgentPrincipals reads the named agent principals product code can

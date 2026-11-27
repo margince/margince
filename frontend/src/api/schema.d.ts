@@ -47694,7 +47694,10 @@ export interface components {
             revision: number;
             /** Format: date-time */
             created_at: string;
-            /** Format: date-time */
+            /**
+             * Format: date-time
+             * @description Always equal to `created_at`: a review is not edited after it is submitted.
+             */
             updated_at: string;
         };
         OutcomeReviewListResponse: {
@@ -54080,6 +54083,8 @@ export interface components {
                 [key: string]: unknown;
             } | null;
             summary: string;
+            /** @description Why a project's phase was moved, in the words given with the move, so a walk through the history says why each move was made. Null on every other row, on a move made without a reason, and for a reader whose role does not read the phase. */
+            reason?: string | null;
             /**
              * Format: uuid
              * @description The history entry this one REVERSES, set on a row written by a restore and null on every other row. A reader pairs the two rather than showing a reversal as a fresh change. The opposite direction is deliberately NOT a field here: a row that HAS been reversed already says so through `undoable.reason = already_undone`, which is computed for the whole record rather than for one page, so a second field would be a second answer to a question already asked.

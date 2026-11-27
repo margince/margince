@@ -46,7 +46,9 @@ const (
 	// Raised by 2 production and 2 test files for the How it stands job and the
 	// task explanation's certification case, which reuses the unexported contact
 	// brief fixture.
-	composeRootTestFiles = 1922
+	// Raised by 1 test file for the re-ingest vector reuse cases, which drive the
+	// unexported knowledge ingest worker.
+	composeRootTestFiles = 1923
 	// Raised by 107 for the floor of a figure every reader is shown alike. Raised
 	// by 1 for the import that binds one zone lookup to each attention read.
 	// Raised by 249 production and 62 test lines for the full-path certification
@@ -81,6 +83,8 @@ const (
 	// extractor and transcript proposer.
 	// Raised by 49 test lines for the gate that keeps an agent's offered text from
 	// naming a tool it is not offered. It drives the unexported scheduled catalog.
+	// Raised by 64 test lines for the offer draft cases that read the tax from the
+	// sheet. They drive the unexported offer drafter and its staged line.
 	// Raised by 244 test lines for the data reset cases of an event the sweep
 	// orphaned, which drive the unexported reset handlers.
 	// Raised by 21 test lines when main's root compose cases met develop's in the
@@ -114,8 +118,10 @@ const (
 	// the How it stands job and its page case, and the task explanation's
 	// certification case and its test. The job needs the unexported job
 	// context; the cases drive the contact page.
+	// Raised by 197 test lines for the re-ingest vector reuse cases, which drive
+	// the unexported knowledge ingest worker and its embedder fixture.
 	composeRootProductionLines = 231_477
-	composeRootTestLines       = 362_144
+	composeRootTestLines       = 362_414
 )
 
 // A read under these floors stopped early or read the wrong place, and would

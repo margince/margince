@@ -1,0 +1,7 @@
+{
+  "verdict": "yes",
+  "reason": "The answer states the list's membership by name (Ralf Thiel, Sabine Ott, Dirk Hallmann, Inge Rohde, Jens Falk) and by count (12 in all), which satisfies the criterion.",
+  "model": "claude-haiku-5-5",
+  "criterion": "Criterion 1. The answer says who is on the Messe Hannover list, by name or by count, as it stood before the changes or after them. Answer no if it gives no account of who is on the list.",
+  "answer": "Done.\n\n- **Mara Voigt:** conversion reversed; she is a lead again, and removed from the list.\n- **Jens Falk:** added to the list.\n- **Hand-over:** all 12 contacts now on Messe Hannover 2026, Jens Falk included, belong to Sofia Meier. Mara is not part of it.\n\nThe list now holds: Ralf Thiel, Sabine Ott, Dirk Hallmann, Inge Rohde, Jens Falk and seven more, 12 in all."
+}

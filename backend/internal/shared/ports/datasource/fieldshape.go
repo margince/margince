@@ -180,6 +180,10 @@ func LocalizeFieldFault(raw json.RawMessage, into any, err error, decode ProbeDe
 			inner.Field = key + "." + inner.Field
 			return inner
 		}
+		if inner := localizeInsideItems(keys[key], field.Type, decode); inner != nil {
+			inner.Field = key + inner.Field
+			return inner
+		}
 		if deeper {
 			return nil
 		}
@@ -191,8 +195,14 @@ func LocalizeFieldFault(raw json.RawMessage, into any, err error, decode ProbeDe
 		// correctly-shaped array reports the array's own shape, and "must be an
 		// array of objects, not an array of objects" is a sentence that tells
 		// the caller their value is wrong for being right.
-		if sent := sentShape(keys[key]); errors.As(probeErr, &typeErr) && sent != want {
-			refusal.Got = sent
+		if errors.As(probeErr, &typeErr) {
+			sent := sentShape(keys[key])
+			switch {
+			case sent == numberShape && (want == numberShape || want == integerShape && !bytes.ContainsAny(keys[key], ".eE")):
+				refusal.Got, refusal.code = "a number outside the range it can hold", codeOutOfRange
+			case sent != want:
+				refusal.Got = sent
+			}
 		}
 		return refusal
 	}
@@ -207,6 +217,38 @@ func localizeInsideObject(raw json.RawMessage, t reflect.Type, err error, decode
 		return nil
 	}
 	return LocalizeFieldFault(raw, reflect.New(inner).Interface(), err, decode)
+}
+
+// localizeInsideItems names the key inside the first array item whose value
+// failed, as `[0].email`, or nil for a field that is no array of objects. A
+// caller told that `emails` must be an array of objects when it is one would
+// change the one thing that was right.
+func localizeInsideItems(raw json.RawMessage, t reflect.Type, decode ProbeDecoder) *FieldShapeError {
+	list := derefType(t)
+	if list == nil || list.Kind() != reflect.Slice {
+		return nil
+	}
+	item := derefType(list.Elem())
+	if item == nil || item.Kind() != reflect.Struct || isNamedShape(item.Name()) {
+		return nil
+	}
+	var items []json.RawMessage
+	if json.Unmarshal(raw, &items) != nil {
+		return nil //nolint:nilerr // a value that is no array is the decoder's to refuse
+	}
+	for i, itemRaw := range items {
+		probeErr := decode(itemRaw, reflect.New(item).Interface())
+		if probeErr == nil {
+			continue
+		}
+		inner := LocalizeFieldFault(itemRaw, reflect.New(item).Interface(), probeErr, decode)
+		if inner == nil {
+			return nil
+		}
+		inner.Field = "[" + strconv.Itoa(i) + "]." + inner.Field
+		return inner
+	}
+	return nil
 }
 
 // namesAKeyBelowATopLevelField reports whether a decoder path reaches a key

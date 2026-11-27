@@ -93,7 +93,7 @@ func (s *Service) Acknowledge(ctx context.Context, companyID ids.CompanyID) (crm
 // the plain probe would still admit them. That difference is a ruling per
 // record type; the upsert is not.
 //
-// Held by: TestUserRecordViewHasOneWriter (backend/gates/userrecordviewwriter_test.go)
+// Held by: TestEachFactHasOneWriter (backend/gates/onewriters_test.go)
 // — it censuses every statement in the tree that writes this table and fails on
 // a second one.
 //

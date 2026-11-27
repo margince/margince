@@ -10,6 +10,7 @@ import (
 	"testing"
 
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 // The browser draws views and category buttons from its own copy of the view
@@ -20,7 +21,6 @@ const frontendViews = "../../../../frontend/src/lib/worklistviews.ts"
 
 var (
 	tsViewEntry = regexp.MustCompile(`(?m)^\s*([a-z_]+):\s*(null|"([a-z_]+)"),?\s*$`)
-	tsComments  = regexp.MustCompile(`(?s)//[^\n]*|/\*.*?\*/`)
 )
 
 // mirrorTable reads one `NAME ... = { key: "view", ... };` literal.
@@ -30,7 +30,7 @@ func mirrorTable(t *testing.T, name string) map[string]string {
 	if err != nil {
 		t.Fatalf("reading the frontend view table: %v", err)
 	}
-	text := tsComments.ReplaceAllString(string(source), "")
+	text := gatekit.TSWithoutComments(string(source))
 	start := strings.Index(text, "const "+name+":")
 	if start < 0 {
 		t.Fatalf("%s is gone from %s; this test cannot check the mirror", name, frontendViews)

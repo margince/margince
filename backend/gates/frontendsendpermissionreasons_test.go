@@ -155,7 +155,7 @@ func tsMapperBody(t *testing.T) string {
 	if err != nil {
 		t.Fatalf("reading the frontend refusal mapper: %v", err)
 	}
-	source := tsComment.ReplaceAllString(string(raw), " ")
+	source := gatekit.TSWithoutComments(string(raw))
 	declarations := tsMapperDeclaration.FindAllStringIndex(source, -1)
 	if len(declarations) != 1 {
 		t.Fatalf("%s declares function %s %d times, want once. After a rename this gate reads nothing; rename it here too", frontendSendPermissionReasons, sendPermissionReasonMapper, len(declarations))

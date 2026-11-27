@@ -94,7 +94,7 @@ func TestCompileGoldenSQLPerOperator(t *testing.T) {
 		{"lte number", leaf("probability", OpLte, 90.5), "t.probability <= $1", []any{90.5}},
 		{"in picklist", leaf("status", OpIn, []any{"open", "won"}), "t.status = ANY($1)", []any{[]string{"open", "won"}}},
 		{"in currency", leaf("amount_minor", OpIn, []any{100.0, 200.0}), "t.amount_minor = ANY($1)", []any{[]int64{100, 200}}},
-		{"contains text", leaf("title", OpContains, "acme"), "t.title ILIKE $1", []any{"%acme%"}},
+		{"contains text", leaf("title", OpContains, "acme"), "f_fold_apostrophes(lower(t.title)) LIKE f_fold_apostrophes(lower($1::text))", []any{"%acme%"}},
 		{"exists true", leaf("owner_id", OpExists, true), "t.owner_id IS NOT NULL", nil},
 		{"exists false", leaf("owner_id", OpExists, false), "t.owner_id IS NULL", nil},
 		{"eq boolean", leaf("is_hot", OpEq, true), "t.is_hot = $1", []any{true}},
@@ -128,7 +128,8 @@ func TestCompileNestedGroupsGolden(t *testing.T) {
 		}},
 	}}
 	sql, args := compile(t, p)
-	want := "(t.status = $1 AND (t.amount_minor > $2 OR (t.owner_id IS NULL AND t.title ILIKE $3)))"
+	want := "(t.status = $1 AND (t.amount_minor > $2 OR (t.owner_id IS NULL AND " +
+		"f_fold_apostrophes(lower(t.title)) LIKE f_fold_apostrophes(lower($3::text)))))"
 	if sql != want {
 		t.Errorf("sql = %q, want %q", sql, want)
 	}

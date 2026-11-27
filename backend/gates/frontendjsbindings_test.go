@@ -10,6 +10,8 @@ import (
 	"regexp"
 	"slices"
 	"strings"
+
+	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
 type jsFile struct {
@@ -43,7 +45,7 @@ func parseJSFile(file, source string) (*jsFile, error) {
 		return nil, err
 	}
 	tree.comments = comments
-	code, _ := stripTSComments(source)
+	code := gatekit.TSWithoutComments(source)
 	parsed := &jsFile{code: code, tree: tree}
 	for i := range tree.tokens {
 		if !tree.is(i, "(") {

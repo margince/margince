@@ -38,7 +38,6 @@ import (
 	"go/ast"
 	"go/parser"
 	"go/token"
-	"io/fs"
 	"path/filepath"
 	"strings"
 	"testing"
@@ -330,45 +329,10 @@ func anyLiteralTen(exprs []ast.Expr) bool {
 	return false
 }
 
-// handWrittenGoFiles walks the module for source a contact maintains. Generated
-// files are excluded because nobody edits them and a generator that emitted
-// this shape would be the generator's defect, not a call site's.
-func handWrittenGoFiles(t *testing.T) []string {
-	t.Helper()
-	var paths []string
-	err := gatekit.WalkDir(".", func(path string, entry fs.DirEntry, err error) error {
-		if err != nil {
-			return err
-		}
-		if entry.IsDir() {
-			if name := entry.Name(); name == "node_modules" || name == "testdata" || name == ".git" {
-				return filepath.SkipDir
-			}
-			return nil
-		}
-		name := entry.Name()
-		if !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_gen.go") || strings.HasSuffix(name, ".gen.go") {
-			return nil
-		}
-		paths = append(paths, path)
-		return nil
-	})
-	if err != nil {
-		t.Fatalf("walking the module for Go source: %v", err)
-	}
-	// A walk that finds nothing certifies nothing. The floor is deliberately
-	// far below the real count (~3700) so it catches a broken walk, not a
-	// changing tree.
-	if len(paths) < 500 {
-		t.Fatalf("the walk found only %d Go files, so this census covered almost nothing", len(paths))
-	}
-	return paths
-}
-
 func TestNobodyBuildsAMinorUnitScaleByHand(t *testing.T) {
 	t.Parallel()
 	var findings []string
-	for _, path := range handWrittenGoFiles(t) {
+	for _, path := range handWrittenGoSources(t) {
 		// values is where the arithmetic belongs, so it is the one place the
 		// shape is correct. Keyed to the FILE that owns the table and not the
 		// package: a second file in that package writing its own loop is the

@@ -25,7 +25,7 @@ var (
 
 // A config's escapes are relative to its own directory.
 func configReads(tree repoTree, file, source string) []string {
-	text, _ := stripTSComments(source)
+	text := gatekit.TSWithoutComments(source)
 	if path.Ext(file) != ".json" {
 		var kept []string
 		for line := range strings.SplitSeq(source, "\n") {

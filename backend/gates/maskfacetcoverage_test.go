@@ -81,7 +81,7 @@ func TestEveryOfferedMaskObjectIsWithheldFromSomeRecordsHistory(t *testing.T) {
 // set and reports the clean result it never obtained.
 func historyEntityTypes(t *testing.T) []string {
 	t.Helper()
-	consts := stringConstsByPackage(t, gatekit.SourceFileSet(), []string{historyTypesPackage})[historyTypesPackage]
+	consts := stringConstsByPackage(t, []string{historyTypesPackage})[historyTypesPackage]
 	file, err := gatekit.ParseFile(historyTypesFile, 0)
 	if err != nil {
 		t.Fatalf("reading %s: %v", historyTypesFile, err)
