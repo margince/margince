@@ -2,7 +2,7 @@ name: ci-image
 description: >-
   Name the CI image for this tree by digest, building and pushing it first when
   this run is the first to need it and may push. Hands back an empty name, and
-  the jobs then set up on the runner, until they pass in the image.
+  the jobs then set up on the runner, when no job here can pull it.
 
 inputs:
   push:
@@ -18,8 +18,9 @@ inputs:
 outputs:
   pinned-image:
     description: >-
-      `ghcr.io/<owner>/ci@sha256:<digest>` once the jobs pass in the image.
-      Empty until then, and whenever the jobs cannot pull it.
+      `ghcr.io/<owner>/ci@sha256:<digest>`, or empty when the lookup finds no
+      digest a job can pull. A job given a digest does not fall back: a pull
+      that then fails fails the job.
     value: ${{ steps.resolve.outputs.pinned-image }}
 
 runs:
@@ -118,7 +119,5 @@ runs:
           echo "::error::'$image' is not a digest-pinned CI image" >&2
           exit 1
         fi
-        # The jobs do not yet pass in the image, so it is built and checked and
-        # they still set up on the runner.
-        echo "pinned-image=" >> "$GITHUB_OUTPUT"
-        echo "Built $image; the jobs set up on the runner"
+        echo "pinned-image=$image" >> "$GITHUB_OUTPUT"
+        echo "The jobs run in $image"
