@@ -84,6 +84,13 @@ jobs:
         env:
           INTEGRATION_BUILD_OUT: ${{ runner.temp }}/integration-bin
         run: make test-integration
+      # Built once here and shipped in the pack, so no shard compiles it.
+      - name: Build cmd/migrate for the shards
+        run: |
+          make composition
+          started=$SECONDS
+          GOWORK="$GITHUB_WORKSPACE/build/composition/go.work" go build -o "$RUNNER_TEMP/integration-bin/cmd-migrate" ./cmd/migrate
+          echo "built cmd/migrate in $(( SECONDS - started ))s"
       # The test durations the shards split by: the newest entry the
       # `integration-timing` job of cache-warm.yml saved on main. The key never
       # matches, so the restore takes the newest entry by prefix.
@@ -176,6 +183,7 @@ jobs:
   # The limit is the build's 30 minutes of waiting plus a shard's own run.
   integration-shards:
     name: integration shard (${{ matrix.shard }}/${{ strategy.job-total }})
+    needs: integration-build
     timeout-minutes: 50
     runs-on: ubuntu-latest
     permissions:
@@ -217,17 +225,6 @@ jobs:
         uses: ./.github/actions/go-build-cache
         with:
           flavor: integration
-      # One link from the warm cache, in place of the `go run` each of the
-      # shard's ~200 clone and drop calls paid (scripts/lib-testdb.sh
-      # migrate_cmd). Before the template step, which runs cmd/migrate too.
-      # Composed workspace, as `make test-db-up` and the lane run it.
-      - name: Build cmd/migrate for the lane's database admin
-        run: |
-          make composition
-          started=$SECONDS
-          GOWORK="$GITHUB_WORKSPACE/build/composition/go.work" go build -o "$RUNNER_TEMP/cmd-migrate" ./cmd/migrate
-          echo "built cmd/migrate in $(( SECONDS - started ))s"
-          echo "MARGINCE_MIGRATE_BIN=$RUNNER_TEMP/cmd-migrate" >> "$GITHUB_ENV"
       - name: Expose the results service to the next steps
         uses: ./.github/actions/results-service-env
       # The same compose stack dev machines use (docker-compose.dev.yml:
@@ -268,10 +265,6 @@ jobs:
             -c "ALTER SYSTEM SET log_parameter_max_length_on_error = -1" -c "SELECT pg_reload_conf()"
           test "$(psql -tAc 'SHOW auto_explain.log_min_duration')" = "10s"
           test "$(psql -tAc 'SHOW log_parameter_max_length_on_error')" = "-1"
-      # Needs the checkout and not the binaries, so it runs while they build.
-      # The shard step checks it again (INTEGRATION_TEMPLATE_READY).
-      - name: Build the migrated template
-        run: make test-db-up
       # 1800 s is the build's own time limit: past it no binaries can come.
       - name: Wait for the test binaries
         id: binaries
@@ -290,6 +283,10 @@ jobs:
         run: |
           mkdir -p "$RUNNER_TEMP/integration-bin"
           tar -I "$LANE_BIN_ZSTD" -xf "$RUNNER_TEMP/integration-bin.tar.zst" -C "$RUNNER_TEMP/integration-bin"
+          echo "MARGINCE_MIGRATE_BIN=$RUNNER_TEMP/integration-bin/cmd-migrate" >> "$GITHUB_ENV"
+      # The build job's cmd/migrate, shipped in the pack.
+      - name: Build the migrated template
+        run: make test-db-up
       # The claims of each attempt are their own, so `Re-run failed jobs` gets a
       # fresh queue. When the build did not run again, the green shards of the
       # earlier attempt keep their groups, and the shards that run again skip
