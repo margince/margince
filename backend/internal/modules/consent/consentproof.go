@@ -89,13 +89,15 @@ func upsertConsentWithProof(
 	ctx context.Context, tx pgx.Tx, in RecordInput, sub subject,
 	doiConfirmedAt *time.Time, capturedAt time.Time, keptUntil *time.Time, actorID string,
 ) (ids.UUID, error) {
+	text, version := wordingFor(ConsentState(in.NewState), in.PolicyText, in.PolicyVersion)
 	if _, err := tx.Exec(ctx, `
-		INSERT INTO contact_consent (`+sub.column+`, purpose_id, state, lawful_basis, captured_at, source)
-		VALUES ($1, $2, $3, $4, $5, $6)
+		INSERT INTO contact_consent (`+sub.column+`, purpose_id, state, lawful_basis, captured_at, source, policy_version)
+		VALUES ($1, $2, $3, $4, $5, $6, $7)
 		ON CONFLICT (`+sub.column+`, purpose_id)
 		DO UPDATE SET state = EXCLUDED.state, lawful_basis = EXCLUDED.lawful_basis,
-		              captured_at = EXCLUDED.captured_at, source = EXCLUDED.source`,
-		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, capturedAt, in.Source); err != nil {
+		              captured_at = EXCLUDED.captured_at, source = EXCLUDED.source,
+		              policy_version = EXCLUDED.policy_version`,
+		sub.id, in.PurposeID, in.NewState, in.LawfulBasis, capturedAt, in.Source, version); err != nil {
 		return ids.Nil, err
 	}
 	// issuance_trigger names the mailbox proof this grant rests on, so the chain
@@ -119,7 +121,6 @@ func upsertConsentWithProof(
 	// second answer to "which wording was this". Set HERE and not in admitRecord,
 	// which takes its input by value: a default written there never reaches the
 	// INSERT, and the CHECK would refuse every row that door writes.
-	text, version := wordingFor(ConsentState(in.NewState), in.PolicyText, in.PolicyVersion)
 	// The published row this rests on, where the door knew which one. Written
 	// BESIDE policy_text rather than instead of it: the text stays readable
 	// without a join, and the id is what a reader checks it against.

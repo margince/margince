@@ -22,6 +22,13 @@ func wordingOf(t *testing.T, e *channelConsentEnv) (*string, *string) {
 		e.contact).Scan(&text, &version); err != nil {
 		t.Fatalf("reading the proof row: %v", err)
 	}
+	var current *string
+	if err := e.owner.QueryRow(e.ctx, `SELECT policy_version FROM contact_consent WHERE contact_id = $1 AND purpose_id = $2`, e.contact, e.newsletter).Scan(&current); err != nil {
+		t.Fatal(err)
+	}
+	if (current == nil) != (version == nil) || (current != nil && *current != *version) {
+		t.Fatalf("current version %v differs from proof version %v", current, version)
+	}
 	return text, version
 }
 
@@ -91,4 +98,19 @@ func TestThePairCheckRefusesAHalfRecordedWording(t *testing.T) {
 	if !strings.Contains(err.Error(), "consent_event_wording_pairs") {
 		t.Errorf("refused by %v, want the pair CHECK", err)
 	}
+}
+
+func TestConsentStateTracksEachProofVersionAndClearsOnWithdrawal(t *testing.T) {
+	e := setupChannelConsent(t)
+	shown := "Send the newsletter"
+	for _, version := range []string{"policy-1", "policy-2"} {
+		if _, err := e.store.Record(e.ctx, RecordInput{ContactID: e.contact, PurposeID: e.newsletter, NewState: "granted", PolicyText: &shown, PolicyVersion: &version}); err != nil {
+			t.Fatal(err)
+		}
+		wordingOf(t, e)
+	}
+	if _, err := e.store.Record(e.ctx, RecordInput{ContactID: e.contact, PurposeID: e.newsletter, NewState: "withdrawn"}); err != nil {
+		t.Fatal(err)
+	}
+	wordingOf(t, e)
 }
