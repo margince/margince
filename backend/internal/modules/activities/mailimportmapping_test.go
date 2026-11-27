@@ -19,7 +19,7 @@ import (
 func emailRequest() crmcontracts.CreateActivityRequest {
 	return crmcontracts.CreateActivityRequest{
 		Kind:   crmcontracts.CreateActivityRequestKindCreateActivityRequestKindEmail,
-		Source: "hubspot_import:1",
+		Source: "import",
 	}
 }
 

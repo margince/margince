@@ -160,3 +160,4 @@ c75048d1d104299f2c51019e71f1355a4af32ed0 af94ee0c871e5c91bb62977dd24a0fa63ba5f0d
 5dd8ba024ce8283beacef31c9138719858493389 af94ee0c871e5c91bb62977dd24a0fa63ba5f0da ratified-main-s-and-develop-s-contract-changes-carried-into-the-merged-contract-in-the-sync
 016d6f3afd32d9138c6e36f9b2930fba8add2495 af94ee0c871e5c91bb62977dd24a0fa63ba5f0da ratified-main-s-and-develop-s-contract-changes-carried-into-the-merged-contract-in-the-sync
 af63adc9383f7777631973df5990d6e920e65683 af94ee0c871e5c91bb62977dd24a0fa63ba5f0da ratified-main-s-and-develop-s-contract-changes-carried-into-the-merged-contract-in-the-sync
+af94ee0c871e5c91bb62977dd24a0fa63ba5f0da ae08d96426c13228be896ae86ccc57c4ec59e860 ratified-an-activity-and-task-source-is-one-of-six-channels

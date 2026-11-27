@@ -87,6 +87,7 @@ var permanentlyUnvalidated = gatekit.Waive(map[unvalidatedSubject]string{
 	"ai_call.ai_call_reasoning_tokens_not_negative":               negativeHistory,
 	"ai_call.ai_call_cached_tokens_not_negative":                  negativeHistory,
 	"ai_call.ai_call_cache_write_tokens_not_negative":             negativeHistory,
+	"activity.activity_source_check":                              unlistedRecordSource,
 	"lead.lead_source_check":                                      unlistedRecordSource,
 	"activity.activity_duration_not_negative": "" +
 		"rows written before the API refused a negative duration may hold one, and the negative counts " +
