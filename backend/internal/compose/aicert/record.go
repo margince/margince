@@ -23,7 +23,8 @@ import (
 // produces the same Record byte-for-byte except for whatever the caller
 // puts in RanAt.
 type Record struct {
-	Task string `json:"task"`
+	Recovery *RecoveryTally `json:"recovery,omitempty"`
+	Task     string         `json:"task"`
 	// Kind is empty on a completion record and KindDecision on a decision
 	// record. Kind, Site, Model and Decision are all omitted when empty, so a
 	// completion record is written exactly as it was before they existed.
@@ -175,8 +176,9 @@ type Record struct {
 // reader — and the readiness report — attribute a task's record to the site
 // each of its rows actually measured.
 type ScenarioRecord struct {
-	Scenario string `json:"scenario"`
-	Site     string `json:"site"`
+	Recovery *RecoveryTally `json:"recovery,omitempty"`
+	Scenario string         `json:"scenario"`
+	Site     string         `json:"site"`
 	// Stamp is THIS scenario's own certification stamp — the scenario whole plus
 	// the candidate and grader requests this build constructs from it
 	// (ScenarioStamps). The record's task-level PromptVersion is the fold of

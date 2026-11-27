@@ -29,9 +29,10 @@ import (
 // is a subset the call must carry to get this answer. So two reads of one tool
 // on two records are two entries.
 type agentLoopToolAnswer struct {
-	Tool   string                     `json:"tool"`
-	Args   map[string]json.RawMessage `json:"args,omitempty"`
-	Result json.RawMessage            `json:"result,omitempty"`
+	Refusal *agentLoopToolRefusal      `json:"refusal,omitempty"`
+	Tool    string                     `json:"tool"`
+	Args    map[string]json.RawMessage `json:"args,omitempty"`
+	Result  json.RawMessage            `json:"result,omitempty"`
 }
 
 // agentLoopToolSurface is the tool surface a certification run is offered. It
@@ -58,6 +59,9 @@ func (s agentLoopToolSurface) Invoke(_ context.Context, name string, args json.R
 	args, err := agents.WithoutReservedArgs(args)
 	if err != nil {
 		return nil, err
+	}
+	if refusal := s.refusalFor(name, args); refusal != nil {
+		return nil, s.refusalError(name, *refusal)
 	}
 	if name == s.work.write {
 		if _, err := s.work.wrote(args, s.list); err != nil {
@@ -100,7 +104,7 @@ func refuseUnanswerableTools(answers []agentLoopToolAnswer, specs []mcp.ToolSpec
 		}
 		declared := agentLoopSchemaProperties(spec.InputSchema)
 		for _, arg := range sortedArgNames(answer.Args) {
-			if !declared[arg] {
+			if !declared[arg] && !(answer.Refusal != nil && answer.Refusal.Kind == "unknown_field" && answer.Refusal.Field == arg) {
 				return fmt.Errorf("%s: the fixture's answer for %s pins %q, which its input schema does not declare",
 					agentLoopSite, answer.Tool, arg)
 			}
@@ -115,7 +119,7 @@ func refuseUnanswerableTools(answers []agentLoopToolAnswer, specs []mcp.ToolSpec
 func listAnswer(answers []agentLoopToolAnswer, list string) (json.RawMessage, error) {
 	var found []json.RawMessage
 	for _, answer := range answers {
-		if answer.Tool == list {
+		if answer.Tool == list && answer.Refusal == nil {
 			found = append(found, answer.Result)
 		}
 	}
