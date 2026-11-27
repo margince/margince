@@ -6,7 +6,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 
 ## custom_field
 
-19 columns · primary key `(id)` · referenced by 0 foreign keys
+20 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
@@ -20,6 +20,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 | `object` | `text` | yes | The existing core object this field is added to. |
 | `option_translations` | `jsonb`, default `'{}'::jsonb` | yes |  |
 | `options` | `jsonb` |  | Allowed picklist values; present (non-empty) when `type=picklist`, null otherwise. |
+| `pipeline_ids` | `uuid[]` |  | The pipelines a deal field applies to; null means every pipeline, and every other object's field is null. |
 | `reportable` | `boolean`, default `false` | yes | Whether reports may group and filter by this field. |
 | `show_in_create` | `boolean`, default `true` | yes | Whether the field is offered in the create dialog of its object. |
 | `slug` | `text` | yes | Admin-facing key the column_name derives from. |
@@ -41,6 +42,7 @@ The 1 table owned by `customfields`, as the migrations build them. [Back to the 
 - `custom_field_activity_kinds_check`: `CHECK (((activity_kinds IS NULL) OR ((object = 'activity') AND (cardinality(activity_kinds) > 0))))`
 - `custom_field_activity_kinds_vocabulary`: `CHECK ((activity_kinds <@ ARRAY['call', 'email', 'meeting', 'message', 'note', 'task']))`
 - `custom_field_object_check`: `CHECK ((object = ANY (ARRAY['contact', 'company', 'deal', 'lead', 'activity', 'project', 'relationship', 'partner', 'contract'])))`
+- `custom_field_pipeline_ids_check`: `CHECK (((pipeline_ids IS NULL) OR ((object = 'deal') AND (cardinality(pipeline_ids) > 0))))`
 - `custom_field_reportable_type_check`: `CHECK (((NOT reportable) OR ((object = ANY (ARRAY['deal', 'company'])) AND (type = ANY (ARRAY['picklist', 'boolean'])))))`
 - `custom_field_status_check`: `CHECK ((status = ANY (ARRAY['active', 'retired'])))`
 - `custom_field_type_check`: `CHECK ((type = ANY (ARRAY['text', 'number', 'date', 'currency', 'picklist', 'multiselect', 'boolean', 'record', 'url'])))`

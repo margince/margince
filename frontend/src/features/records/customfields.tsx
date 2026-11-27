@@ -30,7 +30,11 @@ import { problemMessageOf, unwrap } from "../../lib/problem";
 import { useMe } from "../../lib/session";
 import { TEXT_LIMITS } from "../../lib/textlimits_gen";
 import { FieldBuilder, type NewFieldDraft } from "./customfields.builder";
-import { activityKindsOf, useSetActivityKinds } from "./customfields.kinds";
+import {
+  activityKindsOf,
+  useSetActivityKinds,
+  useSetPipelines,
+} from "./customfields.kinds";
 import { objectLabels } from "./customfields.labels";
 import { RetireFieldConfirm } from "./customfields.retire";
 import {
@@ -59,6 +63,9 @@ function createBody(
     show_in_create: draft.showInCreate,
     ...(draft.activityKinds.length > 0
       ? { activity_kinds: activityKindsOf(draft.activityKinds) }
+      : {}),
+    ...(draft.pipelineIds.length > 0
+      ? { pipeline_ids: draft.pipelineIds }
       : {}),
     ...(draft.type === "currency" ? { currency: draft.currency } : {}),
     ...(hasOptions(draft.type) ? { options: cleanOptions(draft.options) } : {}),
@@ -108,6 +115,7 @@ function stagedField(draft: NewFieldDraft, createdBy: string): CustomField {
       draft.activityKinds.length > 0
         ? activityKindsOf(draft.activityKinds)
         : null,
+    pipeline_ids: draft.pipelineIds.length > 0 ? draft.pipelineIds : null,
     created_by: createdBy,
     created_at: now,
     updated_at: now,
@@ -291,6 +299,7 @@ export function CustomFieldsAdmin() {
   });
 
   const kinds = useSetActivityKinds();
+  const pipelines = useSetPipelines();
 
   const startRename = (field: CustomField) => {
     rename.reset();
@@ -373,7 +382,10 @@ export function CustomFieldsAdmin() {
             setting.mutate({ field, setting: name, on })
           }
           onKinds={(field, next) => kinds.mutate({ field, kinds: next })}
-          savingField={savingFieldOf(setting, kinds)}
+          onPipelines={(field, next) =>
+            pipelines.mutate({ field, pipelineIds: next })
+          }
+          savingField={savingFieldOf(setting, kinds, pipelines)}
         />
       )}
       <PanelBody>

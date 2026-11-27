@@ -140,6 +140,9 @@ func dealRefusalOf(err error, fields map[string]string, stages dealStages) (migr
 	if _, ok := errors.AsType[*deals.StagePipelineMismatchError](err); ok {
 		return migration.Why(migration.ReasonDealPipelineFixed), true
 	}
+	if field, ok := deals.FieldOutsidePipeline(err); ok {
+		return migration.Why(migration.ReasonDealFieldNotForPipeline, "field", field), true
+	}
 	if _, ok := errors.AsType[*deals.LostReasonRequiredError](err); ok {
 		return migration.Why(migration.ReasonLostReasonMissing), true
 	}
@@ -149,10 +152,8 @@ func dealRefusalOf(err error, fields map[string]string, stages dealStages) (migr
 	if _, ok := errors.AsType[*contracts.DealContractsCrossCompanyError](err); ok {
 		return migration.Why(migration.ReasonDealCompanyContracts), true
 	}
-	if _, ok := errors.AsType[*deals.LegalReviewRequiredError](err); ok {
-		return migration.Why(migration.ReasonDealLegalGate), true
-	}
-	if _, ok := errors.AsType[*deals.LegalGateOnCreateError](err); ok {
+	_, review := errors.AsType[*deals.LegalReviewRequiredError](err)
+	if _, onCreate := errors.AsType[*deals.LegalGateOnCreateError](err); review || onCreate {
 		return migration.Why(migration.ReasonDealLegalGate), true
 	}
 	if _, ok := errors.AsType[*deals.PipelineHasNoOpenStageError](err); ok {

@@ -40,6 +40,7 @@ type lockedField struct {
 	ShowInCreate  bool
 	Reportable    bool
 	ActivityKinds []string
+	PipelineIDs   []ids.UUID
 	Version       int64
 	// The label and each option in further UI languages.
 	LabelTranslations  map[string]string
@@ -65,11 +66,11 @@ func (f lockedField) mutable() error {
 func lockField(ctx context.Context, tx pgx.Tx, id ids.UUID) (lockedField, error) {
 	var f lockedField
 	err := tx.QueryRow(ctx,
-		`SELECT object, column_name, type, status, label, options, show_in_create, reportable, activity_kinds, version,
+		`SELECT object, column_name, type, status, label, options, show_in_create, reportable, activity_kinds, pipeline_ids, version,
 		        label_translations, option_translations
 		   FROM custom_field WHERE id = $1 FOR UPDATE`,
 		id).Scan(&f.Object, &f.ColumnName, &f.Type, &f.Status, &f.Label, &f.OptionsRaw, &f.ShowInCreate, &f.Reportable,
-		&f.ActivityKinds, &f.Version, &f.LabelTranslations, &f.OptionTranslations)
+		&f.ActivityKinds, &f.PipelineIDs, &f.Version, &f.LabelTranslations, &f.OptionTranslations)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return lockedField{}, apperrors.ErrNotFound
 	}
@@ -91,12 +92,14 @@ func readField(ctx context.Context, tx pgx.Tx, id ids.UUID) (crmcontracts.Custom
 }
 
 // FieldPatch is the merge-PATCH of the settings a live field may change. A nil
-// member is left as it is, and an empty ActivityKinds means every kind again.
+// member is left as it is, and an empty ActivityKinds or PipelineIDs means every
+// kind or pipeline again.
 type FieldPatch struct {
 	Label         *string
 	ShowInCreate  *bool
 	Reportable    *bool
 	ActivityKinds *[]string
+	PipelineIDs   *[]ids.UUID
 	// LabelTranslations and OptionTranslations replace the stored maps when
 	// set; nil leaves them as they are.
 	LabelTranslations  map[string]string
@@ -107,7 +110,7 @@ type FieldPatch struct {
 // patch answers the same label-required refusal a rename always gave, so a
 // client that only ever renames sees no new error.
 func (p FieldPatch) validate() error {
-	if p.ShowInCreate == nil && p.Label == nil && p.Reportable == nil && p.ActivityKinds == nil &&
+	if p.ShowInCreate == nil && p.Label == nil && p.Reportable == nil && p.ActivityKinds == nil && p.PipelineIDs == nil &&
 		p.LabelTranslations == nil && p.OptionTranslations == nil {
 		return &ValidationError{Errors: []FieldError{{Field: fieldLabel, Code: codeRequired}}}
 	}
@@ -157,8 +160,8 @@ func (s *Service) Update(ctx context.Context, id ids.UUID, patch FieldPatch, ifV
 		}
 		if _, err := tx.Exec(ctx,
 			`UPDATE custom_field SET label = $1, show_in_create = $2, reportable = $3, activity_kinds = $4,
-			        label_translations = $5, option_translations = $6 WHERE id = $7`,
-			next.Label, next.ShowInCreate, next.Reportable, storedKinds(next.ActivityKinds),
+			        pipeline_ids = $5, label_translations = $6, option_translations = $7 WHERE id = $8`,
+			next.Label, next.ShowInCreate, next.Reportable, storedKinds(next.ActivityKinds), next.PipelineIDs,
 			next.LabelTranslations, next.OptionTranslations, id); err != nil {
 			return fmt.Errorf("customfields: updating settings: %w", err)
 		}
@@ -206,6 +209,15 @@ func (p FieldPatch) apply(ctx context.Context, tx pgx.Tx, id ids.UUID, f lockedF
 		}
 		next.ActivityKinds = storedKinds(*p.ActivityKinds)
 	}
+	if p.PipelineIDs != nil {
+		if errs := checkPipelineScope(f.Object, *p.PipelineIDs); len(errs) > 0 {
+			return lockedField{}, &ValidationError{Errors: errs}
+		}
+		next.PipelineIDs = storedPipelines(*p.PipelineIDs)
+		if err := livePipelines(ctx, tx, next.PipelineIDs); err != nil {
+			return lockedField{}, err
+		}
+	}
 	return p.applyTranslations(f, next)
 }
 
@@ -248,6 +260,9 @@ func (p FieldPatch) auditDiff(was, now lockedField) (before, after map[string]an
 	}
 	if p.ActivityKinds != nil {
 		before[fieldKinds], after[fieldKinds] = was.ActivityKinds, now.ActivityKinds
+	}
+	if p.PipelineIDs != nil {
+		before[fieldPipelines], after[fieldPipelines] = was.PipelineIDs, now.PipelineIDs
 	}
 	if p.LabelTranslations != nil {
 		before[fieldLabelTranslations], after[fieldLabelTranslations] = was.LabelTranslations, now.LabelTranslations

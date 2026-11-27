@@ -242,6 +242,19 @@ A `null` always passes, so a value stored before the field was narrowed can stil
 check is `checkCustomValues` in `internal/modules/activities/customfields.go`, and the REST routes
 and the agent tools all reach it.
 
+A deal field may apply to some pipelines only (`custom_field.pipeline_ids`, null for every pipeline).
+The deal store refuses a value for a field that does not apply to the deal's pipeline. This holds on a
+create, a patch and an import row. The code is `field_not_valid_for_pipeline`, and a `null` always passes.
+
+A patch never moves the deal, so it reads the stored pipeline. A deal that moves keeps its values.
+An array column cannot carry a reference constraint, so the engine checks each id against the live
+pipelines when it writes the list. A pipeline archived later matches nothing. The check is
+`checkPipelineScope` in `backend/internal/modules/deals/pipelinefields.go`.
+
+The forms show a field
+only when it applies to the deal's pipeline or the deal holds a value for it. That rule is
+`appliesToPipeline` in `frontend/src/components/customfields.form.ts`.
+
 ## No `cf_*` column is indexed
 
 The engine writes `ADD COLUMN` and, for a `picklist`, its `CHECK`. It creates no index. Custom fields are

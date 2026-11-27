@@ -11235,6 +11235,8 @@ export const en = {
     "“{value}” is in the past, and an open deal’s close date cannot be.",
   "import.reason.lost_reason_missing":
     "A lost deal needs the reason it was lost.",
+  "import.reason.deal_field_not_for_pipeline":
+    "The custom field {field} does not apply to deals in the pipeline of this deal, so the row is skipped. Empty the cell or import the deal into a pipeline the field applies to.",
   "import.reason.deal_pipeline_fixed":
     "This deal is in another pipeline than the file names. An import does not move a deal between pipelines, so the row is skipped.",
   "companies.contractMergeBlocked":
@@ -15090,6 +15092,11 @@ export const en = {
   "cf.activityKindsEvery": "Every type",
   "cf.activityKindsFor": "Types “{label}” shows on",
   "cf.activityKindsSaved": "“{label}” now shows on the types you chose",
+  "cf.pipelines": "Shows in",
+  "cf.pipelinesHint": "Leave it empty to show the field on deals in every pipeline.",
+  "cf.pipelinesEvery": "Every pipeline",
+  "cf.pipelinesFor": "Pipelines “{label}” shows in",
+  "cf.pipelinesSaved": "“{label}” now shows on deals in the pipelines you chose",
   "cf.col.inCreate": "In create forms",
   "cf.showInCreateFor": "Show “{label}” in create forms",
   "cf.shownInCreate": "“{label}” shown in create forms",
