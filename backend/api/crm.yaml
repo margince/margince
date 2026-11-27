@@ -38166,6 +38166,9 @@ paths:
         Verifies a code against the pending secret and, on success, activates the factor and
         returns a fresh set of one-time recovery codes — shown exactly once, never retrievable
         again (`Cache-Control: no-store`). A wrong code leaves the enrolment pending (401).
+        The caller's current password authorizes the confirmation, as it authorizes a password
+        change: a confirmed factor is asked for at every later password sign-in, so a session
+        alone must not install one. A wrong password counts toward the account lockout.
       requestBody:
         required: true
         content:
@@ -38180,13 +38183,25 @@ paths:
           content:
             application/json:
               schema: { $ref: '#/components/schemas/RecoveryCodes' }
-        '401': { $ref: '#/components/responses/Unauthorized' }
+        '401':
+          description: >
+            A refused password carries its own machine `code`: `current_password_invalid` (the
+            password is wrong) or `account_locked` (the lockout is in force, and waiting is the
+            remedy). A missing session and a wrong authenticator code both answer `unauthorized`.
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
         '409':
           description: 'Refused with `code: mfa_already_enrolled` — the factor is already confirmed.'
           content:
             application/problem+json:
               schema: { $ref: '#/components/schemas/Problem' }
         '422': { $ref: '#/components/responses/ValidationError' }
+        '429':
+          description: 'Too many wrong current-password attempts for this account.'
+          content:
+            application/problem+json:
+              schema: { $ref: '#/components/schemas/Problem' }
 
   /me/working-hours:
     get:
@@ -44126,8 +44141,12 @@ components:
     TotpConfirmRequest:
       type: object
       additionalProperties: false
-      required: [code]
+      required: [current_password, code]
       properties:
+        current_password:
+          type: string
+          minLength: 1
+          description: The caller's current password, which authorizes the confirmation.
         code:
           type: string
           description: The current code from the authenticator being enrolled.

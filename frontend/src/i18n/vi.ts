@@ -14051,6 +14051,10 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "mfa.turningOn": "Đang bật…",
   "mfa.codeRefused": "Mã không hợp lệ. Kiểm tra lại rồi thử lại.",
   "mfa.tooManyCodes": "Sai mã quá nhiều lần. Chờ vài phút rồi thử lại.",
+  "mfa.tooManyPasswords":
+    "Sai mật khẩu quá nhiều lần. Chờ một phút rồi thử lại.",
+  "mfa.passwordHint":
+    "Mật khẩu Margince của bạn, không phải mật khẩu Google hay Microsoft.",
   "mfa.confirmFailedTitle": "Chưa bật đăng nhập hai bước",
   "mfa.onTitle": "Đã bật đăng nhập hai bước",
   "mfa.onBody": "Mọi thiết bị khác đã bị đăng xuất.",
