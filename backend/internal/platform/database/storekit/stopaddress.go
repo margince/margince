@@ -7,6 +7,7 @@ import (
 	"context"
 	"fmt"
 	"slices"
+	"strings"
 
 	"github.com/jackc/pgx/v5"
 
@@ -28,10 +29,14 @@ func StopOnAddressesSQL(alias, lowered, hashes string) string {
 // address lowercased, and every SuppressionForms of each spelling EmailLookups
 // knows, the hash an anonymize writes. An empty address matches nothing.
 func StopAddressArgs(addresses ...string) (lowered, hashes []string) {
-	lowered = make([]string, 0, len(addresses))
+	lowered = make([]string, 0, 2*len(addresses))
 	for _, address := range addresses {
-		if trimmed := correspondence.Fold(address); trimmed != "" {
-			lowered = append(lowered, trimmed)
+		if folded := correspondence.Fold(address); folded != "" {
+			lowered = append(lowered, folded)
+		}
+		// A stop recorded before the fold holds the address as it was typed.
+		if legacy := strings.ToLower(strings.TrimSpace(address)); legacy != "" && legacy != correspondence.Fold(address) {
+			lowered = append(lowered, legacy)
 		}
 	}
 	return lowered, SuppressionForms(EmailLookups(addresses...)...)

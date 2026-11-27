@@ -37,8 +37,6 @@ func TestOneAddressHasOneKeyHoweverItIsWritten(t *testing.T) {
 	}
 }
 
-// Different addresses must NOT share a key, or one sender's write blocks every
-// other sender's.
 // An accent typed as a letter and a combining mark folds to the composed
 // letter, the spelling contact_email stores.
 func TestFoldComposesAnAccent(t *testing.T) {
@@ -48,6 +46,8 @@ func TestFoldComposesAnAccent(t *testing.T) {
 	}
 }
 
+// Different addresses must NOT share a key, or one sender's write blocks every
+// other sender's.
 func TestTwoAddressesDoNotShareAKey(t *testing.T) {
 	t.Parallel()
 

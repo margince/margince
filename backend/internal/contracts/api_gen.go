@@ -34833,7 +34833,7 @@ type AddDealRoomDocumentRequest struct {
 	Source   string `json:"source"`
 
 	// Title The buyer-facing name. Defaults to the attachment's filename.
-	Title *string `json:"title,omitempty"`
+	Title *string `json:"title,omitempty" singleline:"true"`
 }
 
 // Address Structured postal address.
@@ -68382,7 +68382,7 @@ type SchedulingTeamRequest struct {
 	State  SchedulingTeamRequestState `json:"state"`
 
 	// Title The team link's name, which is the meeting title it offers.
-	Title string `json:"title"`
+	Title string `json:"title" singleline:"true"`
 }
 
 // SchedulingTeamRequestState defines model for SchedulingTeamRequest.State.
@@ -72678,7 +72678,7 @@ type UpdateDealRoomDocumentRequest struct {
 	// for the reason `DealRoomParticipantCapability` gives.
 	GroupKey *DealRoomDocumentGroup `json:"group_key,omitempty"`
 	Position *int                   `json:"position,omitempty"`
-	Title    *string                `json:"title,omitempty"`
+	Title    *string                `json:"title,omitempty" singleline:"true"`
 }
 
 // UpdateDealRoomParticipantRequest Any subset; omit a field to leave it unchanged.

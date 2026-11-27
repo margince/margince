@@ -20,6 +20,7 @@ import (
 
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 )
@@ -145,7 +146,7 @@ func (s *Store) StopForCredentialTx(ctx context.Context, tx pgx.Tx, ref Withdraw
 		          AND (($1::uuid IS NOT NULL AND live.lead_id = $1)
 		            OR ($1::uuid IS NULL AND `+storekit.StopOnAddressesSQL("live", "$9", "$10")+`)))
 		RETURNING id`,
-		zeroAsNull(ref.LeadID.UUID), normalizeAddress(ref.Address), commsauthz.ReasonObjection,
+		zeroAsNull(ref.LeadID.UUID), correspondence.Fold(ref.Address), commsauthz.ReasonObjection,
 		by, string(commsauthz.LevelMachine), sourcePublicLink, purposeID, string(commsauthz.RecordedBySubject),
 		lowered, hashes, stoppedAt).Scan(&stopID)
 	if errors.Is(err, pgx.ErrNoRows) {

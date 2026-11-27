@@ -9,9 +9,7 @@
 package identifierspellingit_test
 
 import (
-	"fmt"
 	"net/http"
-	"strings"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/compose/integration/apptest"
@@ -73,11 +71,18 @@ func TestANameThatReversesItsOrderIsRefused(t *testing.T) {
 		{"/v1/teams", "name", body{}},
 		{"/v1/pipelines", "name", body{}},
 	} {
-		var refusal map[string]any
+		var refusal struct {
+			Details struct {
+				Errors []struct{ Field, Code string } `json:"errors"`
+			} `json:"details"`
+		}
 		write.rest[write.field] = reversed
 		status := e.Call(t, "POST", write.path, write.rest, nil, &refusal)
-		if status != http.StatusUnprocessableEntity || !strings.Contains(fmt.Sprint(refusal), "invalid_characters") {
-			t.Errorf("POST %s with a direction override in %s → %d %v, want 422 invalid_characters", write.path, write.field, status, refusal)
+		refused := refusal.Details.Errors
+		if status != http.StatusUnprocessableEntity || len(refused) != 1 ||
+			refused[0].Field != write.field || refused[0].Code != "invalid_characters" {
+			t.Errorf("POST %s with a direction override in %s → %d %+v, want 422 invalid_characters on %s",
+				write.path, write.field, status, refused, write.field)
 		}
 	}
 	if status, _ := createContact(t, e, body{"linkedin_url": apptest.ContactProfile(), "full_name": "Đội José"}); status != http.StatusCreated {

@@ -26,6 +26,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/config"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/platform/owndomain"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -398,7 +399,7 @@ func foldedAddressesAndDomains(raw []string) (addresses, domains []string) {
 	addresses = make([]string, 0, len(raw))
 	domains = make([]string, 0, len(raw))
 	for _, a := range raw {
-		addresses = append(addresses, strings.ToLower(strings.TrimSpace(a)))
+		addresses = append(addresses, correspondence.Fold(a))
 		if d := owndomain.OfAddress(a); d != "" {
 			domains = append(domains, d)
 		}

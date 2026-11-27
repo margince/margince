@@ -15,6 +15,7 @@ import (
 	"github.com/margince/margince/backend/internal/platform/database"
 	"github.com/margince/margince/backend/internal/platform/database/storekit"
 	"github.com/margince/margince/backend/internal/shared/apperrors"
+	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/ports/commsauthz"
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
@@ -127,7 +128,7 @@ func communicationStopKeysTx(ctx context.Context, tx pgx.Tx, recipients []connec
 		if recipient.Channel != nil {
 			channels = append(channels, storekit.ChannelIdentityKey{Provider: recipient.Channel.Provider, ChannelUserID: storekit.ChannelSuppressionAccount(recipient.Channel.AccountScope, recipient.Channel.ChannelUserID)})
 		} else {
-			keys = append(keys, normalizeAddress(recipient.Email))
+			keys = append(keys, correspondence.Fold(recipient.Email))
 			emails = append(emails, recipient.Email)
 		}
 		subject, found, err := resolveContact(ctx, tx, recipient)

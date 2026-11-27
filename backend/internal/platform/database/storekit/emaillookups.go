@@ -4,14 +4,16 @@
 package storekit
 
 import (
+	"strings"
+
 	"github.com/margince/margince/backend/internal/platform/mailidentity"
 	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
 // EmailLookups are the stored spellings a lookup of these addresses matches.
-// That is each address as typed and case folded, plus
-// mailidentity.AddressSpellings of it. Postgres cannot fold IDNA, and a row
-// stores the address as it was typed.
+// That is each address folded, the lowercased form older rows and erasure
+// hashes hold, and mailidentity.AddressSpellings of it. Postgres cannot fold
+// IDNA, and a hash cannot be folded again after the fact.
 func EmailLookups(emails ...string) []string {
 	out := make([]string, 0, 2*len(emails))
 	seen := map[string]bool{}
@@ -20,7 +22,8 @@ func EmailLookups(emails ...string) []string {
 		if typed == "" {
 			continue
 		}
-		for _, spelled := range append([]string{typed}, mailidentity.AddressSpellings(email)...) {
+		legacy := strings.ToLower(strings.TrimSpace(email))
+		for _, spelled := range append([]string{typed, legacy}, mailidentity.AddressSpellings(email)...) {
 			if !seen[spelled] {
 				seen[spelled] = true
 				out = append(out, spelled)

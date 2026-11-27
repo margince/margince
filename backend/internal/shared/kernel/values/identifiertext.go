@@ -23,14 +23,15 @@ func IdentifierText(raw string) string {
 	return norm.NFC.String(strings.TrimFunc(visible, unicode.IsSpace))
 }
 
-// drawsNothing reports a format character, a filler or a control that is not
-// white space. Such a rune changes a stored value and shows no change.
+// drawsNothing reports a format character, a filler or a control, tab and line
+// breaks included. It covers every rune identifier_spelling removes in SQL.
 func drawsNothing(r rune) bool {
-	return unicode.Is(unicode.Cf, r) || fillerRunes[r] || (unicode.IsControl(r) && !unicode.IsSpace(r))
+	return unicode.Is(unicode.Cf, r) || fillerRunes[r] || unicode.IsControl(r)
 }
 
 // hidesInside reports a rune that draws nothing between visible characters.
-// Padding is dropped; inside a host it makes a look-alike of another host.
+// Typed padding is dropped; typed inside, it spells a look-alike of another
+// identifier, so the parsers refuse it. Received mail is folded instead.
 func hidesInside(raw string) bool {
 	core := strings.TrimFunc(raw, func(r rune) bool { return unicode.IsSpace(r) || drawsNothing(r) })
 	return strings.ContainsFunc(core, drawsNothing)

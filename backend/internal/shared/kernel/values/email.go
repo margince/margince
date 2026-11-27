@@ -68,6 +68,12 @@ func parseAddress(raw string) (Email, error) {
 	if trimmed == "" {
 		return Email{}, &ParseError{Field: emailField, Code: "email_empty", Message: "an email address is required"}
 	}
+	if hidesInside(raw) {
+		return Email{}, &ParseError{
+			Field: emailField, Code: "email_malformed",
+			Message: "the address holds a character that does not show; type it again without one",
+		}
+	}
 	addr, err := mail.ParseAddress(trimmed)
 	if err != nil || !strings.EqualFold(addr.Address, trimmed) {
 		return Email{}, &ParseError{

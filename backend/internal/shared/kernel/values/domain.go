@@ -18,6 +18,9 @@ import (
 // re-trimmed at every capture surface.
 type Domain struct{ s string }
 
+// domainMalformed is the refusal code for a domain that is not one host name.
+const domainMalformed = "domain_malformed"
+
 // ParseDomain accepts a bare host or a full URL and reduces it to the
 // normalized host. Unicode labels pass the shape check as given; the kernel
 // cannot transcode, so callers go through owndomain.ParseDomain, which stores
@@ -28,13 +31,13 @@ func ParseDomain(raw string) (Domain, error) {
 		return Domain{}, &ParseError{Field: "domain", Code: "domain_empty", Message: "a domain is required"}
 	}
 	if hidesInside(raw) {
-		return Domain{}, &ParseError{Field: "domain", Code: "domain_malformed", Message: "the domain holds a character that does not show; type it again without one"}
+		return Domain{}, &ParseError{Field: "domain", Code: domainMalformed, Message: "the domain holds a character that does not show; type it again without one"}
 	}
 	host := trimmed
 	if strings.Contains(host, "://") {
 		u, err := url.Parse(host)
 		if err != nil || u.Hostname() == "" {
-			return Domain{}, &ParseError{Field: "domain", Code: "domain_malformed", Message: "not a resolvable URL or host name"}
+			return Domain{}, &ParseError{Field: "domain", Code: domainMalformed, Message: "not a resolvable URL or host name"}
 		}
 		host = u.Hostname()
 	} else if i := strings.IndexAny(host, "/?#"); i >= 0 {
@@ -49,7 +52,7 @@ func ParseDomain(raw string) (Domain, error) {
 
 	if !validHost(host) {
 		return Domain{}, &ParseError{
-			Field: "domain", Code: "domain_malformed",
+			Field: "domain", Code: domainMalformed,
 			Message: "not a host name (labels of letters, digits and inner hyphens, with a dot)",
 		}
 	}

@@ -9,12 +9,11 @@ import (
 	"crypto/sha256"
 	"encoding/hex"
 	"fmt"
+	"strings"
 	"sync/atomic"
 
 	"github.com/jackc/pgx/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
-
-	"github.com/margince/margince/backend/internal/shared/kernel/correspondence"
 )
 
 // SuppressionKeyLabel names the key erased identifiers are hashed under. The
@@ -64,7 +63,7 @@ func currentIdentifierKey() (identifierKey, bool) {
 // without a key hold it. The keyed form is a MAC over it, so a stored digest
 // can be re-keyed without the value it came from.
 func identifierDigest(value string) string {
-	digest := sha256.Sum256([]byte(correspondence.Fold(value)))
+	digest := sha256.Sum256([]byte(strings.ToLower(strings.TrimSpace(value))))
 	return hex.EncodeToString(digest[:])
 }
 

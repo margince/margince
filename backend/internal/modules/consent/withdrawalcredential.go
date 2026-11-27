@@ -204,7 +204,7 @@ func holdLeadSubject(ctx context.Context, tx pgx.Tx, lead ids.LeadID) error {
 // validWithdrawalMint refuses what no link can be written for, before either
 // door's probe spends a query on it.
 func validWithdrawalMint(in WithdrawalMintInput) error {
-	if normalizeAddress(in.Address) == "" {
+	if correspondence.Fold(in.Address) == "" {
 		return &ValidationError{
 			Field:  fieldAddress,
 			Reason: "a withdrawal link is written to an address, and this one is empty",
@@ -244,7 +244,7 @@ func insertWithdrawalCredential(ctx context.Context, tx pgx.Tx, in WithdrawalMin
 		INSERT INTO withdrawal_credential
 		    (token_hash, address, contact_id, lead_id, scope, purpose_id, expires_at)
 		VALUES ($1, $2, $3, $4, $5, $6, now() + $7::interval)`,
-		hashPublicToken(minted), normalizeAddress(in.Address),
+		hashPublicToken(minted), correspondence.Fold(in.Address),
 		zeroAsNull(in.ContactID.UUID), zeroAsNull(in.LeadID.UUID),
 		in.Scope, zeroAsNull(in.PurposeID),
 		withdrawalCredentialLife.String()); err != nil {
@@ -370,7 +370,7 @@ func legacyPreferenceTokenAsWithdrawal(ctx context.Context, tx pgx.Tx, token str
 		Legacy: true,
 	}
 	if address != nil {
-		ref.Address = normalizeAddress(*address)
+		ref.Address = correspondence.Fold(*address)
 	}
 	return ref, nil
 }
@@ -407,16 +407,6 @@ func (s *Store) RevokeSubjectCredentialsTx(
 		return fmt.Errorf("consent: revoking the subject's withdrawal links: %w", err)
 	}
 	return nil
-}
-
-// normalizeAddress lowercases and trims, matching the lower(address) the live
-// index is built on so a mint and a lookup agree about which row they mean.
-//
-// authorizecap.go and preference.go each normalize addresses for their own
-// purposes too. Consolidating them would change the cap's lock key, which does
-// not belong in a slice about withdrawal links.
-func normalizeAddress(address string) string {
-	return correspondence.Fold(address)
 }
 
 // purposeKeyByID reads the key a named-purpose credential was minted for, so

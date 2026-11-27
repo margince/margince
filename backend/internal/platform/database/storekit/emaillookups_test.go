@@ -30,3 +30,16 @@ func TestAnAddressIsLookedUpAsItWasTyped(t *testing.T) {
 		t.Errorf("EmailLookups of nothing = %v, want none", got)
 	}
 }
+
+// An erasure hashed before the fold holds the digest of the decomposed spelling.
+// A hash cannot be folded later, so a lookup asks for both digests.
+func TestAnErasureHashedBeforeTheFoldStillSuppresses(t *testing.T) {
+	t.Parallel()
+	decomposed, composed := "josé@x.example", "josé@x.example"
+	forms := SuppressionForms(EmailLookups(decomposed)...)
+	for _, stored := range []string{identifierDigest(decomposed), identifierDigest(composed)} {
+		if !slices.Contains(forms, stored) {
+			t.Errorf("SuppressionForms(EmailLookups(%q)) = %v, missing the stored digest %s", decomposed, forms, stored)
+		}
+	}
+}

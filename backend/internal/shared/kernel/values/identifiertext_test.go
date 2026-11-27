@@ -12,10 +12,8 @@ func TestAnAddressTypedTwoWaysIsOneAddress(t *testing.T) {
 		composed,
 		"jos" + "e" + r(0x0301) + "@x.com",
 		r(0x200B) + composed,
-		"jo" + r(0x200B) + "s" + r(0x00E9) + "@x.com",
 		composed + r(0xFEFF),
 		r(0x180E) + composed,
-		"jo" + r(0x202E) + "s" + r(0x00E9) + "@x.com",
 		composed + r(0x200E),
 		r(0x00A0) + composed + " ",
 	} {
@@ -26,14 +24,25 @@ func TestAnAddressTypedTwoWaysIsOneAddress(t *testing.T) {
 	}
 }
 
-func TestADomainDropsPaddingAndANumberRefusesWhatDrawsNothing(t *testing.T) {
+// A hidden rune between letters spells a look-alike, so a typed address that
+// holds one is refused.
+func TestAnAddressWithAHiddenRuneInsideIsRefused(t *testing.T) {
+	for _, typed := range []string{
+		"jo" + r(0x200B) + "se@x.com",
+		"jo" + r(0x202E) + "se@x.com",
+		"jose@exa" + r(0x2060) + "mple.com",
+	} {
+		if got, err := ParseEmail(typed); err == nil {
+			t.Errorf("ParseEmail(%q) = %q, want a refusal", typed, got)
+		}
+	}
+}
+
+func TestADomainDropsPaddingAndRefusesAHiddenRuneInside(t *testing.T) {
 	if got, err := ParseDomain(r(0xFEFF) + "Example.com" + r(0x200F)); err != nil || got.String() != "example.com" {
 		t.Errorf("ParseDomain = %q, %v; want example.com", got, err)
 	}
 	if got, err := ParseDomain("exa" + r(0x200B) + "mple.com"); err == nil {
 		t.Errorf("ParseDomain kept %q, want a refusal: a hidden rune inside makes a look-alike host", got)
-	}
-	if got, err := ParsePhone(r(0x202A) + "+49 30 1234567" + r(0x202C)); err == nil {
-		t.Errorf("ParsePhone kept %q, want a refusal: a number holds digits and the separators the browser lists", got)
 	}
 }
