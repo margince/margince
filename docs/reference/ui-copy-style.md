@@ -276,8 +276,8 @@ The check does not reach:
 - text a function returns from a `switch` and not from a table;
 - a table whose map type another package declares, which the census of
   language-keyed tables cannot resolve;
-- a generic map type whose key is a type parameter, instantiated with
-  `textlang.Lang`;
+- a map type that takes its key type as a parameter, used with
+  `textlang.Lang` as the key;
 - strings outside a table: problem details, `crm.yaml` and the copy of MCP tools,
   which issues #13561 and #13562 track.
 
