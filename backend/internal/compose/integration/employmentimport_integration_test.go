@@ -65,9 +65,8 @@ func TestEmploymentImportPreservesDistinctRolesAndReplays(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	// Once the first role is linked as a former employment, the contact has an
-	// ended row at the company, so a later role there waits for review rather
-	// than being linked again automatically.
+	// The first role is linked as a former employment, which leaves an ended row
+	// at the company. A later role there then waits for review.
 	want := map[string]crmcontracts.EmploymentImportItemState{"Engineer": "linked", "Director": "needs_review", "Advisor": "needs_review", "Consultant": "needs_match"}
 	for _, item := range report.Items {
 		if item.State != want[item.Role] {
