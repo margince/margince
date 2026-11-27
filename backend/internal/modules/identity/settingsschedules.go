@@ -91,9 +91,6 @@ var (
 		Type: config.Int, Default: seconds(6 * time.Hour), Validate: offOrWithin(5*time.Minute, week),
 		Doc: "Seconds between the sweeps that add missing technical profiles, or 0 for off.",
 	}, scheduleStore)
-	// The watch scans run at least twice a day: a renewal window is at least
-	// a day (below), so two scans always land inside it, with room for one
-	// that runs late or fails.
 	// The two AI verdict passes of mail capture. The floor keeps a value inside
 	// the range from running the model every few seconds.
 	CaptureCounterpartyVerdictIntervalSeconds = config.DefineStored(config.Spec[int]{
@@ -106,6 +103,9 @@ var (
 		Type: config.Int, Default: seconds(10 * time.Minute), Min: seconds(time.Minute), Max: seconds(day),
 		Doc: "Seconds between the passes that judge whether colleagues may read a captured thread.",
 	}, scheduleStore)
+	// The watch scans run at least twice a day: a renewal window is at least
+	// a day (below), so two scans always land inside it, with room for one
+	// that runs late or fails.
 	GmailWatchScanIntervalSeconds = config.DefineStored(config.Spec[int]{
 		Key: "installation.gmail_watch_scan_interval_seconds", Env: "MARGINCE_INSTALLATION_GMAIL_WATCH_SCAN_INTERVAL_SECONDS",
 		Type: config.Int, Default: seconds(6 * time.Hour), Min: seconds(10 * time.Minute), Max: seconds(day / 2),
