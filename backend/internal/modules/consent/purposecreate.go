@@ -92,11 +92,12 @@ func refuseConfusableLabel(ctx context.Context, tx pgx.Tx, label string) error {
 }
 
 // purposeReading is a label or key as a reader tells it apart: case, spacing,
-// underscores and the encoding of its accents aside. Case maps up then down, as
-// privacy.purposes.tsx does, so ΌΡΟΣ reads as Όρος, STRASSE as Straße and ı as i.
+// underscores and the encoding of its accents aside. Case maps up, then folds, so
+// ΌΡΟΣ reads as Όρος, STRAẞE and STRASSE as Straße, and ı as i.
+// privacy.purposes.tsx mirrors it.
 func purposeReading(text string) string {
 	upper := cases.Upper(language.Und).String(norm.NFC.String(text))
-	return strings.Join(strings.Fields(strings.ReplaceAll(cases.Lower(language.Und).String(upper), "_", " ")), " ")
+	return strings.Join(strings.Fields(strings.ReplaceAll(cases.Fold().String(upper), "_", " ")), " ")
 }
 
 // purposeKeyTaken explains a refused key. An archived purpose keeps its key

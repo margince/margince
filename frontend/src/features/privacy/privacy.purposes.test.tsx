@@ -248,6 +248,7 @@ describe("Add purpose", () => {
   // Mutation: lower-case without upper-casing first and the typed label is sent.
   it.each([
     ["Straße", "STRASSE"],
+    ["Straße", "STRAẞE"],
     ["Kilavuz", "Kılavuz"],
   ])(
     "refuses a label that reads like %s once its case is mapped",
