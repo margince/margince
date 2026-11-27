@@ -8,11 +8,7 @@ import {
   ordinalNumber,
 } from "../format/format";
 import { useLocale, useT } from "../i18n";
-import {
-  DESKTOP_MIN_WIDTH,
-  usePhoneViewport,
-  useViewportUnder,
-} from "../lib/viewport";
+import { useBelowDesktop, usePhoneViewport } from "../lib/viewport";
 import { type PageRange, rangeText } from "./listsurface";
 import { PAGE_SIZES, PAGER_SLOTS, pagerSlots } from "./listtable.paging";
 import { Select } from "./select";
@@ -51,7 +47,7 @@ export function Pager({
   const t = useT();
   const { locale } = useLocale();
   const phone = usePhoneViewport();
-  const short = useViewportUnder(DESKTOP_MIN_WIDTH - 1);
+  const short = useBelowDesktop();
   const slots = short ? PAGER_SLOTS.short : PAGER_SLOTS.wide;
   return (
     <div className={`lt-foot${lastPage === 1 && endKnown ? " single" : ""}`}>

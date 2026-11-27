@@ -116,10 +116,10 @@ export function CompaniesScreen({
     key: "companies",
     initialSort: "-created_at",
     fetchPage: fetchCompaniesPage,
-    readsAtOffset: true,
+    readsAtOffset: { rowKey: (company) => company.id },
   });
   const selection = useBulkSelection({
-    rows: state.rows,
+    rows: state.held,
     recordType: "company",
     labelOf: (company) => company.display_name,
   });

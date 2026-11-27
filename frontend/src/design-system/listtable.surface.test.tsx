@@ -244,9 +244,8 @@ describe("pagination", () => {
       screen.getByRole("combobox", { name: "Rows per page" }),
       "50 per page",
     );
-    // The page size is the SERVER's page size: the table reports the choice and
-    // the caller re-asks with it. A table that resliced its buffer here is what
-    // made a list say "1-25 of 50 loaded".
+    // The page size is the server's page size: the table reports the choice and
+    // the caller re-asks with it, never reslicing the rows it holds.
     expect(onPerPage).toHaveBeenCalledWith(50);
   });
 

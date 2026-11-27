@@ -188,7 +188,7 @@ export function ProjectsScreen({
     key: "projects",
     initialSort: "-last_activity_at",
     fetchPage: fetchProjectsPage,
-    readsAtOffset: true,
+    readsAtOffset: { rowKey: (project) => project.id },
   });
   // Held back until the first page has answered: the first-run plate below
   // mounts its own copy of this verb, and a button pressed in the table's

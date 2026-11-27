@@ -183,7 +183,7 @@ function LeadsWorkbench({
     initialSort: "",
     initialFilters: opensOnAll ? {} : { owner_id: viewerId },
     fetchPage: fetchLeadsPage,
-    readsAtOffset: true,
+    readsAtOffset: { rowKey: (lead) => lead.id },
     // A refused dial the list can name is not asked for; it is named instead.
     enabled: (query) => namedRefusedDials(query, withheld).length === 0,
     // Board or table is this screen's own, so the codec must not read it as a
@@ -205,7 +205,7 @@ function LeadsWorkbench({
   const bulkDone = useBulkDoneMessage();
   const showingMine = state.query.filters.owner_id === viewerId;
   const chosen = useRowSelection({
-    rows: state.rows,
+    rows: state.held ?? state.rows,
     keyOf: (lead) => lead.id,
     limit: BULK_MAX_ITEMS,
   });

@@ -4,7 +4,14 @@
 // Which rendered page of a list table is on screen, and how many rows a page
 // holds. A new narrowing sends the reader back to page one.
 
-import { type RefObject, useEffect, useMemo, useRef, useState } from "react";
+import {
+  type RefObject,
+  useEffect,
+  useEffectEvent,
+  useMemo,
+  useRef,
+  useState,
+} from "react";
 import { stable } from "../format/collate";
 
 /**
@@ -63,40 +70,39 @@ export function narrowingSignature(
 }
 
 /**
- * Sends the reader back to page one when the narrowing changes. Page 2 of a
- * new filter, sort or scope holds rows they never asked for.
- *
- * Not when `keepsPage` says so: a link that changes the narrowing names its page.
- *
- * Not on arrival: a page read from the address must survive until the first
- * rows land. A scope that resolves meanwhile, as the deals pipeline does, is
- * part of arriving. Counting effect runs fails, because StrictMode and late
- * deps run the effect on arrival more than once.
+ * Sends the reader back to page one when the dials change, unless `keepsPage`
+ * says a link named both. A scope that settles before the first rows land, as
+ * the deals pipeline does, is arrival and keeps the page. Compared by value:
+ * StrictMode and late deps run the effect on arrival more than once.
  */
 function useResetOnNarrowing(
-  narrowing: string,
+  narrowing: Readonly<{ dials: string; scope: string }>,
   toFirstPage: () => void,
   keepsPage: (() => boolean) | undefined,
   pending: boolean,
 ) {
-  const narrowedBy = useRef(narrowing);
+  const { dials, scope } = narrowing;
+  const seen = useRef({ dials, scope });
   const arrived = useRef(!pending);
-  // `toFirstPage` is re-made every render and must not re-run the effect;
-  // what it does depends only on the signature.
-  // biome-ignore lint/correctness/useExhaustiveDependencies: setPage is stable in effect
+  const reset = useEffectEvent(() => {
+    if (!keepsPage?.()) {
+      toFirstPage();
+    }
+  });
   useEffect(() => {
-    if (narrowedBy.current === narrowing) {
+    const before = seen.current;
+    if (before.dials === dials && before.scope === scope) {
       return;
     }
-    narrowedBy.current = narrowing;
-    if (!arrived.current || keepsPage?.()) {
+    seen.current = { dials, scope };
+    if (before.dials === dials && !arrived.current) {
       return;
     }
-    toFirstPage();
+    reset();
     // The page and nothing else. This also fires on the way out, against an
     // address that is no longer the list's, and a scroll offset written then
     // would be lost. The pager scrolls to the top for its own moves instead.
-  }, [narrowing]);
+  }, [dials, scope]);
   useEffect(() => {
     if (!pending) {
       arrived.current = true;
@@ -248,18 +254,17 @@ function sliceOf<Row>(
   return rows.slice(from, from + perPage);
 }
 
-// A jumped page the count no longer reaches, as after rows were removed, goes
-// to the last page the count names.
+// A jumped page past the count goes to the last counted page.
 function useClampJumpedPage(
   jumped: boolean,
   page: number,
   counted: number | undefined,
   setPage: (to: number) => void,
 ) {
-  // biome-ignore lint/correctness/useExhaustiveDependencies: setPage is re-made every render
+  const toLast = useEffectEvent((last: number) => setPage(last));
   useEffect(() => {
     if (jumped && counted !== undefined && page > counted) {
-      setPage(counted);
+      toLast(counted);
     }
   }, [jumped, page, counted]);
 }
@@ -294,7 +299,10 @@ export function usePaging<Row>(
   });
   useClampJumpedPage(jumped !== undefined, page, counted, setPage);
   useResetOnNarrowing(
-    narrowingSignature({ ...narrowing, perPage }),
+    {
+      dials: narrowingSignature({ ...narrowing, scopeKey: "", perPage }),
+      scope: narrowing.scopeKey,
+    },
     () => setPage(1),
     control.keepsPage,
     control.pending ?? false,

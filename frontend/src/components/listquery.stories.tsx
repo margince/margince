@@ -98,7 +98,7 @@ function Harness({
     key: "story-list",
     initialSort: "-created_at",
     fetchPage,
-    readsAtOffset,
+    readsAtOffset: readsAtOffset ? { rowKey: (row) => row.id } : undefined,
   });
   return (
     <ListTable

@@ -1,5 +1,5 @@
 import { listFetchLimit, listPageOf } from "../../components/listquery";
-import { jumpTarget, useListJump } from "../../components/listquery.jump";
+import { useJumpedList } from "../../components/listquery.jump";
 import { CLOSE_DAY_DIAL } from "../../lib/dealranges";
 import {
   type DealFilters,
@@ -31,7 +31,6 @@ export function useSurfaceReads(
   const scopeKnown = pipelinesQuery.data !== undefined;
   const tableReads = view === "table" && !refused && scopeKnown;
   const dealsQuery = useDeals(f, tableReads, listFetchLimit(perPage));
-  const dealJump = useDealJump(f, perPage, dealsQuery, tableReads);
   const stageColumns = useStageColumns(
     f,
     stages.map((stage) => stage.id),
@@ -47,64 +46,32 @@ export function useSurfaceReads(
   );
   const readError = view === "board" ? stageColumns.error : dealsQuery.error;
   const listRead = scopeKnown ? dealsQuery : pipelinesQuery;
-  return {
-    dealsQuery,
-    stageColumns,
-    stageTotalsQuery,
-    readError,
-    tableRead: tableReadOf(listRead, dealsQuery, dealJump),
-  };
+  const tableRead = useDealsTable(f, perPage, dealsQuery, listRead, tableReads);
+  return { stageColumns, stageTotalsQuery, readError, tableRead };
 }
 
-// The table's list state, read off its cursor read and the page read beside it.
-function tableReadOf(
-  listRead: ReturnType<typeof useDeals> | ReturnType<typeof usePipelines>,
-  dealsQuery: ReturnType<typeof useDeals>,
-  dealJump: ReturnType<typeof useDealJump>,
-) {
-  return {
-    isPending: listRead.isPending,
-    isError: listRead.isError || dealJump.isError,
-    error: listRead.error ?? dealJump.error,
-    refetch: () => {
-      listRead.refetch();
-      dealJump.refetch();
-    },
-    hasMore: dealsQuery.hasNextPage,
-    loadMore: () => {
-      dealsQuery.fetchNextPage();
-    },
-    jumped: dealJump.jumped,
-    total:
-      dealJump.total ??
-      dealsQuery.data?.pages.findLast((page) => page.page?.total !== undefined)
-        ?.page?.total,
-  };
-}
-
-// The table's page past the cursor's deals, read at its offset.
-function useDealJump(
+// The table's list state: its cursor read, and the page the address names read
+// at its offset beside it. Deals carry no `paramScope`, so the page is the
+// unscoped one the table writes.
+function useDealsTable(
   f: DealFilters,
   perPage: number,
   dealsQuery: ReturnType<typeof useDeals>,
+  listRead: ReturnType<typeof useDeals> | ReturnType<typeof usePipelines>,
   enabled: boolean,
 ) {
   const [params] = useUrlParams();
   const closeDay = useCloseDay(f.filters[CLOSE_DAY_DIAL]);
   const readerScope = useHealthScope();
   const pages = dealsQuery.data?.pages ?? [];
-  return useListJump({
+  const rows = pages.flatMap((page) => page.data);
+  const list = useJumpedList({
     prefixKey: dealsListKey(
       readerScope ?? "",
       f,
       closeDay,
       listFetchLimit(perPage),
     ),
-    target: jumpTarget(listPageOf(params), perPage, {
-      rows: pages.reduce((count, page) => count + page.data.length, 0),
-      hasMore: dealsQuery.hasNextPage,
-      pending: dealsQuery.isPending,
-    }),
     read: async (cursor, reach, signal) =>
       listPageOfDeals(
         await readDealsAt(
@@ -119,7 +86,34 @@ function useDealJump(
         ),
       ),
     enabled: enabled && readerScope !== undefined,
+    page: listPageOf(params),
+    perPage,
+    rowKey: (deal) => deal.id,
+    cursor: {
+      rows,
+      hasMore: dealsQuery.hasNextPage,
+      pending: dealsQuery.isPending,
+      total: pages.findLast((page) => page.page?.total !== undefined)?.page
+        ?.total,
+      isError: listRead.isError,
+      error: listRead.error,
+      refetch: () => listRead.refetch(),
+    },
   });
+  return {
+    rows,
+    held: list.held,
+    jumped: list.jumped,
+    total: list.total,
+    isPending: listRead.isPending,
+    isError: list.isError,
+    error: list.error,
+    refetch: list.refetch,
+    hasMore: dealsQuery.hasNextPage,
+    loadMore: () => {
+      dealsQuery.fetchNextPage();
+    },
+  };
 }
 
 function listPageOfDeals(page: DealListPage) {

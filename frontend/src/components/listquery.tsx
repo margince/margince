@@ -16,7 +16,7 @@ import { problemFieldErrorsOf } from "../lib/problem";
 import { useTagVocabulary } from "../lib/tags.queries";
 import { currentParams, useUrlParams } from "../lib/urlstate";
 import "./listquery.css";
-import { jumpTarget, useListJump } from "./listquery.jump";
+import { useJumpedList } from "./listquery.jump";
 import {
   type ListFetchPage,
   listInfiniteOptions,
@@ -156,12 +156,15 @@ export function useListQuery<Row>({
   screenDials = NO_SCREEN_DIALS,
   paramScope,
   enabled,
-  readsAtOffset = false,
+  readsAtOffset,
 }: Readonly<{
   key: string;
   fetchPage: ListFetchPage<Row>;
-  /** The endpoint takes `offset`, so a page past the cursor's rows is read in one request. */
-  readsAtOffset?: boolean;
+  /**
+   * The endpoint takes `offset`, so a page past the cursor's rows is read in
+   * one request; `rowKey` tells a record the two reads both hold.
+   */
+  readsAtOffset?: Readonly<{ rowKey: (row: Row) => string }>;
   initialSort?: string;
   /**
    * Filters the list opens on, for a reader who has not narrowed it themselves.
@@ -313,17 +316,26 @@ export function useListQuery<Row>({
   );
   const infinite = useInfiniteQuery({ ...cursorRead, enabled: reads });
   const rows = (infinite.data?.pages ?? []).flatMap((page) => page.data);
-  const jump = useListJump({
+  const list = useJumpedList({
     prefixKey: cursorRead.queryKey,
-    target: readsAtOffset
-      ? jumpTarget(listPageOf(params, paramScope), query.perPage, {
-          rows: rows.length,
-          hasMore: infinite.hasNextPage,
-          pending: infinite.isPending,
-        })
-      : undefined,
     read: (cursor, reach, signal) => fetchPage(query, cursor, signal, reach),
-    enabled: reads,
+    enabled: reads && readsAtOffset !== undefined,
+    page: listPageOf(params, paramScope),
+    perPage: query.perPage,
+    rowKey: readsAtOffset?.rowKey,
+    cursor: {
+      rows,
+      hasMore: infinite.hasNextPage,
+      pending: infinite.isPending,
+      // The newest page that counted. A record list counts on a page read
+      // without a cursor; a refetch re-reads it, so a later write still reaches it.
+      total: infinite.data?.pages.findLast(
+        (page) => page.page.total !== undefined,
+      )?.page.total,
+      isError: infinite.isError,
+      error: infinite.error,
+      refetch: () => infinite.refetch(),
+    },
   });
   // A bookmark from an older build can name a sort the server no longer
   // offers. The list then opens in its own order. If that one is refused too,
@@ -351,20 +363,13 @@ export function useListQuery<Row>({
     paramScope,
     hasMore: infinite.hasNextPage,
     loadMore: () => infinite.fetchNextPage(),
-    jumped: jump.jumped,
-    // The newest page that counted. A record list counts on a page read
-    // without a cursor; a refetch re-reads it, so a later write still reaches it.
-    total:
-      jump.total ??
-      infinite.data?.pages.findLast((page) => page.page.total !== undefined)
-        ?.page.total,
+    jumped: list.jumped,
+    held: list.held,
+    total: list.total,
     isPending: infinite.isPending,
-    isError: infinite.isError || jump.isError,
-    error: infinite.error ?? jump.error,
-    refetch: () => {
-      infinite.refetch();
-      jump.refetch();
-    },
+    isError: list.isError,
+    error: list.error,
+    refetch: list.refetch,
   };
 }
 
@@ -390,6 +395,8 @@ export type ListState<Row> = Readonly<{
   loadMore: () => void;
   /** Rows read at an offset for a page past `rows`; see `JumpedRows`. */
   jumped?: JumpedRows<Row>;
+  /** `rows` and the jumped page's, each record once: what a selection can hold. */
+  held?: readonly Row[];
   /**
    * How many rows match the current filters on the server, when it says. The
    * rendered count falls back to the rows in hand where it does not.

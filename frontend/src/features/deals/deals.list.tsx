@@ -124,7 +124,7 @@ export function DealsScreen({
   });
   // A refused dial the list can name is named, and no wider list is asked for.
   const roleRefusal = nameRefusal(refusedDials);
-  const { dealsQuery, stageColumns, stageTotalsQuery, readError, tableRead } =
+  const { stageColumns, stageTotalsQuery, readError, tableRead } =
     useSurfaceReads(
       dealFilters,
       stages,
@@ -153,19 +153,15 @@ export function DealsScreen({
   const advance = useAdvanceDeal();
 
   const stageName = new Map(stages.map((stage) => [stage.id, stage.name]));
-  const loadedDeals = (dealsQuery.data?.pages ?? []).flatMap(
-    (page) => page.data,
-  );
   // Cleared after any bulk run except for the rows that refused, since every
   // other row's version has moved.
   const chosen = useRowSelection({
-    rows: loadedDeals,
+    rows: tableRead.held,
     keyOf: (deal) => deal.id,
     limit: BULK_MAX_ITEMS,
   });
 
   const dealsListState: ListState<Deal> = {
-    rows: loadedDeals,
     query,
     setQuery,
     ...tableRead,
@@ -233,6 +229,8 @@ export function DealsScreen({
     ? {
         ...dealsListState,
         rows: [],
+        held: [],
+        jumped: undefined,
         isPending: false,
         isError: false,
         hasMore: false,

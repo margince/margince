@@ -56,7 +56,7 @@ describe("the pager's page numbers", () => {
   });
 
   // A gap after the pages in hand says more follow, so they do not read as the list.
-  it("end in a gap while the server sends no total and more rows exist", () => {
+  it("ends in a gap while the server sends no total and more rows exist", () => {
     const { container } = render(
       <ListTable
         rows={testRows(50)}

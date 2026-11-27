@@ -127,10 +127,10 @@ function ContactsList({ startCreating }: Readonly<{ startCreating: boolean }>) {
     key: CONTACTS_LIST_KEY,
     initialSort: CONTACTS_INITIAL_SORT,
     fetchPage: fetchContactsPage,
-    readsAtOffset: true,
+    readsAtOffset: { rowKey: (contact) => contact.id },
   });
   const selection = useBulkSelection({
-    rows: state.rows,
+    rows: state.held,
     recordType: "contact",
     labelOf: (contact) => contact.full_name,
   });

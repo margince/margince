@@ -126,25 +126,8 @@ export function replaceOwn(
   return next;
 }
 
-/**
- * The list's own dials, and the names they go by in the address.
- *
- * `q`, `sort` and `include_archived` are the wire's own spellings. A filter
- * chip's key is already a wire param name, since `...query.filters` is spread
- * onto the request. So the address and the endpoint describe a narrowed list
- * in one vocabulary, instead of two that must be kept in step.
- * Every other key in the address is therefore a filter, and no list of them is
- * kept here. A screen that adds a chip gets an addressable one for free. A
- * table of known filters would be a second copy of every screen's chip set.
- *
- * `per` is the exception and has no wire spelling, because a rendered page size
- * is a choice about drawing rather than about which rows exist. It is the
- * list's own name, which is why a filter param may not be called `per`.
- */
-// Which rendered page is on screen, under the list's own name. A page number
-// is a slice of rows fetched by cursor or at an offset (see listFetchLimit).
-// A stale cursor in an address would 422; a stale page number shows the
-// last page there is.
+// The rendered page, under the list's own name. A stale one shows the last page
+// there is, where a stale cursor would 422.
 const PAGE_PARAM = "page";
 
 /**
@@ -181,6 +164,10 @@ const PER_PAGE_PARAM = "per";
 /** A screen with no drawing dial of its own, which is most of them. */
 export const NO_SCREEN_DIALS: readonly string[] = [];
 
+/**
+ * The list's own address keys. Every other key is a filter under its wire name;
+ * `per` and `page` are drawing choices with no wire spelling.
+ */
 const LIST_OWN_PARAMS: ReadonlySet<string> = new Set([
   "q",
   "sort",
@@ -407,7 +394,7 @@ export const LIST_OFFSET_CAP = 10000;
 
 /** Where a read starts when it is not the cursor's next step. */
 export type ListReach = Readonly<{
-  /** The row a jump starts at. */
+  /** Rows to skip in the list's own order; set for a jump, never with a cursor. */
   offset?: number;
   /** A read at or past `LIST_OFFSET_CAP`, which walks in the widest reads. */
   pastCap?: boolean;
