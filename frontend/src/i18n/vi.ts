@@ -5579,6 +5579,7 @@ export const vi: Readonly<Record<MessageKey, string>> = {
     "Chưa có dữ liệu kỹ thuật. Tự động điền và cập nhật khi đọc trang web của công ty.",
   "co.tech.laneFailed": "{lane} không phản hồi. Kết quả trước vẫn giữ nguyên.",
   "co.tech.laneRefused": "Trang web đã chặn truy cập.",
+  "co.tech.laneFailedFirst": "{lane} không phản hồi nên chưa có kết quả nào.",
   "co.tech.lane.dns": "DNS",
   "co.tech.lane.certlog": "Chứng chỉ",
   "co.tech.lane.homepage": "Trang chủ",
@@ -7462,6 +7463,21 @@ export const vi: Readonly<Record<MessageKey, string>> = {
   "deepread.statusFailed": "Bị lỗi",
   "deepread.statusCancelled": "Đã hủy",
   "deepread.resumesAt": "Tự động chạy tiếp {when}.",
+  "deepread.failure.bot_blocked":
+    "Cơ chế chống bot của trang web đã từ chối việc đọc.",
+  "deepread.failure.http_server_error": "Trang web trả về lỗi máy chủ.",
+  "deepread.failure.timeout": "Trang web không phản hồi kịp.",
+  "deepread.failure.http_client_error":
+    "Không tìm thấy trang chủ của trang web.",
+  "deepread.failure.dns": "Tên miền không trỏ tới máy chủ nào.",
+  "deepread.failure.tls": "Không xác minh được chứng chỉ HTTPS của trang web.",
+  "deepread.failure.robots_disallowed":
+    "Trang web yêu cầu trình thu thập không đọc trang.",
+  "deepread.failure.unreadable":
+    "Trang web có phản hồi nhưng không có nội dung đọc được.",
+  "deepread.failure.internal":
+    "Margince không hoàn tất được việc đọc. Nguyên nhân nằm ở bản cài đặt này, không phải ở trang web. Quản trị viên xem trong nhật ký máy chủ.",
+  "deepread.failure.stale_reclaim": "Lượt đọc ngừng báo cáo nên đã bị dừng.",
   "deepread.pagesSoFar_one": "Đến nay đã đọc {count} trang",
   "deepread.pagesSoFar_other": "Đến nay đã đọc {count} trang",
   "deepread.stoppedEarly": "Dừng sớm: {reason}",

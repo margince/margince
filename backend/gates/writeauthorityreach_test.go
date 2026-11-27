@@ -29,6 +29,7 @@ import (
 	"go/ast"
 	"path/filepath"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -259,7 +260,7 @@ func TestEveryWriteToAShareableRecordReachesAWriteAuthorityProbe(t *testing.T) {
 	defer writesWithoutARowProbe.AssertAllMatched(t)
 
 	tables := shareableTables(t)
-	pkgs := writeAuthorityIndex(t, tables)
+	pkgs := readOnlyWriteAuthorityIndex(t)
 	vocab := writeAuthorityVocabulary(t)
 
 	subjects := 0
@@ -281,19 +282,19 @@ func TestEveryWriteToAShareableRecordReachesAWriteAuthorityProbe(t *testing.T) {
 		// outright would be a hole: `UpdateContact` on the store shares its name
 		// with the HTTP handler that calls it, so a name-based roots filter
 		// dropped the real store method out of the census entirely.
-		guardedCallers := guardedCallersOf(byReceiver, tables, vocab)
-		for recv := range byReceiver {
-			visible := visibleWriteAuthorityFns(byReceiver, recv)
-			for name := range visible {
+		views := writeAuthorityViews(byReceiver, tables, vocab)
+		guardedCallers := guardedCallersIn(views)
+		for _, view := range views {
+			for name := range view.fns {
 				if guardedCallers[name] {
 					continue
 				}
-				written := writtenTablesUnder(visible, name, tables, map[string]bool{})
+				written := view.written[name]
 				if len(written) == 0 {
 					continue
 				}
 				key := dir + ":" + name
-				if reachesWriteAuthorityProbe(visible, name, vocab, map[string]bool{}) {
+				if view.probed[name] {
 					guarded[key] = true
 				}
 				if judged[key] {
@@ -332,7 +333,7 @@ func TestEveryWriteToAShareableRecordReachesAWriteAuthorityProbe(t *testing.T) {
 // indistinguishable from safety.
 func TestNoMutationOfAShareableRecordHidesItsTableFromThisGate(t *testing.T) {
 	t.Parallel()
-	for dir, byReceiver := range writeAuthorityIndex(t, shareableTables(t)) {
+	for dir, byReceiver := range readOnlyWriteAuthorityIndex(t) {
 		for _, fns := range byReceiver {
 			for name, info := range fns {
 				for _, stmt := range info.dynamicWrite {
@@ -362,24 +363,27 @@ func TestNoMutationOfAShareableRecordHidesItsTableFromThisGate(t *testing.T) {
 func guardedCallersOf(byReceiver map[string]map[string]*writeAuthorityFn,
 	tables map[string]bool, vocab map[string]bool,
 ) map[string]bool {
+	return guardedCallersIn(writeAuthorityViews(byReceiver, tables, vocab))
+}
+
+// guardedCallersIn is guardedCallersOf over views already judged, so the census
+// walks each function's reach once for both questions.
+func guardedCallersIn(views map[string]writeAuthorityView) map[string]bool {
 	known := map[string]bool{}
-	for _, fns := range byReceiver {
-		for name := range fns {
+	for _, view := range views {
+		for name := range view.fns {
 			known[name] = true
 		}
 	}
 	callers, guardedBy := map[string]int{}, map[string]int{}
-	for recv := range byReceiver {
-		visible := visibleWriteAuthorityFns(byReceiver, recv)
-		for name, info := range visible {
-			writes := len(writtenTablesUnder(visible, name, tables, map[string]bool{})) > 0
-			probed := writes && reachesWriteAuthorityProbe(visible, name, vocab, map[string]bool{})
+	for _, view := range views {
+		for name, info := range view.fns {
 			for callee := range info.calls {
 				if !known[callee] || callee == name {
 					continue
 				}
 				callers[callee]++
-				if probed {
+				if view.probed[name] {
 					guardedBy[callee]++
 				}
 			}
@@ -392,6 +396,49 @@ func guardedCallersOf(byReceiver map[string]map[string]*writeAuthorityFn,
 		}
 	}
 	return covered
+}
+
+// writeAuthorityView is one receiver's visible functions, each judged once: the
+// shareable tables it reaches a write of, and whether such a writer reaches a probe.
+type writeAuthorityView struct {
+	fns     map[string]*writeAuthorityFn
+	written map[string][]string
+	probed  map[string]bool
+}
+
+func writeAuthorityViews(byReceiver map[string]map[string]*writeAuthorityFn,
+	tables map[string]bool, vocab map[string]bool,
+) map[string]writeAuthorityView {
+	views := make(map[string]writeAuthorityView, len(byReceiver))
+	for recv := range byReceiver {
+		visible := visibleWriteAuthorityFns(byReceiver, recv)
+		view := writeAuthorityView{fns: visible, written: map[string][]string{}, probed: map[string]bool{}}
+		for name := range visible {
+			written := writtenTablesUnder(visible, name, tables, map[string]bool{})
+			view.written[name] = written
+			view.probed[name] = len(written) > 0 && reachesWriteAuthorityProbe(visible, name, vocab, map[string]bool{})
+		}
+		views[recv] = view
+	}
+	return views
+}
+
+var (
+	readOnlyWriteAuthorityIndexOnce  sync.Once
+	readOnlyWriteAuthorityIndexValue map[string]map[string]map[string]*writeAuthorityFn
+)
+
+// readOnlyWriteAuthorityIndex is built once for the gates that only read it. The
+// spelling gate marks preview admissions on its index, so it builds its own.
+func readOnlyWriteAuthorityIndex(t *testing.T) map[string]map[string]map[string]*writeAuthorityFn {
+	t.Helper()
+	readOnlyWriteAuthorityIndexOnce.Do(func() {
+		readOnlyWriteAuthorityIndexValue = writeAuthorityIndex(t, shareableTables(t))
+	})
+	if readOnlyWriteAuthorityIndexValue == nil {
+		t.Fatal("the write-authority index was not built: the gate that built it first reports why")
+	}
+	return readOnlyWriteAuthorityIndexValue
 }
 
 // writtenTablesUnder collects the shareable tables a function changes, its

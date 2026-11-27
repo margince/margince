@@ -125,11 +125,13 @@ func (h Handlers) ListPassports(w http.ResponseWriter, r *http.Request) {
 // that too instead of naming a zero uuid — and each is worth stating as its own
 // case rather than proving through a database.
 func passportSummary(p PassportRow) crmcontracts.PassportSummary {
+	grantedBy := openapi_types.UUID(p.GrantedBy.UUID)
 	summary := crmcontracts.PassportSummary{
 		Id:         openapi_types.UUID(p.ID.UUID),
 		Scopes:     p.Scopes,
 		Areas:      areasToWire(p.Areas),
 		CreatedAt:  p.CreatedAt,
+		GrantedBy:  &grantedBy,
 		ExpiresAt:  &p.ExpiresAt,
 		RevokedAt:  p.RevokedAt,
 		AppBound:   &p.AppBound,
