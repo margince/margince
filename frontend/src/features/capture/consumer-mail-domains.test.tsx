@@ -164,7 +164,7 @@ describe("ConsumerMailDomainsCard", () => {
     );
 
     await user.type(
-      await screen.findByLabelText("Search the shipped list"),
+      await screen.findByLabelText(en["consumerMail.baselineSearchLabel"]),
       "gm",
     );
     await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);

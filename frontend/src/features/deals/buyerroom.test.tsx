@@ -14,6 +14,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { FilePreviewProvider } from "../../design-system/filepreview";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { BuyerRoomScreen } from "./buyerroom";
 
 // The buyer's Deal Room. The credential in the hash is exchanged once and
@@ -239,7 +240,7 @@ describe("BuyerRoomScreen", () => {
     await user.type(screen.getByLabelText("Reply"), "Thirty days would.");
     await user.click(screen.getByRole("button", { name: "Reply" }));
 
-    await screen.findByText("This tab shows an older room");
+    await screen.findByText(englishCopy["buyer.roomReplacedTitle"]);
     expect(screen.queryByRole("heading", { name: "Other room" })).toBeNull();
     expect(
       sent.some((s) => s.key === "POST /public/rooms/threads/th-1/comments"),
@@ -315,9 +316,7 @@ describe("BuyerRoomScreen", () => {
     });
     render(<BuyerRoomScreen />);
 
-    await screen.findByText(
-      "The company that invited you can see when you sign in and which documents you download.",
-    );
+    await screen.findByText(englishCopy["buyer.engagementNoticeUnnamed"]);
     expect(screen.queryByText(/^ can see/)).toBeNull();
   });
 
@@ -336,7 +335,7 @@ describe("BuyerRoomScreen", () => {
     });
     render(<BuyerRoomScreen />);
 
-    await screen.findByText("Access is paused");
+    await screen.findByText(englishCopy["buyer.pausedTitle"]);
     expect(
       screen.getByText(/Ada Admin has paused this room/),
     ).toBeInTheDocument();
@@ -352,14 +351,14 @@ describe("BuyerRoomScreen", () => {
     });
     render(<BuyerRoomScreen />);
 
-    await screen.findByText("Access has ended");
+    await screen.findByText(englishCopy["buyer.expiredTitle"]);
     expect(
       screen.getByText(
         "Access to this room has expired. Contact Ada Admin if you need it again.",
       ),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Request new link" }),
+      screen.queryByRole("button", { name: englishCopy["buyer.requestLink"] }),
     ).toBeNull();
   });
 
@@ -374,7 +373,7 @@ describe("BuyerRoomScreen", () => {
     const user = userEvent.setup();
     render(<BuyerRoomScreen />);
 
-    await screen.findByText("This link no longer works");
+    await screen.findByText(englishCopy["buyer.deadTitle"]);
     const email = screen.getByLabelText(/^Your email address/);
     await user.click(screen.getByRole("button", { name: /request new link/i }));
     expect(screen.getByText("Your email address is required.")).toBeTruthy();
@@ -398,7 +397,7 @@ describe("BuyerRoomScreen", () => {
     });
     render(<BuyerRoomScreen />);
 
-    await screen.findByText("This link no longer works");
+    await screen.findByText(englishCopy["buyer.deadTitle"]);
   });
 
   it("signing out ends the session on the server and leaves the room", async () => {
@@ -409,7 +408,7 @@ describe("BuyerRoomScreen", () => {
     render(<BuyerRoomScreen />);
 
     await user.click(await screen.findByRole("button", { name: "Sign out" }));
-    await screen.findByText("This link no longer works");
+    await screen.findByText(englishCopy["buyer.deadTitle"]);
     expect(sent.some((s) => s.key === "POST /public/rooms/sign-out")).toBe(
       true,
     );
@@ -433,7 +432,7 @@ describe("BuyerRoomScreen", () => {
     expect(
       screen.getByRole("heading", { name: "Acme rollout" }),
     ).toBeInTheDocument();
-    expect(screen.queryByText("This link no longer works")).toBeNull();
+    expect(screen.queryByText(englishCopy["buyer.deadTitle"])).toBeNull();
   });
 
   it("hides the open room while a second link's exchange is pending", async () => {
@@ -478,13 +477,13 @@ describe("BuyerRoomScreen", () => {
     });
 
     expect(screen.queryByRole("heading", { name: "Room A" })).toBeNull();
-    expect(screen.getByText("Opening your Deal Room…")).toBeInTheDocument();
+    expect(screen.getByText(englishCopy["buyer.opening"])).toBeInTheDocument();
 
     cookie = "mdrs_b";
     answerB(jsonResponse({ session_token: "mdrs_b" }));
     // No read cached under room A's session may answer for room B's.
     await waitFor(() =>
-      expect(screen.queryByText("Opening your Deal Room…")).toBeNull(),
+      expect(screen.queryByText(englishCopy["buyer.opening"])).toBeNull(),
     );
     expect(screen.queryByRole("heading", { name: "Room A" })).toBeNull();
     await screen.findByRole("heading", { name: "Room B" });
@@ -563,9 +562,7 @@ describe("BuyerRoomScreen", () => {
     );
 
     expect(
-      await screen.findByText(
-        "The download did not start. Retry, or ask your contact.",
-      ),
+      await screen.findByText(englishCopy["buyer.docs.downloadFailed"]),
     ).toBeTruthy();
   });
 
@@ -583,7 +580,7 @@ describe("BuyerRoomScreen", () => {
       }),
     );
 
-    await screen.findByText("This link no longer works");
+    await screen.findByText(englishCopy["buyer.deadTitle"]);
   });
 });
 
@@ -685,7 +682,9 @@ describe("the hero the buyer lands on", () => {
 
     const side = await screen.findByRole("complementary");
     // Named once, under its eyebrow, not again in a sentence below.
-    expect(within(side).getByText("Your contact")).toBeInTheDocument();
+    expect(
+      within(side).getByText(englishCopy["buyer.contactEyebrow"]),
+    ).toBeInTheDocument();
     expect(within(side).getByText("Ada Admin")).toBeInTheDocument();
     expect(within(side).queryByText(/Your contact:/)).toBeNull();
     expect(screen.getByText("Signed in as Laura Buyer.")).toBeInTheDocument();
@@ -790,12 +789,10 @@ describe("an access state this build does not know", () => {
     });
     render(<BuyerRoomScreen />);
 
-    expect(await screen.findByText("This room is now read-only.")).toBeTruthy();
     expect(
-      screen.queryByText(
-        "This room is closed. Its content is kept as a record.",
-      ),
-    ).toBeNull();
+      await screen.findByText(englishCopy["buyer.closedNote"]),
+    ).toBeTruthy();
+    expect(screen.queryByText(englishCopy["buyer.closed"])).toBeNull();
   });
 });
 

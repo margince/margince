@@ -11,6 +11,7 @@ import {
   reportingSectionsCatalog,
 } from "../features/analytics/reporting.story-fixtures";
 import { type Locale, LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { type GrantSpec, meFixture } from "../testing/mefixture";
 import { steppedClock } from "../testing/steppedclock";
 import { type Command, CommandPalette } from "./palette";
@@ -180,7 +181,9 @@ function renderPalette(onClose = () => {}, locale: Locale = "en") {
 }
 
 function answerPanel() {
-  return screen.findByRole("region", { name: "Answer from Margince" });
+  return screen.findByRole("region", {
+    name: englishCopy["palette.answerAria"],
+  });
 }
 
 // The answer's lazy chunks load here, on the real clock. Under a case's fake clock
@@ -256,7 +259,9 @@ describe("asking the handbook from the search box", () => {
     renderPalette();
     await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
-    expect(await screen.findByText("Question not answered")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["corpusAsk.failed"]),
+    ).toBeVisible();
     expect(
       screen.getByRole("option", {
         name: /^See all results for “How do I change my time zone\?”/,
@@ -306,7 +311,9 @@ describe("asking the handbook from the search box", () => {
     await screen.findByRole("option", { name: /^Ask the handbook:/ });
     await user.keyboard("{Enter}");
     arrive();
-    expect(await screen.findByText("No document sets")).toBeVisible();
+    expect(
+      await screen.findByText(englishCopy["corpusAsk.noSetsTitle"]),
+    ).toBeVisible();
     expect(asked).toEqual([]);
   });
 
@@ -360,12 +367,10 @@ describe("asking the handbook from the search box", () => {
     renderPalette();
     await user.type(screen.getByRole("combobox"), QUESTION);
     await user.keyboard("{Enter}");
-    expect(await screen.findByText("Question not answered")).toBeVisible();
     expect(
-      screen.queryByText(
-        "Margince answers from its handbook and your documents. Ask an administrator or a colleague.",
-      ),
-    ).toBeNull();
+      await screen.findByText(englishCopy["corpusAsk.failed"]),
+    ).toBeVisible();
+    expect(screen.queryByText(englishCopy["palette.askNoAnswer"])).toBeNull();
   });
 
   it("says who to ask when neither set covers the question", async () => {
@@ -387,9 +392,7 @@ describe("asking the handbook from the search box", () => {
       within(panel).getByText("Your playbook does not cover time zones."),
     ).toBeVisible();
     expect(
-      within(panel).getByText(
-        "Margince answers from its handbook and your documents. Ask an administrator or a colleague.",
-      ),
+      within(panel).getByText(englishCopy["palette.askNoAnswer"]),
     ).toBeVisible();
   });
 
@@ -435,7 +438,7 @@ describe("asking the handbook from the search box", () => {
     await answerPanel();
     await user.type(screen.getByRole("combobox"), " now");
     expect(
-      screen.queryByRole("region", { name: "Answer from Margince" }),
+      screen.queryByRole("region", { name: englishCopy["palette.answerAria"] }),
     ).toBeNull();
   });
 
@@ -488,7 +491,9 @@ it("offers Analytics for a data question the handbook does not cover", async () 
   await clock.type(screen.getByRole("combobox"), "How many deals did I win?");
   await clock.keyboard("{Enter}");
   expect(
-    await screen.findByRole("button", { name: "Open in Analytics" }),
+    await screen.findByRole("button", {
+      name: englishCopy["palette.openAnalytics"],
+    }),
   ).toBeVisible();
   expect(screen.queryByText(/Ask an administrator or a colleague/)).toBeNull();
 });

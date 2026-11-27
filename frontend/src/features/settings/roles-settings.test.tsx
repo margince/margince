@@ -504,12 +504,14 @@ describe("RolesSettings", () => {
     render(<RolesSettings />);
 
     const admin = await openRole(user, "Admin");
-    expect(admin.queryByRole("button", { name: "Archive role" })).toBeNull();
+    expect(
+      admin.queryByRole("button", { name: en["roles.archive"] }),
+    ).toBeNull();
     await user.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
 
     const drawer = await openRole(user, "Field sales");
-    await user.click(drawer.getByRole("button", { name: "Archive role" }));
+    await user.click(drawer.getByRole("button", { name: en["roles.archive"] }));
     await waitFor(() =>
       expect(calls).toContainEqual(
         expect.objectContaining({
@@ -565,14 +567,14 @@ describe("RolesSettings", () => {
     render(<RolesSettings />);
 
     const drawer = await openRole(user, "Field sales");
-    await user.click(drawer.getByRole("button", { name: "Archive role" }));
+    await user.click(drawer.getByRole("button", { name: en["roles.archive"] }));
     await waitFor(() =>
       expect(screen.queryByTestId(`role-${FIELD.key}`)).toBeNull(),
     );
     expect(screen.getByRole("dialog", { name: "Field sales" })).toBeTruthy();
     expect(drawer.getByText(en["roles.archivedNote"])).toBeTruthy();
 
-    await user.click(drawer.getByRole("button", { name: "Restore role" }));
+    await user.click(drawer.getByRole("button", { name: en["roles.restore"] }));
     await waitFor(() =>
       expect(calls).toContainEqual(
         expect.objectContaining({
@@ -583,7 +585,7 @@ describe("RolesSettings", () => {
     );
     expect(await screen.findByTestId(`role-${FIELD.key}`)).toBeTruthy();
     expect(
-      await drawer.findByRole("button", { name: "Archive role" }),
+      await drawer.findByRole("button", { name: en["roles.archive"] }),
     ).toBeTruthy();
   });
 
@@ -634,7 +636,9 @@ describe("RolesSettings", () => {
       expect(radio.hasAttribute("disabled")).toBe(true);
     }
     expect(drawer.queryByRole("button", { name: "Rename" })).toBeNull();
-    expect(drawer.queryByRole("button", { name: "Archive role" })).toBeNull();
+    expect(
+      drawer.queryByRole("button", { name: en["roles.archive"] }),
+    ).toBeNull();
   });
 
   it("shows a renamed built-in role under the name the operator gave it", async () => {
@@ -693,7 +697,7 @@ describe("RolesSettings", () => {
     ).toBe(true);
     expect(
       drawer
-        .getByRole("button", { name: "Archive role" })
+        .getByRole("button", { name: en["roles.archive"] })
         .hasAttribute("disabled"),
     ).toBe(true);
     expect(

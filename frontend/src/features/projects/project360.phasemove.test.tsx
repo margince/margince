@@ -14,6 +14,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { project, project360 } from "../../testing/projects.fixtures";
 import { RecordShell } from "../../testing/recordshell.testkit";
@@ -65,10 +66,12 @@ describe("a phase move from the project page", () => {
     await user.click(screen.getByTestId("project-step-closed"));
     const dialog = await screen.findByRole("dialog");
     expect(
-      within(dialog).getByRole("heading", { name: "Close project" }),
+      within(dialog).getByRole("heading", {
+        name: englishCopy["project.advance.close"],
+      }),
     ).toBeTruthy();
     const confirm = within(dialog).getByRole("button", {
-      name: "Close project",
+      name: englishCopy["project.advance.close"],
     });
     await user.click(confirm);
     expect(posted).toBeFalsy();

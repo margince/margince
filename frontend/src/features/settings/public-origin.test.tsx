@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { PublicOriginCard } from "./public-origin";
 
 afterEach(() => {
@@ -30,7 +31,11 @@ it.each([
     );
     expect(screen.getByText(label)).toBeInTheDocument();
     expect(screen.getByText("https://crm.example.test")).toBeInTheDocument();
-    expect(screen.queryByRole("link", { name: "Configuration" })).toBeNull();
+    expect(
+      screen.queryByRole("link", {
+        name: englishCopy["settings.tab.configuration"],
+      }),
+    ).toBeNull();
     expect(fetcher).not.toHaveBeenCalled();
   },
 );

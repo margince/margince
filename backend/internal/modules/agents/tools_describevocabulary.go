@@ -12,7 +12,7 @@ type readWorkspace struct{ routed }
 
 func (readWorkspace) Spec() mcp.ToolSpec {
 	return mcp.ToolSpec{
-		Name: readWorkspaceName, Title: "Read how this workspace is set up", Version: toolVersionV1,
+		Name: readWorkspaceName, Title: "Read how this company is set up", Version: toolVersionV1,
 		Description: readWorkspaceCopy.render(),
 		Instead:     readWorkspaceCopy.Instead,
 		InputSchema: schema(`{"type":"object","properties":{

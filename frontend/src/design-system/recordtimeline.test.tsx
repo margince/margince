@@ -13,6 +13,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { stable } from "../format/collate";
 import { LocaleProvider, useT } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { withEmailOpener } from "../lib/openemail";
 import { ViewerZoneProvider } from "../lib/viewerzone";
 import { activityTimeline } from "./activitytimeline";
@@ -344,7 +345,11 @@ describe("a record timeline you can work in", () => {
     mount();
     await screen.findByText("Fleet renewal");
 
-    await pickOption(user, screen.getByLabelText("Activity kind"), "Tasks");
+    await pickOption(
+      user,
+      screen.getByLabelText(englishCopy["timeline.filters.kind"]),
+      "Tasks",
+    );
     await waitFor(() =>
       expect(feed.last().searchParams.getAll("kind")).toEqual(["task"]),
     );
@@ -362,7 +367,7 @@ describe("a record timeline you can work in", () => {
     expect(screen.queryByText(note)).toBeNull();
 
     await user.type(
-      screen.getByLabelText("Search this timeline"),
+      screen.getByLabelText(englishCopy["timeline.filters.search"]),
       "cutover{Enter}",
     );
     await waitFor(() =>
@@ -379,7 +384,9 @@ describe("a record timeline you can work in", () => {
         <TimelineFilterBar value={NO_TIMELINE_FILTERS} onChange={onChange} />
       </LocaleProvider>,
     );
-    const search = screen.getByLabelText("Search this timeline");
+    const search = screen.getByLabelText(
+      englishCopy["timeline.filters.search"],
+    );
     await user.type(search, "cutover");
 
     fireEvent.keyDown(search, { key: "Enter", keyCode: 229 });

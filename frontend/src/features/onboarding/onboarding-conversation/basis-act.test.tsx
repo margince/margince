@@ -6,6 +6,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { type Locale, LocaleProvider, translatePlural } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -112,10 +113,14 @@ describe("BasisAct", () => {
     const { dispatch } = renderBasis(true, patches);
     const user = userEvent.setup();
 
-    expect(await screen.findByLabelText("Base currency")).toHaveValue("EUR");
-    expect(screen.getByLabelText("Company time zone")).toHaveValue(
-      "Europe/Berlin",
-    );
+    expect(
+      await screen.findByLabelText(
+        englishCopy["installationSettings.baseCurrency"],
+      ),
+    ).toHaveValue("EUR");
+    expect(
+      screen.getByLabelText(englishCopy["installationSettings.timezone"]),
+    ).toHaveValue("Europe/Berlin");
     // Third of five: the stop sits between the confirmation and the voice.
     expect(screen.getByText("Step 3 of 5 · Basis")).toBeInTheDocument();
 
@@ -133,7 +138,9 @@ describe("BasisAct", () => {
     const { dispatch } = renderBasis(true, patches);
     const user = userEvent.setup();
 
-    const currency = await screen.findByLabelText("Base currency");
+    const currency = await screen.findByLabelText(
+      englishCopy["installationSettings.baseCurrency"],
+    );
     await user.clear(currency);
     await user.type(currency, "chf");
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -149,7 +156,9 @@ describe("BasisAct", () => {
     const { dispatch } = renderBasis(true);
     const user = userEvent.setup();
 
-    const currency = await screen.findByLabelText("Base currency");
+    const currency = await screen.findByLabelText(
+      englishCopy["installationSettings.baseCurrency"],
+    );
     await user.clear(currency);
     await user.type(currency, "eu");
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -218,7 +227,9 @@ describe("BasisAct", () => {
     );
     const user = userEvent.setup();
 
-    const zone = await screen.findByLabelText("Company time zone");
+    const zone = await screen.findByLabelText(
+      englishCopy["installationSettings.timezone"],
+    );
     await user.clear(zone);
     await user.type(zone, "Mars/Olympus");
     await user.click(screen.getByRole("button", { name: "Continue" }));
@@ -242,7 +253,9 @@ describe("BasisAct", () => {
     );
     const user = userEvent.setup();
 
-    const zone = await screen.findByLabelText("Company time zone");
+    const zone = await screen.findByLabelText(
+      englishCopy["installationSettings.timezone"],
+    );
     await user.type(zone, "x");
     await user.click(screen.getByRole("button", { name: "Continue" }));
 
@@ -304,9 +317,13 @@ describe("BasisAct", () => {
     const user = userEvent.setup();
 
     expect(
-      await screen.findByRole("heading", { name: "Set the reporting basis" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["ob.conv.basis.title"],
+      }),
     ).toBeInTheDocument();
-    expect(screen.queryByLabelText("Base currency")).toBeNull();
+    expect(
+      screen.queryByLabelText(englishCopy["installationSettings.baseCurrency"]),
+    ).toBeNull();
 
     await user.click(screen.getByRole("button", { name: "Continue" }));
 

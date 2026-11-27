@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import { formatPercent } from "../../format/format";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -48,7 +49,7 @@ function draw(complete: boolean, withheld = 0) {
 function shareColumn(): string[] {
   const table = screen.getByRole("table");
   const header = within(table).getByRole("columnheader", {
-    name: "Share of pipeline in this currency",
+    name: englishCopy["analytics.shareOfOpenPipeline"],
   });
   const index = within(table).getAllByRole("columnheader").indexOf(header);
   return within(table)

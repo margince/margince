@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, fn, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import { StoryProviders, stubWithSession } from "../../testing/story-utils";
 import { StageMenu } from "./settings.stageverbs";
 
@@ -67,7 +68,7 @@ export const OpenStage: Story = {
       page.getByRole("button", { name: "Edit stage" }),
     ).toBeVisible();
     await expect(
-      page.getByRole("button", { name: "Add criterion" }),
+      page.getByRole("button", { name: englishCopy["stage.criteria.add"] }),
     ).toBeVisible();
     await expect(page.getByRole("button", { name: "Remove" })).toBeEnabled();
   },

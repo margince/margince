@@ -10,6 +10,7 @@ import { SortStep, sortSummary } from "./listsort";
 import type { SortOption } from "./listsurface.dials";
 import { ListViewMenu } from "./listviewmenu";
 import "./listtable.css";
+import { en as englishCopy } from "../i18n/en";
 
 // The Sort step of a list's View panel holds one order at a time. The one in
 // force shows its direction, and the server's own order comes last.
@@ -85,7 +86,7 @@ export const ServerOrder: Story = {
   play: async ({ canvasElement }) => {
     const step = within(await playOpenViewStep(canvasElement, "Sort"));
     await expect(
-      step.getByRole("radio", { name: "Default order" }),
+      step.getByRole("radio", { name: englishCopy["table.sortDefault"] }),
     ).toBeChecked();
     await userEvent.click(step.getByRole("radio", { name: "Amount" }));
     await waitFor(() =>

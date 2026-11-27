@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import {
   jsonResponse,
@@ -222,9 +223,11 @@ export const EmptyOneVendorUnwiredAdminDark: Story = {
 async function openAddDialog(canvasElement: HTMLElement) {
   const body = within(canvasElement.ownerDocument.body);
   await userEvent.click(
-    await body.findByRole("button", { name: "Add another mailbox" }),
+    await body.findByRole("button", {
+      name: englishCopy["connectors.addOpen"],
+    }),
   );
-  await body.findByRole("dialog", { name: "Connect mail and calendar" });
+  await body.findByRole("dialog", { name: englishCopy["connectFlow.title"] });
 }
 
 // "Add another mailbox" opens the connect dialog on its first step: the account, as

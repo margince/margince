@@ -53,8 +53,7 @@ export function useCustomerPayments(enabled: boolean) {
   );
   const pages = query.data?.pages;
   const latest = pages?.at(-1);
-  // A cursor from a replaced accounting connection never works again, so the
-  // list starts over instead of retrying it.
+  // A cursor from a previous source or invoice order cannot be retried.
   const staleCursor =
     query.isFetchNextPageError &&
     problemFieldErrorsOf(query.error).some(

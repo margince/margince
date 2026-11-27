@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { DealsScreen } from "./deals";
 import {
   deal,
@@ -73,9 +74,7 @@ describe("a drop on the board", () => {
     dropOnStage("s2", "w1");
 
     const dialog = within(await screen.findByRole("dialog"));
-    expect(
-      dialog.getByText("Move this deal back to an open stage"),
-    ).toBeTruthy();
+    expect(dialog.getByText(englishCopy["deal.reopenPick"])).toBeTruthy();
     expect(dialog.getByTestId("reopen-stage-s2")).toHaveAttribute(
       "aria-pressed",
       "true",
@@ -115,9 +114,7 @@ describe("a drop on the board", () => {
     dropOnStage("s4", "w1");
 
     expect(
-      await screen.findByText(
-        "This deal is closed. Reopen it to move it to another stage.",
-      ),
+      await screen.findByText(englishCopy["deal.closedTakesNoStage"]),
     ).toBeTruthy();
     expect(screen.queryByRole("dialog")).toBeNull();
     expect(advances).toHaveLength(0);

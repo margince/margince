@@ -24,6 +24,7 @@ import {
   teamEvaluation,
 } from "../features/analytics/analytics.overview.testkit";
 import { stable } from "../format/collate";
+import { en as englishCopy } from "../i18n/en";
 import { forgetSeat } from "../lib/storage";
 import { jsonResponse } from "./story-utils";
 
@@ -248,7 +249,7 @@ describe("the request census of each opening view", () => {
       (url) => path(url) === "/v1/forecast/assurance/exceptions",
     );
     const picker = await screen.findByRole("combobox", {
-      name: "Record scope",
+      name: englishCopy["analytics.scopeLabel"],
     });
     await user.click(picker);
     await user.click(await screen.findByRole("option", { name: "Riley Rep" }));

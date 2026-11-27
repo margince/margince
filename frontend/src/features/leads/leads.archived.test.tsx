@@ -75,7 +75,9 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     await waitFor(() =>
       // Two elements say "Disqualified" (the status badge and the terminal
       // badge), so the wait names the badge it meant.
-      expect(screen.getAllByText("Disqualified").length).toBeGreaterThan(0),
+      expect(
+        screen.getAllByText(en["lead.disqualified"]).length,
+      ).toBeGreaterThan(0),
     );
     // The sweep opens the menu: a census blind to half the header's buttons
     // reports PASS on a page it never read.
@@ -205,7 +207,9 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     await waitFor(() =>
       // Two elements say "Disqualified" (the status badge and the terminal
       // badge), so the wait names the badge it meant.
-      expect(screen.getAllByText("Disqualified").length).toBeGreaterThan(0),
+      expect(
+        screen.getAllByText(en["lead.disqualified"]).length,
+      ).toBeGreaterThan(0),
     );
     const reason = "Disqualified. This lead is read-only.";
     await openLeadActions();
@@ -279,8 +283,10 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     if (!(card instanceof HTMLElement)) {
       throw new Error("the foot is not inside the score card");
     }
-    expect(within(card).getByText("Decision-maker title")).toBeTruthy();
-    expect(within(card).getByText("Lead replied")).toBeTruthy();
+    expect(
+      within(card).getByText(en["lead.factor.decision_maker_title"]),
+    ).toBeTruthy();
+    expect(within(card).getByText(en["lead.factor.reply"])).toBeTruthy();
     expect(within(card).queryByText(/halved every/)).toBeNull();
   });
 
@@ -329,11 +335,11 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     await waitFor(() =>
       expect(budget?.textContent).toContain("Set by Lena F."),
     );
-    expect(screen.getAllByText("Not asked yet")).toHaveLength(2);
+    expect(screen.getAllByText(en["lead.signal.notAsked"])).toHaveLength(2);
     // The questions that add one sit behind the card's link.
     expect(screen.queryByLabelText("Budget?")).toBeNull();
     await userEvent.click(
-      screen.getByRole("button", { name: "Add to the score" }),
+      screen.getByRole("button", { name: en["lead.card.knowAdd"] }),
     );
     const dialog = within(await screen.findByRole("dialog"));
     for (const question of ["Website traffic?", "Company size?", "Budget?"]) {
@@ -358,11 +364,11 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     render(<LeadScreen id="l-1" />);
     await waitFor(() =>
       expect(
-        screen.getAllByText("Disqualified. This lead is read-only.").length,
+        screen.getAllByText(en["lead.terminalDisqualified"]).length,
       ).toBeGreaterThan(0),
     );
     // The link stays, refused with the page's one sentence.
-    const add = screen.getByRole("button", { name: "Add to the score" });
+    const add = screen.getByRole("button", { name: en["lead.card.knowAdd"] });
     expect(add).toBeDisabled();
     expect(
       document.getElementById(add.getAttribute("aria-describedby") ?? "")
@@ -382,7 +388,9 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     render(<LeadScreen id="l-1" />);
 
     await waitFor(() =>
-      expect(screen.getAllByText("No source on record.").length).toBeTruthy(),
+      expect(
+        screen.getAllByText(en["lead.shortfall.noSource"]).length,
+      ).toBeTruthy(),
     );
     expect(screen.queryByText(/undefined/)).toBeNull();
   });
@@ -403,10 +411,8 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     const notStored =
       "The breakdown for this score is not stored yet. The next update shows it.";
     await waitFor(() => expect(screen.getAllByText(notStored)).toHaveLength(1));
-    expect(screen.queryByText("Score inputs:")).toBeNull();
-    expect(
-      screen.queryByText("No factors counted toward this score yet."),
-    ).toBeNull();
+    expect(screen.queryByText(en["lead.shortfall.lead"])).toBeNull();
+    expect(screen.queryByText(en["lead.scoreNoFactors"])).toBeNull();
   });
 
   it("says why a lead scores nothing rather than explaining our storage history", async () => {
@@ -422,13 +428,13 @@ describe("LeadScreen — archived/terminal is read-only (P-3)", () => {
     // they are what the reader came for. "This score predates the breakdown"
     // answers a question nobody asked and leaves a 0 looking like a bad
     // prospect rather than an unassessed one (ADR-0108).
-    await waitFor(() => expect(screen.getByText("Score inputs:")).toBeTruthy());
+    await waitFor(() =>
+      expect(screen.getByText(en["lead.shortfall.lead"])).toBeTruthy(),
+    );
     // Not "no reply yet": engagement lives in linked activities this client
     // never reads. So the page states what moves the score rather than
     // asserting the prospect has done nothing.
-    expect(
-      screen.getByText("A reply or a meeting raises the score most."),
-    ).toBeTruthy();
+    expect(screen.getByText(en["lead.shortfall.engagementMoves"])).toBeTruthy();
   });
 
   it("names the owner 'You' when the lead is owned by the current user", async () => {
@@ -523,7 +529,9 @@ describe("LeadScreen — an archived lead does not ask for what the server refus
     render(<LeadScreen id="l-1" />);
 
     await waitFor(() =>
-      expect(screen.getAllByText("Disqualified").length).toBeGreaterThan(0),
+      expect(
+        screen.getAllByText(en["lead.disqualified"]).length,
+      ).toBeGreaterThan(0),
     );
     // The timeline is read in the same pass as the two refused reads, so it
     // has been asked by the time it is seen.
@@ -588,7 +596,9 @@ describe("LeadScreen — an archived lead does not ask for what the server refus
     );
 
     await waitFor(() =>
-      expect(screen.getAllByText("Disqualified").length).toBeGreaterThan(0),
+      expect(
+        screen.getAllByText(en["lead.disqualified"]).length,
+      ).toBeGreaterThan(0),
     );
     expect(
       urls.slice(asked).filter((url) => /\/(score|lists)/.test(url)),

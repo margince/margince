@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { bundle, proposal, singles } from "../../testing/brief.fixtures";
 import { commercialApproval } from "../../testing/commercial-approval";
 import {
@@ -121,7 +122,7 @@ export const OtherAnswers: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const [menu] = await canvas.findAllByRole("button", {
-      name: "More options",
+      name: englishCopy["brief.deck.rowMore"],
     });
     if (!menu) throw new Error("the deck shows no More options menu");
     await userEvent.click(menu);

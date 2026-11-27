@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -120,7 +121,7 @@ export const Adder: Story = {
   render: story(ADDER),
   play: async ({ canvasElement }) => {
     await within(canvasElement).findByText(
-      "Your role can add entries but not change them",
+      englishCopy["leadSources.addOnlyTitle"],
     );
   },
 };
@@ -175,9 +176,7 @@ const addADuplicate: Story["play"] = async ({ canvasElement }) => {
   const page = within(canvasElement.ownerDocument.body);
   const dialog = within(await page.findByRole("dialog"));
   await userEvent.type(dialog.getByLabelText("Label"), "Partner{Enter}");
-  await dialog.findByText(
-    "A source with this name or key already exists. Choose another name.",
-  );
+  await dialog.findByText(englishCopy["acqSources.duplicate"]);
 };
 
 // The server refuses a name whose key is taken: the dialog says so on the field.
@@ -201,7 +200,7 @@ export const RefusedSwitch: Story = {
       name: "Referral can be chosen on a deal",
     });
     await userEvent.click(refused);
-    await canvas.findByText("Change was not saved");
+    await canvas.findByText(englishCopy["leadSources.notSaved"]);
     await expect(refused).toHaveAccessibleDescription(
       expect.stringContaining("Change was not saved"),
     );

@@ -12,7 +12,7 @@ var attachDocumentCopy = toolCopy{
 		"Use it whenever the user wants a file kept on a record, and never save a file's text as " +
 		"a note instead.",
 	Limits: "Up to " + httperr.Megabytes(MaxInlineFileBytes) + " per file, or less where the " +
-		"workspace sets a smaller upload limit. Send a text file's contents as content_text, as they " +
+		"company sets a smaller upload limit. Send a text file's contents as content_text, as they " +
 		"are; any other file goes as content_base64. Common document, image and email formats are " +
 		"accepted; any other kind is refused, and the refusal names the accepted ones. Tell the user " +
 		"about a refused file; never rename, convert or zip it to get it accepted. The file is " +

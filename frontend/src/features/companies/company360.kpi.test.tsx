@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   type Company,
@@ -70,7 +71,9 @@ describe("company view — where the account stands, and what it is to us", () =
     // A classification with one value let an account whose contract had ended
     // read as "Prospect" while it was also a partner. Lifecycle is the editable
     // field, in the details; the types stay read-only badges.
-    expect((await lifecycleReading()).textContent).toContain("Former customer");
+    expect((await lifecycleReading()).textContent).toContain(
+      englishCopy["company.lifecycle.former_customer"],
+    );
     // The design draws no relationship badge beside the name and no type row
     // in the details: the types are a Profile tab field. This account is a
     // former customer and still carries the `customer` type. Printing both
@@ -190,7 +193,7 @@ describe("company view — the KPI row never invents a figure", () => {
     stub(view({ state_strip: commercial({}) }));
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Company status",
+      name: englishCopy["co.strip.title"],
     });
 
     // A zero here would claim a priced pipeline worth nothing. The truth is
@@ -208,7 +211,7 @@ describe("company view — the KPI row never invents a figure", () => {
     stub(view({ state_strip: commercial({ open_count: 0 }) }));
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Company status",
+      name: englishCopy["co.strip.title"],
     });
 
     // "No amount" on an account with nothing open reports a data problem
@@ -233,7 +236,7 @@ describe("company view — the KPI row never invents a figure", () => {
     );
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Company status",
+      name: englishCopy["co.strip.title"],
     });
 
     // The KPI rules bar a cross-currency sum with no conversion source and
@@ -250,7 +253,7 @@ describe("company view — the KPI row never invents a figure", () => {
     stub(view({ state_strip: commercial({ stalled_count: 1 }) }));
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Company status",
+      name: englishCopy["co.strip.title"],
     });
 
     // A reader told only "1 stalled" has no way to know the deals carry no
@@ -271,7 +274,7 @@ describe("company view — the KPI row never invents a figure", () => {
     );
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Company status",
+      name: englishCopy["co.strip.title"],
     });
 
     // A sum covering one of two deals, shown bare, reads as the whole of the
@@ -292,7 +295,7 @@ describe("company view — the KPI row never invents a figure", () => {
     );
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Company status",
+      name: englishCopy["co.strip.title"],
     });
 
     // Scoped to the card that holds the sum: the money slot beside it is a
@@ -324,15 +327,19 @@ describe("company view — the KPI row never invents a figure", () => {
     );
     renderCompany();
     let strip = await screen.findByRole("region", {
-      name: "Company status",
+      name: englishCopy["co.strip.title"],
     });
-    expect(within(strip).getByText("Not invoiced")).toBeTruthy();
+    expect(
+      within(strip).getByText(englishCopy["co.strip.fin.neverInvoiced"]),
+    ).toBeTruthy();
     expect(within(strip).getByText("Prospect")).toBeTruthy();
     // The strip never carries an overdue cell: what is owed past due is the
     // Payment row's reading and the Finance tab's.
     expect(within(strip).queryByText("Overdue")).toBeNull();
     // A prospect still learns how the relationship stands, in How it stands.
-    expect(screen.getAllByText("Relationship").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(englishCopy["co.health.dim.relationship"]).length,
+    ).toBeGreaterThan(0);
 
     cleanup();
     stub(
@@ -353,11 +360,15 @@ describe("company view — the KPI row never invents a figure", () => {
     );
     renderCompany();
     strip = await screen.findByRole("region", {
-      name: "Company status",
+      name: englishCopy["co.strip.title"],
     });
-    expect(screen.getAllByText("Relationship").length).toBeGreaterThan(0);
+    expect(
+      screen.getAllByText(englishCopy["co.health.dim.relationship"]).length,
+    ).toBeGreaterThan(0);
     expect(within(strip).queryByText("Overdue")).toBeNull();
-    expect(within(strip).queryByText("Not invoiced")).toBeNull();
+    expect(
+      within(strip).queryByText(englishCopy["co.strip.fin.neverInvoiced"]),
+    ).toBeNull();
   });
 });
 
@@ -391,15 +402,17 @@ describe("company view — the state strip", () => {
       }),
     );
     renderCompany();
-    await screen.findByRole("region", { name: "Company status" });
+    await screen.findByRole("region", { name: englishCopy["co.strip.title"] });
     const strip = screen.getByRole("region", {
-      name: "Company status",
+      name: englishCopy["co.strip.title"],
     });
     expect(within(strip).getByText("2")).toBeTruthy();
     expect(strip.textContent).toContain("1 stalled");
     // Whose move it is reads the same `engagement` field, in the daily brief
     // rather than a second copy in the strip.
-    expect(within(strip).queryByText("Awaiting their reply")).toBeNull();
+    expect(
+      within(strip).queryByText(englishCopy["email.move.waitingForThem"]),
+    ).toBeNull();
   });
 
   it("does not draw the worst open signal a second time", async () => {
@@ -419,11 +432,13 @@ describe("company view — the state strip", () => {
     );
     renderCompany();
     const strip = await screen.findByRole("region", {
-      name: "Company status",
+      name: englishCopy["co.strip.title"],
     });
     // The risk reads the same `state_strip.signal` field, shown in the daily
     // brief (companytoday.test.tsx carries the wording coverage).
-    expect(within(strip).queryByText("Contract ending")).toBeNull();
+    expect(
+      within(strip).queryByText(englishCopy["signal.kind.contract_ended"]),
+    ).toBeNull();
     expect(
       within(strip).queryByText(
         "They wrote that the contract ends on 31 July.",
@@ -467,10 +482,18 @@ describe("company view — advice you can act on", () => {
     renderSuggestions(three60);
     await screen.findByText(/nobody has come back/);
 
-    expect(screen.getByRole("button", { name: "Create draft" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["co.suggest.act.draftReply"],
+      }),
+    ).toBeTruthy();
     // The second rule named no action, so it advises without a control. A
     // button that does nothing teaches the reader to stop pressing them.
-    expect(screen.queryByRole("button", { name: "Add next step" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["co.suggest.act.addTask"],
+      }),
+    ).toBeNull();
   });
 
   // The lead panel's footer names what is owed. A count off `data.length` is a
@@ -523,7 +546,7 @@ describe("a customer's KPI row reports what the account is worth", () => {
     ...extra,
   });
   const strip = async () =>
-    await screen.findByRole("region", { name: "Company status" });
+    await screen.findByRole("region", { name: englishCopy["co.strip.title"] });
 
   // The window the slot names is the window the figure covers. Both figures are
   // on the wire and the lifetime one is larger. A slot that read the wrong
@@ -544,7 +567,9 @@ describe("a customer's KPI row reports what the account is worth", () => {
     // first pass, so the assertions below wait for the settled figure.
     await waitFor(() => expect(region.textContent).not.toMatch(/Loading…/));
 
-    expect(within(region).getByText("Revenue · 12 mo")).toBeTruthy();
+    expect(
+      within(region).getByText(englishCopy["co.strip.netInvoiced"]),
+    ).toBeTruthy();
     // Abbreviated: the strip's slots share its width, and a full euro amount
     // wraps mid-number there. The finance card renders the exact figure.
     expect(within(region).getByText(/186(\.4)?K/i)).toBeTruthy();
@@ -589,7 +614,7 @@ describe("the money slot says WHY it has no figure", () => {
     account: { status: "customer" as const, relationship_types: [] },
   };
   const strip = async () =>
-    await screen.findByRole("region", { name: "Company status" });
+    await screen.findByRole("region", { name: englishCopy["co.strip.title"] });
 
   it("names the setup step only when there is no source", async () => {
     stub(view({ state_strip: customer }), 200, company, {
@@ -599,7 +624,8 @@ describe("the money slot says WHY it has no figure", () => {
     renderCompany();
     await strip();
     expect(
-      (await screen.findAllByText("Accounting not connected")).length,
+      (await screen.findAllByText(englishCopy["co.strip.fin.noConnection"]))
+        .length,
     ).toBeGreaterThan(0);
   });
 
@@ -612,7 +638,7 @@ describe("the money slot says WHY it has no figure", () => {
     renderCompany();
     const region = await strip();
     expect(
-      (await screen.findAllByText("Customer not matched")).length,
+      (await screen.findAllByText(englishCopy["co.strip.fin.unmapped"])).length,
     ).toBeGreaterThan(0);
     // The wrong advice here: this reader has connected a source.
     expect(region.textContent).not.toMatch(/Accounting not connected/);
@@ -723,9 +749,10 @@ describe("the money slot says WHY it has no figure", () => {
     const region = await strip();
     // The same word a never-billed prospect gets, kept apart from it by the
     // lifecycle in the detail.
-    expect((await screen.findAllByText("Not invoiced")).length).toBeGreaterThan(
-      0,
-    );
+    expect(
+      (await screen.findAllByText(englishCopy["co.strip.fin.neverInvoiced"]))
+        .length,
+    ).toBeGreaterThan(0);
     expect((await screen.findAllByText("Customer")).length).toBeGreaterThan(0);
     expect(region.textContent).not.toMatch(/Accounting not connected/);
   });
@@ -752,7 +779,7 @@ describe("the money slot says its reason once and borrows no figure", () => {
     account: { status: "customer" as const, relationship_types: [] },
   };
   const strip = async () =>
-    await screen.findByRole("region", { name: "Company status" });
+    await screen.findByRole("region", { name: englishCopy["co.strip.title"] });
 
   it("says why there is no figure once, not once per money window", async () => {
     stub(view({ state_strip: customer }), 200, company, {
@@ -763,9 +790,10 @@ describe("the money slot says its reason once and borrows no figure", () => {
     renderCompany();
     const region = await strip();
     await waitFor(() =>
-      expect(within(region).getAllByText("Customer not matched").length).toBe(
-        1,
-      ),
+      expect(
+        within(region).getAllByText(englishCopy["co.strip.fin.unmapped"])
+          .length,
+      ).toBe(1),
     );
 
     // One statement, not one per cell: the overdue cell beside it has no
@@ -791,7 +819,9 @@ describe("the money slot says its reason once and borrows no figure", () => {
     // No figure at all, and the reason named. The lifetime total on the wire is
     // not this slot's answer, and a dash with no reason would not be either.
     expect(region.textContent).not.toMatch(/428(\.0)?K/i);
-    expect(within(region).getAllByText("Customer not matched").length).toBe(1);
+    expect(
+      within(region).getAllByText(englishCopy["co.strip.fin.unmapped"]).length,
+    ).toBe(1);
   });
 
   // Two shapes: a customer whose finance connection cannot answer, and one
@@ -827,20 +857,27 @@ describe("the money slot says its reason once and borrows no figure", () => {
     renderCompany();
     const region = await strip();
     await waitFor(() =>
-      expect(within(region).getAllByText("Customer not matched").length).toBe(
-        1,
-      ),
+      expect(
+        within(region).getAllByText(englishCopy["co.strip.fin.unmapped"])
+          .length,
+      ).toBe(1),
     );
 
     expect(within(region).getByText("Open deals")).toBeTruthy();
     // The relationship reads in How it stands above the figures, whatever the
     // money cells could or could not read.
-    expect(screen.getAllByText("Relationship").length).toBeGreaterThan(0);
-    expect(within(region).getByText("Last contact")).toBeTruthy();
+    expect(
+      screen.getAllByText(englishCopy["co.health.dim.relationship"]).length,
+    ).toBeGreaterThan(0);
+    expect(
+      within(region).getByText(englishCopy["co.spine.lastSpoke"]),
+    ).toBeTruthy();
     expect(within(region).queryByText("Overdue")).toBeNull();
     // One label on the money slot whatever it can report, so a reader never has
     // to notice the slot renamed itself.
-    expect(within(region).getByText("Revenue · 12 mo")).toBeTruthy();
+    expect(
+      within(region).getByText(englishCopy["co.strip.netInvoiced"]),
+    ).toBeTruthy();
   });
 
   it("shows the real figure beside the same standing readings", async () => {
@@ -857,10 +894,16 @@ describe("the money slot says its reason once and borrows no figure", () => {
     await waitFor(() => expect(region.textContent).not.toMatch(/Loading…/));
 
     expect(within(region).getByText("Open deals")).toBeTruthy();
-    expect(screen.getAllByText("Relationship").length).toBeGreaterThan(0);
-    expect(within(region).getByText("Last contact")).toBeTruthy();
+    expect(
+      screen.getAllByText(englishCopy["co.health.dim.relationship"]).length,
+    ).toBeGreaterThan(0);
+    expect(
+      within(region).getByText(englishCopy["co.spine.lastSpoke"]),
+    ).toBeTruthy();
     expect(within(region).queryByText("Overdue")).toBeNull();
-    expect(within(region).getByText("Revenue · 12 mo")).toBeTruthy();
+    expect(
+      within(region).getByText(englishCopy["co.strip.netInvoiced"]),
+    ).toBeTruthy();
     expect(within(region).getByText(/186(\.4)?K/i)).toBeTruthy();
     // The slot never renames itself: "Finance" was the label it wore with no
     // figure, and a label that moves is a reading read twice.

@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { PageSaveBar, SavePageProvider } from "../../design-system/savepage";
 import { type Locale, LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { AvailabilityCard } from "./meeting-availability";
 
@@ -97,7 +98,9 @@ describe("AvailabilityCard, hours only", () => {
     expect(await screen.findByText(/hours are read in Bangkok/)).not.toBeNull();
     expect(screen.queryByRole("combobox")).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Change time zone" }),
+      screen.getByRole("button", {
+        name: englishCopy["workingHours.changeZone"],
+      }),
     ).not.toBeNull();
   });
 

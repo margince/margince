@@ -69,7 +69,7 @@ describe("the left column's Recorded by row on a deal an agent created", () => {
   it("says only that an agent made it when the create row is not known", async () => {
     mount(deal);
 
-    expect(await screen.findByText("Automated by an agent")).toBeTruthy();
+    expect(await screen.findByText(en["trust.agentUnnamed"])).toBeTruthy();
   });
 });
 

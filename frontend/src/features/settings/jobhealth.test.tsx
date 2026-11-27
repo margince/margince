@@ -16,6 +16,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { tableRowCells } from "../../testing/tablerow.testkit";
 import { JobHealthCard } from "./jobhealth";
@@ -159,8 +160,12 @@ describe("JobHealthCard", () => {
     expect(kind.Retrying).toHaveTextContent("2");
     expect(kind.Discarded).toHaveTextContent("0");
     expect(kind.Queue).toHaveTextContent("default");
-    expect(kind.State).toHaveTextContent("Needs technical attention");
-    expect(kind["Declared wait limit"]).toHaveTextContent(/^1 minute$/);
+    expect(kind.State).toHaveTextContent(
+      englishCopy["health.condition.technical"],
+    );
+    expect(kind[englishCopy["jobs.col.expectation"]]).toHaveTextContent(
+      /^1 minute$/,
+    );
     // The kind is River's identifier, verbatim, in both the count row and the
     // failure below it, which is how an operator ties the two together.
     expect(screen.getAllByText("capture_classify").length).toBe(2);
@@ -174,10 +179,10 @@ describe("JobHealthCard", () => {
     ).toBeInTheDocument();
     // Each reading is named, so fleet work never reads as this company's.
     expect(
-      screen.getByRole("heading", { name: "This company" }),
+      screen.getByRole("heading", { name: englishCopy["jobs.workspaceKinds"] }),
     ).toBeInTheDocument();
     expect(
-      screen.getByRole("heading", { name: "Recent failures" }),
+      screen.getByRole("heading", { name: englishCopy["jobs.failures"] }),
     ).toBeInTheDocument();
     // 4,500 seconds is one hour in its largest whole unit, never "0 hr".
     expect(kind["Oldest wait"]).toHaveTextContent(/^1 hour$/);
@@ -187,12 +192,16 @@ describe("JobHealthCard", () => {
     stubRoutes();
     render(<JobHealthCard />);
     const counted = await tableRowCells("This company", "capture_classify");
-    expect(within(counted.Job).getByText("Mail sorting")).toBeInTheDocument();
+    expect(
+      within(counted.Job).getByText(englishCopy["systemJob.capture_classify"]),
+    ).toBeInTheDocument();
     expect(within(counted.Job).getByText("capture_classify").tagName).toBe(
       "CODE",
     );
     const failure = await tableRowCells("Recent failures", "capture_classify");
-    expect(within(failure.Job).getByText("Mail sorting")).toBeInTheDocument();
+    expect(
+      within(failure.Job).getByText(englishCopy["systemJob.capture_classify"]),
+    ).toBeInTheDocument();
     const unnamed = await tableRowCells(
       "Shared background work",
       "retention_sweep_dispatch",
@@ -436,7 +445,11 @@ describe("JobHealthCard", () => {
     // In its own words, INSTEAD of the readings — not three named rows each
     // saying it has nothing. That the background system is idle is one finding,
     // and a list of empty rows reports it three times as three.
-    expect(screen.queryByText("This company")).not.toBeInTheDocument();
-    expect(screen.queryByText("Recent failures")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(englishCopy["jobs.workspaceKinds"]),
+    ).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(englishCopy["jobs.failures"]),
+    ).not.toBeInTheDocument();
   });
 });

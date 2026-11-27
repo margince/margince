@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture, READS_RECORDS } from "../../testing/mefixture";
 import { CompanyContractsCard } from "./companycontracts";
 
@@ -107,9 +108,15 @@ describe("the contract row menu", () => {
     );
 
     expect(screen.getByRole("button", { name: "Renew" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Change status" })).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Cancel contract" }),
+      screen.getByRole("button", {
+        name: englishCopy["contracts.statusChange.submit"],
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["contracts.cancel.menuLabel"],
+      }),
     ).toBeTruthy();
   });
 
@@ -186,13 +193,19 @@ describe("the contract row menu", () => {
     // renewing a non-superseded terminal agreement (expired, cancelled) is
     // still the normal way a lapsed agreement gets a successor.
     expect(screen.getByRole("button", { name: "Renew" })).toBeTruthy();
-    expect(screen.queryByRole("button", { name: "Change status" })).toBeNull();
+    expect(
+      screen.queryByRole("button", {
+        name: englishCopy["contracts.statusChange.submit"],
+      }),
+    ).toBeNull();
     // Cancel is offered even here: Store.Cancel (contract_lifecycle.go) is a
     // two-column patch with NO status check at all — unlike ChangeStatus, it
     // never refuses on a terminal row, so a form withholding it here would
     // refuse more than the server does.
     expect(
-      screen.getByRole("button", { name: "Cancel contract" }),
+      screen.getByRole("button", {
+        name: englishCopy["contracts.cancel.menuLabel"],
+      }),
     ).toBeTruthy();
   });
 
@@ -231,9 +244,15 @@ describe("the contract row menu", () => {
     );
 
     expect(screen.queryByRole("button", { name: "Renew" })).toBeNull();
-    expect(screen.getByRole("button", { name: "Change status" })).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Cancel contract" }),
+      screen.getByRole("button", {
+        name: englishCopy["contracts.statusChange.submit"],
+      }),
+    ).toBeTruthy();
+    expect(
+      screen.getByRole("button", {
+        name: englishCopy["contracts.cancel.menuLabel"],
+      }),
     ).toBeTruthy();
   });
 
@@ -290,7 +309,9 @@ describe("the contract row's term", () => {
     show(<CompanyContractsCard companyId="o-1" />);
 
     await screen.findByText("Framework agreement 2024");
-    expect(screen.queryByText("Term ended, status pending")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["contracts.endedPendingStatus"]),
+    ).toBeNull();
   });
 
   it("says an active agreement whose term ended waits on its status", async () => {
@@ -304,6 +325,8 @@ describe("the contract row's term", () => {
     ]);
     show(<CompanyContractsCard companyId="o-1" />);
 
-    expect(await screen.findByText("Term ended, status pending")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["contracts.endedPendingStatus"]),
+    ).toBeTruthy();
   });
 });

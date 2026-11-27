@@ -11,6 +11,7 @@ import {
 } from "../../testing/story-utils";
 import { ContactTimelineTab } from "./contacttabs";
 import "./contact360.css";
+import { en as englishCopy } from "../../i18n/en";
 
 // The contact's history tab. The dials are what this file is for. The cuts (All / Threads / Changes) sit
 // in the body, in the `timeline-header` block the account and project pages
@@ -275,7 +276,9 @@ export const FiveVerbsBesideTheHead: Story = {
   ),
   play: async ({ canvasElement }) => {
     const page = within(canvasElement.ownerDocument.body);
-    await page.findByRole("button", { name: "Prepare brief" });
+    await page.findByRole("button", {
+      name: englishCopy["contact.meeting.brief"],
+    });
     for (const body of canvasElement.querySelectorAll(".tl-body")) {
       const head = body.querySelector(":scope > .tl-head");
       const verbs = body.querySelector(":scope > .tl-actions");

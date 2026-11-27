@@ -156,7 +156,7 @@ describe("AuditLogCard", () => {
       expect(latest).toContain("entity_type=contact");
     });
     expect(
-      screen.getByText("Includes what an AI assistant did on their behalf."),
+      screen.getByText(en["settings.auditActorDelegated"]),
     ).toBeInTheDocument();
     const latest = auditLogUrls(backend).at(-1) ?? "";
     expect(latest).toContain("limit=20");
@@ -203,9 +203,7 @@ describe("AuditLogCard", () => {
     const field = screen.getByRole("textbox", { name: "Entity ID" });
     await user.type(field, RECORD_ID.slice(-8));
     expect(
-      screen.getByText(
-        "Paste the full record ID. Use Copy record ID on a row.",
-      ),
+      screen.getByText(en["settings.auditEntityIdHint"]),
     ).toBeInTheDocument();
     expect(field).toHaveAttribute("aria-invalid", "true");
     expect(screen.getByText("Updated")).toBeInTheDocument();
@@ -239,7 +237,7 @@ describe("AuditLogCard", () => {
 
     await waitFor(() => {
       expect(
-        screen.getAllByText("Pick a To date on or after the From date."),
+        screen.getAllByText(en["settings.auditRangeReversed"]),
       ).toHaveLength(2);
     });
     expect(
@@ -279,7 +277,7 @@ describe("AuditLogCard", () => {
     const user = steppedClock();
     vi.stubGlobal("fetch", auditLogBackend({ entries: [] }));
     render(<AuditLogCard />);
-    expect(await screen.findByText("Nothing here yet.")).toBeInTheDocument();
+    expect(await screen.findByText(en["common.empty"])).toBeInTheDocument();
 
     await pickOption(
       user,
@@ -288,7 +286,7 @@ describe("AuditLogCard", () => {
     );
     await vi.advanceTimersByTimeAsync(SEARCH_DEBOUNCE_MS);
     expect(
-      await screen.findByText("No recorded actions match these filters."),
+      await screen.findByText(en["settings.auditNoMatch"]),
     ).toBeInTheDocument();
     // The dial shows the label and asks the server with the contract's token.
     const asked = vi
@@ -319,9 +317,7 @@ describe("AuditLogCard", () => {
     expect(
       await screen.findByRole("button", { name: "Retry" }),
     ).toBeInTheDocument();
-    expect(
-      screen.getByText("Could not load this view. Reload the page."),
-    ).toBeInTheDocument();
+    expect(screen.getByText(en["common.error"])).toBeInTheDocument();
     expect(screen.getByLabelText("Actor")).toBeInTheDocument();
   });
 
@@ -353,7 +349,7 @@ describe("AuditLogCard", () => {
     vi.stubGlobal("fetch", auditLogBackend({ entries: [created] }));
     render(<AuditLogCard />);
     const table = await screen.findByRole("table", {
-      name: "Recorded actions",
+      name: en["settings.auditTrailLabel"],
     });
     const headers = within(table)
       .getAllByRole("columnheader")
@@ -420,7 +416,7 @@ describe("AuditLogCard", () => {
     expect(shortId).toHaveAttribute("title", RECORD_ID);
     expect(screen.queryByText(RECORD_ID.slice(0, 8))).toBeNull();
     expect(
-      screen.getByRole("button", { name: "Copy record ID" }),
+      screen.getByRole("button", { name: en["settings.auditCopyId"] }),
     ).toBeInTheDocument();
     const asked = backend.mock.calls.map(
       ([input]) =>
@@ -486,7 +482,9 @@ describe("AuditLogCard", () => {
     await user.click(screen.getByText("eb3f4280"));
     expect(toggle).toHaveAttribute("aria-expanded", "true");
 
-    await user.click(screen.getByRole("button", { name: "Copy record ID" }));
+    await user.click(
+      screen.getByRole("button", { name: en["settings.auditCopyId"] }),
+    );
     expect(toggle).toHaveAttribute("aria-expanded", "true");
 
     await user.click(screen.getByText("Anna Weber"));
@@ -604,7 +602,9 @@ describe("AuditLogCard", () => {
       render(<AuditLogCard />);
       await screen.findByText("Updated");
       const name = await screen.findByText(expected);
-      expect(name.closest(".auditlog-who")).toHaveTextContent("via an agent");
+      expect(name.closest(".auditlog-who")).toHaveTextContent(
+        en["audit.viaAgent"],
+      );
       expect(name.closest("td")).not.toHaveTextContent(VIEWER_ID);
     },
   );

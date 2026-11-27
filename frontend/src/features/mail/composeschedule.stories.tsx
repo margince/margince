@@ -6,6 +6,7 @@ import { screen, userEvent } from "storybook/test";
 import { StoryProviders } from "../../testing/story-utils";
 import { ScheduleMenu } from "./composeschedule";
 import "./compose.css";
+import { en as englishCopy } from "../../i18n/en";
 
 // The caret beside Send: the other way to send, which opens the schedule dialog.
 
@@ -26,8 +27,12 @@ export const Open: Story = {
   ),
   play: async () => {
     await userEvent.click(
-      await screen.findByRole("button", { name: "Other ways to send" }),
+      await screen.findByRole("button", {
+        name: englishCopy["compose.sendOptions"],
+      }),
     );
-    await screen.findByRole("button", { name: "Schedule send" });
+    await screen.findByRole("button", {
+      name: englishCopy["compose.scheduleSend"],
+    });
   },
 };

@@ -4189,6 +4189,14 @@ END;
 
 public.consent_text_version_pkey CREATE UNIQUE INDEX consent_text_version_pkey ON public.consent_text_version USING btree (id)
 public.consent_text_version_published CREATE UNIQUE INDEX consent_text_version_published ON public.consent_text_version USING btree (key, version, locale) NULLS NOT DISTINCT WHERE (published_at IS NOT NULL)
+public.consume_source_changes(namespace text, changes uuid[]) secdef=false cfg=search_path=pg_catalog, public acl=- 
+BEGIN
+    IF to_regclass('pg_temp.margince_source_changes') IS NULL THEN RETURN; END IF;
+    DELETE FROM pg_temp.margince_source_changes AS journal
+    WHERE journal.namespace = consume_source_changes.namespace
+      AND (changes IS NULL OR journal.change_id = ANY(changes));
+END;
+
 public.contact acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.contact.address_city text gen=- def=-
 public.contact.address_country text gen=- def=-
@@ -9849,20 +9857,31 @@ public.relationship_nudge_dismissal_by_reader CREATE INDEX relationship_nudge_di
 public.relationship_nudge_dismissal_pkey CREATE UNIQUE INDEX relationship_nudge_dismissal_pkey ON public.relationship_nudge_dismissal USING btree (contact_id, reader_id)
 public.relationship_pkey CREATE UNIQUE INDEX relationship_pkey ON public.relationship USING btree (id)
 public.remember_a_triggered_source_change() secdef=false cfg=search_path=pg_catalog, public acl=- 
-DECLARE pending jsonb; identity text; prior jsonb;
 BEGIN
-    pending := coalesce(nullif(current_setting('margince.source_changes', true), ''), '{}')::jsonb;
-    identity := TG_TABLE_NAME || ':' || NEW.id::text;
-    prior := pending->identity;
-    pending := jsonb_set(pending, ARRAY[identity], jsonb_build_object(
+    IF to_regclass('pg_temp.margince_source_changes') IS NULL THEN
+        CREATE TEMP TABLE margince_source_changes (
+            namespace text NOT NULL,
+            entity_type text NOT NULL,
+            entity_id uuid NOT NULL,
+            change_id uuid NOT NULL DEFAULT public.uuidv7() UNIQUE,
+            payload jsonb NOT NULL,
+            claimed boolean NOT NULL DEFAULT false,
+            PRIMARY KEY (namespace, entity_type, entity_id)
+        ) ON COMMIT DELETE ROWS;
+        CREATE INDEX ON margince_source_changes(namespace) WHERE NOT claimed;
+    END IF;
+    INSERT INTO pg_temp.margince_source_changes AS journal(namespace, entity_type, entity_id, payload)
+    VALUES (TG_TABLE_SCHEMA, TG_TABLE_NAME, NEW.id, jsonb_build_object(
         'entity_type', TG_TABLE_NAME, 'id', NEW.id,
-        'change_id', coalesce(prior->'change_id', to_jsonb(public.uuidv7())),
-        'before_system', CASE WHEN prior IS NULL THEN to_jsonb(OLD)->'source_system' ELSE prior->'before_system' END,
+        'before_system', to_jsonb(OLD)->'source_system',
         'after_system', to_jsonb(NEW)->'source_system',
-        'system_changed', coalesce((prior->>'system_changed')::boolean,false) OR ((to_jsonb(OLD)->'source_system') IS DISTINCT FROM (to_jsonb(NEW)->'source_system')),
-        'before', coalesce(prior->'before', to_jsonb(OLD.source)), 'after', NEW.source,
-        'deal_id', to_jsonb(NEW)->'deal_id'));
-    PERFORM set_config('margince.source_changes', pending::text, true);
+        'system_changed', (to_jsonb(OLD)->'source_system') IS DISTINCT FROM (to_jsonb(NEW)->'source_system'),
+        'before', OLD.source, 'after', NEW.source, 'deal_id', to_jsonb(NEW)->'deal_id'))
+    ON CONFLICT (namespace, entity_type, entity_id) DO UPDATE
+    SET payload = journal.payload || jsonb_build_object(
+        'deal_id', to_jsonb(NEW)->'deal_id', 'after', NEW.source, 'after_system', to_jsonb(NEW)->'source_system',
+        'system_changed', (journal.payload->>'system_changed')::boolean OR
+            ((to_jsonb(OLD)->'source_system') IS DISTINCT FROM (to_jsonb(NEW)->'source_system')));
     RETURN NEW;
 END;
 
@@ -10893,6 +10912,31 @@ public.site_read.text_bound_update CREATE TRIGGER text_bound_update AFTER UPDATE
 public.site_read.updated_at timestamp with time zone NOT NULL gen=- def=now()
 public.site_read.warnings jsonb NOT NULL gen=- def='[]'::jsonb
 public.site_read_pkey CREATE UNIQUE INDEX site_read_pkey ON public.site_read USING btree (id)
+public.source_changes_for_audit(namespace text, kind text, identities uuid[]) secdef=false cfg=search_path=pg_catalog, public acl=- 
+BEGIN
+    IF to_regclass('pg_temp.margince_source_changes') IS NULL THEN RETURN; END IF;
+    IF kind IS NULL THEN
+        IF EXISTS (SELECT 1 FROM pg_temp.margince_source_changes AS journal
+                   WHERE journal.namespace <> source_changes_for_audit.namespace) THEN
+            RAISE EXCEPTION 'source change journal does not match the bound workspace';
+        END IF;
+        RETURN QUERY SELECT payload || jsonb_build_object('change_id', journal.change_id) FROM pg_temp.margince_source_changes AS journal
+            WHERE journal.namespace = source_changes_for_audit.namespace;
+        RETURN;
+    END IF;
+    RETURN QUERY
+        WITH claimed AS (
+            UPDATE pg_temp.margince_source_changes AS journal SET claimed = true
+            WHERE journal.namespace = source_changes_for_audit.namespace AND NOT journal.claimed
+            RETURNING journal.payload || jsonb_build_object('change_id', journal.change_id) AS payload
+        )
+        SELECT payload FROM claimed
+        UNION ALL
+        SELECT payload || jsonb_build_object('change_id', journal.change_id) FROM pg_temp.margince_source_changes AS journal
+        WHERE journal.namespace = source_changes_for_audit.namespace
+          AND journal.claimed AND journal.entity_type = kind AND journal.entity_id = ANY(identities);
+END;
+
 public.stage acl=margince_owner=arwdDxt/margince_owner,margince_app=arwd/margince_owner rls=false force=false
 public.stage.archived_at timestamp with time zone gen=- def=-
 public.stage.created_at timestamp with time zone NOT NULL gen=- def=now()

@@ -131,7 +131,7 @@ it("OAuthReturnPanel reports a confirm-failure when the returning provider is no
   });
   render(<OAuthReturnPanel outcome="ok" provider="graph" onDone={vi.fn()} />);
   expect(
-    await screen.findByText("The connection could not be confirmed."),
+    await screen.findByText(en["ob.s4.connectConfirmFailed"]),
   ).toBeTruthy();
 });
 
@@ -155,7 +155,7 @@ it("OAuthReturnPanel refuses to offer an import for an unrecognized provider seg
   });
   render(<OAuthReturnPanel outcome="ok" provider="bogus" onDone={vi.fn()} />);
   expect(
-    await screen.findByText("The connection could not be confirmed."),
+    await screen.findByText(en["ob.s4.connectConfirmFailed"]),
   ).toBeTruthy();
   expect(screen.queryByText("Live and capturing")).toBeNull();
   // The backfill panel reads the run for the mailbox it is offered for; the
@@ -167,7 +167,7 @@ it("OAuthReturnPanel reports a confirm-failure when no connection came back", as
   installFetchStub({ "GET /connectors": () => jsonResponse({ data: [] }) });
   render(<OAuthReturnPanel outcome="ok" onDone={vi.fn()} />);
   expect(
-    await screen.findByText("The connection could not be confirmed."),
+    await screen.findByText(en["ob.s4.connectConfirmFailed"]),
   ).toBeTruthy();
 });
 
@@ -211,9 +211,7 @@ it("OAuthReturnPanel sends a failed consent back to the accounts below, with Don
   const user = userEvent.setup();
   const onDone = vi.fn();
   render(<OAuthReturnPanel outcome="error" provider="gmail" onDone={onDone} />);
-  expect(
-    await screen.findByText("Select the account again below."),
-  ).toBeInTheDocument();
+  expect(await screen.findByText(en["ob.s4.connectRetry"])).toBeInTheDocument();
   expect(screen.queryByText(/Settings/)).toBeNull();
   await user.click(screen.getByRole("button", { name: "Done" }));
   expect(onDone).toHaveBeenCalledTimes(1);

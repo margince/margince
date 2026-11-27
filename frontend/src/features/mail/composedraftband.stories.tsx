@@ -17,6 +17,7 @@ import type { DraftProvenance } from "./composedraftcall";
 // reached BY CLASS, and a story's module graph stops short of compose.tsx,
 // which loads it.
 import "./compose.css";
+import { en as englishCopy } from "../../i18n/en";
 
 // Provenance stays visible above the controls that request another draft.
 
@@ -136,7 +137,7 @@ export const TemplateDraft: Story = {
   },
   play: async () => {
     await expect(
-      await screen.findByText("AI could not write this draft"),
+      await screen.findByText(englishCopy["compose.templateDraftTitle"]),
     ).toBeVisible();
   },
 };

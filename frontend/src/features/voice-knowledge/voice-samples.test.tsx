@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { tableRowCells } from "../../testing/tablerow.testkit";
 import { VoiceSamples } from "./voice-samples";
 import { VoiceHistory } from "./voice-versions";
@@ -192,7 +193,9 @@ describe("VoiceSamples", () => {
     const left = await tableRowCells("Current samples", "Post on audits");
     expect(within(left.State).getByText("Excluded")).toBeInTheDocument();
     expect(
-      within(left.State).getByText("Left out of your voice"),
+      within(left.State).getByText(
+        englishCopy["settings.voice.exclusion.ownerExcluded"],
+      ),
     ).toBeInTheDocument();
   });
 
@@ -204,7 +207,11 @@ describe("VoiceSamples", () => {
     await user.click(
       await screen.findByRole("button", { name: "Actions for Q3 proposal" }),
     );
-    await user.click(screen.getByRole("button", { name: "Remove sample" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["settings.voice.removeSource"],
+      }),
+    );
     const dialog = within(screen.getByRole("dialog"));
     expect(dialog.getByText("Remove Q3 proposal?")).toBeInTheDocument();
     expect(
@@ -212,7 +219,11 @@ describe("VoiceSamples", () => {
     ).toBeInTheDocument();
     expect(writes).toEqual([]);
 
-    await user.click(dialog.getByRole("button", { name: "Remove sample" }));
+    await user.click(
+      dialog.getByRole("button", {
+        name: englishCopy["settings.voice.removeSource"],
+      }),
+    );
     await waitFor(() =>
       expect(writes).toEqual([
         "DELETE /voice-profiles/vp-1/sources/vs-1 If-Match 3",
@@ -252,7 +263,9 @@ describe("VoiceHistory", () => {
     );
     expect(superseded.Status).toBeEmptyDOMElement();
     const candidate = await tableRowCells("Versions and learning", "Version 3");
-    expect(candidate.Status).toHaveTextContent("Awaiting review");
+    expect(candidate.Status).toHaveTextContent(
+      englishCopy["voice.status.candidate"],
+    );
   });
 
   it("rolls back only after the reader confirms", async () => {
@@ -277,7 +290,9 @@ describe("VoiceHistory", () => {
       expect(writes).toEqual(["POST /voice-profiles/vp-1/versions/1/rollback"]),
     );
     await waitFor(() =>
-      expect(document.activeElement?.textContent).toBe("Versions and learning"),
+      expect(document.activeElement?.textContent).toBe(
+        englishCopy["voice.history.label"],
+      ),
     );
   });
 

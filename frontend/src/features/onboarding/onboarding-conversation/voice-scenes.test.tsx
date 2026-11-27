@@ -162,15 +162,15 @@ describe("VoiceCollectScene", () => {
     collectScene({ onAddPaste });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Paste text instead" }),
+      screen.getByRole("button", { name: en["ob.conv.voice.pasteInstead"] }),
     );
     const add = screen.getByRole("button", {
-      name: "Add to writing samples",
+      name: en["ob.conv.voice.pasteAdd"],
     });
     expect(add).toBeDisabled();
 
     await userEvent.type(
-      screen.getByLabelText("Paste the text you wrote here"),
+      screen.getByLabelText(en["ob.conv.voice.composer"]),
       "  A paragraph I actually wrote.  ",
     );
     expect(add).not.toBeDisabled();
@@ -178,7 +178,7 @@ describe("VoiceCollectScene", () => {
 
     expect(onAddPaste).toHaveBeenCalledWith("A paragraph I actually wrote.");
     // The field closes after adding, so a second click cannot resubmit it.
-    expect(screen.queryByLabelText("Paste the text you wrote here")).toBeNull();
+    expect(screen.queryByLabelText(en["ob.conv.voice.composer"])).toBeNull();
   });
 
   it("discards the draft without ever calling onAddPaste", async () => {
@@ -186,41 +186,45 @@ describe("VoiceCollectScene", () => {
     collectScene({ onAddPaste });
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Paste text instead" }),
+      screen.getByRole("button", { name: en["ob.conv.voice.pasteInstead"] }),
     );
     await userEvent.type(
-      screen.getByLabelText("Paste the text you wrote here"),
+      screen.getByLabelText(en["ob.conv.voice.composer"]),
       "Something",
     );
     await userEvent.click(screen.getByRole("button", { name: "Discard" }));
 
     expect(onAddPaste).not.toHaveBeenCalled();
-    expect(screen.queryByLabelText("Paste the text you wrote here")).toBeNull();
+    expect(screen.queryByLabelText(en["ob.conv.voice.composer"])).toBeNull();
   });
 
   it("puts the cursor in the paste box when it opens, and Escape hands focus back", async () => {
     const user = userEvent.setup();
     collectScene({});
-    const opener = screen.getByRole("button", { name: "Paste text instead" });
+    const opener = screen.getByRole("button", {
+      name: en["ob.conv.voice.pasteInstead"],
+    });
 
     await user.click(opener);
-    const field = screen.getByLabelText("Paste the text you wrote here");
+    const field = screen.getByLabelText(en["ob.conv.voice.composer"]);
     expect(document.activeElement).toBe(field);
 
     await user.keyboard("{Escape}");
-    expect(screen.queryByLabelText("Paste the text you wrote here")).toBeNull();
+    expect(screen.queryByLabelText(en["ob.conv.voice.composer"])).toBeNull();
     expect(document.activeElement).toBe(opener);
   });
 
   it("hands focus back to the opener once a paste is added", async () => {
     const user = userEvent.setup();
     collectScene({});
-    const opener = screen.getByRole("button", { name: "Paste text instead" });
+    const opener = screen.getByRole("button", {
+      name: en["ob.conv.voice.pasteInstead"],
+    });
 
     await user.click(opener);
     await user.keyboard("A paragraph I wrote.");
     await user.click(
-      screen.getByRole("button", { name: "Add to writing samples" }),
+      screen.getByRole("button", { name: en["ob.conv.voice.pasteAdd"] }),
     );
     expect(document.activeElement).toBe(opener);
   });
@@ -243,7 +247,9 @@ describe("VoiceCollectScene", () => {
     expect(input).not.toBeNull();
     const click = vi.spyOn(input as HTMLInputElement, "click");
 
-    await userEvent.click(screen.getByRole("button", { name: "Browse files" }));
+    await userEvent.click(
+      screen.getByRole("button", { name: en["ob.conv.voice.browse"] }),
+    );
 
     expect(click).toHaveBeenCalledTimes(1);
   });
@@ -287,7 +293,9 @@ describe("the collect scene's copy", () => {
   it("offers the skip as a short button with no period", () => {
     collectScene({});
 
-    expect(screen.getByRole("button", { name: "Skip for now" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: en["ob.conv.voice.skipped"] }),
+    ).toBeTruthy();
   });
 });
 
@@ -348,7 +356,7 @@ describe("the collect scene's corpus floor meter", () => {
     const onBuild = vi.fn();
     collectScene({ summary: summaryOf(200), canBuild: false, onBuild });
     await userEvent.click(
-      screen.getByRole("button", { name: "Build my voice profile" }),
+      screen.getByRole("button", { name: en["ob.conv.voice.buildChip"] }),
     );
     expect(onBuild).not.toHaveBeenCalled();
     expect((await screen.findByRole("alert")).textContent).toBe(
@@ -364,7 +372,7 @@ describe("the collect scene's corpus floor meter", () => {
     // VOICE_MIN_WORDS constant.
     collectScene({ summary: summaryOf(VOICE_MIN_WORDS), canBuild: true });
     expect(
-      screen.getByRole("button", { name: "Build my voice profile" }),
+      screen.getByRole("button", { name: en["ob.conv.voice.buildChip"] }),
     ).toBeEnabled();
     expect(
       document.querySelector(".ob-voice-meter-line")?.textContent,
@@ -565,7 +573,7 @@ describe("VoiceResultScene", () => {
     );
 
     await userEvent.click(
-      screen.getByRole("button", { name: "Not quite me: add more writing" }),
+      screen.getByRole("button", { name: en["ob.conv.voice.revise"] }),
     );
     expect(onRevise).toHaveBeenCalledTimes(1);
     await userEvent.click(screen.getByRole("button", { name: "That is me" }));
@@ -594,7 +602,7 @@ describe("VoiceCollectScene with no AI connected", () => {
     collectScene({ canBuild: true, onBuild });
 
     expect(
-      await screen.findByRole("link", { name: "Open AI settings" }),
+      await screen.findByRole("link", { name: en["connectAi.link"] }),
     ).toBeTruthy();
     await userEvent
       .setup()

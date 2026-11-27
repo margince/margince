@@ -121,7 +121,7 @@ describe("the worklist readings strip", () => {
     await user.click(
       screen.getByRole("button", {
         name: "Open",
-        description: "Flagged pipeline value",
+        description: en["worklist.readings.revenue"],
       }),
     );
     expect(priced).toHaveBeenCalledWith("deals_at_risk");
@@ -131,7 +131,7 @@ describe("the worklist readings strip", () => {
     await user.click(
       screen.getByRole("button", {
         name: "Open",
-        description: "Flagged pipeline value",
+        description: en["worklist.readings.revenue"],
       }),
     );
     expect(unpriced).toHaveBeenCalledWith("deals_at_risk");

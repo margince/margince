@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -8,13 +9,14 @@ import {
 import { reportingTargets } from "./reporting.scenarios";
 import { reportingStoryRoutes } from "./reporting.story-fixtures";
 import { TargetHistory } from "./reporting.targethistory";
+
 export default {
   title: "Records/Reports/Analytics/Target history",
 } satisfies Meta;
 export const Retired: StoryObj = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
-      within(canvasElement).getByText("Target history", {
+      within(canvasElement).getByText(englishCopy["reporting.targetHistory"], {
         selector: ".disclosure-label",
       }),
     );

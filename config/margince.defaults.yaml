@@ -207,6 +207,7 @@ installation:
   individual_performance: true
   name: null
   oauth_access_token_ttl_minutes: 43200
+  payment_long_overdue_days: 365
   retention_sweep_interval_seconds: 86400
   send_max_age_hours: 24
   send_rate_limit: 30

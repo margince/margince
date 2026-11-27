@@ -6,6 +6,7 @@ import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { RecordDetails } from "../../design-system/recorddetails";
 import { useT } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { installFetchStub, StoryProviders } from "../../testing/story-utils";
 import { EmailValue, reachRows } from "./leadreach";
 
@@ -64,7 +65,9 @@ export const EmailAndPhone: Story = {
       await canvas.findByRole("link", { name: "jonas@nordwind.example" }),
     ).toBeVisible();
     await expect(
-      canvas.getByRole("button", { name: "Copy email address" }),
+      canvas.getByRole("button", {
+        name: englishCopy["contactLink.copyEmail"],
+      }),
     ).toBeVisible();
     await expect(canvas.getByText("+49 30 1234567")).toBeVisible();
     await expect(canvas.queryByText("Not set")).toBeNull();

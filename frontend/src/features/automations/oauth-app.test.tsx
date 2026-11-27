@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stubClipboard } from "../../design-system/clipboard-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { OAuthAppCard, UnitOAuthAppCards } from "./oauth-app";
@@ -192,12 +193,12 @@ describe("the Google app card", () => {
   // Registering an app needs the addresses, so they are open until one exists.
   it("opens the addresses while there is no app, and shuts them once there is", async () => {
     mount({ ...absent(), redirect_uris: stored().redirect_uris });
-    const open = await screen.findByText("Authorized redirect URIs");
+    const open = await screen.findByText(englishCopy["oauthApp.redirectTitle"]);
     expect(open.closest("summary")?.getAttribute("aria-expanded")).toBe("true");
     cleanup();
 
     mount(stored());
-    const shut = await screen.findByText("Authorized redirect URIs");
+    const shut = await screen.findByText(englishCopy["oauthApp.redirectTitle"]);
     expect(shut.closest("summary")?.getAttribute("aria-expanded")).toBe(
       "false",
     );
@@ -387,7 +388,9 @@ describe("the Microsoft app card", () => {
 
   it("names the vendor whose console the operator is copying from", async () => {
     mount(microsoft(), "microsoft");
-    expect(await screen.findByText("Microsoft app")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["oauthApp.microsoft.title"]),
+    ).toBeTruthy();
     expect(screen.queryByText("Google app")).toBeNull();
   });
 
@@ -423,7 +426,10 @@ describe("the Microsoft app card", () => {
     const { calls } = mount(unpinned, "microsoft");
     await user.type(await screen.findByLabelText(/^Client ID/), ENTRA_ID);
     await user.type(screen.getByLabelText(/^Client secret/), "s3cret");
-    await user.type(screen.getByLabelText("Directory (tenant) ID"), DIRECTORY);
+    await user.type(
+      screen.getByLabelText(englishCopy["oauthApp.tenant"]),
+      DIRECTORY,
+    );
     await user.click(screen.getByRole("button", { name: "Replace app" }));
 
     await waitFor(() => expect(calls.length).toBe(1));
@@ -456,7 +462,7 @@ describe("the Microsoft app card", () => {
     const { calls } = mount(microsoft(), "microsoft");
     await user.type(await screen.findByLabelText(/^Client ID/), ENTRA_ID);
     await user.type(screen.getByLabelText(/^Client secret/), "s3cret");
-    await user.clear(screen.getByLabelText("Directory (tenant) ID"));
+    await user.clear(screen.getByLabelText(englishCopy["oauthApp.tenant"]));
     await user.click(screen.getByRole("button", { name: "Replace app" }));
 
     await waitFor(() => expect(calls.length).toBe(1));
@@ -469,7 +475,7 @@ describe("the Microsoft app card", () => {
   it("offers no directory field for Google", async () => {
     mount(stored());
     await screen.findByLabelText(/^Client ID/);
-    expect(screen.queryByLabelText("Directory (tenant) ID")).toBeNull();
+    expect(screen.queryByLabelText(englishCopy["oauthApp.tenant"])).toBeNull();
   });
 });
 
@@ -531,7 +537,9 @@ describe("the extension units' app cards", () => {
     expect(screen.getByText(BOOKS_URI)).toBeTruthy();
     expect(screen.getByText("Connect")).toBeTruthy();
     expect(screen.queryByText("Google app")).toBeNull();
-    expect(screen.queryByText("Microsoft app")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["oauthApp.microsoft.title"]),
+    ).toBeNull();
   });
 
   // The core vendors' cards still render around a failed list, so without its
@@ -553,12 +561,16 @@ describe("the extension units' app cards", () => {
         : jsonResponse({ data: [books] }),
     );
     expect(await screen.findByRole("alert")).toBeTruthy();
-    expect(screen.getByText("Extension apps")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["oauthApp.unit.listTitle"]),
+    ).toBeTruthy();
     failing = false;
     await userEvent.click(screen.getByRole("button", { name: "Retry" }));
     expect(
       await screen.findByText(/The Books ledger extension cannot be connected/),
     ).toBeTruthy();
-    expect(screen.queryByText("Extension apps")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["oauthApp.unit.listTitle"]),
+    ).toBeNull();
   });
 });

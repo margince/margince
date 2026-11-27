@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { throwProblem } from "../lib/problem";
 import { seedWriter } from "../testing/mefixture";
 import { CreateAction } from "./create";
@@ -93,7 +94,9 @@ describe("CreateAction field refusals", () => {
   it("shows a negative amount beside the amount, not at the foot", async () => {
     await submitWith(refusal("amount_minor", "amount_negative"));
     await waitFor(() =>
-      expect(screen.getByText("Enter an amount of zero or more.")).toBeTruthy(),
+      expect(
+        screen.getByText(englishCopy["create.amountNegative"]),
+      ).toBeTruthy(),
     );
     expect(screen.queryByText("amount_minor refused")).toBeNull();
   });
@@ -111,7 +114,7 @@ describe("CreateAction field refusals", () => {
     await submitWith(refusal("pipeline_id", "reference_not_found"));
     await waitFor(() =>
       expect(
-        screen.getByText("This record no longer exists, or you cannot see it."),
+        screen.getByText(englishCopy["create.referenceNotFound"]),
       ).toBeTruthy(),
     );
     expect(screen.queryByText("pipeline_id refused")).toBeNull();

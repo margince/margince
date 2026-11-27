@@ -4,6 +4,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import type { Approval } from "../../lib/approvals.queries";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import type { GrantSpec } from "../../testing/mefixture";
@@ -126,7 +127,9 @@ describe("the LinkedIn match boxes", () => {
       }),
     ).toBeChecked();
     expect(
-      screen.getByRole("checkbox", { name: "Use as job title" }),
+      screen.getByRole("checkbox", {
+        name: englishCopy["approval.linkedin.useAsTitle"],
+      }),
     ).toBeChecked();
     await user.click(screen.getByRole("button", { name: "Approve" }));
     await waitFor(() => expect(sent).toHaveLength(1));
@@ -139,7 +142,9 @@ describe("the LinkedIn match boxes", () => {
     const approval = linkedInMatch();
     show(approval);
     await user.click(
-      await screen.findByRole("checkbox", { name: "Use as job title" }),
+      await screen.findByRole("checkbox", {
+        name: englishCopy["approval.linkedin.useAsTitle"],
+      }),
     );
     await user.click(screen.getByRole("button", { name: "Approve" }));
     await waitFor(() => expect(sent).toHaveLength(1));
@@ -165,7 +170,9 @@ describe("the LinkedIn match boxes", () => {
       const sent = stubCard(allow);
       show(linkedInMatch());
       expect(
-        await screen.findByRole("checkbox", { name: "Use as job title" }),
+        await screen.findByRole("checkbox", {
+          name: englishCopy["approval.linkedin.useAsTitle"],
+        }),
       ).toBeChecked();
       expect(
         screen.queryByRole("checkbox", { name: /as employer/ }),
@@ -218,7 +225,9 @@ describe("the LinkedIn match boxes", () => {
     const sent = stubCard(mayEmploy, pending, pending);
     show(linkedInMatch());
     await user.click(
-      await screen.findByRole("checkbox", { name: "Use as job title" }),
+      await screen.findByRole("checkbox", {
+        name: englishCopy["approval.linkedin.useAsTitle"],
+      }),
     );
     await user.click(screen.getByRole("button", { name: "Approve" }));
     await waitFor(() => expect(sent).toHaveLength(1));
@@ -232,7 +241,9 @@ describe("the LinkedIn match boxes", () => {
     show(
       linkedInMatch({ employer_company_id: undefined, use_as_employer: false }),
     );
-    await screen.findByRole("checkbox", { name: "Use as job title" });
+    await screen.findByRole("checkbox", {
+      name: englishCopy["approval.linkedin.useAsTitle"],
+    });
     expect(screen.queryByRole("checkbox", { name: /as employer/ })).toBeNull();
   });
 
@@ -250,10 +261,14 @@ describe("the LinkedIn match boxes", () => {
     stubCard(mayEmploy);
     const view = show(linkedInMatch());
     await user.click(
-      await screen.findByRole("checkbox", { name: "Use as job title" }),
+      await screen.findByRole("checkbox", {
+        name: englishCopy["approval.linkedin.useAsTitle"],
+      }),
     );
     expect(
-      screen.getByRole("checkbox", { name: "Use as job title" }),
+      screen.getByRole("checkbox", {
+        name: englishCopy["approval.linkedin.useAsTitle"],
+      }),
     ).not.toBeChecked();
     view.rerender(
       <StoryProviders>
@@ -261,7 +276,9 @@ describe("the LinkedIn match boxes", () => {
       </StoryProviders>,
     );
     expect(
-      await screen.findByRole("checkbox", { name: "Use as job title" }),
+      await screen.findByRole("checkbox", {
+        name: englishCopy["approval.linkedin.useAsTitle"],
+      }),
     ).toBeChecked();
   });
 

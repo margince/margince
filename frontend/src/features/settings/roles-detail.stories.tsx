@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import type { Role } from "../../lib/roles.queries";
 import {
   installFetchStub,
@@ -92,7 +93,7 @@ export const ReadOnly: Story = {
     const canvas = within(canvasElement);
     await canvas.findByRole("table");
     const said = canvas
-      .getAllByText("Your role can read roles but not change them.")
+      .getAllByText(englishCopy["roles.readOnly"])
       .filter((line) => !line.closest(".grant-cell"));
     await expect(said).toHaveLength(1);
   },
@@ -103,7 +104,9 @@ export const WithKeys: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await userEvent.click(
-      await canvas.findByRole("switch", { name: "Show API names" }),
+      await canvas.findByRole("switch", {
+        name: englishCopy["roles.showKeys"],
+      }),
     );
     await expect(
       canvas.getByRole("rowheader", { name: /Audit log/ }).textContent,

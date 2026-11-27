@@ -8,6 +8,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse, render } from "../../testing/settings.testkit";
 import { tableRowCells } from "../../testing/tablerow.testkit";
@@ -118,24 +119,28 @@ it("counts each mailbox and the installation without naming what waits", async (
   render(<CaptureHealthCard />);
 
   const box = await tableRowCells("Mailboxes", "Ana Rep");
-  expect(box["Contacts waiting"]).toHaveTextContent("3");
-  expect(box["Threads waiting"]).toHaveTextContent("1");
+  expect(box[englishCopy["captureHealth.col.contacts"]]).toHaveTextContent("3");
+  expect(box[englishCopy["captureHealth.col.threads"]]).toHaveTextContent("1");
   // A count above zero is the one figure in the row worth finding.
   expect(
-    within(box["Contacts waiting"]).getByText("3").closest(".badge"),
+    within(box[englishCopy["captureHealth.col.contacts"]])
+      .getByText("3")
+      .closest(".badge"),
   ).not.toBeNull();
   // The older of the two waits, in its largest whole unit.
   expect(box["Oldest wait"]).toHaveTextContent(/^3 days/);
   expect(
-    within(factRow("Senders waiting for the check")).getByText("4"),
+    within(factRow(englishCopy["captureHealth.fact.pending"])).getByText("4"),
   ).toBeInTheDocument();
   expect(
-    within(factRow("Senders with no retries left"))
+    within(factRow(englishCopy["captureHealth.fact.exhausted"]))
       .getByText("1")
       .closest(".badge"),
   ).not.toBeNull();
   expect(
-    within(factRow("Held meetings")).getByText("201").closest(".badge"),
+    within(factRow(englishCopy["captureHealth.heldMeetings"]))
+      .getByText("201")
+      .closest(".badge"),
   ).not.toBeNull();
 });
 
@@ -149,10 +154,14 @@ it("says which pass failed and which left a backlog, and leaves a pass that keep
   expect(settled.State).toBeEmptyDOMElement();
   expect(settled["Runs every"]).toHaveTextContent("10 minutes");
   const failed = await tableRowCells("Repair passes", "Unasked contacts");
-  expect(within(failed.State).getByText("Last run failed")).toBeInTheDocument();
+  expect(
+    within(failed.State).getByText(englishCopy["captureHealth.warn.failed"]),
+  ).toBeInTheDocument();
   expect(within(failed.State).getByText("write_conflict")).toBeInTheDocument();
   const filed = await tableRowCells("Repair passes", "Filed meetings");
-  expect(within(filed.State).getByText("Backlog remains")).toBeInTheDocument();
+  expect(
+    within(filed.State).getByText(englishCopy["captureHealth.warn.backlog"]),
+  ).toBeInTheDocument();
   expect(filed.Processed).toHaveTextContent("200");
 });
 
@@ -176,10 +185,14 @@ it("reads a calm installation as calm, and still shows how each pass stands", as
     screen.queryByRole("table", { name: "Mailboxes" }),
   ).not.toBeInTheDocument();
   expect(
-    within(factRow("Held meetings")).getByText("0").closest(".badge"),
+    within(factRow(englishCopy["captureHealth.heldMeetings"]))
+      .getByText("0")
+      .closest(".badge"),
   ).toBeNull();
   const failed = await tableRowCells("Repair passes", "Unasked contacts");
-  expect(within(failed.State).getByText("Last run failed")).toBeInTheDocument();
+  expect(
+    within(failed.State).getByText(englishCopy["captureHealth.warn.failed"]),
+  ).toBeInTheDocument();
 });
 
 it("leaves out the state column while every pass keeps up", async () => {
@@ -208,7 +221,9 @@ it("says a pass that never ran has never run, rather than drawing it clean", asy
 
   const pass = await tableRowCells("Repair passes", "Unasked contacts");
   expect(within(pass.State).getByText("Never run")).toBeInTheDocument();
-  expect(pass["Last success"]).toHaveTextContent("Never");
+  expect(pass[englishCopy["captureHealth.col.lastSuccess"]]).toHaveTextContent(
+    "Never",
+  );
 });
 
 it.each(["generated_at", "mailboxes", "sweeps", "classifier", "held_meetings"])(
@@ -223,12 +238,14 @@ it.each(["generated_at", "mailboxes", "sweeps", "classifier", "held_meetings"])(
 
     expect(await screen.findByRole("alert")).toBeInTheDocument();
     expect(
-      screen.queryByRole("table", { name: "Repair passes" }),
+      screen.queryByRole("table", {
+        name: englishCopy["captureHealth.sweeps"],
+      }),
     ).not.toBeInTheDocument();
     // The report refused as unreadable, not a body that crashed on the gap:
     // the boundary's fallback would also be an alert.
     expect(
-      screen.queryByText("This card stopped working"),
+      screen.queryByText(englishCopy["card.errorTitle"]),
     ).not.toBeInTheDocument();
   },
 );
@@ -323,7 +340,9 @@ it("lists concerned connections without message details", async () => {
   });
   render(<CaptureHealthCard />);
   expect(await screen.findByText("mailbox@example.test")).toBeTruthy();
-  expect(await screen.findByText("Shared mailbox")).toBeTruthy();
+  expect(
+    await screen.findByText(englishCopy["captureConcern.sharedMailbox"]),
+  ).toBeTruthy();
   expect(screen.getByText("sales@example.test")).toBeTruthy();
-  expect(screen.getByText("Sync has stopped")).toBeTruthy();
+  expect(screen.getByText(englishCopy["captureConcern.stalled"])).toBeTruthy();
 });

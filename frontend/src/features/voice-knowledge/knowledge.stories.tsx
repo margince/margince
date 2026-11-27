@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -219,7 +220,7 @@ export const NewSetDialog: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "New document set",
+        name: englishCopy["knowledge.new.title"],
       }),
     );
     await within(canvasElement.ownerDocument.body).findByRole("dialog");
@@ -301,7 +302,7 @@ export const NoSetsYet: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     await expect(
-      await canvas.findByText("No document sets yet."),
+      await canvas.findByText(englishCopy["knowledge.empty"]),
     ).toBeVisible();
     await expect(canvas.queryByRole("table")).toBeNull();
   },

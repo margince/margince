@@ -16,6 +16,7 @@ import (
 	"github.com/go-chi/chi/v5"
 	"github.com/jackc/pgx/v5/pgxpool"
 
+	"github.com/margince/margince/backend/internal/compose/loopfault"
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/capture"
 	"github.com/margince/margince/backend/internal/modules/identity"
@@ -53,4 +54,9 @@ func TeamServiceForTest(pool *pgxpool.Pool) *identity.Service {
 // WithConsentClockForTest pins the consent store's clock; the store is shared, so option order does not matter.
 func WithConsentClockForTest(now func() time.Time) Option {
 	return func(s *Server, _ *pgxpool.Pool) { s.consentHandlers = s.WithClock(now) }
+}
+
+// WithRunnerReadFailureForTest refuses selected reads inside the real registry.
+func WithRunnerReadFailureForTest(fail loopfault.Failure) RunnerOption {
+	return func(s *RunnerService) { s.features.readFailure = fail }
 }

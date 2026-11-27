@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import {
   installFetchStub,
@@ -113,7 +114,7 @@ function stub(refuse = false) {
 const press: Story["play"] = async ({ canvasElement }) => {
   await userEvent.click(
     await within(canvasElement).findByRole("button", {
-      name: "Refresh model prices",
+      name: englishCopy["aiRates.refresh.button"],
     }),
   );
 };

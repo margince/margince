@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { showLayout } from "../../testing/listquery.testkit";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
@@ -448,7 +449,7 @@ describe("the board past the picker's first page", () => {
 
     const card = await boardCard("Fleet retrofit");
     expect(within(card).getByLabelText(MASK)).toBeTruthy();
-    expect(screen.queryByText("Company withheld")).toBeNull();
+    expect(screen.queryByText(englishCopy["deal.companyWithheld"])).toBeNull();
   });
 
   // A read that comes back GONE is settled, and it is not the same fact as
@@ -486,7 +487,9 @@ describe("the board past the picker's first page", () => {
     render(<DealsScreen />);
 
     const card = await boardCard("Fleet retrofit");
-    expect(await within(card).findByText("Name did not load")).toBeTruthy();
+    expect(
+      await within(card).findByText(englishCopy["ref.nameLoadFailed"]),
+    ).toBeTruthy();
     expect(within(card).queryByLabelText(MASK)).toBeNull();
     expect(screen.queryByText("o-refused")).toBeNull();
   });
@@ -635,12 +638,11 @@ describe("the deals table's company columns", () => {
       expect(screen.getByText("Fleet retrofit")).toBeTruthy(),
     );
     expect(
-      within(cellUnder("Referring partner", "Fleet retrofit")).getByRole(
-        "img",
-        {
-          name: MASK,
-        },
-      ),
+      within(
+        cellUnder(englishCopy["deal.partnerCompany"], "Fleet retrofit"),
+      ).getByRole("img", {
+        name: MASK,
+      }),
     ).toBeTruthy();
   });
 });

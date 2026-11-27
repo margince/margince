@@ -7,6 +7,7 @@ import {
   holdClipboard,
   stubClipboard,
 } from "../design-system/clipboard-testing";
+import { en as englishCopy } from "../i18n/en";
 import type { BuildRelease } from "../lib/buildrelease";
 import { StoryProviders } from "../testing/story-utils";
 import { AboutMargince, AboutMarginceDialog } from "./aboutmargince";
@@ -55,7 +56,7 @@ const longVersion: BuildRelease = {
 
 const dialogOf = (canvasElement: HTMLElement) =>
   within(canvasElement.ownerDocument.body).getByRole("dialog", {
-    name: "About Margince",
+    name: englishCopy["about.title"],
   });
 
 export const CoreBuild: Story = {
@@ -143,7 +144,7 @@ export const Copied: Story = {
         dialog.getByRole("button", { name: /^2026\.2\.1 · 0123456/ }),
       );
       await dialog.findByRole("button", {
-        name: "Copied version to clipboard",
+        name: englishCopy["about.copiedVersion"],
       });
     } finally {
       clipboard.restore();

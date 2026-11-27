@@ -7,6 +7,7 @@ import { cleanup, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { ApprovalPreferencesCard } from "./approval-preferences";
 
@@ -172,7 +173,11 @@ it("pages explicit muted history, returns to the first page, and closes review",
   await user.click(screen.getByRole("button", { name: "First page" }));
   expect(await screen.findByText("First reviewed date")).toBeTruthy();
   expect(cursors.slice(0, 2)).toEqual([null, "older-reviews"]);
-  await user.click(screen.getByRole("button", { name: "Close review" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["approvalPreferences.close"],
+    }),
+  );
   expect(screen.queryByText("First reviewed date")).toBeNull();
   expect(screen.getByRole("switch").getAttribute("aria-checked")).toBe("true");
 });

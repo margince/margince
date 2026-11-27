@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import type { CalendarChange } from "../lib/calendarchange";
 import { StoryProviders } from "../testing/story-utils";
 import { MeetingChange } from "./meetingchange";
@@ -51,8 +52,12 @@ describe("MeetingChange", () => {
       },
       guests_added: [{ email: "ben.ito@partner.example", name: "Ben Ito" }],
     });
-    expect(screen.getByText("Meeting changed")).toBeInTheDocument();
-    expect(screen.getByText("Microsoft Teams").tagName).toBe("S");
+    expect(
+      screen.getByText(englishCopy["meetingChange.badge.updated"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["webhooks.body.preset.teams"]).tagName,
+    ).toBe("S");
     expect(screen.getByText("Added Ben Ito")).toBeInTheDocument();
     expect(
       container.querySelectorAll(".meetingchange__fact--new"),
@@ -84,7 +89,9 @@ describe("MeetingChange", () => {
       before: BOOKED,
       by: { email: "anna.weber@partner.example", name: "Anna Weber" },
     });
-    expect(screen.getByText("New time proposed")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["meetingChange.badge.proposed"]),
+    ).toBeInTheDocument();
     expect(container.querySelector(".meetingchange__lead")).toHaveTextContent(
       /Anna Weber proposes/,
     );

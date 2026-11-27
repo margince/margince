@@ -5,6 +5,7 @@
 import "@testing-library/jest-dom/vitest";
 import { cleanup, fireEvent, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { suggestion } from "../../testing/dealsuggestion.fixture";
 import { meFixture } from "../../testing/mefixture";
 import { jsonResponse, render } from "../../testing/settings.testkit";
@@ -80,14 +81,18 @@ it("shows the exact deal suggestion before activating its reviewed retirement", 
   const previews: unknown[] = [];
   const writes = serve(204, suggestionRepairReview, previews);
   render(<HomeRepairControls version={7} canActivate />);
-  fireEvent.click(screen.getByRole("button", { name: "Deal suggestions" }));
-  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.suggestions"] }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
+  );
   const apply = await screen.findByRole("button", {
     name: "Apply 1 reviewed change",
   });
   expect(previews).toEqual([{ limit: 25, source: "suggestion" }]);
   expect(
-    screen.getByText("Retire automatic deal suggestion"),
+    screen.getByText(englishCopy["homeRepair.supersede"]),
   ).toBeInTheDocument();
   const inspect = screen.getByRole("button", { name: "Inspect" });
   await waitFor(() => expect(inspect).toBeEnabled());
@@ -109,12 +114,14 @@ it("shows the exact deal suggestion before activating its reviewed retirement", 
 it("allows suggestion inspection but explains missing retirement authority", async () => {
   const writes = serve(204, suggestionRepairReview, [], false);
   render(<HomeRepairControls version={7} canActivate />);
-  fireEvent.click(screen.getByRole("button", { name: "Deal suggestions" }));
-  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.suggestions"] }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
+  );
   expect(
-    await screen.findByText(
-      "Deal creation permission is required to retire these suggestions.",
-    ),
+    await screen.findByText(englishCopy["homeRepair.suggestionPermission"]),
   ).toBeInTheDocument();
   const inspect = screen.getByRole("button", { name: "Inspect" });
   await waitFor(() => expect(inspect).toBeEnabled());
@@ -128,44 +135,48 @@ it("requires a separate explicit action after showing named tasks and their disp
   const writes = serve();
   render(<HomeRepairControls version={7} canActivate />);
   expect(screen.queryByRole("button", { name: /Apply 1 reviewed/ })).toBeNull();
-  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
+  );
   const apply = await screen.findByRole("button", {
     name: "Apply 1 reviewed change",
   });
   await waitFor(() =>
     expect(screen.getAllByText("Prepare account review")).toHaveLength(2),
   );
-  expect(screen.getByText("Keep for human review")).toBeInTheDocument();
+  expect(
+    screen.getByText(englishCopy["homeRepair.keepReview"]),
+  ).toBeInTheDocument();
   expect(writes).toEqual([]);
   fireEvent.click(apply);
   await waitFor(() => expect(writes).toEqual([{ version: 7, review }]));
   expect(
-    await screen.findByText(
-      "The reviewed run is queued. Its progress appears above.",
-    ),
+    await screen.findByText(englishCopy["homeRepair.started"]),
   ).toBeInTheDocument();
 });
 it("allows inspection without activation rights", async () => {
   serve();
   render(<HomeRepairControls version={7} canActivate={false} />);
-  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
-  await screen.findByText("Keep for human review");
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
+  );
+  await screen.findByText(englishCopy["homeRepair.keepReview"]);
   expect(screen.queryByRole("button", { name: /Apply 1 reviewed/ })).toBeNull();
 });
 it("keeps a refused review visible and never reports it queued", async () => {
   serve(409);
   render(<HomeRepairControls version={7} canActivate />);
-  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
+  );
   fireEvent.click(
     await screen.findByRole("button", { name: "Apply 1 reviewed change" }),
   );
   await waitFor(() => expect(screen.getByRole("alert")).toBeInTheDocument());
-  expect(screen.getByText("Keep for human review")).toBeInTheDocument();
   expect(
-    screen.queryByText(
-      "The reviewed run is queued. Its progress appears above.",
-    ),
-  ).toBeNull();
+    screen.getByText(englishCopy["homeRepair.keepReview"]),
+  ).toBeInTheDocument();
+  expect(screen.queryByText(englishCopy["homeRepair.started"])).toBeNull();
 });
 
 it("reviews proposals separately and activates only their displayed snapshot", async () => {
@@ -173,14 +184,18 @@ it("reviews proposals separately and activates only their displayed snapshot", a
   const writes = serve(204, proposalReview, previews);
   render(<HomeRepairControls version={7} canActivate />);
   fireEvent.click(screen.getByRole("button", { name: "Proposals" }));
-  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
+  );
   const apply = await screen.findByRole("button", {
     name: "Apply 1 reviewed change",
   });
   expect(previews).toEqual([{ limit: 25, source: "approval" }]);
-  expect(screen.getByText("Withdraw automatic proposal")).toBeInTheDocument();
   expect(
-    screen.getByText("An identical pending proposal remains available."),
+    screen.getByText(englishCopy["homeRepair.withdraw"]),
+  ).toBeInTheDocument();
+  expect(
+    screen.getByText(englishCopy["homeRepair.reason.duplicate"]),
   ).toBeInTheDocument();
   expect(
     screen.getByText(
@@ -198,8 +213,14 @@ it("shows the exact classification change and submits its server review token", 
   const previews: unknown[] = [];
   const writes = serve(204, classificationRepairReview, previews);
   render(<HomeRepairControls version={7} canActivate />);
-  fireEvent.click(screen.getByRole("button", { name: "Message results" }));
-  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: englishCopy["homeRepair.classifications"],
+    }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
+  );
   expect(
     await screen.findByText(
       "Current: Requests action. Proposed: Information only.",
@@ -219,12 +240,16 @@ it("shows the exact classification change and submits its server review token", 
 it("preserves read-only classification review without offering a refused write", async () => {
   serve(204, classificationRepairReview, [], true, false);
   render(<HomeRepairControls version={7} canActivate />);
-  fireEvent.click(screen.getByRole("button", { name: "Message results" }));
-  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  fireEvent.click(
+    screen.getByRole("button", {
+      name: englishCopy["homeRepair.classifications"],
+    }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
+  );
   expect(
-    await screen.findByText(
-      "Activity editing permission is required to change message results.",
-    ),
+    await screen.findByText(englishCopy["homeRepair.classificationPermission"]),
   ).toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "Apply 1 reviewed change" }),
@@ -234,11 +259,11 @@ it("preserves read-only classification review without offering a refused write",
 it("keeps task review readable without offering an unauthorized archive", async () => {
   serve(204, review, [], true, true, false);
   render(<HomeRepairControls version={7} canActivate />);
-  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
+  );
   expect(
-    await screen.findByText(
-      "Activity archive permission is required to archive reviewed tasks.",
-    ),
+    await screen.findByText(englishCopy["homeRepair.taskPermission"]),
   ).toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: /Apply .* reviewed change/ }),
@@ -249,15 +274,17 @@ it("reviews older answered requests and activates only their revalidation", asyn
   const previews: unknown[] = [];
   const writes = serve(204, settlementRepairReview, previews);
   render(<HomeRepairControls version={7} canActivate />);
-  fireEvent.click(screen.getByRole("button", { name: "Answered requests" }));
-  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.settlements"] }),
+  );
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
+  );
   expect(
     await screen.findByText("1 request is judged again."),
   ).toBeInTheDocument();
   expect(
-    screen.getByText(
-      "A colleague worked on this reminder, so it stays as it is.",
-    ),
+    screen.getByText(englishCopy["homeRepair.reason.settlementHuman"]),
   ).toBeInTheDocument();
   fireEvent.click(
     screen.getByRole("button", { name: "Apply 1 reviewed change" }),
@@ -271,14 +298,14 @@ it("reviews older answered requests and activates only their revalidation", asyn
 it("reviews source and date corrections with update authority and no archive authority", async () => {
   const writes = serve(204, provenanceRepairReview, [], true, true, false);
   render(<HomeRepairControls version={7} canActivate />);
-  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
+  );
   expect(
-    await screen.findByText("Correct source or generated date"),
+    await screen.findByText(englishCopy["homeRepair.normalize"]),
   ).toBeInTheDocument();
   expect(
-    screen.getByText(
-      "Restore the source link and remove the generated notification date.",
-    ),
+    screen.getByText(englishCopy["homeRepair.reason.restoreSourceAndDate"]),
   ).toBeInTheDocument();
   fireEvent.click(
     screen.getByRole("button", { name: "Apply 1 reviewed change" }),
@@ -297,9 +324,11 @@ it("reviews source and date corrections with update authority and no archive aut
 it("keeps source corrections read-only without update authority", async () => {
   const writes = serve(204, provenanceRepairReview, [], true, false, true);
   render(<HomeRepairControls version={7} canActivate />);
-  fireEvent.click(screen.getByRole("button", { name: "Preview items" }));
+  fireEvent.click(
+    screen.getByRole("button", { name: englishCopy["homeRepair.preview"] }),
+  );
   expect(
-    await screen.findByText("Correct source or generated date"),
+    await screen.findByText(englishCopy["homeRepair.normalize"]),
   ).toBeInTheDocument();
   expect(
     screen.queryByRole("button", { name: "Apply 1 reviewed change" }),

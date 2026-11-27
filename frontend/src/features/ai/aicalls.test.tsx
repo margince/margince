@@ -349,7 +349,9 @@ async function openCall(user: ReturnType<typeof userEvent.setup>) {
 it("reads each call in five columns: when, feature, model, outcome and cost", async () => {
   mount();
   const row = await screen.findByTestId(`call-${summary.id}`);
-  expect(within(row).getByText("Message classification")).toBeTruthy();
+  expect(
+    within(row).getByText(en["aiTask.name.capture_classify"]),
+  ).toBeTruthy();
   expect(row.textContent).toContain("Failed");
   expect(row.textContent).toContain("$0.0043");
   // Tokens and latency are the drawer's, so the row fits the settings column.
@@ -385,17 +387,17 @@ it("opens a call in a drawer and leaves the table exactly as it was", async () =
   const drawer = await openCall(user);
   // Nothing is inserted under the row: the detail lives beside the table.
   expect(table.querySelectorAll("tr").length).toBe(rowsBefore);
-  expect(screen.getByRole("dialog", { name: "Message classification" })).toBe(
-    drawer,
-  );
   expect(
-    within(drawer).getByRole("heading", { name: "Message classification" }),
+    screen.getByRole("dialog", { name: en["aiTask.name.capture_classify"] }),
+  ).toBe(drawer);
+  expect(
+    within(drawer).getByRole("heading", {
+      name: en["aiTask.name.capture_classify"],
+    }),
   ).toBeTruthy();
   expect(await within(drawer).findByText(/retry.on.5xx/i)).toBeTruthy();
-  expect(within(drawer).getByText("Request payload")).toBeTruthy();
-  expect(
-    within(drawer).getByText("Export certification scenario"),
-  ).toBeTruthy();
+  expect(within(drawer).getByText(en["aicalls.detail.request"])).toBeTruthy();
+  expect(within(drawer).getByText(en["aiexport.button"])).toBeTruthy();
 
   await user.keyboard("{Escape}");
   await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
@@ -438,7 +440,7 @@ it("steps to the next call from inside the drawer", async () => {
   ]);
   const drawer = await openCall(user);
   expect(
-    within(drawer).getByRole("button", { name: "Previous call" }),
+    within(drawer).getByRole("button", { name: en["aicalls.prev"] }),
   ).toHaveProperty("disabled", true);
   await user.click(within(drawer).getByRole("button", { name: "Next call" }));
   expect(
@@ -458,7 +460,9 @@ it("puts the task filter in a bar above the trace, and repeats no page heading",
   const filter = await screen.findByRole("combobox", { name: "Feature" });
   const bar = filter.closest("fieldset");
   expect(bar).not.toBeNull();
-  const trace = await screen.findByRole("table", { name: "Recent calls" });
+  const trace = await screen.findByRole("table", {
+    name: en["aicalls.callsLabel"],
+  });
   expect(bar?.contains(trace)).toBe(false);
   expect(screen.queryByRole("heading")).toBeNull();
 });
@@ -471,7 +475,7 @@ it("narrows the trace to the feature the address names, and writes a new pick ba
   mount();
   const filter = await screen.findByRole("combobox", { name: "Feature" });
   // No call for it yet, so the server's set lacks it; the select still says it.
-  expect(filter.textContent).toContain("Reading what a company needs");
+  expect(filter.textContent).toContain(en["aiTask.name.account_scan"]);
   const asked = vi
     .mocked(fetch)
     .mock.calls.map(([input]) =>
@@ -481,7 +485,9 @@ it("narrows the trace to the feature the address names, and writes a new pick ba
 
   await user.click(filter);
   await user.click(
-    await screen.findByRole("option", { name: "Message classification" }),
+    await screen.findByRole("option", {
+      name: en["aiTask.name.capture_classify"],
+    }),
   );
   expect(globalThis.location.hash).toBe(
     `#/settings/model-calls?task=${summary.task}`,
@@ -519,10 +525,10 @@ it("asks the server for the outcome and search picked, and clears both", async (
   );
 
   await user.type(
-    screen.getByRole("searchbox", { name: "Search calls" }),
+    screen.getByRole("searchbox", { name: en["aicalls.filter.search"] }),
     "quota",
   );
-  expect(await screen.findByText("No calls match these filters.")).toBeTruthy();
+  expect(await screen.findByText(en["aicalls.filteredEmpty"])).toBeTruthy();
   // The search is asked once it settles, never once per keystroke.
   const searched = askedQueries().filter((q) => q.has("q"));
   expect(searched.map((q) => q.get("q"))).toEqual(["quota"]);
@@ -530,7 +536,7 @@ it("asks the server for the outcome and search picked, and clears both", async (
   // The bar and the empty answer both offer the way back; they do one thing.
   await user.click(
     within(screen.getByRole("group")).getByRole("button", {
-      name: "Clear filters",
+      name: en["aicalls.clear"],
     }),
   );
   expect(await screen.findByTestId(`call-${summary.id}`)).toBeTruthy();
@@ -538,7 +544,7 @@ it("asks the server for the outcome and search picked, and clears both", async (
   expect(
     (
       screen.getByRole("searchbox", {
-        name: "Search calls",
+        name: en["aicalls.filter.search"],
       }) as HTMLInputElement
     ).value,
   ).toBe("");
@@ -566,7 +572,7 @@ it("distinguishes capture disabled from a call without payload", async () => {
   mount(true, false);
   drawer = await openCall(user);
   expect(
-    await within(drawer).findByText("No payload captured for this call."),
+    await within(drawer).findByText(en["aicalls.payload.none"]),
   ).toBeTruthy();
 });
 
@@ -588,9 +594,9 @@ it("names the decision lane in words, never as the rung key", async () => {
   const user = userEvent.setup();
   mount(true, true, OPERATOR, DECIDED);
   const drawer = await openCall(user);
-  expect(within(drawer).getAllByText("Decision model").length).toBeGreaterThan(
-    0,
-  );
+  expect(
+    within(drawer).getAllByText(en["aicalls.badge.decision"]).length,
+  ).toBeGreaterThan(0);
   expect(screen.queryByText(/\bdecide\b/)).toBeNull();
 });
 
@@ -624,7 +630,7 @@ it("draws no outcome badge on a first-try answer, and no decision mark", async (
   const row = await screen.findByTestId(`call-${summary.id}`);
   expect(row.querySelector(".badge")).toBeNull();
   const drawer = await openCall(user);
-  expect(within(drawer).queryByText("Decision model")).toBeNull();
+  expect(within(drawer).queryByText(en["aicalls.badge.decision"])).toBeNull();
 });
 
 it("marks a call that answered after a failed attempt as a warning", async () => {
@@ -648,11 +654,13 @@ it("names a failure code on the row and in the attempt that hit it", async () =>
     ],
   });
   const row = await screen.findByTestId(`call-${summary.id}`);
-  expect(within(row).getByText("Answer rejected")).toBeTruthy();
+  expect(
+    within(row).getByText(en["aicalls.sentinel.output_rejected"]),
+  ).toBeTruthy();
   expect(within(row).queryByText("output_rejected")).toBeNull();
   const drawer = await openCall(user);
   const second = (await within(drawer).findByText("#2")).closest("li");
-  expect(second?.textContent).toContain("Answer rejected");
+  expect(second?.textContent).toContain(en["aicalls.sentinel.output_rejected"]);
 });
 
 it("narrows the trace to where a figure's calls ended, and lets the reader clear it", async () => {
@@ -674,7 +682,7 @@ it("narrows the trace to where a figure's calls ended, and lets the reader clear
     ),
   ).toBe(true);
 
-  await user.click(screen.getByRole("button", { name: "Clear filters" }));
+  await user.click(screen.getByRole("button", { name: en["aicalls.clear"] }));
   expect(globalThis.location.hash).toBe("#/settings/model-calls");
   globalThis.location.hash = "";
 });
@@ -702,7 +710,7 @@ it("shows the request settings the attempts were sent with, and the host that se
   });
   const drawer = await openCall(user);
   expect(
-    await within(drawer).findByText("Settings this call was configured with"),
+    await within(drawer).findByText(en["aicalls.detail.settings"]),
   ).toBeTruthy();
   expect(within(drawer).getByText(/"deadline_ms": 30000/)).toBeTruthy();
   expect(within(drawer).getByText(/served by Cerebras/)).toBeTruthy();
@@ -725,7 +733,7 @@ it("says why the ladder answered after the decision model, and where it went", a
   ).toBeTruthy();
   expect(screen.queryByText(/decision_below_floor/)).toBeNull();
   const first = within(drawer).getByText("#1").closest("li");
-  expect(first?.textContent).toContain("Decision model");
+  expect(first?.textContent).toContain(en["aicalls.badge.decision"]);
   expect(first?.textContent).toContain("jev-classify · Jev-compatible");
 });
 
@@ -775,14 +783,12 @@ it("says a filtered feature has no calls, rather than that nothing was ever call
   const user = userEvent.setup();
   globalThis.location.hash = "#/settings/model-calls?task=account_scan";
   mount(true, true, OPERATOR, RETRIED, [], false);
-  expect(
-    await screen.findByText("No calls recorded for this feature yet."),
-  ).toBeTruthy();
-  expect(screen.queryByText("No AI calls recorded yet.")).toBeNull();
+  expect(await screen.findByText(en["aicalls.taskEmpty"])).toBeTruthy();
+  expect(screen.queryByText(en["aicalls.empty"])).toBeNull();
   // The bar and the empty answer both offer the way back; they do one thing.
   await user.click(
     within(screen.getByRole("group")).getByRole("button", {
-      name: "Clear filters",
+      name: en["aicalls.clear"],
     }),
   );
   expect(globalThis.location.hash).not.toContain("account_scan");
@@ -814,7 +820,7 @@ it("says in the drawer when the AI budget demoted the call", async () => {
   const user = userEvent.setup();
   mount();
   const drawer = await openCall(user);
-  expect(within(drawer).getByText("Budget degraded")).toBeTruthy();
+  expect(within(drawer).getByText(en["aicalls.badge.degraded"])).toBeTruthy();
 });
 
 it("names the call detail settings as the call's configured settings in every language", () => {

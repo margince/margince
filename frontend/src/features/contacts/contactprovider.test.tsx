@@ -359,12 +359,14 @@ describe("a lookup that came back mostly empty", () => {
     expect(line.textContent).toContain("work email");
     // Surfe skips the mobile lookup when it found no email, so it was
     // never asked and must not be listed as something they lacked.
-    expect(line.textContent).not.toContain("mobile number");
-    expect(line.textContent).toContain("LinkedIn profile");
+    expect(line.textContent).not.toContain(en["provider.category.mobile"]);
+    expect(line.textContent).toContain(en["provider.category.linkedin"]);
     expect(line.textContent).not.toContain("professional_email");
 
     // And NOT the one that was answered.
-    expect(line.textContent).not.toContain("current role");
+    expect(line.textContent).not.toContain(
+      en["provider.category.currentEmployment"],
+    );
   });
 
   it("gives only the date when the server did not say what went unanswered", async () => {
@@ -475,7 +477,9 @@ describe("watching a run that is still moving", () => {
       </StoryProviders>,
     );
 
-    expect(await screen.findByText("Response received")).toBeDefined();
+    expect(
+      await screen.findByText(en["provider.profile.landingTitle"]),
+    ).toBeDefined();
     expect(screen.queryByText(/Querying Surfe/)).toBeNull();
   });
 
@@ -505,7 +509,7 @@ describe("watching a run that is still moving", () => {
       </StoryProviders>,
     );
 
-    await screen.findByText("Response received");
+    await screen.findByText(en["provider.profile.landingTitle"]);
     expect(screen.queryByRole("button", { name: /Buy / })).toBeNull();
     expect(screen.queryByRole("button", { name: /Check again/ })).toBeNull();
   });

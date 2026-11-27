@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
 import { browserZone } from "../format/timezone";
+import { en as englishCopy } from "../i18n/en";
 import { StoryProviders } from "../testing/story-utils";
 import { CommitmentReview } from "./commitmentreview";
 
@@ -13,7 +14,7 @@ const meta: Meta<typeof CommitmentReview> = {
   play: async ({ canvasElement, args }) => {
     if (args.decisions?.some((decision) => !decision.current_work)) {
       await userEvent.click(
-        within(canvasElement).getByText("Commitment review"),
+        within(canvasElement).getByText(englishCopy["commitment.review.title"]),
       );
     }
   },

@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -68,7 +69,7 @@ const openIt = async ({
   canvasElement,
 }: Readonly<{ canvasElement: HTMLElement }>) => {
   await userEvent.click(
-    await within(canvasElement).findByText("Company origin"),
+    await within(canvasElement).findByText(englishCopy["companyTriage.title"]),
   );
 };
 

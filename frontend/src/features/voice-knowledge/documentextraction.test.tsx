@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { DocumentExtractionPanel } from "./documentextraction";
 
 // What this panel must never do is collapse the three answers a reading can
@@ -160,7 +161,7 @@ describe("the three answers a reading can give", () => {
     expect(await screen.findByText(/taking unusually long/i)).toBeTruthy();
     // A stalled reading is not a reading in progress: the line that says the
     // file is being read would keep a rep waiting on a worker that is gone.
-    expect(screen.queryByText("Reading this file…")).toBeNull();
+    expect(screen.queryByText(englishCopy["extraction.reading"])).toBeNull();
     // The button is the only way back — the server re-arms the reading on
     // this request — so the press has to reach it.
     await userEvent.click(

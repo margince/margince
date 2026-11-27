@@ -9,6 +9,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { Heading } from "./heading";
 import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
 import { Modal } from "./modal";
@@ -200,7 +201,9 @@ it("keeps the parent panel open when the long select filter is clicked", async (
   render(<SelectInPopover long />);
   await user.click(screen.getByRole("button", { name: "Access" }));
   await user.click(screen.getByRole("combobox", { name: "Hand over to" }));
-  const filter = screen.getByRole("combobox", { name: "Filter the list" });
+  const filter = screen.getByRole("combobox", {
+    name: englishCopy["select.filter"],
+  });
   await user.click(filter);
   await user.type(filter, "Rep Two");
   await user.click(screen.getByRole("option", { name: "Rep Two" }));
@@ -234,7 +237,7 @@ it("puts focus on the panel's first control, and leaves prose alone", async () =
   );
   await user.click(screen.getByRole("button", { name: "Send options" }));
   expect(document.activeElement).toBe(
-    screen.getByRole("button", { name: "Schedule send" }),
+    screen.getByRole("button", { name: englishCopy["compose.schedule"] }),
   );
   unmount();
 

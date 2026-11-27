@@ -3,6 +3,7 @@ import { cleanup } from "@testing-library/react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { translate } from "../i18n";
 import type { MessageKey } from "../i18n/en";
+import { en as englishCopy } from "../i18n/en";
 import { ConnectivityError } from "./connectivity";
 import {
   EmptySuccessError,
@@ -64,9 +65,7 @@ describe("problemMessage", () => {
       },
       t,
     );
-    expect(message).toBe(
-      "Another contact or lead already has this email address, so it was not saved here.",
-    );
+    expect(message).toBe(englishCopy["common.duplicate.email"]);
   });
 
   // An object-RBAC denial and a read-share denial both arrive with the sentinel
@@ -158,8 +157,7 @@ describe("problemMessage", () => {
       problemMessage(
         {
           code: "version_skew",
-          detail:
-            "This record changed after you opened it. Reload it to see the change, then make yours again.",
+          detail: englishCopy["common.versionSkew"],
         },
         german,
       ),
@@ -617,6 +615,7 @@ describe("a field refusal read in the reader's language", () => {
 
   it("never says no cause was reported when the server named a field and a code", () => {
     const line = problemMessageOf(
+      // problem-code:unknown-field: exercises the generic fallback for an unknown server rule.
       refusal({ field: "note", code: "not_a_known_code", message: "bad note" }),
       german,
     );
@@ -667,6 +666,7 @@ describe("a field refusal read in the reader's language", () => {
   it("words the callout and the line under the field the same way", () => {
     const error = refusal({
       field: "note",
+      // problem-code:unknown-field: exercises the generic fallback for an unknown server rule.
       code: "not_a_known_code",
       message: "bad note",
     });
@@ -719,7 +719,7 @@ describe("refusalSentences", () => {
       { name: "Name" },
     );
     expect(byField.get("name")).toBe("Name is required.");
-    expect(rest).toBe("Check this value and try again.");
+    expect(rest).toBe(englishCopy["common.fieldInvalid"]);
   });
 
   it("keeps the server's sentence at the foot when it names no wire key", () => {
@@ -795,7 +795,7 @@ describe("refusalSentences", () => {
       { name: "Name" },
       { conflict: { field: "name", sentence: t("tags.nameTaken") } },
     );
-    expect(byField.get("name")).toBe("A tag with this name already exists.");
+    expect(byField.get("name")).toBe(englishCopy["tags.nameTaken"]);
     expect(rest).toBeNull();
   });
 

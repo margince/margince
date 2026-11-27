@@ -64,7 +64,9 @@ function show(ui: ReactNode) {
 // userEvent.setup() is once per TEST, and a helper that sets up its own would
 // hand each caller a second one.
 async function open(user: ReturnType<typeof userEvent.setup>) {
-  await user.click(screen.getByRole("button", { name: "Compare coverage" }));
+  await user.click(
+    screen.getByRole("button", { name: en["acctCoverage.open"] }),
+  );
 }
 
 describe("comparing the colleagues a reader chooses", () => {

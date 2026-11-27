@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -54,7 +55,7 @@ export const Open: Story = {
       within(canvasElement).getByRole("button", { name: "Create task" }),
     );
     await screen.findByRole("dialog", {
-      name: "A task for each selected record",
+      name: englishCopy["bulk.taskTitle"],
     });
   },
 };

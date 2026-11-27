@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { RecordDetails } from "../../design-system/recorddetails";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -76,7 +77,7 @@ export const Awaiting: Story = {
     const canvas = within(canvasElement);
     await expect(await canvas.findByText("Nordlicht Partners")).toBeVisible();
     await expect(
-      canvas.getByRole("button", { name: "Accept for partner" }),
+      canvas.getByRole("button", { name: englishCopy["lead.partnerAccept"] }),
     ).toBeVisible();
   },
 };
@@ -91,7 +92,7 @@ export const Accepted: Story = {
       await canvas.findByText(/^Accepted for the partner on /),
     ).toBeVisible();
     await expect(
-      canvas.queryByRole("button", { name: "Accept for partner" }),
+      canvas.queryByRole("button", { name: englishCopy["lead.partnerAccept"] }),
     ).toBeNull();
   },
 };

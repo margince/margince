@@ -327,7 +327,9 @@ export const ErasureSearchEnter: Story = {
       cancelable: true,
     });
     await expect(search.dispatchEvent(enter)).toBe(false);
-    await user.click(screen.getByRole("button", { name: "Open request" }));
+    await user.click(
+      screen.getByRole("button", { name: en["privacy.openRequest"] }),
+    );
     await waitFor(() => expect(openedRequests).toHaveLength(1));
   },
 };

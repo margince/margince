@@ -7,6 +7,7 @@ import { cleanup, screen, waitFor } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { signatureReviewHref } from "../../lib/signaturereviewlink";
 import { meFixture } from "../../testing/mefixture";
 import {
@@ -80,7 +81,9 @@ it("shows every retained field and previews only the saved sanitized markup", as
       name: translate("en", "settings.signaturePhone"),
     }),
   ).toHaveValue("+49 555");
-  const frame = screen.getByTitle("Saved signature preview");
+  const frame = screen.getByTitle(
+    englishCopy["settings.signatureReviewPreview"],
+  );
   expect(frame.getAttribute("srcdoc")).toContain("Saved HTML");
   expect(frame.getAttribute("srcdoc")).not.toContain("tracker.test");
   expect(
@@ -206,13 +209,19 @@ it("reviews a conflicting saved version without losing the draft, then saves tha
   await user.clear(text);
   await user.type(text, "Unsaved controller review");
   await user.click(screen.getByRole("button", { name: "Save" }));
-  expect(await screen.findByText("Latest saved version")).toBeInTheDocument();
+  expect(
+    await screen.findByText(englishCopy["settings.signatureReviewLatest"]),
+  ).toBeInTheDocument();
   expect(text).toHaveValue("Unsaved controller review");
   expect(
     screen.getByDisplayValue("Another controller's saved text"),
   ).toBeDisabled();
   expect(versions).toEqual([7]);
-  await user.click(screen.getByRole("button", { name: "Keep my draft" }));
+  await user.click(
+    screen.getByRole("button", {
+      name: englishCopy["settings.signatureReviewKeepDraft"],
+    }),
+  );
   expect(text).toHaveValue("Unsaved controller review");
   await user.click(screen.getByRole("button", { name: "Save" }));
   await waitFor(() => expect(versions).toEqual([7, 8]));

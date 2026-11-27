@@ -3,6 +3,7 @@ import { cleanup, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../../i18n/en";
 import type { ConversationState } from "./conversation-types";
 import { collectingState, render, stubApi } from "./voice-act.testkit";
 import { ConversationWorkbench, WorkbenchEntranceScope } from "./workbench";
@@ -77,7 +78,9 @@ describe("focus across the journey's steps", () => {
   it("hands the reader to the new step's title when the last one goes away", async () => {
     render(<TwoActs />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Skip for now" }),
+      await screen.findByRole("button", {
+        name: englishCopy["ob.conv.voice.skipped"],
+      }),
     );
     expect(document.activeElement).toBe(
       screen.getByRole("heading", { level: 1, name: "Connect your mail" }),
@@ -87,7 +90,9 @@ describe("focus across the journey's steps", () => {
   it("keeps focus where a step put it itself", async () => {
     render(<TwoActs placesFocus />);
     await userEvent.click(
-      await screen.findByRole("button", { name: "Skip for now" }),
+      await screen.findByRole("button", {
+        name: englishCopy["ob.conv.voice.skipped"],
+      }),
     );
     expect(document.activeElement).toBe(screen.getByLabelText("Mail address"));
   });

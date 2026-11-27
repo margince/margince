@@ -5,6 +5,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { CompanyFinanceCard } from "./companyfinance";
 
 // FIN-AC-3 decides WHETHER this card exists, and it is the one rule on the
@@ -99,7 +100,9 @@ describe("the finance card is absent only where FIN-AC-3 says so", () => {
   it("labels a former customer's money historical", async () => {
     stub();
     render(<CompanyFinanceCard companyId="o-1" lifecycle="former_customer" />);
-    expect(await screen.findByText("Finance · historical")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["finance.titleHistorical"]),
+    ).toBeTruthy();
   });
 
   // The label belongs to every state the card can be in, not only the loaded
@@ -109,7 +112,9 @@ describe("the finance card is absent only where FIN-AC-3 says so", () => {
   it("keeps the historical label while the read is still in flight", () => {
     stub();
     render(<CompanyFinanceCard companyId="o-1" lifecycle="former_customer" />);
-    expect(screen.getByText("Finance · historical")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["finance.titleHistorical"]),
+    ).toBeTruthy();
   });
 
   it("leaves a current customer's card unqualified", async () => {
@@ -117,7 +122,9 @@ describe("the finance card is absent only where FIN-AC-3 says so", () => {
     render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
     expect(await screen.findByText("€186,420")).toBeTruthy();
     expect(screen.getByText("Finance")).toBeTruthy();
-    expect(screen.queryByText("Finance · historical")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["finance.titleHistorical"]),
+    ).toBeNull();
   });
 });
 
@@ -145,7 +152,9 @@ describe("how late an invoice was, counted in whole days", () => {
 
   it("says one day late in the singular, and the rest in the plural", async () => {
     withInvoices([invoice("INV-1", "paid", 1), invoice("INV-2", "paid", 8)]);
-    expect(await screen.findByText("Paid 1 day late")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["finance.paidDaysLate_one"]),
+    ).toBeTruthy();
     expect(screen.getByText("Paid 8 days late")).toBeTruthy();
   });
 
@@ -201,7 +210,7 @@ describe("the two readings the card draws as shapes", () => {
     withSummary({ median_days_after_due: 4, payment_behaviour: [1, 3, 9] });
     expect(await screen.findByText("Typically 4 days after due.")).toBeTruthy();
     expect(
-      screen.getByLabelText("Days late per settled invoice, oldest first"),
+      screen.getByLabelText(englishCopy["finance.behaviourShape"]),
     ).toBeTruthy();
   });
 
@@ -209,7 +218,7 @@ describe("the two readings the card draws as shapes", () => {
     withSummary({ median_days_after_due: 4, payment_behaviour: [1] });
     expect(await screen.findByText("Typically 4 days after due.")).toBeTruthy();
     expect(
-      screen.queryByLabelText("Days late per settled invoice, oldest first"),
+      screen.queryByLabelText(englishCopy["finance.behaviourShape"]),
     ).toBeNull();
   });
 
@@ -221,7 +230,9 @@ describe("the two readings the card draws as shapes", () => {
     expect(await screen.findByText("25% of open balance.")).toBeTruthy();
     expect(screen.getByText("Overdue €1,000")).toBeTruthy();
     expect(screen.getByText("Open €4,000")).toBeTruthy();
-    const meter = screen.getByLabelText("Overdue share of the open balance");
+    const meter = screen.getByLabelText(
+      englishCopy["finance.overdueShareLabel"],
+    );
     expect(meter.getAttribute("aria-valuenow")).toBe("100000");
     expect(meter.getAttribute("aria-valuemax")).toBe("400000");
   });
@@ -246,7 +257,7 @@ describe("the two readings the card draws as shapes", () => {
     });
     expect(await screen.findByText("€186,420")).toBeTruthy();
     expect(
-      screen.queryByLabelText("Overdue share of the open balance"),
+      screen.queryByLabelText(englishCopy["finance.overdueShareLabel"]),
     ).toBeNull();
   });
 
@@ -261,7 +272,7 @@ describe("the two readings the card draws as shapes", () => {
     expect(await screen.findByText("€1,150")).toBeTruthy();
     expect(screen.queryByText(/% of everything open/)).toBeNull();
     expect(
-      screen.queryByLabelText("Overdue share of the open balance"),
+      screen.queryByLabelText(englishCopy["finance.overdueShareLabel"]),
     ).toBeNull();
   });
 
@@ -303,7 +314,7 @@ describe("the two readings the card draws as shapes", () => {
     });
     expect(await screen.findByText("€186,420")).toBeTruthy();
     expect(
-      screen.queryByLabelText("Overdue share of the open balance"),
+      screen.queryByLabelText(englishCopy["finance.overdueShareLabel"]),
     ).toBeNull();
   });
 });
@@ -347,7 +358,7 @@ describe("the card names its accounting source the way a reader knows it", () =>
     stub(CONNECTED);
     render(<CompanyFinanceCard companyId="o-1" lifecycle="customer" />);
     expect(
-      await screen.findByText("From your accounting system · not yet synced"),
+      await screen.findByText(englishCopy["finance.fromAccountingNeverSynced"]),
     ).toBeTruthy();
     expect(screen.queryByText(/offline_demo/)).toBeNull();
   });

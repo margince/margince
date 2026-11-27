@@ -76,9 +76,7 @@ describe("the delivery section", () => {
     ).toBeTruthy();
     const link = await screen.findByRole("link", { name: "Rollout Nord" });
     expect(link.getAttribute("href")).toBe("/#/projects/p1");
-    expect(
-      screen.getByText("No project in delivery has gone quiet."),
-    ).toBeTruthy();
+    expect(screen.getByText(en["analytics.nothingQuiet"])).toBeTruthy();
     const phase = bodies.find((sent) => sent.key === "projects-by-phase");
     expect(phase?.body.group_by).toEqual([]);
     expect(phase?.body.aggregates).toEqual([]);
@@ -108,11 +106,7 @@ describe("the delivery section", () => {
     expect(link.getAttribute("href")).toBe("/#/projects/p9");
     expect(screen.queryByText("2026-08-20T09:00:00Z")).toBeNull();
     expect(
-      (
-        await screen.findAllByText(
-          "No projects yet. Create one under Projects with New project. A won deal moves its project to Delivering.",
-        )
-      ).length,
+      (await screen.findAllByText(en["analytics.noProjectsYet"])).length,
     ).toBe(2);
   });
 });
@@ -143,12 +137,14 @@ describe("the data coverage section", () => {
     await userEvent
       .setup()
       .click(await screen.findByRole("button", { name: "Setup" }));
-    await userEvent
-      .setup()
-      .click(await screen.findByRole("button", { name: "Data coverage" }));
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: en["analytics.sectionCoverage"],
+      }),
+    );
     expect(await screen.findByText("Checked")).toBeTruthy();
     expect(screen.getByText("mailbox")).toBeTruthy();
-    expect(screen.getByText("Not connected")).toBeTruthy();
+    expect(screen.getByText(en["analytics.covNotConnected"])).toBeTruthy();
     expect(screen.getByText("—")).toBeTruthy();
   });
 
@@ -158,13 +154,13 @@ describe("the data coverage section", () => {
     await userEvent
       .setup()
       .click(await screen.findByRole("button", { name: "Setup" }));
-    await userEvent
-      .setup()
-      .click(await screen.findByRole("button", { name: "Data coverage" }));
+    await userEvent.setup().click(
+      await screen.findByRole("button", {
+        name: en["analytics.sectionCoverage"],
+      }),
+    );
     expect(
-      await screen.findByText(
-        "Start the input check in Forecast to see source coverage.",
-      ),
+      await screen.findByText(en["analytics.coverageNeverRun"]),
     ).toBeTruthy();
   });
 
@@ -175,7 +171,7 @@ describe("the data coverage section", () => {
     await screen.findByRole("button", { name: "Pipeline" });
     await waitFor(() =>
       expect(
-        screen.queryByRole("button", { name: "Data coverage" }),
+        screen.queryByRole("button", { name: en["analytics.sectionCoverage"] }),
       ).toBeNull(),
     );
     expect(

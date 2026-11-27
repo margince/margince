@@ -128,7 +128,7 @@ describe("the Overview's Contacts card", () => {
       }),
     });
     expect(
-      within(card("Contacts")).getByText("No economic buyer named yet"),
+      within(card("Contacts")).getByText(en["co.overview.noEconomicBuyer"]),
     ).toBeInTheDocument();
   });
 
@@ -147,7 +147,7 @@ describe("the Overview's Contacts card", () => {
         deals: deals([deal("d-1", "Fleet retrofit")]),
       }),
     });
-    expect(screen.queryByText("No economic buyer named yet")).toBeNull();
+    expect(screen.queryByText(en["co.overview.noEconomicBuyer"])).toBeNull();
   });
 
   it("names the first known seat and draws no pill for a role it does not know", () => {
@@ -188,7 +188,7 @@ describe("the Overview's Contacts card", () => {
     const contacts = within(card("Contacts"));
     expect(contacts.queryByRole("button", { name: /add/i })).toBeNull();
     await userEvent.click(
-      contacts.getByRole("button", { name: "All contacts" }),
+      contacts.getByRole("button", { name: en["co.overview.allContacts"] }),
     );
     expect(onTab).toHaveBeenCalledWith("contacts");
   });
@@ -229,7 +229,7 @@ describe("the Overview's Deals and projects card", () => {
     stub();
     renderCards();
     expect(
-      within(card("Deals and projects")).getByText("No open deal or project"),
+      within(card(en["tab.dealsProjects"])).getByText(en["co.overview.noWork"]),
     ).toBeInTheDocument();
   });
 
@@ -238,7 +238,7 @@ describe("the Overview's Deals and projects card", () => {
     const onTab = vi.fn();
     renderCards({ onTab });
     await userEvent.click(
-      within(card("Deals and projects")).getByRole("button", {
+      within(card(en["tab.dealsProjects"])).getByRole("button", {
         name: "All deals",
       }),
     );
@@ -291,7 +291,9 @@ describe("the Overview's Other open tasks card", () => {
         },
       }),
     });
-    const rows = within(card("Other open tasks")).getAllByRole("listitem");
+    const rows = within(card(en["co.overview.otherOpen"])).getAllByRole(
+      "listitem",
+    );
     expect(await within(rows[0]).findByText("You")).toBeInTheDocument();
     expect(rows[1]).toHaveTextContent("Sam Holder");
     expect(rows[1]).not.toHaveTextContent("You");

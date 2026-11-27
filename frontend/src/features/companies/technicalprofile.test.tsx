@@ -4,6 +4,7 @@
 /** @vitest-environment happy-dom */
 import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, beforeEach, describe, expect, it } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -78,7 +79,9 @@ describe("the technical profile card", () => {
 
   it("shows what the company runs, grouped by what a reader asks about", async () => {
     renderCard();
-    expect(await screen.findByText("Microsoft 365")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["connectors.vendorMicrosoft"]),
+    ).toBeTruthy();
     expect(screen.getByText("Webshop")).toBeTruthy();
     expect(screen.getByText("E-Mail")).toBeTruthy();
     expect(screen.getByText("Dienste")).toBeTruthy();
@@ -131,7 +134,9 @@ describe("the technical profile card", () => {
         jsonResponse(laneState()),
     });
     renderCard();
-    expect(await screen.findByText("Microsoft 365")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["connectors.vendorMicrosoft"]),
+    ).toBeTruthy();
     // Every button on this card is an evidence mark opening a row's provenance.
     // A control that ASKS for anything would not be one.
     for (const button of screen.queryAllByRole("button")) {

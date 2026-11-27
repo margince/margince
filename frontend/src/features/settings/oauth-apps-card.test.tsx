@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse } from "../../testing/company.fixtures";
 import { meFixture } from "../../testing/mefixture";
 import { OAuthAppsCard } from "./oauth-apps-card";
@@ -101,7 +102,7 @@ describe("the Google and Microsoft apps card", () => {
     expect(within(google).getByText(`Client ${GOOGLE_ID}`)).toBeTruthy();
     const microsoft = await row("Microsoft app");
     expect(
-      within(microsoft).getByText("Set by this installation"),
+      within(microsoft).getByText(englishCopy["oauthApp.status.environment"]),
     ).toBeTruthy();
     expect(
       within(microsoft).getByText(
@@ -115,10 +116,12 @@ describe("the Google and Microsoft apps card", () => {
     const google = await row("Google app");
     expect(within(google).getByText("Not set up")).toBeTruthy();
     expect(
-      within(google).getByText("For companies on Google Workspace or Gmail."),
+      within(google).getByText(englishCopy["oauthApp.google.for"]),
     ).toBeTruthy();
     expect(
-      within(google).getByRole("button", { name: "Set up Google app" }),
+      within(google).getByRole("button", {
+        name: englishCopy["oauthApp.google.setUp"],
+      }),
     ).toBeTruthy();
   });
 
@@ -127,9 +130,7 @@ describe("the Google and Microsoft apps card", () => {
   it("reads Needs setup, and warns, only when neither vendor has an app", async () => {
     mount(app("google", "none"), app("microsoft", "none"));
     expect(await screen.findByText("Needs setup")).toBeTruthy();
-    expect(
-      screen.getByText("Nobody can connect Gmail, Outlook or a calendar yet"),
-    ).toBeTruthy();
+    expect(screen.getByText(englishCopy["oauthApps.noneTitle"])).toBeTruthy();
     expect(screen.queryByText("Ready")).toBeNull();
   });
 
@@ -137,9 +138,7 @@ describe("the Google and Microsoft apps card", () => {
     mount(app("google", "none"), app("microsoft", "environment"));
     expect(await screen.findByText("Ready")).toBeTruthy();
     expect(screen.queryByText("Needs setup")).toBeNull();
-    expect(
-      screen.queryByText("Nobody can connect Gmail, Outlook or a calendar yet"),
-    ).toBeNull();
+    expect(screen.queryByText(englishCopy["oauthApps.noneTitle"])).toBeNull();
   });
 
   // The pin decides who may connect, wherever the app came from, so it is
@@ -182,14 +181,20 @@ describe("the Google and Microsoft apps card", () => {
       }),
     );
     expect(
-      await screen.findByRole("button", { name: "Show redirect addresses" }),
+      await screen.findByRole("button", {
+        name: englishCopy["oauthApp.menu.showRedirects"],
+      }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("button", { name: "Replace client ID and secret" }),
+      screen.getByRole("button", {
+        name: englishCopy["oauthApp.menu.replace"],
+      }),
     ).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "Remove app" }));
     expect(
-      await screen.findByRole("dialog", { name: "Remove the Google app?" }),
+      await screen.findByRole("dialog", {
+        name: englishCopy["oauthApp.google.removeConfirmTitle"],
+      }),
     ).toBeTruthy();
   });
 
@@ -197,10 +202,14 @@ describe("the Google and Microsoft apps card", () => {
     const user = userEvent.setup();
     mount(app("google", "none"), app("microsoft", "none"));
     await user.click(
-      await screen.findByRole("button", { name: "Set up Google app" }),
+      await screen.findByRole("button", {
+        name: englishCopy["oauthApp.google.setUp"],
+      }),
     );
     expect(
-      await screen.findByRole("dialog", { name: "Set up the Google app" }),
+      await screen.findByRole("dialog", {
+        name: englishCopy["oauthApp.drawer.google.title"],
+      }),
     ).toBeTruthy();
   });
 
@@ -209,11 +218,11 @@ describe("the Google and Microsoft apps card", () => {
   it("refuses Set up with its reason to a reader who cannot change apps", async () => {
     mount(app("google", "none"), app("microsoft", "none"), false);
     const setUp = await screen.findByRole("button", {
-      name: "Set up Google app",
+      name: englishCopy["oauthApp.google.setUp"],
     });
     expect(setUp).toHaveProperty("disabled", true);
     expect(
-      screen.getByText("Only an admin can set up company apps"),
+      screen.getByText(englishCopy["oauthApp.noWriteReason"]),
     ).toBeTruthy();
   });
 });

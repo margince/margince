@@ -13,6 +13,7 @@ import "@testing-library/jest-dom/vitest";
 import ages from "../../../backend/internal/shared/kernel/elapsed/testdata/ages.json";
 import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { Button } from "./button";
 import { DealCard } from "./dealcard";
 import { armHoverIntent, takeHoverClock } from "./hoverintent-testing";
@@ -95,7 +96,7 @@ describe("DealCard on a closed deal", () => {
   });
 
   it("claims no day an imported close does not carry", () => {
-    expect(closedCard(null)).toBe("no close date");
+    expect(closedCard(null)).toBe(englishCopy["deal.undated"]);
   });
 });
 

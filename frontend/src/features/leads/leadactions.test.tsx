@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { useShortcutDispatcher } from "../../lib/shortcuts";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
@@ -159,7 +160,7 @@ describe("the lead header's Log activity and Add task", () => {
     render(<LeadScreen id="l-1" />);
 
     const logButton = await screen.findByRole("button", {
-      name: "Log activity",
+      name: englishCopy["log.title"],
     });
     await vi.waitFor(() =>
       expect(logButton.hasAttribute("disabled")).toBe(false),
@@ -170,7 +171,9 @@ describe("the lead header's Log activity and Add task", () => {
     );
     await user.click(screen.getByRole("button", { name: "Close" }));
 
-    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["record.moreActions"] }),
+    );
     await user.click(await screen.findByRole("button", { name: "Add task" }));
     const drawer = await screen.findByRole("dialog", { name: "Add task" });
     expect(within(drawer).getByLabelText("Due date")).toBeTruthy();
@@ -186,8 +189,12 @@ describe("the lead header's Log activity and Add task", () => {
     render(<LeadScreen id="l-1" />);
 
     const email = await screen.findByRole("button", { name: "Email" });
-    const logButton = screen.getByRole("button", { name: "Log activity" });
-    await user.click(screen.getByRole("button", { name: "More actions" }));
+    const logButton = screen.getByRole("button", {
+      name: englishCopy["log.title"],
+    });
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["record.moreActions"] }),
+    );
     const addTask = await screen.findByRole("button", { name: "Add task" });
     expect(logButton.hasAttribute("disabled")).toBe(true);
     expect(addTask.hasAttribute("disabled")).toBe(true);
@@ -220,7 +227,9 @@ describe("the lead header's Email verb", () => {
     render(<LeadScreen id="l-1" />);
 
     const email = await screen.findByRole("button", { name: "Email" });
-    const logButton = screen.getByRole("button", { name: "Log activity" });
+    const logButton = screen.getByRole("button", {
+      name: englishCopy["log.title"],
+    });
     await vi.waitFor(() =>
       expect(email.getAttribute("aria-describedby")).toBeTruthy(),
     );
@@ -231,7 +240,7 @@ describe("the lead header's Email verb", () => {
     expect(
       document.getElementById(email.getAttribute("aria-describedby") ?? "")
         ?.textContent,
-    ).toBe("Your role can only read. Ask an administrator for another role.");
+    ).toBe(englishCopy["record.roleReadsOnly"]);
   });
 
   it("allows outreach without inventing a reply obligation", async () => {
@@ -267,7 +276,7 @@ describe("the lead's record keys", () => {
     renderHook(() => useShortcutDispatcher());
     render(<LeadScreen id="l-1" />);
     const logButton = await screen.findByRole("button", {
-      name: "Log activity",
+      name: englishCopy["log.title"],
     });
     await vi.waitFor(() =>
       expect(logButton.hasAttribute("disabled")).toBe(false),
@@ -296,7 +305,9 @@ describe("the lead's record keys", () => {
         .getByRole("button", { name: "Email" })
         .getAttribute("aria-keyshortcuts"),
     ).toBe("m");
-    await user.click(screen.getByRole("button", { name: "More actions" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["record.moreActions"] }),
+    );
     const addTask = await screen.findByRole("button", { name: "Add task" });
     expect(addTask.getAttribute("aria-keyshortcuts")).toBe("t");
   });

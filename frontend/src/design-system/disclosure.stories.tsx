@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import type { CSSProperties } from "react";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { Button } from "./atoms";
 import { Disclosure, DisclosureGroup } from "./disclosure";
 import { Panel, PanelBody, PanelIntro } from "./panel";
@@ -190,7 +191,9 @@ export const WithAction: Story = {
   play: async ({ canvasElement }) => {
     const summary = await summaryNamed(canvasElement, "Thread");
     await userEvent.click(
-      within(canvasElement).getByRole("button", { name: "Full history" }),
+      within(canvasElement).getByRole("button", {
+        name: englishCopy["co.360.fullHistory"],
+      }),
     );
     await expect(summary).toHaveAttribute("aria-expanded", "false");
     await userEvent.click(summary);

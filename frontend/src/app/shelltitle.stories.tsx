@@ -20,6 +20,7 @@ import { SettingsRail } from "./shellrail";
 import { SettingsPageTitle } from "./shelltitle";
 import { TopBar } from "./topbar";
 import "../features/settings/settings.css";
+import { en as englishCopy } from "../i18n/en";
 
 const ACCOUNT: Route = { screen: "settings", id: "account" };
 
@@ -105,7 +106,7 @@ export const HeldOnOnboarding: Story = {
       canvas.queryByRole("button", { name: /^Notifications/ }),
     ).toBeNull();
     await expect(
-      canvas.getByRole("link", { name: "Back to setup" }),
+      canvas.getByRole("link", { name: englishCopy["shell.backToSetup"] }),
     ).toBeVisible();
     await expect(
       canvas.queryByRole("button", { name: /^Finish setup/ }),

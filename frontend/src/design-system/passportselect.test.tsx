@@ -2,6 +2,7 @@
 import { cleanup, render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { PassportSelect, ScopeChips, scopeChipLabel } from "./passportselect";
 import { pickOption } from "./select-testing";
 
@@ -57,21 +58,23 @@ describe("PassportSelect", () => {
 describe("ScopeChips", () => {
   it("renders every label as one chip, all reading the same", () => {
     render(<ScopeChips labels={["Read records", "Change records"]} />);
-    const read = screen.getByText("Read records");
-    const write = screen.getByText("Change records");
+    const read = screen.getByText(englishCopy["passport.scope.read"]);
+    const write = screen.getByText(englishCopy["passport.scope.write"]);
     // Each chip is exactly the label its caller passed, with nothing
     // appended: a connection's scopes are exactly what the human ticked, so
     // no chip is qualified as withheld, and neither chip may read as weaker
     // than the other.
-    expect(read.textContent).toBe("Read records");
-    expect(write.textContent).toBe("Change records");
+    expect(read.textContent).toBe(englishCopy["passport.scope.read"]);
+    expect(write.textContent).toBe(englishCopy["passport.scope.write"]);
     expect(write.className).toBe(read.className);
   });
 
   it("draws a scope granted twice as one chip", () => {
     const logged = vi.spyOn(console, "error").mockImplementation(() => {});
     render(<ScopeChips labels={["Read records", "Read records"]} />);
-    expect(screen.getAllByText("Read records")).toHaveLength(1);
+    expect(
+      screen.getAllByText(englishCopy["passport.scope.read"]),
+    ).toHaveLength(1);
     expect(logged).not.toHaveBeenCalled();
   });
 });
@@ -83,7 +86,7 @@ describe("scopeChipLabel", () => {
       : key) as unknown as Parameters<typeof scopeChipLabel>[0];
 
   it("resolves a known scope to the catalogue's word", () => {
-    expect(scopeChipLabel(t, "read")).toBe("Read records");
+    expect(scopeChipLabel(t, "read")).toBe(englishCopy["passport.scope.read"]);
   });
 
   it("falls back to the raw token for a scope the catalogue has no word for", () => {

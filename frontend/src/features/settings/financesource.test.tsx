@@ -12,6 +12,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../../design-system/select-testing";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { FinanceSourceCard } from "./financesource";
 
@@ -104,7 +105,7 @@ describe("FinanceSourceCard", () => {
     });
     render(<FinanceSourceCard />);
     expect(
-      await screen.findByText("No accounting source installed"),
+      await screen.findByText(englishCopy["financeSource.noneInstalled"]),
     ).toBeTruthy();
     expect(screen.queryByTestId("finance-source-connect")).toBeNull();
   });
@@ -116,9 +117,7 @@ describe("FinanceSourceCard", () => {
     );
     render(<FinanceSourceCard />);
     expect(
-      await screen.findByText(
-        "Read-only: only an administrator can connect or sync an accounting source.",
-      ),
+      await screen.findByText(englishCopy["financeSource.readOnly"]),
     ).toBeTruthy();
     expect(screen.queryByTestId("finance-source-connect")).toBeNull();
   });
@@ -153,7 +152,9 @@ describe("FinanceSourceCard", () => {
         provider: "other_books",
       }),
     );
-    expect(await screen.findByText("No customers yet")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["financeSource.noCustomers"]),
+    ).toBeTruthy();
   });
 
   it("names each source on offer, and the connected one, never by its key", async () => {
@@ -193,7 +194,9 @@ describe("FinanceSourceCard", () => {
       "GET /finance/source/customers": () => jsonResponse({ data: [], page }),
     });
     render(<FinanceSourceCard />);
-    expect(await screen.findByText("Unnamed source")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["financeSource.unnamed"]),
+    ).toBeTruthy();
     expect(screen.queryByText("ledger_books")).toBeNull();
   });
 
@@ -269,7 +272,9 @@ describe("FinanceSourceCard", () => {
     const user = userEvent.setup({ advanceTimers: vi.advanceTimersByTime });
     render(<FinanceSourceCard />);
 
-    expect(await screen.findByText("No customers yet")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["financeSource.noCustomers"]),
+    ).toBeTruthy();
     await user.click(screen.getByTestId("finance-source-sync"));
     synced = true;
     await vi.advanceTimersByTimeAsync(3_000);
@@ -309,7 +314,7 @@ describe("FinanceSourceCard", () => {
     await user.click(within(rowA).getByRole("button", { name: "Link" }));
     const dialog = await screen.findByRole("dialog");
     const search = within(dialog).getByRole("searchbox", {
-      name: "Find a company",
+      name: englishCopy["financeSource.findCompany"],
     });
     expect((search as HTMLInputElement).value).toBe("Customer A");
     await waitFor(() =>

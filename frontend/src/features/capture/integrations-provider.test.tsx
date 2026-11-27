@@ -720,7 +720,9 @@ describe("ProviderCard across connections and deletions", () => {
         { name: PROVIDER_NAME },
         { timeout: SETTLE_MS },
       );
-      await user.click(screen.getByRole("button", { name: "More actions" }));
+      await user.click(
+        screen.getByRole("button", { name: en["record.moreActions"] }),
+      );
       await user.click(
         screen.getByRole("button", { name: en["provider.deleteData"] }),
       );

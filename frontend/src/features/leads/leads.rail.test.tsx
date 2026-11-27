@@ -11,6 +11,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { meFixture } from "../../testing/mefixture";
 import { RecordShell } from "../../testing/recordshell.testkit";
 import { LeadScreen } from "./leads";
@@ -130,7 +131,9 @@ async function pickOwner(
 /** Start an override from the score card's head. */
 async function openOverride(user: ReturnType<typeof userEvent.setup>) {
   await user.click(
-    await screen.findByRole("button", { name: "Override score" }),
+    await screen.findByRole("button", {
+      name: englishCopy["lead.overrideScore"],
+    }),
   );
 }
 

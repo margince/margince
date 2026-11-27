@@ -7,6 +7,7 @@ import { cleanup, screen, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, expect, it } from "vitest";
 import { formatMoneyCompact } from "../../format/format";
+import { en as englishCopy } from "../../i18n/en";
 import { forgetSeat } from "../../lib/storage";
 import { formatMoneyCompactRange } from "./analytics.moneyrange";
 import {
@@ -92,9 +93,11 @@ it("keeps a measured zero distinct from a missing model range", async () => {
     ),
   });
   expect((await card("Won + Likely deals")).getByText("€0")).toBeVisible();
-  expect((await card("Modelled quarter finish")).getByText("—")).toBeVisible();
   expect(
-    screen.queryByText("No modelled range was drawn for this period."),
+    (await card(englishCopy["analytics.hero.chart.range"])).getByText("—"),
+  ).toBeVisible();
+  expect(
+    screen.queryByText(englishCopy["forecast.model.noneDetail"]),
   ).toBeNull();
 });
 
@@ -153,7 +156,9 @@ it.each([
     expect((await card(label)).getByText(money(amount))).toBeVisible();
     expect(screen.queryByText(money(29000))).toBeNull();
     expect(
-      (await card("Pipeline due this quarter")).getByText(money(11000)),
+      (await card(englishCopy["analytics.outlook.periodPipeline"])).getByText(
+        money(11000),
+      ),
     ).toBeVisible();
     await openReceipt(user, await card("Sales won"));
     expect(
@@ -173,7 +178,9 @@ it.each([
 it("keeps current-quarter pipeline separate from explicitly labelled all-open stock", async () => {
   openScenario("coverageNumerator");
   expect(
-    (await card("Pipeline due this quarter")).queryByText(money(520000000)),
+    (await card(englishCopy["analytics.outlook.periodPipeline"])).queryByText(
+      money(520000000),
+    ),
   ).toBeNull();
   // Said in the stage chart's head, with the deals it counts after it.
   expect(
@@ -231,6 +238,8 @@ it("withholds period-pipeline values and population details from a masked foreca
   expect(pipeline.queryByText(money(1234500))).toBeNull();
   expect(pipeline.queryByText("18 deals")).toBeNull();
   expect(pipeline.queryByRole("link")).toBeNull();
-  expect((await card("Modelled quarter finish")).getByText("—")).toBeVisible();
+  expect(
+    (await card(englishCopy["analytics.hero.chart.range"])).getByText("—"),
+  ).toBeVisible();
   expect(screen.queryByText(/Projected shortfall/)).toBeNull();
 });

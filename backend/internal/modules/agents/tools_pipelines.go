@@ -68,7 +68,7 @@ type PipelineLister func(ctx context.Context, includeArchived bool) ([]Pipeline,
 
 // pipelinesSource names where a pipeline or stage id comes from, for every tool
 // that takes one.
-const pipelinesSource = "the workspace's pipeline list"
+const pipelinesSource = "the company's pipeline list"
 
 // RegisterPipelineTool wires the config read behind the deal write verbs. A nil
 // seam registers nothing: a surface that cannot ground its answer does not

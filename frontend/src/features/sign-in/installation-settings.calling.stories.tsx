@@ -7,6 +7,7 @@ import { expect, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { useT } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { defaultAgentAllowances } from "../../testing/agentallowances.fixtures";
 import { FIXTURE_TIMEZONE } from "../../testing/mefixture";
 import { defaultOperations } from "../../testing/operationsettings.fixtures";
@@ -99,12 +100,14 @@ export const Editable: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const telegram = await canvas.findByRole("switch", {
-      name: "Telegram chat",
+      name: englishCopy["installationSettings.callTelegram"],
     });
     await userEvent.click(telegram);
     await expect(telegram).toHaveAttribute("aria-checked", "false");
     await expect(
-      canvas.getByRole("switch", { name: "WhatsApp chat" }),
+      canvas.getByRole("switch", {
+        name: englishCopy["installationSettings.callWhatsApp"],
+      }),
     ).toHaveAttribute("aria-checked", "true");
   },
 };
@@ -113,7 +116,9 @@ export const Dark: Story = {
   globals: { theme: "dark" },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await canvas.findByRole("switch", { name: "WhatsApp chat" });
+    await canvas.findByRole("switch", {
+      name: englishCopy["installationSettings.callWhatsApp"],
+    });
     await expect(document.documentElement.dataset.theme).toBe("dark");
     for (const name of ["WhatsApp chat", "Telegram chat", "Zalo chat"]) {
       await expect(canvas.getByRole("switch", { name })).toHaveAttribute(
@@ -152,7 +157,9 @@ export const LockedByEnvironment: Story = {
       await canvas.findByRole("switch", { name: "Zalo chat" }),
     ).toBeDisabled();
     await expect(
-      canvas.getByRole("switch", { name: "WhatsApp chat" }),
+      canvas.getByRole("switch", {
+        name: englishCopy["installationSettings.callWhatsApp"],
+      }),
     ).not.toBeDisabled();
   },
 };
@@ -162,11 +169,13 @@ export const Refused: Story = {
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
     const whatsapp = await canvas.findByRole("switch", {
-      name: "WhatsApp chat",
+      name: englishCopy["installationSettings.callWhatsApp"],
     });
     await userEvent.click(whatsapp);
     await expect(whatsapp).toHaveAttribute("aria-checked", "true");
-    const refusal = canvas.getByText("Settings not saved");
+    const refusal = canvas.getByText(
+      englishCopy["installationSettings.saveFailed"],
+    );
     const callout = refusal.closest("[id]");
     await expect(whatsapp.getAttribute("aria-describedby") ?? "").toContain(
       callout?.id ?? "no refusal id",

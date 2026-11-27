@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
 import { RecordDetails } from "../design-system/recorddetails";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -108,7 +109,7 @@ export const Withheld: Story = {
   render: () => <Page grant={["read"]} tags={{ data: [], withheld: true }} />,
   play: async ({ canvasElement }) => {
     await expect(
-      await within(canvasElement).findByText("Hidden for your role"),
+      await within(canvasElement).findByText(englishCopy["tags.withheld"]),
     ).toBeVisible();
   },
 };

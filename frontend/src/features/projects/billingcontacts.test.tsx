@@ -10,6 +10,7 @@ import {
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { WriteToProvider } from "../../lib/writeto";
 import { ContactBillingRoles } from "../contacts/contactbillingroles";
 import { type BillingContact, BillingContactsPanel } from "./billingcontacts";
@@ -51,7 +52,7 @@ const PAT: BillingContact = {
 it("renders each billing contact with their capacity and address", () => {
   render(<BillingContactsPanel contacts={[PAT]} companyId={COMPANY} />);
   expect(screen.getByText("Pat Okafor")).toBeTruthy();
-  expect(screen.getByText("Invoice recipient")).toBeTruthy();
+  expect(screen.getByText(englishCopy["billing.role.recipient"])).toBeTruthy();
   expect(screen.getByRole("link", { name: "pat@acme.test" })).toBeTruthy();
 });
 
@@ -80,7 +81,7 @@ it("says so when a named recipient has nowhere to send the invoice", () => {
   // Stated rather than left blank: a missing address is the one thing about a
   // billing contact that stops the invoice arriving, and an empty line reads
   // as fine to somebody scanning the list.
-  expect(screen.getByText("No email recorded")).toBeTruthy();
+  expect(screen.getByText(englishCopy["billing.noEmail"])).toBeTruthy();
 });
 
 it("distinguishes nobody named from not allowed to see", () => {
@@ -97,7 +98,7 @@ it("distinguishes nobody named from not allowed to see", () => {
   // reader has no standing to make.
   render(<BillingContactsPanel contacts={undefined} companyId={COMPANY} />);
   expect(screen.queryByText(/No billing contacts yet/)).toBeNull();
-  expect(screen.queryByText("Billing contacts")).toBeNull();
+  expect(screen.queryByText(englishCopy["billing.title"])).toBeNull();
 });
 
 it("lists one contact's several capacities in invoice order", () => {
@@ -115,7 +116,9 @@ it("lists one contact's several capacities in invoice order", () => {
   // its own row because each is its own edge the panel can change alone.
   expect(screen.getAllByText("Pat Okafor")).toHaveLength(3);
   expect(screen.getByText("Approver")).toBeTruthy();
-  expect(screen.getByText("Accounts payable")).toBeTruthy();
+  expect(
+    screen.getByText(englishCopy["billing.role.accountsPayable"]),
+  ).toBeTruthy();
 });
 
 it("shows nothing on a contact who handles nobody's invoices", () => {
@@ -123,7 +126,7 @@ it("shows nothing on a contact who handles nobody's invoices", () => {
   // handle no invoices, and an empty panel on every contact page in the
   // product would be noise stating the obvious.
   render(<ContactBillingRoles companies={[]} />);
-  expect(screen.queryByText("Billing roles")).toBeNull();
+  expect(screen.queryByText(englishCopy["billing.contactTitle"])).toBeNull();
 });
 
 it("names the companies a contact bills for", () => {
@@ -139,7 +142,7 @@ it("names the companies a contact bills for", () => {
       ]}
     />,
   );
-  expect(screen.getByText("Billing roles")).toBeTruthy();
+  expect(screen.getByText(englishCopy["billing.contactTitle"])).toBeTruthy();
   expect(screen.getByText("Acme")).toBeTruthy();
   expect(screen.getByText("Approver")).toBeTruthy();
 });
@@ -391,7 +394,11 @@ it("offers the three capacities in invoice order and sends the one picked", asyn
     within(listbox)
       .getAllByRole("option")
       .map((option) => option.textContent),
-  ).toEqual(["Invoice recipient", "Approver", "Accounts payable"]);
+  ).toEqual([
+    englishCopy["billing.role.recipient"],
+    "Approver",
+    englishCopy["billing.role.accountsPayable"],
+  ]);
   await user.click(within(listbox).getByRole("option", { name: "Approver" }));
   await user.click(screen.getByRole("button", { name: "Save change" }));
   await waitFor(() =>

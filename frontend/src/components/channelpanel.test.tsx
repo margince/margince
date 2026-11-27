@@ -15,6 +15,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ChannelPanel } from "./channelpanel";
 
 type ChannelLinkState = components["schemas"]["ChannelLinkState"];
@@ -147,7 +148,9 @@ describe("ChannelPanel", () => {
     const user = userEvent.setup();
     renderPanel();
     await user.click(
-      await screen.findByRole("button", { name: "Create a channel" }),
+      await screen.findByRole("button", {
+        name: englishCopy["channelLink.create"],
+      }),
     );
     expect(
       await screen.findByText(
@@ -164,12 +167,14 @@ describe("ChannelPanel", () => {
     const user = userEvent.setup();
     renderPanel();
     await user.click(
-      await screen.findByRole("button", { name: "Link an existing channel" }),
+      await screen.findByRole("button", {
+        name: englishCopy["channelLink.linkExisting"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     expect(
       within(dialog).getByRole("checkbox", {
-        name: "Summarize the talk so far (up to 5 summaries)",
+        name: englishCopy["channelLink.summarize"],
       }),
     ).toBeChecked();
     await user.type(
@@ -181,11 +186,15 @@ describe("ChannelPanel", () => {
     );
     await pickOption(
       user,
-      within(dialog).getByRole("combobox", { name: "What Margince posts" }),
+      within(dialog).getByRole("combobox", {
+        name: englishCopy["channelLink.verbosity"],
+      }),
       "Milestones only",
     );
     await user.click(
-      within(dialog).getByRole("button", { name: "Link channel" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["channelLink.linkCta"],
+      }),
     );
     await waitFor(() => expect(screen.queryByRole("dialog")).toBeNull());
     expect(writes).toEqual([
@@ -216,7 +225,9 @@ describe("ChannelPanel", () => {
     const user = userEvent.setup();
     renderPanel();
     await user.click(
-      await screen.findByRole("button", { name: "Link an existing channel" }),
+      await screen.findByRole("button", {
+        name: englishCopy["channelLink.linkExisting"],
+      }),
     );
     const dialog = await screen.findByRole("dialog");
     await user.type(
@@ -224,11 +235,13 @@ describe("ChannelPanel", () => {
       "deal-acme-renewal",
     );
     await user.click(
-      within(dialog).getByRole("button", { name: "Link channel" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["channelLink.linkCta"],
+      }),
     );
     expect(
       await within(dialog).findByText(
-        "The bot is not a member of this channel. Add it to the channel, then try again.",
+        englishCopy["channelLink.refused.botNotMember"],
       ),
     ).toBeInTheDocument();
   });
@@ -243,12 +256,12 @@ describe("ChannelPanel", () => {
     const user = userEvent.setup();
     renderPanel();
     await user.click(
-      await screen.findByRole("button", { name: "Create a channel" }),
+      await screen.findByRole("button", {
+        name: englishCopy["channelLink.create"],
+      }),
     );
     expect(
-      await screen.findByText(
-        "The chat refused this channel name. Rename the record, or link an existing channel.",
-      ),
+      await screen.findByText(englishCopy["channelLink.refused.nameRefused"]),
     ).toBeInTheDocument();
     expect(screen.queryByText(/try again/)).not.toBeInTheDocument();
   });
@@ -263,9 +276,11 @@ describe("ChannelPanel", () => {
     const user = userEvent.setup();
     renderPanel();
     const verbosity = await screen.findByRole("combobox", {
-      name: "What Margince posts",
+      name: englishCopy["channelLink.verbosity"],
     });
-    expect(verbosity).toHaveTextContent("Important only");
+    expect(verbosity).toHaveTextContent(
+      englishCopy["channelLink.verbosity.important"],
+    );
     await pickOption(user, verbosity, "Silent (card only)");
     await waitFor(() =>
       expect(writes).toEqual([
@@ -273,7 +288,9 @@ describe("ChannelPanel", () => {
       ]),
     );
     await waitFor(() =>
-      expect(verbosity).toHaveTextContent("Silent (card only)"),
+      expect(verbosity).toHaveTextContent(
+        englishCopy["channelLink.verbosity.silent"],
+      ),
     );
   });
 
@@ -282,16 +299,16 @@ describe("ChannelPanel", () => {
     const user = userEvent.setup();
     renderPanel();
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", {
+        name: englishCopy["record.moreActions"],
+      }),
     );
     await user.click(
       await screen.findByRole("button", { name: "Unlink Acme renewal" }),
     );
     const dialog = await screen.findByRole("dialog");
     expect(
-      within(dialog).getByText(
-        "Margince stops posting and reading. The channel and its messages stay in the chat.",
-      ),
+      within(dialog).getByText(englishCopy["channelLink.unlinkBody"]),
     ).toBeInTheDocument();
     expect(writes).toEqual([]);
     await user.click(within(dialog).getByRole("button", { name: "Unlink" }));
@@ -303,12 +320,16 @@ describe("ChannelPanel", () => {
   it("says a paused channel lost its chat and offers Unlink in view", async () => {
     stubServer({ state: "paused", link: { ...link, status: "channel_gone" } });
     renderPanel();
-    expect(await screen.findByText("Channel paused")).toBeInTheDocument();
+    expect(
+      await screen.findByText(englishCopy["channelLink.paused"]),
+    ).toBeInTheDocument();
     expect(
       screen.getByRole("button", { name: "Unlink Acme renewal" }),
     ).toBeInTheDocument();
     expect(
-      screen.queryByRole("combobox", { name: "What Margince posts" }),
+      screen.queryByRole("combobox", {
+        name: englishCopy["channelLink.verbosity"],
+      }),
     ).toBeNull();
   });
 
@@ -316,18 +337,22 @@ describe("ChannelPanel", () => {
     stubServer({ state: "linked", link });
     renderPanel(false);
     const verbosity = await screen.findByRole("combobox", {
-      name: "What Margince posts",
+      name: englishCopy["channelLink.verbosity"],
     });
     expect(verbosity).toBeDisabled();
-    expect(screen.queryByRole("button", { name: "More actions" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["record.moreActions"] }),
+    ).toBeNull();
   });
 
   it("offers no link verbs on an unlinked record to a reader who may not edit", async () => {
     stubServer({ state: "none" });
     renderPanel(false);
-    expect(await screen.findByText("No channel yet")).toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Create a channel" }),
+      await screen.findByText(englishCopy["channelLink.none"]),
+    ).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["channelLink.create"] }),
     ).toBeNull();
   });
 });

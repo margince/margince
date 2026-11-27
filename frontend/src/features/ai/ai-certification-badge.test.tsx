@@ -4,6 +4,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { CertificationBadge } from "./ai-certification-badge";
 
 type Certification = components["schemas"]["AiTaskCertification"];
@@ -45,7 +46,9 @@ describe("CertificationBadge", () => {
       model: "m",
       recheck_pending: false,
     });
-    expect(screen.getByText("Not measured")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["aiCert.notMeasured"]),
+    ).toBeInTheDocument();
   });
 
   it("draws nothing for a task with no bound model", () => {

@@ -7,6 +7,7 @@ import { cleanup, render, screen, within } from "@testing-library/react";
 import { afterEach, describe, expect, it } from "vitest";
 import type { components } from "../../api/schema";
 import { type Locale, LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { DealsCard } from "./company360";
 
 type Company360Deal = components["schemas"]["Company360Deal"];
@@ -103,6 +104,6 @@ describe("DealsCard: the account's deals as one table", () => {
     renderCard([]);
 
     expect(screen.queryByRole("table")).toBeNull();
-    expect(screen.getByText("No open deals for this company.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["co.deals.empty"])).toBeTruthy();
   });
 });

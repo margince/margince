@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, userEvent, waitFor, within } from "storybook/test";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { Button } from "./atoms";
 import { RecordTabs } from "./recordtabs";
 
@@ -181,7 +182,9 @@ export const FoldsAboveAWideTrailingControl: Story = {
     const canvas = within(canvasElement);
     await waitFor(() =>
       expect(
-        canvas.getByRole("button", { name: "More sections" }),
+        canvas.getByRole("button", {
+          name: englishCopy["record.tabs.moreLabel"],
+        }),
       ).toBeVisible(),
     );
     const strip = canvasElement.querySelector(".recordtabs-strip");
@@ -222,7 +225,9 @@ export const FoldsAtPhoneWidth: Story = {
     const canvas = within(canvasElement);
     await waitFor(() =>
       expect(
-        canvas.getByRole("button", { name: "More sections" }),
+        canvas.getByRole("button", {
+          name: englishCopy["record.tabs.moreLabel"],
+        }),
       ).toBeVisible(),
     );
     await expect(canvas.getByRole("button", { name: "Team" })).toBeVisible();
@@ -259,7 +264,7 @@ export const MoreMenuOpen: Story = {
   ),
   play: async ({ canvasElement }) => {
     const more = await within(canvasElement).findByRole("button", {
-      name: "More sections",
+      name: englishCopy["record.tabs.moreLabel"],
     });
     await waitFor(() => expect(more).toBeVisible());
     await userEvent.click(more);
@@ -289,7 +294,9 @@ export const FoldsAndReturnsWithWidth: Story = {
     frame.style.inlineSize = "260px";
     await waitFor(() =>
       expect(
-        canvas.getByRole("button", { name: "More sections" }),
+        canvas.getByRole("button", {
+          name: englishCopy["record.tabs.moreLabel"],
+        }),
       ).toBeVisible(),
     );
     frame.style.inlineSize = "100%";
@@ -300,7 +307,9 @@ export const FoldsAndReturnsWithWidth: Story = {
     );
     await waitFor(() =>
       expect(
-        canvas.queryByRole("button", { name: "More sections" }),
+        canvas.queryByRole("button", {
+          name: englishCopy["record.tabs.moreLabel"],
+        }),
       ).toBeNull(),
     );
   },

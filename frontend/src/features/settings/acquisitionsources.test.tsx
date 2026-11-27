@@ -143,7 +143,9 @@ it("names each source without its key and counts its deals, with no text box", a
   vi.stubGlobal("fetch", backend(ADMIN));
   render(<AcquisitionSourcesCard />);
   const row = await screen.findByTestId("acq-source-existing_customer");
-  expect(within(row).getByText("Existing customer")).toBeInTheDocument();
+  expect(
+    within(row).getByText(en["acqSources.builtin.existing_customer"]),
+  ).toBeInTheDocument();
   expect(within(row).queryByText("existing_customer")).toBeNull();
   expect(within(row).getByText("12")).toBeInTheDocument();
   expect(within(row).getByText("12 deals")).toBeInTheDocument();

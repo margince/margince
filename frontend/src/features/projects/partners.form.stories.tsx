@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -33,7 +34,9 @@ export const Setup: Story = {
     );
   },
   play: async () => {
-    await screen.findByRole("textbox", { name: "Served segments" });
+    await screen.findByRole("textbox", {
+      name: englishCopy["partner.servedSegments"],
+    });
   },
 };
 
@@ -49,7 +52,9 @@ export const EndingProgram: Story = {
   ),
   play: async () => {
     await userEvent.click(
-      await screen.findByRole("button", { name: "End partner program" }),
+      await screen.findByRole("button", {
+        name: englishCopy["partner.endProgram"],
+      }),
     );
   },
 };

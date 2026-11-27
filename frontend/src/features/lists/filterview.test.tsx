@@ -337,7 +337,7 @@ describe("editing in place", () => {
       "in Hamburg",
     );
     await user.click(
-      screen.getByRole("button", { name: "Propose conditions" }),
+      screen.getByRole("button", { name: en["filters.propose.submit"] }),
     );
     expect(
       await screen.findByText(/^Margince proposed 1 condition/),
@@ -365,7 +365,7 @@ describe("editing in place", () => {
       "in Hamburg",
     );
     await user.click(
-      screen.getByRole("button", { name: "Propose conditions" }),
+      screen.getByRole("button", { name: en["filters.propose.submit"] }),
     );
     await user.click(screen.getByRole("button", { name: en["filters.done"] }));
     proposal.release();
@@ -526,7 +526,7 @@ describe("saving back over the view", () => {
       "in Hamburg",
     );
     await user.click(
-      screen.getByRole("button", { name: "Propose conditions" }),
+      screen.getByRole("button", { name: en["filters.propose.submit"] }),
     );
     await saveChanges(user);
     proposal.release();

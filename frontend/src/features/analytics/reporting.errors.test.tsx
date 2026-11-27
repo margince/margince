@@ -131,10 +131,12 @@ it("keeps a rejected schedule edit open with the entered cadence", async () => {
   );
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Activate schedule" }),
+      screen.getByRole("button", { name: en["reporting.activateSchedule"] }),
     ).toBeEnabled(),
   );
-  await user.click(screen.getByRole("button", { name: "Activate schedule" }));
+  await user.click(
+    screen.getByRole("button", { name: en["reporting.activateSchedule"] }),
+  );
   expect(
     await screen.findByText("Refresh the schedule before editing it"),
   ).toBeVisible();
@@ -237,7 +239,7 @@ it("shows a refused reporting setup instead of an empty editor", async () => {
     </StoryProviders>,
   );
   await user.click(
-    await screen.findByRole("button", { name: "Reporting setup" }),
+    await screen.findByRole("button", { name: en["reporting.framework"] }),
   );
   expect(await screen.findByText("Reporting access has changed")).toBeVisible();
 });
@@ -267,9 +269,7 @@ it("does not describe an old snapshot with the current ownership rule", async ()
   );
   await screen.findByText("Northstar rollout");
   expect(
-    await screen.findByText(
-      "This snapshot uses an earlier metric definition. Its saved figures have not been recalculated.",
-    ),
+    await screen.findByText(en["reporting.earlierDefinition"]),
   ).toBeVisible();
   expect(
     screen.queryByText(

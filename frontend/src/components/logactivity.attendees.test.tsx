@@ -13,6 +13,7 @@ import userEvent, { type UserEvent } from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption } from "../design-system/select-testing";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { meFixture } from "../testing/mefixture";
 import { LogActivity } from "./logactivity";
 import { MAX_MEETING_NAMES, MeetingAttendeeFields } from "./meetingattendees";
@@ -124,7 +125,10 @@ describe("everyone on a logged meeting", () => {
     await pickOption(user, screen.getByLabelText("Type"), "Meeting");
 
     // The open contact is linked already, so it is not offered again.
-    await user.type(screen.getByLabelText("Other attendees"), "e");
+    await user.type(
+      screen.getByLabelText(englishCopy["log.otherAttendees"]),
+      "e",
+    );
     await screen.findByRole("button", { name: /Bea Brandt · Brandt AG/ });
     expect(screen.queryByRole("button", { name: /Ada Open/ })).toBeNull();
     await user.click(screen.getByRole("button", { name: /Bea Brandt/ }));
@@ -205,7 +209,7 @@ describe("everyone on a logged meeting", () => {
     stubApi(posted);
     render("contact", "c-a");
     await pickOption(user, screen.getByLabelText("Type"), "Meeting");
-    const colleagues = screen.getByLabelText("Colleagues who attended");
+    const colleagues = screen.getByLabelText(englishCopy["log.colleagues"]);
     await user.click(colleagues);
     expect(screen.queryByRole("option", { name: "Me Myself" })).toBeNull();
     expect(screen.queryByRole("option", { name: "Runner Bot" })).toBeNull();
@@ -225,7 +229,7 @@ describe("everyone on a logged meeting", () => {
     await pickOption(user, screen.getByLabelText("Type"), "Meeting");
     await pickOption(
       user,
-      screen.getByLabelText("Colleagues who attended"),
+      screen.getByLabelText(englishCopy["log.colleagues"]),
       "Ben Colleague",
     );
     await pickOption(user, screen.getByLabelText("Type"), "Note");
@@ -263,9 +267,10 @@ describe("a full meeting", () => {
         </LocaleProvider>
       </QueryClientProvider>
     );
-    const contactsBox = () => screen.getByLabelText("Other attendees");
+    const contactsBox = () =>
+      screen.getByLabelText(englishCopy["log.otherAttendees"]);
     const colleaguesBox = () =>
-      screen.getByLabelText("Colleagues who attended");
+      screen.getByLabelText(englishCopy["log.colleagues"]);
 
     // One short of the cap, and the roster loaded: both still offer more.
     const view = rtlRender(fields(MAX_MEETING_NAMES - 1));

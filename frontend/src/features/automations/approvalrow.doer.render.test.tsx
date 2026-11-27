@@ -6,6 +6,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it, vi } from "vitest";
 import { ToastProvider } from "../../design-system/toast";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import type { Approval } from "../../lib/approvals.queries";
 import { ApprovalRow } from "./approvalrow";
 
@@ -74,7 +75,9 @@ it("names the colleague chosen to do a decided follow-up", async () => {
       doer_id: "seat-priya",
     },
   });
-  expect(await screen.findByText("Who does this")).toBeVisible();
+  expect(
+    await screen.findByText(englishCopy["approval.field.doer"]),
+  ).toBeVisible();
   expect(await screen.findByText("Priya Raman")).toBeVisible();
 });
 
@@ -116,5 +119,5 @@ it("shows no doer row on a follow-up that kept its own rule", async () => {
   expect(
     (await screen.findAllByText("Follow up on Northwind")).length,
   ).toBeGreaterThan(0);
-  expect(screen.queryByText("Who does this")).toBeNull();
+  expect(screen.queryByText(englishCopy["approval.field.doer"])).toBeNull();
 });

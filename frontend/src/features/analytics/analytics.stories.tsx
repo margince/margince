@@ -4,6 +4,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, userEvent, within } from "storybook/test";
 import { StatStrip } from "../../design-system/statstrip";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -286,7 +287,9 @@ const pickFoldedSection =
   async ({ canvasElement }: { canvasElement: HTMLElement }) => {
     const page = within(canvasElement.ownerDocument.body);
     await userEvent.click(
-      await page.findByRole("button", { name: "More sections" }),
+      await page.findByRole("button", {
+        name: englishCopy["record.tabs.moreLabel"],
+      }),
     );
     await userEvent.click(await page.findByRole("button", { name }));
   };
@@ -301,10 +304,12 @@ async function explainStageCard({
   await clickButton("Pipeline")({ canvasElement });
   const card = await within(canvasElement.ownerDocument.body).findByRole(
     "region",
-    { name: "Open deals by stage" },
+    { name: englishCopy["analytics.reportDeals"] },
   );
   await userEvent.click(
-    await within(card).findByRole("button", { name: "Explain this number" }),
+    await within(card).findByRole("button", {
+      name: englishCopy["explain.open"],
+    }),
   );
 }
 
@@ -556,7 +561,9 @@ export const ExplainLoading: Story = {
   },
   play: async (context) => {
     await explainStageCard(context);
-    await within(context.canvasElement).findByText("How this number is built");
+    await within(context.canvasElement).findByText(
+      englishCopy["explain.title"],
+    );
   },
 };
 

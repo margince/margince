@@ -18,6 +18,7 @@ import { Heading } from "../design-system/heading";
 import { Modal } from "../design-system/modal";
 import { holdExits } from "../design-system/presence-testing";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { useRoute } from "../lib/router";
 import { useShortcutDispatcher } from "../lib/shortcuts";
 import { meFixture } from "../testing/mefixture";
@@ -363,13 +364,13 @@ describe("the palette C opens", () => {
       />,
     );
     const user = userEvent.setup();
-    expect(screen.queryByText("Ask your documents")).toBeNull();
+    expect(screen.queryByText(englishCopy["corpusAsk.title"])).toBeNull();
 
     await user.type(screen.getByRole("combobox"), "deal");
     expect(destinationRows().map((row) => row.textContent)).toEqual([
       expect.stringContaining("New deal"),
     ]);
-    expect(screen.queryByText("Ask your documents")).toBeNull();
+    expect(screen.queryByText(englishCopy["corpusAsk.title"])).toBeNull();
   });
 
   it("lists every create command the product has", async () => {

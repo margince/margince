@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { pickOption, pickSuggestion } from "../../design-system/select-testing";
 import { stable } from "../../format/collate";
+import { en as englishCopy } from "../../i18n/en";
 import type { GrantSpec } from "../../testing/mefixture";
 import { reachableProviders } from "./ai-provider-reach";
 import { AiRoutingCard } from "./ai-routing";
@@ -400,10 +401,15 @@ describe("AiRoutingCard", () => {
     );
     // Its own embeddings server, for this lane alone.
     await user.type(
-      await within(lane).findByLabelText("Embeddings server"),
+      await within(lane).findByLabelText(
+        englishCopy["aiRouting.embeddingsServer.label"],
+      ),
       "http://gpu-box:8001",
     );
-    await user.type(within(lane).getByLabelText("Vector width"), "1536");
+    await user.type(
+      within(lane).getByLabelText(englishCopy["aiRouting.dimensions.label"]),
+      "1536",
+    );
     await saveEditor(user, backend);
     const sent = backend.getCapturedPut()?.embeddings;
     expect(sent?.provider).toBe("openai_compatible");
@@ -422,7 +428,9 @@ describe("AiRoutingCard", () => {
     await screen.findByText("gemini-embedding-001");
 
     const lane = await openEditor(user, "ai-routing-embeddings");
-    const width = within(lane).getByLabelText("Vector width");
+    const width = within(lane).getByLabelText(
+      englishCopy["aiRouting.dimensions.label"],
+    );
     await user.type(width, "768");
     await user.clear(width);
     await saveEditor(user, backend);
@@ -530,15 +538,15 @@ describe("AiRoutingCard", () => {
       .getAllByRole("option")
       .map((o) => o.textContent);
     // Keyed or keyless, never a vendor whose key is missing.
-    expect(offered).toContain("Google Gemini");
+    expect(offered).toContain(englishCopy["aiProviders.name.gemini"]);
     expect(offered).toContain("Ollama");
-    expect(offered).toContain("OpenAI-compatible");
+    expect(offered).toContain(englishCopy["aiProviders.name.openaiCompatible"]);
     expect(offered).not.toContain("Anthropic");
     expect(offered).not.toContain("OpenAI");
     // Keyless adapters are offered on the probe's word: ollama answered, vllm
     // did not, and nothing binds fake.
     expect(offered).not.toContain("vLLM");
-    expect(offered).not.toContain("Built-in test provider");
+    expect(offered).not.toContain(englishCopy["aiProviders.name.fake"]);
     await user.keyboard("{Escape}");
     await user.click(within(tier).getByRole("button", { name: /cancel/i }));
 
@@ -580,7 +588,7 @@ describe("AiRoutingCard", () => {
     const offered = within(screen.getByRole("listbox"))
       .getAllByRole("option")
       .map((o) => o.textContent);
-    expect(offered).toContain("Built-in test provider");
+    expect(offered).toContain(englishCopy["aiProviders.name.fake"]);
     expect(offered).toContain("Ollama");
     expect(offered).not.toContain("vLLM");
     await user.keyboard("{Escape}");
@@ -612,7 +620,9 @@ describe("AiRoutingCard", () => {
     await screen.findByText("claude-opus-4-8");
 
     const dialog = await openEditor(user, "ai-routing-tier-premium");
-    expect(within(dialog).getByText("Provider key missing")).toBeTruthy();
+    expect(
+      within(dialog).getByText(englishCopy["aiRouting.keyMissing"]),
+    ).toBeTruthy();
     expect(
       await within(dialog).findByText(/no key, so no model list/i),
     ).toBeTruthy();

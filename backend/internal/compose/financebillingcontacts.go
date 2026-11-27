@@ -17,6 +17,7 @@ import (
 	crmcontracts "github.com/margince/margince/backend/internal/contracts"
 	"github.com/margince/margince/backend/internal/modules/contacts"
 	"github.com/margince/margince/backend/internal/modules/finance"
+	"github.com/margince/margince/backend/internal/modules/identity"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 )
 
@@ -48,5 +49,6 @@ func (f financeBillingContacts) BillingContactsFor(
 // The company page's billing section reads the same contacts, so the two panels agree.
 func newFinanceHandlers(pool *pgxpool.Pool) finance.Handlers {
 	return finance.NewHandlers(InstallationDB(pool), FinanceRates()).
-		WithBillingContacts(financeBillingContacts{contacts: contacts.NewStore(InstallationDB(pool))})
+		WithBillingContacts(financeBillingContacts{contacts: contacts.NewStore(InstallationDB(pool))}).
+		WithPaymentAge(identity.PaymentAgeForFinance)
 }

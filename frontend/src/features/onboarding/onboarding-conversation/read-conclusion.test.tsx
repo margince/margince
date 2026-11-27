@@ -6,6 +6,7 @@ import type { ReactNode } from "react";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../../api/schema";
 import { LocaleProvider } from "../../../i18n";
+import { en as englishCopy } from "../../../i18n/en";
 import { meFixture } from "../../../testing/mefixture";
 import { OnboardingScreen } from "../onboarding";
 
@@ -260,7 +261,7 @@ describe("the read conclusion ordering contract", () => {
     expect(
       await screen.findByRole(
         "button",
-        { name: "Confirm profile" },
+        { name: englishCopy["ob.deck.confirm"] },
         {
           timeout: 8000,
         },
@@ -287,7 +288,7 @@ describe("the read conclusion ordering contract", () => {
     expect(
       await screen.findByRole(
         "button",
-        { name: "Confirm profile" },
+        { name: englishCopy["ob.deck.confirm"] },
         {
           timeout: 8000,
         },
@@ -307,7 +308,7 @@ describe("the read conclusion ordering contract", () => {
     expect(
       await screen.findByRole(
         "button",
-        { name: "Confirm profile" },
+        { name: englishCopy["ob.deck.confirm"] },
         {
           timeout: 8000,
         },
@@ -332,7 +333,7 @@ describe("the read conclusion ordering contract", () => {
     expect(
       await screen.findByRole(
         "button",
-        { name: "Confirm profile" },
+        { name: englishCopy["ob.deck.confirm"] },
         { timeout: 8000 },
       ),
     ).toBeTruthy();

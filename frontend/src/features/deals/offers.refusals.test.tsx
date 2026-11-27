@@ -15,6 +15,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { Locale } from "../../i18n";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -176,7 +177,7 @@ describe("a line's cells", () => {
     await user.type(position, "2");
     await user.tab();
     expect(
-      await screen.findByText("Another line already has this position."),
+      await screen.findByText(englishCopy["offer.positionTaken"]),
     ).toBeTruthy();
     expect(screen.queryByText(/: conflict/)).toBeNull();
   });

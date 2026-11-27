@@ -9,6 +9,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import type { EntityKind } from "../lib/entity";
 import { OpenSourceProvider } from "../lib/opensource";
 import { forgetSeat } from "../lib/storage";
@@ -111,7 +112,7 @@ const TASK_BAR = {
 describe("a record's Next bar with what just came in", () => {
   it("is the plain bar when nothing came in", () => {
     withProviders(scoped(undefined, <RecordNextBar />));
-    expect(screen.getByText("Nothing is due next.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["standing.next.none"])).toBeTruthy();
   });
 
   it("is the plain bar outside a record page", () => {
@@ -124,7 +125,7 @@ describe("a record's Next bar with what just came in", () => {
     withProviders(
       scoped({ ...MAIL_IN, notice: vi.fn() }, <RecordNextBar {...TASK_BAR} />),
     );
-    expect(screen.queryByText("Nothing is due next.")).toBeNull();
+    expect(screen.queryByText(englishCopy["standing.next.none"])).toBeNull();
     expect(screen.queryByText("Send the pilot results")).toBeNull();
     expect(screen.getByText("New email")).toBeTruthy();
     expect(screen.getByText("Re: Pricing for 40 seats")).toBeTruthy();
@@ -202,7 +203,7 @@ describe("a record's Next bar with what just came in", () => {
         <RecordNextBar />,
       ),
     );
-    expect(screen.getByText("New website form")).toBeTruthy();
+    expect(screen.getByText(englishCopy["latest.kind.webForm"])).toBeTruthy();
     expect(
       screen.getByText("We run 45 field reps. · Team size: 40-60"),
     ).toBeTruthy();
@@ -432,7 +433,7 @@ describe("the Next bar with nothing next", () => {
     ).toBeTruthy();
     expect(screen.getByText("The order form")).toBeTruthy();
     // The bar keeps its own answer; the exchange is not its content.
-    expect(screen.getByText("Nothing is due next.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["standing.next.none"])).toBeTruthy();
     await user.click(screen.getByRole("button", { name: "View email" }));
     expect(openSource).toHaveBeenCalledWith("sent");
   });
@@ -465,19 +466,23 @@ describe("the Next bar with nothing next", () => {
     expect(line.textContent).not.toMatch(/Waiting|turn/);
     expect(screen.getByText("Introductory lunch")).toBeTruthy();
     expect(screen.getByText("No follow-up task recorded.")).toBeTruthy();
-    expect(screen.queryByText("Nothing is due next.")).toBeNull();
+    expect(screen.queryByText(englishCopy["standing.next.none"])).toBeNull();
     // The meeting is not drawn as the bar's title.
     expect(
       screen.getByText("Introductory lunch").closest(".next-bar-row"),
     ).toBeNull();
-    await user.click(screen.getByRole("button", { name: "View meeting" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["standing.exchange.view.meeting"],
+      }),
+    );
     expect(openSource).toHaveBeenCalledWith("lunch");
   });
 
   it("leaves the exchange out where the page shows it elsewhere", () => {
     const asked = serveLatest([], { activity: sent, whose_move: "them" });
     withProviders(scoped(undefined, <RecordNextBar lastExchange={false} />));
-    expect(screen.getByText("Nothing is due next.")).toBeTruthy();
+    expect(screen.getByText(englishCopy["standing.next.none"])).toBeTruthy();
     expect(screen.queryByText(/^Last email/)).toBeNull();
     expect(asked).toHaveLength(0);
   });
@@ -486,7 +491,9 @@ describe("the Next bar with nothing next", () => {
     const asked = serveLatest([], { activity: sent, whose_move: "them" });
     withProviders(scoped(undefined, <RecordNextBar {...TASK_BAR} />));
     expect(screen.getByText("Send the pilot results")).toBeTruthy();
-    expect(screen.queryByText("Waiting on them")).toBeNull();
+    expect(
+      screen.queryByText(englishCopy["standing.exchange.them"]),
+    ).toBeNull();
     expect(asked).toHaveLength(0);
   });
 });

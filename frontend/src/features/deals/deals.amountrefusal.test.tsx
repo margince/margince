@@ -5,6 +5,7 @@ import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { RecordFormBody } from "../../components/create.form";
 import { LocaleProvider, translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { dealEditFields } from "./deals.fields";
 
 const t = (
@@ -140,7 +141,7 @@ describe("a deal amount the currency cannot hold", () => {
         locale: "en",
       }).find((field) => field.key === "amount");
     expect(amountOf(true)?.validate?.("", {})).toBe(
-      "A won or lost deal keeps its price. Reopen it first to remove it.",
+      englishCopy["deal.closedAmountKept"],
     );
     expect(amountOf(false)?.validate?.("", {})).toBeUndefined();
   });

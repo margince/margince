@@ -30,7 +30,7 @@ afterEach(() => {
 async function addTaskRow(header: HTMLElement): Promise<HTMLElement> {
   const onPage = screen.queryAllByRole("button", { name: "Add task" });
   await userEvent.click(
-    within(header).getByRole("button", { name: "More actions" }),
+    within(header).getByRole("button", { name: en["record.moreActions"] }),
   );
   return waitFor(() => {
     const row = screen
@@ -71,7 +71,7 @@ describe("logging an activity", () => {
     // never held from before the grant landed.
     const logButton = async () =>
       within(await recordHeader()).getByRole("button", {
-        name: "Log activity",
+        name: en["log.title"],
       });
     await waitFor(async () =>
       expect(await logButton()).toHaveProperty("disabled", false),
@@ -79,7 +79,7 @@ describe("logging an activity", () => {
     await user.click(await logButton());
 
     expect(
-      await screen.findByRole("dialog", { name: "Log activity" }),
+      await screen.findByRole("dialog", { name: en["log.title"] }),
     ).toBeTruthy();
   });
 
@@ -191,7 +191,7 @@ describe("logging an activity", () => {
 
     await recordHeader();
     expect(screen.queryByText(quietDayMoment.why_now)).toBeNull();
-    expect(screen.queryByText("Margince suggests")).toBeNull();
+    expect(screen.queryByText(en["co.suggest.byline"])).toBeNull();
     expect(screen.queryByText("Ready")).toBeNull();
     expect(
       screen.queryByRole("button", { name: "Log an interaction" }),
@@ -213,7 +213,7 @@ describe("logging an activity", () => {
     expect(
       within(move).getByRole("button", { name: /Draft a follow-up/ }),
     ).toBeTruthy();
-    expect(within(move).queryByText("Margince suggests")).toBeNull();
+    expect(within(move).queryByText(en["co.suggest.byline"])).toBeNull();
   });
 
   it("logs a meeting on a quiet contact from the header", async () => {
@@ -231,7 +231,7 @@ describe("logging an activity", () => {
         name: /Log activity/,
       }),
     );
-    const dialog = await screen.findByRole("dialog", { name: "Log activity" });
+    const dialog = await screen.findByRole("dialog", { name: en["log.title"] });
     await user.click(within(dialog).getByRole("combobox", { name: "Type" }));
     await user.click(await screen.findByRole("option", { name: "Meeting" }));
     await user.type(
@@ -357,7 +357,7 @@ describe("logging a call started on the page", () => {
 
     const [number] = await screen.findAllByRole("link", { name: NUMBER });
     expect(fireEvent.click(number)).toBe(true);
-    const dialog = screen.getByRole("dialog", { name: "Log activity" });
+    const dialog = screen.getByRole("dialog", { name: en["log.title"] });
     expect(screen.getAllByRole("dialog")).toHaveLength(1);
     expect(
       within(dialog).getByRole("combobox", { name: "Type" }).textContent,

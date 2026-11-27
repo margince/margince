@@ -7,6 +7,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { Modal } from "./atoms";
 import { coveredByDialog } from "./dialogfocus";
 import { DockedWindow, type DockState } from "./dockedwindow";
@@ -251,7 +252,11 @@ describe("a window opened from inside a dialog", () => {
   it("is drawn after the dialog's overlay, outside it", async () => {
     const user = userEvent.setup();
     render(<OverADrawer />);
-    await user.click(screen.getByRole("button", { name: "Draft follow-up" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["worklist.verb.draft_follow_up_now"],
+      }),
+    );
 
     const docked = screen.getByRole("dialog", { name: "Re: Budget" });
     const overlay = document.querySelector(".overlay");
@@ -265,7 +270,11 @@ describe("a window opened from inside a dialog", () => {
   it("keeps Tab in the window while the reader is writing in it", async () => {
     const user = userEvent.setup();
     render(<OverADrawer />);
-    await user.click(screen.getByRole("button", { name: "Draft follow-up" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["worklist.verb.draft_follow_up_now"],
+      }),
+    );
 
     const docked = screen.getByRole("dialog", { name: "Re: Budget" });
     screen.getByRole("button", { name: "Send" }).focus();
@@ -277,7 +286,11 @@ describe("a window opened from inside a dialog", () => {
   it("is not covered by the dialog it was opened from", async () => {
     const user = userEvent.setup();
     render(<OverADrawer />);
-    await user.click(screen.getByRole("button", { name: "Draft follow-up" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["worklist.verb.draft_follow_up_now"],
+      }),
+    );
 
     expect(coveredByDialog(screen.getByRole("button", { name: "Send" }))).toBe(
       false,
@@ -288,7 +301,11 @@ describe("a window opened from inside a dialog", () => {
     const onCloseDrawer = vi.fn();
     const user = userEvent.setup();
     render(<OverADrawer onCloseDrawer={onCloseDrawer} />);
-    await user.click(screen.getByRole("button", { name: "Draft follow-up" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["worklist.verb.draft_follow_up_now"],
+      }),
+    );
 
     await user.keyboard("{Escape}");
     expect(screen.queryByRole("dialog", { name: "Re: Budget" })).toBeNull();

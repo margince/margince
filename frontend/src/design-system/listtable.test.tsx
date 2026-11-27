@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { openView, openViewStep } from "../testing/listview.testkit";
 import { type ListChip, ListTable } from "./listtable";
 import { columns, render, testRows } from "./listtable.testkit";
@@ -263,7 +264,9 @@ describe("the Sort step", () => {
       />,
     );
     await openViewStep(user, "Sort");
-    const fallback = sortMenu().getByRole("radio", { name: "Default order" });
+    const fallback = sortMenu().getByRole("radio", {
+      name: englishCopy["table.sortDefault"],
+    });
     expect(fallback).not.toBeChecked();
     await user.click(fallback);
     expect(onChange).toHaveBeenCalledWith("");
@@ -349,7 +352,9 @@ describe("filter chips", () => {
         name: "More actions for the Status filter",
       }),
     );
-    await user.click(screen.getByRole("button", { name: "Delete filter" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["table.deleteFilter"] }),
+    );
     expect(onChipChange).toHaveBeenCalledWith("status", "");
   });
 });

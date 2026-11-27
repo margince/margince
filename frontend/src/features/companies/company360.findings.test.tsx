@@ -3,6 +3,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { TaskQuickActions, useTaskUpdate } from "../../components/taskactions";
+import { en as englishCopy } from "../../i18n/en";
 import { taskWriteKeys } from "../../lib/activitykeys";
 import { SentenceList } from "../records/record360";
 import { CompanyScreen } from "./companies";
@@ -191,7 +192,9 @@ describe("company view — the citations under a finding", () => {
       />,
     );
     expect(screen.getByText("3 profile fields")).toBeTruthy();
-    expect(screen.queryAllByText("profile field")).toHaveLength(0);
+    expect(
+      screen.queryAllByText(englishCopy["co.brief.cite.profile_field"]),
+    ).toHaveLength(0);
     // Opens the first record, with every sibling, so the drawer's own stepper
     // reaches the other two. The count names them; the stepper reaches them.
     await userEvent.click(screen.getByText("3 profile fields"));
@@ -272,7 +275,11 @@ describe("company view — what is waiting on a decision stays off the page", ()
     );
     renderCompany();
     await screen.findByText("Brandt Automotive GmbH");
-    (await screen.findByRole("button", { name: "More actions" })).click();
+    (
+      await screen.findByRole("button", {
+        name: englishCopy["record.moreActions"],
+      })
+    ).click();
     await screen.findByTestId("company-full-history");
     expect(screen.queryByRole("button", { name: /Review/ })).toBeNull();
   });
@@ -299,7 +306,9 @@ describe("company view — an open task can be acted on", () => {
       ).toBeTruthy(),
     );
     expect(screen.getByRole("button", { name: "Done" })).toBeTruthy();
-    expect(screen.getByRole("button", { name: "Snooze 1 day" })).toBeTruthy();
+    expect(
+      screen.getByRole("button", { name: englishCopy["tasks.snooze"] }),
+    ).toBeTruthy();
   });
 
   it("offers no snooze for a task with no date to move", async () => {
@@ -311,7 +320,9 @@ describe("company view — an open task can be acted on", () => {
     await waitFor(() =>
       expect(screen.getByRole("button", { name: "Done" })).toBeTruthy(),
     );
-    expect(screen.queryByRole("button", { name: "Snooze 1 day" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["tasks.snooze"] }),
+    ).toBeNull();
   });
 
   it("draws no checkbox when the caller has no write path for it", async () => {
@@ -361,9 +372,11 @@ describe("company view — Partner is not a permanent tab", () => {
     renderCompany();
     await screen.findByRole("complementary", { name: "Context" });
 
-    await userEvent.click(screen.getByRole("button", { name: "More actions" }));
     await userEvent.click(
-      screen.getByRole("button", { name: "Set up partner program" }),
+      screen.getByRole("button", { name: englishCopy["record.moreActions"] }),
+    );
+    await userEvent.click(
+      screen.getByRole("button", { name: englishCopy["company.partnerSetUp"] }),
     );
 
     // Asking for the form is what puts the tab on screen. Without it, the
@@ -511,11 +524,13 @@ describe("company view — the account's primary actions", () => {
     // picker inside it, is why accounts collect notes and no follow-ups. The
     // two verbs answer different questions and are asked separately.
     expect(
-      await screen.findByRole("button", { name: "Log activity" }),
+      await screen.findByRole("button", { name: englishCopy["log.title"] }),
     ).toBeTruthy();
     // Add task is the first row of the header's menu.
     await userEvent.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", {
+        name: englishCopy["record.moreActions"],
+      }),
     );
     expect(
       await screen.findByRole("button", { name: "Add task" }),
@@ -531,9 +546,13 @@ describe("company view — the account's primary actions", () => {
     // would tell a reader nothing, because an absent button reads as a build
     // without the feature. Both are offered and refused, and both point at the
     // one sentence that says what is true of the record.
-    const log = await screen.findByRole("button", { name: "Log activity" });
+    const log = await screen.findByRole("button", {
+      name: englishCopy["log.title"],
+    });
     await userEvent.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", {
+        name: englishCopy["record.moreActions"],
+      }),
     );
     const task = await screen.findByRole("button", { name: "Add task" });
     expect(log.hasAttribute("disabled")).toBe(true);

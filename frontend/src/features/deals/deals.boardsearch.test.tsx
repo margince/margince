@@ -3,6 +3,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, describe, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { DealsScreen } from "./deals";
 import { deal, render, stubBackend } from "./deals.testkit";
 
@@ -41,7 +42,7 @@ describe("the deals board under a search", () => {
       await screen.findByText(/No deals match these filters\./),
     ).toBeTruthy();
     await userEvent.click(
-      screen.getByRole("button", { name: "Clear filters" }),
+      screen.getByRole("button", { name: englishCopy["aicalls.clear"] }),
     );
     await waitFor(() =>
       expect(screen.getByPlaceholderText(/Search/)).toHaveValue(""),

@@ -1,5 +1,6 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { screen, within } from "storybook/test";
+import { en as englishCopy } from "../../../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -48,7 +49,9 @@ const meta: Meta<typeof ContactMeetingBrief> = {
   component: ContactMeetingBrief,
   play: async () => {
     const drawer = within(await screen.findByRole("dialog"));
-    await drawer.findByRole("heading", { name: "Meeting brief" });
+    await drawer.findByRole("heading", {
+      name: englishCopy["contact.meeting.title"],
+    });
   },
 };
 

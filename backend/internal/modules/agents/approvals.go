@@ -296,7 +296,7 @@ func archiveAt(ctx context.Context, p datasource.SystemOfRecordProvider, ref dat
 	if !ok {
 		if pin != nil {
 			return datasource.EntityRef{}, fmt.Errorf(
-				"this workspace's system of record cannot archive a %s at a named version, so an archive "+
+				"this company's system of record cannot archive a %s at a named version, so an archive "+
 					"approved against version %d cannot be carried out as approved: %w",
 				ref.Type, *pin, apperrors.ErrUnsupportedBySoR)
 		}
@@ -330,7 +330,7 @@ func refuseArchiveHere(ctx context.Context, p datasource.SystemOfRecordProvider,
 	archiver, ok := p.(datasource.RecordArchiverV2)
 	if !ok {
 		return fmt.Errorf(
-			"this workspace's system of record cannot archive a %s at a named version, and an approved "+
+			"this company's system of record cannot archive a %s at a named version, and an approved "+
 				"archive names one, so no approval of this could be carried out as approved: %w",
 			ref.Type, apperrors.ErrUnsupportedBySoR)
 	}

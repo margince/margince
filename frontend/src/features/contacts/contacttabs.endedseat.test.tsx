@@ -8,6 +8,7 @@ import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import type { components } from "../../api/schema";
 import { UTC_ZONE } from "../../format/timezone";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { pretendReaderZone } from "../../testing/readerzone.testkit";
 import { jsonResponse, stubWithSession } from "../../testing/story-utils";
 import { ContactDealsTab } from "./contactdeals";
@@ -85,7 +86,9 @@ describe("an ended seat on the deals tab", () => {
   it("marks a seat that has ended, on the card and on the row", async () => {
     drawTab(viewWithSeat(false));
     expect(screen.getByText(/No longer on this deal/)).toBeTruthy();
-    expect(await screen.findByText("No longer on this deal")).toBeTruthy();
+    expect(
+      await screen.findByText(englishCopy["contact.deals.seatEnded"]),
+    ).toBeTruthy();
   });
 
   it("marks nothing on a current seat", () => {

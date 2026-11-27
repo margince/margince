@@ -11,6 +11,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { browserZone } from "../format/timezone";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { activityTimeline } from "./activitytimeline";
 import { TimelineRow } from "./timeline";
 import { isTranscriptActivity, TranscriptReadCard } from "./transcriptread";
@@ -187,7 +188,9 @@ describe("reading a transcript for its next steps", () => {
     });
     render(<TranscriptReadCard activityId="a-1" />);
 
-    await user.click(screen.getByRole("button", { name: "Read transcript" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["transcriptread.cta"] }),
+    );
     await waitFor(() =>
       expect(
         calls.some(
@@ -202,9 +205,13 @@ describe("reading a transcript for its next steps", () => {
     expect(await screen.findByText("48 lines read")).toBeTruthy();
     expect(screen.getByText("3 next steps awaiting review")).toBeTruthy();
     // The 🟡 tier is drawn, never spelled as an emoji.
-    expect(screen.getByRole("img", { name: "Approval first" })).toBeTruthy();
+    expect(
+      screen.getByRole("img", { name: englishCopy["autonomy.confirm"] }),
+    ).toBeTruthy();
 
-    await user.click(screen.getByRole("button", { name: "Open Worklist" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["enrich.toInbox"] }),
+    );
     expect(window.location.hash).toContain("worklist");
   });
 
@@ -223,8 +230,12 @@ describe("reading a transcript for its next steps", () => {
     expect(screen.getByText("Done")).toBeTruthy();
     // A correct empty answer is not a queue of work: nothing to review, and
     // nowhere to go.
-    expect(screen.queryByRole("button", { name: "Open Worklist" })).toBeNull();
-    expect(screen.queryByRole("img", { name: "Approval first" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["enrich.toInbox"] }),
+    ).toBeNull();
+    expect(
+      screen.queryByRole("img", { name: englishCopy["autonomy.confirm"] }),
+    ).toBeNull();
   });
 
   it("explains a reading it could not finish, and never as an empty result", async () => {
@@ -245,9 +256,11 @@ describe("reading a transcript for its next steps", () => {
     expect(screen.getByText("Failed")).toBeTruthy();
     expect(screen.queryByText("Done")).toBeNull();
     expect(
-      screen.queryByText("Transcript read in full. No next steps found."),
+      screen.queryByText(englishCopy["transcriptread.nothingStated"]),
     ).toBeNull();
-    expect(screen.queryByRole("button", { name: "Open Worklist" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["enrich.toInbox"] }),
+    ).toBeNull();
   });
 
   it("falls back to its own words when a terminal reading carries no detail", async () => {
@@ -258,9 +271,11 @@ describe("reading a transcript for its next steps", () => {
     // asserted: a heading alone would pass on a notice that never says nothing
     // was staged.
     expect(
-      await screen.findByText("Transcript could not be read"),
+      await screen.findByText(englishCopy["transcriptread.failedTitle"]),
     ).toBeTruthy();
-    expect(screen.getByText("Nothing was staged.")).toBeTruthy();
+    expect(
+      screen.getByText(englishCopy["transcriptread.failedFallback"]),
+    ).toBeTruthy();
   });
 
   it("says a reading is still going, and claims no outcome while it is", async () => {
@@ -272,9 +287,11 @@ describe("reading a transcript for its next steps", () => {
     // concerned: no line count, no verdict, no empty-result notice.
     expect(screen.queryByText("0 lines read")).toBeNull();
     expect(
-      screen.queryByText("Transcript read in full. No next steps found."),
+      screen.queryByText(englishCopy["transcriptread.nothingStated"]),
     ).toBeNull();
-    expect(screen.queryByRole("button", { name: "Open Worklist" })).toBeNull();
+    expect(
+      screen.queryByRole("button", { name: englishCopy["enrich.toInbox"] }),
+    ).toBeNull();
   });
 
   it("shows a reading that finished after the rep navigated away", async () => {
@@ -484,7 +501,9 @@ describe("reading a transcript for its next steps", () => {
     render(<TranscriptReadCard activityId="a-1" />);
 
     expect(
-      await screen.findByRole("button", { name: "Read transcript" }),
+      await screen.findByRole("button", {
+        name: englishCopy["transcriptread.cta"],
+      }),
     ).toBeTruthy();
     await waitFor(() => expect(screen.queryByText("Done")).toBeNull());
     expect(screen.queryByText("48 lines read")).toBeNull();
@@ -495,11 +514,11 @@ describe("reading a transcript for its next steps", () => {
     stubReads({ post: () => jsonResponse({ title: "not implemented" }, 501) });
     render(<TranscriptReadCard activityId="a-1" />);
 
-    await user.click(screen.getByRole("button", { name: "Read transcript" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["transcriptread.cta"] }),
+    );
     expect(
-      await screen.findByText(
-        "Transcript reading is not configured on this server.",
-      ),
+      await screen.findByText(englishCopy["transcriptread.unavailable"]),
     ).toBeTruthy();
   });
 });
@@ -600,7 +619,7 @@ describe("the summary a reading wrote onto the meeting", () => {
     render(<TranscriptSummary activityId="a-1" />);
 
     const section = await screen.findByRole("region", {
-      name: "Meeting summary",
+      name: englishCopy["transcriptread.summaryTitle"],
     });
     expect(section.textContent).toContain("AI-assisted");
     expect(
@@ -701,9 +720,7 @@ describe("the summary a reading wrote onto the meeting", () => {
     );
 
     expect(
-      await screen.findByText(
-        "No summary was written this time. Read the transcript again to retry.",
-      ),
+      await screen.findByText(englishCopy["transcriptread.summaryRefused"]),
     ).toBeTruthy();
     expect(screen.getByText("Volumes rose fifteen percent.")).toBeTruthy();
   });

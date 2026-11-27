@@ -85,7 +85,7 @@ type DealTaskSettler interface {
 // declared verb with no tool is not a gap to describe here:
 // TestEveryDeclaredToolVerbIsRegistered fails the build for it.
 func RegisterCoreTools(r *Registry, p datasource.SystemOfRecordProvider, stages StageResolver, promoter LeadPromoter, consumerMail ConsumerMail, duplicates OpenDuplicatesFor, tagOffer TagOfferFor) {
-	r.Register(readRecord{p: p, name: r.seats, sidecars: r.recordSidecars})
+	r.Register(readRecord{p: p, name: r.seats, sidecars: r.recordSidecars, fail: r.readRecordFailure})
 	r.Register(createRecord{p: p, duplicates: duplicates, tagOffer: tagOffer, language: r.language, words: r.changeWords})
 	r.Register(updateRecord{p: p, language: r.language, words: r.changeWords})
 	r.Register(logActivity{p: p})
@@ -167,6 +167,7 @@ type readRecord struct {
 	p        datasource.SystemOfRecordProvider
 	name     SeatNamer
 	sidecars RecordSidecarsFor
+	fail     func(context.Context, datasource.EntityRef) error
 }
 
 func (t readRecord) Spec() mcp.ToolSpec {
@@ -188,6 +189,11 @@ func (t readRecord) Handle(ctx context.Context, in json.RawMessage) (json.RawMes
 	ref, err := DecodeReadRecordArguments(in)
 	if err != nil {
 		return nil, err
+	}
+	if t.fail != nil {
+		if err := t.fail(ctx, ref); err != nil {
+			return nil, err
+		}
 	}
 	rec, err := t.p.Read(ctx, ref)
 	if err != nil {
@@ -396,7 +402,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 		// — the refusal that actually binds is the server's.
 		InputSchema: schema(`{"type":"object","required":["kind"],"properties":{
 			"kind":{"type":"string","enum":` + activityKindEnum + `},
-			"channel_provider":{"type":"string","description":"Required for kind \"message\", else refused; one the workspace's channel providers name."},
+			"channel_provider":{"type":"string","description":"Required for kind \"message\", else refused; one the company's channel providers name."},
 			"subject":{"type":"string","description":` + proseLanguageNote + `},
 			"body":{"type":"string","description":` + proseLanguageSeeSubject + `},
 			"occurred_at":{"type":"string","format":"date-time"` + timestampNote + `},
@@ -409,7 +415,7 @@ func (t logActivity) Spec() mcp.ToolSpec {
 				"entity_id":{"type":"string","format":"uuid"}},"additionalProperties":false},
 				"description":"Every record this was about, ALL OF THEM in this call: adding one AFTERWARDS is a second write. ` + ProjectLinkRefused + ` A meeting or a call is with a CONTACT and reaches their company through them; linking one to a company is REFUSED, so name the contact who was there and the company follows from where they work. A meeting linked to the deal alone sits on no attendee's timeline and the company sees nothing."},
 			"attendee_user_ids":{"type":"array","maxItems":25,"items":{"type":"string","format":"uuid"},
-				"description":"Meeting or call only: the workspace members who attended besides you, ids from the colleague roster. An id that is not an active member is refused."},
+				"description":"Meeting or call only: the company members who attended besides you, ids from the colleague roster. An id that is not an active member is refused."},
 			"source_activity_id":{"type":"string","format":"uuid","description":` + followUpSourceDescription + `},
 			"follow_up_task":` + string(argumentSchemaFor[crmcontracts.ActivityFollowUpTask](timestampRule)) + `,
 			"source_system":{"type":"string"},"source_id":{"type":"string"}},

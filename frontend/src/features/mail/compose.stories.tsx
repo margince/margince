@@ -5,6 +5,7 @@ import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, within } from "storybook/test";
 import type { components } from "../../api/schema";
 import { browserZone } from "../../format/timezone";
+import { en as englishCopy } from "../../i18n/en";
 import type { Transport } from "../../lib/contacttransports";
 import { CONNECTED_ROSTER } from "../../testing/mailroster.testkit";
 import {
@@ -378,7 +379,9 @@ export const MailboxNotSendCapable: Story = {
   }),
   play: async () => {
     await fillAndSend();
-    await screen.findByRole("link", { name: "Reconnect your mailbox" });
+    await screen.findByRole("link", {
+      name: englishCopy["compose.mailboxNotSendCapableGoto"],
+    });
     await expect(
       screen.queryByText("reconnect your mailbox to enable sending"),
     ).toBeNull();
@@ -766,7 +769,9 @@ export const SelectedOlderMessage: Story = {
   play: async () => {
     const user = userEvent.setup();
     await user.click(
-      await screen.findByRole("button", { name: "Show selected message" }),
+      await screen.findByRole("button", {
+        name: englishCopy["compose.selectedShow"],
+      }),
     );
     await screen.findByText(SELECTED_REQUEST.body);
     expect(screen.queryByText("Later invoice discussion")).toBeNull();
@@ -796,7 +801,7 @@ export const ColleagueFollowUp: Story = {
     const user = userEvent.setup();
     await screen.findByText(/Following up on “Product materials”/);
     await user.click(
-      screen.getByRole("button", { name: "Show selected message" }),
+      screen.getByRole("button", { name: englishCopy["compose.selectedShow"] }),
     );
     await screen.findByText(/Mira Voss wrote/);
   },

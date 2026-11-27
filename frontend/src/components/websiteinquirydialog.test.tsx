@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { renderWithQueryClient } from "../testing/queryrender";
 import {
   installFetchStub,
@@ -77,7 +78,7 @@ it("reviews the shared policy before saving it and keeps authority separate from
   const title = await screen.findByRole("textbox", { name: "Task title" });
   expect(title).toHaveValue(INQUIRY_POLICY.task_title);
   const requestType = screen.getByRole("combobox", {
-    name: "Request type field (optional)",
+    name: englishCopy["inquiry.requestTypeField"],
   });
   await waitFor(() => expect(requestType).toBeEnabled());
   await user.click(requestType);
@@ -88,14 +89,16 @@ it("reviews the shared policy before saving it and keeps authority separate from
   await user.clear(title);
   await user.type(title, "Review this new inquiry");
   expect(write).not.toHaveBeenCalled();
-  await user.click(screen.getByRole("button", { name: "Review handling" }));
-  expect(screen.getByText("Authorized by")).toBeVisible();
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["inquiry.review"] }),
+  );
+  expect(screen.getByText(englishCopy["auto.colOwner"])).toBeVisible();
   expect(
     screen.getByText(/Saving this plan replaces the old lead handling/),
   ).toBeVisible();
   await waitFor(() =>
     expect(
-      screen.getByText("Authorized by").nextElementSibling,
+      screen.getByText(englishCopy["auto.colOwner"]).nextElementSibling,
     ).toHaveTextContent("Test User"),
   );
   expect(screen.getByText("Coordinator").nextElementSibling).toHaveTextContent(
@@ -150,18 +153,22 @@ it("keeps the proposed policy visible when a stale review is refused", async () 
     <WebsiteInquiryDialog form={INQUIRY_FORM} onClose={closed} />,
   );
   await screen.findByRole("textbox", { name: "Task title" });
-  await user.click(screen.getByRole("button", { name: "Review handling" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["inquiry.review"] }),
+  );
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Turn on this handling" }),
+      screen.getByRole("button", { name: englishCopy["inquiry.enable"] }),
     ).toBeEnabled(),
   );
   await user.click(
-    screen.getByRole("button", { name: "Turn on this handling" }),
+    screen.getByRole("button", { name: englishCopy["inquiry.enable"] }),
   );
   expect(await screen.findByRole("alert")).toBeVisible();
   expect(closed).not.toHaveBeenCalled();
-  await user.click(screen.getByRole("button", { name: "Back to settings" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["inquiry.back"] }),
+  );
   expect(screen.getByRole("textbox", { name: "Task title" })).toHaveValue(
     INQUIRY_POLICY.task_title,
   );
@@ -191,12 +198,16 @@ it("keeps activation unavailable when the current deadline preview fails", async
     <WebsiteInquiryDialog form={INQUIRY_FORM} onClose={() => {}} />,
   );
   await screen.findByRole("textbox", { name: "Task title" });
-  await user.click(screen.getByRole("button", { name: "Review handling" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["inquiry.review"] }),
+  );
   expect(await screen.findByRole("alert")).toBeVisible();
   expect(
-    screen.getByRole("button", { name: "Turn on this handling" }),
+    screen.getByRole("button", { name: englishCopy["inquiry.enable"] }),
   ).toBeDisabled();
-  await user.click(screen.getByRole("button", { name: "Back to settings" }));
+  await user.click(
+    screen.getByRole("button", { name: englishCopy["inquiry.back"] }),
+  );
   expect(screen.getByRole("textbox", { name: "Task title" })).toHaveValue(
     INQUIRY_POLICY.task_title,
   );
@@ -221,12 +232,16 @@ it("names what is missing on the review press instead of a dead button", async (
   const title = await screen.findByRole("textbox", { name: "Task title" });
   await user.clear(title);
   await user.type(title, "   ");
-  const review = screen.getByRole("button", { name: "Review handling" });
+  const review = screen.getByRole("button", {
+    name: englishCopy["inquiry.review"],
+  });
   expect(review).toBeEnabled();
   await user.click(review);
   expect(await screen.findByText("Required: Task title")).toBeVisible();
-  expect(screen.queryByText("Authorized by")).not.toBeInTheDocument();
+  expect(
+    screen.queryByText(englishCopy["auto.colOwner"]),
+  ).not.toBeInTheDocument();
   await user.type(title, "Answer the inquiry");
   await user.click(review);
-  expect(await screen.findByText("Authorized by")).toBeVisible();
+  expect(await screen.findByText(englishCopy["auto.colOwner"])).toBeVisible();
 });

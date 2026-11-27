@@ -3,6 +3,7 @@ import { cleanup, render, screen } from "@testing-library/react";
 import { afterEach, expect, it } from "vitest";
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { ContractTerms } from "./contractterms";
 
 type Contract = components["schemas"]["Contract"];
@@ -54,7 +55,9 @@ it("keeps due-on-receipt apart from no terms at all", () => {
   // empty caption would say an agreement demanding immediate payment has no
   // terms — the opposite of what somebody negotiated.
   draw({ ...BASE, payment_term_days: 0 });
-  expect(screen.getByText("Due on receipt")).toBeTruthy();
+  expect(
+    screen.getByText(englishCopy["contracts.terms.onReceipt"]),
+  ).toBeTruthy();
 });
 
 it("says nothing at all when no term was recorded", () => {

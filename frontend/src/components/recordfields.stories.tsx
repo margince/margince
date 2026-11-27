@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { useState } from "react";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../i18n/en";
 import { StoryProviders } from "../testing/story-utils";
 import { RecordFields } from "./recordfields";
 import type { FieldRecord } from "./recordfieldtypes";
@@ -82,7 +83,7 @@ export const GroupInDialog: Story = {
       }),
     );
     const dialog = await screen.findByRole("dialog", {
-      name: "Email addresses",
+      name: englishCopy["history.field.emails"],
     });
     // The dialog fades in from transparent, so visible is a state it reaches.
     await waitFor(() =>

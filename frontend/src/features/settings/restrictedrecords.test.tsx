@@ -13,6 +13,7 @@ import userEvent from "@testing-library/user-event";
 import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { RestrictedRecordsCard } from "./restrictedrecords";
 import { RequestsPanel } from "./settings.privacy";
@@ -142,7 +143,11 @@ describe("RestrictedRecordsCard", () => {
     render(<RestrictedRecordsCard />);
 
     expect(await screen.findByText("Acme rollout, Acme renewal")).toBeVisible();
-    expect(screen.getByText("Commercial correspondence")).toBeVisible();
+    expect(
+      screen.getByText(
+        englishCopy["restricted.class.commercialCorrespondence"],
+      ),
+    ).toBeVisible();
     expect(screen.getByText("§257 HGB / §147 AO")).toBeVisible();
     expect(screen.getByText("2 fields removed")).toBeVisible();
     // The wire carries no subject or body, and the card asks for none — but
@@ -171,7 +176,9 @@ describe("RestrictedRecordsCard", () => {
     expect(
       await screen.findByText("Halloran Seilerei rope refit"),
     ).toBeVisible();
-    expect(screen.queryByText("No deal on record")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(englishCopy["restricted.noDeal"]),
+    ).not.toBeInTheDocument();
   });
 
   it("says when nothing is held", async () => {
@@ -192,7 +199,9 @@ describe("RestrictedRecordsCard", () => {
     );
     // The reason is what makes it a decision rather than a toggle, so the
     // confirm asks for one before anything is sent.
-    const confirm = screen.getByRole("button", { name: "Release and erase" });
+    const confirm = screen.getByRole("button", {
+      name: englishCopy["restricted.release.confirm"],
+    });
     expect(screen.getByText(/Releasing ERASES the record/)).toBeVisible();
     await user.click(confirm);
     const why = screen.getByRole("textbox", { name: /Why/ });
@@ -233,7 +242,9 @@ describe("RestrictedRecordsCard", () => {
     const dialog = screen.getByRole("dialog");
     await user.type(within(dialog).getByRole("textbox", { name: /Why/ }), "x");
     await user.click(
-      within(dialog).getByRole("button", { name: "Release and erase" }),
+      within(dialog).getByRole("button", {
+        name: englishCopy["restricted.release.confirm"],
+      }),
     );
 
     expect(await within(dialog).findByRole("alert")).toHaveTextContent(
@@ -281,10 +292,14 @@ describe("RestrictedRecordsCard", () => {
     const sent = backend({ retention_policy: ["read", "update"] }, []);
     const user = await renderHeld();
 
-    await user.click(screen.getByRole("button", { name: "Pin a record" }));
+    await user.click(
+      screen.getByRole("button", {
+        name: englishCopy["restricted.pin.action"],
+      }),
+    );
     const dialog = screen.getByRole("dialog");
     const confirm = within(dialog).getByRole("button", {
-      name: "Pin and hold",
+      name: englishCopy["restricted.pin.confirm"],
     });
     await user.type(
       within(dialog).getByRole("textbox", { name: /Why/ }),
@@ -342,7 +357,9 @@ describe("RestrictedRecordsCard", () => {
     );
     await user.type(screen.getByRole("textbox", { name: /Why/ }), "erase it");
     expect(
-      screen.getByRole("button", { name: "Release and erase" }),
+      screen.getByRole("button", {
+        name: englishCopy["restricted.release.confirm"],
+      }),
     ).toBeEnabled();
   });
 
@@ -351,7 +368,9 @@ describe("RestrictedRecordsCard", () => {
     await renderHeld();
     expect(await screen.findByText(/Only an administrator/)).toBeVisible();
     expect(
-      screen.queryByRole("button", { name: "Pin a record" }),
+      screen.queryByRole("button", {
+        name: englishCopy["restricted.pin.action"],
+      }),
     ).not.toBeInTheDocument();
   });
 
@@ -363,7 +382,9 @@ describe("RestrictedRecordsCard", () => {
       screen.queryByRole("button", { name: /^Release/ }),
     ).not.toBeInTheDocument();
     expect(
-      screen.queryByRole("button", { name: "Pin a record" }),
+      screen.queryByRole("button", {
+        name: englishCopy["restricted.pin.action"],
+      }),
     ).not.toBeInTheDocument();
   });
 

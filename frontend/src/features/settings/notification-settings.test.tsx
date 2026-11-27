@@ -192,7 +192,9 @@ describe("NotificationSettingsCard", () => {
       within(automations).queryByRole("option", { name: "Email" }),
     ).toBeNull();
     expect(
-      within(automations).getByRole("option", { name: "Daily digest" }),
+      within(automations).getByRole("option", {
+        name: en["notifications.delivery.digest"],
+      }),
     ).not.toBeNull();
     await user.keyboard("{Escape}");
 
@@ -267,7 +269,7 @@ describe("NotificationSettingsCard", () => {
     expect(
       screen.getByRole("combobox", { name: /Automations that ran/i })
         .textContent,
-    ).toContain("Daily digest");
+    ).toContain(en["notifications.delivery.digest"]);
     // The set came back whole and the untouched rows came back with it.
     expect(
       screen.getByRole("combobox", { name: /Approvals waiting on you/i })
@@ -382,7 +384,7 @@ describe("NotificationSettingsCard", () => {
     expect(
       screen.getByRole("combobox", { name: /Automations that ran/i })
         .textContent,
-    ).toContain("Daily digest");
+    ).toContain(en["notifications.delivery.digest"]);
     expect(screen.getByRole("button", { name: "Save" })).not.toBeNull();
   });
 

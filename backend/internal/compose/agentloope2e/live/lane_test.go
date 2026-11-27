@@ -44,6 +44,9 @@ func labRoot(t *testing.T) string {
 	patterns := []string{
 		"e2e/llm/candidates.json", "e2e/llm/candidates.py", "e2e/llm/judge.py", "e2e/llm/judge_cli.py", DefaultPreset,
 		runnerDir + "/window.go", HarnessDir + "/runner_integration_test.go",
+		"backend/internal/compose/registry.go", "backend/internal/compose/fortest_integration.go",
+		"backend/internal/compose/loopfault/*.go", "backend/internal/modules/agents/tools.go",
+		"backend/internal/modules/agents/registry.go", "backend/internal/modules/agents/tools_readfailure.go",
 		lanePackage + "/*.go", lanePackage + "/live/*.go",
 		HarnessDir + "/agentloop_*_test.go", ScenarioDir + "/*.yaml",
 	}
@@ -122,6 +125,11 @@ func TestEachStampPartMovesWithItsOwnInput(t *testing.T) {
 		for name, edit := range map[string]func(lab string){
 			"a harness test file": func(lab string) {
 				appendTo(t, filepath.Join(lab, HarnessDir, "agentloop_models_integration_test.go"))
+			},
+			"fault reader":          func(lab string) { appendTo(t, filepath.Join(lab, "backend/internal/compose/loopfault/reader.go")) },
+			"fault registry wiring": func(lab string) { appendTo(t, filepath.Join(lab, "backend/internal/compose/registry.go")) },
+			"fault read boundary": func(lab string) {
+				appendTo(t, filepath.Join(lab, "backend/internal/modules/agents/tools_readfailure.go"))
 			},
 			"a lane source file": func(lab string) { appendTo(t, filepath.Join(lab, lanePackage, "check.go")) },
 			"the live package":   func(lab string) { appendTo(t, filepath.Join(lab, lanePackage, "live", "certify.go")) },

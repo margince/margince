@@ -3,6 +3,7 @@
 
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, screen, userEvent, waitFor, within } from "storybook/test";
+import { en as englishCopy } from "../../i18n/en";
 import {
   jsonResponse,
   type RouteMap,
@@ -43,14 +44,16 @@ export const FieldsRefused: Story = {
   play: async () => {
     const box = within(await screen.findByRole("dialog"));
     await userEvent.type(
-      box.getByRole("textbox", { name: "Mailbox address" }),
+      box.getByRole("textbox", {
+        name: englishCopy["sharedMailboxes.address"],
+      }),
       "not-an-email",
     );
     const port = box.getByRole("textbox", { name: "Port" });
     await userEvent.clear(port);
     await userEvent.type(port, "abc");
     await userEvent.click(
-      box.getByRole("button", { name: "Connect a shared mailbox" }),
+      box.getByRole("button", { name: englishCopy["sharedMailboxes.connect"] }),
     );
     const sentence = await box.findByText("Enter a whole number for Port.");
     await waitFor(() => expect(sentence).toBeVisible());
@@ -75,7 +78,9 @@ export const LoginRefused: Story = {
   play: async () => {
     const box = within(await screen.findByRole("dialog"));
     await userEvent.type(
-      box.getByRole("textbox", { name: "Mailbox address" }),
+      box.getByRole("textbox", {
+        name: englishCopy["sharedMailboxes.address"],
+      }),
       "sales@acme.example",
     );
     await userEvent.click(
@@ -89,15 +94,19 @@ export const LoginRefused: Story = {
       "imap.acme.example",
     );
     await userEvent.type(
-      box.getByRole("textbox", { name: "Email address" }),
+      box.getByRole("textbox", {
+        name: englishCopy["connectors.imapUsername"],
+      }),
       "sales@acme.example",
     );
     await userEvent.type(
-      box.getByLabelText("App password", { exact: false }),
+      box.getByLabelText(englishCopy["connectors.imapSecret"], {
+        exact: false,
+      }),
       "app-password",
     );
     await userEvent.click(
-      box.getByRole("button", { name: "Connect a shared mailbox" }),
+      box.getByRole("button", { name: englishCopy["sharedMailboxes.connect"] }),
     );
     const sentence = await box.findByText(/rejected these credentials/);
     await waitFor(() => expect(sentence).toBeVisible());

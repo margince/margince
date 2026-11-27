@@ -6,6 +6,7 @@ import "@testing-library/jest-dom/vitest";
 import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../i18n/en";
 import { renderWithQueryClient } from "../testing/queryrender";
 import {
   installFetchStub,
@@ -98,17 +99,25 @@ it("reviews current versions and handles only eligible submissions without enabl
   expect(preview).not.toHaveBeenCalled();
   expect(write).not.toHaveBeenCalled();
   await user.click(
-    screen.getByRole("button", { name: "Review selected inquiries" }),
+    screen.getByRole("button", {
+      name: englishCopy["inquiry.reviewSelection"],
+    }),
   );
-  expect(await screen.findByText("Ready to handle")).toBeVisible();
-  expect(screen.getByText("Already handled")).toBeVisible();
+  expect(
+    await screen.findByText(englishCopy["inquiry.result.eligible"]),
+  ).toBeVisible();
+  expect(
+    screen.getByText(englishCopy["inquiry.result.alreadyHandled"]),
+  ).toBeVisible();
   expect(screen.getByText("Lena Vogel")).toBeVisible();
   expect(screen.getByText("ops@example.test")).toBeVisible();
   expect(write).not.toHaveBeenCalled();
   await user.click(
-    screen.getByRole("button", { name: "Create the reviewed tasks" }),
+    screen.getByRole("button", { name: englishCopy["inquiry.handleSelected"] }),
   );
-  expect(await screen.findByText("Task created")).toBeVisible();
+  expect(
+    await screen.findByText(englishCopy["inquiry.result.taskCreated"]),
+  ).toBeVisible();
   expect(write).toHaveBeenCalledWith(
     expect.objectContaining({
       automation_id: INQUIRY_AUTOMATION.id,
@@ -119,7 +128,9 @@ it("reviews current versions and handles only eligible submissions without enabl
   );
   expect(close).not.toHaveBeenCalled();
   expect(
-    screen.queryByRole("button", { name: "Create the reviewed tasks" }),
+    screen.queryByRole("button", {
+      name: englishCopy["inquiry.handleSelected"],
+    }),
   ).not.toBeInTheDocument();
 });
 
@@ -150,16 +161,20 @@ it("keeps a changed result visible so it can be read and reviewed again", async 
     await screen.findByRole("checkbox", { name: "Select Lena Vogel" }),
   );
   await user.click(
-    screen.getByRole("button", { name: "Review selected inquiries" }),
+    screen.getByRole("button", {
+      name: englishCopy["inquiry.reviewSelection"],
+    }),
   );
   await user.click(
-    await screen.findByRole("button", { name: "Create the reviewed tasks" }),
+    await screen.findByRole("button", {
+      name: englishCopy["inquiry.handleSelected"],
+    }),
   );
   expect(
-    await screen.findByText("Changed since selection. Read it again."),
+    await screen.findByText(englishCopy["inquiry.result.changed"]),
   ).toBeVisible();
   await user.click(
-    screen.getByRole("button", { name: "Choose submissions again" }),
+    screen.getByRole("button", { name: englishCopy["inquiry.chooseAgain"] }),
   );
   await waitFor(() =>
     expect(
@@ -167,7 +182,9 @@ it("keeps a changed result visible so it can be read and reviewed again", async 
     ).not.toBeChecked(),
   );
   expect(
-    screen.getByRole("button", { name: "Review selected inquiries" }),
+    screen.getByRole("button", {
+      name: englishCopy["inquiry.reviewSelection"],
+    }),
   ).toBeDisabled();
 });
 
@@ -197,11 +214,15 @@ it("refuses to create tasks when the selected-source preview fails", async () =>
     await screen.findByRole("checkbox", { name: "Select Lena Vogel" }),
   );
   await user.click(
-    screen.getByRole("button", { name: "Review selected inquiries" }),
+    screen.getByRole("button", {
+      name: englishCopy["inquiry.reviewSelection"],
+    }),
   );
   await waitFor(() =>
     expect(
-      screen.getByRole("button", { name: "Create the reviewed tasks" }),
+      screen.getByRole("button", {
+        name: englishCopy["inquiry.handleSelected"],
+      }),
     ).toBeDisabled(),
   );
   expect(write).not.toHaveBeenCalled();

@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { PageTitle } from "../../app/shell";
 import { translate } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import * as router from "../../lib/router";
 import { settingsHref } from "../../lib/settingsrouting";
 import {
@@ -57,7 +58,7 @@ describe("SettingsScreen page layout", () => {
     // The granted pages appear once the /me probe resolves the grant map.
     await waitFor(() =>
       expect(
-        screen.getByRole("link", { name: "Records and fields" }),
+        screen.getByRole("link", { name: englishCopy["settings.tab.records"] }),
       ).toBeTruthy(),
     );
     // The subjects the level carries, after the group naming the level. A group
@@ -95,7 +96,7 @@ describe("SettingsScreen page layout", () => {
     expect(account.getAttribute("href")).toBe("/#/settings/account");
     expect(
       screen
-        .getByRole("link", { name: "Records and fields" })
+        .getByRole("link", { name: englishCopy["settings.tab.records"] })
         .getAttribute("href"),
     ).toBe("/#/settings/records");
   });
@@ -111,7 +112,9 @@ describe("SettingsScreen page layout", () => {
     render(<SettingsScreen route={settingsHref("records")} />);
     // Visible once /me resolves the custom_field read grant.
     expect(
-      await screen.findByRole("heading", { name: "Custom fields" }),
+      await screen.findByRole("heading", {
+        name: englishCopy["roles.object.custom_field"],
+      }),
     ).toBeTruthy();
     // The editor IS the content now, so nothing on the page navigates to it.
     expect(screen.queryByRole("link", { name: /custom fields/i })).toBeNull();
@@ -144,7 +147,9 @@ describe("SettingsScreen page layout", () => {
       await screen.findByRole("heading", { name: "Products" }),
     ).toBeTruthy();
     expect(
-      screen.getByRole("heading", { name: "Offer templates" }),
+      screen.getByRole("heading", {
+        name: englishCopy["roles.object.offer_template"],
+      }),
     ).toBeTruthy();
     const hrefs = screen
       .queryAllByRole("link")

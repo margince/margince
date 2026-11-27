@@ -13,6 +13,7 @@ import type { ReactNode } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { serviceAccountProblem } from "../../design-system/serviceaccountkeyfield";
 import { LocaleProvider } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { type GrantSpec, meFixture } from "../../testing/mefixture";
 import { AiProviderKeysCard } from "./ai-provider-keys";
 
@@ -117,9 +118,11 @@ describe("a service-account provider key", () => {
 
     const row = await openRow(user);
     expect(
-      screen.getByText("Service account key configured"),
+      screen.getByText(englishCopy["aiProviderKeys.serviceAccountConfigured"]),
     ).toBeInTheDocument();
-    const box = within(row).getByLabelText("Service-account key (JSON)");
+    const box = within(row).getByLabelText(
+      englishCopy["serviceAccountKey.label"],
+    );
     expect(box.tagName).toBe("TEXTAREA");
     expect(box).toHaveValue("");
     expect(within(row).queryByPlaceholderText(/paste the api key/i)).toBeNull();
@@ -136,12 +139,12 @@ describe("a service-account provider key", () => {
 
     const row = await openRow(user);
     await user.upload(
-      within(row).getByLabelText("Or choose the key file"),
+      within(row).getByLabelText(englishCopy["serviceAccountKey.fileLabel"]),
       new File([KEY_FILE], "acme-eu.json", { type: "application/json" }),
     );
     await waitFor(() =>
       expect(
-        within(row).getByLabelText("Service-account key (JSON)"),
+        within(row).getByLabelText(englishCopy["serviceAccountKey.label"]),
       ).toHaveValue(KEY_FILE),
     );
     await user.click(within(row).getByRole("button", { name: /save key/i }));
@@ -158,7 +161,9 @@ describe("a service-account provider key", () => {
     render(<AiProviderKeysCard />);
 
     const row = await openRow(user);
-    await user.click(within(row).getByLabelText("Service-account key (JSON)"));
+    await user.click(
+      within(row).getByLabelText(englishCopy["serviceAccountKey.label"]),
+    );
     await user.paste("AIzaSy-this-is-an-api-key");
     await user.click(within(row).getByRole("button", { name: /save key/i }));
 

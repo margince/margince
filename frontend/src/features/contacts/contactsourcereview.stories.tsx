@@ -80,7 +80,7 @@ export const Drawer: Story = {
   play: async ({ canvasElement }) => {
     await userEvent.click(
       await within(canvasElement).findByRole("button", {
-        name: "Review source",
+        name: en["notice.source.review"],
       }),
     );
   },

@@ -89,11 +89,11 @@ async function createFromHead(alone: string) {
   render(<PipelinesCard />);
   const head = await screen.findByRole("region", { name: alone });
   await user.click(
-    await within(head).findByRole("button", { name: "New pipeline" }),
+    await within(head).findByRole("button", { name: en["pipeline.new"] }),
   );
   await user.type(screen.getByLabelText(/Name/), "Partnerships");
   await user.click(screen.getByRole("button", { name: "Create" }));
-  await screen.findByRole("region", { name: "All pipelines" });
+  await screen.findByRole("region", { name: en["pipeline.catalog"] });
 }
 
 describe("PipelinesCard: the second pipeline", () => {
@@ -146,7 +146,7 @@ describe("PipelinesCard: a refusal that lands mid-edit", () => {
     server(TWO_PIPELINES);
     const { client } = render(<PipelinesCard />);
     await user.click(
-      await screen.findByRole("button", { name: "New pipeline" }),
+      await screen.findByRole("button", { name: en["pipeline.new"] }),
     );
     expect(screen.getByLabelText(/Name/)).toBeTruthy();
     act(() => {
@@ -218,13 +218,11 @@ describe("PipelinesCard: a name already in use", () => {
     render(<PipelinesCard />);
     const head = await screen.findByRole("region", { name: "Sales" });
     await user.click(
-      await within(head).findByRole("button", { name: "New pipeline" }),
+      await within(head).findByRole("button", { name: en["pipeline.new"] }),
     );
     await user.type(screen.getByLabelText(/Name/), "Sales");
     await user.click(screen.getByRole("button", { name: "Create" }));
-    expect(
-      await screen.findByText("A pipeline with this name already exists."),
-    ).toBeTruthy();
+    expect(await screen.findByText(en["pipeline.nameTaken"])).toBeTruthy();
     expect(screen.getByLabelText(/Name/).getAttribute("aria-invalid")).toBe(
       "true",
     );

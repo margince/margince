@@ -6,6 +6,7 @@ import { cleanup, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { useState } from "react";
 import { afterEach, expect, it, vi } from "vitest";
+import { en as englishCopy } from "../../i18n/en";
 import { jsonResponse, render } from "./users-admin.testkit";
 import { MemberTeamsField } from "./users-teams";
 
@@ -48,7 +49,7 @@ it("starts an empty workspace's first team from the field, and puts the member o
   const user = userEvent.setup();
   const created = teamsServer();
   render(<Field />);
-  expect(await screen.findByText("No teams yet.")).toBeTruthy();
+  expect(await screen.findByText(englishCopy["users.noTeamsYet"])).toBeTruthy();
   await user.click(screen.getByRole("button", { name: /New team/ }));
   await user.type(screen.getByRole("searchbox"), "DACH Sales");
   await user.click(

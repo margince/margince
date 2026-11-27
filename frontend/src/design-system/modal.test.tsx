@@ -10,6 +10,7 @@ import userEvent from "@testing-library/user-event";
 import { useEffect, useRef, useState } from "react";
 import { afterEach, describe, expect, it, vi } from "vitest";
 import { stable } from "../format/collate";
+import { en as englishCopy } from "../i18n/en";
 import { useUnsavedGuard } from "../lib/unsavedclaims";
 import { Button, Modal } from "./atoms";
 import { Heading } from "./heading";
@@ -809,7 +810,7 @@ function NoteField() {
 }
 
 const question = () =>
-  screen.queryByRole("dialog", { name: "Discard unsaved changes?" });
+  screen.queryByRole("dialog", { name: englishCopy["unsaved.title"] });
 
 describe("a backdrop click closes only a press that starts and ends there", () => {
   it("stays open when a press inside ends on the backdrop", () => {
@@ -915,7 +916,9 @@ describe("a dialog holding typed text asks before it closes", () => {
     render(<NoteDialog onClose={onClose} />);
     await user.type(screen.getByLabelText("Details"), "Pricing call");
     await user.keyboard("{Escape}");
-    await user.click(screen.getByRole("button", { name: "Discard changes" }));
+    await user.click(
+      screen.getByRole("button", { name: englishCopy["unsaved.discard"] }),
+    );
     expect(onClose).toHaveBeenCalledTimes(1);
   });
 
@@ -966,7 +969,11 @@ describe("a dialog holding typed text asks before it closes", () => {
     view.rerender(dialog(false));
     view.rerender(dialog(true));
     expect(question()).toBeNull();
-    expect(screen.getByRole("dialog", { name: "Log activity" })).toBeTruthy();
+    expect(
+      screen.getByRole("dialog", {
+        name: englishCopy["shell.shortcuts.logActivity"],
+      }),
+    ).toBeTruthy();
   });
 
   it("asks for a draft the caller holds", async () => {

@@ -12,6 +12,7 @@ import { afterEach, describe, expect, it, vi } from "vitest";
 
 import type { components } from "../api/schema";
 import { LocaleProvider } from "../i18n";
+import { en as englishCopy } from "../i18n/en";
 import { EmailDetail } from "./emaildetail";
 import { EmailEntry, EmailFiles, EmailWords } from "./emailentry";
 import { EmailReference } from "./emailreference";
@@ -498,7 +499,9 @@ describe("EmailReference", () => {
     // The subject the caller passed is not this reader's to see, and an opener
     // the caller passed leads to a message they may not read.
     expect(screen.queryByText("Angebot Q4")).not.toBeInTheDocument();
-    expect(screen.getByText("Not shared with you")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["email.withheldSubject"]),
+    ).toBeInTheDocument();
     expect(screen.queryByRole("button")).not.toBeInTheDocument();
   });
 
@@ -547,7 +550,9 @@ describe("EmailDetail", () => {
     // reader who could have caught it agreed with it instead. A sign-off is the
     // sender still speaking; only an older message underneath gets folded.
     await screen.findByText("Können wir Dienstag sprechen?");
-    expect(screen.queryByText("Show quoted history")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText(englishCopy["email.detail.showQuoted"]),
+    ).not.toBeInTheDocument();
     expect(screen.getByText(/Viele Grüße/)).toBeInTheDocument();
     expect(screen.getByText(/Ana Sommer/)).toBeInTheDocument();
   });
@@ -632,7 +637,9 @@ describe("EmailDetail", () => {
       />,
     );
     await screen.findByText("Ja, gerne.");
-    expect(screen.getByText("Show quoted history")).toBeInTheDocument();
+    expect(
+      screen.getByText(englishCopy["email.detail.showQuoted"]),
+    ).toBeInTheDocument();
     expect(screen.getByText(/Passt Dienstag\?/)).toBeInTheDocument();
   });
 
@@ -716,7 +723,7 @@ describe("EmailDetail", () => {
         formatWhen={() => "1 Sep 09:12"}
       />,
     );
-    await screen.findByText("Not shared with you");
+    await screen.findByText(englishCopy["email.withheldSubject"]);
     // No sender, no words, and no reason: why a message is limited describes
     // what it is about.
     expect(screen.queryByText(/Ana Sommer/)).not.toBeInTheDocument();

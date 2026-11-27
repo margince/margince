@@ -1,6 +1,7 @@
 import type { Meta, StoryObj } from "@storybook/react-vite";
 import { expect, within } from "storybook/test";
 import type { components } from "../api/schema";
+import { en as englishCopy } from "../i18n/en";
 import {
   installFetchStub,
   jsonResponse,
@@ -50,7 +51,7 @@ export const ChooseRecord: Story = {
   play: async ({ canvasElement }) => {
     await expect(
       within(canvasElement).getByRole("searchbox", {
-        name: "Which record is this activity for?",
+        name: englishCopy["tasks.log.record"],
       }),
     ).toBeVisible();
   },
@@ -65,12 +66,12 @@ export const ContactOutcome: Story = {
     ]),
   play: async ({ canvasElement }) => {
     await expect(
-      within(canvasElement).getByRole("checkbox", { name: "Mark task done" }),
+      within(canvasElement).getByRole("checkbox", {
+        name: englishCopy["tasks.log.markDone"],
+      }),
     ).toBeChecked();
     await expect(
-      await within(canvasElement).findByText(
-        "Drop files here, or click to choose them",
-      ),
+      await within(canvasElement).findByText(englishCopy["log.filesEmpty"]),
     ).toBeVisible();
   },
 };

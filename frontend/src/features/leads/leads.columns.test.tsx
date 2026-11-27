@@ -15,6 +15,7 @@ import type { CreateFieldOption } from "../../components/create.fields";
 import { armHoverIntent } from "../../design-system/hoverintent-testing";
 import { type ListColumn, ListTable } from "../../design-system/listtable";
 import { LocaleProvider, useT } from "../../i18n";
+import { en as englishCopy } from "../../i18n/en";
 import { useCompanyZone } from "../../lib/companyzone";
 import { companyNamesAnswer } from "../../testing/companynames.testkit";
 import { openViewStep } from "../../testing/listview.testkit";
@@ -283,7 +284,9 @@ describe("the lead score cell", () => {
     if (!(score instanceof HTMLElement)) throw new Error("no score anchor");
     expect(score).toHaveAccessibleDescription("Decision-maker title");
     expect(score).not.toHaveAttribute("tabindex");
-    expect(screen.getByText("Decision-maker title")).not.toBeVisible();
+    expect(
+      screen.getByText(englishCopy["lead.factor.decision_maker_title"]),
+    ).not.toBeVisible();
   });
 
   it("raises the reason as a tip once the pointer settles on the score", async () => {
@@ -408,7 +411,7 @@ describe("a lead's row on a phone", () => {
     ]);
     const row = await phoneRowOf("Anna Example");
     expect(row.caption).toEqual([]);
-    expect(row.row).not.toHaveTextContent("No next step");
+    expect(row.row).not.toHaveTextContent(englishCopy["lead.noNextTask"]);
   });
 
   it("names a linked company as words, not as a second link in the row", async () => {
