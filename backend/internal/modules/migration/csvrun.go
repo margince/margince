@@ -206,7 +206,7 @@ func (s *RunStore) GetStaged(ctx context.Context, id RunID) (Run, error) {
 // never carries.
 func readStaged(ctx context.Context, tx pgx.Tx, id RunID) (Run, error) {
 	args := []any{id}
-	scope := ownRunScope(ctx, "captured_by", func(v any) int { args = append(args, v); return len(args) })
+	scope := ownRunScope(ctx, "own_seat", func(v any) int { args = append(args, v); return len(args) })
 	run, err := scanStaged(tx.QueryRow(ctx, `SELECT `+stagedColumns+`, profile FROM import_run WHERE id = $1`+scope, args...), true)
 	if errors.Is(err, pgx.ErrNoRows) {
 		return Run{}, fmt.Errorf("import run %s: %w", id, apperrors.ErrNotFound)
@@ -242,7 +242,7 @@ func (s *RunStore) ListStaged(ctx context.Context, cursor string, limit int, vie
 	}
 	var args []any
 	arg := func(v any) int { args = append(args, v); return len(args) }
-	where := storekit.SQLf(`connector = $%d`, arg(ConnectorCSV)) + ownRunScope(ctx, "captured_by", arg)
+	where := storekit.SQLf(`connector = $%d`, arg(ConnectorCSV)) + ownRunScope(ctx, "own_seat", arg)
 	switch view {
 	case ViewHistory:
 		where += storekit.SQLf(` AND status NOT IN ($%d, $%d)`, arg(StatusPending), arg(StatusCancelled))

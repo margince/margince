@@ -121,8 +121,8 @@ func (o *ownerResolver) ownerFor(raw string) (*ids.UserID, *migration.SkippedRow
 // ownerOf resolves a row's owner cell, with the warning placed on the row's
 // own line and column.
 func (w *csvWriters) ownerOf(row migration.Row) (*ids.UserID, *migration.SkippedRow) {
-	if w.owners.own != nil {
-		return w.owners.own, nil
+	if own := w.ownSeat(); own != nil {
+		return own, nil
 	}
 	raw := strings.TrimSpace(textFields(row.Fields)[csvTargetOwner])
 	if raw == "" {
@@ -187,4 +187,13 @@ func collapseUnknownOwners(issues []crmcontracts.ImportRowIssue) []crmcontracts.
 		}
 	}
 	return out
+}
+
+// ownSeat is the seat an own import forces as owner, or nil for a workspace
+// import and for writers built without an owner resolver.
+func (w *csvWriters) ownSeat() *ids.UserID {
+	if w.owners == nil {
+		return nil
+	}
+	return w.owners.own
 }

@@ -19,7 +19,7 @@ import (
 // human's import grant stages and commits imports through the same code, and
 // must not become the one who names authors.
 func TestTheAuthorColumnIsTheDeclaredImportersAlone(t *testing.T) {
-	grant := principal.Permissions{Objects: map[string]principal.ObjectGrant{"import_run": {Create: true}}}
+	grant := principal.Permissions{Objects: map[string]principal.ObjectGrant{"import_run": {Create: true, Read: true, Update: true, Delete: true}}}
 	as := func(p principal.Principal) context.Context {
 		return principal.WithActor(context.Background(), p)
 	}
@@ -36,6 +36,11 @@ func TestTheAuthorColumnIsTheDeclaredImportersAlone(t *testing.T) {
 		t.Errorf("the declared importer was refused its author column: %v", err)
 	}
 	var refused *provenance.AuthorError
+	ownGrant := principal.Permissions{Objects: map[string]principal.ObjectGrant{"import_run": {Create: true, Read: true, Update: true}}}
+	rep := as(principal.Principal{Type: principal.PrincipalHuman, ID: "human:rep", Permissions: ownGrant})
+	if err := refuseAuthorFromNonImporter(rep, withAuthor); !errors.As(err, &refused) {
+		t.Errorf("a rep who imports only their own records mapped an author column: %v", err)
+	}
 	if err := refuseAuthorFromNonImporter(agent, withAuthor); !errors.As(err, &refused) || refused.Code != "reserved_source_author" {
 		t.Errorf("an agent mapped an author column: %v", err)
 	}

@@ -88,7 +88,7 @@ func (h Handlers) LogActivity(w http.ResponseWriter, r *http.Request, _ crmcontr
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// A declared importer — a HUMAN holding import_run:create — may stamp the
+	// A declared importer — a HUMAN holding import_run:create and :delete — may stamp the
 	// reserved mirror: namespace, so its rows replay idempotently and rank as
 	// captured history rather than as first-party testimony. Everyone else gets
 	// the client door, an agent carrying that human's own grants included.

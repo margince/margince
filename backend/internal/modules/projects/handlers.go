@@ -53,7 +53,7 @@ func (h Handlers) CreateProject(w http.ResponseWriter, r *http.Request, _ crmcon
 	if !httperr.Decode(w, r, &req) {
 		return
 	}
-	// A declared importer (a HUMAN holding import_run:create) may stamp the
+	// A declared importer (a HUMAN holding import_run:create and :delete) may stamp the
 	// reserved mirror: namespace; everyone else, an agent carrying that human's
 	// grants included, gets the closed door.
 	mapInput := ProjectCreationInput

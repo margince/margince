@@ -232,7 +232,7 @@ func (s *RunStore) beginUndo(ctx context.Context, id RunID, enqueue Enqueue) (Ru
 			return err
 		}
 		args := []any{id}
-		scope := ownRunScope(ctx, "captured_by", func(v any) int { args = append(args, v); return len(args) })
+		scope := ownRunScope(ctx, "own_seat", func(v any) int { args = append(args, v); return len(args) })
 		row := tx.QueryRow(ctx, `
 			SELECT id, connector, status, checkpoint, undo_report, report, source_name
 			  FROM import_run

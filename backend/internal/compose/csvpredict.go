@@ -207,6 +207,9 @@ func (w *csvWriters) reconcilePrediction(
 	if err != nil {
 		return predictCreate, migration.Reason{}, err
 	}
+	if why, err := w.notYourRecord(current); err != nil || why.Code != "" {
+		return predictUnwritable, why, err
+	}
 	changed, kept, err := w.landingChanges(ctx, row, current, typed)
 	if err != nil {
 		return predictCreate, migration.Reason{}, err

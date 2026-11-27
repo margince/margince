@@ -40,14 +40,14 @@ import (
 	"github.com/margince/margince/backend/internal/shared/ports/connector"
 )
 
-// importerPerms is AdminPerms plus the one grant the door reads. The harness
-// admin does NOT hold import_run, so this addition is what makes the caller an
-// importer — and its absence is what the refusal cases rely on.
+// importerPerms is AdminPerms plus the full import_run grant of a workspace
+// importer. The harness admin does NOT hold import_run, so this addition is
+// what makes the caller one, and its absence is what the refusal cases rely on.
 func importerPerms() principal.Permissions {
 	perms := integration.AdminPerms
 	objects := make(map[string]principal.ObjectGrant, len(perms.Objects)+1)
 	maps.Copy(objects, perms.Objects)
-	objects["import_run"] = principal.ObjectGrant{Create: true}
+	objects["import_run"] = principal.ObjectGrant{Create: true, Read: true, Update: true, Delete: true}
 	perms.Objects = objects
 	return perms
 }

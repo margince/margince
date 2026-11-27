@@ -33,6 +33,42 @@ func stageImport(t *testing.T, e *apptest.AppEnv, object, sourceRef string, mapp
 	return status, out
 }
 
+// roleSeat signs in a new member of role, as repSeat does for a rep.
+func roleSeat(t *testing.T, e *apptest.AppEnv, email, role string) *apptest.AppEnv {
+	t.Helper()
+	const password = "own-import-password"
+	seat := createdID(t, e, "/v1/users", AnyMap{"email": email, "display_name": "Mia Manager", "role": role})
+	apptest.SetPasswordByLink(t, e, seat, password)
+	return e.AsSecondSeat(t, email, password)
+}
+
+// Management sees every lead but imports only its own. A row that names a
+// colleague's lead by id is skipped: the lead keeps its name and does
+// not become theirs.
+func TestAnOwnImportLeavesAColleaguesRecordAlone(t *testing.T) {
+	e := setupImportApp(t)
+	e.DescribeCompany(t)
+	lead := createdRecord(t, e, "/v1/leads", AnyMap{"source": "manual", "full_name": "Ada Kept", "email": "kept@own-import.example"})
+	boss := roleSeat(t, e, "boss@own-import.test", "management")
+
+	profile, _ := importjobtest.UploadCSV(t, boss, "lead", "id,Name,Email\n"+lead+",Taken Over,kept@own-import.example\n")
+	status, run := stageImport(t, boss, "lead", profile.SourceRef, map[string]string{"id": "id", "Name": "full_name", "Email": "email"})
+	if status != http.StatusAccepted {
+		t.Fatalf("the management import → %d %v, want 202", status, run)
+	}
+	runID, _ := run["id"].(string)
+	importjobtest.Drain(t, boss)
+	approveAndRead(t, boss, runID)
+
+	var name, owner string
+	if err := e.Owner.QueryRow(t.Context(), `SELECT full_name, coalesce(owner_id::text, '') FROM lead WHERE id = $1`, lead).Scan(&name, &owner); err != nil {
+		t.Fatalf("reading the lead: %v", err)
+	}
+	if name != "Ada Kept" || owner != "" {
+		t.Fatalf("the colleague's lead reads %q owned by %q, want %q with no owner", name, owner, "Ada Kept")
+	}
+}
+
 // A rep imports their own leads. Every row they import is theirs, even where
 // the file names a colleague as its owner.
 func TestARepImportsLeadsTheyOwn(t *testing.T) {

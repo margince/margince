@@ -84,7 +84,7 @@ func newBundleWriters(
 		seen[part.Object] = true
 	}
 	options := runOptionsOf(settled)
-	b := &bundleWriters{parts: map[string]*csvWriters{}, links: newLinkResolver(db, importwire.SourceSystem(settled.SourceName))}
+	b := &bundleWriters{parts: map[string]*csvWriters{}, links: newLinkResolver(db, importwire.SourceSystem(settled.SourceName, migration.OwnSeat(ctx)))}
 	if err := b.resolveOwnersAndTags(ctx, db, src); err != nil {
 		return nil, err
 	}

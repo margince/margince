@@ -357,6 +357,9 @@ func (w *csvWriters) reconcile(ctx context.Context, id ids.UUID, row migration.R
 	if err != nil {
 		return migration.EnsureResult{}, err
 	}
+	if why, err := w.notYourRecord(current); err != nil || why.Code != "" {
+		return skippedFor(why), err
+	}
 	changed, keptWhy, err := w.landingChanges(ctx, row, current, typed)
 	if err != nil {
 		return migration.EnsureResult{}, err
