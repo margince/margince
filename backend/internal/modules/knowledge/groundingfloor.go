@@ -48,6 +48,18 @@ var measuredFloors = []FloorMeasurement{
 		MeasuredOn: time.Date(2026, time.October, 13, 0, 0, 0, 0, time.UTC), Owner: "ai-models",
 	},
 	{
+		// Covered 0.57–0.75, uncovered 0.22–0.57 over eight questions each on a
+		// one-document corpus at 1024 dimensions. 0.54 keeps every covered question;
+		// one uncovered question on the same subject still passes it.
+		Model: "bge-m3", Floor: 0.54, Separable: true,
+		MeasuredOn: time.Date(2026, time.November, 27, 0, 0, 0, 0, time.UTC), Owner: "ai-models",
+	},
+	{
+		// The same weights as bge-m3, under the name a vLLM server serves them.
+		Model: "BAAI/bge-m3", Floor: 0.54, Separable: true,
+		MeasuredOn: time.Date(2026, time.November, 27, 0, 0, 0, 0, time.UTC), Owner: "ai-models",
+	},
+	{
 		// A covered question scored 0.670 and an unrelated one 0.672 against
 		// the same passage.
 		Model: "mistralai/mistral-embed-2312", Separable: false,

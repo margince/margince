@@ -1600,6 +1600,26 @@
           ],
           "default": true
         },
+        "capture_confidentiality_verdict_interval_seconds": {
+          "description": "Seconds between the passes that judge whether colleagues may read a captured thread.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 60,
+          "maximum": 86400,
+          "default": 600
+        },
+        "capture_counterparty_verdict_interval_seconds": {
+          "description": "Seconds between the passes that judge who a new sender is.",
+          "type": [
+            "integer",
+            "null"
+          ],
+          "minimum": 60,
+          "maximum": 86400,
+          "default": 600
+        },
         "close_date_sweep_interval_seconds": {
           "description": "Seconds between the close-date sweeps.",
           "type": [
