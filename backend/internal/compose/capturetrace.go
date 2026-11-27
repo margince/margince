@@ -83,8 +83,27 @@ func verdictPass(pool *pgxpool.Pool, kind string) capture.VerdictPass {
 		if err != nil {
 			return capture.VerdictClock{}, err
 		}
+		every, err := configuredEvery(ctx, pool, kind, pass.Every)
+		if err != nil {
+			return capture.VerdictClock{}, err
+		}
 		return capture.VerdictClock{
-			Every: pass.Every, Running: pass.Running, Queued: pass.Queued, NextAt: pass.NextAt,
+			Every: every, Running: pass.Running, Queued: pass.Queued, NextAt: pass.NextAt,
 		}, nil
 	}
+}
+
+// configuredEvery is the interval a pass really runs on. A kind whose cadence
+// is an installation setting has no fixed one in its declaration, so it is read
+// from that setting, the same value the worker schedules from.
+func configuredEvery(ctx context.Context, pool *pgxpool.Pool, kind string, declared time.Duration) (time.Duration, error) {
+	spec, ok := jobs.SpecFor(kind)
+	if !ok || spec.Cadence.Setting == "" {
+		return declared, nil
+	}
+	read, err := installationSettingReader(ctx, pool)
+	if err != nil {
+		return 0, err
+	}
+	return scheduleValue(spec.Cadence.Setting, read)
 }
