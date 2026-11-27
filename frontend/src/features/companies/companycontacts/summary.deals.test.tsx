@@ -135,15 +135,19 @@ test("offers no deal picker when the account has one open deal", async () => {
 test("falls back to the newest deal's committee when the picked deal has closed", async () => {
   const user = userEvent.setup();
   const asked: string[] = [];
+  let closed = false;
   vi.stubGlobal("fetch", (input: RequestInfo | URL) => {
     const named = new URL(new Request(input).url).searchParams.get("deal_id");
     asked.push(named ?? "");
     if (named === "d-retrofit") {
+      closed = true;
       return Promise.resolve(
         Response.json({ title: "Not found", status: 404 }, { status: 404 }),
       );
     }
-    return Promise.resolve(Response.json(committeeOf("d-fleet")));
+    // Once Retrofit has closed, the server's own answer no longer lists it.
+    const deals = closed ? [DEALS[0]] : DEALS;
+    return Promise.resolve(Response.json({ ...committeeOf("d-fleet"), deals }));
   });
   renderBand();
 
@@ -157,8 +161,14 @@ test("falls back to the newest deal's committee when the picked deal has closed"
   );
 
   await waitFor(() => expect(asked).toContain("d-retrofit"));
-  expect(
-    await screen.findByText("Buying committee · Fleet 2027"),
-  ).not.toBeNull();
+  // The refreshed answer lists one deal, so its picker leaves only once it lands.
+  await waitFor(() =>
+    expect(
+      screen.queryByRole("combobox", {
+        name: "Deal whose buying committee to show",
+      }),
+    ).toBeNull(),
+  );
+  expect(screen.getByText("Buying committee · Fleet 2027")).not.toBeNull();
   expect(screen.queryByText("Unavailable")).toBeNull();
 });
