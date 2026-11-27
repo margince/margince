@@ -2720,14 +2720,14 @@
               "env": "cloud_frontier"
             },
             "same_model": false,
-            "band": "certified",
+            "band": "not_supported",
             "state": "current"
           },
           "abandoned": 0,
-          "runs": 33,
-          "passed": 32,
+          "runs": 42,
+          "passed": 35,
           "cases_failing_often": 0,
-          "cases_below_quality_bar": 1,
+          "cases_below_quality_bar": 0,
           "scope": "full_invocation",
           "judge": "gemini-3.8-flash"
         },
@@ -10736,8 +10736,8 @@
       "answer": "mostly",
       "sites_shipped": 64,
       "sites_measured": 55,
-      "ready": 38,
-      "usable_with_care": 1,
+      "ready": 37,
+      "usable_with_care": 2,
       "not_reliable_yet": 0,
       "too_few_runs": 16,
       "recheck_pending": 15,
@@ -10756,18 +10756,18 @@
           "sites_current": 34,
           "sites_partial": 0,
           "sites_stale": 14,
-          "runs": 1230,
-          "passed": 1214,
-          "reliability": 0.9869918699186991,
+          "runs": 1239,
+          "passed": 1213,
+          "reliability": 0.9790153349475383,
           "reliability_interval": {
-            "lower": 0.982154,
-            "upper": 0.990531
+            "lower": 0.973127,
+            "upper": 0.983635
           },
-          "slowest_p95_ms": 31838,
+          "slowest_p95_ms": 72442,
           "bands": {
-            "certified": 30,
+            "certified": 29,
             "supported_degraded": 6,
-            "not_supported": 1,
+            "not_supported": 2,
             "too_few_runs": 11
           }
         },
@@ -10781,17 +10781,17 @@
           "sites_current": 33,
           "sites_partial": 0,
           "sites_stale": 12,
-          "runs": 906,
-          "passed": 889,
-          "reliability": 0.9812362030905077,
+          "runs": 915,
+          "passed": 892,
+          "reliability": 0.9748633879781421,
           "reliability_interval": {
-            "lower": 0.974528,
-            "upper": 0.986203
+            "lower": 0.967332,
+            "upper": 0.980693
           },
-          "slowest_p95_ms": 69604,
+          "slowest_p95_ms": 48579,
           "bands": {
-            "certified": 27,
-            "supported_degraded": 3,
+            "certified": 26,
+            "supported_degraded": 4,
             "not_supported": 0,
             "too_few_runs": 15
           }
@@ -10833,13 +10833,13 @@
           "task": "agent_loop",
           "best": {
             "provider": "anthropic",
-            "model": "claude-haiku-5-5",
+            "model": "claude-sonnet-5-5",
             "env": "cloud_frontier"
           },
-          "band": "certified",
+          "band": "supported_degraded",
           "state": "current",
-          "runs": 12,
-          "passed": 12,
+          "runs": 24,
+          "passed": 19,
           "records": 2,
           "judge": "gemini-3.8-flash"
         },
@@ -11641,14 +11641,14 @@
           "sites_current": 39,
           "sites_partial": 0,
           "sites_stale": 9,
-          "runs": 1347,
-          "passed": 1317,
-          "reliability": 0.977728285077951,
+          "runs": 1359,
+          "passed": 1325,
+          "reliability": 0.9749816041206769,
           "reliability_interval": {
-            "lower": 0.971964,
-            "upper": 0.982329
+            "lower": 0.968952,
+            "upper": 0.979865
           },
-          "slowest_p95_ms": 10127,
+          "slowest_p95_ms": 9179,
           "bands": {
             "certified": 21,
             "supported_degraded": 16,
@@ -11674,7 +11674,7 @@
             "lower": 0.993025,
             "upper": 0.998356
           },
-          "slowest_p95_ms": 36881,
+          "slowest_p95_ms": 35276,
           "bands": {
             "certified": 29,
             "supported_degraded": 2,
@@ -14155,18 +14155,18 @@
       "sites_current": 40,
       "sites_partial": 0,
       "sites_stale": 15,
-      "runs": 1335,
-      "passed": 1311,
-      "reliability": 0.9820224719101124,
+      "runs": 1344,
+      "passed": 1310,
+      "reliability": 0.9747023809523809,
       "reliability_interval": {
-        "lower": 0.976735,
-        "upper": 0.986125
+        "lower": 0.968606,
+        "upper": 0.97964
       },
-      "slowest_p95_ms": 31838,
+      "slowest_p95_ms": 72442,
       "bands": {
-        "certified": 32,
+        "certified": 31,
         "supported_degraded": 8,
-        "not_supported": 1,
+        "not_supported": 2,
         "too_few_runs": 14
       }
     },
@@ -14180,17 +14180,17 @@
       "sites_current": 39,
       "sites_partial": 0,
       "sites_stale": 13,
-      "runs": 999,
-      "passed": 981,
-      "reliability": 0.9819819819819819,
+      "runs": 1008,
+      "passed": 984,
+      "reliability": 0.9761904761904762,
       "reliability_interval": {
-        "lower": 0.975744,
-        "upper": 0.986638
+        "lower": 0.969218,
+        "upper": 0.981614
       },
-      "slowest_p95_ms": 69604,
+      "slowest_p95_ms": 48579,
       "bands": {
-        "certified": 30,
-        "supported_degraded": 4,
+        "certified": 29,
+        "supported_degraded": 5,
         "not_supported": 0,
         "too_few_runs": 18
       }
@@ -14205,14 +14205,14 @@
       "sites_current": 46,
       "sites_partial": 0,
       "sites_stale": 12,
-      "runs": 1623,
-      "passed": 1573,
-      "reliability": 0.9691928527418361,
+      "runs": 1635,
+      "passed": 1581,
+      "reliability": 0.9669724770642202,
       "reliability_interval": {
-        "lower": 0.963204,
-        "upper": 0.974233
+        "lower": 0.960823,
+        "upper": 0.972185
       },
-      "slowest_p95_ms": 10127,
+      "slowest_p95_ms": 9179,
       "bands": {
         "certified": 24,
         "supported_degraded": 18,
@@ -14365,7 +14365,7 @@
         "lower": 0.993819,
         "upper": 0.998543
       },
-      "slowest_p95_ms": 36881,
+      "slowest_p95_ms": 35276,
       "bands": {
         "certified": 33,
         "supported_degraded": 2,
@@ -15291,9 +15291,10 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "anthropic",
-          "model": "claude-haiku-5-5",
-          "env": "cloud_frontier"
+          "provider": "gemini",
+          "model": "gemini-3.8-flash",
+          "env": "cloud_frontier",
+          "thinking_level": "low"
         },
         "band": "certified",
         "runs": 12,
@@ -15350,8 +15351,8 @@
             "lower": 0.879604,
             "upper": 1
           },
-          "latency_p50_ms": 16284,
-          "latency_p95_ms": 31838,
+          "latency_p50_ms": 19304,
+          "latency_p95_ms": 72442,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -15367,21 +15368,21 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "certified",
+          "band": "supported_degraded",
           "judge": "gemini-3.8-flash",
           "scenarios_measured": 4,
           "scenarios_total": 4,
-          "runs": 15,
-          "passed": 14,
-          "reliability": 0.9333333333333333,
+          "runs": 18,
+          "passed": 16,
+          "reliability": 0.8888888888888888,
           "reliability_interval": {
-            "lower": 0.801292,
-            "upper": 0.979841
+            "lower": 0.75985,
+            "upper": 0.952891
           },
-          "latency_p50_ms": 24196,
-          "latency_p95_ms": 69604,
+          "latency_p50_ms": 25106,
+          "latency_p95_ms": 48579,
           "reported": {
-            "accepted": 15,
+            "accepted": 18,
             "wrong_answer": 0,
             "invalid": 0,
             "abstained": 0
@@ -15399,18 +15400,18 @@
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 4,
           "scenarios_total": 4,
-          "runs": 21,
-          "passed": 21,
-          "reliability": 1,
+          "runs": 15,
+          "passed": 14,
+          "reliability": 0.9333333333333333,
           "reliability_interval": {
-            "lower": 0.927459,
-            "upper": 1
+            "lower": 0.801292,
+            "upper": 0.979841
           },
-          "latency_p50_ms": 7102,
-          "latency_p95_ms": 10127,
+          "latency_p50_ms": 6406,
+          "latency_p95_ms": 9179,
           "reported": {
-            "accepted": 21,
-            "wrong_answer": 0,
+            "accepted": 14,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
@@ -15560,8 +15561,8 @@
             "lower": 0.879604,
             "upper": 1
           },
-          "latency_p50_ms": 20968,
-          "latency_p95_ms": 36881,
+          "latency_p50_ms": 22250,
+          "latency_p95_ms": 35276,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
@@ -15914,9 +15915,10 @@
       "best_state": "current",
       "recommended": {
         "binding": {
-          "provider": "anthropic",
-          "model": "claude-haiku-5-5",
-          "env": "cloud_frontier"
+          "provider": "gemini",
+          "model": "gemini-3.8-flash",
+          "env": "cloud_frontier",
+          "thinking_level": "low"
         },
         "band": "certified",
         "runs": 12,
@@ -15962,22 +15964,22 @@
             "env": "cloud_frontier"
           },
           "state": "current",
-          "band": "certified",
+          "band": "not_supported",
           "judge": "gemini-3.8-flash",
           "scenarios_measured": 4,
           "scenarios_total": 4,
-          "runs": 12,
-          "passed": 12,
-          "reliability": 1,
+          "runs": 21,
+          "passed": 11,
+          "reliability": 0.5238095238095238,
           "reliability_interval": {
-            "lower": 0.879604,
-            "upper": 1
+            "lower": 0.387557,
+            "upper": 0.656607
           },
-          "latency_p50_ms": 16284,
-          "latency_p95_ms": 31838,
+          "latency_p50_ms": 19304,
+          "latency_p95_ms": 72442,
           "reported": {
-            "accepted": 12,
-            "wrong_answer": 0,
+            "accepted": 11,
+            "wrong_answer": 10,
             "invalid": 0,
             "abstained": 0
           },
@@ -15994,18 +15996,18 @@
           "judge": "gemini-3.8-flash",
           "scenarios_measured": 4,
           "scenarios_total": 4,
-          "runs": 18,
-          "passed": 18,
-          "reliability": 1,
+          "runs": 24,
+          "passed": 19,
+          "reliability": 0.7916666666666666,
           "reliability_interval": {
-            "lower": 0.91638,
-            "upper": 1
+            "lower": 0.668517,
+            "upper": 0.877452
           },
-          "latency_p50_ms": 24196,
-          "latency_p95_ms": 69604,
+          "latency_p50_ms": 25106,
+          "latency_p95_ms": 48579,
           "reported": {
-            "accepted": 18,
-            "wrong_answer": 0,
+            "accepted": 23,
+            "wrong_answer": 1,
             "invalid": 0,
             "abstained": 0
           },
@@ -16022,18 +16024,18 @@
           "judge": "claude-sonnet-5-5",
           "scenarios_measured": 4,
           "scenarios_total": 4,
-          "runs": 12,
-          "passed": 12,
-          "reliability": 1,
+          "runs": 30,
+          "passed": 27,
+          "reliability": 0.9,
           "reliability_interval": {
-            "lower": 0.879604,
-            "upper": 1
+            "lower": 0.807803,
+            "upper": 0.950671
           },
-          "latency_p50_ms": 7102,
-          "latency_p95_ms": 10127,
+          "latency_p50_ms": 6406,
+          "latency_p95_ms": 9179,
           "reported": {
-            "accepted": 12,
-            "wrong_answer": 0,
+            "accepted": 27,
+            "wrong_answer": 3,
             "invalid": 0,
             "abstained": 0
           },
@@ -16183,8 +16185,8 @@
             "lower": 0.879604,
             "upper": 1
           },
-          "latency_p50_ms": 20968,
-          "latency_p95_ms": 36881,
+          "latency_p50_ms": 22250,
+          "latency_p95_ms": 35276,
           "reported": {
             "accepted": 12,
             "wrong_answer": 0,
