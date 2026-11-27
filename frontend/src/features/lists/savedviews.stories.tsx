@@ -108,7 +108,9 @@ export const NamingAView: Story = {
   },
   play: async ({ canvasElement }) => {
     const canvas = within(canvasElement);
-    await userEvent.click(canvas.getByRole("button", { name: "Save view" }));
+    await userEvent.click(
+      await canvas.findByRole("button", { name: "Save view" }),
+    );
   },
 };
 
