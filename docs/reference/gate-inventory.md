@@ -393,6 +393,7 @@ The eight shapes, what each is for, and how each one silently passes:
 | `leadcontactlockorder_test.go` | H2 | One lock order over the lead and the contact it was promoted into. |
 | `leadoriginwriters_test.go` | H2 | Every statement that inserts a lead says where the lead came from. |
 | `license_test.go` | H3 | Every hand-written Go file carries the BUSL-1.1 SPDX header, and the file list is derived from the tree. |
+| `lifecyclecolumnwriter_test.go` | H2 | A table that declares a lifecycle column has a statement that keeps it. |
 | `likeescape_test.go` | H2 | A LIKE whose pattern carries a caller's text escapes the wildcards in it. |
 | `linktargetvisiblecallers_test.go` | H3 | A read that shows the caller where an activity is filed asks auth.LinkTargetReadableClause, which also requires the read grant on the linked record's type. |
 | `lintbuildtagreach_test.go` | H2 | Every Go file in this repository is compiled by a pass the merge gate runs, analysed by one that lints, and read by both lint configs or neither. |

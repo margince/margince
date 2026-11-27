@@ -88,7 +88,7 @@ func CountPersonalWithoutStanding(ctx context.Context, q datatask.Querier, maxim
 func PersonalStandingDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1795688930_private_senders_stand", Version: 1,
-		Title: systemtext.Literal("datatask.title.core.1795688930_private_senders_stand"), Requires: []string{"core/1795766214"},
+		Title: systemtext.Literal("datatask.title.core.1795688930_private_senders_stand"), Requires: []string{"core/1795772262"},
 		Steps: []datatask.Step{{
 			Name: "private_senders", Limit: 100, MinLimit: 5,
 			Audit: datatask.AuditPolicy{PerRecord: true},

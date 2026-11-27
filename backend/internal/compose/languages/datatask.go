@@ -19,7 +19,7 @@ import (
 const (
 	// MigrationVersion is the migration that created the language table and put a
 	// foreign key on every language column.
-	MigrationVersion = "core/1795766226"
+	MigrationVersion = "core/1795772274"
 
 	// ReasonNotRegistered names a stored value the language table does not hold.
 	// Its sentence and remedy are in systemtext.

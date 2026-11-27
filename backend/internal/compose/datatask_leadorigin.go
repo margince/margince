@@ -85,7 +85,7 @@ func estimateOpenLeads(ctx context.Context, q datatask.Querier, maximum int64) (
 func leadArrivalOriginDataTask() datatask.Task {
 	return datatask.Task{
 		ID: "core/1795680289_lead_arrival_origin", Version: 1,
-		Title: systemtext.Literal("datatask.title.core.1795680289_lead_arrival_origin"), Requires: []string{"core/1795766209"},
+		Title: systemtext.Literal("datatask.title.core.1795680289_lead_arrival_origin"), Requires: []string{"core/1795772257"},
 		Steps: []datatask.Step{
 			foldStep("arrival_origin_from_history", "contacts writes the same arrival origin on the lead it inserts, without a separate audit",
 				contacts.BackfillArrivalOriginTx, contacts.CountArrivalOriginBackfills),

@@ -110,7 +110,7 @@ func TestAnAgentDecidesASenderButNeverDestroysItsMail(t *testing.T) {
 	got := d.mcp.Call(t, "change_capture", map[string]any{
 		"action": "set_sender_decision", "address": "spam@sender.test", "request_body": AnyMap{"decision": "keep_out"},
 	})
-	if !got.IsError || !strings.Contains(got.Text, "permission denied") {
+	if !got.IsError || !strings.Contains(got.Text, "permission_denied") {
 		t.Errorf("an agent's keep_out answered %+v, want a refusal", got)
 	}
 	if status := d.e.Call(t, "PUT", "/v1/capture/senders/spam@sender.test/decision",

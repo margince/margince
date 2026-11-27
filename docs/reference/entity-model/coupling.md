@@ -10,13 +10,13 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 
 | Area | Tables | Columns | Inbound keys | Outbound keys | Outbound cascades |
 |---|--:|--:|--:|--:|--:|
-| [activities](activities.md) | 32 | 425 | 31 | 40 | 19 |
+| [activities](activities.md) | 32 | 424 | 31 | 40 | 19 |
 | [agents](agents.md) | 3 | 28 | 0 | 5 | 1 |
 | [ai](ai.md) | 12 | 191 | 0 | 3 | 0 |
 | [aiactivity](aiactivity.md) | 1 | 24 | 0 | 2 | 0 |
 | [approvals](approvals.md) | 3 | 51 | 4 | 8 | 2 |
 | [assignments](assignments.md) | 2 | 27 | 0 | 5 | 3 |
-| [assurance](assurance.md) | 9 | 85 | 0 | 7 | 5 |
+| [assurance](assurance.md) | 9 | 83 | 0 | 7 | 5 |
 | [automation](automation.md) | 3 | 32 | 1 | 2 | 0 |
 | [capture](capture.md) | 25 | 275 | 6 | 27 | 14 |
 | [chatlinks](chatlinks.md) | 2 | 29 | 0 | 4 | 2 |
@@ -25,15 +25,15 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [comms](comms.md) | 1 | 51 | 5 | 6 | 1 |
 | [compose](compose.md) | 44 | 398 | 11 | 30 | 26 |
 | [consent](consent.md) | 23 | 319 | 2 | 44 | 23 |
-| [contacts](contacts.md) | 49 | 718 | 75 | 37 | 13 |
+| [contacts](contacts.md) | 49 | 716 | 75 | 37 | 13 |
 | [continuity](continuity.md) | 1 | 7 | 0 | 0 | 0 |
 | [contracts](contracts.md) | 1 | 29 | 2 | 3 | 0 |
 | [customfields](customfields.md) | 1 | 20 | 0 | 1 | 0 |
 | [dealrooms](dealrooms.md) | 8 | 93 | 0 | 8 | 1 |
 | [deals](deals.md) | 26 | 379 | 26 | 18 | 2 |
 | [finance](finance.md) | 5 | 77 | 0 | 3 | 0 |
-| [forecasting](forecasting.md) | 4 | 94 | 1 | 2 | 0 |
-| [identity](identity.md) | 22 | 220 | 155 | 7 | 5 |
+| [forecasting](forecasting.md) | 4 | 88 | 1 | 2 | 0 |
+| [identity](identity.md) | 22 | 217 | 155 | 7 | 5 |
 | [initiatives](initiatives.md) | 5 | 40 | 0 | 2 | 1 |
 | [integrations](integrations.md) | 5 | 59 | 3 | 3 | 1 |
 | [introductions](introductions.md) | 1 | 31 | 0 | 6 | 1 |
@@ -49,7 +49,7 @@ An area with no inbound key is a candidate for a separate module. Its outbound k
 | [signals](signals.md) | 2 | 43 | 2 | 9 | 4 |
 | [webforms](webforms.md) | 2 | 27 | 0 | 4 | 0 |
 | [webhooks](webhooks.md) | 2 | 32 | 0 | 1 | 1 |
-| [weeklyplan](weeklyplan.md) | 2 | 33 | 0 | 7 | 1 |
+| [weeklyplan](weeklyplan.md) | 2 | 32 | 0 | 7 | 1 |
 
 ## Keys from areas with no inbound dependency
 

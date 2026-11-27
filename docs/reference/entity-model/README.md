@@ -31,7 +31,7 @@ module to put a change in, read [modules.md](../modules.md).
 | | |
 |---|--:|
 | Tables | 357 |
-| Columns | 4395 |
+| Columns | 4380 |
 | Foreign keys | 633 |
 | Owning areas | 40 |
 
@@ -163,7 +163,7 @@ erDiagram
 | [`activity_reply_verdict_history`](activities.md#activity_reply_verdict_history) | activities | 6 | 0 |
 | [`activity_request_settlement`](activities.md#activity_request_settlement) | activities | 11 | 0 |
 | [`activity_retention_evidence`](activities.md#activity_retention_evidence) | activities | 12 | 0 |
-| [`activity_review_response`](activities.md#activity_review_response) | activities | 16 | 0 |
+| [`activity_review_response`](activities.md#activity_review_response) | activities | 15 | 0 |
 | [`activity_review_template`](activities.md#activity_review_template) | activities | 15 | 0 |
 | [`activity_sales_state`](activities.md#activity_sales_state) | activities | 3 | 0 |
 | [`agent_run`](agents.md#agent_run) | agents | 15 | 0 |
@@ -185,7 +185,7 @@ erDiagram
 | [`assurance_deal_receipt`](assurance.md#assurance_deal_receipt) | assurance | 11 | 0 |
 | [`assurance_exception`](assurance.md#assurance_exception) | assurance | 20 | 3 |
 | [`assurance_input_change`](assurance.md#assurance_input_change) | assurance | 4 | 0 |
-| [`assurance_resolution`](assurance.md#assurance_resolution) | assurance | 12 | 0 |
+| [`assurance_resolution`](assurance.md#assurance_resolution) | assurance | 10 | 0 |
 | [`assurance_run`](assurance.md#assurance_run) | assurance | 13 | 3 |
 | [`assurance_run_finding`](assurance.md#assurance_run_finding) | assurance | 3 | 0 |
 | [`assurance_source_coverage`](assurance.md#assurance_source_coverage) | assurance | 6 | 0 |
@@ -321,10 +321,10 @@ erDiagram
 | [`finance_external_customer`](finance.md#finance_external_customer) | finance | 11 | 1 |
 | [`finance_invoice`](finance.md#finance_invoice) | finance | 29 | 4 |
 | [`finance_payment`](finance.md#finance_payment) | finance | 17 | 0 |
-| [`forecast_call`](forecasting.md#forecast_call) | forecasting | 14 | 2 |
+| [`forecast_call`](forecasting.md#forecast_call) | forecasting | 12 | 2 |
 | [`forecast_capture_status`](forecasting.md#forecast_capture_status) | forecasting | 6 | 0 |
-| [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 34 | 0 |
-| [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 40 | 2 |
+| [`forecast_contribution`](forecasting.md#forecast_contribution) | forecasting | 32 | 0 |
+| [`forecast_snapshot`](forecasting.md#forecast_snapshot) | forecasting | 38 | 2 |
 | [`fx_rate`](deals.md#fx_rate) | deals | 7 | 0 |
 | [`generated_summary`](platform.md#generated_summary) | platform | 9 | 0 |
 | [`geocode_cache`](contacts.md#geocode_cache) | contacts | 5 | 0 |
@@ -423,7 +423,7 @@ erDiagram
 | [`restore_drill`](continuity.md#restore_drill) | continuity | 7 | 0 |
 | [`retention_policy`](privacy.md#retention_policy) | privacy | 7 | 0 |
 | [`role`](identity.md#role) | identity | 9 | 1 |
-| [`role_assignment`](identity.md#role_assignment) | identity | 6 | 0 |
+| [`role_assignment`](identity.md#role_assignment) | identity | 5 | 0 |
 | [`runner_job`](agents.md#runner_job) | agents | 7 | 0 |
 | [`sales_goal_plan`](reporting.md#sales_goal_plan) | reporting | 10 | 1 |
 | [`sales_goal_plan_revision`](reporting.md#sales_goal_plan_revision) | reporting | 10 | 0 |
@@ -438,7 +438,7 @@ erDiagram
 | [`scheduled_send`](activities.md#scheduled_send) | activities | 23 | 1 |
 | [`sdr_handoff`](contacts.md#sdr_handoff) | contacts | 17 | 1 |
 | [`sdr_handoff_event`](contacts.md#sdr_handoff_event) | contacts | 10 | 0 |
-| [`sdr_handoff_reason`](contacts.md#sdr_handoff_reason) | contacts | 9 | 2 |
+| [`sdr_handoff_reason`](contacts.md#sdr_handoff_reason) | contacts | 7 | 2 |
 | [`session`](identity.md#session) | identity | 11 | 0 |
 | [`setting`](platform.md#setting) | platform | 3 | 0 |
 | [`setup_token`](identity.md#setup_token) | identity | 4 | 0 |
@@ -460,7 +460,7 @@ erDiagram
 | [`task_explanation`](platform.md#task_explanation) | platform | 6 | 0 |
 | [`tax_rate`](deals.md#tax_rate) | deals | 7 | 0 |
 | [`team`](identity.md#team) | identity | 6 | 11 |
-| [`team_membership`](identity.md#team_membership) | identity | 5 | 0 |
+| [`team_membership`](identity.md#team_membership) | identity | 4 | 0 |
 | [`team_weekly_review`](compose.md#team_weekly_review) | compose | 30 | 4 |
 | [`team_weekly_review_coverage`](compose.md#team_weekly_review_coverage) | compose | 13 | 0 |
 | [`team_weekly_review_member`](compose.md#team_weekly_review_member) | compose | 5 | 0 |
@@ -483,7 +483,7 @@ erDiagram
 | [`web_form_last_post`](webforms.md#web_form_last_post) | webforms | 2 | 0 |
 | [`webhook_delivery`](webhooks.md#webhook_delivery) | webhooks | 19 | 0 |
 | [`webhook_subscription`](webhooks.md#webhook_subscription) | webhooks | 13 | 1 |
-| [`weekly_plan`](weeklyplan.md#weekly_plan) | weeklyplan | 11 | 1 |
+| [`weekly_plan`](weeklyplan.md#weekly_plan) | weeklyplan | 10 | 1 |
 | [`weekly_plan_commitment`](weeklyplan.md#weekly_plan_commitment) | weeklyplan | 22 | 0 |
 | [`weekly_review`](compose.md#weekly_review) | compose | 39 | 6 |
 | [`weekly_review_deal`](compose.md#weekly_review_deal) | compose | 9 | 0 |
@@ -497,5 +497,5 @@ erDiagram
 | [`worklist_done`](activities.md#worklist_done) | activities | 4 | 0 |
 | [`worklist_pin`](activities.md#worklist_pin) | activities | 4 | 0 |
 | [`worklist_snapshot`](compose.md#worklist_snapshot) | compose | 8 | 0 |
-| [`workspace`](identity.md#workspace) | identity | 4 | 0 |
+| [`workspace`](identity.md#workspace) | identity | 3 | 0 |
 | [`workspace_email_domain`](capture.md#workspace_email_domain) | capture | 4 | 0 |

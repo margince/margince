@@ -181,8 +181,6 @@ func (in LegalEntityInput) withDefaultJurisdiction() LegalEntityInput {
 	return in
 }
 
-var entityLanguageShape = regexp.MustCompile(`^[a-z]{2}$`)
-
 func cleanEntityLanguage(raw string) (string, error) {
 	lower := strings.ToLower(raw)
 	if !langcode.Known(lower) {

@@ -32,6 +32,7 @@ import (
 	"github.com/margince/margince/backend/internal/shared/apperrors"
 	"github.com/margince/margince/backend/internal/shared/kernel/ids"
 	"github.com/margince/margince/backend/internal/shared/kernel/principal"
+	"github.com/margince/margince/backend/internal/shared/kernel/values"
 )
 
 // refuseStaleVisibility refuses a visibility write built on a row that has
@@ -99,6 +100,9 @@ func refuseStaleVisibility(
 // is a decision, and quietly answering it for somebody would hand the row to
 // whoever happened to press the button.
 func refuseUnreadableResult(current crmcontracts.Contact, in UpdateContactInput) error {
+	if err := refuseUnknownVisibility(in.Visibility); err != nil {
+		return err
+	}
 	private := current.Visibility != nil && string(*current.Visibility) == visibilityOwner
 	if in.Visibility != nil {
 		private = *in.Visibility == visibilityOwner
@@ -200,4 +204,16 @@ func patchNarrowingByHand(
 	}
 	p.Set(fieldNarrowingReason, before, after)
 	return nil
+}
+
+// refuseUnknownVisibility names a visibility outside the two the contract
+// lists, before the CHECK refuses it with no field to name.
+func refuseUnknownVisibility(visibility *string) error {
+	if visibility == nil || *visibility == visibilityOwner || *visibility == visibilityWorkspace {
+		return nil
+	}
+	return &values.ParseError{
+		Field: fieldVisibility, Code: "invalid_enum",
+		Message: fmt.Sprintf("%q is not a visibility; expected one of: %s, %s", *visibility, visibilityOwner, visibilityWorkspace),
+	}
 }
