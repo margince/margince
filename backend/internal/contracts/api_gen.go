@@ -80790,6 +80790,11 @@ type ListConsentPurposeSendCountsParams struct {
 	Days *int `form:"days,omitempty" json:"days,omitempty" maximum:"366" minimum:"1"`
 }
 
+// RenameConsentPurposeJSONBody defines parameters for RenameConsentPurpose.
+type RenameConsentPurposeJSONBody struct {
+	Label string `json:"label"`
+}
+
 // ListContactsParams defines parameters for ListContacts.
 type ListContactsParams struct {
 	// Cursor Opaque keyset cursor from a prior response's `page.next_cursor`. The cursor encodes the
@@ -87757,6 +87762,9 @@ type DismissConnectorSilenceJSONRequestBody = DismissCaptureSilenceRequest
 
 // CreateConsentPurposeJSONRequestBody defines body for CreateConsentPurpose for application/json ContentType.
 type CreateConsentPurposeJSONRequestBody = CreateConsentPurposeRequest
+
+// RenameConsentPurposeJSONRequestBody defines body for RenameConsentPurpose for application/json ContentType.
+type RenameConsentPurposeJSONRequestBody RenameConsentPurposeJSONBody
 
 // CreateContactJSONRequestBody defines body for CreateContact for application/json ContentType.
 type CreateContactJSONRequestBody = CreateContactRequest
@@ -103741,6 +103749,12 @@ type ServerInterface interface {
 	// How many messages went out under each declared consent purpose, and how many the record disputes.
 	// (GET /consent-purposes/send-counts)
 	ListConsentPurposeSendCounts(w http.ResponseWriter, r *http.Request, params ListConsentPurposeSendCountsParams)
+	// Archive an unused consent purpose.
+	// (DELETE /consent-purposes/{id})
+	ArchiveConsentPurpose(w http.ResponseWriter, r *http.Request, id Id)
+	// Rename an unused consent purpose.
+	// (PATCH /consent-purposes/{id})
+	RenameConsentPurpose(w http.ResponseWriter, r *http.Request, id Id)
 	// List contacts (live by default; cursor-paginated).
 	// (GET /contacts)
 	ListContacts(w http.ResponseWriter, r *http.Request, params ListContactsParams)
@@ -108493,6 +108507,18 @@ func (_ Unimplemented) CreateConsentPurpose(w http.ResponseWriter, r *http.Reque
 // How many messages went out under each declared consent purpose, and how many the record disputes.
 // (GET /consent-purposes/send-counts)
 func (_ Unimplemented) ListConsentPurposeSendCounts(w http.ResponseWriter, r *http.Request, params ListConsentPurposeSendCountsParams) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Archive an unused consent purpose.
+// (DELETE /consent-purposes/{id})
+func (_ Unimplemented) ArchiveConsentPurpose(w http.ResponseWriter, r *http.Request, id Id) {
+	w.WriteHeader(http.StatusNotImplemented)
+}
+
+// Rename an unused consent purpose.
+// (PATCH /consent-purposes/{id})
+func (_ Unimplemented) RenameConsentPurpose(w http.ResponseWriter, r *http.Request, id Id) {
 	w.WriteHeader(http.StatusNotImplemented)
 }
 
@@ -131617,6 +131643,70 @@ func (siw *ServerInterfaceWrapper) ListConsentPurposeSendCounts(w http.ResponseW
 
 	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
 		siw.Handler.ListConsentPurposeSendCounts(w, r, params)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// ArchiveConsentPurpose operation middleware
+func (siw *ServerInterfaceWrapper) ArchiveConsentPurpose(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.ArchiveConsentPurpose(w, r, id)
+	}))
+
+	for _, middleware := range siw.HandlerMiddlewares {
+		handler = middleware(handler)
+	}
+
+	handler.ServeHTTP(w, r)
+}
+
+// RenameConsentPurpose operation middleware
+func (siw *ServerInterfaceWrapper) RenameConsentPurpose(w http.ResponseWriter, r *http.Request) {
+
+	var err error
+	_ = err
+
+	// ------------- Path parameter "id" -------------
+	var id Id
+
+	err = runtime.BindStyledParameterWithOptions("simple", "id", chi.URLParam(r, "id"), &id, runtime.BindStyledParameterOptions{ParamLocation: runtime.ParamLocationPath, Explode: false, Required: true, Type: "string", Format: "uuid"})
+	if err != nil {
+		siw.ErrorHandlerFunc(w, r, &InvalidParamFormatError{ParamName: "id", Err: err})
+		return
+	}
+
+	ctx := r.Context()
+
+	ctx = context.WithValue(ctx, CookieAuthScopes, []string{})
+
+	r = r.WithContext(ctx)
+
+	handler := http.Handler(http.HandlerFunc(func(w http.ResponseWriter, r *http.Request) {
+		siw.Handler.RenameConsentPurpose(w, r, id)
 	}))
 
 	for _, middleware := range siw.HandlerMiddlewares {
@@ -165528,6 +165618,12 @@ func HandlerWithOptions(si ServerInterface, options ChiServerOptions) http.Handl
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/consent-purposes/send-counts", wrapper.ListConsentPurposeSendCounts)
+	})
+	r.Group(func(r chi.Router) {
+		r.Delete(options.BaseURL+"/consent-purposes/{id}", wrapper.ArchiveConsentPurpose)
+	})
+	r.Group(func(r chi.Router) {
+		r.Patch(options.BaseURL+"/consent-purposes/{id}", wrapper.RenameConsentPurpose)
 	})
 	r.Group(func(r chi.Router) {
 		r.Get(options.BaseURL+"/contacts", wrapper.ListContacts)

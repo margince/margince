@@ -1571,6 +1571,11 @@ export interface components {
             /** @description The authority that revoked it (user | admin). */
             revoked_by_level: string;
         };
+        /** @description A human created, renamed or archived a consent purpose. */
+        PublicEventConsentPurposeChanged: {
+            /** @enum {string} */
+            action: "created" | "renamed" | "archived";
+        };
         /** @description Payload for consent.changed. A subject's per-purpose consent state was recorded (consent/store.go's Record). The subject is a contact or a lead, never both (a lead before promotion). Record resolves that choice at runtime via consentSubject, so this schema cannot name a fixed type. This makes it the first dynamic-entity event (contract `x-entity-type: dynamic`). The generated EntityType() is unused, and the emit site supplies the real entity type through storekit.EmitEventForEntity. */
         PublicEventConsentChanged: {
             /**
@@ -2173,6 +2178,7 @@ export const publicEventIntroRequestCompletedOutcomeValues: ReadonlyArray<Flatte
 export const publicEventIntroRequestClosedReasonValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventIntroRequestClosed"]["reason"]> = ["cancelled", "expired"];
 export const publicEventCommsDeliveryBouncedKindValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventCommsDeliveryBounced"]["kind"]> = ["hard", "soft"];
 export const publicEventEngagementReplyOccurred_precisionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventEngagementReply"]["occurred_precision"]> = ["instant", "day"];
+export const publicEventConsentPurposeChangedActionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventConsentPurposeChanged"]["action"]> = ["created", "renamed", "archived"];
 export const publicEventRetentionRestrictedActionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventRetentionRestricted"]["action"]> = ["restrict", "release", "pin"];
 export const publicEventRetentionAppliedActionValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["PublicEventRetentionApplied"]["action"]> = ["archive", "anonymize", "erase"];
 export const userReactivatedStatusValues: ReadonlyArray<FlattenedDeepRequired<components>["schemas"]["UserReactivatedStatus"]> = ["invited", "active"];

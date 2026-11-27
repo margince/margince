@@ -363,7 +363,7 @@ If nothing is held, the screen says so, and it is good news: "No records held. E
 
 Consent in Margince is recorded for each **purpose**. **Settings → Privacy and retention → Consent purposes** holds the list of purposes: the reasons this company uses the data of the humans in it. Each purpose has a key, a label, and a mark for whether it needs double opt-in.
 
-You can only add to the list: "A purpose cannot be renamed or removed once created; the catalog is append-only. Choose the key carefully." On a contact you can **Record consent** or **Withdraw** consent for a purpose.
+You can rename or archive a purpose while it has no references. Any consent, notice, wording or scheduled send fixes the purpose. To change it after use, create a new purpose. These changes need a human with the consent settings update grant. On a contact you can **Record consent** or **Withdraw** consent for a purpose.
 
 Your team cannot record a purpose that needs **double opt-in** at all. Only the contact can confirm one, by opening a link that works once, mailed to their own recorded address. Use **Ask them to confirm their details**. If a colleague could confirm it for the contact, it would not prove the contact agreed.
 

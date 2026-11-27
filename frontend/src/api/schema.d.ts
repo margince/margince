@@ -19488,6 +19488,30 @@ export interface paths {
         patch?: never;
         trace?: never;
     };
+    "/consent-purposes/{id}": {
+        parameters: {
+            query?: never;
+            header?: never;
+            path?: never;
+            cookie?: never;
+        };
+        get?: never;
+        put?: never;
+        post?: never;
+        /**
+         * Archive an unused consent purpose.
+         * @description Requires consent_config:update. Any reference to the purpose prevents an archive.
+         */
+        delete: operations["archiveConsentPurpose"];
+        options?: never;
+        head?: never;
+        /**
+         * Rename an unused consent purpose.
+         * @description Requires consent_config:update. Any reference to the purpose prevents a change.
+         */
+        patch: operations["renameConsentPurpose"];
+        trace?: never;
+    };
     "/consent-purposes/send-counts": {
         parameters: {
             query?: never;
@@ -97029,6 +97053,61 @@ export interface operations {
                     "application/json": components["schemas"]["ConsentPurpose"];
                 };
             };
+            422: components["responses"]["ValidationError"];
+        };
+    };
+    archiveConsentPurpose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody?: never;
+        responses: {
+            /** @description Archived. */
+            204: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content?: never;
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
+        };
+    };
+    renameConsentPurpose: {
+        parameters: {
+            query?: never;
+            header?: never;
+            path: {
+                /** @description Opaque resource id (UUID; ordering semantics are not exposed). */
+                id: components["parameters"]["Id"];
+            };
+            cookie?: never;
+        };
+        requestBody: {
+            content: {
+                "application/json": {
+                    label: string;
+                };
+            };
+        };
+        responses: {
+            /** @description Renamed. */
+            200: {
+                headers: {
+                    [name: string]: unknown;
+                };
+                content: {
+                    "application/json": components["schemas"]["ConsentPurpose"];
+                };
+            };
+            404: components["responses"]["NotFound"];
+            409: components["responses"]["Conflict"];
             422: components["responses"]["ValidationError"];
         };
     };
