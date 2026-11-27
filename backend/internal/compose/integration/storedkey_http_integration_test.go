@@ -6,8 +6,8 @@
 package integration
 
 // The owners reached over HTTP name the installation's stored-key id. Each case
-// gives the installation a stored-key id that differs from the workspace the
-// request is bound to, so a builder that read the request's id fails it.
+// gives the installation a stored-key id that differs from the bound workspace.
+// A builder that read the request's id then fails it.
 
 import (
 	"bytes"

@@ -180,6 +180,7 @@ func TestTheFleetStaysPausedUntilEveryPostCommitPurgeHasRun(t *testing.T) {
 	blob := &pauseWatchingStore{Store: blobstore.NewMemory(), fleetPaused: &paused}
 	h := resetHandlers(rt)
 	h.blob = blob
+	h.objectsKey = func(context.Context) (ids.UUID, error) { return ids.NewV7(), nil }
 	h.flush = func(ids.UUID) { pausedAtFlush = paused }
 
 	if _, err := h.runQuiesced(context.Background(), ids.NewV7(), noOutbox, func(*resetCounts) error { return nil }); err != nil {

@@ -15,8 +15,8 @@ import (
 )
 
 // A reader of the onboarding state and a writer of the anchor company take
-// turns: SaveCompany waits on the advisory lock while a transaction that
-// already read the state is open, and runs once that transaction ends.
+// turns. SaveCompany waits on the advisory lock while a transaction that read
+// the state is open, and runs once that transaction ends.
 func TestSaveCompanyWaitsForATransactionHoldingTheCompanyStateLock(t *testing.T) {
 	e := newAnchorEnv(t)
 	ctx := e.ctx
@@ -43,14 +43,15 @@ func TestSaveCompanyWaitsForATransactionHoldingTheCompanyStateLock(t *testing.T)
 		saved <- err
 	}()
 
-	deadline := time.Now().Add(10 * time.Second)
+	waitCtx, cancel := context.WithTimeout(ctx, 10*time.Second)
+	defer cancel()
 	for !advisoryLockHasAWaiter(ctx, t, e.pool) {
 		select {
 		case err := <-saved:
 			t.Fatalf("SaveCompany finished (%v) while another transaction held the company state lock", err)
 		default:
 		}
-		if time.Now().After(deadline) {
+		if waitCtx.Err() != nil {
 			t.Fatal("SaveCompany never queued on the company state lock")
 		}
 	}
