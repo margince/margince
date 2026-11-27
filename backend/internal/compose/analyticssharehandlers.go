@@ -15,6 +15,7 @@ import (
 	"bytes"
 	"context"
 	"encoding/csv"
+	"errors"
 	"fmt"
 	"net/http"
 	"strings"
@@ -125,7 +126,11 @@ func (h analyticsShareHandlers) OpenForecastShare(
 		}
 		out.Kind = crmcontracts.SharedForecastViewKind(share.Kind)
 		out.Target = share.Target
-
+		label, err := sharedScopeLabel(ctx, tx, share.Scope)
+		if err != nil {
+			return err
+		}
+		out.ScopeLabel = optional(label)
 		if share.Kind != shareKindSnapshot {
 			return h.serveLive(ctx, tx, share, &out)
 		}
@@ -139,6 +144,16 @@ func (h analyticsShareHandlers) OpenForecastShare(
 		return
 	}
 	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
+// sharedScopeLabel names the share's population as the reader's own lens names
+// it. One that lens refuses gets no name, so a link never names whom it may not.
+func sharedScopeLabel(ctx context.Context, tx pgx.Tx, scope forecasting.Scope) (string, error) {
+	resolved, err := ResolveAnalyticsScope(ctx, tx, requestedFromForecastScope(scope))
+	if errors.Is(err, apperrors.ErrNotFound) || errors.Is(err, apperrors.ErrPermissionDenied) {
+		return "", nil
+	}
+	return resolved.Label, err
 }
 
 // frozenForReader is what one reader may take from a frozen share: the rows

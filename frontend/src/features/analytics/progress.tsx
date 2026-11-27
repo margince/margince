@@ -3,7 +3,8 @@
 
 import "./progress.css";
 import { useState } from "react";
-import { Button, Field, SegmentedControl } from "../../design-system/atoms";
+import { AppLink } from "../../design-system/applink";
+import { Field, SegmentedControl } from "../../design-system/atoms";
 import { FilterBar } from "../../design-system/filterbar";
 import { Panel, PanelBody } from "../../design-system/panel";
 import { QueryGate } from "../../design-system/querystates";
@@ -17,8 +18,9 @@ import {
 } from "../../format/format";
 import { zoneLabelAt } from "../../format/timezone";
 import { type Translator, useLocale, useT } from "../../i18n";
-import { navigate } from "../../lib/router";
-import { replaceDial, useUrlParams } from "../../lib/urlstate";
+import { analyticsSectionHref } from "../../lib/analytics.address";
+import { routeHash } from "../../lib/router";
+import { hashWithParams, replaceDial, useUrlParams } from "../../lib/urlstate";
 import { isUuid } from "../../lib/uuid";
 import { AnalyticsBoard, AnalyticsSheet } from "./analytics.board";
 import {
@@ -105,12 +107,9 @@ export function ProgressScreen() {
       <FilterBar
         label={t("progress.controls")}
         actions={
-          <Button
-            variant="ghost"
-            onClick={() => navigate({ screen: "goals" }, goalDials(ask))}
-          >
+          <AppLink className="btn btn-ghost" href={goalsHref(ask)}>
             {t("progress.viewGoals")}
-          </Button>
+          </AppLink>
         }
         caption={
           progress.data &&
@@ -208,10 +207,10 @@ function scopeOptions(
 }
 
 // Sales goals opens on the same year, and on the seller being read.
-function goalDials(ask: ProgressAsk): Map<string, string> {
+function goalsHref(ask: ProgressAsk): string {
   const dials = new Map([["year", String(ask.year)]]);
   if (ask.scope?.kind === "owner") dials.set("seller", ask.scope.id);
-  return dials;
+  return hashWithParams(routeHash({ screen: "goals" }), dials);
 }
 
 function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
@@ -233,9 +232,7 @@ function ProgressBody({ progress }: Readonly<{ progress: SalesProgress }>) {
             <ProgressResult
               progress={progress}
               onEvidence={open}
-              onGoals={() =>
-                navigate({ screen: "goals" }, goalDials(askOf(progress)))
-              }
+              goalsHref={goalsHref(askOf(progress))}
             />
             <ProgressScenarios progress={progress} />
             <ProgressReadings progress={progress} onEvidence={open} />
@@ -312,17 +309,15 @@ function ProgressGoalBasis({
       flatHead
       footer={
         offered && (
-          <Button
-            variant="link"
-            onClick={() =>
-              navigate(
-                { screen: "analytics", id: "performance" },
-                analyticsDials(askOf(progress)),
-              )
-            }
+          <AppLink
+            className="btn btn-link"
+            href={analyticsSectionHref(
+              "performance",
+              analyticsDials(askOf(progress)),
+            )}
           >
             {t("progress.openInAnalytics")}
-          </Button>
+          </AppLink>
         )
       }
     >

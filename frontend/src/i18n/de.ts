@@ -9599,6 +9599,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
     "Die Zahlen zum Zeitpunkt des Snapshots. Die Zahlen ändern sich nicht, und der Link nennt den Zeitpunkt der Aufnahme.",
   "analytics.share.snapshotUnavailable":
     "Für diesen Zeitraum gibt es noch keinen Snapshot.",
+  "analytics.share.quarterOnly":
+    "Geteilt wird immer das Quartal. Wähle Quartal, um diese Ansicht zu teilen.",
   "analytics.share.expiryNote":
     "Der Link funktioniert nach 30 Tagen nicht mehr.",
   "analytics.share.create": "Link erstellen",
@@ -9801,6 +9803,8 @@ export const de: Readonly<Record<MessageKey, string>> = {
   "forecast.period.quarter": "Quartal",
   "forecast.period.month": "Monat",
   "forecast.period.week": "Woche",
+  "forecast.quarterCards":
+    "Die beiden Pipeline-Karten unten gelten für das Quartal.",
   "forecast.receipt": "Daten und Belege geprüft",
   "forecast.eligible": "Berücksichtigte Deals",
   "forecast.priced": "Bepreist",
