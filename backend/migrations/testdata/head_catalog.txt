@@ -3389,6 +3389,7 @@ public.company.size_band text gen=- def=-
 public.company.source text NOT NULL gen=- def=-
 public.company.source_author_id uuid gen=- def=-
 public.company.source_author_name text gen=- def=-
+public.company.source_change_is_remembered CREATE TRIGGER source_change_is_remembered AFTER UPDATE ON public.company FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()
 public.company.source_id text gen=- def=-
 public.company.source_system text gen=- def=-
 public.company.status text NOT NULL gen=- def='unknown'::text
@@ -4209,6 +4210,7 @@ public.contact.search_tsv tsvector gen=s def=(((setweight(to_tsvector('simple'::
 public.contact.source text NOT NULL gen=- def=-
 public.contact.source_author_id uuid gen=- def=-
 public.contact.source_author_name text gen=- def=-
+public.contact.source_change_is_remembered CREATE TRIGGER source_change_is_remembered AFTER UPDATE ON public.contact FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()
 public.contact.source_id text gen=- def=-
 public.contact.source_system text gen=- def=-
 public.contact.strength_folded boolean NOT NULL gen=- def=true
@@ -5295,6 +5297,7 @@ public.deal.search_tsv tsvector gen=s def=((setweight(to_tsvector('simple'::regc
 public.deal.source text NOT NULL gen=- def=-
 public.deal.source_author_id uuid gen=- def=-
 public.deal.source_author_name text gen=- def=-
+public.deal.source_change_is_remembered CREATE TRIGGER source_change_is_remembered AFTER UPDATE ON public.deal FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()
 public.deal.source_id text gen=- def=-
 public.deal.source_system text gen=- def=-
 public.deal.stage_id uuid NOT NULL gen=- def=-
@@ -7712,6 +7715,7 @@ public.lead.sla_breached_at timestamp with time zone gen=- def=-
 public.lead.source text NOT NULL gen=- def=-
 public.lead.source_author_id uuid gen=- def=-
 public.lead.source_author_name text gen=- def=-
+public.lead.source_change_is_remembered CREATE TRIGGER source_change_is_remembered AFTER UPDATE ON public.lead FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()
 public.lead.source_id text gen=- def=-
 public.lead.source_system text gen=- def=-
 public.lead.status text NOT NULL gen=- def='new'::text
@@ -8650,6 +8654,7 @@ public.offer.offer_version_js_safe CHECK (((version >= '-9007199254740991'::bigi
 public.offer.pdf_asset_ref text gen=- def=-
 public.offer.revision integer NOT NULL gen=- def=1
 public.offer.source text NOT NULL gen=- def=-
+public.offer.source_change_is_remembered CREATE TRIGGER source_change_is_remembered AFTER UPDATE ON public.offer FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()
 public.offer.source_commercial_revision bigint gen=- def=-
 public.offer.status text NOT NULL gen=- def='draft'::text
 public.offer.tax_minor bigint NOT NULL gen=- def=0
@@ -9100,6 +9105,7 @@ public.project.search_tsv tsvector gen=s def=(setweight(to_tsvector('simple'::re
 public.project.source text NOT NULL gen=- def=-
 public.project.source_author_id uuid gen=- def=-
 public.project.source_author_name text gen=- def=-
+public.project.source_change_is_remembered CREATE TRIGGER source_change_is_remembered AFTER UPDATE ON public.project FOR EACH ROW WHEN ((old.source IS DISTINCT FROM new.source)) EXECUTE FUNCTION remember_a_triggered_source_change()
 public.project.source_id text gen=- def=-
 public.project.source_system text gen=- def=-
 public.project.started_at date gen=- def=-
@@ -9754,6 +9760,24 @@ public.relationship_nudge_dismissal.text_bound_update CREATE TRIGGER text_bound_
 public.relationship_nudge_dismissal_by_reader CREATE INDEX relationship_nudge_dismissal_by_reader ON public.relationship_nudge_dismissal USING btree (reader_id, contact_id)
 public.relationship_nudge_dismissal_pkey CREATE UNIQUE INDEX relationship_nudge_dismissal_pkey ON public.relationship_nudge_dismissal USING btree (contact_id, reader_id)
 public.relationship_pkey CREATE UNIQUE INDEX relationship_pkey ON public.relationship USING btree (id)
+public.remember_a_triggered_source_change() secdef=false cfg=search_path=pg_catalog, public acl=- 
+DECLARE pending jsonb; identity text; prior jsonb;
+BEGIN
+    pending := coalesce(nullif(current_setting('margince.source_changes', true), ''), '{}')::jsonb;
+    identity := TG_TABLE_NAME || ':' || NEW.id::text;
+    prior := pending->identity;
+    pending := jsonb_set(pending, ARRAY[identity], jsonb_build_object(
+        'entity_type', TG_TABLE_NAME, 'id', NEW.id,
+        'change_id', coalesce(prior->'change_id', to_jsonb(public.uuidv7())),
+        'before_system', CASE WHEN prior IS NULL THEN to_jsonb(OLD)->'source_system' ELSE prior->'before_system' END,
+        'after_system', to_jsonb(NEW)->'source_system',
+        'system_changed', coalesce((prior->>'system_changed')::boolean,false) OR ((to_jsonb(OLD)->'source_system') IS DISTINCT FROM (to_jsonb(NEW)->'source_system')),
+        'before', coalesce(prior->'before', to_jsonb(OLD.source)), 'after', NEW.source,
+        'deal_id', to_jsonb(NEW)->'deal_id'));
+    PERFORM set_config('margince.source_changes', pending::text, true);
+    RETURN NEW;
+END;
+
 public.rename_legacy_capture_labels(subjects uuid[]) secdef=false cfg=- acl=- DECLARE
     moving text := current_setting('margince.last_activity_move', true);
     changed integer;
