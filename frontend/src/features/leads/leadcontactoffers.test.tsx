@@ -72,26 +72,6 @@ function stubBackend(writes: { method: string; body: unknown }[]) {
           }).authorization,
         });
       }
-      if (url.endsWith("/v1/lead-sources")) {
-        return jsonResponse({
-          data: [
-            {
-              id: "src-manual",
-              key: "manual",
-              label: "Created manually",
-              intent: "neutral",
-              sort_order: 10,
-              active: true,
-              system: true,
-              lead_count: 0,
-              version: 1,
-              created_at: "2026-01-01T00:00:00Z",
-              updated_at: "2026-01-01T00:00:00Z",
-            },
-          ],
-          page: { next_cursor: null, has_more: false },
-        });
-      }
       if (url.includes("/contacts?")) {
         return jsonResponse({
           data: [ben],

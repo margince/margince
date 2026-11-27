@@ -176,7 +176,7 @@ func TestTheStandardDealFieldsSelectTheirRecordsAndNeverMixCurrencies(t *testing
 func TestTheStandardLeadFieldsSelectTheirRecords(t *testing.T) {
 	e, _ := listsApp(t, true)
 	webinar := createdID(t, e, "/v1/leads", AnyMap{
-		"full_name": "Carla Webinar", "email": "carla@lead.example", "source": "webinar",
+		"full_name": "Carla Webinar", "email": "carla@lead.example", "source": "webform",
 	})
 	manual := createdID(t, e, "/v1/leads", AnyMap{"full_name": "Dan Manual", "source": "manual"})
 	var judged struct {
@@ -193,7 +193,7 @@ func TestTheStandardLeadFieldsSelectTheirRecords(t *testing.T) {
 		{leaf("name", "eq", "Dan Manual"), []string{manual}},
 		{leaf("email", "eq", "CARLA@lead.example"), []string{webinar}},
 		{leaf("email", "exists", false), []string{manual}},
-		{leaf("source", "eq", "webinar"), []string{webinar}},
+		{leaf("source", "eq", "webform"), []string{webinar}},
 		{leaf("score", "gte", 85), []string{webinar}},
 		{leaf("score", "gt", 85), []string{}},
 		{leaf("score", "lt", 84.5), []string{manual}},

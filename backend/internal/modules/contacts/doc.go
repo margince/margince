@@ -27,8 +27,7 @@
 // holds the number a page stated, this holds whether it is real.
 // lead_origin and lead_disqualify_reason are the two administered lead
 // vocabularies. The first says where a lead came from and carries the intent the
-// scorer weighs. The second says why a lead was dropped. lead_source is the
-// deprecated list of how a row reached Margince, and nothing scores by it.
+// scorer weighs. The second says why a lead was dropped.
 // relationship_nudge_dismissal is a lapsed contact one reader has set aside.
 // It is its own table, not a disposition, because the decay lane's row
 // carries a contact's id and no activity. A NULL moment is a permanent stop,

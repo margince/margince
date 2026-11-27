@@ -69,6 +69,19 @@ func PartyDataTask() datatask.Task {
 	}
 }
 
+// LeadDataTask moves every lead whose source is off the fixed channel list onto
+// its channel, through the mapping contacts use.
+func LeadDataTask() datatask.Task {
+	return datatask.Task{
+		ID: "core/1795710028_lead_source_channels", Version: 1,
+		Title:    systemtext.Literal("datatask.title.core.1795710028_lead_source_channels"),
+		Requires: []string{"core/1795710028"},
+		Steps: []datatask.Step{
+			step("lead_sources", contacts.CorrectLeadSourcesTx, contacts.CountUnlistedLeadSources),
+		},
+	}
+}
+
 func step(name string, move correct, left count) datatask.Step {
 	return datatask.Step{
 		Name: name, Limit: 500, MinLimit: 1,
