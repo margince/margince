@@ -58,7 +58,9 @@ type StagedOfferLineInput struct {
 	Description    string
 	Quantity       string // exact decimal, numeric(14,3) — see OfferLineInput
 	UnitPriceMinor int64
-	TaxRate        string // exact decimal, numeric(5,2)
+	// TaxRate is an exact decimal, numeric(5,2). Empty asks the store to take it
+	// from the sheet's standard category, which is what a drafted line sends.
+	TaxRate string
 	// ProductID is the rate-card product the price was grounded on, nil when
 	// none was. A classified product hands the line its category, and the
 	// sheet its rate, in place of TaxRate.
@@ -173,8 +175,12 @@ func (in StagedOfferLineInput) wireTaxRefs() (*openapi_types.UUID, *crmcontracts
 // CheckStagedLine judges the figures of a drafted line by the limits every
 // other line holds, so a drafter can drop one the store would refuse.
 func CheckStagedLine(in StagedOfferLineInput) error {
+	taxRate := in.TaxRate
+	if taxRate == "" {
+		taxRate = zeroPct // the sheet's rate is read when the line is staged
+	}
 	return checkLineFigures(OfferLineInput{
-		Quantity: in.Quantity, UnitPriceMinor: in.UnitPriceMinor, DiscountPct: zeroPct, TaxRate: in.TaxRate,
+		Quantity: in.Quantity, UnitPriceMinor: in.UnitPriceMinor, DiscountPct: zeroPct, TaxRate: taxRate,
 	})
 }
 
