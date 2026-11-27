@@ -156,7 +156,7 @@ func decideThread(t *testing.T, e *integration.Env, user ids.UUID, threadKey str
 func seedHeldThreadOn(t *testing.T, e *integration.Env, threadKey, from string, user ids.UUID) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
 			                      source, captured_by, counterparty_email, thread_key,
@@ -178,7 +178,7 @@ func seedHeldThreadOn(t *testing.T, e *integration.Env, threadKey, from string, 
 
 func setImportVerdict(t *testing.T, e *integration.Env, activityID, user ids.UUID, status string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE capture_import SET verdict_status = $3
 			 WHERE activity_id = $1 AND user_id = $2`, activityID, user, status)
@@ -194,7 +194,7 @@ func setImportVerdict(t *testing.T, e *integration.Env, activityID, user ids.UUI
 func recompute(t *testing.T, e *integration.Env, activityID ids.UUID) {
 	t.Helper()
 	ctx := purgeCtx(e, e.Rep1)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](activityID))
 	}); err != nil {
 		t.Fatalf("recomputing the audience: %v", err)

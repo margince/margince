@@ -32,7 +32,7 @@ func TestAnEventStartsUnreadOnlyWhenTheDealCheckReadsItsType(t *testing.T) {
 		return ok && change.Scope != assurance.ScopeNone
 	}
 	emitted := map[ids.UUID]string{}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		for _, eventType := range events.Types() {
 			entity := ids.NewV7()
 			if err := storekit.Emit(ctx, tx, ids.NewV7(), eventType, "deal", entity, nil); err != nil {

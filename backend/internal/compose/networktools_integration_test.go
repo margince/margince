@@ -47,7 +47,7 @@ func employAt(t *testing.T, e *integration.Env, contact, company ids.UUID) {
 func seedAsAdmin(t *testing.T, e *integration.Env, fn func(context.Context, pgx.Tx) error, what string) {
 	t.Helper()
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return fn(ctx, tx)
 	}); err != nil {
 		t.Fatalf("%s: %v", what, err)

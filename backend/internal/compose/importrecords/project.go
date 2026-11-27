@@ -151,7 +151,7 @@ func (r projectRecord) birthOf(fields map[string]string, typed map[string]any, s
 // already names one.
 func (r projectRecord) PredictCreate(ctx context.Context, fields map[string]string, typed map[string]any) (migration.Reason, error) {
 	in := r.birthOf(fields, typed, "")
-	err := database.WithWorkspaceTx(ctx, r.stores.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.stores.Pool, func(tx pgx.Tx) error {
 		return r.stores.Projects.RefuseImportCreate(ctx, tx, in, r.cols)
 	})
 	if why, refused := r.Refusal(err, fields); refused {

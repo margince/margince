@@ -102,7 +102,7 @@ func TestAQualificationInFlightHoldsItsCorrespondence(t *testing.T) {
 func assertRetentionClass(t *testing.T, e *Env, activity ids.UUID, want string) {
 	t.Helper()
 	var class string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT coalesce(retention_class, '') FROM activity WHERE id = $1`, activity).Scan(&class)
 	}); err != nil {
@@ -115,7 +115,7 @@ func assertRetentionClass(t *testing.T, e *Env, activity ids.UUID, want string) 
 
 func assertHeldNotDestroyed(t *testing.T, e *Env, activity ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var subject, class string
 		var body *string
 		var restricted bool
@@ -149,7 +149,7 @@ func linkCorrespondenceToADeal(t *testing.T, e *Env, activity ids.UUID) ids.Deal
 	t.Helper()
 	pipeline, open, _ := DealFixture(t, e)
 	var deal ids.DealID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		id := ids.NewV7()
 		if _, err := tx.Exec(ctx, `

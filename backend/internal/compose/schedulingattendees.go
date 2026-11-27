@@ -113,7 +113,7 @@ func (c schedulingCalendar) attendeeCandidates(ctx, hostCtx context.Context, add
 	}
 
 	var found attendeeCandidates
-	err := database.WithWorkspaceTx(ctx, c.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, c.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT 'contact', e.contact_id, '' FROM contact_email e JOIN contact c ON c.id = e.contact_id
 			 WHERE e.email = $1 AND e.archived_at IS NULL AND c.archived_at IS NULL AND (`+scope+`)

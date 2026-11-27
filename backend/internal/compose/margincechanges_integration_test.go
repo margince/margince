@@ -229,14 +229,14 @@ func TestTheMorningEmailListsTheChangedDealAndAnUndoBeforeTheSendStopsIt(t *test
 		t.Fatalf("morning with only Margince's changes = useful %v:\n%s\nwant it sent naming the deal", useful, message.Text)
 	}
 	var basis sendBasis
-	if err := database.WithWorkspaceTx(v.owner(t), v.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.owner(t), v.Pool, func(tx pgx.Tx) error {
 		basis, err = readSendBasis(v.owner(t), tx, v.Rep1, nil, morningRefs(items, digestLines{}), now)
 		return err
 	}); err != nil {
 		t.Fatal(err)
 	}
 	v.undo(t, deals.VerdictAmountCorrection)
-	err = database.WithWorkspaceTx(v.owner(t), v.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(v.owner(t), v.Pool, func(tx pgx.Tx) error {
 		return holdSendBasisTx(v.owner(t), tx, basis, func() time.Time { return now })
 	})
 	if !errors.Is(err, errSendBasisChanged) {
@@ -360,7 +360,7 @@ func (v *dealVerdictEnv) morningBasis(t *testing.T, now time.Time) (string, send
 		t.Fatal(err)
 	}
 	var basis sendBasis
-	if err := database.WithWorkspaceTx(v.owner(t), v.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.owner(t), v.Pool, func(tx pgx.Tx) error {
 		basis, err = readSendBasis(v.owner(t), tx, v.Rep1, nil, morningRefs(items, digestLines{}), now)
 		return err
 	}); err != nil {
@@ -371,7 +371,7 @@ func (v *dealVerdictEnv) morningBasis(t *testing.T, now time.Time) (string, send
 
 func (v *dealVerdictEnv) holds(t *testing.T, basis sendBasis, now time.Time) error {
 	t.Helper()
-	return database.WithWorkspaceTx(v.owner(t), v.Pool, func(tx pgx.Tx) error {
+	return database.WithTx(v.owner(t), v.Pool, func(tx pgx.Tx) error {
 		return holdSendBasisTx(v.owner(t), tx, basis, func() time.Time { return now })
 	})
 }

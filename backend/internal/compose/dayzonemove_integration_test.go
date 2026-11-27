@@ -99,7 +99,7 @@ func setInstallationZone(t *testing.T, e *integration.Env, zone string) *time.Lo
 func storedStart(t *testing.T, e *integration.Env, id ids.UUID) time.Time {
 	t.Helper()
 	var at time.Time
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT occurred_at FROM activity WHERE id = $1`, id).Scan(&at)
 	}); err != nil {
 		t.Fatalf("reading the stored start: %v", err)

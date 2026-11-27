@@ -41,7 +41,7 @@ func TestGrantRoleRefusesARoleTheInstallationDidNotShip(t *testing.T) {
 	// The seat genuinely holds it, so anything that answers "no" below is the
 	// is_system filter and not an empty database.
 	var assigned bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT EXISTS (SELECT 1 FROM role_assignment ra JOIN role r ON r.id = ra.role_id
 			                WHERE ra.user_id = $1 AND r.key = 'rep_custom')`, e.Rep1).Scan(&assigned)

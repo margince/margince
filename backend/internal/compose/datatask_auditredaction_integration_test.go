@@ -28,7 +28,7 @@ func legacyAuditErasure(t *testing.T, e *integration.Env) (ids.ContactID, ids.UU
 		t.Fatal(err)
 	}
 	var certificate ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		// Earlier erasures wrote this certificate without physically removing images.
 		certificate, err = storekit.AuditWithEvidence(e.Admin(), tx, "erase", "contact", contact.UUID, nil, nil,
@@ -68,7 +68,7 @@ func TestHistoricalAuditTaskRemovesEarlierPayloadsAndPreservesLaterWork(t *testi
 	if n := e.WsCount(t, `SELECT count(*) FROM audit_log WHERE entity_type='contact' AND entity_id=$1 AND action='erase'`, contact); n != 1 {
 		t.Fatalf("correction changed the subject's erasure boundary: %d certificates", n)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 1000, RunID: ids.NewV7()})
 		if err == nil && out.Changed != 0 {
 			t.Errorf("replay changed %d certificates", out.Changed)
@@ -107,7 +107,7 @@ func TestHistoricalAuditTaskRollsBackAndRejectsMalformedCursors(t *testing.T) {
 	 AND after->>'full_name'='Legacy Personal Name'`, contact); n != 1 {
 		t.Fatalf("rollback lost %d original images, want 1 still present", n)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := batch(ctx, tx, datatask.BatchIn{Cursor: []byte(`"bad cursor"`), Limit: 2})
 		return err
 	}); err == nil {

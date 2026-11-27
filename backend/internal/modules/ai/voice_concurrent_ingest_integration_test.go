@@ -182,7 +182,7 @@ func TestConcurrentIngestOfDistinctSourcesAllSucceed(t *testing.T) {
 	}
 
 	var stored int
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT count(*) FROM voice_corpus_source
 			WHERE voice_profile_id = $1 AND archived_at IS NULL`, profile).Scan(&stored)
@@ -238,7 +238,7 @@ func TestConcurrentIngestMarksTheBuiltProfileStale(t *testing.T) {
 
 func (e *concurrentIngestEnv) readProfile(ctx context.Context, t *testing.T, profile ids.UUID) (status string, version int64) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT status, version FROM voice_profile WHERE id = $1`, profile).Scan(&status, &version)
 	}); err != nil {

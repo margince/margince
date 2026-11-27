@@ -29,7 +29,7 @@ func TestPersonalWaitingRequiresTheAddressedSeatNotTheRecordOwner(t *testing.T) 
 	e := integration.Setup(t)
 	at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
 	addresses := map[ids.UUID]string{}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		for _, seat := range []ids.UUID{e.AdminUser, e.Rep1} {
 			var address string
 			if err := tx.QueryRow(context.Background(), `SELECT email FROM app_user WHERE id=$1`, seat).Scan(&address); err != nil {
@@ -152,7 +152,7 @@ func TestCapturedMailboxRoleSurvivesSecondaryToWithoutInventingCcOrBccDuty(t *te
 	e := integration.Setup(t)
 	at := time.Date(2026, 10, 21, 8, 0, 0, 0, time.UTC)
 	var address string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `SELECT email FROM app_user WHERE id=$1`, e.Rep1).Scan(&address); err != nil {
 			return err
 		}
@@ -206,7 +206,7 @@ func TestCapturedMailboxRoleSurvivesSecondaryToWithoutInventingCcOrBccDuty(t *te
 				restoreLegacyRecipientThroughEngine(classifier, t, e, ref.ID, address, at)
 			}
 			var directEvidence int
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(), `SELECT count(*) FROM activity_participant WHERE activity_id=$1 AND role='to' AND address=$2`, ref.ID, address).Scan(&directEvidence)
 			}); err != nil {
 				t.Fatal(err)
@@ -241,7 +241,7 @@ func TestCapturedMailboxRoleSurvivesSecondaryToWithoutInventingCcOrBccDuty(t *te
 				t.Fatal(err)
 			}
 			var tasks int
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(), `SELECT count(*) FROM activity WHERE source_system='email_request' AND source_activity_id=$1`, ref.ID).Scan(&tasks)
 			}); err != nil {
 				t.Fatal(err)

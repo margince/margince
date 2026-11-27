@@ -86,7 +86,7 @@ func TestTheMeetingFilterIsLeftOutOfTheVocabularyWithoutTheActivityGrant(t *test
 		}
 		ctx := quietSeat(e, objects...)
 		var schema analyticsquery.Schema
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			schema, err = compose.AnalyticsSchemaWithCoverage(ctx, tx)
 			return err
@@ -182,7 +182,7 @@ func daysAt(t *testing.T, q *quietEnv, expr func(asOf string) string, deal ids.U
 	t.Helper()
 	ctx := q.As(q.AdminUser, nil, AdminPerms)
 	var days float64
-	err := database.WithWorkspaceTx(ctx, q.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, q.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, "SELECT "+expr("$1::timestamptz")+" FROM deal t WHERE t.id = $2", asOf, deal).Scan(&days)
 	})
 	if err != nil {

@@ -47,7 +47,7 @@ func (s Settings) Preview(ctx context.Context, id ids.UUID, in crmcontracts.Webs
 		return crmcontracts.WebsiteInquiryHandlingPreview{}, err
 	}
 	var out crmcontracts.WebsiteInquiryHandlingPreview
-	err = database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
+	err = database.WithSnapshot(ctx, s.db.Pool(), func(bound context.Context) error {
 		owner, policyID, err := s.previewOwner(bound, id, in, policy)
 		if err != nil {
 			return err

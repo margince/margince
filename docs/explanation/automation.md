@@ -142,7 +142,7 @@ there would leave the effect never applied.
 The **claim** is the guard against doing a thing twice. `runOne` inserts the `workflow_run` row
 `ON CONFLICT DO NOTHING` before `Apply`. So when the same occurrence is delivered again (the bus delivers
 at least once), it finds the row taken and does nothing. Every write in the pipeline runs inside
-`database.WithWorkspaceTx`, which fails closed before any SQL if no workspace is bound to the context.
+`database.WithTx`, so each write commits with its audit and outbox rows.
 `workflow_run` itself has no workspace column. An installation holds one workspace, so there is no case
 across workspaces to guard against.
 
@@ -233,11 +233,10 @@ database:
 | **Cause** | `WithCausationEvent(env.EventID)`: the event that triggered it is the parent edge | none: a clock pass has no source event |
 
 **The workspace goes with the context.** Every statement runs inside one transaction. The reads and writes
-of a firing all open through `database.WithWorkspaceTx` (see [write-backbone.md](write-backbone.md)),
-which refuses before any SQL when no workspace is bound. The clock scan is the one place that reads
-across the installation (`database.LiveWorkspaces`, a pool query marked `rls-exempt` over the `workspace`
-table). It opens a context per workspace again before any work per record. So nothing after it runs
-without a tenant.
+of a firing all open through `database.WithTx` (see [write-backbone.md](write-backbone.md)).
+The row, its audit row and its outbox row commit together. The clock scan is the one place that reads
+across the installation (`database.LiveWorkspaces`, a pool query marked `pool-exempt` over the `workspace`
+table). It binds a context per workspace again before any work per record.
 
 **A firing acts *as the system*, with the rights *of its owner*.** These are two different identities:
 

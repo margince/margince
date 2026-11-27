@@ -102,11 +102,11 @@ func TestMarkerCorrectionReportsAWriteConflictWithoutAbortingItsTransaction(t *t
 	record := legacyWeeklyCopies(t, e, "")
 	contact, company := e.SeedContact(t, "Ordinary contact", nil), e.SeedCompany(t, "Ordinary company", nil)
 	ctx := principal.SystemActing(e.Admin(), "system:marker-test")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(business pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(business pgx.Tx) error {
 		if _, err := business.Exec(ctx, `UPDATE contact SET legal_hold=false WHERE id=$1`, contact); err != nil {
 			return err
 		}
-		return database.WithWorkspaceTx(ctx, e.Pool, func(cleanup pgx.Tx) error {
+		return database.WithTx(ctx, e.Pool, func(cleanup pgx.Tx) error {
 			page, err := privacy.RedactMarkedWeeklyAuditPageTx(ctx, cleanup, ids.UUID{}, ids.NewV7(), 200, nil)
 			if !storekit.IsLockTimeout(err) {
 				t.Fatalf("a busy table lock must return a lock timeout, got %v", err)
@@ -140,12 +140,12 @@ func TestMarkerCorrectionReportsAReadLockOnARightsRequest(t *testing.T) {
 	request := legacyRequestAuditCopies(t, e)
 	company := e.SeedCompany(t, "Ordinary company", nil)
 	ctx := principal.SystemActing(e.Admin(), "system:marker-test")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(business pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(business pgx.Tx) error {
 		var locked ids.UUID
 		if err := business.QueryRow(ctx, `SELECT id FROM data_subject_request WHERE id=$1 FOR UPDATE`, request).Scan(&locked); err != nil {
 			return err
 		}
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(cleanup pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(cleanup pgx.Tx) error {
 			if _, err := cleanup.Exec(ctx, `SET LOCAL lock_timeout='200ms'`); err != nil {
 				return err
 			}

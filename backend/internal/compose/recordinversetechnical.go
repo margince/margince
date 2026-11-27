@@ -67,7 +67,7 @@ func (s RestoreSeam) reverseTechnical(
 	ctx context.Context, entityType string, id ids.UUID, row AuditRow, ifVersion int64,
 ) (privacy.RecordHistoryEntry, error) {
 	company := ids.From[ids.CompanyKind](row.EntityID)
-	err := database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		if err := s.inverses.contacts.LockTechnicalRestoreTx(ctx, tx, company, ifVersion); err != nil {
 			// An archived company refuses the hold; the evaluator names why.
 			if refusal, refused := errors.AsType[RefusedRestore](s.bindingRefusal(ctx, tx, row)); refused {

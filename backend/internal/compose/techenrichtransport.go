@@ -93,14 +93,13 @@ func (h technicalHandlers) startTechnicalEnrich(
 			Detail: "This company has no domain on file. Add one to look up what they run.",
 		}
 	}
-	// The tenant comes from the bound transaction rather than being read
-	// separately: WithWorkspaceTx refuses outside a workspace, so a job row
-	// without one — which River would never dequeue — cannot be written here.
+	// A job row without a workspace is one River would never dequeue, so the
+	// write refuses when none is bound.
 	ws, bound := principal.WorkspaceID(ctx)
 	if !bound {
 		return crmcontracts.TechnicalEnrichStarted{}, database.ErrNoWorkspace
 	}
-	err = database.WithWorkspaceTx(ctx, h.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, h.pool, func(tx pgx.Tx) error {
 		return h.enqueue.EnqueueTx(ctx, tx, TechnicalEnrichCompanyArgs{
 			Workspace: ws,
 			CompanyID: id,

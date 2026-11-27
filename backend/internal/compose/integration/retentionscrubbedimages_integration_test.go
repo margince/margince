@@ -61,7 +61,7 @@ func TestARetentionEraseScrubsTheImagesOfAStoredOriginal(t *testing.T) {
 func auditWithImages(t *testing.T, e *Env, entityType string, id ids.UUID) {
 	t.Helper()
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := storekit.Audit(ctx, tx, "update", entityType, id,
 			map[string]any{"note": "what it held"}, map[string]any{"note": "what it holds"})
 		return err
@@ -93,7 +93,7 @@ func assertImagesScrubbed(t *testing.T, e *Env, entityType string, id ids.UUID) 
 	}
 	ctx := e.Admin()
 	var evidence string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT coalesce(evidence::text, '') FROM audit_log
 			WHERE entity_type = $1 AND entity_id = $2 AND action = 'update'`, entityType, id).Scan(&evidence)
 	}); err != nil {

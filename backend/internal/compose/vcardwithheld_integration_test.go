@@ -34,7 +34,7 @@ func TestAWithheldCardQueuesNoImport(t *testing.T) {
 		activity, activity.String(), "connector:gmail:"+e.Rep1.String()); err != nil {
 		t.Fatalf("seeding the captured message: %v", err)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return e.Activities.RecordWithheldFiles(ctx, tx, ids.From[ids.ActivityKind](activity),
 			activities.CapturedFileSource{
 				System: "gmail", MessageID: activity.String(), CapturedBy: "connector:gmail", Category: "email_attachment",

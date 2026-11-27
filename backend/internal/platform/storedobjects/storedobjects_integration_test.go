@@ -189,7 +189,7 @@ func workspaceOf(ctx context.Context) ids.WorkspaceID {
 // without waiting a day for it.
 func age(ctx context.Context, t *testing.T, pool *pgxpool.Pool, key string, by time.Duration) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			UPDATE stored_object_intent SET recorded_at = now() - $2::interval
 			 WHERE storage_key = $1`, key, by.String())
@@ -202,7 +202,7 @@ func age(ctx context.Context, t *testing.T, pool *pgxpool.Pool, key string, by t
 func provisionalSince(ctx context.Context, t *testing.T, pool *pgxpool.Pool, key string) time.Time {
 	t.Helper()
 	var at time.Time
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT recorded_at FROM stored_object_intent WHERE storage_key = $1`, key).Scan(&at)
 	}); err != nil {
@@ -216,7 +216,7 @@ func provisionalSince(ctx context.Context, t *testing.T, pool *pgxpool.Pool, key
 func holds(ctx context.Context, t *testing.T, pool *pgxpool.Pool, key string) bool {
 	t.Helper()
 	var found bool
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx,
 			`SELECT EXISTS (SELECT 1 FROM stored_object_intent WHERE storage_key = $1)`, key).Scan(&found)
 	}); err != nil {

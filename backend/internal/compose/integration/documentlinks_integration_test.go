@@ -39,7 +39,7 @@ func captureMailLink(t *testing.T, e *Env, mail ids.UUID, system, address, text 
 	})
 	store := activities.NewStore(e.DB())
 	for range 2 {
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			_, err := store.RecordCapturedLinks(ctx, tx, ids.From[ids.ActivityKind](mail),
 				activities.CapturedFileSource{System: system, MessageID: "m-" + mail.String(), CapturedBy: "connector:imap", Category: "email_attachment"},
 				[]activities.CapturedLink{{URL: address, Text: text}})
@@ -100,7 +100,7 @@ func TestADocumentLinkIsNotAFileOfItsMail(t *testing.T) {
 		t.Errorf("link with no anchor text is named %q, want its host", v)
 	}
 	var counts map[ids.UUID]int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) (err error) {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) (err error) {
 		counts, err = activities.AttachmentCountsFor(e.Admin(), tx, []ids.UUID{mail})
 		return err
 	}); err != nil {

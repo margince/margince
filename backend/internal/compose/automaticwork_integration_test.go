@@ -47,7 +47,7 @@ func (f *workFixture) promiseTask(t *testing.T, assignee ids.UUID) ids.ActivityI
 	t.Helper()
 	ctx := f.e.AutomationCtx(assignee)
 	var task ids.UUID
-	if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		task, err = writeCommitmentTask(ctx, tx, f.e.Activities, f.e.Contacts, commitmentTask{
 			Extractor: transcriptProposalActor, Locator: ids.NewV7().String(), Summary: "Send the pricing",
@@ -121,7 +121,7 @@ func (f *workFixture) report(t *testing.T, now time.Time, days int) crmcontracts
 	t.Helper()
 	ctx := f.e.Admin()
 	var out crmcontracts.AutomaticWorkHealth
-	if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = readAutomaticWorkHealth(ctx, tx, now, days)
 		return err
@@ -384,7 +384,7 @@ func TestAutomaticWorkWindowStartsOnTheRequestedDayAcrossAMidnightDSTChange(t *t
 		t.Fatal(err)
 	}
 	now := time.Date(2026, 9, 6, 15, 0, 0, 0, time.UTC)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, from, last, err := automaticWorkWindow(ctx, tx, now, 1)
 		if err != nil {
 			return err

@@ -72,7 +72,7 @@ func setupProviderConsumer(t *testing.T, automaticLookup bool) *providerConsumer
 	// a first name and nothing else, which is right for the erasure tests it
 	// was written for and leaves this one's subject unfindable — so the
 	// identifier is added HERE, where the fixture's own claim needs it.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO contact_social (contact_id, platform, handle)
 			VALUES ($1, 'linkedin', 'https://www.linkedin.com/in/selma-subject')`,
@@ -96,7 +96,7 @@ func setupProviderConsumer(t *testing.T, automaticLookup bool) *providerConsumer
 	// Named once above and passed to both the INSERT and the guard, so the
 	// check reads the selection this connection actually carries rather than a
 	// second copy of it that can drift from it silently.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO provider_connection
 			       (id, provider, status, mode, preset, categories, automatic_individual_create)
@@ -112,7 +112,7 @@ func setupProviderConsumer(t *testing.T, automaticLookup bool) *providerConsumer
 	// The one answer that decides. Written as a row the way the settings
 	// surface leaves it, because the read is machinery-applied and this
 	// fixture has no caller for a gated write.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO setting (key, value) VALUES ($1, to_jsonb($2::bool))
 			ON CONFLICT (key) DO UPDATE SET value = excluded.value`,
@@ -188,7 +188,7 @@ func actorEnvelope(contactID ids.UUID, actorType, actorID string) events.Envelop
 func (c *providerConsumerEnv) runsForContact(t *testing.T) int {
 	t.Helper()
 	var runs int
-	if err := database.WithWorkspaceTx(c.env.Admin(), c.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(c.env.Admin(), c.env.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM provider_run WHERE contact_id = $1`, c.contactID).Scan(&runs)
 	}); err != nil {
@@ -210,7 +210,7 @@ func TestContactCreatedQueuesAnEnrichmentRun(t *testing.T) {
 	// first would create the row this asserts and pass even if HandleEvent
 	// did nothing at all.
 	var state, skipReason string
-	if err := database.WithWorkspaceTx(c.env.Admin(), c.env.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(c.env.Admin(), c.env.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT state, coalesce(skip_reason, '') FROM provider_run WHERE contact_id = $1`,
 			c.contactID).Scan(&state, &skipReason)

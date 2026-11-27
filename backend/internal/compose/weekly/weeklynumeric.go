@@ -90,7 +90,7 @@ func applyNumericMoney(money *Money, summary crmcontracts.WeeklyNumericSummary) 
 }
 
 func (e *Engine) withMeasurementSnapshot(ctx context.Context, read func(pgx.Tx) error) error {
-	return database.WithWorkspaceSnapshot(ctx, e.pool, func(snapshot context.Context) error {
-		return database.WithWorkspaceTx(snapshot, e.pool, read)
+	return database.WithSnapshot(ctx, e.pool, func(snapshot context.Context) error {
+		return database.WithTx(snapshot, e.pool, read)
 	})
 }

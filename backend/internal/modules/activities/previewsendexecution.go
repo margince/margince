@@ -20,7 +20,7 @@ type SendExecutionPreviewer interface {
 // preparation write, including when the caller already holds a shared snapshot.
 func (s *Store) PreviewSendExecution(ctx context.Context, origin SendOrigin, in SendEmailInput, gate SendExecutionPreviewer) (commsauthz.DecisionSet, error) {
 	var decisions commsauthz.DecisionSet
-	err := database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(ctx context.Context) error {
+	err := database.WithSnapshot(ctx, s.db.Pool(), func(ctx context.Context) error {
 		return database.WithSavepoint(ctx, func(ctx context.Context) error {
 			prepared, err := s.prepareRenderedSend(ctx, origin, in, gate, nil)
 			if err != nil {

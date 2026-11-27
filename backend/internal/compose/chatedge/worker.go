@@ -81,7 +81,7 @@ func (w *Worker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 	}
 	rawID := job.Args.RawCapture()
 	var payload []byte
-	err = database.WithWorkspaceTx(bound, w.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(bound, w.Pool, func(tx pgx.Tx) error {
 		var err error
 		payload, err = capture.GetRawCapturePayloadTx(bound, tx, rawID)
 		return err
@@ -96,7 +96,7 @@ func (w *Worker[T]) Work(ctx context.Context, job *river.Job[T]) error {
 	switch decoded.Outcome {
 	case Discard:
 		w.Log.InfoContext(bound, w.Name+": discarded a stored item that is no message")
-		return jobs.FaultContext(ctx, database.WithWorkspaceTx(bound, w.Pool, func(tx pgx.Tx) error {
+		return jobs.FaultContext(ctx, database.WithTx(bound, w.Pool, func(tx pgx.Tx) error {
 			return capture.DeleteRawCaptureTx(bound, tx, rawID)
 		}))
 	case Change:

@@ -89,7 +89,7 @@ func newOwnerResolver(ctx context.Context, pool *pgxpool.Pool, emails []string) 
 	if len(emails) == 0 {
 		return o, nil
 	}
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		o.seats, err = seatsByEmail(ctx, tx, emails)
 		return err

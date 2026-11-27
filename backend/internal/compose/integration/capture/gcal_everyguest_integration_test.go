@@ -171,7 +171,7 @@ type guestRow struct {
 func guestRows(t *testing.T, e *integration.SearchEnv, meeting ids.UUID) map[string][]guestRow {
 	t.Helper()
 	out := map[string][]guestRow{}
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT coalesce(ap.address, u.email), ap.user_id, ap.contact_id
 			  FROM activity_participant ap LEFT JOIN app_user u ON u.id = ap.user_id
@@ -206,7 +206,7 @@ func meetingLinkedTo(t *testing.T, e *integration.SearchEnv, meeting ids.UUID, c
 func gcalMeeting(t *testing.T, e *integration.SearchEnv) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM activity WHERE source_system = 'gcal' AND source_id = 'review'`).Scan(&id)
 	}); err != nil {

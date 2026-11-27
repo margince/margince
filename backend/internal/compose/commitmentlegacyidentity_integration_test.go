@@ -33,7 +33,7 @@ func TestHistoricalTaskSurvivesMissingParticipantsAndReassignment(t *testing.T) 
 	locator := commitmentLocator(e.activity.UUID, claimKindOurs, "seat:"+e.Rep2.String(), "3:"+quote)
 	ctx := withTranscriptReader(e.ctx, "human:"+e.Rep1.String(), ids.NewV7())
 	var task ids.UUID
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		task, err = writeCommitmentTask(ctx, tx, e.Activities, e.Contacts, commitmentTask{
 			Extractor: transcriptProposalActor, Locator: locator, Summary: "Send revised pricing", Body: quote,

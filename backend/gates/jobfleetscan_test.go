@@ -197,11 +197,11 @@ func TestFleetEnumerationOnlyAtRatifiedSites(t *testing.T) {
 	}
 }
 
-// TestModulesReadTheWorkspaceCollectionOnlyInIdentity has no waiver list: a
-// module other than identity, which owns the workspace table, takes the fleet
+// TestModulesReadTheWorkspaceCollectionOnlyInIdentity has no waiver list.
+// A module other than identity, which owns the workspace table, takes the fleet
 // from database.LiveWorkspaces or database.EveryWorkspace and never spells the
-// scan itself. The census check fails when no module file was read, so a moved
-// directory cannot turn this into a pass over nothing.
+// scan itself. The census check fails when few module files were read, so a
+// moved directory cannot turn this into a pass over nothing.
 func TestModulesReadTheWorkspaceCollectionOnlyInIdentity(t *testing.T) {
 	t.Parallel()
 	paths, err := goFilesUnder("internal/modules")

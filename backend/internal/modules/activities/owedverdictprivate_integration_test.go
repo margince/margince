@@ -62,7 +62,7 @@ func (e *loadEnv) privateTo(t *testing.T, message, seat ids.UUID, reason string)
 		return
 	}
 	system := asClassifier(e)
-	if err := database.WithWorkspaceTx(system, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.pool, func(tx pgx.Tx) error {
 		return RecomputeAudienceTx(system, tx, ids.From[ids.ActivityKind](message))
 	}); err != nil {
 		t.Fatalf("deriving the audience: %v", err)
@@ -432,7 +432,7 @@ func TestNoReminderForASeatThatMayNotReadThePrivateMail(t *testing.T) {
 	e := setupLoad(t)
 	source := e.privateWait(t, "Please send the report", ReasonWorkspaceFloor)
 	system := asClassifier(e)
-	err := database.WithWorkspaceTx(system, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(system, e.pool, func(tx pgx.Tx) error {
 		mail, err := readActivity(system, tx, ids.From[ids.ActivityKind](source), storekit.LiveOnly)
 		if err != nil {
 			return err
@@ -503,7 +503,7 @@ func TestReviewReadsRoutinePrivateMailAndNeverHeldMail(t *testing.T) {
 			}
 			e.privateTo(t, mail, e.rep, reason)
 			reviewer := e.asSeat(e.rep)
-			err := database.WithWorkspaceTx(reviewer, e.pool, func(tx pgx.Tx) error {
+			err := database.WithTx(reviewer, e.pool, func(tx pgx.Tx) error {
 				_, err := OwedReviewTx(reviewer, tx, mail, 4000, 4000)
 				return err
 			})

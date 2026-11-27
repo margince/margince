@@ -48,7 +48,7 @@ func (h analyticsQueryHandlers) ListExtensionHistory(w http.ResponseWriter, r *h
 	ctx := r.Context()
 	entity, id := string(params.EntityType), ids.UUID(params.EntityId)
 	entries := []crmcontracts.ExtensionHistoryEntry{}
-	err := database.WithWorkspaceTx(ctx, h.db.Pool(), func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, h.db.Pool(), func(tx pgx.Tx) error {
 		if err := auth.Require(ctx, entity, principal.ActionRead); err != nil {
 			return err
 		}

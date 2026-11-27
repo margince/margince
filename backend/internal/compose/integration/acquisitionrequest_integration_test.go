@@ -48,7 +48,7 @@ func queuedFollowUp(t *testing.T, e *Env, gate *consent.Gate, address string) fu
 		t.Fatalf("planting the delivery: %v", err)
 	}
 	recipients := []connector.Recipient{{Email: address}}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		set, err := gate.AuthorizeStagingTx(e.Admin(), tx, delivery, commsauthz.Request{
 			Recipients: recipients, Context: commsauthz.CategoryRequestedFollowup, Subject: "S", Body: "b",
 		})

@@ -95,7 +95,7 @@ func TestAColleagueTakesOverAPromiseNobodyWasAskedToKeep(t *testing.T) {
 	}
 
 	var claims []crmcontracts.ConversationClaim
-	if err := database.WithWorkspaceTx(f.priya, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(f.priya, f.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		claims, err = f.e.Contacts.ClaimsForContact(f.priya, tx, ids.From[ids.ContactKind](f.contact), nil, 10)
 		return err
@@ -267,7 +267,7 @@ func TestAPromiseTheScanCouldNotPlaceIsStillTakenOver(t *testing.T) {
 	// whatever this records.
 	scan := principal.SystemActing(f.e.Admin(), "signal-scan")
 	var outcome CommitmentOutcome
-	if err := database.WithWorkspaceTx(scan, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(scan, f.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		outcome, _, err = NewCommitmentDispatcher(f.e.Pool, approvals.NewService(f.e.DB())).
 			DispatchTx(scan, tx, c, ids.NewV7())
@@ -330,7 +330,7 @@ func TestAPromiseAnAgentRecordedIsOpenOnItsContact(t *testing.T) {
 	isOpen := func() bool {
 		t.Helper()
 		var open []crmcontracts.ConversationClaim
-		if err := database.WithWorkspaceTx(f.priya, f.e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(f.priya, f.e.Pool, func(tx pgx.Tx) error {
 			var err error
 			open, err = f.h.claims.OpenCommitmentsForContact(f.priya, tx, ids.From[ids.ContactKind](f.contact), nil, 50)
 			return err

@@ -51,7 +51,7 @@ func logged(
 func standing(reader context.Context, t *testing.T, e *Env, cited ...ids.UUID) map[ids.UUID]bool {
 	t.Helper()
 	var out map[ids.UUID]bool
-	err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		var readErr error
 		out, readErr = activities.StandingActivities(reader, tx, cited)
 		return readErr

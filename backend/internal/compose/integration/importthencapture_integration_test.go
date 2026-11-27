@@ -264,7 +264,7 @@ func TestASentMessageIsNotRewrittenByAColleaguesMailbox(t *testing.T) {
 	// The sent row as the send path writes it: the mail natural key, the
 	// sender's own stamp, and no identity claim.
 	sent := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, occurred_at, direction,
 			                      source_system, source_id, source, captured_by)
@@ -369,7 +369,7 @@ func eraseImportedMessage(t *testing.T, e *integration.Env, messageID string, ke
 	imported := scalar[ids.UUID](t, e, `
 		SELECT activity_id FROM activity_identity
 		 WHERE identity_kind = 'mail' AND identity_key = $1`, messageID)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			UPDATE activity SET archived_at = now(), body = NULL, subject = NULL
 			 WHERE id = $1`, imported); err != nil {
@@ -392,7 +392,7 @@ func eraseImportedMessage(t *testing.T, e *integration.Env, messageID string, ke
 func assertErasedStaysErased(t *testing.T, e *integration.Env, erased ids.UUID, messageID string) {
 	t.Helper()
 	var body *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT body FROM activity WHERE id = $1`, erased).Scan(&body)
 	}); err != nil {
@@ -627,7 +627,7 @@ func TestAPlantedMessageIDNeitherSuppressesNorTakesOverTheRealMessage(t *testing
 
 	// A different seat plants a row under a Message-ID they do not hold.
 	planter := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Planter')`,
 			planter, "planter-"+planter.String()+"@ws.example")

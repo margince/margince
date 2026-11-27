@@ -151,7 +151,7 @@ func TestNoiseRedactionEmptiesAnActivitysCustomFieldValues(t *testing.T) {
 		t.Fatal(err)
 	}
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := store.RedactCapturedNoiseTx(ctx, tx, erasable, noise)
 		return err
 	}); err != nil {

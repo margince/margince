@@ -88,7 +88,7 @@ func (r RecordAccessReads) Read(
 		return crmcontracts.RecordAccess{}, errors.New("compose: a record access read with no caller bound")
 	}
 	var out crmcontracts.RecordAccess
-	err := database.WithWorkspaceSnapshot(ctx, r.pool, func(ctx context.Context) error {
+	err := database.WithSnapshot(ctx, r.pool, func(ctx context.Context) error {
 		subject, err := r.subject(ctx, table, id)
 		if err != nil {
 			return err
@@ -228,7 +228,7 @@ func withoutTeams(ps []principal.Principal, caller ids.UUID) []principal.Princip
 // it.
 func (r RecordAccessReads) judge(ctx context.Context, subject accessSubject, ps []principal.Principal) ([]accessVerdict, error) {
 	out := make([]accessVerdict, len(ps))
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		reads, err := auth.AdmitReaders(ctx, tx, subject.table, subject.id, ps)
 		if err != nil {
 			return err

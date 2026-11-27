@@ -421,7 +421,7 @@ func TestTheVerdictsAgeOutAndGoWithTheirDeal(t *testing.T) {
 	at := e.dayNoon(t)
 	e.passAt(t, at.Add(-24*time.Hour))
 	e.passAt(t, at)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return consent.SeedDefaultRetentionTx(context.Background(), tx)
 	}); err != nil {
 		t.Fatalf("planting the default retention ladder: %v", err)

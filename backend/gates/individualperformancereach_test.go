@@ -107,7 +107,7 @@ var switchWalkConfig = walkConfig{
 	},
 	dispatchers: []switchReader{{modulePath + "/internal/modules/agents", "Registry.Invoke", 0}},
 	synchronous: []string{
-		databasePath + ".WithWorkspaceTx", databasePath + ".WithWorkspaceSnapshot",
+		databasePath + ".WithTx", databasePath + ".WithSnapshot",
 		databasePath + ".DB.Tx", databasePath + ".DB.TxIsolated",
 	},
 	sentinelPackages:    []string{modulePath + "/internal/shared/apperrors", "github.com/jackc/pgx/v5"},

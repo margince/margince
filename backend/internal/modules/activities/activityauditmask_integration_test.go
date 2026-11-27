@@ -178,7 +178,7 @@ func TestEveryColumnOfAMailTextAuditRowIsStoredMasked(t *testing.T) {
 	ctx := e.as(principal.RowScopeAll)
 	for _, entityType := range []string{"activity", "scheduled_send", "mail_draft"} {
 		image := map[string]any{"subject": maskableLine}
-		err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 			_, err := storekit.AuditWithEvidence(ctx, tx, "update", entityType, ids.NewV7(), image, image,
 				map[string]any{"reason": maskableLine})
 			return err

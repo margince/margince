@@ -79,7 +79,7 @@ func optIn(t *testing.T, e *integration.Env, catalog *customfields.Service, fiel
 
 func dealsByColumn(ctx context.Context, e *integration.Env, column string) (AnalyticsAnswer, error) {
 	var answer AnalyticsAnswer
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		answer, err = RunAnalyticsQuery(ctx, tx, analyticsquery.Query{
 			Entity:   "deals-by-stage",
@@ -125,7 +125,7 @@ func TestAReportableDealFieldGroupsTheDealsThatHoldIt(t *testing.T) {
 	}
 
 	var schema analyticsquery.Schema
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		schema, _, err = AnalyticsSchemaIn(ctx, tx)
 		return err
 	}); err != nil {

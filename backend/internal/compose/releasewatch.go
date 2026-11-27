@@ -158,7 +158,7 @@ func recordedRelease(ctx context.Context, pool *pgxpool.Pool) (string, error) {
 		return "", nil
 	}
 	var recorded string
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		version, err := lastObservedRelease(ctx, tx)
 		recorded = version
 		return err

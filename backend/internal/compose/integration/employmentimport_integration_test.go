@@ -28,7 +28,7 @@ import (
 func employmentPurchase(t *testing.T, e *Env, subject ids.UUID, claims []provider.Claim) {
 	t.Helper()
 	run := seedRun(t, e, subject, "completed", ids.NewV7().String(), false)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return contacts.WriteProviderClaims(e.Admin(), tx, run, subject.String(), "surfe", claims, time.Date(2026, 9, 1, 0, 0, 0, 0, time.UTC))
 	}); err != nil {
 		t.Fatal(err)
@@ -86,7 +86,7 @@ func TestEmploymentImportPreservesDistinctRolesAndReplays(t *testing.T) {
 			t.Fatal("replay created another relationship")
 		}
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var count, current int
 		if err := tx.QueryRow(context.Background(), `SELECT count(*), count(*) FILTER (WHERE `+employment.CurrentPrimarySlotSQL("")+`) FROM relationship WHERE contact_id=$1 AND archived_at IS NULL`, subject).Scan(&count, &current); err != nil {
 			return err
@@ -188,7 +188,7 @@ func TestEmploymentImportHumanCorrectionSurvivesReplayAndRevert(t *testing.T) {
 	if _, err := store.ApplyEmploymentImport(e.Admin(), contact, crmcontracts.EmploymentImportRequest{}); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		reverted, err := contacts.RevertProviderFills(e.Admin(), tx, "surfe", subject)
 		if err != nil {
 			return err
@@ -246,7 +246,7 @@ func TestEmploymentImportMergeKeepsRolesAndMovesSupport(t *testing.T) {
 	if _, err := store.MergeContact(e.Admin(), ids.From[ids.ContactKind](source), ids.From[ids.ContactKind](target), nil); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var oldResolutions, newResolutions, oldFields, newFields int64
 		err := tx.QueryRow(e.Admin(), `SELECT
    (SELECT count(*) FROM provider_employment_resolution WHERE relationship_id=@source),
@@ -343,7 +343,7 @@ func TestEmploymentImportRetractionWaitsForTheFinalProvider(t *testing.T) {
 		t.Fatal(err)
 	}
 	run := seedRun(t, e, subject, "completed", ids.NewV7().String(), false)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(e.Admin(), `UPDATE provider_run SET provider='second_provider' WHERE id=$1`, run); err != nil {
 			return err
 		}
@@ -355,7 +355,7 @@ func TestEmploymentImportRetractionWaitsForTheFinalProvider(t *testing.T) {
 		t.Fatal(err)
 	}
 	for index, vendor := range []string{"surfe", "second_provider"} {
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			if _, err := contacts.RevertProviderFills(e.Admin(), tx, vendor, subject); err != nil {
 				return err
 			}
@@ -404,7 +404,7 @@ func TestEmploymentImportEndsTheOlderUndatedRoleAtTheSameCompany(t *testing.T) {
 	if len(report.Items) != 1 || report.Items[0].State != "linked" {
 		t.Fatalf("report = %+v, want the new role linked, not left for review", report.Items)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var status string
 		var ended *time.Time
 		if err := tx.QueryRow(context.Background(), `SELECT employment_status, ended_at FROM relationship WHERE id = $1`, older.ID).Scan(&status, &ended); err != nil {

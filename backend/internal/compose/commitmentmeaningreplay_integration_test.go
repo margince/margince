@@ -44,7 +44,7 @@ func assertNonActionRereadPreservesAdmission(t *testing.T, f renewalPrivacyFixtu
 		c.Meaning = &commitmentMeaning{State: state, DeadlinePrecision: "none"}
 		c.AdmissionSourceID, c.RenewedAt, c.RenewalEvidence = nil, nil, nil
 		c.AsOf, c.Summary, c.DueDate = c.AsOf.Add(time.Hour), "Later interpretation", ""
-		if err := database.WithWorkspaceTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, f.e.Pool, func(tx pgx.Tx) error {
 			outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 			if err == nil && outcome != CommitmentRemembered {
 				t.Errorf("%s reread = %s", state, outcome)

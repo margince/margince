@@ -45,7 +45,7 @@ func (e *scoutEnv) openedCorrection(t *testing.T, company ids.UUID) (deals.DealC
 		t.Fatalf("no deal_open correction on the company: %v", err)
 	}
 	var correction deals.DealCorrection
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		correction, err = e.Deals.CorrectionForAudit(e.Admin(), tx, auditID)
 		return err
 	}); err != nil {
@@ -226,7 +226,7 @@ func TestEvidenceNoLongerWorkspaceReadableOpensNoDeal(t *testing.T) {
 	}
 	holds := func() bool {
 		var held bool
-		if err := database.WithWorkspaceTx(e.system(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.system(), e.Pool, func(tx pgx.Tx) error {
 			var err error
 			held, err = dealscout.EvidenceHolds(e.system(), tx, evidence)
 			return err

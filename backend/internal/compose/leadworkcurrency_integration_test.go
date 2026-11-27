@@ -39,7 +39,7 @@ func TestLeadReplyAdviceFollowsTheSourceRatherThanTheImport(t *testing.T) {
 	assertLeadAdviceOnWorklist(t, l, now, 1)
 	var due *time.Time
 	var source *ids.UUID
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT due_at, source_activity_id FROM activity WHERE source_system=$1 AND source_id=$2`, provenance.LeadRepliedSource, inbound.String()+":"+lead.String()).Scan(&due, &source)
 	}); err != nil {
 		t.Fatal(err)
@@ -101,7 +101,7 @@ func TestLeadReplyAdviceRejectsFutureMailAndSharesLegacyAdmission(t *testing.T) 
 		t.Fatal(err)
 	}
 	assertCurrentLeadAdvice(t, l, lead, now, 0)
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
 		return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, source)
 	}); err != nil {
 		t.Fatal(err)
@@ -142,7 +142,7 @@ func TestLeadQualificationKeepsBookingsDistinctFromMail(t *testing.T) {
 			if err != nil {
 				t.Fatal(err)
 			}
-			if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
 				if tc.kind == "meeting" {
 					return writer.FileLeadBookingTx(l.e.Admin(), tx, lead, ids.UUID(source.Id))
 				}
@@ -226,7 +226,7 @@ func TestAdoptedLegacyLeadAdviceSurvivesItsSourceArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error { return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, source) }); err != nil {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error { return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, source) }); err != nil {
 		t.Fatal(err)
 	}
 	if n := l.qualifyAsks(t, lead, l.e.Rep2); n != 1 {
@@ -250,7 +250,7 @@ func TestAdoptedLegacyLeadAdviceSurvivesItsSourceArchive(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error {
 		return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, ids.UUID(next.Id))
 	}); err != nil {
 		t.Fatal(err)
@@ -277,7 +277,7 @@ func TestLeadAdviceFollowsItsSourceAudienceOnEveryRead(t *testing.T) {
 		t.Fatal(err)
 	}
 	sourceID := ids.From[ids.ActivityKind](ids.UUID(source.Id))
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error { return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, sourceID.UUID) }); err != nil {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error { return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, sourceID.UUID) }); err != nil {
 		t.Fatal(err)
 	}
 	assertCurrentLeadAdvice(t, l, lead, now, 1)
@@ -322,7 +322,7 @@ func TestLeadAdviceFollowsItsSourceAudienceOnEveryRead(t *testing.T) {
 	if _, err := l.e.Activities.SetAudience(l.e.Admin(), privateID, activities.SetAudienceInput{Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: l.e.AdminUser}}}); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error { return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, privateID.UUID) }); err != nil {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error { return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, privateID.UUID) }); err != nil {
 		t.Fatal(err)
 	}
 	if n := l.e.WsCount(t, `SELECT count(*) FROM activity a JOIN activity_link l ON l.activity_id=a.id
@@ -339,7 +339,7 @@ func TestLeadAdviceFollowsItsSourceAudienceOnEveryRead(t *testing.T) {
 	if err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error { return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, ids.UUID(next.Id)) }); err != nil {
+	if err := database.WithTx(l.e.Admin(), l.e.Pool, func(tx pgx.Tx) error { return writer.FileLeadReplyTx(l.e.Admin(), tx, lead, ids.UUID(next.Id)) }); err != nil {
 		t.Fatal(err)
 	}
 	assertLeadAdviceOnWorklist(t, l, now, 1)

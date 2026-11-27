@@ -46,7 +46,7 @@ func TestABootSetRetainOnlyPostureSuppressesDestruction(t *testing.T) {
 		t.Fatal(err)
 	}
 	var leadName string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `SELECT full_name FROM lead WHERE id = $1`, staleLead).Scan(&leadName)
 	}); err != nil {
 		t.Fatal(err)

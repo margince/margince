@@ -64,7 +64,7 @@ type delivered struct {
 func seedMailRecipient(t *testing.T, e *Env) ids.UUID {
 	t.Helper()
 	contactID := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx,
 			`INSERT INTO contact (id, full_name, source, captured_by)
@@ -115,7 +115,7 @@ type addresses struct{ counterparty, to, cc string }
 func seedAddressedDelivery(t *testing.T, e *Env, age, subject, body, status string, addr addresses, linkTo ids.UUID) delivered {
 	t.Helper()
 	out := delivered{contact: linkTo, activity: ids.NewV7(), delivery: ids.NewV7(), subject: subject, status: status}
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO activity (id, kind, subject, body, direction, occurred_at, source, captured_by, source_system, source_id, counterparty_email)
@@ -165,7 +165,7 @@ type deliveryRow struct {
 func readDelivery(t *testing.T, e *Env, id ids.UUID) deliveryRow {
 	t.Helper()
 	var row deliveryRow
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT recipients::text, cc::text, subject, body, list_unsubscribe, reason,
 			       status, sent_at, provider_message_id
@@ -212,7 +212,7 @@ func assertDeliveryRedacted(t *testing.T, e *Env, d delivered) {
 			row.sentAt, row.providerMessageID)
 	}
 	var activitySubject *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT subject FROM activity WHERE id = $1`, d.activity).Scan(&activitySubject)
 	}); err != nil {
@@ -273,7 +273,7 @@ func TestErasureRedactsTheDeliveryBehindARedactedActivity(t *testing.T) {
 	// The floor-shielded message keeps its activity, so its delivery keeps its
 	// copy: the two must agree, always.
 	var activityBody *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT body FROM activity WHERE id = $1`, shielded.activity).Scan(&activityBody)
 	}); err != nil {
@@ -419,7 +419,7 @@ func TestErasurePreservesUnlinkedMailUnderATransitiveLegalHold(t *testing.T) {
 
 	var subject string
 	var body *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT subject, body FROM activity WHERE id = $1`, held.activity).Scan(&subject, &body)
 	}); err != nil {
@@ -481,7 +481,7 @@ func TestSARIncludesTheSubjectsSentMessages(t *testing.T) {
 // the send log must not keep serving the same words afterwards.
 func TestRetentionRedactsTheDeliveryOfAnAgedOutActivity(t *testing.T) {
 	e := Setup(t)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO retention_policy (object_type, category, retain_days, action)
 			VALUES ('activity', NULL, 100, 'erase')`)

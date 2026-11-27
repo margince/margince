@@ -60,7 +60,7 @@ func (e *CounterpartyVerdictEngine) StageReviewsWorkspace(ctx context.Context, m
 				return err
 			}
 		}
-		return database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+		return database.WithTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 			args := []any{counterpartyProposalKind, maxRows}
 			rows, err := tx.Query(wsCtx, fmt.Sprintf(`SELECT a.id FROM approval a JOIN capture_pending_counterparty p ON p.proposal_id=a.id
      WHERE a.kind=$%d AND a.status='pending' AND p.status='unsure' ORDER BY a.id LIMIT $%d`, len(args)-1, len(args)), args...)
@@ -117,7 +117,7 @@ func (e *CounterpartyVerdictEngine) AgeOutStaleReviewsWorkspace(ctx context.Cont
 // backs out having changed nothing.
 func (e *CounterpartyVerdictEngine) ageOutOneReview(ctx context.Context, row capture.StaleReview) (bool, error) {
 	aged := false
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		proposalID, ok, err := e.pending.ClaimReviewForAgeOut(ctx, tx, row.ID)
 		if err != nil || !ok {
 			return err
@@ -161,7 +161,7 @@ func (e *CounterpartyVerdictEngine) HideNoiseStragglersWorkspace(ctx context.Con
 			return nil
 		}
 		hidden := 0
-		err = database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+		err = database.WithTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 			var err error
 			hidden, err = e.activities.HideCapturedNoiseTx(wsCtx, tx, due)
 			return err
@@ -246,7 +246,7 @@ func (e *CounterpartyVerdictEngine) redactOneNoiseMessage(
 	ctx context.Context, id ids.UUID, window time.Duration, erasable activities.ErasableColumns,
 ) (bool, error) {
 	destroyed := false
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		// The floor in force now, not the one the page was selected under: a
 		// jurisdiction change between the two must not destroy what it shields.
 		floor, _, err := purgeFloorTx(ctx, tx)
@@ -348,7 +348,7 @@ const reservedDomainReason = "reserved domain (RFC 2606): no contact proposed"
 // staging backlog ahead of real senders. `rejected` creates nothing and
 // touches no mail, as an aged-out review does.
 func (e *CounterpartyVerdictEngine) closeReservedDomainReview(ctx context.Context, row capture.PendingCounterparty) error {
-	return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		return e.pending.ResolveReviewed(ctx, tx, row.ID, capture.PendingStatusRejected, reservedDomainReason)
 	})
 }
@@ -364,7 +364,7 @@ func (e *CounterpartyVerdictEngine) closeLeadHeldReview(ctx context.Context, row
 	if err != nil || lead.IsZero() {
 		return false, err
 	}
-	return true, database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	return true, database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		return e.pending.ResolveReviewedAs(ctx, tx, row.ID, capture.PendingStatusReal, capture.KindContact, leadHeldReason)
 	})
 }

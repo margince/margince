@@ -28,5 +28,5 @@ func Record(ctx context.Context, pool *pgxpool.Pool, workspace ids.UUID, watch *
 		return nil
 	}
 	ctx = principal.SystemActing(principal.WithWorkspaceID(ctx, workspace), Actor)
-	return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error { return watch.RecordTx(ctx, tx) })
+	return database.WithTx(ctx, pool, func(tx pgx.Tx) error { return watch.RecordTx(ctx, tx) })
 }

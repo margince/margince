@@ -50,9 +50,9 @@ func (s *Service) SetOptions(ctx context.Context, id ids.UUID, options []string)
 	if err != nil {
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: begin schema tx: %w", err)
 	}
-	// Error-path safety net only; after Commit this is pgx's ErrTxClosed
-	// no-op, and on the error path the operation's own error is the one
-	// the caller must see (the WithWorkspaceTx spelling).
+	// Error-path safety net only. After Commit this is pgx's ErrTxClosed
+	// no-op, and on the error path the caller must see the operation's own
+	// error (the WithTx spelling).
 	//craft:ignore swallowed-errors deferred rollback of a committed tx is a designed no-op; real failures already left through the operation error
 	defer func() { _ = tx.Rollback(ctx) }()
 

@@ -128,7 +128,7 @@ func (s *Service) IntroRequestDraft(
 			apperrors.ErrInvalidArgument)
 	}
 	var facts introFacts
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var err error
 		facts, err = s.introFactsFor(ctx, tx, companyID, active, req)
 		return err

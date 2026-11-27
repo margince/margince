@@ -41,7 +41,7 @@ func (d systemDirectory) ByRole(ctx context.Context, actAs extension.UserID, rol
 		return []extension.UserID{}, nil
 	}
 	var members []ids.UUID
-	err = database.WithWorkspaceTx(seatCtx, d.rt.deps.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(seatCtx, d.rt.deps.pool, func(tx pgx.Tx) error {
 		// A key that names no role matches no row, so it adds nobody and the
 		// answer does not tell whether the role exists.
 		rows, err := tx.Query(seatCtx, `

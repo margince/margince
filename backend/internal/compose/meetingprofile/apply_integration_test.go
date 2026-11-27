@@ -113,7 +113,7 @@ func (m *meeting) readAs(reader context.Context, t *testing.T, entries []saidBy,
 		}
 	}
 	quiet := slog.New(slog.NewTextHandler(io.Discard, nil))
-	if err := database.WithWorkspaceTx(reader, m.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, m.e.Pool, func(tx pgx.Tx) error {
 		return meetingprofile.Apply(reader, tx, quiet, raw, 1, m.transcript, parties)
 	}); err != nil {
 		t.Fatalf("applying the reading: %v", err)
@@ -335,7 +335,7 @@ func TestOneSweepRemovesMoreMeetingValuesThanOneBatch(t *testing.T) {
 // may edit companies is still refused it.
 func TestOnlyTheSystemRunsTheMeetingProfileSweep(t *testing.T) {
 	m := newMeeting(t, "workspace")
-	err := database.WithWorkspaceTx(m.e.Admin(), m.e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(m.e.Admin(), m.e.Pool, func(tx pgx.Tx) error {
 		_, err := contacts.RetractStaleMeetingProfilesTx(m.e.Admin(), tx, 10)
 		return err
 	})

@@ -60,7 +60,7 @@ func TestCancellingOneCalendarOccurrenceLeavesTheHeldMeetingsPromiseCurrent(t *t
 			Seat: &e.Rep1, Summary: "Send pricing", Quote: "I will send the pricing.", Confidence: 0.95,
 			Locator: commitmentLocator(source.ID, claimKindOurs, e.Rep1.String(), "I will send the pricing."),
 		}
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			outcome, _, err := dispatcher.DispatchTx(ctx, tx, c, ids.NewV7())
 			if err == nil && outcome != test.want {
 				t.Errorf("%s: outcome = %q, want %q", test.name, outcome, test.want)

@@ -46,7 +46,7 @@ func (e *Engine) LatestReview(ctx context.Context, weekStart *time.Time) (Review
 	}
 
 	var review Review
-	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		row := tx.QueryRow(ctx, reviewSelect+`
 			 WHERE user_id = $1 AND ($2::date IS NULL OR local_week_start = $2)
 			 ORDER BY local_week_start DESC
@@ -181,7 +181,7 @@ func (e *Engine) ListWeeks(ctx context.Context, limit int) ([]WeekEntry, error) 
 		return nil, err
 	}
 	var weeks []WeekEntry
-	err = database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT local_week_start, deals_won, pipeline_won_minor, base_currency
 			  FROM weekly_review

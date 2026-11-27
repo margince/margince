@@ -118,7 +118,7 @@ func (s authorSeats) resolve(ctx context.Context, tx pgx.Tx, author *storekit.So
 }
 
 func (w *csvWriters) resolveSourceAuthor(ctx context.Context, author *storekit.SourceAuthorInput) error {
-	return database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		return w.authors.resolve(ctx, tx, author)
 	})
 }

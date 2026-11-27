@@ -58,7 +58,7 @@ func (s *Service) Acknowledge(ctx context.Context, companyID ids.CompanyID) (crm
 	}
 	now := s.now().UTC()
 	var stored time.Time
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		// Anything that names a record is gated: acknowledging an account
 		// the caller cannot read would confirm it exists.
 		if err := auth.EnsureVisible(ctx, tx, "company", companyID.UUID); err != nil {

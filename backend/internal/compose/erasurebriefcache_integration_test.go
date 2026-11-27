@@ -169,7 +169,7 @@ func saveABriefWaitingAtMost(e *integration.Env, contact ids.UUID, wait string) 
 }
 
 func saveABriefIn(e *integration.Env, contact ids.UUID, fingerprint string, prepare func(pgx.Tx) error) error {
-	return database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	return database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if prepare != nil {
 			if err := prepare(tx); err != nil {
 				return err

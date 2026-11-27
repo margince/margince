@@ -103,7 +103,7 @@ func newEvidenceTriggerEnv(t *testing.T, domains ...string) *evidenceTriggerEnv 
 func (e *evidenceTriggerEnv) ledger(t *testing.T) int {
 	t.Helper()
 	var rows int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM deal_stage_evidence WHERE deal_id = $1`,
 			e.dealID.UUID).Scan(&rows)
@@ -507,7 +507,7 @@ func TestAnUnrelatedEventIsIgnored(t *testing.T) {
 func (e *evidenceTriggerEnv) seedContract(t *testing.T) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		company := e.SeedCompany(t, "Acme GmbH", &e.AdminUser)
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO contract (company_id, deal_id, title, status, starts_on, captured_by)
@@ -545,7 +545,7 @@ type meetingSeed struct {
 func (e *evidenceTriggerEnv) seedMeeting(t *testing.T, seed meetingSeed) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		var status, sourceSystem, body *string
 		if seed.status != "" {
@@ -603,7 +603,7 @@ func (e *evidenceTriggerEnv) seedMeeting(t *testing.T, seed meetingSeed) ids.UUI
 // leaving a meeting we held with ourselves.
 func (e *evidenceTriggerEnv) onlyOurSeatsAttend(t *testing.T, activityID ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE activity_participant SET user_id = $2, address = NULL
 			 WHERE activity_id = $1 AND user_id IS NULL`, activityID, e.AdminUser)
@@ -616,7 +616,7 @@ func (e *evidenceTriggerEnv) onlyOurSeatsAttend(t *testing.T, activityID ids.UUI
 // markHeld stamps the meeting held, the way a rep does after it happens.
 func (e *evidenceTriggerEnv) markHeld(t *testing.T, activityID ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET meeting_status = 'held' WHERE id = $1`, activityID)
 		return err
@@ -629,7 +629,7 @@ func (e *evidenceTriggerEnv) markHeld(t *testing.T, activityID ids.UUID) {
 // logging path writes a colleague: a contact link with no address and no seat.
 func (e *evidenceTriggerEnv) replaceAttendeeWithContactLink(t *testing.T, activityID ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		var contactID ids.UUID
 		if err := tx.QueryRow(ctx, `
@@ -650,7 +650,7 @@ func (e *evidenceTriggerEnv) replaceAttendeeWithContactLink(t *testing.T, activi
 // setAttendeeAddress puts the outside attendee on a given address.
 func (e *evidenceTriggerEnv) setAttendeeAddress(t *testing.T, activityID ids.UUID, address string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE activity_participant SET address = $2
 			 WHERE activity_id = $1 AND user_id IS NULL`, activityID, address)
@@ -664,7 +664,7 @@ func (e *evidenceTriggerEnv) setAttendeeAddress(t *testing.T, activityID ids.UUI
 func (e *evidenceTriggerEnv) citedLines(t *testing.T) []int32 {
 	t.Helper()
 	var lines []int32
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT source_lines FROM deal_stage_evidence WHERE deal_id = $1`,
 			e.dealID.UUID).Scan(&lines)
@@ -680,7 +680,7 @@ func (e *evidenceTriggerEnv) assertClaim(t *testing.T, sourceType, extractedBy s
 	t.Helper()
 	var gotSource, gotBy string
 	var confidence *float64
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT source_type, extracted_by, confidence
 			  FROM deal_stage_evidence WHERE deal_id = $1`,

@@ -179,7 +179,7 @@ func (f fieldOwnership) HumanOwnedConflicts(ctx context.Context, entityType stri
 		table = entityType
 	}
 	var conflicts []string
-	err := database.WithWorkspaceTx(ctx, f.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, f.pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			WITH proposed AS (
 			  SELECT key, value FROM jsonb_each($3::jsonb)

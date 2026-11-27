@@ -141,7 +141,7 @@ func newHeldContactReleaser(pool *pgxpool.Pool, log *slog.Logger) *heldContactRe
 func (r *heldContactReleaser) releaseThread(ctx context.Context, threadKey string) {
 	ctx = principal.SystemActing(ctx, confidentialityActor)
 	var held []ids.ContactID
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		emails, err := capture.WithheldSendersOnThreadTx(ctx, tx, threadKey, heldContactLiveBound)
 		if err != nil {
 			return err
@@ -184,7 +184,7 @@ func (r *heldContactReleaser) reconcileWorkspace(ctx context.Context) (int, erro
 	}
 	ctx = principal.SystemActing(ctx, confidentialityActor)
 	var held []ids.ContactID
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		var err error
 		held, err = contacts.ReleasableConfidentialityHeldTx(ctx, tx, heldEvidence, heldContactSweepContacts)
 		return err

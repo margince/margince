@@ -43,10 +43,10 @@ func lockTimedOut(err error) bool {
 // on the owner-privileged schema pool — Postgres transactional DDL makes
 // the three land or roll back together.
 //
-// Deliberately NOT database.WithWorkspaceTx: that helper runs on the app
-// pool, whose margince_app role carries DML-only grants and cannot ALTER
-// a core table. The whole transaction runs as the owner role and never
-// SET ROLEs: the owner is not a member of margince_app on a real install.
+// This does not use database.WithTx. That helper runs on the app pool, whose
+// margince_app role carries DML-only grants and cannot ALTER a core table.
+// The whole transaction runs as the owner role and never uses SET ROLE. The
+// owner is not a member of margince_app on a real install.
 func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.CustomField, error) {
 	if err := auth.Require(ctx, rbacObject, principal.ActionCreate); err != nil {
 		return crmcontracts.CustomField{}, err
@@ -76,9 +76,9 @@ func (s *Service) Create(ctx context.Context, spec FieldSpec) (crmcontracts.Cust
 	if err != nil {
 		return crmcontracts.CustomField{}, fmt.Errorf("customfields: begin schema tx: %w", err)
 	}
-	// Error-path safety net only; after Commit this is pgx's ErrTxClosed
-	// no-op, and on the error path the operation's own error is the one
-	// the caller must see (the WithWorkspaceTx spelling).
+	// Error-path safety net only. After Commit this is pgx's ErrTxClosed
+	// no-op, and on the error path the caller must see the operation's own
+	// error (the WithTx spelling).
 	//craft:ignore swallowed-errors deferred rollback of a committed tx is a designed no-op; real failures already left through the operation error
 	defer func() { _ = tx.Rollback(ctx) }()
 

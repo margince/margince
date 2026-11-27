@@ -64,7 +64,7 @@ func TestAdmittedInternalMailIsFiledUnderNoProject(t *testing.T) {
 	admin := principal.WithActor(ctx, actor)
 	seedInternalMailAnchor(admin, t, pool, actor.UserID)
 	project := ids.NewV7()
-	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(admin, `INSERT INTO project (id, name, key, source, captured_by)
 			VALUES ($1, 'Payroll', 'OPS-1', 'manual', $2)`, project, actor.ID)
 		return err
@@ -108,7 +108,7 @@ func TestAdmittedInternalMailIsFiledUnderNoProject(t *testing.T) {
 
 	var internal bool
 	var links int
-	if err := database.WithWorkspaceTx(admin, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(admin, `SELECT a.internal_mail_authorization IS NOT NULL,
 			(SELECT count(*) FROM activity_link l WHERE l.activity_id = a.id AND l.entity_type = 'project')
 			FROM activity a WHERE a.id = $1`, captured).Scan(&internal, &links)

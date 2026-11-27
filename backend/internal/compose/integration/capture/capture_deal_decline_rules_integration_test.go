@@ -247,7 +247,7 @@ func TestAnAutomaticFilingOfAReplyAnswersTheQuestion(t *testing.T) {
 	}
 	reply := ids.From[ids.ActivityKind](activityOf(t, e, "nm2@acme.example"))
 	system := newRepairer(e, w).system
-	if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 		_, err := activities.FileOnDealIfUnfiledTx(system, tx, reply, operations, nil, "")
 		return err
 	}); err != nil {

@@ -50,7 +50,7 @@ func TestStoredMailGetsItsDocumentLinksOnceAndKeepsAnArchivedOne(t *testing.T) {
 
 	run := func() int {
 		var changed int
-		if err := database.WithWorkspaceTx(system, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(system, e.Pool, func(tx pgx.Tx) error {
 			out, err := documentLinksDataTask().Steps[0].Batch(system, tx, datatask.BatchIn{Limit: 50})
 			changed = out.Changed
 			return err

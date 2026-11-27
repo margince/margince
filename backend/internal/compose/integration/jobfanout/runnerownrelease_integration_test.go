@@ -63,7 +63,7 @@ func TestAScheduledRunDoesNotReleaseTheChangeItsCredentialProposed(t *testing.T)
 		t.Fatalf("the run never had its own release refused: trace = %+v", trace)
 	}
 	var status string
-	if err := database.WithWorkspaceTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(re.wsCtx, re.pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status FROM approval WHERE id = $1`, approvalID).Scan(&status)
 	}); err != nil {

@@ -41,7 +41,7 @@ func TestAnEditCommittedWhileTheProjectArchiveWaitsKeepsTheProject(t *testing.T)
 		_, err := e.Projects.ArchiveProject(admin, project, nil, storekit.NotTouchedByHumanSince(imported))
 		archived <- err
 	}()
-	err = database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		if _, err := e.Projects.UpdateProjectTx(admin, tx, project, projects.UpdateProjectInput{Description: &description}, projects.CustomColumns{}); err != nil {
 			return err
 		}
@@ -93,7 +93,7 @@ func TestAProjectMayBeCreatedOnACompanyThatIsOnlyReadable(t *testing.T) {
 		t.Fatalf("the REST create on a readable company: %v", err)
 	}
 	in := projects.CreateProjectInput{Name: "Through the import", CompanyID: company, Source: "import"}
-	err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		if err := e.Projects.RefuseImportCreate(reader, tx, in, projects.CustomColumns{}); err != nil {
 			return err
 		}

@@ -382,7 +382,7 @@ func TestAReplacementStillBumpsTheVersionOnAPolledConnection(t *testing.T) {
 func suppressChannelAccount(t *testing.T, e *integration.Env, account string) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, `
 			INSERT INTO erasure_suppression (kind, value_hash)
 			VALUES ('channel_identity', $1)`,

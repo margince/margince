@@ -25,7 +25,7 @@ import (
 func loginInUnicode(t *testing.T, e *integration.Env, seat ids.UUID, login string) {
 	t.Helper()
 	e.WsExec(t, `UPDATE app_user SET email = $2, email_domain_folded = NULL WHERE id = $1`, seat, login)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, _, err := identity.FoldLoginDomainsTx(context.Background(), tx, ids.Nil, 100)
 		return err
 	}); err != nil {
@@ -56,7 +56,7 @@ func TestAnImportOwnerInEitherSpellingIsTheSeat(t *testing.T) {
 	loginInUnicode(t, e, e.Rep3, "rep3@bücher.example")
 	const owner = "Rep3@xn--bcher-kva.example"
 	var seats map[string]ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		seats, err = seatsByEmail(context.Background(), tx, []string{owner})
 		return err

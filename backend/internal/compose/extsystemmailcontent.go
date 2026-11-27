@@ -50,7 +50,7 @@ func (m systemMailContent) Get(ctx context.Context, actAs extension.UserID, mail
 		return extension.MailContent{}, err
 	}
 	out := extension.MailContent{ID: id.String(), ContentState: extension.MailContentAvailable}
-	err = database.WithWorkspaceTx(seatCtx, m.rt.deps.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(seatCtx, m.rt.deps.pool, func(tx pgx.Tx) error {
 		if err := auth.Require(seatCtx, "activity", principal.ActionRead); err != nil {
 			return err
 		}

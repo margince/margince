@@ -127,7 +127,7 @@ func (r *callRuntime) traceSystemRead(ctx context.Context, read extension.System
 		// already accounts for.
 		return nil
 	}
-	err := database.WithWorkspaceTx(ctx, r.deps.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.deps.pool, func(tx pgx.Tx) error {
 		return logSystemRead(ctx, tx, map[string]any{
 			"extension": r.unit, traceReadKey: string(read), traceTypeKey: recordType, traceRecordKey: recordID,
 		})
@@ -210,7 +210,7 @@ func readDealSummary(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) (exte
 		mergedInto string
 		archivedAt *time.Time
 	)
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `
 			SELECT d.name, s.name, d.status, d.amount_minor, d.currency, d.expected_close_date,
 			       d.owner_id, d.archived_at, COALESCE(d.merged_into_id::text, '')
@@ -250,7 +250,7 @@ const dealResponsibleQuery = `
 
 func readDealResponsible(ctx context.Context, pool *pgxpool.Pool, id ids.UUID) ([]extension.Responsible, error) {
 	var out []extension.Responsible
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		survivor, err := deals.FollowMergeTx(ctx, tx, id)
 		if errors.Is(err, pgx.ErrNoRows) {
 			return extension.ErrNotFound
@@ -367,7 +367,7 @@ func dealShownTo(ctx context.Context, pool *pgxpool.Pool, colleague, deal ids.UU
 	// The existing-row probe, so a colleague who may read every deal is not
 	// shown one no row holds.
 	var visible bool
-	err = database.WithWorkspaceTx(ownCtx, pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ownCtx, pool, func(tx pgx.Tx) error {
 		visible, err = auth.VisibleToExisting(ownCtx, tx, fieldmask.Deal, deal)
 		return err
 	})
@@ -383,7 +383,7 @@ func dealWritableBy(ctx context.Context, pool *pgxpool.Pool, colleague, deal ids
 		return false, err
 	}
 	var writable bool
-	err = database.WithWorkspaceTx(ownCtx, pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ownCtx, pool, func(tx pgx.Tx) error {
 		writable, err = auth.WritableLiveBy(ownCtx, tx, fieldmask.Deal, deal)
 		return err
 	})
@@ -451,7 +451,7 @@ func readColleagueEmails(ctx context.Context, pool *pgxpool.Pool, users []ids.UU
 	if len(users) == 0 {
 		return out, nil
 	}
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT id, email FROM app_user WHERE id = ANY($1) AND NOT is_agent AND `+workforce.LiveMemberSQL(""), users)
 		if err != nil {
 			return err

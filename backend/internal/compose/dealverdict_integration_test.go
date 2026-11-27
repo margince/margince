@@ -173,7 +173,7 @@ func (v *dealVerdictEnv) outcomes(t *testing.T) string {
 func (v *dealVerdictEnv) undo(t *testing.T, correction string) {
 	t.Helper()
 	var id ids.UUID
-	err := database.WithWorkspaceTx(v.Admin(), v.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(v.Admin(), v.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(v.Admin(), `SELECT id FROM deal_correction
 			WHERE deal_id = $1 AND correction = $2 AND reversed_at IS NULL`, v.deal, correction).Scan(&id)
 	})
@@ -368,7 +368,7 @@ func verdictAfterTheOwnerLeft(t *testing.T, revoke, wantOutcome string) {
 	ctx := principal.SystemActing(v.Admin(), closeDateSweepActor)
 	c := verdictCandidate{deal: v.deal, owner: v.Rep1}
 	var read dealVerdictRead
-	if err := database.WithWorkspaceTx(ctx, v.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, v.Pool, func(tx pgx.Tx) error {
 		var err error
 		read, err = readDealVerdict(ctx, tx, v.deal, nil, v.now, v.now)
 		return err
@@ -475,7 +475,7 @@ func TestAnAgentsNoteIsNotDealVerdictEvidence(t *testing.T) {
 		t.Fatal(err)
 	}
 	var read dealVerdictRead
-	if err := database.WithWorkspaceTx(v.Admin(), v.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(v.Admin(), v.Pool, func(tx pgx.Tx) error {
 		return readVerdictActivities(v.Admin(), tx, v.deal, &read)
 	}); err != nil {
 		t.Fatal(err)
@@ -502,7 +502,7 @@ func TestAnInboundCopyFromASeatIsMarkedAsOurWords(t *testing.T) {
 		t.Fatal(err)
 	}
 	var read dealVerdictRead
-	if err := database.WithWorkspaceTx(v.Admin(), v.Pool, func(tx pgx.Tx) error { return readVerdictActivities(v.Admin(), tx, v.deal, &read) }); err != nil {
+	if err := database.WithTx(v.Admin(), v.Pool, func(tx pgx.Tx) error { return readVerdictActivities(v.Admin(), tx, v.deal, &read) }); err != nil {
 		t.Fatal(err)
 	}
 	for _, activity := range read.in.Activities {

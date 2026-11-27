@@ -41,7 +41,7 @@ func TestReviewedLegacyCorrectionRechecksAccessAfterWaitingForItsSource(t *testi
 	}()
 	written := make(chan error, 1)
 	go func() {
-		err := database.WithWorkspaceSnapshot(f.e.Admin(), f.e.Pool, func(ctx context.Context) error {
+		err := database.WithSnapshot(f.e.Admin(), f.e.Pool, func(ctx context.Context) error {
 			if _, err := f.e.Activities.SetAudience(ctx, ids.From[ids.ActivityKind](f.source), activities.SetAudienceInput{Audience: "selected", Members: []activities.AudienceMember{{SubjectType: "user", SubjectID: f.e.Rep2}}}); err != nil {
 				return err
 			}
@@ -92,7 +92,7 @@ func TestReviewedLegacyWritesWaitForAConcurrentPinBeforeDecidingPristineness(t *
 			}()
 			pinned := make(chan error, 1)
 			go func() {
-				pinned <- database.WithWorkspaceSnapshot(owner, f.e.Pool, func(ctx context.Context) error {
+				pinned <- database.WithSnapshot(owner, f.e.Pool, func(ctx context.Context) error {
 					if err := f.e.Activities.PinWorklistRow(ctx, activities.WorklistRowRef{Source: "task", RowID: f.task.String()}); err != nil {
 						return err
 					}

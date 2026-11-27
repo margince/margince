@@ -31,7 +31,7 @@ import (
 func rulesetOf(t *testing.T, e *integration.Env, id ids.UUID) string {
 	t.Helper()
 	var ruleset *string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT owed_verdict_ruleset FROM activity WHERE id = $1`, id).Scan(&ruleset)
 	})
@@ -47,7 +47,7 @@ func rulesetOf(t *testing.T, e *integration.Env, id ids.UUID) string {
 // stampVerdict puts a row in the state an earlier build would have left it in.
 func stampVerdict(t *testing.T, e *integration.Env, id ids.UUID, verdict, ruleset string) {
 	t.Helper()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE activity SET owed_verdict = $2, owed_verdict_at = now(), owed_verdict_ruleset = $3
 			WHERE id = $1`, id, verdict, ruleset)

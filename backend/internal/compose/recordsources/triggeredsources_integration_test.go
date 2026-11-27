@@ -123,7 +123,7 @@ func TestARolledBackEditKeepsTheLegacySourceAndWritesNoSourceEvent(t *testing.T)
 	company := olderParty(t, o.owner, "company", "coldstart", nil)
 	abort := errors.New("abort the edit")
 	ctx := o.e.Admin()
-	err := database.WithWorkspaceWriteTx(ctx, o.e.Pool, func(joined context.Context) error {
+	err := database.WithWriteTx(ctx, o.e.Pool, func(joined context.Context) error {
 		if _, err := o.e.Contacts.UpdateCompany(joined, ids.From[ids.CompanyKind](company), contacts.UpdateCompanyInput{DisplayName: new("Rolled back")}); err != nil {
 			return err
 		}
@@ -149,7 +149,7 @@ func TestABeforeCommitFailureRollsBackTheSourceAuditAndEvent(t *testing.T) {
 	company := olderParty(t, o.owner, "company", "coldstart", nil)
 	abort := errors.New("cannot finish the edit")
 	ctx := o.e.Admin()
-	err := database.WithWorkspaceWriteTx(ctx, o.e.Pool, func(joined context.Context) error {
+	err := database.WithWriteTx(ctx, o.e.Pool, func(joined context.Context) error {
 		if _, err := o.e.Contacts.UpdateCompany(joined, ids.From[ids.CompanyKind](company), contacts.UpdateCompanyInput{DisplayName: new("Abort at commit")}); err != nil {
 			return err
 		}

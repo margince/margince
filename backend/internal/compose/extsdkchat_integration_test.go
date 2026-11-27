@@ -216,7 +216,7 @@ func (e *chatEnv) activityOf(t *testing.T, key string) (id ids.UUID, audience st
 func (e *chatEnv) lead(t *testing.T) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`INSERT INTO lead (id, full_name, status, source, captured_by, owner_id) VALUES ($1, 'A Lead', 'new', 'manual', 'human:x', $2)`,
 			id, e.member)
@@ -266,7 +266,7 @@ func TestAChosenSubjectTheMemberCannotSeeIsRefusedAsNotFound(t *testing.T) {
 	grantPolicy(t, e.member, "ingress-own", `{"objects":{"activity":{"read":true,"create":true,"update":true},
 		"contact":{"read":true,"create":true,"update":true},"company":{"read":true,"create":true,"update":true}},"row_scope":"own"}`)
 	hidden := e.SeedContact(t, "Hidden", &e.second)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE contact SET visibility = 'owner' WHERE id = $1`, hidden)
 		return err
 	}); err != nil {

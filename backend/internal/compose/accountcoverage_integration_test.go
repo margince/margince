@@ -186,7 +186,7 @@ func TestThePublishedThresholdsMoveTheAccountCoverageVerdict(t *testing.T) {
 	now := clocktest.Now(t).UTC().Truncate(time.Second)
 	f := seedCoverageAccounts(t, e, now)
 	ctx := coverageViewer(e)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `INSERT INTO reporting_framework_revision (revision, definition, effective_at, created_by) VALUES (1, '{"template":"sales","qualification":[],"capture_contexts":[],"reason":"test","account_coverage":{"max_engaged_seats":2}}', now(), $1)`, e.Rep1)
 		if err != nil {
 			return err
@@ -208,7 +208,7 @@ func assertTheDealPageAgrees(ctx context.Context, t *testing.T, e *forecastEnv, 
 	t.Helper()
 	for dealID, single := range want {
 		var coverage network.DealCoverage
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) (err error) {
 			coverage, err = network.CoverageFor(ctx, tx, ids.From[ids.DealKind](dealID), now)
 			return err
 		}); err != nil {

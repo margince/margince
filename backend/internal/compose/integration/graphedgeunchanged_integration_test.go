@@ -33,7 +33,7 @@ type graphSkipEnv struct{ e *Env }
 
 func (v graphSkipEnv) inTx(t *testing.T, run func(tx pgx.Tx) error) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(v.e.Admin(), v.e.Pool, run); err != nil {
+	if err := database.WithTx(v.e.Admin(), v.e.Pool, run); err != nil {
 		t.Fatal(err)
 	}
 }

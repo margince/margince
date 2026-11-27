@@ -157,11 +157,11 @@ func sendArticle14Notice(
 	approvalID ids.ApprovalID, proposal siteLeadProposal, steps siteLeadSteps,
 ) error {
 	var cause error
-	err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
+	err := database.WithSnapshot(ctx, pool, func(ctx context.Context) error {
 		if err := steps.redeem(ctx); err != nil {
 			return err
 		}
-		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			untold, err := keepOnlyIfTold(ctx, tx, notices, approvalID, proposal, steps.capture)
 			if err != nil || untold.reason == "" {
 				return err

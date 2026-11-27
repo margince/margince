@@ -181,7 +181,7 @@ func healthFinding(source crmcontracts.HealthSource, code string, condition crmc
 
 func healthTx[T any](ctx context.Context, pool *pgxpool.Pool, read func(context.Context, pgx.Tx) (T, error)) (T, error) {
 	var out T
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error { var err error; out, err = read(ctx, tx); return err })
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error { var err error; out, err = read(ctx, tx); return err })
 	return out, err
 }
 

@@ -52,7 +52,7 @@ func bindIndividualPerformance(ctx context.Context, pool *pgxpool.Pool) (context
 // a step that must not act on an answer read earlier in its run.
 func readIndividualPerformance(ctx context.Context, pool *pgxpool.Pool) (bool, error) {
 	var allowed bool
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		allowed, err = identity.IndividualPerformanceTx(ctx, tx)
 		return err

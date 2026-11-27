@@ -49,7 +49,7 @@ func (s *Store) SetState(ctx context.Context, commitmentID ids.UUID, state strin
 	if err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		planID, current, err := ownCommitmentTx(ctx, tx, commitmentID, owner)
 		if err != nil {
 			return err
@@ -105,7 +105,7 @@ func (s *Store) AskForHelp(ctx context.Context, commitmentID ids.UUID, ask strin
 	if err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		planID, current, err := ownCommitmentTx(ctx, tx, commitmentID, owner)
 		if err != nil {
 			return err
@@ -168,7 +168,7 @@ func (s *Store) Respond(ctx context.Context, commitmentID ids.UUID, answer strin
 	if err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.db.Pool(), func(tx pgx.Tx) error {
 		planID, owner, current, err := commitmentOwnerTx(ctx, tx, commitmentID)
 		if err != nil {
 			return err

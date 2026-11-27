@@ -77,7 +77,7 @@ func TestASiblingHoldRollsBackWithItsAudienceChange(t *testing.T) {
 	e.WsExec(t, `UPDATE capture_import SET verdict_status='cleared' WHERE activity_id=@id`, pgx.StrictNamedArgs{"id": mail})
 	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
 	ctx := e.Admin()
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := store.RecordOutcomeOnThreadTx(ctx, tx, "rolled-back-hold", e.Rep1, capture.VerdictHeld, "personnel", nil)
 		if err != nil {
 			return err
@@ -114,7 +114,7 @@ func TestASettledHoldProtectsHistoryBeforeTheBoundedSweepFinishes(t *testing.T) 
 	}
 	repairCtx := principal.SystemActing(e.Admin(), "system:hold-repair-test")
 	task := threadHoldClosesDataTask(e.Pool)
-	if err := database.WithWorkspaceTx(repairCtx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(repairCtx, e.Pool, func(tx pgx.Tx) error {
 		_, err := task.Steps[0].Batch(repairCtx, tx, datatask.BatchIn{Limit: 200, RunID: ids.NewV7()})
 		return err
 	}); err != nil {
@@ -124,7 +124,7 @@ func TestASettledHoldProtectsHistoryBeforeTheBoundedSweepFinishes(t *testing.T) 
 		t.Fatalf("the later batch was not left pending: %s", got)
 	}
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return activities.RecomputeAudienceTx(ctx, tx, ids.From[ids.ActivityKind](last))
 	}); err != nil {
 		t.Fatal(err)
@@ -139,7 +139,7 @@ func TestAClassifiersHoldDoesNotReplaceAnExistingOwnerHold(t *testing.T) {
 	mail := seedHeldThreadMail(t, e, "owner-held-history", "customer@example.test", "Earlier exchange")
 	e.WsExec(t, `UPDATE capture_import SET verdict_status='held_by_owner',verdict_reason='owner' WHERE activity_id=@id`, pgx.StrictNamedArgs{"id": mail})
 	store := capture.NewThreadVerdictStore(InstallationDB(e.Pool))
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		out, err := store.RecordOutcomeOnThreadTx(e.Admin(), tx, "owner-held-history", e.Rep1, capture.VerdictHeld, "personnel", nil)
 		if err != nil {
 			return err

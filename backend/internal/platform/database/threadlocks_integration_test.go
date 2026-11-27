@@ -33,7 +33,7 @@ func holdThreadComponent(ctx context.Context, t *testing.T, pool *pgxpool.Pool, 
 	var workerErr error
 	go func() {
 		defer close(done)
-		workerErr = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		workerErr = database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			if err := storekit.WaitThreadKeysTx(ctx, tx, keys); err != nil {
 				return err
 			}
@@ -71,7 +71,7 @@ func TestAComponentConflictAbortsAndRetriesTheWholeTransaction(t *testing.T) {
 	attempts := 0
 	err := storekit.RetryLockCycles(ctx, func() error {
 		attempts++
-		err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error { return storekit.LockThreadKeysTx(ctx, tx, "overlap") })
+		err := database.WithTx(ctx, pool, func(tx pgx.Tx) error { return storekit.LockThreadKeysTx(ctx, tx, "overlap") })
 		if attempts == 1 {
 			if !storekit.IsLockCycle(err) {
 				t.Fatalf("contended component = %v, want native serialization failure", err)
@@ -89,7 +89,7 @@ func TestASwallowedComponentConflictCannotCommit(t *testing.T) {
 	ctx, pool := laneEnv(t)
 	holdThreadComponent(ctx, t, pool, []string{"contended"})
 	var conflict error
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		conflict = storekit.LockThreadKeysTx(ctx, tx, "contended")
 		return nil
 	})
@@ -104,7 +104,7 @@ func TestAWideComponentKeepsItsAdvisoryLocksBounded(t *testing.T) {
 	for i := range 256 {
 		keys = append(keys, fmt.Sprintf("wide-%d", i))
 	}
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if err := storekit.WaitThreadKeysTx(ctx, tx, keys); err != nil {
 			return err
 		}
@@ -130,10 +130,10 @@ func TestAWideComponentKeepsItsAdvisoryLocksBounded(t *testing.T) {
 func TestAnAmbientSnapshotLeavesComponentRetryToItsOwner(t *testing.T) {
 	ctx, pool := laneEnv(t)
 	attempts := 0
-	err := database.WithWorkspaceSnapshot(ctx, pool, func(ctx context.Context) error {
+	err := database.WithSnapshot(ctx, pool, func(ctx context.Context) error {
 		return storekit.RetryLockCycles(ctx, func() error {
 			attempts++
-			return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error { return storekit.RetryThreadTransaction(ctx, tx) })
+			return database.WithTx(ctx, pool, func(tx pgx.Tx) error { return storekit.RetryThreadTransaction(ctx, tx) })
 		})
 	})
 	if !storekit.IsLockCycle(err) || attempts != 1 {
@@ -143,7 +143,7 @@ func TestAnAmbientSnapshotLeavesComponentRetryToItsOwner(t *testing.T) {
 
 func TestRepeatedThreadWritersShareOneTransactionLockBudget(t *testing.T) {
 	ctx, pool := laneEnv(t)
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		for i := range 256 {
 			if err := storekit.LockThreadKeysTx(ctx, tx, fmt.Sprintf("cumulative-%d", i)); err != nil {
 				return err
@@ -173,11 +173,11 @@ func TestAWideFrontierNeverQueuesAheadOfOrdinaryThreadWork(t *testing.T) {
 	for i := range 256 {
 		keys = append(keys, fmt.Sprintf("wide-%d", i))
 	}
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error { return storekit.WaitThreadKeysTx(ctx, tx, keys) })
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error { return storekit.WaitThreadKeysTx(ctx, tx, keys) })
 	if !storekit.IsLockCycle(err) {
 		t.Fatalf("busy wide frontier=%v, want transaction retry", err)
 	}
-	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error { return storekit.LockThreadKeysTx(ctx, tx, "independent-component") })
+	err = database.WithTx(ctx, pool, func(tx pgx.Tx) error { return storekit.LockThreadKeysTx(ctx, tx, "independent-component") })
 	if err != nil {
 		t.Fatalf("wide attempt blocked ordinary work: %v", err)
 	}
@@ -185,11 +185,11 @@ func TestAWideFrontierNeverQueuesAheadOfOrdinaryThreadWork(t *testing.T) {
 
 func TestThreadComponentsReuseTheLegacyPrivacyMutex(t *testing.T) {
 	ctx, pool := laneEnv(t)
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if err := storekit.LockWriteIdentity(ctx, tx, "capture_thread_hold", "compatible-thread"); err != nil {
 			return err
 		}
-		conflict := database.WithWorkspaceTx(ctx, pool, func(other pgx.Tx) error { return storekit.LockThreadKeysTx(ctx, other, "compatible-thread") })
+		conflict := database.WithTx(ctx, pool, func(other pgx.Tx) error { return storekit.LockThreadKeysTx(ctx, other, "compatible-thread") })
 		if !storekit.IsLockCycle(conflict) {
 			t.Errorf("legacy privacy mutex did not fence component writer: %v", conflict)
 		}
@@ -202,7 +202,7 @@ func TestThreadComponentsReuseTheLegacyPrivacyMutex(t *testing.T) {
 
 func TestThreadLockOwnershipDoesNotSurviveSavepointRollbackOrCommit(t *testing.T) {
 	ctx, pool := laneEnv(t)
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		savepoint, err := tx.Begin(ctx)
 		if err != nil {
 			return err
@@ -229,7 +229,7 @@ func TestThreadLockOwnershipDoesNotSurviveSavepointRollbackOrCommit(t *testing.T
 	if err != nil {
 		t.Fatal(err)
 	}
-	err = database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if err := storekit.LockThreadKeysTx(ctx, tx, "after-rollback"); err != nil {
 			return err
 		}
@@ -270,7 +270,7 @@ func TestCancellationDuringComponentAcquisitionReleasesItsBarrier(t *testing.T) 
 		t.Fatal(err)
 	}
 	defer waiter.Close()
-	err = database.WithWorkspaceTx(waiting, waiter, func(tx pgx.Tx) error { return storekit.WaitThreadKeysTx(waiting, tx, []string{"cancelled-component"}) })
+	err = database.WithTx(waiting, waiter, func(tx pgx.Tx) error { return storekit.WaitThreadKeysTx(waiting, tx, []string{"cancelled-component"}) })
 	if !errors.Is(err, context.Canceled) {
 		t.Fatalf("cancelled wait returned %v", err)
 	}
@@ -282,7 +282,7 @@ func TestCancellationDuringComponentAcquisitionReleasesItsBarrier(t *testing.T) 
 	for i := range 256 {
 		keys = append(keys, fmt.Sprintf("after-cancel-%d", i))
 	}
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error { return storekit.WaitThreadKeysTx(ctx, tx, keys) }); err != nil {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error { return storekit.WaitThreadKeysTx(ctx, tx, keys) }); err != nil {
 		t.Fatalf("cancelled acquisition leaked its barrier: %v", err)
 	}
 }

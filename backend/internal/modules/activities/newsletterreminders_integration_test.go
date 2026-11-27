@@ -57,7 +57,7 @@ func (e *recencyEnv) repairNewsletterReminders(t *testing.T) int {
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.ws), "system:data-task-test")
 	store := NewStore(database.BindTo(e.pool, ids.From[ids.WorkspaceKind](e.ws)))
 	var reopened int
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) (err error) {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) (err error) {
 		_, reopened, err = store.ReopenNewsletterClosedRemindersTx(ctx, tx, ids.Nil, 1000)
 		return err
 	}); err != nil {

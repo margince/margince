@@ -167,7 +167,7 @@ func runEnrichPass(t *testing.T, e *integration.Env, brain *signatureScriptBrain
 func seedLaterMail(t *testing.T, e *integration.Env, contact ids.UUID, from, body, after string) {
 	t.Helper()
 	mail := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO activity (id, kind, subject, body, direction, occurred_at, source_system, source_id, source, captured_by)
@@ -193,7 +193,7 @@ func seedLaterMail(t *testing.T, e *integration.Env, contact ids.UUID, from, bod
 func liveNumbers(t *testing.T, e *integration.Env, contact ids.UUID) []string {
 	t.Helper()
 	var numbers []string
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT phone FROM contact_phone WHERE contact_id = $1 AND archived_at IS NULL ORDER BY phone`, contact)
 		if err != nil {
@@ -214,7 +214,7 @@ type numberRow struct{ snippet, replaced string }
 func numberEvidence(t *testing.T, e *integration.Env, contact ids.UUID) map[string]numberRow {
 	t.Helper()
 	out := map[string]numberRow{}
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT value_key, evidence_snippet, coalesce(superseded_value, '')
 			  FROM contact_profile_field WHERE contact_id = $1 AND field = 'phone'`, contact)

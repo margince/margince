@@ -65,7 +65,7 @@ func dealsWithNoOpenNextStep(
 	ctx context.Context, pool *pgxpool.Pool, candidates []ids.UUID, asOf time.Time,
 ) (map[ids.UUID]bool, error) {
 	var none map[ids.UUID]bool
-	err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		var err error
 		none, err = stillowed.DealsWithoutNextStepTx(ctx, tx, candidates, asOf)
 		return err

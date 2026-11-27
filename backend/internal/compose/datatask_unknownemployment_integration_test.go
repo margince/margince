@@ -55,7 +55,7 @@ func TestUnknownEmploymentLinksBecomeCurrentThroughTheExecutor(t *testing.T) {
 		t.Fatalf("repair audit evidence on %d links", got)
 	}
 	before := e.WsCount(t, `SELECT count(*) FROM audit_log`)
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 1, RunID: ids.NewV7()})
 		if out.Changed != 0 {
 			t.Errorf("nil-cursor replay changed %d", out.Changed)
@@ -97,7 +97,7 @@ func TestUnknownEmploymentRepairRejectsMalformedCursor(t *testing.T) {
 	e := integration.Setup(t)
 	task := unknownEmploymentDataTask(e.Pool)
 	ctx := datatask.Acting(e.Admin(), task.ID)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Cursor: []byte(`{"after":"not-an-id"}`), Limit: 1, RunID: ids.NewV7()})
 		return err
 	})

@@ -52,7 +52,7 @@ func (e *sendEnv) repLeaves(t *testing.T) {
 func handOverDrafts(ctx context.Context, t *testing.T, e *sendEnv) (MailDraftHandover, error) {
 	t.Helper()
 	var out MailDraftHandover
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = draftStore(e).HandOverMailDraftsTx(ctx, tx, ids.From[ids.UserKind](e.rep), ids.From[ids.UserKind](e.other))
 		return err
@@ -182,7 +182,7 @@ func TestOnlyALeaversFreeDraftsAreTransferable(t *testing.T) {
 	count := func(ctx context.Context) int {
 		t.Helper()
 		var n int
-		if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 			var err error
 			n, err = draftStore(e).TransferableMailDraftsTx(ctx, tx, ids.From[ids.UserKind](e.rep))
 			return err
@@ -231,7 +231,7 @@ func TestAReceiversConcurrentSaveIsAConflict(t *testing.T) {
 	pids := make(chan int32, 1)
 	done := make(chan error, 1)
 	go func() {
-		done <- database.WithWorkspaceTx(admin, e.pool, func(tx pgx.Tx) error {
+		done <- database.WithTx(admin, e.pool, func(tx pgx.Tx) error {
 			var pid int32
 			if err := tx.QueryRow(admin, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
 				return err

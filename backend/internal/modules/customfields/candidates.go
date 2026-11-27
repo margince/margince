@@ -97,7 +97,7 @@ func (s *Service) DateFieldCandidates(ctx context.Context, object, column string
 	quotedCol := quoteIdentifier(column)
 
 	var rows []dateFieldRow
-	err = database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		var qErr error
 		if recurring {
 			rows, qErr = queryRecurringCandidates(ctx, tx, object, quotedCol, from, to, limit)

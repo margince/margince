@@ -47,7 +47,7 @@ func (r *linkResolver) visibleContactByEmail(ctx context.Context, key string) (l
 		return linkAnswer{}, err
 	}
 	var answer linkAnswer
-	err := database.WithWorkspaceTx(ctx, r.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, r.pool, func(tx pgx.Tx) error {
 		var args []any
 		arg := func(v any) int { args = append(args, v); return len(args) }
 		emailPos := arg(canonicalFor(fieldEmail, key))

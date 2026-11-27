@@ -37,7 +37,7 @@ func (e *Env) CaptureMailFile(t *testing.T, blob blobstore.Store, mail ids.UUID,
 	if err != nil {
 		t.Fatalf("staging %s: %v", filename, err)
 	}
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return store.RecordCapturedFiles(ctx, tx, ids.From[ids.ActivityKind](mail), activities.CapturedFileSource{
 			System: "imap", MessageID: "m-" + mail.String(), CapturedBy: "connector:imap", Category: "email_attachment",
 		}, staged)

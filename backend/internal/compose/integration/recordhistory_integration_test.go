@@ -44,7 +44,7 @@ func seedRecordAuditRow(t *testing.T, e *Env, action string, contactID ids.UUID,
 	t.Helper()
 	rowID := ids.NewV7()
 	ctx := principal.WithWorkspaceID(t.Context(), e.WS)
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx,
 			`INSERT INTO audit_log (id, actor_type, actor_id, on_behalf_of,
 			                        action, entity_type, entity_id, before, after, occurred_at)

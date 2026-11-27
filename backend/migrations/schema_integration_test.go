@@ -162,10 +162,10 @@ func seedWorkspace(t *testing.T, conn *pgx.Conn, label string) string {
 	return id
 }
 
-// inTx runs fn inside ONE transaction, which is the shape the production
-// database.WithWorkspaceTx seam gives a caller: every statement a module issues
-// addresses the transaction rather than the bare pool. It binds no session
-// setting, because there is none left to bind.
+// inTx runs fn inside one transaction, the shape the production database.WithTx
+// seam gives a caller. Every statement a module issues addresses the
+// transaction rather than the bare pool. It binds no session setting, because
+// none is left to bind.
 func inTx(t *testing.T, conn *pgx.Conn, fn func(pgx.Tx) error) error {
 	t.Helper()
 	ctx := context.Background()

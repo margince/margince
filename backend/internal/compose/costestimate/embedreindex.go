@@ -247,7 +247,7 @@ func sortedWorkspaceIDs(counts map[ids.WorkspaceID]int) []ids.WorkspaceID {
 // uses: a per-workspace ai_model_rate/budget/spend read during index
 // maintenance must see the workspace regardless of any one caller's row
 // scope. The actual GUC bind happens inside RateFor/MonthlyTokenBudget/
-// MonthTokens themselves (database.WithWorkspaceTx), keyed off the
+// MonthTokens themselves (database.WithTx), keyed off the
 // workspace id this context now carries.
 func systemWorkspaceContext(ctx context.Context, wsID ids.UUID) context.Context {
 	ctx = principal.WithWorkspaceID(ctx, wsID)

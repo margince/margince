@@ -52,7 +52,7 @@ func seedEnrichContact(t *testing.T, e *integration.Env, email, body string) ids
 	t.Helper()
 	contact := ids.NewV7()
 	activity := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO contact (id, full_name, source, captured_by)
@@ -108,7 +108,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 
 	var title *string
 	var phones, evidence, linkedinRows int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `SELECT title FROM contact WHERE id = $1`, contact).Scan(&title); err != nil {
 			return err
@@ -153,7 +153,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 
 	t.Run("newer mail reopens the contact", func(t *testing.T) {
 		newer := ids.NewV7()
-		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			ctx := context.Background()
 			if _, err := tx.Exec(ctx, `
 				INSERT INTO activity (id, kind, subject, body, direction, occurred_at, source_system, source_id, source, captured_by)
@@ -186,7 +186,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 	t.Run("an occupied title is never touched", func(t *testing.T) {
 		occupied := seedEnrichContact(t, e, "carol@acme.example",
 			"Cheers,\nCarol\nVP Sales\n+49 30 7654321")
-		err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(context.Background(),
 				`UPDATE contact SET title = 'Handwritten Title' WHERE id = $1`, occupied)
 			return err
@@ -201,7 +201,7 @@ func TestSignatureEnrichPass(t *testing.T) {
 			t.Fatalf("Run: %v", err)
 		}
 		var title string
-		err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
 				`SELECT title FROM contact WHERE id = $1`, occupied).Scan(&title)
 		})
@@ -283,7 +283,7 @@ func TestSignatureEnrichAbsorbsModelFailures(t *testing.T) {
 func enrichEvidenceCount(t *testing.T, e *integration.Env, email string) int {
 	t.Helper()
 	var n int
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT count(*) FROM contact_profile_field f
 			JOIN contact_email pe ON pe.contact_id = f.contact_id
@@ -334,7 +334,7 @@ func TestASignatureDoesNotOverwriteACorrectedField(t *testing.T) {
 
 	var titleRows int
 	var title *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		c := context.Background()
 		if err := tx.QueryRow(c, `SELECT title FROM contact WHERE id = $1`, contact).Scan(&title); err != nil {
 			return err
@@ -589,7 +589,7 @@ func seedForeignSignature(t *testing.T, e *integration.Env) ids.UUID {
 	t.Helper()
 	contact := ids.NewV7()
 	activity := ids.NewV7()
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO contact (id, full_name, source, captured_by)
@@ -653,7 +653,7 @@ func TestASignatureIsNotReadOffAMessageTheContactDidNotSend(t *testing.T) {
 
 	var fields int
 	var title *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx,
 			`SELECT count(*) FROM contact_profile_field WHERE contact_id = $1`, contact).Scan(&fields); err != nil {
@@ -682,7 +682,7 @@ func TestABackfilledSenderRowIsReadByItsAddressNotItsContactID(t *testing.T) {
 	// address from activity.counterparty_email, so a historical row can name the
 	// recipient while carrying the sender's address. A predicate that trusted
 	// contact_id would admit exactly the mail this test refuses.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			UPDATE activity_participant SET contact_id = $1
 			 WHERE role = 'from' AND address = 'marcus@other.test'`, contact)
@@ -700,7 +700,7 @@ func TestABackfilledSenderRowIsReadByItsAddressNotItsContactID(t *testing.T) {
 	}
 
 	var fields int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM contact_profile_field WHERE contact_id = $1`, contact).Scan(&fields)
 	}); err != nil {
@@ -728,7 +728,7 @@ func TestAForeignSignatureUnderTheirOwnIsNotReadAsTheirs(t *testing.T) {
 	}
 
 	var fields int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM contact_profile_field WHERE contact_id = $1`, contact).Scan(&fields)
 	}); err != nil {
@@ -750,7 +750,7 @@ func TestFieldsWrittenOffAnotherSendersSignatureAreTakenBack(t *testing.T) {
 	// through the real applier, so the row carries the source and source_ref
 	// production writes and the retraction has to match.
 	var activity ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT activity_id FROM activity_link WHERE contact_id = $1`, contact).Scan(&activity)
 	}); err != nil {
@@ -766,7 +766,7 @@ func TestFieldsWrittenOffAnotherSendersSignatureAreTakenBack(t *testing.T) {
 
 	var fields int
 	var title *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		c := context.Background()
 		if err := tx.QueryRow(c,
 			`SELECT count(*) FROM contact_profile_field WHERE contact_id = $1`, contact).Scan(&fields); err != nil {
@@ -787,7 +787,7 @@ func TestFieldsWrittenOffAnotherSendersSignatureAreTakenBack(t *testing.T) {
 	// same record as writing it, and a repair that left no trace would make a
 	// title move on its own between two readings of the history.
 	var audits, events int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		c := context.Background()
 		if err := tx.QueryRow(c, `
 			SELECT count(*) FROM audit_log
@@ -814,7 +814,7 @@ func TestARetractionLeavesATitleSomebodyChangedAfterwards(t *testing.T) {
 	contact := seedForeignSignature(t, e)
 
 	var activity ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT activity_id FROM activity_link WHERE contact_id = $1`, contact).Scan(&activity)
 	}); err != nil {
@@ -826,7 +826,7 @@ func TestARetractionLeavesATitleSomebodyChangedAfterwards(t *testing.T) {
 	// A human sees the wrong title and types the right one. UpdateContact writes
 	// the COLUMN and leaves the sidecar row alone, so the row still says the
 	// machine's value while the page shows theirs.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE contact SET title = 'Geschäftsführerin' WHERE id = $1`, contact)
 		return err
@@ -841,7 +841,7 @@ func TestARetractionLeavesATitleSomebodyChangedAfterwards(t *testing.T) {
 
 	var title *string
 	var fields int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		c := context.Background()
 		if err := tx.QueryRow(c, `SELECT title FROM contact WHERE id = $1`, contact).Scan(&title); err != nil {
 			return err
@@ -869,7 +869,7 @@ func TestTheRetractionMatchesOnlyCanonicalActivityRefs(t *testing.T) {
 	contact := seedForeignSignature(t, e)
 
 	var activity ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT activity_id FROM activity_link WHERE contact_id = $1`, contact).Scan(&activity)
 	}); err != nil {
@@ -878,7 +878,7 @@ func TestTheRetractionMatchesOnlyCanonicalActivityRefs(t *testing.T) {
 	applyAsTheOlderPassDid(t, e, contact, activity)
 	// Two rows the same pass wrote in name only: one names the same message in
 	// a spelling the writer never produces, one is not a uuid at all.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO field_provenance (object_type, object_id, field_name, value, evidence_snippet, evidence_ref, source, captured_by)
 			VALUES ('contact', $1, 'role', 'Partner', 'Partner', 'activity:' || upper($2::text), 'capture_enrich', 'agent:enrich'),
@@ -897,7 +897,7 @@ func TestTheRetractionMatchesOnlyCanonicalActivityRefs(t *testing.T) {
 		t.Errorf("removed %d fields, want 1 — only the canonical ref names a message", removed)
 	}
 	var left []string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(),
 			`SELECT field FROM contact_profile_field WHERE contact_id = $1 ORDER BY field`, contact)
 		if err != nil {

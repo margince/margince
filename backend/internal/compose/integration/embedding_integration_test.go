@@ -411,7 +411,7 @@ func TestSimilarEntitiesFiltersIdentityAndDoesNotCrossDimCrash(t *testing.T) {
 	// model predicate — over the SAME mixed-width store must error with a
 	// dimension mismatch. This is what SimilarEntities would do to every
 	// caller the moment the e.model = $identity predicate is removed.
-	err = database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `SELECT 1 - (embedding <=> $1::vector) FROM embedding`, "[1,2,3]")
 		if err != nil {
 			return err

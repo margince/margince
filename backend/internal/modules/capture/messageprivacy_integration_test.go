@@ -22,7 +22,7 @@ import (
 // copy of a collided message.
 func TestAVerdictAfterThePrivacyDecisionLeavesEveryReaderOnTheFirstAnswer(t *testing.T) {
 	ctx, pool := meetingTenureEnv(t)
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		seat := ids.NewV7()
 		if _, err := tx.Exec(ctx, `INSERT INTO app_user (id, email, display_name) VALUES ($1, $2, 'Seat')`,
 			seat, seat.String()+"@seat.example"); err != nil {

@@ -590,7 +590,7 @@ func (e *partyEnv) chatNotesAs(t *testing.T, user ids.UUID, query *string) int {
 	t.Helper()
 	var found int
 	ws := principal.WithWorkspaceID(context.Background(), e.ws)
-	err := database.WithWorkspaceTx(ws, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ws, e.pool, func(tx pgx.Tx) error {
 		members, err := identity.MemberPrincipalsTx(ws, tx, []ids.UUID{user})
 		if err != nil {
 			return err
@@ -660,7 +660,7 @@ func (e *pullEnv) previous(t *testing.T, before time.Time) string {
 	t.Helper()
 	link := chatlinks.Link{DealID: &e.deal, ChannelSlug: "acme"}
 	var got string
-	err := database.WithWorkspaceTx(principal.WithWorkspaceID(context.Background(), e.ws), e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(principal.WithWorkspaceID(context.Background(), e.ws), e.pool, func(tx pgx.Tx) error {
 		var err error
 		got, err = previousNote(context.Background(), tx, link, before)
 		return err

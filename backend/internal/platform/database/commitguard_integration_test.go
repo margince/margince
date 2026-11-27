@@ -46,7 +46,7 @@ func TestACommitThatHasStartedFinishesWhenItsContextEnds(t *testing.T) {
 	work, end := context.WithCancel(ctx)
 	done := make(chan error, 1)
 	go func() {
-		done <- database.WithWorkspaceTx(work, pool, func(tx pgx.Tx) error {
+		done <- database.WithTx(work, pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(work, `INSERT INTO `+table+` VALUES (1)`)
 			return err
 		})
@@ -140,17 +140,17 @@ func TestARollbackOnAnEndedContextKeepsTheConnection(t *testing.T) {
 	t.Cleanup(pool.Close)
 	ctx := principal.WithWorkspaceID(context.Background(), ids.NewV7())
 	selectOne := func(tx pgx.Tx) error { _, err := tx.Exec(ctx, `SELECT 1`); return err }
-	if err := database.WithWorkspaceTx(ctx, pool, selectOne); err != nil {
+	if err := database.WithTx(ctx, pool, selectOne); err != nil {
 		t.Fatal(err)
 	}
 	dialled := pool.Stat().NewConnsCount()
 
 	work, end := context.WithCancel(ctx)
 	refused := errors.New("refused")
-	if err := database.WithWorkspaceTx(work, pool, func(pgx.Tx) error { end(); return refused }); !errors.Is(err, refused) {
+	if err := database.WithTx(work, pool, func(pgx.Tx) error { end(); return refused }); !errors.Is(err, refused) {
 		t.Fatalf("the transaction answered %v, want its own refusal", err)
 	}
-	if err := database.WithWorkspaceTx(ctx, pool, selectOne); err != nil {
+	if err := database.WithTx(ctx, pool, selectOne); err != nil {
 		t.Fatal(err)
 	}
 
@@ -169,7 +169,7 @@ func TestAWatchedRequestLearnsOnlyOfCommittedWrites(t *testing.T) {
 	} {
 		t.Run(name, func(t *testing.T) {
 			watched, committed := database.WatchCommits(ctx)
-			if err := database.WithWorkspaceTx(watched, pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(watched, pool, func(tx pgx.Tx) error {
 				_, err := tx.Exec(watched, statement)
 				return err
 			}); err != nil {

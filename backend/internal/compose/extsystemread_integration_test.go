@@ -133,7 +133,7 @@ func (s *systemReadEnv) seat(t *testing.T, email, status string, agent bool) ids
 func (s *systemReadEnv) read(t *testing.T, fn func(context.Context, pgx.Tx) error) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), s.WS)
-	if err := database.WithWorkspaceTx(ctx, s.Pool, func(tx pgx.Tx) error { return fn(ctx, tx) }); err != nil {
+	if err := database.WithTx(ctx, s.Pool, func(tx pgx.Tx) error { return fn(ctx, tx) }); err != nil {
 		t.Fatalf("reading the fixture's tables: %v", err)
 	}
 }

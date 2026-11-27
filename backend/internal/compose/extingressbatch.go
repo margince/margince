@@ -133,5 +133,5 @@ func (r *callRuntime) inPositionTx(ctx context.Context, fn func(context.Context,
 	if err != nil {
 		return err
 	}
-	return database.WithWorkspaceTx(scoped, r.deps.pool, func(tx pgx.Tx) error { return fn(scoped, tx) })
+	return database.WithTx(scoped, r.deps.pool, func(tx pgx.Tx) error { return fn(scoped, tx) })
 }

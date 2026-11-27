@@ -207,7 +207,7 @@ func TestSiteReadBudgetDeferralKeepsProgressAndJoinsUntilDue(t *testing.T) {
 	if _, err := store.BeginSiteRead(worker, read.ID, 10*time.Minute); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("claim before next_attempt_at: %v, want ErrNotFound", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE site_read SET next_attempt_at = now() - interval '1 second' WHERE id = $1`, read.ID)
 		return err
 	}); err != nil {
@@ -238,7 +238,7 @@ func TestSiteReadWorkerReclaimsAStaleRunningDossier(t *testing.T) {
 	if _, err := store.BeginSiteRead(worker, read.ID, 20*time.Minute); err != nil {
 		t.Fatal(err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE site_read
 			SET started_at = now() - interval '11 minutes' WHERE id = $1`, read.ID)
 		return err
@@ -248,7 +248,7 @@ func TestSiteReadWorkerReclaimsAStaleRunningDossier(t *testing.T) {
 	if _, err := store.BeginSiteRead(worker, read.ID, 20*time.Minute); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("reclaim before configured timeout: %v, want ErrNotFound", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE site_read
 			SET started_at = now() - interval '21 minutes' WHERE id = $1`, read.ID)
 		return err
@@ -345,7 +345,7 @@ func TestATransientlyFailedReadIsClaimedAgainWhenItsRetryFallsDue(t *testing.T) 
 	if _, err := store.BeginSiteRead(worker, read.ID, 10*time.Minute); !errors.Is(err, apperrors.ErrNotFound) {
 		t.Fatalf("claim before next_attempt_at: %v, want ErrNotFound", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE site_read SET next_attempt_at = now() - interval '1 second' WHERE id = $1`, read.ID)
 		return err
@@ -440,7 +440,7 @@ func TestAReclaimedReadRefusesTheAbandonedAttemptsTerminalWrite(t *testing.T) {
 		t.Fatal(err)
 	}
 	// Age the lease past its own interval so the next Begin reclaims it.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE site_read
 			SET started_at = now() - interval '21 minutes' WHERE id = $1`, read.ID)
 		return err

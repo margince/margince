@@ -13,10 +13,8 @@ package integration
 // rows a reader would not be shown, and to assert that a statement the schema
 // must refuse is refused.
 //
-// Every one of them binds the workspace explicitly, through
-// database.WithWorkspaceTx. What scopes these statements is that binding — the
-// GUC the transaction sets — and the test pool has to set it like any other
-// caller, owner-less or not.
+// Every one of them runs through database.WithTx, like any other caller,
+// owner-less or not.
 
 import (
 	"context"
@@ -36,7 +34,7 @@ import (
 func (e *Env) WsExec(t *testing.T, sql string, args ...any) {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, sql, args...)
 		return err
 	}); err != nil {
@@ -72,7 +70,7 @@ func (e *Env) DestroyErasedLinks(store *activities.Store) error {
 func (e *Env) WsExecErr(t *testing.T, sql string, args ...any) error {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
-	return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(ctx, sql, args...)
 		return err
 	})
@@ -83,7 +81,7 @@ func (e *Env) WsCount(t *testing.T, sql string, args ...any) int {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	var n int
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, sql, args...).Scan(&n)
 	}); err != nil {
 		t.Fatalf("count query: %v", err)
@@ -97,7 +95,7 @@ func (e *Env) WsScalar(t *testing.T, sql string, args ...any) string {
 	t.Helper()
 	ctx := principal.WithWorkspaceID(context.Background(), e.WS)
 	var out string
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, sql, args...).Scan(&out)
 	}); err != nil {
 		t.Fatalf("scalar query: %v", err)
@@ -109,7 +107,7 @@ func (e *Env) WsScalar(t *testing.T, sql string, args ...any) string {
 // It is for suites about what a label does, not the read-to-write window.
 func (e *Env) LabelCapture(ctx context.Context, id ids.UUID, label string) (bool, error) {
 	var version int64
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(ctx, `SELECT version FROM activity WHERE id = $1 AND restricted_at IS NULL`, id).Scan(&version)
 	}); err != nil {
 		return false, err

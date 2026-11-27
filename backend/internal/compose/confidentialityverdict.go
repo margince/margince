@@ -458,7 +458,7 @@ func (e *ConfidentialityVerdictEngine) finishOneSettledThread(
 	// stage that opened its transaction with one context and wrote with another
 	// fails at the first audited write.
 	wsCtx := e.workspaceCtx(ctx)
-	err := database.WithWorkspaceTx(wsCtx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(wsCtx, e.pool, func(tx pgx.Tx) error {
 		if err := capture.LockThreadHoldTx(wsCtx, tx, t.ThreadKey); err != nil {
 			return err
 		}

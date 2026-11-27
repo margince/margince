@@ -618,7 +618,7 @@ func TestADepartedColleagueStaysNamedOnAnOldMessage(t *testing.T) {
 // callers honest about.
 func deactivateSeat(t *testing.T, e *Env, user ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, user)
 		return err
@@ -679,7 +679,7 @@ func partyForUser(parties []crmcontracts.EmailParty, user ids.UUID) *crmcontract
 // produces and prove nothing about the one it does.
 func seatParticipant(t *testing.T, e *Env, activityID ids.UUID, user ids.UUID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_participant (activity_id, user_id, contact_id, address, role)
 			SELECT $1, $2, NULL, NULLIF('', ''), 'to'
@@ -696,7 +696,7 @@ func seatParticipant(t *testing.T, e *Env, activityID ids.UUID, user ids.UUID) {
 // capture.StampFurtherParticipants leaves when no seat and no contact match.
 func headerParticipant(t *testing.T, e *Env, activityID ids.UUID, role, address, name string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity_participant (activity_id, user_id, contact_id, address, role, display_name)
 			VALUES ($1, NULL, NULL, $2, $3, $4)

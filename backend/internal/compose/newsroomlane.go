@@ -68,7 +68,7 @@ func (w *siteDeepReadWorker) readNewsroom(ctx context.Context, claim contacts.Si
 		})
 	}
 
-	if err := database.WithWorkspaceTx(laneCtx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(laneCtx, w.pool, func(tx pgx.Tx) error {
 		raised, err := WriteNewsroomSignals(laneCtx, tx, companyID, events, time.Now())
 		if err != nil {
 			return err

@@ -44,7 +44,7 @@ func TestADepartedSeatsMailboxProvesNothing(t *testing.T) {
 func provedLabels(t *testing.T, e *integration.Env) map[ids.UUID][]string {
 	t.Helper()
 	var out map[ids.UUID][]string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		out, err = storekit.ProvedMailboxLabels(context.Background(), tx)
 		return err

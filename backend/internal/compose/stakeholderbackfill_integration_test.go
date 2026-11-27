@@ -48,7 +48,7 @@ func setupBackfill(t *testing.T) *backfillEnv {
 	c := setupCloseLost(t)
 	integration.ApplyRiverSchema(t)
 	o := &owedEnv{e: c.Env, owner: c.Rep1, seat: seatAddress(t, c.Env, c.Rep1), now: c.now}
-	err := database.WithWorkspaceTx(c.Admin(), c.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(c.Admin(), c.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `UPDATE capture_connection SET mail_posture = 'shared' WHERE user_id = $1`, o.owner)
 		return err
 	})
@@ -164,7 +164,7 @@ func (b *backfillEnv) filedOn(t *testing.T, mail, deal ids.UUID) bool {
 func (b *backfillEnv) finished(t *testing.T) bool {
 	t.Helper()
 	var done bool
-	err := database.WithWorkspaceTx(b.Admin(), b.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(b.Admin(), b.Pool, func(tx pgx.Tx) error {
 		var err error
 		done, err = capture.StakeholderBackfillDoneTx(b.Admin(), tx)
 		return err
@@ -358,7 +358,7 @@ func TestTheBackfillFinishesInAWorkspaceWithNoActivity(t *testing.T) {
 	}
 	dealRefileFixture{o: o}.run(t, args)
 	done := false
-	if err := database.WithWorkspaceTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(o.e.Admin(), o.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		done, err = capture.StakeholderBackfillDoneTx(o.e.Admin(), tx)
 		return err
@@ -505,7 +505,7 @@ func TestTheOfferUsesTheWindowThePassFroze(t *testing.T) {
 	if _, err := worker.backfillState(ctx, CapturedDealRefileArgs{AsOf: b.now}); err != nil {
 		t.Fatal(err)
 	}
-	err := database.WithWorkspaceTx(b.Admin(), b.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(b.Admin(), b.Pool, func(tx pgx.Tx) error {
 		return NewSettingsStore(b.Pool).SetRawTx(b.Admin(), tx, "deals.silent_close_days", []byte("60"))
 	})
 	if err != nil {
@@ -532,7 +532,7 @@ func TestTheOpenPhaseReadsBothEdgesOfItsWindow(t *testing.T) {
 	b.setBackfillFinished(t, false)
 
 	var listed []ids.UUID
-	err := database.WithWorkspaceTx(b.Admin(), b.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(b.Admin(), b.Pool, func(tx pgx.Tx) error {
 		var err error
 		listed, err = mailDealRepair(b.Pool).StakeholderBackfillCandidatesTx(
 			principal.SystemActing(b.Admin(), dealRefileActor), tx, b.now, 120, ids.Nil, ids.MustParse("ffffffff-ffff-ffff-ffff-ffffffffffff"), 100)

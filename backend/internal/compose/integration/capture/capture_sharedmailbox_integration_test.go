@@ -85,7 +85,7 @@ func readsMail(reader context.Context, t *testing.T, e *integration.SearchEnv, i
 	t.Helper()
 	var readable bool
 	var listed int
-	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		switch err := auth.EnsureActivityContentVisible(reader, tx, id); {
 		case err == nil:
 			readable = true
@@ -110,7 +110,7 @@ func readsMail(reader context.Context, t *testing.T, e *integration.SearchEnv, i
 func discoversMail(reader context.Context, t *testing.T, e *integration.SearchEnv, id ids.UUID) int {
 	t.Helper()
 	var listed int
-	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		var args []any
 		clause, err := auth.ActivityDiscoverClause(reader, "a", func(v any) int { args = append(args, v); return len(args) })
 		if err != nil {
@@ -127,7 +127,7 @@ func discoversMail(reader context.Context, t *testing.T, e *integration.SearchEn
 func adminCount(t *testing.T, e *integration.SearchEnv, query string, args ...any) int {
 	t.Helper()
 	var n int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), query, args...).Scan(&n)
 	}); err != nil {
 		t.Fatalf("counting: %v", err)
@@ -144,7 +144,7 @@ func outsider(t *testing.T, e *integration.SearchEnv) ids.UUID {
 func emailIDs(t *testing.T, e *integration.SearchEnv) []ids.UUID {
 	t.Helper()
 	var out []ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `SELECT id FROM activity WHERE kind = 'email' ORDER BY id`)
 		if err != nil {
 			return err
@@ -375,7 +375,7 @@ func TestAPersonalPurgeDoesNotDestroyAMessageTheSharedMailboxAlsoHolds(t *testin
 		return fmt.Sprintf("($%d::text IS NULL AND $%d::text IS NULL AND false)", current, carried)
 	}}
 	var subject capturemod.PurgeSubject
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		subject, err = capturemod.SelectPurgeSubjectTx(context.Background(), tx, e.Rep1, capturemod.IdentityKindAddress, "anna@acme.example", noFloor)
 		return err
@@ -410,7 +410,7 @@ func TestAPersonalPurgeKeepsAContactWhoseMailTheSharedMailboxHolds(t *testing.T)
 	e := env.e
 	_, syncShared := sharedMailbox(t, env, e.Team2, capturemod.PostureHeld)
 	contact := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO contact (id, full_name, source, captured_by, owner_id, visibility)
 			VALUES ($1, 'Anna Acme', 'manual', 'human:x', $2, 'owner')`, contact, e.Rep1); err != nil {
@@ -431,7 +431,7 @@ func TestAPersonalPurgeKeepsAContactWhoseMailTheSharedMailboxHolds(t *testing.T)
 		return fmt.Sprintf("($%d::text IS NULL AND $%d::text IS NULL AND false)", current, carried)
 	}}
 	var purgeable []ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		purgeable, err = capturemod.SelectPurgeableContactsTx(context.Background(), tx, e.Rep1, capturemod.IdentityKindAddress, "anna@acme.example", noFloor)
 		return err
@@ -455,7 +455,7 @@ func TestABrokenSharedMailboxShowsInFleetHealth(t *testing.T) {
 		Permissions: principal.Permissions{Objects: map[string]principal.ObjectGrant{"job_health": {Read: true}}, RowScope: principal.RowScopeAll},
 	})
 	var concerns []capturemod.FleetConcern
-	if err := database.WithWorkspaceTx(operator, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(operator, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		concerns, err = capturemod.FleetConcernsTx(operator, tx, captureNow)
 		return err

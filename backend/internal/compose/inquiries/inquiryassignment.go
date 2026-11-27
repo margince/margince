@@ -39,7 +39,7 @@ func NewAssignment(db *database.DB, records *contacts.Store, routing Routing) As
 // Preview plans an assignment and writes nothing.
 func (s Assignment) Preview(ctx context.Context, id ids.ActivityID, in crmcontracts.WebsiteInquiryAssignmentRequest) (crmcontracts.WebsiteInquiryAssignment, error) {
 	var out crmcontracts.WebsiteInquiryAssignment
-	err := database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(ctx context.Context) error {
+	err := database.WithSnapshot(ctx, s.db.Pool(), func(ctx context.Context) error {
 		var err error
 		out, err = s.plan(ctx, id, in)
 		return err
@@ -52,7 +52,7 @@ func (s Assignment) Preview(ctx context.Context, id ids.ActivityID, in crmcontra
 func (s Assignment) Apply(ctx context.Context, id ids.ActivityID, version int64, in crmcontracts.WebsiteInquiryAssignmentRequest) (crmcontracts.WebsiteInquiryAssignment, error) {
 	var out crmcontracts.WebsiteInquiryAssignment
 	run := func() error {
-		return database.WithWorkspaceSnapshot(ctx, s.db.Pool(), func(ctx context.Context) error {
+		return database.WithSnapshot(ctx, s.db.Pool(), func(ctx context.Context) error {
 			planned, err := s.plan(ctx, id, in)
 			if err != nil {
 				return err

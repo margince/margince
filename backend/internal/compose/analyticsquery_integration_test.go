@@ -443,7 +443,7 @@ func TestAnExplanationCannotOutSeeTheNumberItExplains(t *testing.T) {
 		t.Fatalf("permission exclusions = %v, want the six deals in the reader’s population", answer.ExcludedByPermission)
 	}
 	var kept reporting.CapturedQuestion
-	err = database.WithWorkspaceTx(masked, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(masked, e.Pool, func(tx pgx.Tx) error {
 		var captureErr error
 		card := reporting.QuestionCard{Question: crmcontracts.ReportingCardQuestion{Entity: q.Entity, Measures: []crmcontracts.AnalyticsMeasure{{Fn: "count", As: new("n")}}}}
 		kept, captureErr = (reportingQuestions{}).Capture(masked, tx, card, crmcontracts.ReportingScope{})

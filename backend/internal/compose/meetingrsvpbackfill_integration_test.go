@@ -91,7 +91,7 @@ func seedCapturedMeeting(t *testing.T, e *integration.Env, eventID string, start
 // the reason this is seeded explicitly rather than assumed.
 func seedCalendarConnection(t *testing.T, e *integration.Env) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (provider, user_id, status, account_label)
 			VALUES ($1, $2, 'connected', $3)`, calendarSystem, e.AdminUser, backfillOwner)
@@ -105,7 +105,7 @@ func seedCalendarConnection(t *testing.T, e *integration.Env) {
 func backfillOutcome(t *testing.T, e *integration.Env, id ids.UUID) (string, bool) {
 	t.Helper()
 	var outcome *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT outcome FROM activity_meeting_rsvp_backfill WHERE activity_id = $1`, id).Scan(&outcome)
 	}); err != nil {
@@ -179,7 +179,7 @@ func TestTheBackfillKeepsAnAnsweredMeetingWhenAnAttendeeDeclined(t *testing.T) {
 	id := seedCapturedMeeting(t, e, "evt-already-held", starts,
 		attendee{email: backfillOwner, response: "declined", self: true},
 		attendee{email: "client@acme.test", response: "accepted"})
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE activity SET meeting_status = 'held' WHERE id = $1`, id)
 		return err

@@ -64,7 +64,7 @@ func TestRecordGrantWidensRowScopeAndRevokes(t *testing.T) {
 	}
 
 	// Revocation binds on the next query.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `DELETE FROM record_grant WHERE id = $1`, grantID)
 		return err
 	}); err != nil {
@@ -161,7 +161,7 @@ func TestAShareIsPassedOnOnlyByACallerWhoCouldChangeTheRow(t *testing.T) {
 	// Read back, because a 403 raised after the upsert ran is indistinguishable
 	// from one raised instead of it.
 	var access string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT access FROM record_grant WHERE record_id = $1 AND subject_id = $2`,
 			foreign, colleague).Scan(&access)
@@ -452,7 +452,7 @@ func TestARecordsTermsAreRestatedOnlyByACallerWhoCouldChangeIt(t *testing.T) {
 			// indistinguishable from one raised instead of it, and the whole
 			// question here is whether the stored term moved.
 			var stored *time.Time
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(),
 					`SELECT expires_at FROM record_grant
 					  WHERE record_type = $1 AND record_id = $2 AND subject_id = $3`,
@@ -473,7 +473,7 @@ func TestARecordsTermsAreRestatedOnlyByACallerWhoCouldChangeIt(t *testing.T) {
 			if err := share(owner, e.Rep1, "read", nil); err != nil {
 				t.Errorf("the record's owner restating the grant they made → %v, want allowed", err)
 			}
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(context.Background(),
 					`SELECT expires_at FROM record_grant
 					  WHERE record_type = $1 AND record_id = $2 AND subject_id = $3`,
@@ -541,7 +541,7 @@ func TestAStrangerToTheRecordCannotRestateItsGrants(t *testing.T) {
 		t.Helper()
 		var access string
 		var expires *time.Time
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			return tx.QueryRow(context.Background(),
 				`SELECT access, expires_at FROM record_grant
 				  WHERE record_type = 'deal' AND record_id = $1 AND subject_id = $2`,

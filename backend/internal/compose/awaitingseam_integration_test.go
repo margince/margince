@@ -25,7 +25,7 @@ func seedFollowUps(t *testing.T, e *integration.Env) (sent, met ids.UUID) {
 	t.Helper()
 	sent, met = ids.NewV7(), ids.NewV7()
 	contact, company := ids.NewV7(), ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		for _, stmt := range []struct {
 			sql  string

@@ -84,7 +84,7 @@ func (s countryCheckState) String() string {
 func readCountryCheck(t *testing.T, e *integration.Env, table string, id ids.UUID) countryCheckState {
 	t.Helper()
 	var state countryCheckState
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT countries, checked_at FROM `+table+`_address_country WHERE `+table+`_id = $1`, id).
 			Scan(&state.resolved, &state.checkedAt)
@@ -323,7 +323,7 @@ type recordStamp struct {
 func readRecordStamp(t *testing.T, e *integration.Env, table string, id ids.UUID) recordStamp {
 	t.Helper()
 	var stamp recordStamp
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT version, updated_at FROM `+table+` WHERE id = $1`, id).Scan(&stamp.version, &stamp.updatedAt)
 	}); err != nil {

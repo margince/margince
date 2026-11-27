@@ -102,7 +102,7 @@ func readsContent(t *testing.T, e *integration.Env, seat, activity ids.UUID) boo
 func hasAReader(t *testing.T, e *integration.Env, activity ids.UUID) bool {
 	t.Helper()
 	var reachable bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		reachable, err = auth.ActivityHasAReaderTx(e.Admin(), tx, activity)
 		return err
@@ -190,7 +190,7 @@ func TestAGuessedParticipantIsNoEvidenceOfPresence(t *testing.T) {
 		t.Fatal(err)
 	}
 	header := legacyPair(t, e, conn, "gm-presence-header", "connector:gmail", e.Rep1, contact)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return capture.StampFurtherParticipants(e.Admin(), tx, ids.From[ids.ActivityKind](header), "email", "", true,
 			[]connector.MessageParticipant{{Email: "a@authz.test", Role: connector.ParticipantRoleTo}})
 	}); err != nil {
@@ -207,7 +207,7 @@ func TestAGuessedParticipantIsNoEvidenceOfPresence(t *testing.T) {
 			t.Errorf("%s mail: content readable = %v, want %v", name, got, c.want)
 		}
 		var holds, minable bool
-		if err := database.WithWorkspaceTx(seat, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(seat, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			if holds, err = capture.SeatHoldsActivityTx(seat, tx, ids.From[ids.ActivityKind](c.activity)); err != nil {
 				return err
@@ -230,7 +230,7 @@ func TestAGuessedParticipantIsNoEvidenceOfPresence(t *testing.T) {
 		},
 		"rebuild": search.RebuildEdges,
 	} {
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error { return fold(e.Admin(), tx) }); err != nil {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error { return fold(e.Admin(), tx) }); err != nil {
 			t.Fatal(err)
 		}
 		if got := e.WsCount(t, `SELECT count_total FROM graph_interaction_edge WHERE user_id = $1 AND contact_id = $2`, e.Rep1, contact); got != 2 {
@@ -264,7 +264,7 @@ func TestTheGuessedMailboxRepairRemovesOnlyUnprovenOwners(t *testing.T) {
 	}
 	creator := legacyCapturedMail(t, e, conn, "gm-creator", e.Rep1)
 	worked := seedGuessedSeat(t, e, conn, "gm-worked", e.Rep2)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := storekit.AuditEvent(e.Admin(), tx, "update", "activity", worked, map[string]any{"note": "kept"})
 		return err
 	}); err != nil {
@@ -315,7 +315,7 @@ func TestTheGuessedMailboxRepairRemovesOnlyUnprovenOwners(t *testing.T) {
 	in := datatask.BatchIn{Limit: 2, RunID: ids.NewV7()}
 	for {
 		var out datatask.BatchOut
-		err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error { var err error; out, err = step.Batch(ctx, tx, in); return err })
+		err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error { var err error; out, err = step.Batch(ctx, tx, in); return err })
 		if err != nil {
 			t.Fatal(err)
 		}

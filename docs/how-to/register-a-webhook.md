@@ -21,7 +21,7 @@ works with no change.
 > **One company for each installation.** One installation serves one company. The
 > server finds its one company by itself, so no request chooses a tenant, and there is no
 > `X-Workspace-Slug` header. The `curl` calls below carry only the session cookie. ("Workspace" still names
-> the tenant identity in the code that `WithWorkspaceTx` uses for the transaction.)
+> the tenant identity in the code that `WithTx` uses for the transaction.)
 
 ## Before you start
 

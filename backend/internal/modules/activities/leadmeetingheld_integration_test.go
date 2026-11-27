@@ -108,7 +108,7 @@ func TestTheRepairKeepsOneOpenQualifyTaskPerLead(t *testing.T) {
 	}
 	var scanned []ids.UUID
 	var changed int
-	if err := database.WithWorkspaceTx(asClassifier(e), e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(asClassifier(e), e.pool, func(tx pgx.Tx) error {
 		var err error
 		scanned, changed, err = RetireDuplicateLeadTasksTx(asClassifier(e), tx, source, ids.Nil, 10, requestInstant)
 		return err

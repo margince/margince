@@ -37,7 +37,7 @@ func TestTheDealMoveReadsRunAgainstTheRealSchema(t *testing.T) {
 
 	var moves []meetingbrief.DealMoveIn
 	var hidden bool
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		moves, hidden, err = meetingbrief.ReadDealMovesForTest(ctx, tx, dealID,
 			time.Now().UTC().AddDate(0, 0, -30), time.Now().UTC(), "en")
@@ -68,7 +68,7 @@ func TestAReaderWithoutTheRoomGrantIsToldTheRoomWasLeftOut(t *testing.T) {
 	ctx := principal.WithWorkspaceID(e.As(e.AdminUser, nil, noRooms), e.WS)
 
 	var hidden bool
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		_, hidden, err = meetingbrief.ReadDealMovesForTest(ctx, tx, dealID,
 			time.Now().UTC().AddDate(0, 0, -30), time.Now().UTC(), "en")
@@ -96,7 +96,7 @@ func TestAReaderWithoutDealAccessIsToldNothingAboutTheDeal(t *testing.T) {
 	}
 	ctx := principal.WithWorkspaceID(e.As(e.AdminUser, nil, noDeals), e.WS)
 
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, _, err := meetingbrief.ReadDealMovesForTest(ctx, tx, dealID,
 			time.Now().UTC().AddDate(0, 0, -30), time.Now().UTC(), "en")
 		return err

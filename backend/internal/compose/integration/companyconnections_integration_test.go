@@ -36,7 +36,7 @@ import (
 func ourSideUsers(t *testing.T, e *integration.Env, contacts []ids.UUID) map[ids.UUID]bool {
 	t.Helper()
 	out := map[ids.UUID]bool{}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		edges, err := search.EdgesForContacts(e.Admin(), tx, contacts)
 		if err != nil {
 			return err
@@ -59,7 +59,7 @@ func TestConnectorCapturedMailPutsAColleagueOnTheAccount(t *testing.T) {
 	// A contact, and mail that arrived the way real mail arrives: through a
 	// connector, stamped `connector:gmail:<seat>` for the mailbox it came from.
 	var contact ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
 			VALUES (
@@ -70,7 +70,7 @@ func TestConnectorCapturedMailPutsAColleagueOnTheAccount(t *testing.T) {
 	}
 
 	var activityID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO activity (kind, subject, direction, occurred_at, source, captured_by)
@@ -93,7 +93,7 @@ func TestConnectorCapturedMailPutsAColleagueOnTheAccount(t *testing.T) {
 		t.Fatalf("seeding connector-captured mail: %v", err)
 	}
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(e.Admin(), tx, []ids.UUID{activityID})
 	}); err != nil {
 		t.Fatalf("folding the edge: %v", err)
@@ -112,7 +112,7 @@ func TestADepartedColleagueIsNotOfferedAsAWayIn(t *testing.T) {
 	now := time.Now().UTC()
 
 	var contact ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
 			VALUES (
@@ -123,7 +123,7 @@ func TestADepartedColleagueIsNotOfferedAsAWayIn(t *testing.T) {
 	}
 
 	var activityID ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if err := tx.QueryRow(ctx, `
 			INSERT INTO activity (kind, subject, direction, occurred_at, source, captured_by)
@@ -143,7 +143,7 @@ func TestADepartedColleagueIsNotOfferedAsAWayIn(t *testing.T) {
 	}); err != nil {
 		t.Fatalf("seeding the interaction: %v", err)
 	}
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(e.Admin(), tx, []ids.UUID{activityID})
 	}); err != nil {
 		t.Fatalf("folding the edge: %v", err)
@@ -157,7 +157,7 @@ func TestADepartedColleagueIsNotOfferedAsAWayIn(t *testing.T) {
 	// archived the row instead would pass against a read that filters only on
 	// archived_at while production kept offering the departed colleague. That
 	// is exactly what happened here before this line was corrected.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep2)
 		return err

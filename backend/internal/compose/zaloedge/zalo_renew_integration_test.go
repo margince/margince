@@ -181,7 +181,7 @@ func TestAFailedVaultWriteParksTheConnectionBecauseZaloSpentTheOldToken(t *testi
 // the way a connection that drops after COMMIT does.
 func (e *env) commitThenFail() func(context.Context, func(pgx.Tx) error) error {
 	return func(ctx context.Context, fn func(pgx.Tx) error) error {
-		if err := database.WithWorkspaceTx(ctx, e.pool, fn); err != nil {
+		if err := database.WithTx(ctx, e.pool, fn); err != nil {
 			return err
 		}
 		return errors.New("the connection dropped after the commit")
@@ -192,7 +192,7 @@ func (e *env) commitThenFail() func(context.Context, func(pgx.Tx) error) error {
 // the new pair although Zalo issued it.
 func (e *env) rollBack() func(context.Context, func(pgx.Tx) error) error {
 	return func(ctx context.Context, fn func(pgx.Tx) error) error {
-		return database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+		return database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 			if err := fn(tx); err != nil {
 				return err
 			}

@@ -83,7 +83,7 @@ func threadConnectorCtx(e *integration.Env, owner ids.UUID) context.Context {
 func seatAddress(t *testing.T, e *integration.Env, seat ids.UUID) string {
 	t.Helper()
 	addr := "seat-" + seat.String() + "@ws.example"
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			WITH adopted AS (UPDATE capture_connection SET account_label = $2, archived_at = NULL
 			   WHERE user_id = $1 AND provider = 'gmail' AND account_label IS NULL AND NOT EXISTS (SELECT 1 FROM capture_connection
@@ -113,7 +113,7 @@ func captureThreadMail(t *testing.T, e *integration.Env, owner ids.UUID, raw []b
 func threadKeyOfMessage(t *testing.T, e *integration.Env, messageID string) string {
 	t.Helper()
 	var key string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT a.thread_key FROM activity a
 			  JOIN activity_identity i ON i.activity_id = a.id
@@ -130,7 +130,7 @@ func threadKeyOfMessage(t *testing.T, e *integration.Env, messageID string) stri
 func TestEveryThreadKeyedTableIsMerged(t *testing.T) {
 	e := integration.Setup(t)
 	var tables []string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT c.table_name FROM information_schema.columns c
 			  JOIN information_schema.tables tb
@@ -307,7 +307,7 @@ func TestAMailboxTakingOverAnImportJoinsItsThread(t *testing.T) {
 func TestAMergedThreadKeepsTheHoldEitherHalfCarried(t *testing.T) {
 	e := integration.Setup(t)
 	seat := e.Rep1
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		ctx := context.Background()
 		if _, err := tx.Exec(ctx, `
 			INSERT INTO capture_thread_verdict (thread_key, user_id, status)
@@ -320,7 +320,7 @@ func TestAMergedThreadKeepsTheHoldEitherHalfCarried(t *testing.T) {
 		t.Fatalf("merging: %v", err)
 	}
 	var statuses []string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT thread_key || ':' || status FROM capture_thread_verdict
 			 WHERE user_id = $1 AND thread_key IN ('held-half', 'open-half')`, seat)

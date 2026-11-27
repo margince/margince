@@ -143,7 +143,7 @@ func TestThePolymorphicKeysTaskKeysLiveRowsAndEndsTheRest(t *testing.T) {
 
 	for _, step := range task.Steps {
 		var replay datatask.BatchOut
-		if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 			var err error
 			replay, err = step.Batch(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 			return err
@@ -195,7 +195,7 @@ func seedContractEndedSignal(ctx context.Context, tx pgx.Tx, company ids.UUID) e
 func readLifecycleFinding(ctx context.Context, t *testing.T, e *integration.Env, company ids.UUID) lifecyclereview.Finding {
 	t.Helper()
 	var finding lifecyclereview.Finding
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var signal ids.UUID
 		if err := tx.QueryRow(ctx, `SELECT id FROM signal WHERE kind = 'contract_ended' AND entity_id = $1`,
 			company).Scan(&signal); err != nil {
@@ -214,7 +214,7 @@ func readLifecycleFinding(ctx context.Context, t *testing.T, e *integration.Env,
 func TestAVisitMarkGoesWithItsRecord(t *testing.T) {
 	e := integration.Setup(t)
 	company := e.SeedCompany(t, "Brandt Logistik AG", nil)
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := company360.RecordVisit(e.Admin(), tx, ids.From[ids.UserKind](e.AdminUser), "company", company, clocktest.Now(t))
 		return err
 	}); err != nil {

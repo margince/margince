@@ -47,7 +47,7 @@ func readOwnDay(t *testing.T, e *integration.Env, now time.Time) crmcontracts.Wo
 // granted through the OAuth flow, which needs a provider.
 func seedCalendar(t *testing.T, e *integration.Env, provider, status string, failing bool) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var id ids.UUID
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO capture_connection (provider, user_id, status, auth)

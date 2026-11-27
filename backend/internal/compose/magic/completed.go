@@ -36,8 +36,8 @@ func (s *Service) CompletedChanges(ctx context.Context, since, through time.Time
 	ctx = context.WithValue(ctx, completedThroughKey{}, through)
 	receipt := crmcontracts.MagicReceipt{Done: []crmcontracts.MagicLine{}}
 	width := limit + 1
-	err := database.WithWorkspaceSnapshot(ctx, s.pool, func(ctx context.Context) error {
-		return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error { return s.drawDone(ctx, tx, since, width, &receipt) })
+	err := database.WithSnapshot(ctx, s.pool, func(ctx context.Context) error {
+		return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error { return s.drawDone(ctx, tx, since, width, &receipt) })
 	})
 	if err != nil {
 		return CompletedRead{}, err

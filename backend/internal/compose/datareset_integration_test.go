@@ -80,7 +80,7 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 		t.Fatal(err)
 	}
 
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		tables, err := resetTargetTables(ctx, tx)
 		if err != nil {
 			return err
@@ -147,7 +147,7 @@ func TestSweepWorkspaceDataClearsDomainKeepsIdentity(t *testing.T) {
 func TestPreserveSetIntegrity(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(ctx, `
 			SELECT table_name FROM information_schema.tables
 			WHERE table_schema = 'public' AND table_type = 'BASE TABLE'`)
@@ -200,7 +200,7 @@ func TestClearWorkspaceOutboxEmptiesTheStagedEvents(t *testing.T) {
 	ctx := e.Admin()
 	e.WsExec(t, `INSERT INTO event_outbox (stream, envelope) VALUES ('t', jsonb_build_object('type', 'x'))`)
 
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		return clearWorkspaceOutbox(ctx, tx)
 	}); err != nil {
 		t.Fatalf("clear: %v", err)
@@ -409,7 +409,7 @@ func TestSweepTargetsCarryNoDeleteBlockingTrigger(t *testing.T) {
 	defer deleteGuardedSweepTargets.AssertAllMatched(t)
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		targets, err := resetTargetTables(ctx, tx)
 		if err != nil {
 			return err
@@ -599,7 +599,7 @@ func TestResetKeepsTheDeploymentCredentialsSealedBeforeIt(t *testing.T) {
 func TestAResetKeepsAConnectedAITool(t *testing.T) {
 	e := integration.Setup(t)
 	ctx := e.Admin()
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `INSERT INTO oauth_client (client_id, client_name, redirect_uris, created_via)
 			VALUES ('reset-kept', 'Gemini', ARRAY['https://x.example/cb'], 'admin')`); err != nil {
 			return err
@@ -689,7 +689,7 @@ func TestAResetLeavesNoFactRevision(t *testing.T) {
 	if got := e.WsCount(t, "SELECT count(*) FROM company_fact_revision"); got == 0 {
 		t.Fatal("the lookup left no fact revision to clear; the fixture proves nothing")
 	}
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		tables, err := resetTargetTables(ctx, tx)
 		if err != nil {
 			return err
@@ -738,7 +738,7 @@ func TestAResetClearsADirectedSendAndKeepsItsAuditRow(t *testing.T) {
 	}
 
 	ctx := e.Admin()
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		tables, err := resetTargetTables(ctx, tx)
 		if err != nil {
 			return err

@@ -29,7 +29,7 @@ func (e *flushEnv) fileOnDeal(t *testing.T, activity ids.UUID) events.Envelope {
 		Type: principal.PrincipalSystem, ID: "system:test",
 		Permissions: principal.Permissions{RowScope: principal.RowScopeAll},
 	})
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		_, err := activities.FileOnDealIfUnfiledTx(ctx, tx, ids.From[ids.ActivityKind](activity), e.deal, nil, "")
 		return err
 	})

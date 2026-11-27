@@ -19,7 +19,7 @@ import (
 func (w *csvWriters) land(ctx context.Context, row migration.Row, create func(tx pgx.Tx) (ids.UUID, error)) error {
 	ctx = contacts.WithBulkWrite(ctx)
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(ctx, w.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, w.pool, func(tx pgx.Tx) error {
 		var err error
 		if id, err = create(tx); err != nil {
 			return err

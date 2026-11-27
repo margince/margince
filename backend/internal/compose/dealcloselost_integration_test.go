@@ -65,7 +65,7 @@ func setupCloseLost(t *testing.T) *closeLostEnv {
 // for silence waits for it.
 func (c *closeLostEnv) setBackfillFinished(t *testing.T, finished bool) {
 	t.Helper()
-	err := database.WithWorkspaceTx(c.Admin(), c.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(c.Admin(), c.Pool, func(tx pgx.Tx) error {
 		if !finished {
 			_, err := tx.Exec(c.Admin(), `DELETE FROM installation_state WHERE key = $1`, string(storekit.StateStakeholderMailBackfill))
 			return err
@@ -108,7 +108,7 @@ func (c *closeLostEnv) owner(t *testing.T) context.Context {
 func (c *closeLostEnv) undo(t *testing.T, deal ids.UUID) {
 	t.Helper()
 	var correction ids.UUID
-	err := database.WithWorkspaceTx(c.Admin(), c.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(c.Admin(), c.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(c.Admin(), `SELECT id FROM deal_correction
 			WHERE deal_id = $1 AND correction = 'close_lost' AND reversed_at IS NULL`, deal).Scan(&correction)
 	})
@@ -238,7 +238,7 @@ func TestAnOwnerWhoLeavesBeforeTheSilentCloseWritesKeepsTheDeal(t *testing.T) {
 			c := setupCloseLost(t)
 			ctx := principal.SystemActing(c.Admin(), closeDateSweepActor)
 			var due []closeDecision
-			if err := database.WithWorkspaceTx(ctx, c.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(ctx, c.Pool, func(tx pgx.Tx) error {
 				var err error
 				due, err = closeDecisions(ctx, tx, c.now, nil)
 				return err
@@ -377,7 +377,7 @@ func TestARefusalOwedAReplyOnlyItsParticipantsMaySeeIsNotClosed(t *testing.T) {
 	}
 	// The re-check under the row lock runs as the owner's agent, who is not on
 	// the private thread; it must see the open request too.
-	err := database.WithWorkspaceTx(c.Admin(), c.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(c.Admin(), c.Pool, func(tx pgx.Tx) error {
 		ctx, err := agentForTx(identity.NewService(c.Pool), c.Rep1, marginceActorID)(c.Admin(), tx)
 		if err != nil {
 			return err
@@ -526,7 +526,7 @@ func TestAnUndoAfterSomebodyMovedTheDealIsRefused(t *testing.T) {
 		t.Fatal(err)
 	}
 	var correction ids.UUID
-	if err := database.WithWorkspaceTx(c.Admin(), c.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(c.Admin(), c.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(c.Admin(), `SELECT id FROM deal_correction WHERE deal_id = $1 AND correction = 'close_lost'`,
 			c.silent).Scan(&correction)
 	}); err != nil {
@@ -673,7 +673,7 @@ func mustExec(t *testing.T, tx pgx.Tx, statement string, args ...any) {
 func (c *closeLostEnv) decisionFor(ctx context.Context, t *testing.T, deal ids.UUID) closeDecision {
 	t.Helper()
 	var due []closeDecision
-	if err := database.WithWorkspaceTx(ctx, c.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, c.Pool, func(tx pgx.Tx) error {
 		var err error
 		due, err = closeDecisions(ctx, tx, c.now, []ids.UUID{deal})
 		return err

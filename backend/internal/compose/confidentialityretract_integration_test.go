@@ -217,7 +217,7 @@ func TestAPersonalVerdictKeepsAContactAHumanEdited(t *testing.T) {
 func seedCapturedContact(t *testing.T, e *integration.Env, email string) ids.ContactID {
 	t.Helper()
 	var id ids.ContactID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO contact (full_name, source, captured_by, owner_id, visibility)
 			VALUES ($1, 'gmail:seed', 'connector:gmail', $2, 'owner')
@@ -285,7 +285,7 @@ func TestAPersonalVerdictKeepsAContactAHumanApproved(t *testing.T) {
 // no kind, because the owner said "keep this private" and not why.
 func seedOwnerHeldThread(t *testing.T, e *integration.Env, threadKey string) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_thread_verdict (thread_key, user_id, status, disposition_reason, resolved_at)
 			VALUES ($1, $2, 'held_by_owner', 'owner_decision', now())`, threadKey, e.Rep1)
@@ -299,7 +299,7 @@ func seedOwnerHeldThread(t *testing.T, e *integration.Env, threadKey string) {
 // leaves: system actor, the deciding human in on_behalf_of.
 func seedApprovedOnBehalfOf(t *testing.T, e *integration.Env, id ids.ContactID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id, on_behalf_of)
 			VALUES ('system', 'agent:capture_counterparty', 'create', 'contact', $1, $2)`,
@@ -316,7 +316,7 @@ func seedApprovedOnBehalfOf(t *testing.T, e *integration.Env, id ids.ContactID) 
 func seedOpenThreadMail(t *testing.T, e *integration.Env, threadKey, from, subject string) ids.UUID {
 	t.Helper()
 	id := ids.NewV7()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, body, direction, source_system, source_id,
 			                      source, captured_by, counterparty_email, thread_key, audience)
@@ -343,7 +343,7 @@ func seedOpenThreadMail(t *testing.T, e *integration.Env, threadKey, from, subje
 func seedMachinePromotedContact(t *testing.T, e *integration.Env, email string) ids.ContactID {
 	t.Helper()
 	var id ids.ContactID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		if err := tx.QueryRow(context.Background(), `
 			INSERT INTO contact (full_name, source, captured_by, owner_id, visibility)
 			VALUES ($1, 'capture_counterparty_verdict', 'agent:capture_counterparty_verdict', $2, 'workspace')
@@ -371,7 +371,7 @@ func seedMachinePromotedContact(t *testing.T, e *integration.Env, email string) 
 func contactVisibilityIs(t *testing.T, e *integration.Env, id ids.ContactID) string {
 	t.Helper()
 	var visibility string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT visibility FROM contact WHERE id = $1`, id.UUID).Scan(&visibility)
 	}); err != nil {
@@ -383,7 +383,7 @@ func contactVisibilityIs(t *testing.T, e *integration.Env, id ids.ContactID) str
 // seedHumanEdit lands the audit row a contact's own edit leaves behind.
 func seedHumanEdit(t *testing.T, e *integration.Env, id ids.ContactID) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO audit_log (actor_type, actor_id, action, entity_type, entity_id)
 			VALUES ('human', $1, 'update', 'contact', $2)`, e.Rep1.String(), id.UUID)
@@ -396,7 +396,7 @@ func seedHumanEdit(t *testing.T, e *integration.Env, id ids.ContactID) {
 func contactIsArchived(t *testing.T, e *integration.Env, id ids.ContactID) bool {
 	t.Helper()
 	var archived bool
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT archived_at IS NOT NULL FROM contact WHERE id = $1`, id.UUID).Scan(&archived)
 	}); err != nil {

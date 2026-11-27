@@ -250,7 +250,7 @@ func (s *Service) save(ctx context.Context, userID ids.UserID, contactID ids.Con
 	if err != nil {
 		return fmt.Errorf("encode the brief payload: %w", err)
 	}
-	return database.WithWorkspaceTx(ctx, s.pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, s.pool, func(tx pgx.Tx) error {
 		return SaveForLiveContact(ctx, tx, userID, contactID, generatedsummary.Entry{
 			Fingerprint: brief.Fingerprint,
 			GeneratedAt: brief.GeneratedAt,

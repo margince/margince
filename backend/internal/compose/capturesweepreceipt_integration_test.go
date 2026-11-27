@@ -43,7 +43,7 @@ type storedReceipt struct {
 func receiptsOf(t *testing.T, e *integration.Env, sweep capture.Sweep) []storedReceipt {
 	t.Helper()
 	var out []storedReceipt
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		rows, err := tx.Query(context.Background(), `
 			SELECT outcome, processed, cap_hit, coalesce(error_class, '')
 			  FROM capture_sweep_run WHERE sweep = $1
@@ -117,7 +117,7 @@ func seedFiledHeldMeetings(t *testing.T, e *integration.Env, n int) {
 func readHealth(t *testing.T, e *integration.Env) crmcontracts.CaptureHealth {
 	t.Helper()
 	var health crmcontracts.CaptureHealth
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		health, err = readCaptureHealth(e.Admin(), tx, time.Now().UTC())
 		return err
@@ -346,7 +346,7 @@ func TestPruningKeepsTheLastSuccessThroughAnyRunOfFailures(t *testing.T) {
 		t.Errorf("oldest kept receipt = %+v, want the last success", last)
 	}
 	var state capture.SweepState
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		states, err := capture.SweepStatesTx(context.Background(), tx)
 		for _, s := range states {
 			if s.Sweep == capture.SweepStrandedContacts {

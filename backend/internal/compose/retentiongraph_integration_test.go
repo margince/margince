@@ -39,7 +39,7 @@ func TestRetentionCorrectsTheRelationshipGraphInItsOwnTransaction(t *testing.T) 
 	now := time.Now().UTC()
 
 	var contact ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			INSERT INTO contact (full_name, owner_id, source, captured_by, visibility)
 			VALUES (
@@ -54,7 +54,7 @@ func TestRetentionCorrectsTheRelationshipGraphInItsOwnTransaction(t *testing.T) 
 	seed := func(at time.Time, direction, contactRole string) ids.UUID {
 		t.Helper()
 		var id ids.UUID
-		if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 			ctx := context.Background()
 			if err := tx.QueryRow(ctx, `
 				INSERT INTO activity (kind, subject, direction, occurred_at, source, captured_by)
@@ -83,7 +83,7 @@ func TestRetentionCorrectsTheRelationshipGraphInItsOwnTransaction(t *testing.T) 
 	older := seed(now.AddDate(0, 0, -20), "inbound", "from")
 	newer := seed(now.AddDate(0, 0, -2), "outbound", "to")
 
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return search.RecomputeEdgesForActivities(e.Admin(), tx, []ids.UUID{older, newer})
 	}); err != nil {
 		t.Fatalf("folding: %v", err)
@@ -92,7 +92,7 @@ func TestRetentionCorrectsTheRelationshipGraphInItsOwnTransaction(t *testing.T) 
 	// A policy that makes BOTH interactions due, driven through the real
 	// public sweep — no test-only hook, so what runs here is what runs
 	// nightly. retain_days is 1, and both are older than that.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO retention_policy (object_type, retain_days, action, enabled)
 			VALUES ('activity', 1, 'archive', true)`)
@@ -114,7 +114,7 @@ func TestRetentionCorrectsTheRelationshipGraphInItsOwnTransaction(t *testing.T) 
 	// sweep archived both interactions, so the pair has no evidence left and
 	// its aggregate must be gone rather than frozen at two.
 	var edges int
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT count(*) FROM graph_interaction_edge WHERE contact_id = $1`, contact).Scan(&edges)
 	}); err != nil {

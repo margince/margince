@@ -23,7 +23,7 @@ func TestAFactWriterWaitsForTheCaptureThatCheckedTheVersion(t *testing.T) {
 	run := storekit.WithCaptureFactsRun(ctx)
 	domain := "barrier-" + ids.NewV7().String() + ".example"
 	t.Cleanup(func() {
-		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			_, err := tx.Exec(ctx, `DELETE FROM capture_freemail_domain WHERE domain = $1`, domain)
 			return err
 		}); err != nil {
@@ -39,7 +39,7 @@ func TestAFactWriterWaitsForTheCaptureThatCheckedTheVersion(t *testing.T) {
 	}
 	capture := func(during func(tx pgx.Tx)) int {
 		var seen int
-		if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			if err := storekit.HoldCaptureFactsTx(run, tx); err != nil {
 				return err
 			}
@@ -62,7 +62,7 @@ func TestAFactWriterWaitsForTheCaptureThatCheckedTheVersion(t *testing.T) {
 	waiting := capture(func(reader pgx.Tx) {
 		writer := make(chan uint32, 1)
 		go func() {
-			written <- database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+			written <- database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 				var pid uint32
 				if err := tx.QueryRow(ctx, `SELECT pg_backend_pid()`).Scan(&pid); err != nil {
 					return err
@@ -111,7 +111,7 @@ func TestASavepointReusesLockedCaptureFactsAndForgetsItsOwnWrites(t *testing.T) 
 			return count, err
 		})
 	}
-	err := database.WithWorkspaceTx(ctx, pool, func(root pgx.Tx) error {
+	err := database.WithTx(ctx, pool, func(root pgx.Tx) error {
 		if err := storekit.HoldCaptureFactsTx(run, root); err != nil {
 			return err
 		}

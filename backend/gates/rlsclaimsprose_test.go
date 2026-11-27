@@ -141,7 +141,7 @@ func deniesTheControl(line string) bool {
 		"no rls", "no row-level security", "no row level security",
 		"rls=false", "not workspace-scoped", "carries neither",
 		"assumed force rls", "does not apply to a superuser",
-		"nobypassrls", "rolbypassrls", "rls-exempt", "rls store-path", "rls-store-path",
+		"nobypassrls", "rolbypassrls", "pool-exempt", "rls store-path", "rls-store-path",
 	} {
 		if strings.Contains(lowered, denial) {
 			return true

@@ -121,7 +121,7 @@ func (d attentionDecay) Lapsed(
 	}
 	var lapsed []attention.QuietRelationship
 	exhausted := false
-	err := database.WithWorkspaceTx(ctx, d.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, d.pool, func(tx pgx.Tx) error {
 		// Every page's candidates in one read; only the derivation goes page by page.
 		quiet, err := search.QuietContacts(ctx, tx, read)
 		if err != nil {
@@ -415,7 +415,7 @@ type attentionPins struct {
 
 func (p attentionPins) PinnedRows(ctx context.Context) (map[attention.RowRef]bool, error) {
 	var out map[attention.RowRef]bool
-	err := database.WithWorkspaceTx(ctx, p.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, p.pool, func(tx pgx.Tx) error {
 		pinned, err := p.store.PinnedRows(ctx, tx)
 		if err != nil {
 			return err

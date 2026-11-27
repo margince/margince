@@ -61,7 +61,7 @@ func TestAnUnreadMedicalDocumentKeepsItsPersonalClassification(t *testing.T) {
 			sync(t, raw)
 			activity := activityIDOf(t, e, key)
 			var question ids.UUID
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(t.Context(), `SELECT id FROM capture_thread_verdict WHERE first_activity_id=@activity AND user_id=@seat`, pgx.StrictNamedArgs{"activity": activity, "seat": e.Rep1}).Scan(&question)
 			}); err != nil {
 				t.Fatal(err)
@@ -72,7 +72,7 @@ func TestAnUnreadMedicalDocumentKeepsItsPersonalClassification(t *testing.T) {
 				t.Fatal(err)
 			}
 			var status, storedKind string
-			if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+			if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 				return tx.QueryRow(t.Context(), `SELECT status,kind FROM capture_thread_verdict WHERE id=@question`, pgx.StrictNamedArgs{"question": question}).Scan(&status, &storedKind)
 			}); err != nil {
 				t.Fatal(err)
@@ -94,7 +94,7 @@ func TestAnUnreadMedicalDocumentKeepsItsPersonalClassification(t *testing.T) {
 				sync(t, emailWithFile(sender, captureOwner, "later-medical@health.example", key, "test_result.jpg", []byte{0xff, 0xd8, 0xff, 0xe0}))
 				later := activityIDOf(t, e, "later-medical@health.example")
 				var withheld int
-				if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+				if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 					return tx.QueryRow(t.Context(), `SELECT count(*) FROM attachment WHERE activity_id=@activity AND bytes_withheld AND storage_key=''`, pgx.StrictNamedArgs{"activity": later}).Scan(&withheld)
 				}); err != nil {
 					t.Fatal(err)

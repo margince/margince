@@ -138,7 +138,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 	if _, err := engine.SnapshotRun(reader, at); err != nil {
 		t.Fatalf("taking the rep's brief run: %v", err)
 	}
-	if err := database.WithWorkspaceSnapshot(reader, pool, func(ctx context.Context) error {
+	if err := database.WithSnapshot(reader, pool, func(ctx context.Context) error {
 		if _, err := emailSummariesReusingPlans(ctx, store, []ids.UUID{ids.UUID(mail.Id)}, at); err != nil {
 			return err
 		}
@@ -165,7 +165,7 @@ func TestTheReadsThatReuseGenericPlansBindNoPartialIndexPredicate(t *testing.T) 
 		if err := readMeetingLanes(ctx, store, at, e.Rep1); err != nil {
 			return err
 		}
-		return database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+		return database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 			if _, err := contact360.LastTouchFor(ctx, tx, []ids.ContactID{ids.From[ids.ContactKind](contact)}, contact360.AssembleOptions{AsOf: at}); err != nil {
 				return err
 			}

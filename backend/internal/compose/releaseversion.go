@@ -126,7 +126,7 @@ func RecordInstallationRelease(ctx context.Context, pool *pgxpool.Pool, log *slo
 	// The closure declares its own error at every step. Assigning the enclosing
 	// err from in here would leave two variables of that name meaning different
 	// things, one of which this call is about to overwrite.
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, bootLedgerLock, releaseLedgerFact); err != nil {
 			return fmt.Errorf("compose: serializing the release observation: %w", err)
 		}
@@ -197,7 +197,7 @@ func AssertInstallationRelease(ctx context.Context, pool *pgxpool.Pool, log *slo
 	}
 
 	var installation string
-	if err := database.WithWorkspaceTx(ctx, pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, pool, func(tx pgx.Tx) error {
 		recorded, err := lastObservedRelease(ctx, tx)
 		installation = recorded
 		return err

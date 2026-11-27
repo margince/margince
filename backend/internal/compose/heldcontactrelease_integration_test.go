@@ -45,7 +45,7 @@ func seedHeldExchange(t *testing.T, e *integration.Env, email, thread string) he
 func heldContactID(t *testing.T, e *integration.Env, email string) ids.UUID {
 	t.Helper()
 	var id ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(), `
 			SELECT p.id FROM contact p JOIN contact_email pe ON pe.contact_id = p.id
 			 WHERE pe.email = $1 AND p.archived_at IS NULL`, email).Scan(&id)
@@ -241,7 +241,7 @@ func TestTheHeldContactTaskReleasesAcrossPagesAndReplaysSafely(t *testing.T) {
 		t.Errorf("the task finished %d times having read more than one page, want once", n)
 	}
 	audits := e.WsCount(t, `SELECT count(*) FROM audit_log`)
-	if err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		out, err := task.Steps[0].Batch(ctx, tx, datatask.BatchIn{Limit: 100, RunID: ids.NewV7()})
 		if err == nil && out.Changed != 0 {
 			t.Errorf("replay changed %d contacts", out.Changed)
@@ -339,7 +339,7 @@ func TestASecondAddressWithAnyOtherAnswerKeepsTheContactHeld(t *testing.T) {
 // would, and returns its error.
 func releaseUnder(e *integration.Env, email string, id ids.ContactID) error {
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), confidentialityActor)
-	return database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	return database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := tx.Exec(ctx, `SET LOCAL lock_timeout = '300ms'`); err != nil {
 			return err
 		}
@@ -358,7 +358,7 @@ func TestAReleaseWaitsForAnOwnerHoldingTheThreadAgain(t *testing.T) {
 	id := ids.From[ids.ContactKind](heldContactID(t, e, email))
 	owner := purgeCtx(e, e.Rep1)
 
-	err := database.WithWorkspaceTx(owner, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(owner, e.Pool, func(tx pgx.Tx) error {
 		if err := capture.NewThreadVerdictStore(InstallationDB(e.Pool)).DecideAsOwner(owner, tx, "thr-rehold", false); err != nil {
 			return err
 		}
@@ -387,7 +387,7 @@ func TestNewMailFromTheAddressWaitsForARunningRelease(t *testing.T) {
 	id := ids.From[ids.ContactKind](heldContactID(t, e, email))
 	ctx := principal.SystemActing(principal.WithWorkspaceID(context.Background(), e.WS), confidentialityActor)
 
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		if _, err := releaseHeldContactTx(ctx, tx, newCounterpartyStore(e.Pool), id); err != nil {
 			return err
 		}

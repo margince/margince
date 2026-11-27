@@ -59,7 +59,7 @@ func TestUnlinkedSignalFindingSurvivesReplayAndHonorsAResolution(t *testing.T) {
 func readSignalFindings(ctx context.Context, t *testing.T, e *scoutEnv) []assurance.Exception {
 	t.Helper()
 	var found []assurance.Exception
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		found, err = AssuranceExceptions(ctx, tx)
 		return err

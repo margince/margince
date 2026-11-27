@@ -44,7 +44,7 @@ func (e *partyEnv) parties(t *testing.T) (facts []string, widestArgs, readerCoun
 	t.Helper()
 	ws := principal.WithActor(principal.WithWorkspaceID(context.Background(), e.ws), chatLinksPrincipal)
 	widest := &widestStatement{}
-	err := database.WithWorkspaceTx(ws, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ws, e.pool, func(tx pgx.Tx) error {
 		readers, err := noteReaders(ws, tx, chatlinks.Link{DealID: &e.deal, ChannelSlug: "acme"})
 		if err != nil {
 			return err

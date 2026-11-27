@@ -142,7 +142,7 @@ func (w *Flusher) lines(ctx context.Context, items []chatlinks.Item) ([]string, 
 	for _, item := range items {
 		var shared sharedText
 		if item.ActivityID != nil {
-			err := database.WithWorkspaceTx(ctx, w.Pool, func(tx pgx.Tx) error {
+			err := database.WithTx(ctx, w.Pool, func(tx pgx.Tx) error {
 				var err error
 				shared, err = sharedActivity(ctx, tx, *item.ActivityID)
 				return err

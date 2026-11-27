@@ -189,7 +189,7 @@ func (e *Engine) TeamReview(
 		return TeamReview{}, err
 	}
 	var review TeamReview
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		if err := refuseWhileIndividualOff(ctx, tx); err != nil {
 			return err
 		}
@@ -221,7 +221,7 @@ func (e *Engine) LatestTeamReview(
 		return TeamReview{}, err
 	}
 	var review TeamReview
-	err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		if err := refuseWhileIndividualOff(ctx, tx); err != nil {
 			return err
 		}

@@ -51,7 +51,7 @@ func TestToolSurfaceSendCarriesTheUnsubscribeSurface(t *testing.T) {
 	}
 
 	anchorID := ids.NewV7()
-	if err := database.WithWorkspaceTx(admin, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(admin, e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO activity (id, kind, subject, occurred_at, source, captured_by)
 			VALUES ($1,

@@ -3,13 +3,12 @@
 
 package identity
 
-// The reset-mail goroutine's recover: it outlives the request, so the
-// chassis recovery middleware can never see a panic inside it, and an
-// unrecovered panic on an unauthenticated endpoint is a one-request denial
-// of service. A nil pool is enough to trigger a real panic on this path —
-// database.WithWorkspaceTx calls pool.Begin without a nil check — so this
-// proves the guard without a database: the request still answers 202 and
-// the process survives a send that panics.
+// The reset-mail goroutine's recover. It outlives the request, so the chassis
+// recovery middleware can never see a panic inside it. An unrecovered panic on
+// an unauthenticated endpoint is a one-request denial of service. A nil pool is enough to trigger a real panic on this path,
+// because database.WithTx calls pool.Begin without a nil check. So this proves
+// the guard without a database: the request still answers 202 and the process
+// survives a send that panics.
 
 import (
 	"context"
@@ -24,9 +23,8 @@ import (
 
 func TestRequestPasswordResetRecoversAPanicInTheSendGoroutine(t *testing.T) {
 	// A workspace-bound context with a nil-pool Service reaches the mint's
-	// WithWorkspaceTx call and panics there — before the mailer is ever
-	// invoked. That is exactly what the recover in RequestPasswordReset
-	// exists to survive.
+	// WithTx call and panics there, before the mailer is invoked. The recover
+	// in RequestPasswordReset exists to survive that.
 	svc := &Service{}
 	h := NewHandlers(svc).WithPasswordReset(nopMailer{}).WithPasswordLinkBase("https://crm.example.test")
 	done := make(chan struct{})

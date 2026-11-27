@@ -77,7 +77,7 @@ func TestThePollRefusesADepartedSeatEvenOnAConnectedRow(t *testing.T) {
 
 	// Deactivated directly, so the cascade never ran and the row stays as it
 	// was: exactly the state this predicate exists to catch.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE app_user SET status = 'deactivated' WHERE id = $1`, e.Rep1)
 		return err
@@ -123,7 +123,7 @@ func deactivate(t *testing.T, e *integration.Env, seat ids.UUID) {
 
 func seedCaptureConnection(t *testing.T, e *integration.Env, owner ids.UUID, provider string, auth []byte) {
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (provider, user_id, status, auth)
 			VALUES ($1, $2, 'connected', $3)`, provider, owner, auth)
@@ -137,7 +137,7 @@ func connectionState(t *testing.T, e *integration.Env, owner ids.UUID, provider 
 	t.Helper()
 	var status string
 	var auth []byte
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT status, auth FROM capture_connection WHERE user_id = $1 AND provider = $2`,
 			owner, provider).Scan(&status, &auth)
@@ -156,7 +156,7 @@ func isDue(t *testing.T, e *integration.Env, owner ids.UUID, provider string) bo
 		t.Fatalf("DueConnections: %v", err)
 	}
 	var want ids.UUID
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT id FROM capture_connection WHERE user_id = $1 AND provider = $2`,
 			owner, provider).Scan(&want)
@@ -202,7 +202,7 @@ func TestReapingClearsTheCredentialPointerOfAWithdrawnConnection(t *testing.T) {
 
 	r := capture.NewRegistry(InstallationDB(e.Pool), nil, nil, vault)
 	// Withdrawn first, exactly as the deactivation transaction leaves it.
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_connection SET status = 'disconnected', auth = NULL WHERE user_id = $1`, e.Rep1)
 		return err
@@ -247,7 +247,7 @@ func TestReapingLeavesALiveConnectionAlone(t *testing.T) {
 func seedVaultedConnection(t *testing.T, e *integration.Env, owner ids.UUID, ref string) {
 	const provider = "gmail"
 	t.Helper()
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(), `
 			INSERT INTO capture_connection (provider, user_id, status, credential_ref)
 			VALUES ($1, $2, 'connected', $3)`, provider, owner, ref)
@@ -261,7 +261,7 @@ func credentialRef(t *testing.T, e *integration.Env, owner ids.UUID) *string {
 	const provider = "gmail"
 	t.Helper()
 	var ref *string
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		return tx.QueryRow(context.Background(),
 			`SELECT credential_ref FROM capture_connection WHERE user_id = $1 AND provider = $2`,
 			owner, provider).Scan(&ref)
@@ -324,7 +324,7 @@ func TestInstallingTheReaperWithoutACaptureRegistryBindsNothing(t *testing.T) {
 func TestTheReaperAdapterDoesNotFailADepartureItCannotFinish(t *testing.T) {
 	e := integration.Setup(t)
 	seedVaultedConnection(t, e, e.Rep1, "ref-with-no-vault")
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_connection SET status = 'disconnected' WHERE user_id = $1`, e.Rep1)
 		return err
@@ -367,7 +367,7 @@ func TestReapingSurvivesACallerThatHasAlreadyHungUp(t *testing.T) {
 		t.Fatalf("sealing the credential: %v", err)
 	}
 	seedVaultedConnection(t, e, e.Rep1, string(ref))
-	if err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		_, err := tx.Exec(context.Background(),
 			`UPDATE capture_connection SET status = 'disconnected' WHERE user_id = $1`, e.Rep1)
 		return err

@@ -198,12 +198,11 @@ func TestRecordSentKeepsTheReceiptWhenTheReconcileHitsAUniqueViolation(t *testin
 	}
 }
 
-// A PANIC in the seam costs exactly what a returned error costs. It is not an
-// error the caller can inspect, so nothing about it can be handled — but the
-// consequence of letting it escape is the one thing this ordering exists to
-// prevent: it would unwind through WithWorkspaceTx's deferred rollback, take
-// the receipt for an already-transmitted message with it, fail the job, and let
-// the redelivery mail the recipient a second time.
+// A panic in the seam costs what a returned error costs. The caller cannot
+// inspect it, so nothing about it can be handled. Letting it escape is what this
+// ordering exists to prevent. It would unwind through WithTx's deferred
+// rollback and take the receipt for an already-transmitted message with it.
+// The job would fail, and the redelivery would mail the recipient a second time.
 func TestRecordSentKeepsTheReceiptWhenTheReconcilePanics(t *testing.T) {
 	e := setupStore(t)
 	id := e.stage(t, e.baseInput(e.activity, stagedIdentity))

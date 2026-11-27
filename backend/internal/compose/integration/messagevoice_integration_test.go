@@ -209,7 +209,7 @@ func TestEverySurfaceNamesTheSameAuthor(t *testing.T) {
 	reader := f.e.As(f.readerSeat, []ids.UUID{f.e.Team1}, AccountRepPerms)
 	entity, entityID := "contact", f.p
 	var listed []crmcontracts.Activity
-	if err := database.WithWorkspaceTx(reader, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, f.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		listed, _, err = activities.ListActivitiesTx(reader, tx, activities.ListActivitiesInput{EntityType: &entity, EntityID: &entityID})
 		return err
@@ -279,7 +279,7 @@ func TestAPartyIsNamedOnlyAsFarAsTheReaderMaySee(t *testing.T) {
 	perms.Objects = objects
 	reader := f.e.As(f.readerSeat, []ids.UUID{f.e.Team1}, perms)
 	var listed []crmcontracts.Activity
-	if err := database.WithWorkspaceTx(reader, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, f.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		listed, _, err = activities.ListActivitiesTx(reader, tx, activities.ListActivitiesInput{})
 		return err
@@ -313,7 +313,7 @@ func listedRow(t *testing.T, f voiceFixture, seat ids.UUID) crmcontracts.Activit
 	t.Helper()
 	reader := f.e.As(seat, []ids.UUID{f.e.Team1}, AccountRepPerms)
 	var listed []crmcontracts.Activity
-	if err := database.WithWorkspaceTx(reader, f.e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, f.e.Pool, func(tx pgx.Tx) error {
 		var err error
 		listed, _, err = activities.ListActivitiesTx(reader, tx, activities.ListActivitiesInput{})
 		return err
@@ -390,7 +390,7 @@ func listedAuthorOn(t *testing.T, e *Env, seat, contact, activityID ids.UUID) *c
 	reader := e.As(seat, []ids.UUID{e.Team1}, AccountRepPerms)
 	entity := "contact"
 	var listed []crmcontracts.Activity
-	if err := database.WithWorkspaceTx(reader, e.Pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(reader, e.Pool, func(tx pgx.Tx) error {
 		var err error
 		listed, _, err = activities.ListActivitiesTx(reader, tx, activities.ListActivitiesInput{EntityType: &entity, EntityID: &contact})
 		return err

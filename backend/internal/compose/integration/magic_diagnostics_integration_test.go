@@ -97,7 +97,7 @@ func seedUpkeepMachineAction(t *testing.T, e *Env) {
 func TestInfrastructureUpdatesDoNotMakeAQuietReceiptIncomplete(t *testing.T) {
 	e := Setup(t)
 	ctx := principal.SystemActing(e.Admin(), "bootstrap")
-	err := database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		for _, kind := range []string{"knowledge_document", "ai_model_rate", "tag", "list"} {
 			if _, err := storekit.Audit(ctx, tx, "update", kind, ids.NewV7(), map[string]string{"state": "old"}, map[string]string{"state": "current"}); err != nil {
 				return err
@@ -134,7 +134,7 @@ func TestInfrastructureUpdatesDoNotMakeAQuietReceiptIncomplete(t *testing.T) {
 		t.Fatalf("unsupported CRM change disappeared with maintenance: %+v", receipt.NotShown)
 	}
 	// Unserved business subjects and future audit kinds must still refuse completeness.
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		for _, kind := range []string{"contract", "finance_invoice", "finance_payment", "scheduled_send", "future_crm_record"} {
 			if _, err := storekit.Audit(ctx, tx, "update", kind, ids.NewV7(), map[string]string{"state": "old"}, map[string]string{"state": "current"}); err != nil {
 				return err
@@ -226,7 +226,7 @@ func seedMachineLinkChanges(t *testing.T, e *Env) {
 	if _, err := store.RemoveTag(ctx, tagID, "contact", contact); err != nil {
 		t.Fatal(err)
 	}
-	err = database.WithWorkspaceTx(ctx, e.Pool, func(tx pgx.Tx) error {
+	err = database.WithTx(ctx, e.Pool, func(tx pgx.Tx) error {
 		_, err := storekit.Audit(ctx, tx, "update", auditentity.KnowledgeDocument, ids.NewV7(), map[string]string{"state": "old"}, map[string]string{"state": "current"})
 		return err
 	})

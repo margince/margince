@@ -17,14 +17,11 @@ import (
 // DB is a pool that knows which workspace it binds — the installation's, the
 // only one there is (ADR-0061/A107).
 //
-// It exists to take that binding OFF the request context. WithWorkspaceTx
-// reads the workspace from the caller's ctx, which means every request path,
-// every job and every fixture has to put it there first, and a path that
-// forgets fails at the SQL rather than at the seam. ADR-0091 §9 step 3 is the
-// collapse: one helper, the singleton resolved once. RLS is retired — no table
-// carries workspace_id and no policy reads one — so what Tx checks below is the
-// same programming-error refusal WithWorkspaceTx checks: that a caller reached
-// the installation's one workspace at all, not that SQL is scoped by it.
+// It exists to take that binding off the request context. The singleton is
+// resolved once, so no request path, job or fixture has to put it there first.
+// No table carries workspace_id and no policy reads one. What Tx checks below is
+// only that a caller reached the installation's one workspace at all. It does
+// not check that SQL is scoped by it.
 //
 // The workspace arrives as a resolver rather than a value because bootstrap
 // has not necessarily happened when the server is assembled — the worker polls
@@ -124,10 +121,9 @@ func (d *DB) Pool() *pgxpool.Pool {
 	return d.pool
 }
 
-// Tx runs fn inside ONE transaction. Same contract as WithWorkspaceTx, minus
-// the requirement that the caller have put the workspace in ctx: this handle
-// resolves the installation's workspace itself, and still refuses before any
-// SQL runs when it cannot.
+// Tx runs fn inside one transaction, with WithTx's contract. This handle
+// resolves the installation's workspace itself, and refuses before any SQL runs
+// when it cannot.
 func (d *DB) Tx(ctx context.Context, fn func(pgx.Tx) error) error {
 	return d.transact(ctx, pgx.TxOptions{}, fn)
 }
@@ -176,11 +172,11 @@ func (d *DB) transact(ctx context.Context, opts pgx.TxOptions, fn func(pgx.Tx) e
 	if _, err := d.workspace(ctx); err != nil {
 		return fmt.Errorf("pg: resolving the installation's workspace: %w", err)
 	}
-	// The ambient snapshot, joined here for the reason WithWorkspaceTx joins it
-	// — and this is the seam most stores actually reach, so a join spelled only
-	// there would leave a composed read holding TWO connections per request:
-	// the snapshot, plus one per handle-based lane. At MaxConns that is how a
-	// morning's concurrent reads wait on each other instead of the database.
+	// The ambient snapshot, joined here for the reason WithTx joins it. Most
+	// stores reach this seam. A join spelled only in WithTx would leave a
+	// composed read holding two connections per request, the snapshot plus one
+	// per handle-based lane. At MaxConns that is how a morning's concurrent reads
+	// wait on each other instead of the database.
 	//
 	// The budget is NOT applied to a joined transaction. BoundStatement is SET
 	// LOCAL, so a per-handle ceiling would silently re-time every later lane in

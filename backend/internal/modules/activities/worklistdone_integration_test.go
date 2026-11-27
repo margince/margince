@@ -29,7 +29,7 @@ import (
 func doneNow(ctx context.Context, t *testing.T, e *loadEnv, among ...WorklistRowRef) map[WorklistRowRef]time.Time {
 	t.Helper()
 	var out map[WorklistRowRef]time.Time
-	if err := database.WithWorkspaceTx(ctx, e.pool, func(tx pgx.Tx) error {
+	if err := database.WithTx(ctx, e.pool, func(tx pgx.Tx) error {
 		got, err := handledStore(e).DoneRows(ctx, tx, among)
 		out = got
 		return err

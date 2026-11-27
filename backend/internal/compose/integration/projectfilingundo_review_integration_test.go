@@ -353,7 +353,7 @@ func TestACredentialFilesAnActivityUnderErasureOnceAHumanApproves(t *testing.T) 
 // hold, as the approval engine does.
 func staysUndoable(e *Env, named []ids.UUID, project ids.UUID) (bool, error) {
 	var stays bool
-	err := database.WithWorkspaceTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
+	err := database.WithTx(e.Admin(), e.Pool, func(tx pgx.Tx) error {
 		var err error
 		stays, err = activities.FilingsStayUndoable(e.Admin(), tx, named, project)
 		return err
