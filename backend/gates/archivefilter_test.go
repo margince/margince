@@ -17,9 +17,7 @@ package gates
 import (
 	"go/ast"
 	"io/fs"
-	"maps"
 	"path/filepath"
-	"slices"
 	"strconv"
 	"strings"
 	"testing"
@@ -29,23 +27,94 @@ import (
 
 // archiveFilteredCall is where a storekit row writer takes its table and,
 // when the caller chooses one, its archive filter. A filter position of -1
-// means the call always resolves live rows.
+// means the call writes through LiveOnly.
 type archiveFilteredCall struct{ table, filter int }
 
-var archiveFilteredCalls = map[string]archiveFilteredCall{
-	"LockRow": {2, 4}, "ApplyGuardedIn": {2, 5}, "EnsureIfMatchIn": {2, 5},
-	"ApplyGuarded": {2, -1}, "ApplyWithVersion": {2, -1}, "EnsureIfMatch": {2, -1},
-	"ClaimOwnership": {2, -1}, "LockPair": {2, -1},
+const storekitDir = "internal/platform/database/storekit"
+
+// storekitWriterFloor is the vacuity floor on the derived writers: storekit
+// had nine when this gate was written.
+const storekitWriterFloor = 8
+
+// storekitArchiveFilteredCalls derives the writers from storekit itself: each
+// exported function taking `table string` and either an ArchivedFilter or a
+// body that names LiveOnly.
+func storekitArchiveFilteredCalls(t *testing.T) map[string]archiveFilteredCall {
+	t.Helper()
+	entries, err := gatekit.ReadDir(storekitDir)
+	if err != nil {
+		t.Fatalf("reading %s: %v", storekitDir, err)
+	}
+	calls := map[string]archiveFilteredCall{}
+	for _, entry := range entries {
+		if !strings.HasSuffix(entry.Name(), ".go") || strings.HasSuffix(entry.Name(), "_test.go") {
+			continue
+		}
+		file, err := gatekit.ParseFile(filepath.Join(storekitDir, entry.Name()), 0)
+		if err != nil {
+			t.Fatalf("parsing %s: %v", entry.Name(), err)
+		}
+		for _, decl := range file.Decls {
+			fn, ok := decl.(*ast.FuncDecl)
+			if !ok || !fn.Name.IsExported() || fn.Body == nil {
+				continue
+			}
+			if at, ok := archiveFilterPositions(fn); ok {
+				calls[fn.Name.Name] = at
+			}
+		}
+	}
+	if len(calls) < storekitWriterFloor {
+		t.Fatalf("derived %d storekit row writers, under the floor of %d; the reader has stopped "+
+			"matching storekit's signatures", len(calls), storekitWriterFloor)
+	}
+	return calls
 }
 
-// archiveFilterCallFloor is the vacuity floor: the tree held 296 such
+// archiveFilterPositions reads one storekit function's table and filter
+// argument positions, and reports whether it is a row writer at all.
+func archiveFilterPositions(fn *ast.FuncDecl) (archiveFilteredCall, bool) {
+	at := archiveFilteredCall{table: -1, filter: -1}
+	position := 0
+	for _, field := range fn.Type.Params.List {
+		typeName := ""
+		if ident, ok := field.Type.(*ast.Ident); ok {
+			typeName = ident.Name
+		}
+		for _, name := range field.Names {
+			switch {
+			case name.Name == "table" && typeName == "string":
+				at.table = position
+			case typeName == "ArchivedFilter":
+				at.filter = position
+			}
+			position++
+		}
+	}
+	if at.table < 0 {
+		return at, false
+	}
+	if at.filter >= 0 {
+		return at, true
+	}
+	namesLiveOnly := false
+	ast.Inspect(fn.Body, func(n ast.Node) bool {
+		if ident, ok := n.(*ast.Ident); ok && ident.Name == "LiveOnly" {
+			namesLiveOnly = true
+		}
+		return !namesLiveOnly
+	})
+	return at, namesLiveOnly
+}
+
+// archiveFilterCallFloor is the vacuity floor: the tree held 297 such
 // calls on a catalog table when this gate was written.
 const archiveFilterCallFloor = 200
 
 // archiveFilterUse is one call the gate judges: the table it names and the
 // filter it resolves rows through.
 type archiveFilterUse struct {
-	at, table, filter string
+	at, call, table, filter string
 }
 
 // archiveFilterMismatch says what is wrong with a filter on a table, or "".
@@ -61,9 +130,11 @@ func archiveFilterMismatch(filter string, hasArchive bool) string {
 	return ""
 }
 
-// archiveFilterUses reads every storekit row writer in one Go file whose table
-// is a literal or a package constant.
-func archiveFilterUses(t *testing.T, path string, packageConstants map[string]map[string]string) []archiveFilterUse {
+// archiveFilterUses reads every storekit row writer in one Go file. A table or
+// filter the reader cannot resolve is left empty, for the caller to report.
+func archiveFilterUses(
+	t *testing.T, path string, calls map[string]archiveFilteredCall, packageConstants map[string]map[string]string,
+) []archiveFilterUse {
 	t.Helper()
 	file, err := gatekit.ParseFile(path, 0)
 	if err != nil {
@@ -76,7 +147,8 @@ func archiveFilterUses(t *testing.T, path string, packageConstants map[string]ma
 		if !ok {
 			return true
 		}
-		at, ok := archiveFilteredCalls[calledName(call)]
+		name := calledName(call)
+		at, ok := calls[name]
 		if !ok || len(call.Args) <= max(at.table, at.filter) {
 			return true
 		}
@@ -89,24 +161,43 @@ func archiveFilterUses(t *testing.T, path string, packageConstants map[string]ma
 		}
 		filter := "LiveOnly"
 		if at.filter >= 0 {
-			selector, ok := call.Args[at.filter].(*ast.SelectorExpr)
-			if !ok {
-				return true
+			filter = ""
+			if selector, ok := call.Args[at.filter].(*ast.SelectorExpr); ok {
+				filter = selector.Sel.Name
 			}
-			filter = selector.Sel.Name
 		}
-		if table != "" {
-			uses = append(uses, archiveFilterUse{at: path, table: table, filter: filter})
-		}
+		line := gatekit.SourceFileSet().Position(call.Pos()).Line
+		uses = append(uses, archiveFilterUse{at: path + ":" + strconv.Itoa(line), call: name, table: table, filter: filter})
 		return true
 	})
 	return uses
 }
 
+// archiveFilterForwarders names each call, as file:writer, that hands storekit
+// a table or filter its own caller chose, with why that caller is judged instead.
+var archiveFilterForwarders = gatekit.Waive(map[string]string{
+	"internal/compose/csvreviewguard.go:EnsureIfMatch": "lockReviewedImportRow answers company, contact, lead, " +
+		"deal or activity, and each carries archived_at.",
+	"internal/modules/activities/lifecycle.go:ApplyGuardedIn": "activityArchivedFilter answers LiveOnly or " +
+		"IncludeArchived, and activity carries archived_at.",
+	"internal/modules/contacts/bulkchange.go:LockRowReading": "holdForBulk is handed contact, company or lead, " +
+		"and each carries archived_at.",
+	"internal/modules/contacts/claim.go:ClaimOwnership": "claimableTables admits contact, company and lead, " +
+		"and each carries archived_at.",
+	"internal/modules/contacts/leadcontactlock.go:LockRow": "the table is contact, and each caller passes " +
+		"LiveOnly or IncludeArchived, which contact answers.",
+	"internal/modules/contacts/mergesurvivorshippreview.go:EnsureIfMatch": "the preview admits a contact or " +
+		"company kind only, and both carry archived_at.",
+	"internal/modules/contracts/contract_write.go:ApplyGuardedIn": "the table is contract, and every caller passes " +
+		"LiveOnly or IncludeArchived, which contract answers.",
+})
+
 func TestAStorekitRowWriteNamesAnArchiveFilterItsTableAnswers(t *testing.T) {
 	t.Parallel()
+	defer archiveFilterForwarders.AssertAllMatched(t)
 	schema := parseHeadCatalog(t)
 	archived := schema.tablesWithColumn("archived_at", "")
+	calls := storekitArchiveFilteredCalls(t)
 	packageConstants := map[string]map[string]string{}
 	judged := 0
 	for _, root := range []string{"internal", "pkg", "../extensions"} {
@@ -115,7 +206,7 @@ func TestAStorekitRowWriteNamesAnArchiveFilterItsTableAnswers(t *testing.T) {
 				return err
 			}
 			if d.IsDir() {
-				if d.Name() == "testdata" {
+				if d.Name() == "testdata" || path == storekitDir {
 					return filepath.SkipDir
 				}
 				return nil
@@ -123,7 +214,15 @@ func TestAStorekitRowWriteNamesAnArchiveFilterItsTableAnswers(t *testing.T) {
 			if !strings.HasSuffix(path, ".go") || strings.HasSuffix(path, "_test.go") || isIntegrationTagged(path) {
 				return nil
 			}
-			for _, use := range archiveFilterUses(t, path, packageConstants) {
+			for _, use := range archiveFilterUses(t, path, calls, packageConstants) {
+				if use.table == "" || use.filter == "" {
+					if !archiveFilterForwarders.Waived(t, use.at[:strings.LastIndex(use.at, ":")]+":"+use.call) {
+						t.Errorf("%s: %s names its table or archive filter through a value this gate cannot read; "+
+							"pass a literal, a package constant and a storekit filter, or waive the call in archiveFilterForwarders",
+							use.at, use.call)
+					}
+					continue
+				}
 				if _, known := schema.tables[use.table]; !known {
 					continue
 				}
@@ -146,14 +245,16 @@ func TestAStorekitRowWriteNamesAnArchiveFilterItsTableAnswers(t *testing.T) {
 
 func TestTheArchiveFilterRuleFiresOnEveryMismatch(t *testing.T) {
 	t.Parallel()
-	cases := map[string]bool{
-		"LiveOnly/false": true, "IncludeArchived/false": true, "NoArchiveColumn/false": false,
-		"LiveOnly/true": false, "IncludeArchived/true": false, "NoArchiveColumn/true": true,
+	cases := []struct {
+		filter               string
+		hasArchive, mismatch bool
+	}{
+		{"LiveOnly", false, true}, {"IncludeArchived", false, true}, {"NoArchiveColumn", false, false},
+		{"LiveOnly", true, false}, {"IncludeArchived", true, false}, {"NoArchiveColumn", true, true},
 	}
-	for _, key := range slices.Sorted(maps.Keys(cases)) {
-		filter, column, _ := strings.Cut(key, "/")
-		if got := archiveFilterMismatch(filter, column == "true") != ""; got != cases[key] {
-			t.Errorf("%s with archived_at=%s: mismatch %v, want %v", filter, column, got, cases[key])
+	for _, c := range cases {
+		if got := archiveFilterMismatch(c.filter, c.hasArchive) != ""; got != c.mismatch {
+			t.Errorf("%s with archived_at=%v: mismatch %v, want %v", c.filter, c.hasArchive, got, c.mismatch)
 		}
 	}
 }

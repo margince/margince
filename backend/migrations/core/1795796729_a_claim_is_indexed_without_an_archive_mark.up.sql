@@ -3,8 +3,8 @@
 
 -- pgmigrate:no-transaction
 -- The claim indexes lose their archive predicate before the column goes, so the
--- evidence upsert always has a unique index to infer. The contact index now
--- leads with contact_id, so it also finds a deleted contact's claims.
+-- evidence upsert always has a unique index to infer. Without its predicate the
+-- (contact_id, kind) index covers every claim, so the contact_id index goes.
 SET lock_timeout = '3s';
 DROP INDEX CONCURRENTLY IF EXISTS conversation_claim_evidence_next;
 CREATE UNIQUE INDEX CONCURRENTLY conversation_claim_evidence_next ON conversation_claim (contact_id, source_activity_id, evidence_fingerprint);
