@@ -71,11 +71,8 @@ var quotedTextValues = regexp.MustCompile(`'([a-z_]+)'::text`)
 // schema catalog, without the NULL arm.
 func catalogCheckValues(t *testing.T, constraint string) map[string]bool {
 	t.Helper()
-	raw, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the schema catalog: %v", err)
-	}
-	for line := range strings.SplitSeq(string(raw), "\n") {
+	raw := headCatalog(t)
+	for line := range strings.SplitSeq(raw, "\n") {
 		if !strings.Contains(line, "."+constraint+" CHECK") {
 			continue
 		}

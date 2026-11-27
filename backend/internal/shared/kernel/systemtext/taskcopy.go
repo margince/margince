@@ -24,7 +24,7 @@ var definitions = map[string]Definition{
 		Arguments: []string{argumentText},
 	},
 	"commitment.explanation": {
-		Words:     langcopy.Phrase{En: "Promiser: %s. Commitment in the email “%s”, sent %s.", De: "Zugesagt von: %s. Zusage in der E-Mail „%s“, gesendet am %s.", Vi: "Người cam kết: %s. Cam kết trong email “%s”, gửi ngày %s."},
+		Words:     langcopy.Phrase{En: "%s promised this in the email “%s”, sent %s.", De: "%s hat das in der E-Mail „%s“ vom %s zugesagt.", Vi: "%s đã hứa điều này trong email “%s”, gửi ngày %s."},
 		Arguments: []string{argumentText, argumentText, argumentDate},
 	},
 	"lead.reply":                               {Words: langcopy.Phrase{En: "Review qualification for %s", De: "Qualifizierung von %s prüfen", Vi: "Xem xét điều kiện của %s"}, Arguments: []string{argumentText}},

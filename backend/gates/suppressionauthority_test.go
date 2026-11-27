@@ -41,17 +41,14 @@ var suppressionKindLiteral = regexp.MustCompile(`'([a-z_]+)'::text`)
 func TestEverySuppressionKindIsClassifiedByTheMigrationThatAddedTheLevel(t *testing.T) {
 	t.Parallel()
 
-	catalog, err := gatekit.ReadFile("migrations/testdata/head_catalog.txt")
-	if err != nil {
-		t.Fatalf("reading the schema catalog: %v", err)
-	}
-	check := suppressionKindCheck.Find(catalog)
-	if check == nil {
+	catalog := headCatalog(t)
+	check := suppressionKindCheck.FindString(catalog)
+	if check == "" {
 		t.Fatal("the catalog records no kind CHECK for communication_suppression: " +
 			"the gate has stopped seeing its subject, which reports PASS over an unchecked vocabulary")
 	}
 
-	kinds := suppressionKindLiteral.FindAllStringSubmatch(string(check), -1)
+	kinds := suppressionKindLiteral.FindAllStringSubmatch(check, -1)
 	// Under-recognition is the one way this must not fail. A regex that matched
 	// nothing would pass an empty loop and prove nothing at all.
 	if len(kinds) < 4 {

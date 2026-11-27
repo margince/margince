@@ -34,6 +34,15 @@ export type StandingVerdict = Readonly<{
   tone: ReadingTone;
 }>;
 
+/** One activity a written sentence rests on, opened from under it so a
+ *  reader can check the sentence against what was said. */
+export type StandingCitation = Readonly<{
+  id: string;
+  // The kind and day, such as "Email · 25 Nov".
+  label: string;
+  onOpen?: () => void;
+}>;
+
 /** The newest thing said on the record, set under the verdict: what the
  *  call rests on today, in the words of the record that said it. */
 export type StandingLatest = Readonly<{
@@ -59,6 +68,7 @@ export function HowItStands({
   date,
   sources = { by: "records" },
   verdict,
+  citations,
   latest,
   hero,
   heroLayout = "beside",
@@ -72,6 +82,8 @@ export function HowItStands({
   date: string;
   sources?: StandingSources;
   verdict: StandingVerdict;
+  // What a model's sentence rests on; drawn only with a sentence.
+  citations?: readonly StandingCitation[];
   latest?: StandingLatest;
   hero?: ReactNode;
   heroLayout?: "beside" | "below";
@@ -121,6 +133,9 @@ export function HowItStands({
             {verdict.sentence ? (
               <p className="standing-sheet-sentence">{verdict.sentence}</p>
             ) : null}
+            {verdict.sentence && citations && citations.length > 0 ? (
+              <Citations citations={citations} />
+            ) : null}
             {verdict.note ? <ClampedText text={verdict.note} /> : null}
             {latest ? <LatestWord latest={latest} /> : null}
           </div>
@@ -136,6 +151,31 @@ export function HowItStands({
         {figures && <div className="standing-sheet-figures">{figures}</div>}
       </Panel>
     </div>
+  );
+}
+
+function Citations({
+  citations,
+}: Readonly<{ citations: readonly StandingCitation[] }>) {
+  const t = useT();
+  return (
+    <p className="standing-sheet-citations">
+      <span>{t("standing.citations.from")}</span>
+      {citations.map((citation) =>
+        citation.onOpen ? (
+          <button
+            key={citation.id}
+            type="button"
+            className="link-button"
+            onClick={citation.onOpen}
+          >
+            {citation.label}
+          </button>
+        ) : (
+          <span key={citation.id}>{citation.label}</span>
+        ),
+      )}
+    </p>
   );
 }
 

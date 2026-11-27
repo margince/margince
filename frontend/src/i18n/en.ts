@@ -2316,6 +2316,7 @@ export const en = {
   "systemJob.stage_evidence": "Deal stage evidence",
   "systemJob.stage_evidence_read": "Deal stage evidence read",
   "systemJob.stage_evidence_reread": "Deal stage evidence reread",
+  "systemJob.standing_line": "How it stands check",
   "systemJob.suppression_journal_worker": "Erasure journal export",
   "systemJob.stored_object_reap_worker": "File storage cleanup",
   "systemJob.technical_backfill": "Technical lookup backlog",
@@ -4162,6 +4163,8 @@ export const en = {
   "standing.title": "How it stands · {date}",
   "standing.noteMore": "Show more",
   "standing.noteLess": "Show less",
+  "standing.citations.source": "The activity",
+  "standing.citations.from": "Read from",
   "standing.latest.title": "Latest",
   "standing.latest.open": "Open in History",
   "standing.sources.records": "From CRM records",
@@ -11486,6 +11489,7 @@ export const en = {
   "jobs.kind.risk_verdict_sweep": "Deal risk check",
   "jobs.kind.signal_scan": "Signal scan",
   "jobs.kind.site_deep_read": "Company website read",
+  "jobs.kind.standing_line_check": "How it stands check",
   "jobs.kind.stored_object_reap": "File storage cleanup",
   "jobs.kind.suppression_journal_export": "Erasure journal export",
   "jobs.kind.tag_scout": "Tag suggestions",
@@ -21536,6 +21540,7 @@ export const en = {
   "worklist.why.now": "Why now",
   "worklist.why.consequence": "If nothing is done",
   "worklist.why.todo": "What to do",
+  "worklist.why.writing": "Reading the task and its messages…",
   "worklist.title.deal_at_risk": "{name} has gone quiet",
   "worklist.title.deal_at_risk.close_overdue": "{name} is past its close date",
   "worklist.title.relationship_decay": "No recent contact with {name}",
@@ -21549,8 +21554,6 @@ export const en = {
   "worklist.title.bounce": "Bounced: {name}",
   "worklist.title.lead_response": "Get back to new lead {name}",
   "worklist.title.customer_waiting": "{name} is waiting for your reply",
-  "worklist.todo.task.named":
-    "Finish the task with {name} and mark it done, or move it to another day.",
   "worklist.todo.deal_at_risk.named": "Open {name} and plan the next step.",
   "worklist.todo.customer_waiting.named": "Reply to {name}.",
   "worklist.todo.awaiting_reply.named": "Send {name} a follow-up.",
@@ -21578,7 +21581,6 @@ export const en = {
     "Check the calendar connection so its meetings are captured again.",
   "worklist.todo.capture_health.calendar.named":
     "Check the connection of {name} so its meetings are captured again.",
-  "worklist.consequence.task_slips.named": "The task with {name} stays undone.",
   "worklist.happened.customer_waiting":
     "{name} wrote on {when}, and nobody has answered yet.",
   "worklist.happened.customer_waiting.bare":
@@ -21658,7 +21660,6 @@ export const en = {
   "worklist.happened.meeting.bare": "This meeting is on {when}.",
   "worklist.happened.task": "It is due on {due}.",
   "worklist.happened.task.overdue": "It was due on {due} and is still open.",
-  "worklist.happened.task.undated": "It has no due date.",
   "worklist.happened.deal": "{deal}: {figures}.",
   "worklist.happened.lastFrom": "Last contact from {name}: {when}.",
   "worklist.happened.lastTo": "Last contact to {name}: {when}.",
@@ -21680,7 +21681,6 @@ export const en = {
     "{name} slips past its expected close date.",
   "worklist.consequence.meeting_unprepared":
     "You go into the meeting unprepared.",
-  "worklist.consequence.task_slips": "The task stays undone.",
   "worklist.consequence.work_blocked":
     "Work that depends on this decision stays blocked.",
   "worklist.consequence.customer_never_received":
@@ -21695,8 +21695,6 @@ export const en = {
     "Mail on this mailbox stays out of Margince.",
   "worklist.consequence.data_drifts": "The records drift further apart.",
   "worklist.todo.deal_at_risk": "Open the deal and plan the next step.",
-  "worklist.todo.task":
-    "Do the work and mark it done, or move it to another day.",
   "worklist.todo.customer_waiting": "Reply to the message.",
   "worklist.todo.awaiting_reply": "Send a follow-up.",
   "worklist.todo.lead_response": "Get in touch now; a new lead cools fast.",
