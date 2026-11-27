@@ -26,7 +26,7 @@ func TestLogActivityInputCarriesTheColleaguesWhoAttendedACall(t *testing.T) {
 		Kind:            crmcontracts.CreateActivityRequestKindCreateActivityRequestKindCall,
 		AttendeeUserIds: &attendees,
 		Subject:         &subject,
-		Source:          "human",
+		Source:          "manual",
 	})
 	if err != nil {
 		t.Fatalf("mapping a call with a colleague: %v", err)
@@ -42,7 +42,7 @@ func TestLogActivityInputRefusesColleaguesOnANote(t *testing.T) {
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind:            crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote,
 		AttendeeUserIds: &attendees,
-		Source:          "human",
+		Source:          "manual",
 	})
 
 	var fault *KindFieldError
@@ -62,7 +62,7 @@ func TestLogActivityInputRefusesAnEmptyColleagueListOnANote(t *testing.T) {
 	_, err := LogActivityInputFrom(crmcontracts.CreateActivityRequest{
 		Kind:            crmcontracts.CreateActivityRequestKindCreateActivityRequestKindNote,
 		AttendeeUserIds: &attendees,
-		Source:          "human",
+		Source:          "manual",
 	})
 
 	if _, ok := errors.AsType[*KindFieldError](err); !ok {

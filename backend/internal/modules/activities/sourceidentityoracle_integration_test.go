@@ -34,7 +34,7 @@ func importedEmail(sourceID, messageID string) LogActivityInput {
 	id := sourceID
 	return LogActivityInput{
 		Kind:         string(crmcontracts.ActivityKindEmail),
-		Source:       "hubspot_import:145347700",
+		Source:       "import",
 		SourceSystem: &system,
 		SourceID:     &id,
 		Direction:    &direction,
