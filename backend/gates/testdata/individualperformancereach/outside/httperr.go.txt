@@ -1,0 +1,12 @@
+package httperr
+
+import (
+	"errors"
+	"net/http"
+)
+
+func Write(w http.ResponseWriter, r *http.Request, err error) {}
+
+func WriteJSON(w http.ResponseWriter, status int, v any) {}
+
+func Validation(field, code, message string) error { return errors.New(message) }

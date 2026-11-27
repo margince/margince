@@ -6,277 +6,36 @@
 package gates
 
 // What the individual-performance path walk knows of code outside the
-// packages it type-checks. Each import outside them is an empty stand-in, so
-// a call into one is named by its import path and declared type alone.
+// packages it reads. A call into one is named by its declaration alone. An
+// error is proved non-nil by its type or its returns.
 
 import (
-	"fmt"
 	"go/ast"
-	"go/parser"
-	"go/token"
 	"go/types"
-	"regexp"
 	"strings"
-
-	"github.com/margince/margince/backend/internal/shared/gatekit"
 )
 
-// switchImports answers a walked package with its real types, and any other
-// with an empty package named the way code spells it.
-type switchImports map[string]*types.Package
-
-func (s switchImports) Import(importPath string) (*types.Package, error) {
-	if pkg, ok := s[importPath]; ok {
-		return pkg, nil
-	}
-	pkg := types.NewPackage(importPath, standInName(importPath))
-	pkg.MarkComplete()
-	return pkg, nil
-}
-
-// standInName is the name a package is declared with. A package of this
-// module says so in its own source, since its name may differ from its path
-// (crmcontracts for internal/contracts). Any other follows Go's convention:
-// pgx for github.com/jackc/pgx/v5, yaml for gopkg.in/yaml.v3.
-func standInName(importPath string) string {
-	if dir, ours := strings.CutPrefix(importPath, modulePath+"/"); ours {
-		if name := declaredPackageName(dir); name != "" {
-			return name
-		}
-	}
-	elems := strings.Split(importPath, "/")
-	name := elems[len(elems)-1]
-	if len(elems) > 1 && majorVersion.MatchString(name) {
-		name = elems[len(elems)-2]
-	}
-	name, _, _ = strings.Cut(name, ".")
-	return strings.ReplaceAll(strings.TrimPrefix(name, "go-"), "-", "")
-}
-
-// declaredPackageName reads the package clause of a Go file in dir, or ""
-// when dir holds none.
-func declaredPackageName(dir string) string {
-	entries, err := gatekit.ReadDir(dir)
-	if err != nil {
-		return ""
-	}
-	for _, entry := range entries {
-		name := entry.Name()
-		if entry.IsDir() || !strings.HasSuffix(name, ".go") || strings.HasSuffix(name, "_test.go") {
-			continue
-		}
-		if file, err := gatekit.ParseFile(dir+"/"+name, parser.PackageClauseOnly); err == nil {
-			return file.Name.Name
-		}
-	}
-	return ""
-}
-
-var majorVersion = regexp.MustCompile(`^v[0-9]+$`)
-
-// standInErrors are the messages a stand-in import leaves behind. They name
-// a value of a type it left invalid, or an import whose every use it leaves
-// undeclared.
-var standInErrors = regexp.MustCompile(`invalid type|unknown type|imported (as \w+ )?and not used|cannot infer|missing type in composite literal`)
-
-// unexplainedTypeErrors lists the type errors of one package that no stand-in
-// import explains.
-func unexplainedTypeErrors(errs []types.Error, files []*ast.File, info *types.Info, walked switchImports) []string {
-	selectors := map[token.Pos]*ast.SelectorExpr{}
-	for _, file := range files {
-		ast.Inspect(file, func(n ast.Node) bool {
-			if sel, ok := n.(*ast.SelectorExpr); ok {
-				selectors[sel.Pos()], selectors[sel.Sel.Pos()] = sel, sel
-			}
-			return true
-		})
-	}
-	invalidVars := map[token.Pos]bool{}
-	for ident, obj := range info.Defs {
-		if v, ok := obj.(*types.Var); ok && !validType(v.Type()) {
-			invalidVars[ident.Pos()] = true
-		}
-	}
-	var out []string
-	for _, err := range errs {
-		if standInErrors.MatchString(err.Msg) || explainedSelector(selectors[err.Pos], info, walked) {
-			continue
-		}
-		// A variable a stand-in left untyped is used only inside expressions
-		// the checker skips, so it reads as unused.
-		if strings.HasPrefix(err.Msg, "declared and not used") && invalidVars[err.Pos] {
-			continue
-		}
-		out = append(out, fmt.Sprintf("%s: %s", err.Fset.Position(err.Pos), err.Msg))
-	}
-	return out
-}
-
-// explainedSelector reports a selector a stand-in leaves unresolved. That is
-// a name of a stand-in package, or a field or method promoted through a field
-// a stand-in left untyped.
-func explainedSelector(sel *ast.SelectorExpr, info *types.Info, walked switchImports) bool {
-	if sel == nil {
-		return false
-	}
-	if ident, ok := ast.Unparen(sel.X).(*ast.Ident); ok {
-		if pkg, ok := info.Uses[ident].(*types.PkgName); ok {
-			_, real := walked[pkg.Imported().Path()]
-			return !real
-		}
-	}
-	return embedsInvalid(info.TypeOf(sel.X), map[types.Type]bool{})
-}
-
-// embedsInvalid reports a type a stand-in left without its methods. It is
-// defined over a stand-in's type, or embeds one at any depth.
-func embedsInvalid(t types.Type, seen map[types.Type]bool) bool {
-	if t == nil || seen[t] {
-		return false
-	}
-	seen[t] = true
-	if ptr, ok := t.Underlying().(*types.Pointer); ok {
-		t = ptr.Elem()
-	}
-	if param, ok := t.(*types.TypeParam); ok {
-		return !validType(param.Constraint()) || embedsInvalid(param.Constraint(), seen)
-	}
-	switch under := t.Underlying().(type) {
-	case *types.Basic:
-		return under.Kind() == types.Invalid
-	case *types.Struct:
-		for field := range under.Fields() {
-			if field.Embedded() && (!validType(field.Type()) || embedsInvalid(field.Type(), seen)) {
-				return true
-			}
-		}
-	case *types.Interface:
-		for embedded := range under.EmbeddedTypes() {
-			if !validType(embedded) || embedsInvalid(embedded, seen) {
-				return true
-			}
-		}
-	}
-	return false
-}
-
-// validType reports a type no stand-in left invalid, in itself or in the
-// element it is built of.
-func validType(t types.Type) bool {
-	switch e := t.(type) {
-	case *types.Basic:
-		return e.Kind() != types.Invalid
-	case *types.Pointer:
-		return validType(e.Elem())
-	case *types.Slice:
-		return validType(e.Elem())
-	case *types.Array:
-		return validType(e.Elem())
-	case *types.Map:
-		return validType(e.Key()) && validType(e.Elem())
-	}
-	return true
-}
-
-// spell records the declared type of each name whose type is a stand-in's,
-// as path.Type, so a method called on it can be named.
-func (g *switchGraph) spell(names []*ast.Ident, typeExpr ast.Expr, info *types.Info) {
-	spelled := spelledType(typeExpr, info)
-	if spelled == "" {
-		return
-	}
-	for _, name := range names {
-		if v, ok := info.Defs[name].(*types.Var); ok {
-			g.spelled[v] = spelled
-		}
-	}
-}
-
-func spelledType(typeExpr ast.Expr, info *types.Info) string {
-	if star, ok := typeExpr.(*ast.StarExpr); ok {
-		typeExpr = star.X
-	}
-	sel, ok := typeExpr.(*ast.SelectorExpr)
-	if !ok {
-		return ""
-	}
-	ident, ok := sel.X.(*ast.Ident)
-	if !ok {
-		return ""
-	}
-	if pkg, ok := info.Uses[ident].(*types.PkgName); ok {
-		return pkg.Imported().Path() + "." + sel.Sel.Name
-	}
-	return ""
-}
-
-// spellFromCall records the declared result type of a walked function for
-// each variable defined from its call, as db := InstallationDB(pool).
-func (g *switchGraph) spellFromCall(assign *ast.AssignStmt, info *types.Info) {
-	call, ok := ast.Unparen(assign.Rhs[0]).(*ast.CallExpr)
-	if assign.Tok != token.DEFINE || len(assign.Rhs) != 1 || !ok {
-		return
-	}
-	decl := g.decls[calledFunc(call, info)]
-	if decl == nil || decl.Type.Results == nil {
-		return
-	}
-	var results []ast.Expr
-	for _, field := range decl.Type.Results.List {
-		for range max(1, len(field.Names)) {
-			results = append(results, field.Type)
-		}
-	}
-	if len(results) != len(assign.Lhs) {
-		return
-	}
-	for i, lhs := range assign.Lhs {
-		ident, isIdent := lhs.(*ast.Ident)
-		spelled := spelledType(results[i], g.infos[calledFunc(call, info)])
-		if v, ok := info.Defs[ident].(*types.Var); isIdent && ok && spelled != "" {
-			g.spelled[v] = spelled
-		}
-	}
-}
-
 // outsideCallee names a call of a function no walked package declares, as
-// path.Func or path.Type.Method, or "" for any other call.
+// path.Func or path.Type.Method, or "" for any other call. A method promoted
+// through an embedded field is named for the type that declares it.
 func (g *switchGraph) outsideCallee(call *ast.CallExpr, info *types.Info) string {
-	sel, ok := ast.Unparen(call.Fun).(*ast.SelectorExpr)
+	fn := calledFunc(call, info)
+	if fn == nil || fn.Pkg() == nil || g.walked[fn.Pkg().Path()] {
+		return ""
+	}
+	sig, ok := fn.Type().(*types.Signature)
+	if !ok || sig.Recv() == nil {
+		return fn.Pkg().Path() + "." + fn.Name()
+	}
+	recv := sig.Recv().Type()
+	if ptr, ok := recv.(*types.Pointer); ok {
+		recv = ptr.Elem()
+	}
+	named, ok := types.Unalias(recv).(*types.Named)
 	if !ok {
 		return ""
 	}
-	if ident, ok := ast.Unparen(sel.X).(*ast.Ident); ok {
-		if pkg, ok := info.Uses[ident].(*types.PkgName); ok {
-			if pkg.Imported().Scope().Lookup(sel.Sel.Name) != nil {
-				return ""
-			}
-			return pkg.Imported().Path() + "." + sel.Sel.Name
-		}
-	}
-	if validType(typeOrInvalid(info.TypeOf(sel.X))) {
-		return ""
-	}
-	var v *types.Var
-	switch x := ast.Unparen(sel.X).(type) {
-	case *ast.Ident:
-		v, _ = info.Uses[x].(*types.Var)
-	case *ast.SelectorExpr:
-		if selection, ok := info.Selections[x]; ok {
-			v, _ = selection.Obj().(*types.Var)
-		}
-	}
-	if v == nil || g.spelled[v.Origin()] == "" {
-		return ""
-	}
-	return g.spelled[v.Origin()] + "." + sel.Sel.Name
-}
-
-func typeOrInvalid(t types.Type) types.Type {
-	if t == nil {
-		return types.Typ[types.Invalid]
-	}
-	return t
+	return fn.Pkg().Path() + "." + named.Obj().Name() + "." + fn.Name()
 }
 
 // censusReassigned records each variable an assignment names. A package

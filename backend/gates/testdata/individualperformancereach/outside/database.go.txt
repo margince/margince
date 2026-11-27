@@ -1,0 +1,16 @@
+package database
+
+import (
+	"context"
+	"errors"
+)
+
+type Tx interface {
+	Exec(ctx context.Context, sql string) error
+}
+
+type DB struct{}
+
+func (d *DB) Tx(ctx context.Context, fn func(tx Tx) error) error { return fn(nil) }
+
+func Stored(err error) error { return errors.Join(err) }

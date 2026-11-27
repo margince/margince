@@ -62,6 +62,25 @@ func (h Handlers) GetInATransaction(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, out)
 }
 
+// A handle embedded in another type runs the same transaction.
+type embeddedDB struct{ *database.DB }
+
+func (h Handlers) GetInAnEmbeddedTransaction(w http.ResponseWriter, r *http.Request) {
+	var out []int
+	err := embeddedDB{h.db}.Tx(r.Context(), func(tx database.Tx) error {
+		if err := auth.Require(r.Context()); err != nil {
+			return err
+		}
+		out = []int{1}
+		return nil
+	})
+	if err != nil {
+		httperr.Write(w, r, err)
+		return
+	}
+	httperr.WriteJSON(w, http.StatusOK, out)
+}
+
 func (h Handlers) GetThroughTheWiredImplementation(w http.ResponseWriter, r *http.Request) {
 	serve(w, r, h.source.Read)
 }

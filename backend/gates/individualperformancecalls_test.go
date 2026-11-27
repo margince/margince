@@ -68,8 +68,8 @@ func (w *pathWalk) expr(expr ast.Expr, s pathState) pathState {
 }
 
 // callAnswer is what a call answers of the switch: each result that carries
-// the answer. lastErr marks the last result, for a call whose results a
-// stand-in leaves unknown.
+// the answer. lastErr marks the last result, the error of a call whose every
+// run checks.
 type callAnswer struct {
 	results []bool
 	lastErr bool
@@ -137,7 +137,7 @@ func (w *pathWalk) call(call *ast.CallExpr, s pathState) pathState {
 		s.covered = withMember(s.covered, obj, kept)
 	}
 	covers := (external && len(runs) == 0 && w.pureCall(call, callee, s)) || (!guards && bare)
-	if errLast, known := errorLast(info.TypeOf(call)); guards && (errLast || (!known && external)) {
+	if guards && errorLast(info.TypeOf(call)) {
 		answer.lastErr = true
 	} else {
 		s.checked = s.checked || guards
@@ -168,18 +168,12 @@ func (w *pathWalk) readerCall(call *ast.CallExpr, reader *types.Func, index int,
 	return s
 }
 
-// errorLast reports whether a call's results end in an error, and false for
-// known when a stand-in left its type unread.
-func errorLast(t types.Type) (errLast, known bool) {
-	switch results := t.(type) {
-	case nil:
-		return false, false
-	case *types.Tuple:
-		return results.Len() > 0 && types.Identical(results.At(results.Len()-1).Type(), errorType), true
-	case *types.Basic:
-		return false, results.Kind() != types.Invalid
+// errorLast reports whether a call's results end in an error.
+func errorLast(t types.Type) bool {
+	if results, ok := t.(*types.Tuple); ok {
+		return results.Len() > 0 && types.Identical(results.At(results.Len()-1).Type(), errorType)
 	}
-	return types.Identical(t, errorType), true
+	return t != nil && types.Identical(t, errorType)
 }
 
 func andAnswers(acc, next []bool, first bool) []bool {
@@ -318,7 +312,7 @@ func (w *pathWalk) runs(call *ast.CallExpr, callee *types.Func) (runs []run, res
 	switch {
 	case callee == nil && calledVar(call.Fun, info) != nil:
 		values, resolved = w.varValues(calledVar(call.Fun, info))
-	case callee != nil && (isInterfaceMethod(callee) || w.sw.g.decls[callee.Origin()] != nil):
+	case callee != nil && (w.sw.g.walkedInterface(callee) || w.sw.g.decls[callee.Origin()] != nil):
 		values, resolved = w.funcValues(callee)
 	case w.sw.g.synchronous[w.sw.g.outsideCallee(call, info)]:
 		return w.handedFuncs(call), true, true
@@ -647,4 +641,11 @@ func calledVar(fun ast.Expr, info *types.Info) *types.Var {
 func isInterfaceMethod(fn *types.Func) bool {
 	sig, ok := fn.Type().(*types.Signature)
 	return ok && sig.Recv() != nil && types.IsInterface(sig.Recv().Type())
+}
+
+// walkedInterface reports a method of an interface a walked package declares.
+// The conversions to any other interface happen out of sight, so a call of
+// one is an outside call.
+func (g *switchGraph) walkedInterface(fn *types.Func) bool {
+	return isInterfaceMethod(fn) && fn.Pkg() != nil && g.walked[fn.Pkg().Path()]
 }

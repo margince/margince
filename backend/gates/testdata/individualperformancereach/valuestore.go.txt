@@ -102,3 +102,8 @@ func (h Handlers) GetFromAnotherService(w http.ResponseWriter, r *http.Request) 
 func (h Handlers) GetFromACallback(w http.ResponseWriter, r *http.Request) {
 	httperr.WriteJSON(w, http.StatusOK, slices.Collect(func(yield func(int) bool) { yield(teamFigure()[0]) }))
 }
+
+// A constant another package declares names a state, and carries no one's work.
+func (h Handlers) GetAnOutsideConstant(w http.ResponseWriter, r *http.Request) {
+	httperr.WriteJSON(w, http.StatusAccepted, map[string]string{"status": store.StateQueued})
+}

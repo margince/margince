@@ -12,10 +12,13 @@ package gates
 
 import (
 	"go/ast"
+	"go/importer"
 	"go/parser"
 	"go/token"
+	"go/types"
 	"slices"
 	"strings"
+	"sync"
 	"testing"
 
 	"github.com/margince/margince/backend/internal/shared/gatekit"
@@ -50,26 +53,71 @@ func fixtureConfig(name string) walkConfig {
 
 // loadFixture loads one planted package beside the planted auth reader. Each
 // package is loaded alone, so a type one package converts is never wired
-// into another.
+// into another. The packages they call outside the walk are planted too.
 func loadFixture(name string, config walkConfig) (*switchWalk, error) {
-	fset := token.NewFileSet()
-	byPackage := map[string][]*ast.File{}
+	imports := &switchFixtureImports{fset: token.NewFileSet(), checked: map[string]*types.Package{}}
+	var walked []typedPackage
 	for _, pkg := range []string{"auth", name} {
-		src, err := gatekit.ReadFile(reachFixtures + pkg + ".go.txt")
+		typed, err := imports.check(pkg, reachFixtures+pkg+".go.txt")
 		if err != nil {
 			return nil, err
 		}
-		file, err := parser.ParseFile(fset, pkg+".go", src, 0)
-		if err != nil {
-			return nil, err
-		}
-		byPackage[fixturePath+pkg] = []*ast.File{file}
+		walked = append(walked, typed)
 	}
-	g, err := newSwitchGraph(fset, byPackage, config)
+	g, err := newSwitchGraph(imports.fset, walked, config)
 	if err != nil {
 		return nil, err
 	}
 	return newSwitchWalk(g), nil
+}
+
+// switchFixtureImports answers a planted package from its source and the
+// standard library from export data. A fixture is then typed as fully as the
+// tree is.
+type switchFixtureImports struct {
+	fset    *token.FileSet
+	checked map[string]*types.Package
+}
+
+// switchFixtureStdlib is shared by every fixture. The export-data importer
+// caches what it reads and is not safe for concurrent use, so a lock guards it.
+var (
+	switchFixtureStdlib   = sync.OnceValue(importer.Default)
+	switchFixtureStdlibMu sync.Mutex
+)
+
+func (f *switchFixtureImports) Import(path string) (*types.Package, error) {
+	if pkg, ok := f.checked[path]; ok {
+		return pkg, nil
+	}
+	if name, planted := strings.CutPrefix(path, fixturePath); planted {
+		typed, err := f.check(name, reachFixtures+"outside/"+name+".go.txt")
+		return typed.types, err
+	}
+	switchFixtureStdlibMu.Lock()
+	defer switchFixtureStdlibMu.Unlock()
+	return switchFixtureStdlib().Import(path)
+}
+
+// check type-checks one planted file as the package fixturePath+name. Any
+// type error fails it, since the walk would read that code wrong.
+func (f *switchFixtureImports) check(name, file string) (typedPackage, error) {
+	src, err := gatekit.ReadFile(file)
+	if err != nil {
+		return typedPackage{}, err
+	}
+	parsed, err := parser.ParseFile(f.fset, name+".go", src, 0)
+	if err != nil {
+		return typedPackage{}, err
+	}
+	info := newTypedInfo()
+	conf := types.Config{Importer: f}
+	pkg, err := conf.Check(fixturePath+name, f.fset, []*ast.File{parsed}, info)
+	if err != nil {
+		return typedPackage{}, err
+	}
+	f.checked[pkg.Path()] = pkg
+	return typedPackage{path: pkg.Path(), files: []*ast.File{parsed}, info: info, types: pkg}, nil
 }
 
 // walkFixture answers which of ops the walk flags in the planted package name.
@@ -135,7 +183,7 @@ func TestABranchThatSkipsTheCheckBesideOneThatAsksFails(t *testing.T) {
 func TestAHandlerThatChecksOnEveryPathPasses(t *testing.T) {
 	t.Parallel()
 	ops := []string{
-		"getInATransaction", "getThroughTheWiredImplementation", "getThroughACheckedCallback", "getOnBothBranches",
+		"getInATransaction", "getInAnEmbeddedTransaction", "getThroughTheWiredImplementation", "getThroughACheckedCallback", "getOnBothBranches",
 		"getEachRow", "getThroughAConstructor", "getThroughABuiltReader", "getUnlessUnknown", "getUnlessMalformed", "getTheCatalog",
 		"getPastADerivedAnswer", "getThroughARespondingHelper", "getUnlessRefused",
 	}
@@ -182,17 +230,18 @@ func TestAReaderOfTheSameNameInAnotherPackageChecksNothing(t *testing.T) {
 }
 
 // A callback handed to sync.Once, to a registration or to an iterator may
-// run once in the process, later, or never. Its check covers nothing.
+// run once in the process, later, or never. Its check covers nothing, and
+// neither does a call through an interface another package declares.
 func TestACallbackAnOutsideCalleeKeepsOrSkipsLendsNoCheck(t *testing.T) {
 	t.Parallel()
-	ops := []string{"getAfterOnce", "getAfterARegistration", "getAfterAnIterator"}
+	ops := []string{"getAfterOnce", "getAfterARegistration", "getAfterAnIterator", "getThroughAnOutsideInterface"}
 	if got := walkFixture(t, "heldcallback", ops...); !slices.Equal(got, ops) {
 		t.Errorf("flagged %v, want %v", got, ops)
 	}
 }
 
-// A type error no stand-in import explains fails the walk, which would read
-// that code wrong. So does a synchronous callee no package calls.
+// A type error fails the walk, which would read that code wrong. So does a
+// synchronous callee no package calls.
 func TestATypeErrorOrAnUncalledSynchronousCalleeFailsTheWalk(t *testing.T) {
 	t.Parallel()
 	_, err := loadFixture("typeerror", fixtureConfig("typeerror"))
@@ -264,13 +313,13 @@ func TestACacheChecksOnlyOnAHitOfAFieldFilledOnlyChecked(t *testing.T) {
 // A value keeps what is stored in it. A builder's method stores, as does a
 // scan's address. So do a callback the walk cannot run and a helper handed a
 // slice. A store before a refusal stays. A context value is a figure, as are
-// another service's answer and a callback's yield. The request, and the
-// catalog built into a string, stay figure-free.
+// another service's answer and a callback's yield. The request, the catalog
+// built into a string and another package's constant stay figure-free.
 func TestAValueKeepsWhatIsStoredInIt(t *testing.T) {
 	t.Parallel()
 	ops := []string{"getABuilderHoldingAFigure", "getAScannedFigure", "getAFigureFilledLater", "getAFigureFilledInPlace",
 		"getAFigureStoredBeforeARefusal", "getAnOuterFigureBeforeARefusal", "getFromTheContext", "getFromAnotherService",
-		"getFromACallback", "getTheRequestBack", "getTheCatalogBuilt"}
+		"getFromACallback", "getTheRequestBack", "getTheCatalogBuilt", "getAnOutsideConstant"}
 	if got, want := walkFixture(t, "valuestore", ops...), ops[:9]; !slices.Equal(got, want) {
 		t.Errorf("flagged %v, want %v", got, want)
 	}
