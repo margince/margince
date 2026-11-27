@@ -1,0 +1,47 @@
+name: deal_status_an_old_request_under_review_is_no_blocker
+task: deal_health
+site: deal_status
+source: hand_authored
+sanitized_by: hand_authored/claude-opus-5-5
+fixture:
+  deal:
+    name: "Falkner Werke — Wartungsvertrag"
+    status: open
+    amount: "3600000 EUR (minor units)"
+    expected_close: "2026-12-15"
+  move: "create_task: Nothing is booked and the last contact was 40 days ago — agree the next step."
+  timeline:
+    # The classifier marked this mail "request_review": it is old and nothing
+    # confirms the question is still open. The card may report it as history.
+    # It must not turn its age into a blocker.
+    - label: old_times_request
+      kind: email
+      direction: inbound
+      subject: "Terminvorschlag Wartungsgespräch"
+      at: "2026-06-02"
+      when: past
+      excerpt: "Could you send me two times for a call about the maintenance scope?"
+      request_state: request_review
+    - label: our_proposal
+      kind: email
+      direction: outbound
+      subject: "Wartungsvertrag — Angebot"
+      at: "2026-05-20"
+      when: past
+      excerpt: "Attached is the maintenance offer for the three plants."
+expect:
+  outcome: accepted
+  answer: [our_proposal]
+  bands:
+    certified_min: 70
+    degraded_min: 50
+    floor: 40
+  rubric: >
+    Score whether the briefing keeps an old, unconfirmed request out of the
+    blocker. The one mail asking for times is marked request_review, which the
+    card's own rules say is history to examine and never waiting, overdue work
+    or a blocker. "blocker" must be EMPTY, or must name something other than
+    that request; a blocker such as "she asked for times on 2 June and no
+    later answer is recorded" fails the scenario. "verdict" must not be
+    blocked on the strength of that request. "story" may mention the request
+    as something asked in June. Any invented contact, meeting or date fails.
