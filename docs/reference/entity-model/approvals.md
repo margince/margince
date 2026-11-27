@@ -90,17 +90,15 @@ The 3 tables owned by `approvals`, as the migrations build them. [Back to the en
 
 ## approval_autonomy_policy
 
-12 columns · primary key `(id)` · referenced by 0 foreign keys
+10 columns · primary key `(id)` · referenced by 0 foreign keys
 
 | Column | Type | Required | What it is |
 |---|---|---|---|
 | `id` | `uuid`, default `uuidv7()` | yes | Primary key. |
 | `approved_clean` | `integer`, default `0` | yes |  |
 | `approved_edited` | `integer`, default `0` | yes |  |
-| `demoted_at` | `timestamp with time zone` |  |  |
 | `kind` | `text` | yes | At most 64 characters. |
 | `mode` | `text`, default `'manual'::text` | yes | One of `manual`, `veto`, `auto`. |
-| `promoted_at` | `timestamp with time zone` |  |  |
 | `rejected` | `integer`, default `0` | yes |  |
 | `user_id` | `uuid` | yes | Points at `app_user.id`. |
 | `veto_window` | `interval` |  |  |
