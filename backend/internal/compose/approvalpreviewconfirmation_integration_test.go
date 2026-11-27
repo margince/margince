@@ -8,6 +8,7 @@ package compose
 import (
 	"encoding/json"
 	"errors"
+	"maps"
 	"strings"
 	"testing"
 
@@ -15,6 +16,7 @@ import (
 	"github.com/margince/margince/backend/internal/modules/approvals"
 	"github.com/margince/margince/backend/internal/modules/automation"
 	"github.com/margince/margince/backend/internal/shared/kernel/diffhash"
+	"github.com/margince/margince/backend/internal/shared/kernel/principal"
 	"github.com/margince/margince/backend/internal/shared/kernel/systemtext"
 	"github.com/margince/margince/backend/internal/shared/ports/datasource"
 	"github.com/margince/margince/backend/internal/shared/ports/workflow"
@@ -35,7 +37,13 @@ func TestAutomationConfirmationShowsTheQuestionAndOnlyItsActualEffect(t *testing
 	if !errors.As(err, &staged) {
 		t.Fatalf("staging: %v", err)
 	}
-	proposal, err := svc.GetWire(e.Admin(), staged.ApprovalID)
+	reader, ok := principal.Actor(e.Admin())
+	if !ok {
+		t.Fatal("missing admin actor")
+	}
+	reader.Permissions.Objects = maps.Clone(reader.Permissions.Objects)
+	reader.Permissions.Objects["automation"] = principal.ObjectGrant{Read: true}
+	proposal, err := svc.GetWire(principal.WithActor(e.Admin(), reader), staged.ApprovalID)
 	if err != nil {
 		t.Fatal(err)
 	}

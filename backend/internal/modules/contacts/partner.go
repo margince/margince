@@ -110,8 +110,8 @@ type UpsertPartnerInput struct {
 	Cleared   []string
 	IfVersion *int64
 	// MustCreate makes the write a set-up. It refuses a company with a live
-	// program. It starts the program from the column defaults, even when it
-	// revives an archived row that kept a tier, metrics or segments.
+	// program. It starts nonfinancial fields from their defaults. A stored
+	// margin tier stays in place and still requires a human with financial authority.
 	MustCreate bool
 }
 
