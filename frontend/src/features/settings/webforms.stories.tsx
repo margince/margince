@@ -50,6 +50,7 @@ const serverForm: WebForm = {
   allowed_origins: [],
   consent_required: false,
   consent_wording: null,
+  owner_id: "u-lena",
   secret_configured: true,
   last_post_at: null,
 };
@@ -69,6 +70,12 @@ function cardStory(forms: WebForm[], allow: GrantSpec = OPERATOR) {
       "GET /me": meRoute(allow),
       "GET /web-forms": () =>
         jsonResponse({ data: forms, secrets_available: true }),
+      "GET /users/names": () =>
+        jsonResponse({
+          data: [
+            { id: "u-lena", display_name: "Lena Hoffmann", departed: false },
+          ],
+        }),
     });
     return (
       <StoryProviders>

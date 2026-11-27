@@ -284,7 +284,7 @@ export const SETTINGS_SECTIONS = {
     ],
     units: ["settings.part.integrations.units"],
   },
-  "web-forms": ["webForms.title"],
+  "web-forms": [],
   knowledge: ["knowledge.title"],
   import: [
     "import.hub.title",

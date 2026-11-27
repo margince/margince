@@ -7,13 +7,20 @@ import { useState } from "react";
 import { api } from "../../api/client";
 import { ifMatch } from "../../api/version";
 import { ArchiveAction } from "../../components/archive";
+import { PageHeadAction } from "../../components/pageheadaction";
 import { WebsiteInquiryDialog } from "../../components/websiteinquirydialog";
-import { Badge, Button, OverflowMenu } from "../../design-system/atoms";
+import {
+  Badge,
+  Button,
+  EmptyState,
+  OverflowMenu,
+} from "../../design-system/atoms";
+import { CellStack } from "../../design-system/cellstack";
 import { ConfirmModal } from "../../design-system/confirmmodal";
+import { DataTable, type DataTableColumn } from "../../design-system/datatable";
 import { ErrorLine } from "../../design-system/errorline";
 import { Panel, PanelBody, PanelIntro } from "../../design-system/panel";
-import { QueryGate } from "../../design-system/querystates";
-import { SettingList, SettingRow } from "../../design-system/settingrow";
+import { QueryStates } from "../../design-system/querystates";
 import {
   formatDate,
   formatDateTime,
@@ -34,7 +41,7 @@ import {
   type WebForm,
   type WebFormCreated,
 } from "./webformkinds";
-import { FormOwnerLine } from "./webformowner";
+import { FormOwnerCell } from "./webformowner";
 import { WebFormSetupModal } from "./webformsetup";
 import "./webforms.css";
 
@@ -187,115 +194,171 @@ function HandlingAction({
   );
 }
 
-function FormRow({
+// Every verb a form offers, behind one menu so the row reads as facts. A press
+// on the row itself opens Edit, the verb an admin reaches for most.
+function FormMenu({
   form,
   canEdit,
   canArchive,
   onSetup,
+  onEdit,
 }: Readonly<{
   form: WebForm;
   canEdit: boolean;
   canArchive: boolean;
   onSetup: (setup: Setup) => void;
+  onEdit: (form: WebForm) => void;
 }>) {
   const t = useT();
-  const [editing, setEditing] = useState(false);
   return (
-    <>
-      <SettingRow
-        label={form.name}
-        description={
-          <span className="webform-row-description">
-            {form.sender === "browser"
-              ? form.allowed_origins.join(", ")
-              : t(`webForms.senderLine.${form.sender}`)}
-            {!form.handling_automation_id && form.owner_id && (
-              <FormOwnerLine ownerId={form.owner_id} />
-            )}
-            <LastPostLine lastPostAt={form.last_post_at} />
-            <IntakeLine intake={form.intake} />
-            <span className="webform-row-actions">
-              <Button
-                data-testid="web-form-setup"
-                onClick={() => onSetup({ form })}
-              >
-                {t("webForms.setup")}
-              </Button>
-              {canEdit && (
-                <Button
-                  data-testid="edit-web-form"
-                  onClick={() => setEditing(true)}
-                >
-                  {t("webForms.edit")}
-                </Button>
-              )}
-              <HandlingAction form={form} canEdit={canEdit} />
-              {(canEdit || canArchive) && (
-                <OverflowMenu label={t("record.moreActions")}>
-                  {canEdit && <PauseAction form={form} />}
-                  {canEdit && mintsSecret(form.sender) && (
-                    <RotateAction form={form} onRotated={onSetup} />
-                  )}
-                  {canArchive && (
-                    <ArchiveAction
-                      requires={{ object: "integrations", action: "delete" }}
-                      label={t("webForms.archive")}
-                      title={t("webForms.archiveTitle", { name: form.name })}
-                      confirmText={t("webForms.archiveConfirm")}
-                      archivedMessage={t("webForms.archiveDone")}
-                      invalidate={WEB_FORMS_KEY}
-                      recordKey="web-form"
-                      onArchived={() => {}}
-                      archive={() => archiveWebForm(form)}
-                    />
-                  )}
-                </OverflowMenu>
-              )}
-            </span>
-          </span>
-        }
-        value={
-          <span className="webform-answer">
-            <Badge tone={form.state === "active" ? "success" : "warning"}>
-              {t(`webForms.state.${form.state}`)}
-            </Badge>
-            <Badge tone="default">{t(`webForms.sender.${form.sender}`)}</Badge>
-            {form.consent_required && (
-              <Badge tone="default">{t("webForms.row.consent")}</Badge>
-            )}
-            {!form.secret_configured && pastesSecret(form.sender) && (
-              <Badge tone="warning">{t("webForms.row.secretMissing")}</Badge>
-            )}
-          </span>
-        }
-        control={null}
-      />
-      {editing && (
-        <WebFormDrawer form={form} onClose={() => setEditing(false)} />
+    <OverflowMenu label={t("table.rowActions", { name: form.name })}>
+      <Button data-testid="web-form-setup" onClick={() => onSetup({ form })}>
+        {t("webForms.setup")}
+      </Button>
+      {canEdit && (
+        <Button data-testid="edit-web-form" onClick={() => onEdit(form)}>
+          {t("webForms.edit")}
+        </Button>
       )}
-    </>
+      <HandlingAction form={form} canEdit={canEdit} />
+      {canEdit && <PauseAction form={form} />}
+      {canEdit && mintsSecret(form.sender) && (
+        <RotateAction form={form} onRotated={onSetup} />
+      )}
+      {canArchive && (
+        <ArchiveAction
+          requires={{ object: "integrations", action: "delete" }}
+          label={t("webForms.archive")}
+          title={t("webForms.archiveTitle", { name: form.name })}
+          confirmText={t("webForms.archiveConfirm")}
+          archivedMessage={t("webForms.archiveDone")}
+          invalidate={WEB_FORMS_KEY}
+          recordKey="web-form"
+          onArchived={() => {}}
+          archive={() => archiveWebForm(form)}
+        />
+      )}
+    </OverflowMenu>
   );
 }
 
+// A browser form names the websites it takes posts from under its sender; the
+// signed senders need no address, so the sender alone says it.
+function SenderCell({ form }: Readonly<{ form: WebForm }>) {
+  const t = useT();
+  return (
+    <CellStack>
+      <span>{t(`webForms.sender.${form.sender}`)}</span>
+      {form.sender === "browser" && form.allowed_origins.length > 0 && (
+        <span className="t-caption">{form.allowed_origins.join(", ")}</span>
+      )}
+    </CellStack>
+  );
+}
+
+function StateCell({ form }: Readonly<{ form: WebForm }>) {
+  const t = useT();
+  return (
+    <span className="webform-answer">
+      <Badge tone={form.state === "active" ? "success" : "warning"} dot>
+        {t(`webForms.state.${form.state}`)}
+      </Badge>
+      {!form.secret_configured && pastesSecret(form.sender) && (
+        <Badge tone="warning">{t("webForms.row.secretMissing")}</Badge>
+      )}
+      {form.consent_required && (
+        <Badge tone="default">{t("webForms.row.consent")}</Badge>
+      )}
+    </span>
+  );
+}
+
+function formColumns({
+  t,
+  canEdit,
+  canArchive,
+  onSetup,
+  onEdit,
+}: Readonly<{
+  t: ReturnType<typeof useT>;
+  canEdit: boolean;
+  canArchive: boolean;
+  onSetup: (setup: Setup) => void;
+  onEdit: (form: WebForm) => void;
+}>): DataTableColumn<WebForm>[] {
+  return [
+    {
+      key: "name",
+      header: t("webForms.col.form"),
+      grow: true,
+      fold: "title",
+      render: (form) => form.name,
+    },
+    {
+      key: "sender",
+      header: t("webForms.col.sender"),
+      render: (form) => <SenderCell form={form} />,
+    },
+    {
+      key: "owner",
+      header: t("webForms.col.owner"),
+      render: (form) => (
+        <FormOwnerCell
+          ownerId={form.owner_id}
+          handled={!!form.handling_automation_id}
+        />
+      ),
+    },
+    {
+      key: "lastPost",
+      header: t("webForms.col.lastPost"),
+      render: (form) => <LastPostCell form={form} />,
+    },
+    {
+      key: "state",
+      header: t("webForms.col.state"),
+      render: (form) => <StateCell form={form} />,
+    },
+    {
+      key: "verbs",
+      header: t("table.actions"),
+      headerHidden: true,
+      align: "end",
+      fold: "end",
+      render: (form) => (
+        <span className="cell-actions">
+          <FormMenu
+            form={form}
+            canEdit={canEdit}
+            canArchive={canArchive}
+            onSetup={onSetup}
+            onEdit={onEdit}
+          />
+        </span>
+      ),
+    },
+  ];
+}
+
 // Whether the pasted code works, read off the last post the form landed. An
-// older server sends no field at all, so the row says nothing either way.
-function LastPostLine({
-  lastPostAt,
-}: Readonly<{ lastPostAt: string | null | undefined }>) {
+// older server sends no field at all, so the cell says nothing either way.
+function LastPostCell({ form }: Readonly<{ form: WebForm }>) {
   const readerZone = useViewerZone();
   const t = useT();
   const { locale } = useLocale();
-  if (lastPostAt === undefined) {
-    return null;
-  }
+  const lastPostAt = form.last_post_at;
   return (
-    <span>
-      {lastPostAt === null
-        ? t("webForms.row.noPost")
-        : t("webForms.row.lastPost", {
-            when: formatDate(lastPostAt, locale, readerZone),
-          })}
-    </span>
+    <CellStack>
+      {lastPostAt === null && (
+        <span className="webform-none">{t("webForms.row.noPost")}</span>
+      )}
+      {lastPostAt && (
+        <span className="t-num">
+          {formatDate(lastPostAt, locale, readerZone)}
+        </span>
+      )}
+      <IntakeLine intake={form.intake} />
+    </CellStack>
   );
 }
 
@@ -343,13 +406,21 @@ export function WebFormsCard() {
   const me = useMe();
   const query = useWebForms();
   const [creating, setCreating] = useState(false);
+  const [editing, setEditing] = useState<WebForm | null>(null);
   const [setup, setSetup] = useState<Setup | null>(null);
   const showReadOnly = me.isSuccess && !canCreate && !canEdit && !canArchive;
+  const forms = query.data?.data ?? [];
+  const columns = formColumns({
+    t,
+    canEdit,
+    canArchive,
+    onSetup: setSetup,
+    onEdit: setEditing,
+  });
   return (
-    <Panel
-      title={t("webForms.title")}
-      titleAction={
-        canCreate && query.isSuccess ? (
+    <>
+      {canCreate && query.isSuccess && (
+        <PageHeadAction>
           <Button
             variant="primary"
             data-testid="new-web-form"
@@ -357,37 +428,36 @@ export function WebFormsCard() {
           >
             <Globe aria-hidden /> {t("webForms.new")}
           </Button>
-        ) : undefined
-      }
-    >
-      <PanelBody>
-        <PanelIntro>
-          {t("webForms.sub")}{" "}
-          <a href={WEB_FORMS_GUIDE} target="_blank" rel="noreferrer">
-            {t("webForms.guide")}
-          </a>
-        </PanelIntro>
-        {showReadOnly && <PanelIntro>{t("webForms.readOnly")}</PanelIntro>}
-        <QueryGate
-          pendingLabel={t("webForms.title")}
-          query={query}
-          empty={(result) => result.data.length === 0}
-        >
-          {(result) => (
-            <SettingList>
-              {result.data.map((form) => (
-                <FormRow
-                  key={form.id}
-                  form={form}
-                  canEdit={canEdit}
-                  canArchive={canArchive}
-                  onSetup={setSetup}
-                />
-              ))}
-            </SettingList>
+        </PageHeadAction>
+      )}
+      {/* Untitled: on a one-panel page the page heading names the forms. */}
+      <Panel>
+        <PanelBody>
+          <PanelIntro>
+            <a href={WEB_FORMS_GUIDE} target="_blank" rel="noreferrer">
+              {t("webForms.guide")}
+            </a>
+          </PanelIntro>
+          {showReadOnly && <PanelIntro>{t("webForms.readOnly")}</PanelIntro>}
+          {!(query.isSuccess && forms.length > 0) && (
+            <QueryStates query={query} pendingLabel={t("webForms.title")}>
+              <EmptyState>{t("common.empty")}</EmptyState>
+            </QueryStates>
           )}
-        </QueryGate>
-      </PanelBody>
+        </PanelBody>
+        {query.isSuccess && forms.length > 0 && (
+          <DataTable
+            bleed
+            fold
+            label={t("webForms.title")}
+            columns={columns}
+            rows={[...forms]}
+            rowKey={(form) => form.id}
+            rowTestId={(form) => `web-form-${form.id}`}
+            onRowClick={canEdit ? setEditing : undefined}
+          />
+        )}
+      </Panel>
       {creating && query.data && (
         <WebFormDrawer
           secretsAvailable={query.data.secrets_available}
@@ -397,6 +467,9 @@ export function WebFormsCard() {
           }
         />
       )}
+      {editing && (
+        <WebFormDrawer form={editing} onClose={() => setEditing(null)} />
+      )}
       {setup && (
         <WebFormSetupModal
           form={setup.form}
@@ -404,6 +477,6 @@ export function WebFormsCard() {
           onClose={() => setSetup(null)}
         />
       )}
-    </Panel>
+    </>
   );
 }

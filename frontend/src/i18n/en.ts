@@ -19026,8 +19026,6 @@ export const en = {
   "financeSource.cancel": "Cancel",
 
   "webForms.title": "Website forms",
-  "webForms.sub":
-    "Forms on your website. Each enquiry becomes a lead, or a note on the lead or contact with that email.",
   "webForms.readOnly":
     "Read-only: only a role with the integrations permission can change website forms.",
   "webForms.new": "New website form",
@@ -19044,12 +19042,16 @@ export const en = {
   "webForms.senderLine.typeform": "Signed webhook from Typeform",
   "webForms.senderLine.tally": "Signed webhook from Tally",
   "webForms.row.consent": "Consent required",
-  "webForms.row.lastPost": "Last post {when}",
   "webForms.row.intake.throttled":
     "Throttled since {when}, too many submissions",
   "webForms.row.intake.blocked": "Blocked until {when}",
   "webForms.row.intake.pausedAll": "Paused for all forms: too much traffic",
-  "webForms.row.noPost": "No post recorded yet",
+  "webForms.row.noPost": "None yet",
+  "webForms.col.form": "Form",
+  "webForms.col.sender": "Sends from",
+  "webForms.col.owner": "New leads go to",
+  "webForms.col.lastPost": "Last post",
+  "webForms.col.state": "Status",
   "webForms.setup": "Show setup",
   "webForms.edit": "Edit",
   "webForms.pause": "Pause form",
@@ -19241,7 +19243,6 @@ export const en = {
   "webForms.field.ownerNone": "Unassigned",
   "webForms.field.ownerGone": "{name} (left, so new leads arrive unassigned)",
   "webForms.field.ownerKept": "Saved owner (not listed)",
-  "webForms.row.owner": "Leads go to",
   "webForms.row.ownerLeft": "{name} left, so new leads arrive unassigned",
   "webForms.field.successMessage": "Success message",
   "webForms.field.successMessageHint": "Shown to the visitor after sending.",

@@ -209,7 +209,7 @@ describe("WebFormsCard", () => {
     const user = userEvent.setup();
     render(<WebFormsCard />);
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: "Actions for Contact page" }),
     );
     await user.click(await screen.findByTestId("archive-record"));
     expect(
@@ -349,8 +349,64 @@ describe("WebFormsCard", () => {
       backendFor(OPERATOR, [{ ...contactForm, owner_id: "u-42" }]).fetch,
     );
     render(<WebFormsCard />);
-    expect(await screen.findByText("Jane Doe")).toBeTruthy();
-    expect(screen.getByText(/Leads go to/)).toBeTruthy();
+    const row = await screen.findByTestId("web-form-wf-1");
+    expect(await within(row).findByText("Jane Doe")).toBeTruthy();
+    expect(
+      screen.getByRole("columnheader", { name: "New leads go to" }),
+    ).toBeTruthy();
+  });
+
+  it("says a form with no owner sends its leads unassigned", async () => {
+    vi.stubGlobal("fetch", backendFor(OPERATOR, [contactForm]).fetch);
+    render(<WebFormsCard />);
+    const row = await screen.findByTestId("web-form-wf-1");
+    expect(within(row).getByText("Unassigned")).toBeTruthy();
+  });
+
+  it("leaves a handled form's leads to its inquiry handling", async () => {
+    vi.stubGlobal(
+      "fetch",
+      backendFor(OPERATOR, [
+        { ...contactForm, owner_id: "u-42", handling_automation_id: "au-1" },
+      ]).fetch,
+    );
+    render(<WebFormsCard />);
+    const row = await screen.findByTestId("web-form-wf-1");
+    expect(within(row).getByText("Inquiry handling")).toBeTruthy();
+    expect(within(row).queryByText("Jane Doe")).toBeNull();
+  });
+
+  it("opens a form's settings from its row and from its menu", async () => {
+    vi.stubGlobal("fetch", backendFor(OPERATOR, [contactForm]).fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("web-form-wf-1"));
+    expect(
+      await screen.findByRole("heading", { name: "Edit website form" }),
+    ).toBeTruthy();
+    await user.click(screen.getByRole("button", { name: "Cancel" }));
+    await waitFor(() =>
+      expect(
+        screen.queryByRole("heading", { name: "Edit website form" }),
+      ).toBeNull(),
+    );
+    await user.click(
+      screen.getByRole("button", { name: "Actions for Contact page" }),
+    );
+    await user.click(await screen.findByTestId("edit-web-form"));
+    expect(
+      await screen.findByRole("heading", { name: "Edit website form" }),
+    ).toBeTruthy();
+  });
+
+  it("keeps a reader's rows shut", async () => {
+    vi.stubGlobal("fetch", backendFor({}, [contactForm]).fetch);
+    const user = userEvent.setup();
+    render(<WebFormsCard />);
+    await user.click(await screen.findByTestId("web-form-wf-1"));
+    expect(
+      screen.queryByRole("heading", { name: "Edit website form" }),
+    ).toBeNull();
   });
 
   it("says when each form last landed a post, or that none has yet", async () => {
@@ -362,8 +418,12 @@ describe("WebFormsCard", () => {
       ]).fetch,
     );
     render(<WebFormsCard />);
-    expect(await screen.findByText(/^Last post /)).toBeTruthy();
-    expect(screen.getByText("No post recorded yet")).toBeTruthy();
+    const posted = await screen.findByTestId("web-form-wf-1");
+    expect(within(posted).getByText(/2026/)).toBeTruthy();
+    expect(within(posted).queryByText("None yet")).toBeNull();
+    expect(
+      within(screen.getByTestId("web-form-wf-2")).getByText("None yet"),
+    ).toBeTruthy();
   });
 
   it("tells the admin when the intake refuses posts, and why", async () => {
@@ -410,7 +470,7 @@ describe("WebFormsCard", () => {
     vi.stubGlobal("fetch", backendFor(OPERATOR, [fromAnOlderServer]).fetch);
     render(<WebFormsCard />);
     expect(await screen.findByText("Contact page")).toBeTruthy();
-    expect(screen.queryByText(/^Last post |^No post recorded yet$/)).toBeNull();
+    expect(screen.queryByText("None yet")).toBeNull();
   });
 
   it("says leads arrive unassigned once the form's owner left", async () => {
@@ -425,7 +485,7 @@ describe("WebFormsCard", () => {
         "Max Former left, so new leads arrive unassigned",
       ),
     ).toBeTruthy();
-    await user.click(screen.getByTestId("edit-web-form"));
+    await user.click(screen.getByTestId("web-form-wf-1"));
     expect(
       await screen.findByText(
         "Max Former (left, so new leads arrive unassigned)",
@@ -571,7 +631,7 @@ describe("WebFormsCard", () => {
     const user = userEvent.setup();
     render(<WebFormsCard />);
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: "Actions for Contact page" }),
     );
     await user.click(await screen.findByTestId("toggle-web-form"));
 
@@ -600,7 +660,7 @@ describe("WebFormsCard actions", () => {
     const user = userEvent.setup();
     render(<WebFormsCard />);
     await user.click(
-      await screen.findByRole("button", { name: "More actions" }),
+      await screen.findByRole("button", { name: "Actions for Contact page" }),
     );
     await user.click(await screen.findByTestId("rotate-web-form-secret"));
     expect(backend.sent).toHaveLength(0);
@@ -623,7 +683,7 @@ describe("WebFormsCard actions", () => {
     vi.stubGlobal("fetch", backend.fetch);
     const user = userEvent.setup();
     render(<WebFormsCard />);
-    await user.click(await screen.findByTestId("edit-web-form"));
+    await user.click(await screen.findByTestId("web-form-wf-1"));
     await user.click(screen.getByLabelText(/Require consent/));
     await user.type(
       screen.getByLabelText(/^Consent wording/),
@@ -673,7 +733,7 @@ describe("WebFormsCard actions", () => {
     vi.stubGlobal("fetch", backend.fetch);
     const user = userEvent.setup();
     render(<WebFormsCard />);
-    await user.click(await screen.findByTestId("edit-web-form"));
+    await user.click(await screen.findByTestId("web-form-wf-1"));
     await user.type(screen.getByLabelText(/^Thank-you page/), "x");
     await user.click(screen.getByTestId("save-web-form"));
 

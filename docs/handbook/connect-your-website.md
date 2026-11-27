@@ -17,7 +17,7 @@ To put a contact form on your website, open **Settings → Website forms** and c
 5. Choose **Copy code** and paste the code into your page where the form goes. In a site builder, set the form to send to the **Form address** instead.
 Style the form as you like, but keep each field's `name`. A post from a website not on the list is refused.
 
-To check that the code works, send one test message from your page. Once Margince accepts it, the form's row shows **Last post** and the date. Until then it shows **No post recorded yet**.
+To check that the code works, send one test message from your page. Once Margince accepts it, the form's row shows the date under **Last post**. Until then it shows **None yet**.
 Also called: contact form, request form, lead form, web form, embed a form.
 
 ### How do I make a form's leads ask about one product?
@@ -35,7 +35,7 @@ Yes. Point the form at the **Form address** with `method="post"`, and give its f
 | `phone`, `company`, `title` | Phone number, company and job title |
 | `message` | What the prospect wrote |
 | `consent` | The consent tick box |
-| `cf_` and a custom field's key, such as `cf_budget` | That lead custom field. **Show setup** lists the names. A value the field cannot take goes in the note. |
+| `cf_` and a custom field's key, such as `cf_budget` | That lead custom field. **Show setup** in the form's **⋯** menu lists the names. A value the field cannot take goes in the note. |
 
 Margince also reads common names such as `name`, `your-email` or `Firma`. Every other field is kept in the lead's note, so nothing the prospect wrote is lost. Fields named `utm_source` and the other `utm_` names show where the prospect came from. Copy the hidden fields that start with `_mrg_` from the **Code to paste** as well: they stop most spam.
 Also called: field names, map fields, custom fields, my own form, Contact Form 7.
@@ -53,7 +53,7 @@ The prospect then sees the form's **Success message**, or goes to the **Thank-yo
 Also called: where do my website leads go, new lead from website, duplicate lead.
 
 ### Who handles questions from a form?
-Choose **Inquiry handling** beside the form. Choose one colleague, share work between selected colleagues, or ask someone to check each question first. Pick a colleague to check questions that need review, a task title, a deadline and its time zone.
+Choose **Inquiry handling** in the form's **⋯** menu. Choose one colleague, share work between selected colleagues, or ask someone to check each question first. Pick a colleague to check questions that need review, a task title, a deadline and its time zone.
 
 Choose **Review handling** to check the plan. **Authorized by** names the colleague whose rights let the rule act. The colleague who checks questions and the selected colleagues get the work. Saving this plan replaces the old lead handling for this form.
 
@@ -82,7 +82,7 @@ To connect a Webflow form, choose **Your website** and list the Webflow site's a
 
 A webhook made in the settings of Webflow is not signed, so Margince cannot check it. Choose **Webflow webhook** only when someone who writes code makes the webhook with the Webflow API. Create the form first and give its **Form address** to the webhook.
 
-The Webflow API then answers the secret of the webhook once. A webhook an OAuth app makes is signed with the client secret of that app instead. Paste the secret in **Signing secret** under **Edit**. Until then the form takes no posts, and its row says **Waiting for its secret**.
+The Webflow API then answers the secret of the webhook once. A webhook an OAuth app makes is signed with the client secret of that app instead. Open the form's row and paste the secret in **Signing secret**. Until then the form takes no posts, and its row says **Waiting for its secret**.
 Also called: Webflow form, Webflow action, Webflow webhook.
 
 ### How do I connect Typeform or Tally?
