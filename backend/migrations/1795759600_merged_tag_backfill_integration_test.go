@@ -52,7 +52,7 @@ func TestTheMergedTagBackfillNamesOnlyTagsStillMerged(t *testing.T) {
 	if err != nil {
 		t.Fatalf("loading core: %v", err)
 	}
-	through := namespaceThroughVersion(t, core, "1795701165")
+	through := namespaceThroughVersion(t, core, "1795759600")
 	if _, err := dbmigrate.Up(ctx, conn, through); err != nil {
 		t.Fatalf("up: %v", err)
 	}
