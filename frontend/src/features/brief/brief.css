@@ -649,7 +649,8 @@
 @media (pointer: coarse) {
   .rail-count-go,
   .record-details-toggle,
-  .brief-done-band > .btn {
+  .brief-done-band > .btn,
+  .magic-approval-decide > .btn {
     min-height: max(var(--controlHeight), 44px);
   }
 }
